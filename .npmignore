@@ -1,0 +1,29 @@
+# Source files
+src/
+*.ts
+!dist/**/*.d.ts
+
+# Config files
+tsconfig.json
+.gitignore
+.npmignore
+
+# Documentation
+SETUP_GUIDE.md
+REPOSITORY_STRUCTURE.md
+examples/
+
+# Development files
+.vscode/
+.idea/
+*.log
+.DS_Store
+
+# Docker files (optional, include if you want Docker support)
+# Dockerfile
+
+# Test files
+test/
+*.test.js
+*.spec.js
+coverage/
