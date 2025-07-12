@@ -2,7 +2,7 @@
   "name": "creative-thinking",
   "version": "0.1.0",
   "description": "MCP server for lateral and creative thinking techniques",
-  "license": "LGPL-3.0-or-later",
+  "license": "GPL-3.0",
   "author": "@uddhav",
   "homepage": "https://github.com/uddhav/creative-thinking#readme",
   "repository": {

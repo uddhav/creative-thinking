@@ -39,7 +39,9 @@ node dist/index.js
 - **SCAMPER**: Systematic ideation through seven transformation actions
 - Visual progress tracking with emojis and formatted output
 - Support for revisions and branching in creative exploration
-- Session management with insights extraction
+- Session management with unique IDs and history tracking
+- Insights extraction and summary when sessions complete
+- Colored console output with chalk (can be disabled with DISABLE_THOUGHT_LOGGING environment variable)
 
 ## Tool
 
@@ -199,4 +201,4 @@ npm run build
 
 ## License
 
-This MCP server is licensed under the MIT License. This means you are free to use, modify, and distribute the software, subject to the terms and conditions of the MIT License. For more details, please see the LICENSE file in the project repository.
+This MCP server is licensed under the GPL-3.0 License. This means you are free to use, modify, and distribute the software, subject to the terms and conditions of the GPL-3.0 License. For more details, please see the LICENSE file in the project repository.

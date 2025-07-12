@@ -35,21 +35,46 @@ npx -y github:uddhav/creative-thinking
 
 ### Key Types and Interfaces
 ```typescript
-interface LateralThinkingData {
-  problem?: string;
-  technique: 'six_thinking_hats' | 'po' | 'random_entry' | 'scamper';
-  // Technique-specific parameters...
-  session_id?: string;
-  revision?: string;
-  complete?: boolean;
+type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper';
+type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green';
+type ScamperAction = 'substitute' | 'combine' | 'adapt' | 'modify' | 'put_to_other_use' | 'eliminate' | 'reverse';
+
+interface LateralThinkingArgs {
+  technique: LateralTechnique;
+  problem: string;
+  currentStep: number;
+  totalSteps: number;
+  output: string;
+  nextStepNeeded: boolean;
+  
+  // Technique-specific parameters
+  hatColor?: SixHatsColor;
+  provocation?: string;
+  principles?: string[];
+  randomStimulus?: string;
+  connections?: string[];
+  scamperAction?: ScamperAction;
+  
+  // Advanced features
+  isRevision?: boolean;
+  revisesStep?: number;
+  branchFromStep?: number;
+  branchId?: string;
 }
 
-interface SessionData {
-  id: string;
+interface SessionState {
   problem: string;
-  technique: string;
-  history: Array<{ timestamp: Date; step: any; result: any }>;
-  branches: Map<string, SessionData>;
+  technique: LateralTechnique;
+  currentStep: number;
+  totalSteps: number;
+  history: Array<{
+    step: number;
+    timestamp: string;
+    input: LateralThinkingArgs;
+    output: any;
+  }>;
+  branches: Map<string, SessionState>;
+  insights: string[];
 }
 ```
 
@@ -68,8 +93,27 @@ The server follows the standard MCP server pattern:
 
 ## Important Implementation Details
 
-1. **Session ID Generation**: Uses timestamp-based IDs for uniqueness
+1. **Session ID Generation**: Uses timestamp-based IDs for uniqueness (format: `session_${Date.now()}`)
 2. **Revision Support**: Creates branches in session history for exploring alternatives
-3. **Complete Flag**: Triggers insight extraction and session summary
+3. **Session Completion**: When `nextStepNeeded` is false, triggers insight extraction and session summary
 4. **Error Handling**: Validates parameters and provides clear error messages
 5. **Type Safety**: Comprehensive TypeScript types for all parameters and returns
+6. **Visual Formatting**: 
+   - Uses chalk.bold for headers
+   - Technique-specific colors (blue, red, yellow, green, etc.)
+   - Box drawing with ┌─┐│└┘ characters
+   - Progress indicators with filled/empty circles
+7. **Step Validation**: Ensures steps are sequential and within bounds for each technique
+8. **Technique Step Counts**:
+   - Six Hats: 6 steps (one per hat color)
+   - PO: 4 steps (provocation, suspend judgment, extract principles, develop ideas)
+   - Random Entry: 3 steps (stimulus, connections, solutions)
+   - SCAMPER: 7 steps (one per action)
+
+## Code Style Guidelines
+
+- Use TypeScript strict mode
+- Async/await pattern for all asynchronous operations
+- Comprehensive error messages with actionable guidance
+- Consistent use of template literals for string formatting
+- Visual output should be clear and structured with proper spacing
