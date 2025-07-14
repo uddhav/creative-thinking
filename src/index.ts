@@ -115,7 +115,22 @@ class LateralThinkingServer {
   private cleanupOldSessions(): void {
     const now = Date.now();
     for (const [id, session] of this.sessions) {
+      // Clean up old sessions with startTime
       if (session.startTime && now - session.startTime > this.SESSION_TTL) {
+        this.sessions.delete(id);
+        if (this.currentSessionId === id) {
+          this.currentSessionId = null;
+        }
+      }
+      // Fallback: Clean up sessions without startTime that have been completed
+      else if (!session.startTime && session.endTime && now - session.endTime > this.SESSION_TTL) {
+        this.sessions.delete(id);
+        if (this.currentSessionId === id) {
+          this.currentSessionId = null;
+        }
+      }
+      // Additional fallback: Clean up very old sessions without any timestamps
+      else if (!session.startTime && !session.endTime && session.history.length === 0) {
         this.sessions.delete(id);
         if (this.currentSessionId === id) {
           this.currentSessionId = null;
@@ -132,6 +147,11 @@ class LateralThinkingServer {
     this.sessions.clear();
   }
 
+  /**
+   * Get enhanced Six Thinking Hats information including Black Swan awareness
+   * @param color - The hat color to get information for
+   * @returns Hat information with name, focus, emoji, and enhanced focus
+   */
   private getSixHatsInfo(color: SixHatsColor): { name: string; focus: string; emoji: string; enhancedFocus?: string } {
     const hatsInfo = {
       blue: { 
@@ -174,6 +194,11 @@ class LateralThinkingServer {
     return hatsInfo[color];
   }
 
+  /**
+   * Get SCAMPER action information with pre-mortem risk questions
+   * @param action - The SCAMPER action to get information for
+   * @returns Action information with description, emoji, and risk question
+   */
   private getScamperInfo(action: ScamperAction): { description: string; emoji: string; riskQuestion?: string } {
     const scamperInfo = {
       substitute: { 
@@ -314,6 +339,11 @@ class LateralThinkingServer {
     };
   }
 
+  /**
+   * Get critical thinking steps for a technique where adversarial mode is emphasized
+   * @param technique - The lateral thinking technique
+   * @returns Array of step numbers that are critical/adversarial
+   */
   private getCriticalSteps(technique: LateralTechnique): number[] {
     const criticalSteps: Record<LateralTechnique, number[]> = {
       six_hats: [], // determined by hat color, not step number
@@ -326,6 +356,11 @@ class LateralThinkingServer {
     return criticalSteps[technique] || [];
   }
 
+  /**
+   * Determine whether current step is in creative or critical mode
+   * @param data - The lateral thinking data with current step info
+   * @returns Color and symbol for visual mode indication
+   */
   private getModeIndicator(data: LateralThinkingData): { color: typeof chalk; symbol: string } {
     // Check if current step is in critical steps list
     const criticalSteps = this.getCriticalSteps(data.technique);
@@ -348,6 +383,56 @@ class LateralThinkingServer {
       color: isCritical ? chalk.yellow : chalk.green,
       symbol: isCritical ? '⚠️ ' : '✨ '
     };
+  }
+
+  /**
+   * Truncate a word if it exceeds maximum length to prevent layout breaking
+   * @param word - The word to potentially truncate
+   * @param maxLength - Maximum allowed length
+   * @returns Truncated word with ellipsis if needed
+   */
+  private truncateWord(word: string, maxLength: number): string {
+    if (word.length <= maxLength) return word;
+    return word.substring(0, maxLength - 3) + '...';
+  }
+
+  /**
+   * Format the risk identification section for visual output
+   * @param risks - Array of identified risks
+   * @param maxLength - Maximum line length for formatting
+   * @returns Formatted lines for the risk section
+   */
+  private formatRiskSection(risks: string[], maxLength: number): string[] {
+    const parts: string[] = [];
+    const border = '─'.repeat(maxLength);
+    
+    parts.push(`├${border}┤`);
+    parts.push(`│ ${chalk.yellow('⚠️  Risks Identified:'.padEnd(maxLength - 2))} │`);
+    risks.forEach(risk => {
+      parts.push(`│ ${chalk.yellow(`• ${risk}`.padEnd(maxLength - 2))} │`);
+    });
+    
+    return parts;
+  }
+
+  /**
+   * Format the mitigation strategies section for visual output
+   * @param mitigations - Array of mitigation strategies
+   * @param maxLength - Maximum line length for formatting
+   * @param hasRisks - Whether risks section was displayed (affects border)
+   * @returns Formatted lines for the mitigation section
+   */
+  private formatMitigationSection(mitigations: string[], maxLength: number, hasRisks: boolean): string[] {
+    const parts: string[] = [];
+    const border = '─'.repeat(maxLength);
+    
+    if (!hasRisks) parts.push(`├${border}┤`);
+    parts.push(`│ ${chalk.green('✓ Mitigations:'.padEnd(maxLength - 2))} │`);
+    mitigations.forEach(mitigation => {
+      parts.push(`│ ${chalk.green(`• ${mitigation}`.padEnd(maxLength - 2))} │`);
+    });
+    
+    return parts;
   }
 
   private formatOutput(data: LateralThinkingData): string {
@@ -431,11 +516,16 @@ class LateralThinkingServer {
       parts.push(`├${border}┤`);
     }
     
-    // Wrap output text
+    // Wrap output text with word truncation
     const words = output.split(' ');
     let line = '';
-    for (const word of words) {
-      if (line.length + word.length + 1 > maxLength - 4) {
+    const maxWordLength = maxLength - 4;
+    
+    for (let word of words) {
+      // Truncate word if it's too long
+      word = this.truncateWord(word, maxWordLength);
+      
+      if (line.length + word.length + 1 > maxWordLength) {
         parts.push(`│ ${line.padEnd(maxLength - 2)} │`);
         line = word;
       } else {
@@ -446,21 +536,13 @@ class LateralThinkingServer {
       parts.push(`│ ${line.padEnd(maxLength - 2)} │`);
     }
     
-    // Add risk/adversarial section if present
+    // Add risk/adversarial sections using extracted methods
     if (data.risks && data.risks.length > 0) {
-      parts.push(`├${border}┤`);
-      parts.push(`│ ${chalk.yellow('⚠️  Risks Identified:'.padEnd(maxLength - 2))} │`);
-      data.risks.forEach(risk => {
-        parts.push(`│ ${chalk.yellow(`• ${risk}`.padEnd(maxLength - 2))} │`);
-      });
+      parts.push(...this.formatRiskSection(data.risks, maxLength));
     }
     
     if (data.mitigations && data.mitigations.length > 0) {
-      if (!data.risks) parts.push(`├${border}┤`);
-      parts.push(`│ ${chalk.green('✓ Mitigations:'.padEnd(maxLength - 2))} │`);
-      data.mitigations.forEach(mitigation => {
-        parts.push(`│ ${chalk.green(`• ${mitigation}`.padEnd(maxLength - 2))} │`);
-      });
+      parts.push(...this.formatMitigationSection(data.mitigations, maxLength, !!data.risks));
     }
     
     parts.push(`└${border}┘`);
