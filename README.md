@@ -254,6 +254,27 @@ Load a session:
 }
 ```
 
+Export a session:
+```json
+{
+  "sessionOperation": "export",
+  "exportOptions": {
+    "sessionId": "session_12345",
+    "format": "markdown"  // Options: "markdown", "json", "csv"
+  }
+}
+```
+
+### Export Formats
+
+The tool supports three export formats:
+
+- **Markdown**: Human-readable reports with rich formatting
+- **JSON**: Complete structured data for analysis and integration
+- **CSV**: Tabular data for spreadsheets and data visualization
+
+See [examples/export-formats.md](examples/export-formats.md) for detailed export examples and use cases.
+
 ### Auto-Save
 
 Enable automatic saving after each step by adding `"autoSave": true` to your thinking step requests.

@@ -13,6 +13,7 @@ export var PersistenceErrorCode;
     PersistenceErrorCode["PERMISSION_DENIED"] = "PERMISSION_DENIED";
     PersistenceErrorCode["CORRUPTION"] = "CORRUPTION";
     PersistenceErrorCode["IO_ERROR"] = "IO_ERROR";
+    PersistenceErrorCode["EXPORT_FAILED"] = "EXPORT_FAILED";
 })(PersistenceErrorCode || (PersistenceErrorCode = {}));
 /**
  * Custom error class for persistence operations
