@@ -115,7 +115,22 @@ class LateralThinkingServer {
   private cleanupOldSessions(): void {
     const now = Date.now();
     for (const [id, session] of this.sessions) {
+      // Clean up old sessions with startTime
       if (session.startTime && now - session.startTime > this.SESSION_TTL) {
+        this.sessions.delete(id);
+        if (this.currentSessionId === id) {
+          this.currentSessionId = null;
+        }
+      }
+      // Fallback: Clean up sessions without startTime that have been completed
+      else if (!session.startTime && session.endTime && now - session.endTime > this.SESSION_TTL) {
+        this.sessions.delete(id);
+        if (this.currentSessionId === id) {
+          this.currentSessionId = null;
+        }
+      }
+      // Additional fallback: Clean up very old sessions without any timestamps
+      else if (!session.startTime && !session.endTime && session.history.length === 0) {
         this.sessions.delete(id);
         if (this.currentSessionId === id) {
           this.currentSessionId = null;
@@ -132,27 +147,95 @@ class LateralThinkingServer {
     this.sessions.clear();
   }
 
-  private getSixHatsInfo(color: SixHatsColor): { name: string; focus: string; emoji: string } {
+  /**
+   * Get enhanced Six Thinking Hats information including Black Swan awareness
+   * @param color - The hat color to get information for
+   * @returns Hat information with name, focus, emoji, and enhanced focus
+   */
+  private getSixHatsInfo(color: SixHatsColor): { name: string; focus: string; emoji: string; enhancedFocus?: string } {
     const hatsInfo = {
-      blue: { name: 'Blue Hat', focus: 'Process control and overview', emoji: '🔵' },
-      white: { name: 'White Hat', focus: 'Facts and information', emoji: '⚪' },
-      red: { name: 'Red Hat', focus: 'Emotions and intuition', emoji: '🔴' },
-      yellow: { name: 'Yellow Hat', focus: 'Optimism and benefits', emoji: '🟡' },
-      black: { name: 'Black Hat', focus: 'Critical judgment and caution', emoji: '⚫' },
-      green: { name: 'Green Hat', focus: 'Creativity and alternatives', emoji: '🟢' }
+      blue: { 
+        name: 'Blue Hat Plus', 
+        focus: 'Process control and overview', 
+        emoji: '🔵',
+        enhancedFocus: 'Process control with meta-uncertainty awareness'
+      },
+      white: { 
+        name: 'White Hat Plus', 
+        focus: 'Facts and information', 
+        emoji: '⚪',
+        enhancedFocus: 'Facts and information including unknown unknowns'
+      },
+      red: { 
+        name: 'Red Hat Plus', 
+        focus: 'Emotions and intuition', 
+        emoji: '🔴',
+        enhancedFocus: 'Emotions, intuition, and collective behavior prediction'
+      },
+      yellow: { 
+        name: 'Yellow Hat Plus', 
+        focus: 'Optimism and benefits', 
+        emoji: '🟡',
+        enhancedFocus: 'Optimism, benefits, and positive black swans'
+      },
+      black: { 
+        name: 'Black Hat Plus', 
+        focus: 'Critical judgment and caution', 
+        emoji: '⚫',
+        enhancedFocus: 'Critical judgment and catastrophic discontinuities'
+      },
+      green: { 
+        name: 'Green Hat Plus', 
+        focus: 'Creativity and alternatives', 
+        emoji: '🟢',
+        enhancedFocus: 'Creativity and antifragile innovations'
+      }
     };
     return hatsInfo[color];
   }
 
-  private getScamperInfo(action: ScamperAction): { description: string; emoji: string } {
+  /**
+   * Get SCAMPER action information with pre-mortem risk questions
+   * @param action - The SCAMPER action to get information for
+   * @returns Action information with description, emoji, and risk question
+   */
+  private getScamperInfo(action: ScamperAction): { description: string; emoji: string; riskQuestion?: string } {
     const scamperInfo = {
-      substitute: { description: 'Replace parts with alternatives', emoji: '🔄' },
-      combine: { description: 'Merge with other ideas or functions', emoji: '🔗' },
-      adapt: { description: 'Adjust for different contexts', emoji: '🔧' },
-      modify: { description: 'Magnify, minimize, or modify attributes', emoji: '🔍' },
-      put_to_other_use: { description: 'Find new applications', emoji: '🎯' },
-      eliminate: { description: 'Remove unnecessary elements', emoji: '✂️' },
-      reverse: { description: 'Invert or rearrange components', emoji: '🔃' }
+      substitute: { 
+        description: 'Replace parts with alternatives', 
+        emoji: '🔄',
+        riskQuestion: 'What could go wrong with this substitution?'
+      },
+      combine: { 
+        description: 'Merge with other ideas or functions', 
+        emoji: '🔗',
+        riskQuestion: 'What conflicts might arise from combining?'
+      },
+      adapt: { 
+        description: 'Adjust for different contexts', 
+        emoji: '🔧',
+        riskQuestion: 'What assumptions might fail in new contexts?'
+      },
+      modify: { 
+        description: 'Magnify, minimize, or modify attributes', 
+        emoji: '🔍',
+        riskQuestion: 'What breaks when scaled up or down?'
+      },
+      put_to_other_use: { 
+        description: 'Find new applications', 
+        emoji: '🎯',
+        riskQuestion: 'What unintended uses could be harmful?'
+      },
+      eliminate: { 
+        description: 'Remove unnecessary elements', 
+        emoji: '✂️',
+        riskQuestion: 'What dependencies might we be overlooking?'
+      },
+      reverse: { 
+        description: 'Invert or rearrange components', 
+        emoji: '🔃',
+        riskQuestion: 'What assumptions break when reversed?'
+      }
     };
     return scamperInfo[action];
   }
@@ -256,18 +339,28 @@ class LateralThinkingServer {
     };
   }
 
+  /**
+   * Get critical thinking steps for a technique where adversarial mode is emphasized
+   * @param technique - The lateral thinking technique
+   * @returns Array of step numbers that are critical/adversarial
+   */
   private getCriticalSteps(technique: LateralTechnique): number[] {
     const criticalSteps: Record<LateralTechnique, number[]> = {
       six_hats: [], // determined by hat color, not step number
       yes_and: [3], // Evaluate (But) step
-      concept_extraction: [4], // Apply with failure analysis
-      po: [2, 4], // Verification steps
-      random_entry: [3], // Validation step
-      scamper: [] // Primarily creative
+      concept_extraction: [2, 4], // Extract limitations and Apply with risk assessment
+      po: [2, 3, 4], // All verification and testing steps
+      random_entry: [2, 3], // Doubt generation and validation steps
+      scamper: [] // Risk questions integrated into each action
     };
     return criticalSteps[technique] || [];
   }
 
+  /**
+   * Determine whether current step is in creative or critical mode
+   * @param data - The lateral thinking data with current step info
+   * @returns Color and symbol for visual mode indication
+   */
   private getModeIndicator(data: LateralThinkingData): { color: typeof chalk; symbol: string } {
     // Check if current step is in critical steps list
     const criticalSteps = this.getCriticalSteps(data.technique);
@@ -292,6 +385,56 @@ class LateralThinkingServer {
     };
   }
 
+  /**
+   * Truncate a word if it exceeds maximum length to prevent layout breaking
+   * @param word - The word to potentially truncate
+   * @param maxLength - Maximum allowed length
+   * @returns Truncated word with ellipsis if needed
+   */
+  private truncateWord(word: string, maxLength: number): string {
+    if (word.length <= maxLength) return word;
+    return word.substring(0, maxLength - 3) + '...';
+  }
+
+  /**
+   * Format the risk identification section for visual output
+   * @param risks - Array of identified risks
+   * @param maxLength - Maximum line length for formatting
+   * @returns Formatted lines for the risk section
+   */
+  private formatRiskSection(risks: string[], maxLength: number): string[] {
+    const parts: string[] = [];
+    const border = '─'.repeat(maxLength);
+    
+    parts.push(`├${border}┤`);
+    parts.push(`│ ${chalk.yellow('⚠️  Risks Identified:'.padEnd(maxLength - 2))} │`);
+    risks.forEach(risk => {
+      parts.push(`│ ${chalk.yellow(`• ${risk}`.padEnd(maxLength - 2))} │`);
+    });
+    
+    return parts;
+  }
+
+  /**
+   * Format the mitigation strategies section for visual output
+   * @param mitigations - Array of mitigation strategies
+   * @param maxLength - Maximum line length for formatting
+   * @param hasRisks - Whether risks section was displayed (affects border)
+   * @returns Formatted lines for the mitigation section
+   */
+  private formatMitigationSection(mitigations: string[], maxLength: number, hasRisks: boolean): string[] {
+    const parts: string[] = [];
+    const border = '─'.repeat(maxLength);
+    
+    if (!hasRisks) parts.push(`├${border}┤`);
+    parts.push(`│ ${chalk.green('✓ Mitigations:'.padEnd(maxLength - 2))} │`);
+    mitigations.forEach(mitigation => {
+      parts.push(`│ ${chalk.green(`• ${mitigation}`.padEnd(maxLength - 2))} │`);
+    });
+    
+    return parts;
+  }
+
   private formatOutput(data: LateralThinkingData): string {
     const { technique, currentStep, totalSteps, output, hatColor, scamperAction, randomStimulus, provocation, successExample, initialIdea } = data;
     
@@ -306,7 +449,7 @@ class LateralThinkingServer {
         if (hatColor) {
           const hatInfo = this.getSixHatsInfo(hatColor);
           emoji = hatInfo.emoji;
-          techniqueInfo = `${hatInfo.name}: ${hatInfo.focus}`;
+          techniqueInfo = `${hatInfo.name}: ${hatInfo.enhancedFocus || hatInfo.focus}`;
         }
         break;
       case 'po':
@@ -326,11 +469,19 @@ class LateralThinkingServer {
           const actionInfo = this.getScamperInfo(scamperAction);
           emoji = actionInfo.emoji;
           techniqueInfo = `${scamperAction.toUpperCase()}: ${actionInfo.description}`;
+          if (actionInfo.riskQuestion) {
+            techniqueInfo += ` | ${actionInfo.riskQuestion}`;
+          }
         }
         break;
       case 'concept_extraction':
         emoji = '🔍';
-        const stepNames = ['Identify Success', 'Extract Concepts', 'Abstract Patterns', 'Apply to Problem'];
+        const stepNames = [
+          'Identify Success', 
+          'Extract & Analyze Limitations', 
+          'Abstract with Boundaries', 
+          'Apply with Risk Assessment'
+        ];
         techniqueInfo = stepNames[currentStep - 1];
         if (successExample && currentStep === 1) {
           techniqueInfo += `: ${successExample}`;
@@ -365,11 +516,16 @@ class LateralThinkingServer {
       parts.push(`├${border}┤`);
     }
     
-    // Wrap output text
+    // Wrap output text with word truncation
     const words = output.split(' ');
     let line = '';
-    for (const word of words) {
-      if (line.length + word.length + 1 > maxLength - 4) {
+    const maxWordLength = maxLength - 4;
+    
+    for (let word of words) {
+      // Truncate word if it's too long
+      word = this.truncateWord(word, maxWordLength);
+      
+      if (line.length + word.length + 1 > maxWordLength) {
         parts.push(`│ ${line.padEnd(maxLength - 2)} │`);
         line = word;
       } else {
@@ -380,21 +536,13 @@ class LateralThinkingServer {
       parts.push(`│ ${line.padEnd(maxLength - 2)} │`);
     }
     
-    // Add risk/adversarial section if present
+    // Add risk/adversarial sections using extracted methods
     if (data.risks && data.risks.length > 0) {
-      parts.push(`├${border}┤`);
-      parts.push(`│ ${chalk.yellow('⚠️  Risks Identified:'.padEnd(maxLength - 2))} │`);
-      data.risks.forEach(risk => {
-        parts.push(`│ ${chalk.yellow(`• ${risk}`.padEnd(maxLength - 2))} │`);
-      });
+      parts.push(...this.formatRiskSection(data.risks, maxLength));
     }
     
     if (data.mitigations && data.mitigations.length > 0) {
-      if (!data.risks) parts.push(`├${border}┤`);
-      parts.push(`│ ${chalk.green('✓ Mitigations:'.padEnd(maxLength - 2))} │`);
-      data.mitigations.forEach(mitigation => {
-        parts.push(`│ ${chalk.green(`• ${mitigation}`.padEnd(maxLength - 2))} │`);
-      });
+      parts.push(...this.formatMitigationSection(data.mitigations, maxLength, !!data.risks));
     }
     
     parts.push(`└${border}┘`);
@@ -423,7 +571,7 @@ class LateralThinkingServer {
   private getTechniqueSteps(technique: LateralTechnique): number {
     switch (technique) {
       case 'six_hats': return 6;
-      case 'po': return 4; // Create provocation, suspend judgment, extract principles, develop ideas
+      case 'po': return 4; // Create provocation, verify provocation, extract & test principles, develop robust solutions
       case 'random_entry': return 3; // Random stimulus, generate connections, develop solutions
       case 'scamper': return 7;
       case 'concept_extraction': return 4; // Identify success, extract concepts, abstract patterns, apply to problem
@@ -613,24 +761,24 @@ class LateralThinkingServer {
         if (nextStep <= 6) {
           const nextHat = hatOrder[nextStep - 1];
           const hatInfo = this.getSixHatsInfo(nextHat);
-          return `Next: ${hatInfo.name} - Focus on ${hatInfo.focus}`;
+          return `Next: ${hatInfo.name} - Focus on ${hatInfo.enhancedFocus || hatInfo.focus}`;
         }
         break;
         
       case 'po':
         const poSteps = [
           'Create a provocative statement (Po:)',
-          'Suspend judgment and explore the provocation',
-          'Extract useful principles from the provocation',
-          'Develop practical ideas from the principles'
+          'Suspend judgment and explore the provocation (then challenge it)',
+          'Extract and verify principles through hypothesis testing',
+          'Develop robust solutions addressing failure modes'
         ];
         return poSteps[nextStep - 1] || 'Complete the process';
         
       case 'random_entry':
         const randomSteps = [
           'Introduce a random stimulus word/concept',
-          'Generate connections between the stimulus and problem',
-          'Develop solutions from the connections'
+          'Generate connections with systematic doubt ("Is this always true?")',
+          'Validate insights before developing solutions'
         ];
         return randomSteps[nextStep - 1] || 'Complete the process';
         
@@ -649,9 +797,9 @@ class LateralThinkingServer {
       case 'concept_extraction':
         const conceptSteps = [
           'Identify a successful solution/example from any domain',
-          'Extract the key concepts that make it successful',
-          'Abstract these concepts into transferable patterns',
-          'Apply the abstracted patterns to your problem'
+          'Extract key concepts and analyze where they wouldn\'t work',
+          'Abstract patterns with domain boundary identification',
+          'Apply patterns only where success probability is high'
         ];
         return conceptSteps[nextStep - 1] || 'Complete the process';
         
@@ -671,57 +819,60 @@ class LateralThinkingServer {
 
 const LATERAL_THINKING_TOOL: Tool = {
   name: "lateralthinking",
-  description: `A structured tool for lateral and creative thinking using proven creativity techniques.
-This tool guides you through systematic creative problem-solving methods that break conventional thinking patterns.
+  description: `A unified creative-adversarial thinking tool that combines generative techniques with systematic verification.
+This enhanced framework integrates creative problem-solving with critical analysis and risk assessment.
 
-Supported techniques:
-1. **six_hats**: Edward de Bono's Six Thinking Hats for comprehensive perspective analysis
-   - Blue Hat: Process control and overview
-   - White Hat: Facts and information
-   - Red Hat: Emotions and intuition  
-   - Yellow Hat: Optimism and benefits
-   - Black Hat: Critical judgment and caution
-   - Green Hat: Creativity and alternatives
+Enhanced Techniques (with Unified Framework):
 
-2. **po**: Provocative Operation technique for escaping thinking patterns
+1. **six_hats**: Six Thinking Hats Plus with Black Swan Awareness
+   - Blue Hat Plus: Process control with meta-uncertainty awareness
+   - White Hat Plus: Facts including unknown unknowns consideration
+   - Red Hat Plus: Emotions with collective behavior prediction
+   - Yellow Hat Plus: Optimism seeking positive black swans
+   - Black Hat Plus: Critical judgment of catastrophic discontinuities
+   - Green Hat Plus: Creativity focused on antifragile innovations
+
+2. **po**: Provocative Operation with Systematic Verification
    - Create provocative statements
-   - Suspend judgment
-   - Extract principles
-   - Develop practical ideas
+   - Challenge assumptions after exploration
+   - Test principles through hypothesis verification
+   - Develop robust solutions addressing failure modes
 
-3. **random_entry**: Random stimulus technique for unexpected connections
-   - Introduce random element
-   - Generate associations
-   - Develop solutions from connections
+3. **random_entry**: Random Stimulus with Systematic Doubt
+   - Introduce random elements
+   - Generate connections with Cartesian doubt ("Is this always true?")
+   - Validate insights before solution development
 
-4. **scamper**: Systematic idea generation through transformations
-   - Substitute, Combine, Adapt, Modify, Put to other use, Eliminate, Reverse
+4. **scamper**: Transformations with Pre-Mortem Analysis
+   - Each action includes "What could go wrong?" assessment
+   - Risk mitigation built into solutions
+   - Stress-testing for each transformation
 
-5. **concept_extraction**: Transfer successful principles across domains
+5. **concept_extraction**: Pattern Transfer with Failure Mode Analysis
    - Identify successful examples
-   - Extract core concepts
-   - Abstract into patterns
-   - Apply to new problems
+   - Extract concepts and analyze where they wouldn't work
+   - Define domain boundaries for patterns
+   - Apply only where success probability is high
 
-6. **yes_and**: Collaborative ideation with critical evaluation
+6. **yes_and**: Collaborative Ideation with Critical Evaluation
    - Accept initial ideas (Yes)
-   - Build creatively upon them (And)
-   - Evaluate potential issues (But)
+   - Build creatively (And)
+   - Evaluate risks and issues (But)
    - Integrate into robust solutions
 
-When to use this tool:
-- Breaking out of conventional thinking patterns
-- Generating novel solutions to stubborn problems
-- Exploring problems from multiple perspectives
-- Systematic creative ideation
-- When analytical approaches have reached their limits
+Key Features:
+- Dual creative/critical thinking modes
+- Risk and failure mode identification
+- Antifragile solution design
+- Black swan consideration
+- Visual indicators for generative vs adversarial modes
+- Meta-learning metrics tracking
 
-Features:
-- Step-by-step guidance through each technique
-- Support for revisions and branching
-- Technique-specific parameters and outputs
-- Visual progress tracking
-- Insights extraction upon completion`,
+When to use:
+- Complex problems requiring both innovation and risk assessment
+- Situations with high uncertainty or potential failure costs
+- When robust, stress-tested solutions are needed
+- Breaking mental models while maintaining critical thinking`,
   inputSchema: {
     type: "object",
     properties: {

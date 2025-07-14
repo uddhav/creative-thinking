@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a **Creative Thinking MCP Server** that implements structured lateral thinking techniques as an MCP (Model Context Protocol) tool. The server provides six creativity methodologies: Six Thinking Hats, PO (Provocative Operation), Random Entry, SCAMPER, Concept Extraction, and Yes, And...
+This is a **Creative Thinking MCP Server** that implements a unified creative-adversarial framework combining generative thinking techniques with systematic verification and risk assessment. The server provides six enhanced methodologies: Six Thinking Hats Plus (with Black Swan awareness), PO with Systematic Verification, Random Entry with Systematic Doubt, SCAMPER with Pre-Mortem Analysis, Concept Extraction with Failure Mode Analysis, and Yes, And with Critical Evaluation.
 
 ## Development Commands
 
@@ -132,7 +132,7 @@ The implementation now supports the unified generative/adversarial framework fro
 
 ## Important Implementation Details
 
-1. **Session ID Generation**: Uses timestamp-based IDs for uniqueness (format: `session_${Date.now()}`)
+1. **Session ID Generation**: Uses UUID for secure, unique IDs (format: `session_${randomUUID()}`)
 2. **Revision Support**: Creates branches in session history for exploring alternatives
 3. **Session Completion**: When `nextStepNeeded` is false, triggers insight extraction and session summary
 4. **Error Handling**: Validates parameters and provides clear error messages
@@ -144,12 +144,12 @@ The implementation now supports the unified generative/adversarial framework fro
    - Progress indicators with filled/empty circles
 7. **Step Validation**: Ensures steps are sequential and within bounds for each technique
 8. **Technique Step Counts**:
-   - Six Hats: 6 steps (one per hat color)
-   - PO: 4 steps (provocation, suspend judgment, extract principles, develop ideas)
-   - Random Entry: 3 steps (stimulus, connections, solutions)
-   - SCAMPER: 7 steps (one per action)
-   - Concept Extraction: 4 steps (identify success, extract concepts, abstract patterns, apply to problem)
-   - Yes, And...: 4 steps (accept (yes), build (and), evaluate (but), integrate)
+   - Six Hats Plus: 6 steps (enhanced hat colors with meta-awareness)
+   - PO Verified: 4 steps (provocation, verify provocation, extract & test principles, develop robust solutions)
+   - Random Entry Doubted: 3 steps (stimulus, connections with doubt, validated solutions)
+   - SCAMPER Pre-Mortem: 7 steps (each action with "what could go wrong?" analysis)
+   - Concept Extraction Bounded: 4 steps (identify, extract with limitations, abstract with boundaries, apply with risk assessment)
+   - Yes, And Evaluated: 4 steps (accept (yes), build (and), evaluate risks (but), integrate)
 
 ## Code Style Guidelines
 
