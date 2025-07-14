@@ -15,6 +15,7 @@ type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green';
 type ScamperAction = 'substitute' | 'combine' | 'adapt' | 'modify' | 'put_to_other_use' | 'eliminate' | 'reverse';
 
 interface LateralThinkingData {
+  sessionId?: string; // For continuing existing sessions
   technique: LateralTechnique;
   problem: string;
   currentStep: number;
@@ -96,9 +97,39 @@ class LateralThinkingServer {
   private sessions: Map<string, SessionData> = new Map();
   private currentSessionId: string | null = null;
   private disableThoughtLogging: boolean;
+  private readonly SESSION_TTL = 24 * 60 * 60 * 1000; // 24 hours
+  private cleanupInterval: NodeJS.Timeout | null = null;
 
   constructor() {
     this.disableThoughtLogging = (process.env.DISABLE_THOUGHT_LOGGING || "").toLowerCase() === "true";
+    this.startSessionCleanup();
+  }
+
+  private startSessionCleanup(): void {
+    // Run cleanup every hour
+    this.cleanupInterval = setInterval(() => {
+      this.cleanupOldSessions();
+    }, 60 * 60 * 1000);
+  }
+
+  private cleanupOldSessions(): void {
+    const now = Date.now();
+    for (const [id, session] of this.sessions) {
+      if (session.startTime && now - session.startTime > this.SESSION_TTL) {
+        this.sessions.delete(id);
+        if (this.currentSessionId === id) {
+          this.currentSessionId = null;
+        }
+      }
+    }
+  }
+
+  public destroy(): void {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+    }
+    this.sessions.clear();
   }
 
   private getSixHatsInfo(color: SixHatsColor): { name: string; focus: string; emoji: string } {
@@ -192,6 +223,7 @@ class LateralThinkingServer {
     }
 
     return {
+      sessionId: data.sessionId as string | undefined,
       technique: data.technique as LateralTechnique,
       problem: data.problem,
       currentStep: data.currentStep,
@@ -224,33 +256,26 @@ class LateralThinkingServer {
     };
   }
 
+  private getCriticalSteps(technique: LateralTechnique): number[] {
+    const criticalSteps: Record<LateralTechnique, number[]> = {
+      six_hats: [], // determined by hat color, not step number
+      yes_and: [3], // Evaluate (But) step
+      concept_extraction: [4], // Apply with failure analysis
+      po: [2, 4], // Verification steps
+      random_entry: [3], // Validation step
+      scamper: [] // Primarily creative
+    };
+    return criticalSteps[technique] || [];
+  }
+
   private getModeIndicator(data: LateralThinkingData): { color: typeof chalk; symbol: string } {
-    // Determine if current step is primarily creative or critical
-    let isCritical = false;
+    // Check if current step is in critical steps list
+    const criticalSteps = this.getCriticalSteps(data.technique);
+    let isCritical = criticalSteps.includes(data.currentStep);
     
-    switch (data.technique) {
-      case 'six_hats':
-        isCritical = data.hatColor === 'black' || data.hatColor === 'white';
-        break;
-      case 'yes_and':
-        isCritical = data.currentStep === 3; // Evaluate (But) step
-        break;
-      case 'concept_extraction':
-        isCritical = data.currentStep === 4; // Apply with failure analysis
-        break;
-      case 'po':
-        isCritical = data.currentStep === 2 || data.currentStep === 4; // Verification steps
-        break;
-      case 'random_entry':
-        isCritical = data.currentStep === 3; // Validation step
-        break;
-      case 'scamper':
-        // SCAMPER is primarily creative, but can be critical if risks are identified
-        isCritical = false;
-        break;
-      default:
-        // Default to creative mode for unknown techniques
-        isCritical = false;
+    // Special handling for six_hats based on hat color
+    if (data.technique === 'six_hats') {
+      isCritical = data.hatColor === 'black' || data.hatColor === 'white';
     }
     
     // Override based on presence of risk data
@@ -270,6 +295,7 @@ class LateralThinkingServer {
   private formatOutput(data: LateralThinkingData): string {
     const { technique, currentStep, totalSteps, output, hatColor, scamperAction, randomStimulus, provocation, successExample, initialIdea } = data;
     
+    const parts: string[] = [];
     let header = '';
     let techniqueInfo = '';
     let emoji = '🧠';
@@ -331,12 +357,12 @@ class LateralThinkingServer {
     const maxLength = Math.max(header.length, techniqueInfo.length, output.length) + 4;
     const border = '─'.repeat(maxLength);
 
-    let result = `\n┌${border}┐\n`;
-    result += `│ ${header.padEnd(maxLength - 2)} │\n`;
+    parts.push(`\n┌${border}┐`);
+    parts.push(`│ ${header.padEnd(maxLength - 2)} │`);
     
     if (techniqueInfo) {
-      result += `│ ${chalk.gray(techniqueInfo.padEnd(maxLength - 2))} │\n`;
-      result += `├${border}┤\n`;
+      parts.push(`│ ${chalk.gray(techniqueInfo.padEnd(maxLength - 2))} │`);
+      parts.push(`├${border}┤`);
     }
     
     // Wrap output text
@@ -344,40 +370,40 @@ class LateralThinkingServer {
     let line = '';
     for (const word of words) {
       if (line.length + word.length + 1 > maxLength - 4) {
-        result += `│ ${line.padEnd(maxLength - 2)} │\n`;
+        parts.push(`│ ${line.padEnd(maxLength - 2)} │`);
         line = word;
       } else {
         line += (line ? ' ' : '') + word;
       }
     }
     if (line) {
-      result += `│ ${line.padEnd(maxLength - 2)} │\n`;
+      parts.push(`│ ${line.padEnd(maxLength - 2)} │`);
     }
     
     // Add risk/adversarial section if present
     if (data.risks && data.risks.length > 0) {
-      result += `├${border}┤\n`;
-      result += `│ ${chalk.yellow('⚠️  Risks Identified:'.padEnd(maxLength - 2))} │\n`;
+      parts.push(`├${border}┤`);
+      parts.push(`│ ${chalk.yellow('⚠️  Risks Identified:'.padEnd(maxLength - 2))} │`);
       data.risks.forEach(risk => {
-        result += `│ ${chalk.yellow(`• ${risk}`.padEnd(maxLength - 2))} │\n`;
+        parts.push(`│ ${chalk.yellow(`• ${risk}`.padEnd(maxLength - 2))} │`);
       });
     }
     
     if (data.mitigations && data.mitigations.length > 0) {
-      if (!data.risks) result += `├${border}┤\n`;
-      result += `│ ${chalk.green('✓ Mitigations:'.padEnd(maxLength - 2))} │\n`;
+      if (!data.risks) parts.push(`├${border}┤`);
+      parts.push(`│ ${chalk.green('✓ Mitigations:'.padEnd(maxLength - 2))} │`);
       data.mitigations.forEach(mitigation => {
-        result += `│ ${chalk.green(`• ${mitigation}`.padEnd(maxLength - 2))} │\n`;
+        parts.push(`│ ${chalk.green(`• ${mitigation}`.padEnd(maxLength - 2))} │`);
       });
     }
     
-    result += `└${border}┘`;
+    parts.push(`└${border}┘`);
     
-    return result;
+    return parts.join('\n');
   }
 
   private initializeSession(technique: LateralTechnique, problem: string): string {
-    const sessionId = `session_${Date.now()}_${randomUUID()}`;
+    const sessionId = `session_${randomUUID()}`;
     this.sessions.set(sessionId, {
       technique,
       problem,
@@ -391,7 +417,6 @@ class LateralThinkingServer {
         antifragileFeatures: 0
       }
     });
-    this.currentSessionId = sessionId;
     return sessionId;
   }
 
@@ -470,16 +495,28 @@ class LateralThinkingServer {
     try {
       const validatedInput = this.validateInput(input);
       
-      // Initialize session if this is the first step
-      if (validatedInput.currentStep === 1 && !validatedInput.isRevision) {
-        const sessionId = this.initializeSession(validatedInput.technique, validatedInput.problem);
+      let sessionId: string;
+      let session: SessionData | undefined;
+      
+      // Handle session initialization or continuation
+      if (validatedInput.currentStep === 1 && !validatedInput.isRevision && !validatedInput.sessionId) {
+        // Create new session
+        sessionId = this.initializeSession(validatedInput.technique, validatedInput.problem);
         validatedInput.totalSteps = this.getTechniqueSteps(validatedInput.technique);
+        session = this.sessions.get(sessionId);
+      } else if (validatedInput.sessionId) {
+        // Continue existing session
+        sessionId = validatedInput.sessionId;
+        session = this.sessions.get(sessionId);
+        if (!session) {
+          throw new Error(`Session ${sessionId} not found. It may have expired.`);
+        }
+      } else {
+        throw new Error('No session ID provided for continuing session. Include sessionId from previous response.');
       }
       
-      // Get current session
-      const session = this.currentSessionId ? this.sessions.get(this.currentSessionId) : null;
       if (!session) {
-        throw new Error('No active session. Start with step 1.');
+        throw new Error('Failed to get or create session.');
       }
       
       // Add to history
@@ -515,7 +552,7 @@ class LateralThinkingServer {
       
       // Generate response
       const response: LateralThinkingResponse = {
-        sessionId: this.currentSessionId || '',
+        sessionId: sessionId,
         technique: validatedInput.technique,
         currentStep: validatedInput.currentStep,
         totalSteps: validatedInput.totalSteps,
@@ -688,6 +725,10 @@ Features:
   inputSchema: {
     type: "object",
     properties: {
+      sessionId: {
+        type: "string",
+        description: "Session ID from previous response (required for steps 2+)"
+      },
       technique: {
         type: "string",
         enum: ["six_hats", "po", "random_entry", "scamper", "concept_extraction", "yes_and"],
