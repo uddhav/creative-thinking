@@ -4,15 +4,33 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { CallToolRequestSchema, ListToolsRequestSchema, } from "@modelcontextprotocol/sdk/types.js";
 import chalk from 'chalk';
 import { randomUUID } from 'crypto';
+import { createAdapter, getDefaultConfig } from './persistence/index.js';
 class LateralThinkingServer {
     sessions = new Map();
     currentSessionId = null;
     disableThoughtLogging;
     SESSION_TTL = 24 * 60 * 60 * 1000; // 24 hours
     cleanupInterval = null;
+    persistenceAdapter = null;
     constructor() {
         this.disableThoughtLogging = (process.env.DISABLE_THOUGHT_LOGGING || "").toLowerCase() === "true";
         this.startSessionCleanup();
+        this.initializePersistence();
+    }
+    async initializePersistence() {
+        try {
+            const persistenceType = (process.env.PERSISTENCE_TYPE || 'filesystem');
+            const config = getDefaultConfig(persistenceType);
+            // Override with environment variables if provided
+            if (process.env.PERSISTENCE_PATH) {
+                config.options.path = process.env.PERSISTENCE_PATH;
+            }
+            this.persistenceAdapter = await createAdapter(config);
+        }
+        catch (error) {
+            console.error('Failed to initialize persistence:', error);
+            // Continue without persistence
+        }
     }
     startSessionCleanup() {
         // Run cleanup every hour
@@ -52,6 +70,337 @@ class LateralThinkingServer {
             this.cleanupInterval = null;
         }
         this.sessions.clear();
+    }
+    /**
+     * Handle session management operations
+     */
+    async handleSessionOperation(input) {
+        if (!this.persistenceAdapter) {
+            return {
+                content: [{
+                        type: "text",
+                        text: JSON.stringify({
+                            error: "Persistence not available",
+                            status: 'failed'
+                        }, null, 2)
+                    }],
+                isError: true
+            };
+        }
+        switch (input.sessionOperation) {
+            case 'save':
+                return this.handleSaveOperation(input);
+            case 'load':
+                return this.handleLoadOperation(input);
+            case 'list':
+                return this.handleListOperation(input);
+            case 'delete':
+                return this.handleDeleteOperation(input);
+            case 'export':
+                return this.handleExportOperation(input);
+            default:
+                return {
+                    content: [{
+                            type: "text",
+                            text: JSON.stringify({
+                                error: `Unknown session operation: ${input.sessionOperation}`,
+                                status: 'failed'
+                            }, null, 2)
+                        }],
+                    isError: true
+                };
+        }
+    }
+    /**
+     * Save current session
+     */
+    async handleSaveOperation(input) {
+        try {
+            if (!this.currentSessionId || !this.sessions.has(this.currentSessionId)) {
+                throw new Error('No active session to save');
+            }
+            const session = this.sessions.get(this.currentSessionId);
+            // Update session with save options
+            if (input.saveOptions?.sessionName) {
+                session.name = input.saveOptions.sessionName;
+            }
+            if (input.saveOptions?.tags) {
+                session.tags = input.saveOptions.tags;
+            }
+            await this.saveSessionToPersistence(this.currentSessionId, session);
+            return {
+                content: [{
+                        type: "text",
+                        text: JSON.stringify({
+                            success: true,
+                            sessionId: this.currentSessionId,
+                            message: 'Session saved successfully',
+                            savedAt: new Date().toISOString()
+                        }, null, 2)
+                    }]
+            };
+        }
+        catch (error) {
+            return {
+                content: [{
+                        type: "text",
+                        text: JSON.stringify({
+                            error: error instanceof Error ? error.message : String(error),
+                            status: 'failed'
+                        }, null, 2)
+                    }]
+            };
+        }
+    }
+    /**
+     * Load a saved session
+     */
+    async handleLoadOperation(input) {
+        try {
+            if (!input.loadOptions?.sessionId) {
+                throw new Error('Session ID required for load operation');
+            }
+            const loadedState = await this.persistenceAdapter.load(input.loadOptions.sessionId);
+            if (!loadedState) {
+                throw new Error('Session not found');
+            }
+            // Convert persistence state to session data
+            const session = {
+                technique: loadedState.technique,
+                problem: loadedState.problem,
+                history: loadedState.history.map((h) => ({
+                    ...h.input,
+                    timestamp: h.timestamp
+                })),
+                branches: Object.entries(loadedState.branches).reduce((acc, [key, value]) => {
+                    acc[key] = value;
+                    return acc;
+                }, {}),
+                insights: loadedState.insights,
+                startTime: loadedState.startTime,
+                endTime: loadedState.endTime,
+                metrics: loadedState.metrics,
+                tags: loadedState.tags,
+                name: loadedState.name
+            };
+            // Load into memory
+            this.sessions.set(loadedState.id, session);
+            this.currentSessionId = loadedState.id;
+            const continueFrom = input.loadOptions.continueFrom || session.history.length;
+            return {
+                content: [{
+                        type: "text",
+                        text: JSON.stringify({
+                            success: true,
+                            sessionId: loadedState.id,
+                            technique: session.technique,
+                            problem: session.problem,
+                            currentStep: continueFrom,
+                            totalSteps: session.history[0]?.totalSteps || this.getTechniqueSteps(session.technique),
+                            message: 'Session loaded successfully',
+                            continueFrom
+                        }, null, 2)
+                    }]
+            };
+        }
+        catch (error) {
+            return {
+                content: [{
+                        type: "text",
+                        text: JSON.stringify({
+                            error: error instanceof Error ? error.message : String(error),
+                            status: 'failed'
+                        }, null, 2)
+                    }]
+            };
+        }
+    }
+    /**
+     * List saved sessions
+     */
+    async handleListOperation(input) {
+        try {
+            const options = input.listOptions || {};
+            const metadata = await this.persistenceAdapter.list(options);
+            // Format visual output
+            const visualOutput = this.formatSessionList(metadata);
+            return {
+                content: [{
+                        type: "text",
+                        text: visualOutput
+                    }]
+            };
+        }
+        catch (error) {
+            return {
+                content: [{
+                        type: "text",
+                        text: JSON.stringify({
+                            error: error instanceof Error ? error.message : String(error),
+                            status: 'failed'
+                        }, null, 2)
+                    }]
+            };
+        }
+    }
+    /**
+     * Delete a saved session
+     */
+    async handleDeleteOperation(input) {
+        try {
+            if (!input.deleteOptions?.sessionId) {
+                throw new Error('Session ID required for delete operation');
+            }
+            const deleted = await this.persistenceAdapter.delete(input.deleteOptions.sessionId);
+            return {
+                content: [{
+                        type: "text",
+                        text: JSON.stringify({
+                            success: deleted,
+                            sessionId: input.deleteOptions.sessionId,
+                            message: deleted ? 'Session deleted successfully' : 'Session not found'
+                        }, null, 2)
+                    }]
+            };
+        }
+        catch (error) {
+            return {
+                content: [{
+                        type: "text",
+                        text: JSON.stringify({
+                            error: error instanceof Error ? error.message : String(error),
+                            status: 'failed'
+                        }, null, 2)
+                    }]
+            };
+        }
+    }
+    /**
+     * Export a session
+     */
+    async handleExportOperation(input) {
+        try {
+            if (!input.exportOptions?.sessionId || !input.exportOptions?.format) {
+                throw new Error('Session ID and format required for export operation');
+            }
+            const data = await this.persistenceAdapter.export(input.exportOptions.sessionId, input.exportOptions.format);
+            return {
+                content: [{
+                        type: "text",
+                        text: data.toString()
+                    }]
+            };
+        }
+        catch (error) {
+            return {
+                content: [{
+                        type: "text",
+                        text: JSON.stringify({
+                            error: error instanceof Error ? error.message : String(error),
+                            status: 'failed'
+                        }, null, 2)
+                    }]
+            };
+        }
+    }
+    /**
+     * Save session to persistence adapter
+     */
+    async saveSessionToPersistence(sessionId, session) {
+        if (!this.persistenceAdapter)
+            return;
+        const state = {
+            id: sessionId,
+            problem: session.problem,
+            technique: session.technique,
+            currentStep: session.history.length,
+            totalSteps: session.history[0]?.totalSteps || this.getTechniqueSteps(session.technique),
+            history: session.history.map((item, index) => ({
+                step: index + 1,
+                timestamp: item.timestamp || new Date().toISOString(),
+                input: item,
+                output: item
+            })),
+            branches: session.branches,
+            insights: session.insights,
+            startTime: session.startTime,
+            endTime: session.endTime,
+            metrics: session.metrics,
+            tags: session.tags,
+            name: session.name
+        };
+        await this.persistenceAdapter.save(sessionId, state);
+    }
+    /**
+     * Format session list for visual output
+     */
+    formatSessionList(metadata) {
+        const lines = [
+            '',
+            chalk.bold('📚 Saved Creative Thinking Sessions'),
+            '═'.repeat(50),
+            ''
+        ];
+        if (metadata.length === 0) {
+            lines.push('No saved sessions found.');
+            return lines.join('\n');
+        }
+        for (const session of metadata) {
+            const emoji = this.getTechniqueEmoji(session.technique);
+            const progress = this.formatProgress(session.stepsCompleted, session.totalSteps);
+            const status = session.status === 'completed' ? '✓' : '';
+            const timeAgo = this.formatTimeAgo(session.updatedAt);
+            lines.push(`📝 ${chalk.bold(session.name || session.problem)}`);
+            lines.push(`   Technique: ${emoji} ${session.technique.replace('_', ' ').toUpperCase()}`);
+            lines.push(`   Progress: ${progress} ${session.stepsCompleted}/${session.totalSteps} steps ${status}`);
+            lines.push(`   Updated: ${timeAgo}`);
+            if (session.tags.length > 0) {
+                lines.push(`   Tags: ${session.tags.join(', ')}`);
+            }
+            lines.push('');
+        }
+        lines.push(`Showing ${metadata.length} sessions.`);
+        return lines.join('\n');
+    }
+    /**
+     * Get emoji for technique
+     */
+    getTechniqueEmoji(technique) {
+        const emojis = {
+            six_hats: '🎩',
+            po: '💡',
+            random_entry: '🎲',
+            scamper: '🔄',
+            concept_extraction: '🔍',
+            yes_and: '🤝'
+        };
+        return emojis[technique] || '🧠';
+    }
+    /**
+     * Format progress bar
+     */
+    formatProgress(completed, total) {
+        const percentage = Math.round((completed / total) * 100);
+        const filled = Math.round((completed / total) * 10);
+        const empty = 10 - filled;
+        return '█'.repeat(filled) + '░'.repeat(empty);
+    }
+    /**
+     * Format time ago
+     */
+    formatTimeAgo(date) {
+        const now = new Date();
+        const diff = now.getTime() - date.getTime();
+        const minutes = Math.floor(diff / 60000);
+        const hours = Math.floor(minutes / 60);
+        const days = Math.floor(hours / 24);
+        if (days > 0)
+            return `${days} day${days > 1 ? 's' : ''} ago`;
+        if (hours > 0)
+            return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+        if (minutes > 0)
+            return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+        return 'just now';
     }
     /**
      * Get enhanced Six Thinking Hats information including Black Swan awareness
@@ -202,6 +551,37 @@ class LateralThinkingServer {
         if (data.blackSwans && (!Array.isArray(data.blackSwans) || data.blackSwans.some(b => typeof b !== 'string'))) {
             throw new Error('blackSwans must be an array of strings');
         }
+        // Validate session management operations
+        if (data.sessionOperation) {
+            if (!['save', 'load', 'list', 'delete', 'export'].includes(data.sessionOperation)) {
+                throw new Error('Invalid sessionOperation: must be one of save, load, list, delete, export');
+            }
+            // For regular operations, technique and problem are not required
+            if (data.sessionOperation !== 'save') {
+                // Override the required field checks for session operations
+                data.technique = data.technique || 'six_hats'; // dummy value
+                data.problem = data.problem || 'session operation'; // dummy value
+                data.currentStep = data.currentStep || 1; // dummy value
+                data.totalSteps = data.totalSteps || 1; // dummy value
+                data.output = data.output || ''; // dummy value
+                data.nextStepNeeded = data.nextStepNeeded ?? false; // dummy value
+            }
+            // Validate operation-specific options
+            if (data.sessionOperation === 'load' && !data.loadOptions?.sessionId) {
+                throw new Error('sessionId is required in loadOptions for load operation');
+            }
+            if (data.sessionOperation === 'delete' && !data.deleteOptions?.sessionId) {
+                throw new Error('sessionId is required in deleteOptions for delete operation');
+            }
+            if (data.sessionOperation === 'export') {
+                if (!data.exportOptions?.sessionId) {
+                    throw new Error('sessionId is required in exportOptions for export operation');
+                }
+                if (!data.exportOptions?.format) {
+                    throw new Error('format is required in exportOptions for export operation');
+                }
+            }
+        }
         return {
             sessionId: data.sessionId,
             technique: data.technique,
@@ -233,6 +613,13 @@ class LateralThinkingServer {
             revisesStep: data.revisesStep,
             branchFromStep: data.branchFromStep,
             branchId: data.branchId,
+            sessionOperation: data.sessionOperation,
+            saveOptions: data.saveOptions,
+            loadOptions: data.loadOptions,
+            listOptions: data.listOptions,
+            deleteOptions: data.deleteOptions,
+            exportOptions: data.exportOptions,
+            autoSave: data.autoSave,
         };
     }
     /**
@@ -426,7 +813,17 @@ class LateralThinkingServer {
         return parts.join('\n');
     }
     initializeSession(technique, problem) {
-        const sessionId = `session_${randomUUID()}`;
+        let sessionId;
+        let attempts = 0;
+        const MAX_ATTEMPTS = 10;
+        // Generate unique session ID with collision detection
+        do {
+            sessionId = `session_${randomUUID()}`;
+            attempts++;
+            if (attempts > MAX_ATTEMPTS) {
+                throw new Error('Failed to generate unique session ID after 10 attempts');
+            }
+        } while (this.sessions.has(sessionId));
         this.sessions.set(sessionId, {
             technique,
             problem,
@@ -507,9 +904,13 @@ class LateralThinkingServer {
         }
         return insights;
     }
-    processLateralThinking(input) {
+    async processLateralThinking(input) {
         try {
             const validatedInput = this.validateInput(input);
+            // Handle session operations first
+            if (validatedInput.sessionOperation) {
+                return await this.handleSessionOperation(validatedInput);
+            }
             let sessionId;
             let session;
             // Handle session initialization or continuation
@@ -533,8 +934,12 @@ class LateralThinkingServer {
             if (!session) {
                 throw new Error('Failed to get or create session.');
             }
-            // Add to history
-            session.history.push(validatedInput);
+            // Add to history with proper timestamp
+            const historyEntry = {
+                ...validatedInput,
+                timestamp: new Date().toISOString()
+            };
+            session.history.push(historyEntry);
             // Update metrics
             if (session.metrics) {
                 // Count risks identified
@@ -589,6 +994,17 @@ class LateralThinkingServer {
             // Add technique-specific guidance for next step
             if (validatedInput.nextStepNeeded) {
                 response.nextStepGuidance = this.getNextStepGuidance(validatedInput);
+            }
+            // Auto-save if enabled
+            if (validatedInput.autoSave && this.persistenceAdapter && session) {
+                try {
+                    await this.saveSessionToPersistence(sessionId, session);
+                }
+                catch (error) {
+                    console.error('Auto-save failed:', error);
+                    // Add auto-save failure to response
+                    response.autoSaveError = error instanceof Error ? error.message : 'Auto-save failed';
+                }
             }
             return {
                 content: [{
@@ -864,6 +1280,114 @@ When to use:
                 type: "array",
                 items: { type: "string" },
                 description: "Low probability, high impact events to consider (unified framework)"
+            },
+            sessionOperation: {
+                type: "string",
+                enum: ["save", "load", "list", "delete", "export"],
+                description: "Session management operation to perform"
+            },
+            saveOptions: {
+                type: "object",
+                properties: {
+                    sessionName: {
+                        type: "string",
+                        description: "Name for the saved session"
+                    },
+                    tags: {
+                        type: "array",
+                        items: { type: "string" },
+                        description: "Tags to categorize the session"
+                    },
+                    asTemplate: {
+                        type: "boolean",
+                        description: "Save as a template for reuse"
+                    }
+                },
+                description: "Options for save operation"
+            },
+            loadOptions: {
+                type: "object",
+                properties: {
+                    sessionId: {
+                        type: "string",
+                        description: "ID of the session to load"
+                    },
+                    continueFrom: {
+                        type: "integer",
+                        description: "Step to continue from",
+                        minimum: 1
+                    }
+                },
+                required: ["sessionId"],
+                description: "Options for load operation"
+            },
+            listOptions: {
+                type: "object",
+                properties: {
+                    limit: {
+                        type: "integer",
+                        description: "Maximum number of sessions to return"
+                    },
+                    technique: {
+                        type: "string",
+                        enum: ["six_hats", "po", "random_entry", "scamper", "concept_extraction", "yes_and"],
+                        description: "Filter by technique"
+                    },
+                    status: {
+                        type: "string",
+                        enum: ["active", "completed", "all"],
+                        description: "Filter by session status"
+                    },
+                    tags: {
+                        type: "array",
+                        items: { type: "string" },
+                        description: "Filter by tags"
+                    },
+                    searchTerm: {
+                        type: "string",
+                        description: "Search in session content"
+                    }
+                },
+                description: "Options for list operation"
+            },
+            deleteOptions: {
+                type: "object",
+                properties: {
+                    sessionId: {
+                        type: "string",
+                        description: "ID of the session to delete"
+                    },
+                    confirm: {
+                        type: "boolean",
+                        description: "Confirmation flag"
+                    }
+                },
+                required: ["sessionId"],
+                description: "Options for delete operation"
+            },
+            exportOptions: {
+                type: "object",
+                properties: {
+                    sessionId: {
+                        type: "string",
+                        description: "ID of the session to export"
+                    },
+                    format: {
+                        type: "string",
+                        enum: ["json", "markdown", "csv"],
+                        description: "Export format"
+                    },
+                    outputPath: {
+                        type: "string",
+                        description: "Optional output file path"
+                    }
+                },
+                required: ["sessionId", "format"],
+                description: "Options for export operation"
+            },
+            autoSave: {
+                type: "boolean",
+                description: "Enable automatic session saving"
             }
         },
         required: ["technique", "problem", "currentStep", "totalSteps", "output", "nextStepNeeded"]

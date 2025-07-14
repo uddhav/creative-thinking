@@ -37,6 +37,12 @@ node dist/index.js
 - **PO (Provocative Operation)**: Break thinking patterns through deliberate provocation
 - **Random Entry**: Generate creative connections through random stimuli
 - **SCAMPER**: Systematic ideation through seven transformation actions
+- **Concept Extraction**: Transfer successful patterns across domains
+- **Yes, And...**: Collaborative ideation with critical evaluation
+- **Session Persistence**: Save, load, list, delete, and export thinking sessions
+- **Auto-save**: Automatically persist progress after each step
+- **Tagging & Organization**: Categorize sessions with names and tags
+- **Multiple Export Formats**: Export sessions as JSON, Markdown, or CSV
 - Visual progress tracking with emojis and formatted output
 - Support for revisions and branching in creative exploration
 - Session management with unique IDs and history tracking
@@ -199,6 +205,65 @@ Add the following to your VS Code settings:
 ```
 
 To disable visual output logging, set the environment variable: `DISABLE_THOUGHT_LOGGING=true`
+
+## Session Management
+
+The Creative Thinking tool now supports full session persistence, allowing you to save your creative thinking progress and return to it later.
+
+### Session Operations
+
+Add `sessionOperation` to your request to perform session management:
+
+- **save**: Save the current session with optional name and tags
+- **load**: Load a previously saved session
+- **list**: List all saved sessions with filtering options
+- **delete**: Delete a saved session
+- **export**: Export a session in JSON, Markdown, or CSV format
+
+### Quick Examples
+
+Save current session:
+```json
+{
+  "sessionOperation": "save",
+  "saveOptions": {
+    "sessionName": "Product Innovation Brainstorm",
+    "tags": ["product", "innovation", "q1-2024"]
+  }
+}
+```
+
+List sessions:
+```json
+{
+  "sessionOperation": "list",
+  "listOptions": {
+    "technique": "scamper",
+    "status": "active"
+  }
+}
+```
+
+Load a session:
+```json
+{
+  "sessionOperation": "load",
+  "loadOptions": {
+    "sessionId": "session_12345"
+  }
+}
+```
+
+### Auto-Save
+
+Enable automatic saving after each step by adding `"autoSave": true` to your thinking step requests.
+
+### Configuration
+
+- `PERSISTENCE_TYPE`: Storage backend (`filesystem` or `memory`)
+- `PERSISTENCE_PATH`: Custom storage path (default: `~/.creative-thinking/sessions`)
+
+For detailed session management examples, see [examples/session-management.md](examples/session-management.md).
 
 ## Building
 
