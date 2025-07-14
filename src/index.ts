@@ -109,7 +109,7 @@ interface LateralThinkingData {
 interface SessionData {
   technique: LateralTechnique;
   problem: string;
-  history: LateralThinkingData[];
+  history: Array<LateralThinkingData & { timestamp: string }>;
   branches: Record<string, LateralThinkingData[]>;
   insights: string[];
   // Meta-learning data
@@ -143,6 +143,7 @@ interface LateralThinkingResponse {
     antifragileFeatures?: number;
   };
   nextStepGuidance?: string;
+  autoSaveError?: string;
 }
 
 class LateralThinkingServer {
@@ -323,8 +324,14 @@ class LateralThinkingServer {
       const session: SessionData = {
         technique: loadedState.technique,
         problem: loadedState.problem,
-        history: loadedState.history.map((h: any) => h.input),
-        branches: loadedState.branches,
+        history: loadedState.history.map((h: any) => ({
+          ...h.input,
+          timestamp: h.timestamp
+        })),
+        branches: Object.entries(loadedState.branches).reduce((acc, [key, value]) => {
+          acc[key] = value as LateralThinkingData[];
+          return acc;
+        }, {} as Record<string, LateralThinkingData[]>),
         insights: loadedState.insights,
         startTime: loadedState.startTime,
         endTime: loadedState.endTime,
@@ -478,7 +485,7 @@ class LateralThinkingServer {
       totalSteps: session.history[0]?.totalSteps || this.getTechniqueSteps(session.technique),
       history: session.history.map((item, index) => ({
         step: index + 1,
-        timestamp: new Date().toISOString(),
+        timestamp: item.timestamp || new Date().toISOString(),
         input: item,
         output: item
       })),
@@ -1018,7 +1025,20 @@ class LateralThinkingServer {
   }
 
   private initializeSession(technique: LateralTechnique, problem: string): string {
-    const sessionId = `session_${randomUUID()}`;
+    let sessionId: string;
+    let attempts = 0;
+    const MAX_ATTEMPTS = 10;
+    
+    // Generate unique session ID with collision detection
+    do {
+      sessionId = `session_${randomUUID()}`;
+      attempts++;
+      
+      if (attempts > MAX_ATTEMPTS) {
+        throw new Error('Failed to generate unique session ID after 10 attempts');
+      }
+    } while (this.sessions.has(sessionId));
+    
     this.sessions.set(sessionId, {
       technique,
       problem,
@@ -1139,8 +1159,12 @@ class LateralThinkingServer {
         throw new Error('Failed to get or create session.');
       }
       
-      // Add to history
-      session.history.push(validatedInput);
+      // Add to history with proper timestamp
+      const historyEntry = {
+        ...validatedInput,
+        timestamp: new Date().toISOString()
+      };
+      session.history.push(historyEntry);
       
       // Update metrics
       if (session.metrics) {
@@ -1210,6 +1234,8 @@ class LateralThinkingServer {
           await this.saveSessionToPersistence(sessionId, session);
         } catch (error) {
           console.error('Auto-save failed:', error);
+          // Add auto-save failure to response
+          response.autoSaveError = error instanceof Error ? error.message : 'Auto-save failed';
         }
       }
       

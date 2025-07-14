@@ -168,8 +168,14 @@ class LateralThinkingServer {
             const session = {
                 technique: loadedState.technique,
                 problem: loadedState.problem,
-                history: loadedState.history.map((h) => h.input),
-                branches: loadedState.branches,
+                history: loadedState.history.map((h) => ({
+                    ...h.input,
+                    timestamp: h.timestamp
+                })),
+                branches: Object.entries(loadedState.branches).reduce((acc, [key, value]) => {
+                    acc[key] = value;
+                    return acc;
+                }, {}),
                 insights: loadedState.insights,
                 startTime: loadedState.startTime,
                 endTime: loadedState.endTime,
@@ -311,7 +317,7 @@ class LateralThinkingServer {
             totalSteps: session.history[0]?.totalSteps || this.getTechniqueSteps(session.technique),
             history: session.history.map((item, index) => ({
                 step: index + 1,
-                timestamp: new Date().toISOString(),
+                timestamp: item.timestamp || new Date().toISOString(),
                 input: item,
                 output: item
             })),
@@ -807,7 +813,17 @@ class LateralThinkingServer {
         return parts.join('\n');
     }
     initializeSession(technique, problem) {
-        const sessionId = `session_${randomUUID()}`;
+        let sessionId;
+        let attempts = 0;
+        const MAX_ATTEMPTS = 10;
+        // Generate unique session ID with collision detection
+        do {
+            sessionId = `session_${randomUUID()}`;
+            attempts++;
+            if (attempts > MAX_ATTEMPTS) {
+                throw new Error('Failed to generate unique session ID after 10 attempts');
+            }
+        } while (this.sessions.has(sessionId));
         this.sessions.set(sessionId, {
             technique,
             problem,
@@ -918,8 +934,12 @@ class LateralThinkingServer {
             if (!session) {
                 throw new Error('Failed to get or create session.');
             }
-            // Add to history
-            session.history.push(validatedInput);
+            // Add to history with proper timestamp
+            const historyEntry = {
+                ...validatedInput,
+                timestamp: new Date().toISOString()
+            };
+            session.history.push(historyEntry);
             // Update metrics
             if (session.metrics) {
                 // Count risks identified
@@ -982,6 +1002,8 @@ class LateralThinkingServer {
                 }
                 catch (error) {
                     console.error('Auto-save failed:', error);
+                    // Add auto-save failure to response
+                    response.autoSaveError = error instanceof Error ? error.message : 'Auto-save failed';
                 }
             }
             return {

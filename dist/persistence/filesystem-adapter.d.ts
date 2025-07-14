@@ -31,6 +31,7 @@ export declare class FilesystemAdapter implements PersistenceAdapter {
     cleanup(olderThan: Date): Promise<number>;
     close(): Promise<void>;
     private ensureInitialized;
+    private validateSessionId;
     private getSessionPath;
     private getMetadataPath;
     private extractMetadata;

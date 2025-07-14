@@ -36,7 +36,20 @@ export class FilesystemAdapter implements PersistenceAdapter {
     }
 
     this.config = config;
-    this.basePath = config.options.path || path.join(process.cwd(), '.creative-thinking');
+    
+    // Validate and sanitize the base path
+    const providedPath = config.options.path || path.join(process.cwd(), '.creative-thinking');
+    
+    // Resolve to absolute path and normalize
+    this.basePath = path.resolve(path.normalize(providedPath));
+    
+    // Ensure the path doesn't contain dangerous patterns
+    if (this.basePath.includes('..') || !path.isAbsolute(this.basePath)) {
+      throw new PersistenceError(
+        'Invalid base path: Path traversal detected',
+        PersistenceErrorCode.PERMISSION_DENIED
+      );
+    }
 
     // Create base directory if it doesn't exist
     try {
@@ -69,9 +82,20 @@ export class FilesystemAdapter implements PersistenceAdapter {
         data: state
       };
 
+      // Serialize and check size limit (10MB max)
+      const serialized = JSON.stringify(sessionData, null, 2);
+      const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+      
+      if (Buffer.byteLength(serialized, 'utf8') > MAX_FILE_SIZE) {
+        throw new PersistenceError(
+          `Session data too large: exceeds ${MAX_FILE_SIZE} bytes limit`,
+          PersistenceErrorCode.STORAGE_FULL
+        );
+      }
+
       await fs.writeFile(
         sessionPath,
-        JSON.stringify(sessionData, null, 2),
+        serialized,
         'utf8'
       );
 
@@ -368,12 +392,55 @@ export class FilesystemAdapter implements PersistenceAdapter {
     }
   }
 
+  private validateSessionId(sessionId: string): void {
+    // Allow only alphanumeric, underscore, and hyphen
+    const validIdPattern = /^[a-zA-Z0-9_-]+$/;
+    
+    if (!sessionId || !validIdPattern.test(sessionId)) {
+      throw new PersistenceError(
+        'Invalid session ID: Must contain only alphanumeric characters, underscores, and hyphens',
+        PersistenceErrorCode.INVALID_FORMAT
+      );
+    }
+    
+    if (sessionId.length > 255) {
+      throw new PersistenceError(
+        'Invalid session ID: Too long (max 255 characters)',
+        PersistenceErrorCode.INVALID_FORMAT
+      );
+    }
+  }
+
   private getSessionPath(sessionId: string): string {
-    return path.join(this.basePath, 'sessions', `${sessionId}.json`);
+    this.validateSessionId(sessionId);
+    const safePath = path.join(this.basePath, 'sessions', `${sessionId}.json`);
+    
+    // Double-check the resulting path is within basePath
+    const resolvedPath = path.resolve(safePath);
+    if (!resolvedPath.startsWith(this.basePath)) {
+      throw new PersistenceError(
+        'Invalid session path: Path traversal detected',
+        PersistenceErrorCode.PERMISSION_DENIED
+      );
+    }
+    
+    return resolvedPath;
   }
 
   private getMetadataPath(sessionId: string): string {
-    return path.join(this.basePath, 'metadata', `${sessionId}.json`);
+    this.validateSessionId(sessionId);
+    const safePath = path.join(this.basePath, 'metadata', `${sessionId}.json`);
+    
+    // Double-check the resulting path is within basePath
+    const resolvedPath = path.resolve(safePath);
+    if (!resolvedPath.startsWith(this.basePath)) {
+      throw new PersistenceError(
+        'Invalid metadata path: Path traversal detected',
+        PersistenceErrorCode.PERMISSION_DENIED
+      );
+    }
+    
+    return resolvedPath;
   }
 
   private extractMetadata(state: SessionState): SessionMetadata {
@@ -480,7 +547,7 @@ export class FilesystemAdapter implements PersistenceAdapter {
     const rows = session.history.map(h => [
       h.step.toString(),
       h.timestamp,
-      `"${h.output.replace(/"/g, '""')}"`
+      `"${h.output.output.replace(/"/g, '""')}"`
     ]);
 
     return [

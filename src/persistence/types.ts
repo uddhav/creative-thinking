@@ -6,6 +6,48 @@
 export type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 'concept_extraction' | 'yes_and';
 
 /**
+ * Represents input data for a lateral thinking step
+ */
+export interface LateralThinkingInput {
+  technique: LateralTechnique;
+  problem: string;
+  currentStep: number;
+  totalSteps: number;
+  output: string;
+  nextStepNeeded: boolean;
+  
+  // Technique-specific fields
+  hatColor?: string;
+  provocation?: string;
+  principles?: string[];
+  randomStimulus?: string;
+  connections?: string[];
+  scamperAction?: string;
+  successExample?: string;
+  extractedConcepts?: string[];
+  abstractedPatterns?: string[];
+  applications?: string[];
+  initialIdea?: string;
+  additions?: string[];
+  evaluations?: string[];
+  synthesis?: string;
+  
+  // Risk/adversarial fields
+  risks?: string[];
+  failureModes?: string[];
+  mitigations?: string[];
+  antifragileProperties?: string[];
+  blackSwans?: string[];
+  
+  // Session fields
+  sessionId?: string;
+  isRevision?: boolean;
+  revisesStep?: number;
+  branchFromStep?: number;
+  branchId?: string;
+}
+
+/**
  * Session state structure for persistence
  */
 export interface SessionState {
@@ -17,10 +59,10 @@ export interface SessionState {
   history: Array<{
     step: number;
     timestamp: string;
-    input: any;
-    output: any;
+    input: LateralThinkingInput;
+    output: LateralThinkingInput;
   }>;
-  branches: Record<string, any[]>;
+  branches: Record<string, LateralThinkingInput[]>;
   insights: string[];
   startTime?: number;
   endTime?: number;
