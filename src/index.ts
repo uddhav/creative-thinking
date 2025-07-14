@@ -8,6 +8,7 @@ import {
   Tool,
 } from "@modelcontextprotocol/sdk/types.js";
 import chalk from 'chalk';
+import { randomUUID } from 'crypto';
 
 type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 'concept_extraction' | 'yes_and';
 type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green';
@@ -69,6 +70,26 @@ interface SessionData {
     risksCaught?: number;
     antifragileFeatures?: number;
   };
+}
+
+interface LateralThinkingResponse {
+  sessionId: string;
+  technique: LateralTechnique;
+  currentStep: number;
+  totalSteps: number;
+  nextStepNeeded: boolean;
+  historyLength: number;
+  branches: string[];
+  completed?: boolean;
+  insights?: string[];
+  summary?: string;
+  metrics?: {
+    duration: number;
+    creativityScore: number;
+    risksCaught?: number;
+    antifragileFeatures?: number;
+  };
+  nextStepGuidance?: string;
 }
 
 class LateralThinkingServer {
@@ -153,6 +174,23 @@ class LateralThinkingServer {
       }
     }
 
+    // Validate unified framework fields
+    if (data.risks && !Array.isArray(data.risks)) {
+      throw new Error('risks must be an array');
+    }
+    if (data.failureModes && !Array.isArray(data.failureModes)) {
+      throw new Error('failureModes must be an array');
+    }
+    if (data.mitigations && !Array.isArray(data.mitigations)) {
+      throw new Error('mitigations must be an array');
+    }
+    if (data.antifragileProperties && !Array.isArray(data.antifragileProperties)) {
+      throw new Error('antifragileProperties must be an array');
+    }
+    if (data.blackSwans && !Array.isArray(data.blackSwans)) {
+      throw new Error('blackSwans must be an array');
+    }
+
     return {
       technique: data.technique as LateralTechnique,
       problem: data.problem,
@@ -170,6 +208,15 @@ class LateralThinkingServer {
       extractedConcepts: data.extractedConcepts as string[] | undefined,
       abstractedPatterns: data.abstractedPatterns as string[] | undefined,
       applications: data.applications as string[] | undefined,
+      initialIdea: data.initialIdea as string | undefined,
+      additions: data.additions as string[] | undefined,
+      evaluations: data.evaluations as string[] | undefined,
+      synthesis: data.synthesis as string | undefined,
+      risks: data.risks as string[] | undefined,
+      failureModes: data.failureModes as string[] | undefined,
+      mitigations: data.mitigations as string[] | undefined,
+      antifragileProperties: data.antifragileProperties as string[] | undefined,
+      blackSwans: data.blackSwans as string[] | undefined,
       isRevision: data.isRevision as boolean | undefined,
       revisesStep: data.revisesStep as number | undefined,
       branchFromStep: data.branchFromStep as number | undefined,
@@ -179,16 +226,40 @@ class LateralThinkingServer {
 
   private getModeIndicator(data: LateralThinkingData): { color: typeof chalk; symbol: string } {
     // Determine if current step is primarily creative or critical
-    const criticalSteps = {
-      six_hats: data.hatColor === 'black' || data.hatColor === 'white',
-      yes_and: data.currentStep === 3, // Evaluate (But) step
-      concept_extraction: data.currentStep === 4, // Apply with failure analysis
-      po: data.currentStep === 2 || data.currentStep === 4, // Verification steps
-    };
+    let isCritical = false;
     
-    const isCritical = criticalSteps[data.technique as keyof typeof criticalSteps] || 
-                      (data.risks && data.risks.length > 0) ||
-                      (data.failureModes && data.failureModes.length > 0);
+    switch (data.technique) {
+      case 'six_hats':
+        isCritical = data.hatColor === 'black' || data.hatColor === 'white';
+        break;
+      case 'yes_and':
+        isCritical = data.currentStep === 3; // Evaluate (But) step
+        break;
+      case 'concept_extraction':
+        isCritical = data.currentStep === 4; // Apply with failure analysis
+        break;
+      case 'po':
+        isCritical = data.currentStep === 2 || data.currentStep === 4; // Verification steps
+        break;
+      case 'random_entry':
+        isCritical = data.currentStep === 3; // Validation step
+        break;
+      case 'scamper':
+        // SCAMPER is primarily creative, but can be critical if risks are identified
+        isCritical = false;
+        break;
+      default:
+        // Default to creative mode for unknown techniques
+        isCritical = false;
+    }
+    
+    // Override based on presence of risk data
+    if (data.risks && data.risks.length > 0) {
+      isCritical = true;
+    }
+    if (data.failureModes && data.failureModes.length > 0) {
+      isCritical = true;
+    }
     
     return {
       color: isCritical ? chalk.yellow : chalk.green,
@@ -306,7 +377,7 @@ class LateralThinkingServer {
   }
 
   private initializeSession(technique: LateralTechnique, problem: string): string {
-    const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const sessionId = `session_${Date.now()}_${randomUUID()}`;
     this.sessions.set(sessionId, {
       technique,
       problem,
@@ -443,8 +514,8 @@ class LateralThinkingServer {
       }
       
       // Generate response
-      const response: any = {
-        sessionId: this.currentSessionId,
+      const response: LateralThinkingResponse = {
+        sessionId: this.currentSessionId || '',
         technique: validatedInput.technique,
         currentStep: validatedInput.currentStep,
         totalSteps: validatedInput.totalSteps,
