@@ -37,7 +37,5 @@ export declare class FilesystemAdapter implements PersistenceAdapter {
     private extractMetadata;
     private applyFilters;
     private applySorting;
-    private sessionToMarkdown;
-    private sessionToCSV;
 }
 //# sourceMappingURL=filesystem-adapter.d.ts.map

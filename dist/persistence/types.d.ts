@@ -156,7 +156,8 @@ export declare enum PersistenceErrorCode {
     STORAGE_FULL = "STORAGE_FULL",
     PERMISSION_DENIED = "PERMISSION_DENIED",
     CORRUPTION = "CORRUPTION",
-    IO_ERROR = "IO_ERROR"
+    IO_ERROR = "IO_ERROR",
+    EXPORT_FAILED = "EXPORT_FAILED"
 }
 /**
  * Custom error class for persistence operations

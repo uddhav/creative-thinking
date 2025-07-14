@@ -5,6 +5,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { randomUUID } from 'crypto';
 import { PersistenceError, PersistenceErrorCode } from './types.js';
+import { ExportFactory } from '../export/index.js';
 /**
  * Filesystem-based persistence adapter
  * Stores sessions as JSON files in a directory structure
@@ -187,15 +188,17 @@ export class FilesystemAdapter {
         if (!session) {
             throw new PersistenceError(`Session ${sessionId} not found`, PersistenceErrorCode.NOT_FOUND);
         }
-        switch (format) {
-            case 'json':
-                return Buffer.from(JSON.stringify(session, null, 2));
-            case 'markdown':
-                return Buffer.from(this.sessionToMarkdown(session));
-            case 'csv':
-                return Buffer.from(this.sessionToCSV(session));
-            default:
-                throw new PersistenceError(`Unsupported export format: ${format}`, PersistenceErrorCode.INVALID_FORMAT);
+        try {
+            // Use the new export factory
+            const result = await ExportFactory.export(session, format);
+            // Convert string content to Buffer if needed
+            if (typeof result.content === 'string') {
+                return Buffer.from(result.content);
+            }
+            return result.content;
+        }
+        catch (error) {
+            throw new PersistenceError(`Export failed: ${error instanceof Error ? error.message : String(error)}`, PersistenceErrorCode.EXPORT_FAILED);
         }
     }
     async import(data, format) {
@@ -349,42 +352,6 @@ export class FilesystemAdapter {
             return sortOrder === 'asc' ? comparison : -comparison;
         });
         return sorted;
-    }
-    sessionToMarkdown(session) {
-        const lines = [
-            `# ${session.problem}`,
-            ``,
-            `**Technique:** ${session.technique}`,
-            `**Status:** ${session.currentStep}/${session.totalSteps} steps`,
-            ``,
-            `## History`,
-            ``
-        ];
-        for (const entry of session.history) {
-            lines.push(`### Step ${entry.step}`);
-            lines.push(`**Time:** ${entry.timestamp}`);
-            lines.push(`**Output:** ${entry.output}`);
-            lines.push(``);
-        }
-        if (session.insights.length > 0) {
-            lines.push(`## Insights`);
-            session.insights.forEach(insight => {
-                lines.push(`- ${insight}`);
-            });
-        }
-        return lines.join('\n');
-    }
-    sessionToCSV(session) {
-        const headers = ['Step', 'Timestamp', 'Output'];
-        const rows = session.history.map(h => [
-            h.step.toString(),
-            h.timestamp,
-            `"${h.output.output.replace(/"/g, '""')}"`
-        ]);
-        return [
-            headers.join(','),
-            ...rows.map(r => r.join(','))
-        ].join('\n');
     }
 }
 //# sourceMappingURL=filesystem-adapter.js.map

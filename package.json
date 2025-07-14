@@ -37,9 +37,9 @@
   "devDependencies": {
     "@types/node": "^22",
     "@types/yargs": "^17.0.32",
+    "@vitest/coverage-v8": "^1.6.1",
     "typescript": "^5.3.3",
-    "vitest": "^1.0.0",
-    "@vitest/coverage-v8": "^1.0.0"
+    "vitest": "^1.6.1"
   },
   "keywords": [
     "mcp",
