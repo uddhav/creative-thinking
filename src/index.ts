@@ -9,10 +9,18 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import chalk from 'chalk';
 import { randomUUID } from 'crypto';
+import { 
+  PersistenceAdapter, 
+  createAdapter, 
+  getDefaultConfig,
+  SessionState as PersistenceSessionState,
+  SessionMetadata,
+  ExportFormat
+} from './persistence/index.js';
 
-type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 'concept_extraction' | 'yes_and';
-type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green';
-type ScamperAction = 'substitute' | 'combine' | 'adapt' | 'modify' | 'put_to_other_use' | 'eliminate' | 'reverse';
+export type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 'concept_extraction' | 'yes_and';
+export type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green';
+export type ScamperAction = 'substitute' | 'combine' | 'adapt' | 'modify' | 'put_to_other_use' | 'eliminate' | 'reverse';
 
 interface LateralThinkingData {
   sessionId?: string; // For continuing existing sessions
@@ -55,6 +63,47 @@ interface LateralThinkingData {
   revisesStep?: number;
   branchFromStep?: number;
   branchId?: string;
+  
+  // Session management operations
+  sessionOperation?: 'save' | 'load' | 'list' | 'delete' | 'export';
+  
+  // Save operation options
+  saveOptions?: {
+    sessionName?: string;
+    tags?: string[];
+    asTemplate?: boolean;
+  };
+  
+  // Load operation options
+  loadOptions?: {
+    sessionId: string;
+    continueFrom?: number;
+  };
+  
+  // List operation options
+  listOptions?: {
+    limit?: number;
+    technique?: LateralTechnique;
+    status?: 'active' | 'completed' | 'all';
+    tags?: string[];
+    searchTerm?: string;
+  };
+  
+  // Delete operation options
+  deleteOptions?: {
+    sessionId: string;
+    confirm?: boolean;
+  };
+  
+  // Export operation options
+  exportOptions?: {
+    sessionId: string;
+    format: 'json' | 'markdown' | 'csv';
+    outputPath?: string;
+  };
+  
+  // Auto-save preference
+  autoSave?: boolean;
 }
 
 interface SessionData {
@@ -71,6 +120,9 @@ interface SessionData {
     risksCaught?: number;
     antifragileFeatures?: number;
   };
+  // Session management fields
+  tags?: string[];
+  name?: string;
 }
 
 interface LateralThinkingResponse {
@@ -99,10 +151,29 @@ class LateralThinkingServer {
   private disableThoughtLogging: boolean;
   private readonly SESSION_TTL = 24 * 60 * 60 * 1000; // 24 hours
   private cleanupInterval: NodeJS.Timeout | null = null;
+  private persistenceAdapter: PersistenceAdapter | null = null;
 
   constructor() {
     this.disableThoughtLogging = (process.env.DISABLE_THOUGHT_LOGGING || "").toLowerCase() === "true";
     this.startSessionCleanup();
+    this.initializePersistence();
+  }
+
+  private async initializePersistence(): Promise<void> {
+    try {
+      const persistenceType = (process.env.PERSISTENCE_TYPE || 'filesystem') as 'filesystem' | 'memory';
+      const config = getDefaultConfig(persistenceType);
+      
+      // Override with environment variables if provided
+      if (process.env.PERSISTENCE_PATH) {
+        config.options.path = process.env.PERSISTENCE_PATH;
+      }
+      
+      this.persistenceAdapter = await createAdapter(config);
+    } catch (error) {
+      console.error('Failed to initialize persistence:', error);
+      // Continue without persistence
+    }
   }
 
   private startSessionCleanup(): void {
@@ -145,6 +216,361 @@ class LateralThinkingServer {
       this.cleanupInterval = null;
     }
     this.sessions.clear();
+  }
+
+  /**
+   * Handle session management operations
+   */
+  private async handleSessionOperation(input: LateralThinkingData): Promise<{ content: Array<{ type: string; text: string }>; isError?: boolean }> {
+    if (!this.persistenceAdapter) {
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            error: "Persistence not available",
+            status: 'failed'
+          }, null, 2)
+        }],
+        isError: true
+      };
+    }
+
+    switch (input.sessionOperation) {
+      case 'save':
+        return this.handleSaveOperation(input);
+      case 'load':
+        return this.handleLoadOperation(input);
+      case 'list':
+        return this.handleListOperation(input);
+      case 'delete':
+        return this.handleDeleteOperation(input);
+      case 'export':
+        return this.handleExportOperation(input);
+      default:
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify({
+              error: `Unknown session operation: ${input.sessionOperation}`,
+              status: 'failed'
+            }, null, 2)
+          }],
+          isError: true
+        };
+    }
+  }
+
+  /**
+   * Save current session
+   */
+  private async handleSaveOperation(input: LateralThinkingData): Promise<{ content: Array<{ type: string; text: string }> }> {
+    try {
+      if (!this.currentSessionId || !this.sessions.has(this.currentSessionId)) {
+        throw new Error('No active session to save');
+      }
+
+      const session = this.sessions.get(this.currentSessionId)!;
+      
+      // Update session with save options
+      if (input.saveOptions?.sessionName) {
+        session.name = input.saveOptions.sessionName;
+      }
+      if (input.saveOptions?.tags) {
+        session.tags = input.saveOptions.tags;
+      }
+
+      await this.saveSessionToPersistence(this.currentSessionId, session);
+
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            success: true,
+            sessionId: this.currentSessionId,
+            message: 'Session saved successfully',
+            savedAt: new Date().toISOString()
+          }, null, 2)
+        }]
+      };
+    } catch (error) {
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            error: error instanceof Error ? error.message : String(error),
+            status: 'failed'
+          }, null, 2)
+        }]
+      };
+    }
+  }
+
+  /**
+   * Load a saved session
+   */
+  private async handleLoadOperation(input: LateralThinkingData): Promise<{ content: Array<{ type: string; text: string }> }> {
+    try {
+      if (!input.loadOptions?.sessionId) {
+        throw new Error('Session ID required for load operation');
+      }
+
+      const loadedState = await this.persistenceAdapter!.load(input.loadOptions.sessionId);
+      if (!loadedState) {
+        throw new Error('Session not found');
+      }
+
+      // Convert persistence state to session data
+      const session: SessionData = {
+        technique: loadedState.technique,
+        problem: loadedState.problem,
+        history: loadedState.history.map((h: any) => h.input),
+        branches: loadedState.branches,
+        insights: loadedState.insights,
+        startTime: loadedState.startTime,
+        endTime: loadedState.endTime,
+        metrics: loadedState.metrics,
+        tags: loadedState.tags,
+        name: loadedState.name
+      };
+
+      // Load into memory
+      this.sessions.set(loadedState.id, session);
+      this.currentSessionId = loadedState.id;
+
+      const continueFrom = input.loadOptions.continueFrom || session.history.length;
+
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            success: true,
+            sessionId: loadedState.id,
+            technique: session.technique,
+            problem: session.problem,
+            currentStep: continueFrom,
+            totalSteps: session.history[0]?.totalSteps || this.getTechniqueSteps(session.technique),
+            message: 'Session loaded successfully',
+            continueFrom
+          }, null, 2)
+        }]
+      };
+    } catch (error) {
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            error: error instanceof Error ? error.message : String(error),
+            status: 'failed'
+          }, null, 2)
+        }]
+      };
+    }
+  }
+
+  /**
+   * List saved sessions
+   */
+  private async handleListOperation(input: LateralThinkingData): Promise<{ content: Array<{ type: string; text: string }> }> {
+    try {
+      const options = input.listOptions || {};
+      const metadata = await this.persistenceAdapter!.list(options);
+
+      // Format visual output
+      const visualOutput = this.formatSessionList(metadata);
+
+      return {
+        content: [{
+          type: "text",
+          text: visualOutput
+        }]
+      };
+    } catch (error) {
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            error: error instanceof Error ? error.message : String(error),
+            status: 'failed'
+          }, null, 2)
+        }]
+      };
+    }
+  }
+
+  /**
+   * Delete a saved session
+   */
+  private async handleDeleteOperation(input: LateralThinkingData): Promise<{ content: Array<{ type: string; text: string }> }> {
+    try {
+      if (!input.deleteOptions?.sessionId) {
+        throw new Error('Session ID required for delete operation');
+      }
+
+      const deleted = await this.persistenceAdapter!.delete(input.deleteOptions.sessionId);
+
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            success: deleted,
+            sessionId: input.deleteOptions.sessionId,
+            message: deleted ? 'Session deleted successfully' : 'Session not found'
+          }, null, 2)
+        }]
+      };
+    } catch (error) {
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            error: error instanceof Error ? error.message : String(error),
+            status: 'failed'
+          }, null, 2)
+        }]
+      };
+    }
+  }
+
+  /**
+   * Export a session
+   */
+  private async handleExportOperation(input: LateralThinkingData): Promise<{ content: Array<{ type: string; text: string }> }> {
+    try {
+      if (!input.exportOptions?.sessionId || !input.exportOptions?.format) {
+        throw new Error('Session ID and format required for export operation');
+      }
+
+      const data = await this.persistenceAdapter!.export(
+        input.exportOptions.sessionId,
+        input.exportOptions.format as ExportFormat
+      );
+
+      return {
+        content: [{
+          type: "text",
+          text: data.toString()
+        }]
+      };
+    } catch (error) {
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            error: error instanceof Error ? error.message : String(error),
+            status: 'failed'
+          }, null, 2)
+        }]
+      };
+    }
+  }
+
+  /**
+   * Save session to persistence adapter
+   */
+  private async saveSessionToPersistence(sessionId: string, session: SessionData): Promise<void> {
+    if (!this.persistenceAdapter) return;
+
+    const state: PersistenceSessionState = {
+      id: sessionId,
+      problem: session.problem,
+      technique: session.technique,
+      currentStep: session.history.length,
+      totalSteps: session.history[0]?.totalSteps || this.getTechniqueSteps(session.technique),
+      history: session.history.map((item, index) => ({
+        step: index + 1,
+        timestamp: new Date().toISOString(),
+        input: item,
+        output: item
+      })),
+      branches: session.branches,
+      insights: session.insights,
+      startTime: session.startTime,
+      endTime: session.endTime,
+      metrics: session.metrics,
+      tags: session.tags,
+      name: session.name
+    };
+
+    await this.persistenceAdapter.save(sessionId, state);
+  }
+
+  /**
+   * Format session list for visual output
+   */
+  private formatSessionList(metadata: SessionMetadata[]): string {
+    const lines: string[] = [
+      '',
+      chalk.bold('📚 Saved Creative Thinking Sessions'),
+      '═'.repeat(50),
+      ''
+    ];
+
+    if (metadata.length === 0) {
+      lines.push('No saved sessions found.');
+      return lines.join('\n');
+    }
+
+    for (const session of metadata) {
+      const emoji = this.getTechniqueEmoji(session.technique);
+      const progress = this.formatProgress(session.stepsCompleted, session.totalSteps);
+      const status = session.status === 'completed' ? '✓' : '';
+      const timeAgo = this.formatTimeAgo(session.updatedAt);
+
+      lines.push(`📝 ${chalk.bold(session.name || session.problem)}`);
+      lines.push(`   Technique: ${emoji} ${session.technique.replace('_', ' ').toUpperCase()}`);
+      lines.push(`   Progress: ${progress} ${session.stepsCompleted}/${session.totalSteps} steps ${status}`);
+      lines.push(`   Updated: ${timeAgo}`);
+      
+      if (session.tags.length > 0) {
+        lines.push(`   Tags: ${session.tags.join(', ')}`);
+      }
+      
+      lines.push('');
+    }
+
+    lines.push(`Showing ${metadata.length} sessions.`);
+    return lines.join('\n');
+  }
+
+  /**
+   * Get emoji for technique
+   */
+  private getTechniqueEmoji(technique: LateralTechnique): string {
+    const emojis = {
+      six_hats: '🎩',
+      po: '💡',
+      random_entry: '🎲',
+      scamper: '🔄',
+      concept_extraction: '🔍',
+      yes_and: '🤝'
+    };
+    return emojis[technique] || '🧠';
+  }
+
+  /**
+   * Format progress bar
+   */
+  private formatProgress(completed: number, total: number): string {
+    const percentage = Math.round((completed / total) * 100);
+    const filled = Math.round((completed / total) * 10);
+    const empty = 10 - filled;
+    return '█'.repeat(filled) + '░'.repeat(empty);
+  }
+
+  /**
+   * Format time ago
+   */
+  private formatTimeAgo(date: Date): string {
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (days > 0) return `${days} day${days > 1 ? 's' : ''} ago`;
+    if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    if (minutes > 0) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+    return 'just now';
   }
 
   /**
@@ -305,14 +731,48 @@ class LateralThinkingServer {
       throw new Error('blackSwans must be an array of strings');
     }
 
+    // Validate session management operations
+    if (data.sessionOperation) {
+      if (!['save', 'load', 'list', 'delete', 'export'].includes(data.sessionOperation as string)) {
+        throw new Error('Invalid sessionOperation: must be one of save, load, list, delete, export');
+      }
+      
+      // For regular operations, technique and problem are not required
+      if (data.sessionOperation !== 'save') {
+        // Override the required field checks for session operations
+        data.technique = data.technique || 'six_hats'; // dummy value
+        data.problem = data.problem || 'session operation'; // dummy value
+        data.currentStep = data.currentStep || 1; // dummy value
+        data.totalSteps = data.totalSteps || 1; // dummy value
+        data.output = data.output || ''; // dummy value
+        data.nextStepNeeded = data.nextStepNeeded ?? false; // dummy value
+      }
+      
+      // Validate operation-specific options
+      if (data.sessionOperation === 'load' && !(data.loadOptions as any)?.sessionId) {
+        throw new Error('sessionId is required in loadOptions for load operation');
+      }
+      if (data.sessionOperation === 'delete' && !(data.deleteOptions as any)?.sessionId) {
+        throw new Error('sessionId is required in deleteOptions for delete operation');
+      }
+      if (data.sessionOperation === 'export') {
+        if (!(data.exportOptions as any)?.sessionId) {
+          throw new Error('sessionId is required in exportOptions for export operation');
+        }
+        if (!(data.exportOptions as any)?.format) {
+          throw new Error('format is required in exportOptions for export operation');
+        }
+      }
+    }
+
     return {
       sessionId: data.sessionId as string | undefined,
       technique: data.technique as LateralTechnique,
-      problem: data.problem,
-      currentStep: data.currentStep,
-      totalSteps: data.totalSteps,
-      output: data.output,
-      nextStepNeeded: data.nextStepNeeded,
+      problem: data.problem as string,
+      currentStep: data.currentStep as number,
+      totalSteps: data.totalSteps as number,
+      output: data.output as string,
+      nextStepNeeded: data.nextStepNeeded as boolean,
       hatColor: data.hatColor as SixHatsColor | undefined,
       provocation: data.provocation as string | undefined,
       principles: data.principles as string[] | undefined,
@@ -336,6 +796,13 @@ class LateralThinkingServer {
       revisesStep: data.revisesStep as number | undefined,
       branchFromStep: data.branchFromStep as number | undefined,
       branchId: data.branchId as string | undefined,
+      sessionOperation: data.sessionOperation as 'save' | 'load' | 'list' | 'delete' | 'export' | undefined,
+      saveOptions: data.saveOptions as { sessionName?: string; tags?: string[]; asTemplate?: boolean } | undefined,
+      loadOptions: data.loadOptions as { sessionId: string; continueFrom?: number } | undefined,
+      listOptions: data.listOptions as { limit?: number; technique?: LateralTechnique; status?: 'active' | 'completed' | 'all'; tags?: string[]; searchTerm?: string } | undefined,
+      deleteOptions: data.deleteOptions as { sessionId: string; confirm?: boolean } | undefined,
+      exportOptions: data.exportOptions as { sessionId: string; format: 'json' | 'markdown' | 'csv'; outputPath?: string } | undefined,
+      autoSave: data.autoSave as boolean | undefined,
     };
   }
 
@@ -639,9 +1106,14 @@ class LateralThinkingServer {
     return insights;
   }
 
-  public processLateralThinking(input: unknown): { content: Array<{ type: string; text: string }>; isError?: boolean } {
+  public async processLateralThinking(input: unknown): Promise<{ content: Array<{ type: string; text: string }>; isError?: boolean }> {
     try {
       const validatedInput = this.validateInput(input);
+      
+      // Handle session operations first
+      if (validatedInput.sessionOperation) {
+        return await this.handleSessionOperation(validatedInput);
+      }
       
       let sessionId: string;
       let session: SessionData | undefined;
@@ -730,6 +1202,15 @@ class LateralThinkingServer {
       // Add technique-specific guidance for next step
       if (validatedInput.nextStepNeeded) {
         response.nextStepGuidance = this.getNextStepGuidance(validatedInput);
+      }
+      
+      // Auto-save if enabled
+      if (validatedInput.autoSave && this.persistenceAdapter && session) {
+        try {
+          await this.saveSessionToPersistence(sessionId, session);
+        } catch (error) {
+          console.error('Auto-save failed:', error);
+        }
       }
       
       return {
@@ -1014,6 +1495,114 @@ When to use:
         type: "array",
         items: { type: "string" },
         description: "Low probability, high impact events to consider (unified framework)"
+      },
+      sessionOperation: {
+        type: "string",
+        enum: ["save", "load", "list", "delete", "export"],
+        description: "Session management operation to perform"
+      },
+      saveOptions: {
+        type: "object",
+        properties: {
+          sessionName: {
+            type: "string",
+            description: "Name for the saved session"
+          },
+          tags: {
+            type: "array",
+            items: { type: "string" },
+            description: "Tags to categorize the session"
+          },
+          asTemplate: {
+            type: "boolean",
+            description: "Save as a template for reuse"
+          }
+        },
+        description: "Options for save operation"
+      },
+      loadOptions: {
+        type: "object",
+        properties: {
+          sessionId: {
+            type: "string",
+            description: "ID of the session to load"
+          },
+          continueFrom: {
+            type: "integer",
+            description: "Step to continue from",
+            minimum: 1
+          }
+        },
+        required: ["sessionId"],
+        description: "Options for load operation"
+      },
+      listOptions: {
+        type: "object",
+        properties: {
+          limit: {
+            type: "integer",
+            description: "Maximum number of sessions to return"
+          },
+          technique: {
+            type: "string",
+            enum: ["six_hats", "po", "random_entry", "scamper", "concept_extraction", "yes_and"],
+            description: "Filter by technique"
+          },
+          status: {
+            type: "string",
+            enum: ["active", "completed", "all"],
+            description: "Filter by session status"
+          },
+          tags: {
+            type: "array",
+            items: { type: "string" },
+            description: "Filter by tags"
+          },
+          searchTerm: {
+            type: "string",
+            description: "Search in session content"
+          }
+        },
+        description: "Options for list operation"
+      },
+      deleteOptions: {
+        type: "object",
+        properties: {
+          sessionId: {
+            type: "string",
+            description: "ID of the session to delete"
+          },
+          confirm: {
+            type: "boolean",
+            description: "Confirmation flag"
+          }
+        },
+        required: ["sessionId"],
+        description: "Options for delete operation"
+      },
+      exportOptions: {
+        type: "object",
+        properties: {
+          sessionId: {
+            type: "string",
+            description: "ID of the session to export"
+          },
+          format: {
+            type: "string",
+            enum: ["json", "markdown", "csv"],
+            description: "Export format"
+          },
+          outputPath: {
+            type: "string",
+            description: "Optional output file path"
+          }
+        },
+        required: ["sessionId", "format"],
+        description: "Options for export operation"
+      },
+      autoSave: {
+        type: "boolean",
+        description: "Enable automatic session saving"
       }
     },
     required: ["technique", "problem", "currentStep", "totalSteps", "output", "nextStepNeeded"]
