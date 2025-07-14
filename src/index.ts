@@ -206,20 +206,20 @@ class LateralThinkingServer {
     }
 
     // Validate unified framework fields
-    if (data.risks && !Array.isArray(data.risks)) {
-      throw new Error('risks must be an array');
+    if (data.risks && (!Array.isArray(data.risks) || data.risks.some(r => typeof r !== 'string'))) {
+      throw new Error('risks must be an array of strings');
     }
-    if (data.failureModes && !Array.isArray(data.failureModes)) {
-      throw new Error('failureModes must be an array');
+    if (data.failureModes && (!Array.isArray(data.failureModes) || data.failureModes.some(f => typeof f !== 'string'))) {
+      throw new Error('failureModes must be an array of strings');
     }
-    if (data.mitigations && !Array.isArray(data.mitigations)) {
-      throw new Error('mitigations must be an array');
+    if (data.mitigations && (!Array.isArray(data.mitigations) || data.mitigations.some(m => typeof m !== 'string'))) {
+      throw new Error('mitigations must be an array of strings');
     }
-    if (data.antifragileProperties && !Array.isArray(data.antifragileProperties)) {
-      throw new Error('antifragileProperties must be an array');
+    if (data.antifragileProperties && (!Array.isArray(data.antifragileProperties) || data.antifragileProperties.some(a => typeof a !== 'string'))) {
+      throw new Error('antifragileProperties must be an array of strings');
     }
-    if (data.blackSwans && !Array.isArray(data.blackSwans)) {
-      throw new Error('blackSwans must be an array');
+    if (data.blackSwans && (!Array.isArray(data.blackSwans) || data.blackSwans.some(b => typeof b !== 'string'))) {
+      throw new Error('blackSwans must be an array of strings');
     }
 
     return {
