@@ -105,6 +105,13 @@ Seven systematic transformations:
 - **E**liminate: Remove unnecessary elements
 - **R**everse: Invert or rearrange components
 
+### Concept Extraction
+Four-step process for transferring successful principles across domains:
+1. **Identify Success**: Analyze a successful solution from any domain
+2. **Extract Concepts**: Identify the key principles that make it work
+3. **Abstract Patterns**: Generalize concepts into transferable patterns
+4. **Apply to Problem**: Transfer abstracted patterns to your specific challenge
+
 ## Usage Examples
 
 ### Six Thinking Hats Example
@@ -129,6 +136,24 @@ Seven systematic transformations:
   "totalSteps": 7,
   "scamperAction": "adapt",
   "output": "Adapt the mug handle design from ergonomic tools - add a thumb rest and finger grooves like those found on professional photography equipment for better grip and reduced fatigue.",
+  "nextStepNeeded": true
+}
+```
+
+### Concept Extraction Example
+```json
+{
+  "technique": "concept_extraction",
+  "problem": "How to improve employee onboarding process",
+  "currentStep": 3,
+  "totalSteps": 4,
+  "abstractedPatterns": [
+    "Orchestrated parallel workflows",
+    "Role clarity through visual systems",
+    "Time-boxed task completion",
+    "Cross-functional visibility"
+  ],
+  "output": "Abstract patterns: Create systems where multiple activities happen simultaneously with clear visual indicators, time boundaries, and everyone understanding the full picture.",
   "nextStepNeeded": true
 }
 ```

@@ -9,7 +9,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import chalk from 'chalk';
 
-type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper';
+type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 'concept_extraction';
 type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green';
 type ScamperAction = 'substitute' | 'combine' | 'adapt' | 'modify' | 'put_to_other_use' | 'eliminate' | 'reverse';
 
@@ -28,6 +28,12 @@ interface LateralThinkingData {
   randomStimulus?: string;
   connections?: string[];
   scamperAction?: ScamperAction;
+  
+  // Concept Extraction specific
+  successExample?: string;
+  extractedConcepts?: string[];
+  abstractedPatterns?: string[];
+  applications?: string[];
   
   // Optional fields for advanced features
   isRevision?: boolean;
@@ -126,6 +132,10 @@ class LateralThinkingServer {
       randomStimulus: data.randomStimulus as string | undefined,
       connections: data.connections as string[] | undefined,
       scamperAction: data.scamperAction as ScamperAction | undefined,
+      successExample: data.successExample as string | undefined,
+      extractedConcepts: data.extractedConcepts as string[] | undefined,
+      abstractedPatterns: data.abstractedPatterns as string[] | undefined,
+      applications: data.applications as string[] | undefined,
       isRevision: data.isRevision as boolean | undefined,
       revisesStep: data.revisesStep as number | undefined,
       branchFromStep: data.branchFromStep as number | undefined,
@@ -134,7 +144,7 @@ class LateralThinkingServer {
   }
 
   private formatOutput(data: LateralThinkingData): string {
-    const { technique, currentStep, totalSteps, output, hatColor, scamperAction, randomStimulus, provocation } = data;
+    const { technique, currentStep, totalSteps, output, hatColor, scamperAction, randomStimulus, provocation, successExample } = data;
     
     let header = '';
     let techniqueInfo = '';
@@ -165,6 +175,14 @@ class LateralThinkingServer {
           const actionInfo = this.getScamperInfo(scamperAction);
           emoji = actionInfo.emoji;
           techniqueInfo = `${scamperAction.toUpperCase()}: ${actionInfo.description}`;
+        }
+        break;
+      case 'concept_extraction':
+        emoji = '🔍';
+        const stepNames = ['Identify Success', 'Extract Concepts', 'Abstract Patterns', 'Apply to Problem'];
+        techniqueInfo = stepNames[currentStep - 1];
+        if (successExample && currentStep === 1) {
+          techniqueInfo += `: ${successExample}`;
         }
         break;
     }
@@ -227,6 +245,7 @@ class LateralThinkingServer {
       case 'po': return 4; // Create provocation, suspend judgment, extract principles, develop ideas
       case 'random_entry': return 3; // Random stimulus, generate connections, develop solutions
       case 'scamper': return 7;
+      case 'concept_extraction': return 4; // Identify success, extract concepts, abstract patterns, apply to problem
       default: return 5;
     }
   }
@@ -253,6 +272,21 @@ class LateralThinkingServer {
         break;
       case 'scamper':
         insights.push('Systematic transformation completed across all dimensions');
+        break;
+      case 'concept_extraction':
+        const concepts = session.history.filter(h => h.extractedConcepts).flatMap(h => h.extractedConcepts || []);
+        const patterns = session.history.filter(h => h.abstractedPatterns).flatMap(h => h.abstractedPatterns || []);
+        const applications = session.history.filter(h => h.applications).flatMap(h => h.applications || []);
+        
+        if (concepts.length > 0) {
+          insights.push(`Core concepts identified: ${concepts.join(', ')}`);
+        }
+        if (patterns.length > 0) {
+          insights.push(`Abstracted patterns: ${patterns.join(', ')}`);
+        }
+        if (applications.length > 0) {
+          insights.push(`${applications.length} new applications generated for your problem`);
+        }
         break;
     }
     
@@ -376,6 +410,15 @@ class LateralThinkingServer {
           return `Next: ${nextAction.toUpperCase()} - ${actionInfo.description}`;
         }
         break;
+        
+      case 'concept_extraction':
+        const conceptSteps = [
+          'Identify a successful solution/example from any domain',
+          'Extract the key concepts that make it successful',
+          'Abstract these concepts into transferable patterns',
+          'Apply the abstracted patterns to your problem'
+        ];
+        return conceptSteps[nextStep - 1] || 'Complete the process';
     }
     
     return 'Continue with the next step';
@@ -410,6 +453,12 @@ Supported techniques:
 4. **scamper**: Systematic idea generation through transformations
    - Substitute, Combine, Adapt, Modify, Put to other use, Eliminate, Reverse
 
+5. **concept_extraction**: Transfer successful principles across domains
+   - Identify successful examples
+   - Extract core concepts
+   - Abstract into patterns
+   - Apply to new problems
+
 When to use this tool:
 - Breaking out of conventional thinking patterns
 - Generating novel solutions to stubborn problems
@@ -428,7 +477,7 @@ Features:
     properties: {
       technique: {
         type: "string",
-        enum: ["six_hats", "po", "random_entry", "scamper"],
+        enum: ["six_hats", "po", "random_entry", "scamper", "concept_extraction"],
         description: "The lateral thinking technique to use"
       },
       problem: {
@@ -480,6 +529,25 @@ Features:
         type: "string",
         enum: ["substitute", "combine", "adapt", "modify", "put_to_other_use", "eliminate", "reverse"],
         description: "Current SCAMPER action"
+      },
+      successExample: {
+        type: "string",
+        description: "A successful solution/example to analyze (for concept_extraction technique)"
+      },
+      extractedConcepts: {
+        type: "array",
+        items: { type: "string" },
+        description: "Key concepts extracted from the success example (for concept_extraction technique)"
+      },
+      abstractedPatterns: {
+        type: "array",
+        items: { type: "string" },
+        description: "Abstracted patterns from the concepts (for concept_extraction technique)"
+      },
+      applications: {
+        type: "array",
+        items: { type: "string" },
+        description: "Applications of patterns to the problem (for concept_extraction technique)"
       },
       isRevision: {
         type: "boolean",

@@ -160,6 +160,63 @@ const branchExample = {
   branchId: "social_features_branch"
 };
 
+// Example 7: Concept Extraction Workflow
+const conceptExtractionExample = [
+  {
+    technique: "concept_extraction",
+    problem: "How to improve employee onboarding process",
+    currentStep: 1,
+    totalSteps: 4,
+    successExample: "Southwest Airlines' 10-minute turnaround between flights",
+    output: "Southwest achieves incredibly fast plane turnarounds through synchronized team choreography, where each member knows their exact role and timing.",
+    nextStepNeeded: true
+  },
+  {
+    technique: "concept_extraction",
+    problem: "How to improve employee onboarding process",
+    currentStep: 2,
+    totalSteps: 4,
+    extractedConcepts: [
+      "Synchronized team choreography",
+      "Clear role definition",
+      "Precise timing and sequencing",
+      "Parallel processing of tasks",
+      "Visual communication systems"
+    ],
+    output: "Key concepts identified: choreographed movements, parallel task execution, visual cues for coordination, and every team member understanding the complete process.",
+    nextStepNeeded: true
+  },
+  {
+    technique: "concept_extraction",
+    problem: "How to improve employee onboarding process",
+    currentStep: 3,
+    totalSteps: 4,
+    abstractedPatterns: [
+      "Orchestrated parallel workflows",
+      "Role clarity through visual systems",
+      "Time-boxed task completion",
+      "Cross-functional visibility"
+    ],
+    output: "Abstract patterns: Create systems where multiple activities happen simultaneously with clear visual indicators, time boundaries, and everyone understanding the full picture.",
+    nextStepNeeded: true
+  },
+  {
+    technique: "concept_extraction",
+    problem: "How to improve employee onboarding process",
+    currentStep: 4,
+    totalSteps: 4,
+    applications: [
+      "Create onboarding 'flight plan' with parallel tracks for IT setup, training, and social integration",
+      "Design visual dashboard showing new employee's progress through onboarding stages",
+      "Implement 'pit crew' approach where different departments handle their parts simultaneously",
+      "Set up day-one, week-one, month-one choreographed checkpoints",
+      "Use color-coded systems for different onboarding tracks (technical, cultural, administrative)"
+    ],
+    output: "Applied Southwest's turnaround concepts to create a rapid, parallel-track onboarding system with visual progress tracking and choreographed departmental handoffs.",
+    nextStepNeeded: false
+  }
+];
+
 // Usage in an MCP client:
 // const response = await mcpClient.callTool('lateralthinking', sixHatsExample[0]);
 // console.log(response);
