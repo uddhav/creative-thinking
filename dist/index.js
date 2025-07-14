@@ -35,8 +35,8 @@ class LateralThinkingServer {
     }
     validateInput(input) {
         const data = input;
-        if (!data.technique || !['six_hats', 'po', 'random_entry', 'scamper'].includes(data.technique)) {
-            throw new Error('Invalid technique: must be one of six_hats, po, random_entry, or scamper');
+        if (!data.technique || !['six_hats', 'po', 'random_entry', 'scamper', 'concept_extraction'].includes(data.technique)) {
+            throw new Error('Invalid technique: must be one of six_hats, po, random_entry, scamper, or concept_extraction');
         }
         if (!data.problem || typeof data.problem !== 'string') {
             throw new Error('Invalid problem: must be a string');
@@ -62,6 +62,18 @@ class LateralThinkingServer {
         if (technique === 'scamper' && data.scamperAction &&
             !['substitute', 'combine', 'adapt', 'modify', 'put_to_other_use', 'eliminate', 'reverse'].includes(data.scamperAction)) {
             throw new Error('Invalid scamperAction for scamper technique');
+        }
+        // Validate concept extraction specific fields
+        if (technique === 'concept_extraction') {
+            if (data.extractedConcepts && !Array.isArray(data.extractedConcepts)) {
+                throw new Error('extractedConcepts must be an array for concept_extraction technique');
+            }
+            if (data.abstractedPatterns && !Array.isArray(data.abstractedPatterns)) {
+                throw new Error('abstractedPatterns must be an array for concept_extraction technique');
+            }
+            if (data.applications && !Array.isArray(data.applications)) {
+                throw new Error('applications must be an array for concept_extraction technique');
+            }
         }
         return {
             technique: data.technique,
