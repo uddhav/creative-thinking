@@ -35,8 +35,8 @@ class LateralThinkingServer {
     }
     validateInput(input) {
         const data = input;
-        if (!data.technique || !['six_hats', 'po', 'random_entry', 'scamper', 'concept_extraction'].includes(data.technique)) {
-            throw new Error('Invalid technique: must be one of six_hats, po, random_entry, scamper, or concept_extraction');
+        if (!data.technique || !['six_hats', 'po', 'random_entry', 'scamper', 'concept_extraction', 'yes_and'].includes(data.technique)) {
+            throw new Error('Invalid technique: must be one of six_hats, po, random_entry, scamper, concept_extraction, or yes_and');
         }
         if (!data.problem || typeof data.problem !== 'string') {
             throw new Error('Invalid problem: must be a string');
@@ -98,11 +98,28 @@ class LateralThinkingServer {
             branchId: data.branchId,
         };
     }
+    getModeIndicator(data) {
+        // Determine if current step is primarily creative or critical
+        const criticalSteps = {
+            six_hats: data.hatColor === 'black' || data.hatColor === 'white',
+            yes_and: data.currentStep === 3, // Evaluate (But) step
+            concept_extraction: data.currentStep === 4, // Apply with failure analysis
+            po: data.currentStep === 2 || data.currentStep === 4, // Verification steps
+        };
+        const isCritical = criticalSteps[data.technique] ||
+            (data.risks && data.risks.length > 0) ||
+            (data.failureModes && data.failureModes.length > 0);
+        return {
+            color: isCritical ? chalk.yellow : chalk.green,
+            symbol: isCritical ? '⚠️ ' : '✨ '
+        };
+    }
     formatOutput(data) {
-        const { technique, currentStep, totalSteps, output, hatColor, scamperAction, randomStimulus, provocation, successExample } = data;
+        const { technique, currentStep, totalSteps, output, hatColor, scamperAction, randomStimulus, provocation, successExample, initialIdea } = data;
         let header = '';
         let techniqueInfo = '';
         let emoji = '🧠';
+        const mode = this.getModeIndicator(data);
         switch (technique) {
             case 'six_hats':
                 if (hatColor) {
@@ -138,6 +155,14 @@ class LateralThinkingServer {
                     techniqueInfo += `: ${successExample}`;
                 }
                 break;
+            case 'yes_and':
+                emoji = '🤝';
+                const yesAndSteps = ['Accept (Yes)', 'Build (And)', 'Evaluate (But)', 'Integrate'];
+                techniqueInfo = yesAndSteps[currentStep - 1];
+                if (initialIdea && currentStep === 1) {
+                    techniqueInfo += `: ${initialIdea}`;
+                }
+                break;
         }
         if (data.isRevision) {
             header = chalk.yellow(`🔄 Revision of Step ${data.revisesStep}`);
@@ -146,7 +171,7 @@ class LateralThinkingServer {
             header = chalk.green(`🌿 Branch from Step ${data.branchFromStep} (ID: ${data.branchId})`);
         }
         else {
-            header = chalk.blue(`${emoji} ${technique.replace('_', ' ').toUpperCase()} - Step ${currentStep}/${totalSteps}`);
+            header = chalk.blue(`${emoji} ${technique.replace('_', ' ').toUpperCase()} - Step ${currentStep}/${totalSteps} ${mode.symbol}`);
         }
         const maxLength = Math.max(header.length, techniqueInfo.length, output.length) + 4;
         const border = '─'.repeat(maxLength);
@@ -171,6 +196,22 @@ class LateralThinkingServer {
         if (line) {
             result += `│ ${line.padEnd(maxLength - 2)} │\n`;
         }
+        // Add risk/adversarial section if present
+        if (data.risks && data.risks.length > 0) {
+            result += `├${border}┤\n`;
+            result += `│ ${chalk.yellow('⚠️  Risks Identified:'.padEnd(maxLength - 2))} │\n`;
+            data.risks.forEach(risk => {
+                result += `│ ${chalk.yellow(`• ${risk}`.padEnd(maxLength - 2))} │\n`;
+            });
+        }
+        if (data.mitigations && data.mitigations.length > 0) {
+            if (!data.risks)
+                result += `├${border}┤\n`;
+            result += `│ ${chalk.green('✓ Mitigations:'.padEnd(maxLength - 2))} │\n`;
+            data.mitigations.forEach(mitigation => {
+                result += `│ ${chalk.green(`• ${mitigation}`.padEnd(maxLength - 2))} │\n`;
+            });
+        }
         result += `└${border}┘`;
         return result;
     }
@@ -181,7 +222,13 @@ class LateralThinkingServer {
             problem,
             history: [],
             branches: {},
-            insights: []
+            insights: [],
+            startTime: Date.now(),
+            metrics: {
+                creativityScore: 0,
+                risksCaught: 0,
+                antifragileFeatures: 0
+            }
         });
         this.currentSessionId = sessionId;
         return sessionId;
@@ -193,6 +240,7 @@ class LateralThinkingServer {
             case 'random_entry': return 3; // Random stimulus, generate connections, develop solutions
             case 'scamper': return 7;
             case 'concept_extraction': return 4; // Identify success, extract concepts, abstract patterns, apply to problem
+            case 'yes_and': return 4; // Accept (Yes), Build (And), Evaluate (But), Integrate
             default: return 5;
         }
     }
@@ -232,6 +280,21 @@ class LateralThinkingServer {
                     insights.push(`${applications.length} new applications generated for your problem`);
                 }
                 break;
+            case 'yes_and':
+                const additions = session.history.filter(h => h.additions).flatMap(h => h.additions || []);
+                const evaluations = session.history.filter(h => h.evaluations).flatMap(h => h.evaluations || []);
+                const synthesis = session.history.find(h => h.synthesis)?.synthesis;
+                insights.push('Collaborative ideation with critical evaluation completed');
+                if (additions.length > 0) {
+                    insights.push(`Creative additions: ${additions.length}`);
+                }
+                if (evaluations.length > 0) {
+                    insights.push(`Critical evaluations performed: ${evaluations.length}`);
+                }
+                if (synthesis) {
+                    insights.push('Final synthesis achieved');
+                }
+                break;
         }
         return insights;
     }
@@ -250,6 +313,19 @@ class LateralThinkingServer {
             }
             // Add to history
             session.history.push(validatedInput);
+            // Update metrics
+            if (session.metrics) {
+                // Count risks identified
+                if (validatedInput.risks && validatedInput.risks.length > 0) {
+                    session.metrics.risksCaught = (session.metrics.risksCaught || 0) + validatedInput.risks.length;
+                }
+                // Count antifragile properties
+                if (validatedInput.antifragileProperties && validatedInput.antifragileProperties.length > 0) {
+                    session.metrics.antifragileFeatures = (session.metrics.antifragileFeatures || 0) + validatedInput.antifragileProperties.length;
+                }
+                // Simple creativity score based on output length and variety
+                session.metrics.creativityScore = (session.metrics.creativityScore || 0) + Math.min(validatedInput.output.length / 100, 5);
+            }
             // Handle branches
             if (validatedInput.branchFromStep && validatedInput.branchId) {
                 if (!session.branches[validatedInput.branchId]) {
@@ -274,9 +350,19 @@ class LateralThinkingServer {
             };
             // Add completion summary if done
             if (!validatedInput.nextStepNeeded) {
+                session.endTime = Date.now();
                 response.completed = true;
                 response.insights = this.extractInsights(session);
                 response.summary = `Lateral thinking session completed using ${validatedInput.technique} technique`;
+                // Add metrics to response
+                if (session.metrics) {
+                    response.metrics = {
+                        duration: session.endTime - (session.startTime || 0),
+                        creativityScore: Math.round((session.metrics.creativityScore || 0) * 10) / 10,
+                        risksCaught: session.metrics.risksCaught,
+                        antifragileFeatures: session.metrics.antifragileFeatures
+                    };
+                }
             }
             // Add technique-specific guidance for next step
             if (validatedInput.nextStepNeeded) {
@@ -347,6 +433,14 @@ class LateralThinkingServer {
                     'Apply the abstracted patterns to your problem'
                 ];
                 return conceptSteps[nextStep - 1] || 'Complete the process';
+            case 'yes_and':
+                const yesAndSteps = [
+                    'Accept the initial idea or contribution (Yes)',
+                    'Build upon it with creative additions (And)',
+                    'Critically evaluate potential issues (But)',
+                    'Integrate insights into a robust solution'
+                ];
+                return yesAndSteps[nextStep - 1] || 'Complete the process';
         }
         return 'Continue with the next step';
     }
@@ -385,6 +479,12 @@ Supported techniques:
    - Abstract into patterns
    - Apply to new problems
 
+6. **yes_and**: Collaborative ideation with critical evaluation
+   - Accept initial ideas (Yes)
+   - Build creatively upon them (And)
+   - Evaluate potential issues (But)
+   - Integrate into robust solutions
+
 When to use this tool:
 - Breaking out of conventional thinking patterns
 - Generating novel solutions to stubborn problems
@@ -403,7 +503,7 @@ Features:
         properties: {
             technique: {
                 type: "string",
-                enum: ["six_hats", "po", "random_entry", "scamper", "concept_extraction"],
+                enum: ["six_hats", "po", "random_entry", "scamper", "concept_extraction", "yes_and"],
                 description: "The lateral thinking technique to use"
             },
             problem: {
@@ -475,6 +575,24 @@ Features:
                 items: { type: "string" },
                 description: "Applications of patterns to the problem (for concept_extraction technique)"
             },
+            initialIdea: {
+                type: "string",
+                description: "The initial idea or contribution to build upon (for yes_and technique)"
+            },
+            additions: {
+                type: "array",
+                items: { type: "string" },
+                description: "Creative additions building on the idea (for yes_and technique)"
+            },
+            evaluations: {
+                type: "array",
+                items: { type: "string" },
+                description: "Critical evaluations of potential issues (for yes_and technique)"
+            },
+            synthesis: {
+                type: "string",
+                description: "Final integrated solution combining insights (for yes_and technique)"
+            },
             isRevision: {
                 type: "boolean",
                 description: "Whether this revises a previous step"
@@ -492,6 +610,31 @@ Features:
             branchId: {
                 type: "string",
                 description: "Identifier for the branch"
+            },
+            risks: {
+                type: "array",
+                items: { type: "string" },
+                description: "Risks or potential issues identified (unified framework)"
+            },
+            failureModes: {
+                type: "array",
+                items: { type: "string" },
+                description: "Ways this solution could fail (unified framework)"
+            },
+            mitigations: {
+                type: "array",
+                items: { type: "string" },
+                description: "Strategies to address risks (unified framework)"
+            },
+            antifragileProperties: {
+                type: "array",
+                items: { type: "string" },
+                description: "Ways the solution benefits from stress/change (unified framework)"
+            },
+            blackSwans: {
+                type: "array",
+                items: { type: "string" },
+                description: "Low probability, high impact events to consider (unified framework)"
             }
         },
         required: ["technique", "problem", "currentStep", "totalSteps", "output", "nextStepNeeded"]

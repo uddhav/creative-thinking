@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a **Creative Thinking MCP Server** that implements structured lateral thinking techniques as an MCP (Model Context Protocol) tool. The server provides four creativity methodologies: Six Thinking Hats, PO (Provocative Operation), Random Entry, and SCAMPER.
+This is a **Creative Thinking MCP Server** that implements structured lateral thinking techniques as an MCP (Model Context Protocol) tool. The server provides six creativity methodologies: Six Thinking Hats, PO (Provocative Operation), Random Entry, SCAMPER, Concept Extraction, and Yes, And...
 
 ## Development Commands
 
@@ -25,6 +25,17 @@ node dist/index.js
 npx -y github:uddhav/creative-thinking
 ```
 
+### Docker Usage
+```bash
+# Build Docker image
+docker build -t creative-thinking .
+
+# Run the server in Docker
+docker run -it creative-thinking
+```
+
+Note: No test suite is included in this project.
+
 ## Architecture
 
 ### Core Structure
@@ -35,7 +46,7 @@ npx -y github:uddhav/creative-thinking
 
 ### Key Types and Interfaces
 ```typescript
-type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper';
+type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 'concept_extraction' | 'yes_and';
 type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green';
 type ScamperAction = 'substitute' | 'combine' | 'adapt' | 'modify' | 'put_to_other_use' | 'eliminate' | 'reverse';
 
@@ -54,6 +65,25 @@ interface LateralThinkingArgs {
   randomStimulus?: string;
   connections?: string[];
   scamperAction?: ScamperAction;
+  
+  // Concept Extraction specific
+  successExample?: string;
+  extractedConcepts?: string[];
+  abstractedPatterns?: string[];
+  applications?: string[];
+  
+  // Yes, And... specific
+  initialIdea?: string;
+  additions?: string[];
+  evaluations?: string[];
+  synthesis?: string;
+  
+  // Unified Framework: Risk/Adversarial fields
+  risks?: string[];
+  failureModes?: string[];
+  mitigations?: string[];
+  antifragileProperties?: string[];
+  blackSwans?: string[];
   
   // Advanced features
   isRevision?: boolean;
@@ -87,9 +117,18 @@ The server follows the standard MCP server pattern:
 
 ### Visual Output System
 - Uses chalk for terminal colors
-- Emojis as technique indicators (🎩, 💥, 🎲, 🔄)
+- Emojis as technique indicators (🎩, 💥, 🎲, 🔄, 🔍, 🤝)
 - Box-drawing characters for structured display
 - Controlled by `DISABLE_THOUGHT_LOGGING` environment variable
+
+## Unified Framework Integration
+
+The implementation now supports the unified generative/adversarial framework from SPECIFICATIONS.md:
+
+1. **Dual Thinking Mode Indicators**: Visual indicators (✨ creative, ⚠️ critical) show current mode
+2. **Risk/Adversarial Fields**: All techniques support risks, failureModes, mitigations, antifragileProperties, blackSwans
+3. **Meta-Learning Metrics**: Sessions track creativityScore, risksCaught, antifragileFeatures
+4. **Enhanced Visual Output**: Risk sections (yellow) and mitigations (green) displayed separately
 
 ## Important Implementation Details
 
@@ -109,6 +148,8 @@ The server follows the standard MCP server pattern:
    - PO: 4 steps (provocation, suspend judgment, extract principles, develop ideas)
    - Random Entry: 3 steps (stimulus, connections, solutions)
    - SCAMPER: 7 steps (one per action)
+   - Concept Extraction: 4 steps (identify success, extract concepts, abstract patterns, apply to problem)
+   - Yes, And...: 4 steps (accept (yes), build (and), evaluate (but), integrate)
 
 ## Code Style Guidelines
 
@@ -117,3 +158,10 @@ The server follows the standard MCP server pattern:
 - Comprehensive error messages with actionable guidance
 - Consistent use of template literals for string formatting
 - Visual output should be clear and structured with proper spacing
+
+## Package Distribution
+
+- **Binary**: The package exposes a `creative-thinking` command via `dist/index.js`
+- **Note**: The `dist/` directory is intentionally not in `.gitignore` for GitHub distribution via npx
+- **Publishing**: Uses `prepublishOnly` script to ensure fresh build before npm publish
+- **npm Packaging**: `.npmignore` excludes source files, keeping only compiled output
