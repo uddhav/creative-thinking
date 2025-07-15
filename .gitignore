@@ -40,4 +40,4 @@ coverage/
 .cache/
 
 # npm
-package-lock.json
+# package-lock.json # Needed for CI dependency caching
