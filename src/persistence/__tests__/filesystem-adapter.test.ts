@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from '@vitest/runner';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { FilesystemAdapter } from '../filesystem-adapter.js';
 import { PersistenceError, PersistenceErrorCode } from '../types.js';
 import * as path from 'path';

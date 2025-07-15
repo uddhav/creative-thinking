@@ -27,7 +27,15 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "prepublishOnly": "npm run build && npm run test:run"
+    "prepublishOnly": "npm run build && npm run test:run",
+    "lint": "eslint . --ext .ts,.tsx",
+    "lint:fix": "eslint . --ext .ts,.tsx --fix",
+    "format": "prettier --write \"src/**/*.{ts,tsx,json,md}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,json,md}\"",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist coverage",
+    "pretest": "npm run build",
+    "version": "npm run build && git add -A dist"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "0.5.0",
@@ -37,7 +45,13 @@
   "devDependencies": {
     "@types/node": "^22",
     "@types/yargs": "^17.0.32",
+    "@typescript-eslint/eslint-plugin": "^8.37.0",
+    "@typescript-eslint/parser": "^8.37.0",
     "@vitest/coverage-v8": "^1.6.1",
+    "eslint": "^9.31.0",
+    "eslint-config-prettier": "^10.1.5",
+    "eslint-plugin-prettier": "^5.5.1",
+    "prettier": "^3.6.2",
     "typescript": "^5.3.3",
     "vitest": "^1.6.1"
   },

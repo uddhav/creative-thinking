@@ -1,0 +1,46 @@
+# Configuration for PR labeler action
+
+documentation:
+  - '**/*.md'
+  - 'docs/**/*'
+  - 'examples/**/*'
+
+tests:
+  - '**/*.test.ts'
+  - '**/*.spec.ts'
+  - '**/test/**/*'
+  - '**/__tests__/**/*'
+
+dependencies:
+  - 'package.json'
+  - 'package-lock.json'
+  - 'yarn.lock'
+
+ci:
+  - '.github/**/*'
+  - '.circleci/**/*'
+  - '.travis.yml'
+  - 'azure-pipelines.yml'
+
+docker:
+  - 'Dockerfile'
+  - 'docker-compose.yml'
+  - '.dockerignore'
+
+export:
+  - 'src/export/**/*'
+  - 'dist/export/**/*'
+
+persistence:
+  - 'src/persistence/**/*'
+  - 'dist/persistence/**/*'
+
+techniques:
+  - 'src/techniques/**/*'
+  - 'src/index.ts'
+
+config:
+  - 'tsconfig.json'
+  - 'vitest.config.ts'
+  - '.eslintrc*'
+  - '.prettierrc*'
