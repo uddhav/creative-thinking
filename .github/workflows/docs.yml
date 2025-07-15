@@ -36,9 +36,13 @@ jobs:
       - name: 📦 Install dependencies
         run: npm ci
 
-      - name: 📚 Install documentation tools
+      - name: 📚 Verify documentation tools
         run: |
-          npm install --save-dev typedoc typedoc-plugin-markdown @microsoft/api-extractor @microsoft/api-documenter
+          # Documentation tools should be in devDependencies
+          # If not present, install them temporarily
+          if ! npm list typedoc >/dev/null 2>&1; then
+            npm install --no-save typedoc typedoc-plugin-markdown
+          fi
 
       - name: 🔨 Build project
         run: npm run build

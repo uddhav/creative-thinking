@@ -30,14 +30,12 @@ jobs:
 
       - name: 🔍 Run ESLint
         run: npm run lint
-        continue-on-error: true
 
       - name: 📊 TypeScript type checking
         run: npm run typecheck
 
       - name: 🎨 Check code formatting
         run: npm run format:check
-        continue-on-error: true
 
   # Job 2: Test with Coverage
   test:
@@ -111,7 +109,13 @@ jobs:
         shell: bash
 
       - name: 🚀 Test CLI execution
-        run: node dist/index.js --version || true
+        run: |
+          # Test that the CLI starts without errors
+          timeout 5s node dist/index.js || exit_code=$?
+          if [ "$exit_code" != "124" ] && [ "$exit_code" != "0" ]; then
+            echo "CLI failed to start properly"
+            exit 1
+          fi
         shell: bash
 
       - name: 📁 Upload build artifacts
@@ -139,12 +143,12 @@ jobs:
         run: npm ci
 
       - name: 🔒 Run npm audit
-        run: npm audit --production
-        continue-on-error: true
+        run: |
+          npm audit --production --audit-level=high || echo "::warning::npm audit found vulnerabilities"
 
       - name: 🔍 Run Snyk security scan
+        if: env.SNYK_TOKEN != ''
         uses: snyk/actions/node@master
-        continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
