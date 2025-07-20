@@ -21,11 +21,15 @@ export class FilesystemAdapter {
         this.config = config;
         // Validate and sanitize the base path
         const providedPath = config.options.path || path.join(process.cwd(), '.creative-thinking');
+        // Check for path traversal patterns before normalization
+        if (providedPath.includes('..') || providedPath.includes('~')) {
+            throw new PersistenceError('Invalid base path: Path traversal detected', PersistenceErrorCode.PERMISSION_DENIED);
+        }
         // Resolve to absolute path and normalize
         this.basePath = path.resolve(path.normalize(providedPath));
-        // Ensure the path doesn't contain dangerous patterns
-        if (this.basePath.includes('..') || !path.isAbsolute(this.basePath)) {
-            throw new PersistenceError('Invalid base path: Path traversal detected', PersistenceErrorCode.PERMISSION_DENIED);
+        // Additional check after resolution
+        if (!path.isAbsolute(this.basePath)) {
+            throw new PersistenceError('Invalid base path: Must be an absolute path', PersistenceErrorCode.PERMISSION_DENIED);
         }
         // Create base directory if it doesn't exist
         try {
@@ -49,7 +53,7 @@ export class FilesystemAdapter {
                 format: 'json',
                 compressed: false,
                 encrypted: false,
-                data: state
+                data: state,
             };
             // Serialize and check size limit (10MB max)
             const serialized = JSON.stringify(sessionData, null, 2);
@@ -161,8 +165,10 @@ export class FilesystemAdapter {
                 const searchableContent = [
                     session.problem,
                     ...session.history.map(h => h.output),
-                    ...session.insights
-                ].join(' ').toLowerCase();
+                    ...session.insights,
+                ]
+                    .join(' ')
+                    .toLowerCase();
                 matches = searchableContent.includes(searchText);
             }
             if (query.problem && session.problem.toLowerCase().includes(query.problem.toLowerCase())) {
@@ -242,15 +248,13 @@ export class FilesystemAdapter {
             totalSessions: files.length,
             totalSize,
             oldestSession: oldestTime ? new Date(oldestTime) : undefined,
-            newestSession: newestTime ? new Date(newestTime) : undefined
+            newestSession: newestTime ? new Date(newestTime) : undefined,
         };
     }
     async cleanup(olderThan) {
         this.ensureInitialized();
         const metadata = await this.list();
-        const toDelete = metadata
-            .filter(m => m.updatedAt < olderThan)
-            .map(m => m.id);
+        const toDelete = metadata.filter(m => m.updatedAt < olderThan).map(m => m.id);
         return this.deleteBatch(toDelete);
     }
     async close() {
@@ -310,7 +314,7 @@ export class FilesystemAdapter {
             tags: state.tags || [],
             insights: state.insights.length,
             branches: Object.keys(state.branches).length,
-            metrics: state.metrics
+            metrics: state.metrics,
         };
     }
     applyFilters(metadata, filter) {

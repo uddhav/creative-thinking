@@ -1,8 +1,8 @@
 /**
  * Enhanced JSON exporter with flexible output options
  */
-import { SessionState } from '../persistence/types.js';
-import { ExportOptions, ExportResult } from './types.js';
+import type { SessionState } from '../persistence/types.js';
+import type { ExportOptions, ExportResult } from './types.js';
 import { BaseExporter } from './base-exporter.js';
 export declare class JSONExporter extends BaseExporter {
     constructor();

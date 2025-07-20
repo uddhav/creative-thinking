@@ -28,16 +28,22 @@ describe('FilesystemAdapter', () => {
     it('should initialize successfully with valid path', async () => {
       await adapter.initialize({
         adapter: 'filesystem',
-        options: { path: testBasePath }
+        options: { path: testBasePath },
       });
-      
+
       // Check that directories were created
       const sessionDir = path.join(testBasePath, 'sessions');
       const metadataDir = path.join(testBasePath, 'metadata');
-      
-      const sessionDirExists = await fs.stat(sessionDir).then(() => true).catch(() => false);
-      const metadataDirExists = await fs.stat(metadataDir).then(() => true).catch(() => false);
-      
+
+      const sessionDirExists = await fs
+        .stat(sessionDir)
+        .then(() => true)
+        .catch(() => false);
+      const metadataDirExists = await fs
+        .stat(metadataDir)
+        .then(() => true)
+        .catch(() => false);
+
       expect(sessionDirExists).toBe(true);
       expect(metadataDirExists).toBe(true);
     });
@@ -46,7 +52,7 @@ describe('FilesystemAdapter', () => {
       await expect(
         adapter.initialize({
           adapter: 'filesystem',
-          options: { path: '../../../etc/passwd' }
+          options: { path: '../../../etc/passwd' },
         })
       ).rejects.toThrow(PersistenceError);
     });
@@ -54,13 +60,13 @@ describe('FilesystemAdapter', () => {
     it('should throw error if already initialized', async () => {
       await adapter.initialize({
         adapter: 'filesystem',
-        options: { path: testBasePath }
+        options: { path: testBasePath },
       });
 
       await expect(
         adapter.initialize({
           adapter: 'filesystem',
-          options: { path: testBasePath }
+          options: { path: testBasePath },
         })
       ).rejects.toThrow('Adapter already initialized');
     });
@@ -70,17 +76,12 @@ describe('FilesystemAdapter', () => {
     beforeEach(async () => {
       await adapter.initialize({
         adapter: 'filesystem',
-        options: { path: testBasePath }
+        options: { path: testBasePath },
       });
     });
 
     it('should accept valid session IDs', async () => {
-      const validIds = [
-        'session_123',
-        'session-abc-def',
-        'SESSION_XYZ_789',
-        'test_session-123'
-      ];
+      const validIds = ['session_123', 'session-abc-def', 'SESSION_XYZ_789', 'test_session-123'];
 
       for (const id of validIds) {
         const testState = {
@@ -91,7 +92,7 @@ describe('FilesystemAdapter', () => {
           totalSteps: 6,
           history: [],
           branches: {},
-          insights: []
+          insights: [],
         };
 
         await expect(adapter.save(id, testState)).resolves.not.toThrow();
@@ -106,7 +107,7 @@ describe('FilesystemAdapter', () => {
         '',
         'a'.repeat(256), // Too long
         'session with spaces',
-        'session@special#chars'
+        'session@special#chars',
       ];
 
       for (const id of invalidIds) {
@@ -118,7 +119,7 @@ describe('FilesystemAdapter', () => {
           totalSteps: 6,
           history: [],
           branches: {},
-          insights: []
+          insights: [],
         };
 
         await expect(adapter.save(id, testState)).rejects.toThrow(PersistenceError);
@@ -130,7 +131,7 @@ describe('FilesystemAdapter', () => {
     beforeEach(async () => {
       await adapter.initialize({
         adapter: 'filesystem',
-        options: { path: testBasePath }
+        options: { path: testBasePath },
       });
     });
 
@@ -142,38 +143,40 @@ describe('FilesystemAdapter', () => {
         technique: 'six_hats' as const,
         currentStep: 3,
         totalSteps: 6,
-        history: [{
-          step: 1,
-          timestamp: new Date().toISOString(),
-          input: {
-            technique: 'six_hats' as const,
-            problem: 'How to improve team collaboration',
-            currentStep: 1,
-            totalSteps: 6,
-            output: 'Blue hat thinking...',
-            nextStepNeeded: true,
-            hatColor: 'blue'
+        history: [
+          {
+            step: 1,
+            timestamp: new Date().toISOString(),
+            input: {
+              technique: 'six_hats' as const,
+              problem: 'How to improve team collaboration',
+              currentStep: 1,
+              totalSteps: 6,
+              output: 'Blue hat thinking...',
+              nextStepNeeded: true,
+              hatColor: 'blue',
+            },
+            output: {
+              technique: 'six_hats' as const,
+              problem: 'How to improve team collaboration',
+              currentStep: 1,
+              totalSteps: 6,
+              output: 'Blue hat thinking...',
+              nextStepNeeded: true,
+              hatColor: 'blue',
+            },
           },
-          output: {
-            technique: 'six_hats' as const,
-            problem: 'How to improve team collaboration',
-            currentStep: 1,
-            totalSteps: 6,
-            output: 'Blue hat thinking...',
-            nextStepNeeded: true,
-            hatColor: 'blue'
-          }
-        }],
+        ],
         branches: {},
         insights: ['Initial insight'],
         startTime: Date.now(),
         metrics: {
           creativityScore: 5,
           risksCaught: 2,
-          antifragileFeatures: 1
+          antifragileFeatures: 1,
         },
         tags: ['teamwork', 'productivity'],
-        name: 'Team Collaboration Session'
+        name: 'Team Collaboration Session',
       };
 
       await adapter.save(sessionId, testState);
@@ -192,39 +195,40 @@ describe('FilesystemAdapter', () => {
     it('should enforce file size limit', async () => {
       const sessionId = 'large-session';
       const largeOutput = 'x'.repeat(1024 * 1024); // 1MB string
-      
+
       const testState = {
         id: sessionId,
         problem: 'test',
         technique: 'six_hats' as const,
         currentStep: 1,
         totalSteps: 6,
-        history: Array(15).fill(null).map((_, i) => ({
-          step: i + 1,
-          timestamp: new Date().toISOString(),
-          input: {
-            technique: 'six_hats' as const,
-            problem: 'test',
-            currentStep: i + 1,
-            totalSteps: 6,
-            output: largeOutput,
-            nextStepNeeded: true
-          },
-          output: {
-            technique: 'six_hats' as const,
-            problem: 'test',
-            currentStep: i + 1,
-            totalSteps: 6,
-            output: largeOutput,
-            nextStepNeeded: true
-          }
-        })),
+        history: Array(15)
+          .fill(null)
+          .map((_, i) => ({
+            step: i + 1,
+            timestamp: new Date().toISOString(),
+            input: {
+              technique: 'six_hats' as const,
+              problem: 'test',
+              currentStep: i + 1,
+              totalSteps: 6,
+              output: largeOutput,
+              nextStepNeeded: true,
+            },
+            output: {
+              technique: 'six_hats' as const,
+              problem: 'test',
+              currentStep: i + 1,
+              totalSteps: 6,
+              output: largeOutput,
+              nextStepNeeded: true,
+            },
+          })),
         branches: {},
-        insights: []
+        insights: [],
       };
 
-      await expect(adapter.save(sessionId, testState))
-        .rejects.toThrow('Session data too large');
+      await expect(adapter.save(sessionId, testState)).rejects.toThrow('Session data too large');
     });
   });
 
@@ -232,7 +236,7 @@ describe('FilesystemAdapter', () => {
     beforeEach(async () => {
       await adapter.initialize({
         adapter: 'filesystem',
-        options: { path: testBasePath }
+        options: { path: testBasePath },
       });
     });
 
@@ -249,7 +253,7 @@ describe('FilesystemAdapter', () => {
           branches: {},
           insights: [],
           endTime: Date.now(),
-          tags: ['tag1', 'tag2']
+          tags: ['tag1', 'tag2'],
         },
         {
           id: 'session-2',
@@ -260,7 +264,7 @@ describe('FilesystemAdapter', () => {
           history: [],
           branches: {},
           insights: [],
-          tags: ['tag2', 'tag3']
+          tags: ['tag2', 'tag3'],
         },
         {
           id: 'session-3',
@@ -271,8 +275,8 @@ describe('FilesystemAdapter', () => {
           history: [],
           branches: {},
           insights: [],
-          tags: ['tag1']
-        }
+          tags: ['tag1'],
+        },
       ];
 
       for (const session of sessions) {
@@ -284,20 +288,20 @@ describe('FilesystemAdapter', () => {
       expect(allSessions).toHaveLength(3);
 
       // Test filtering by technique
-      const sixHatsSessions = await adapter.list({ 
-        filter: { technique: 'six_hats' } 
+      const sixHatsSessions = await adapter.list({
+        filter: { technique: 'six_hats' },
       });
       expect(sixHatsSessions).toHaveLength(2);
 
       // Test filtering by status
-      const completedSessions = await adapter.list({ 
-        filter: { status: 'completed' } 
+      const completedSessions = await adapter.list({
+        filter: { status: 'completed' },
       });
       expect(completedSessions).toHaveLength(1);
 
       // Test filtering by tags
-      const tag1Sessions = await adapter.list({ 
-        filter: { tags: ['tag1'] } 
+      const tag1Sessions = await adapter.list({
+        filter: { tags: ['tag1'] },
       });
       expect(tag1Sessions).toHaveLength(2);
 
@@ -311,7 +315,7 @@ describe('FilesystemAdapter', () => {
     beforeEach(async () => {
       await adapter.initialize({
         adapter: 'filesystem',
-        options: { path: testBasePath }
+        options: { path: testBasePath },
       });
     });
 
@@ -325,11 +329,11 @@ describe('FilesystemAdapter', () => {
         totalSteps: 6,
         history: [],
         branches: {},
-        insights: []
+        insights: [],
       };
 
       await adapter.save(sessionId, testState);
-      
+
       // Verify it exists
       const loaded = await adapter.load(sessionId);
       expect(loaded).toBeDefined();

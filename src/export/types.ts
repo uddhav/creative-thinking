@@ -2,7 +2,7 @@
  * Export format types and interfaces
  */
 
-import { SessionState, LateralTechnique } from '../persistence/types.js';
+import type { SessionState, LateralTechnique } from '../persistence/types.js';
 
 export type ExportFormat = 'json' | 'markdown' | 'csv';
 
@@ -83,6 +83,24 @@ export const DEFAULT_MARKDOWN_TEMPLATE = `# {{problem}}
 // CSV headers for different export types
 export const CSV_HEADERS = {
   basic: ['Step', 'Timestamp', 'Technique', 'Output'],
-  detailed: ['Step', 'Timestamp', 'Technique', 'HatColor', 'Action', 'Output', 'Risks', 'Mitigations'],
-  metrics: ['SessionID', 'Problem', 'Technique', 'Duration', 'Steps', 'CreativityScore', 'RisksIdentified', 'Insights']
+  detailed: [
+    'Step',
+    'Timestamp',
+    'Technique',
+    'HatColor',
+    'Action',
+    'Output',
+    'Risks',
+    'Mitigations',
+  ],
+  metrics: [
+    'SessionID',
+    'Problem',
+    'Technique',
+    'Duration',
+    'Steps',
+    'CreativityScore',
+    'RisksIdentified',
+    'Insights',
+  ],
 };

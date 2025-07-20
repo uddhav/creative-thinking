@@ -2,8 +2,9 @@
  * CSV exporter for data analysis and spreadsheet import
  */
 
-import { SessionState, LateralThinkingInput } from '../persistence/types.js';
-import { ExportOptions, ExportResult, CSV_HEADERS } from './types.js';
+import type { SessionState, LateralThinkingInput } from '../persistence/types.js';
+import type { ExportOptions, ExportResult } from './types.js';
+import { CSV_HEADERS } from './types.js';
 import { BaseExporter } from './base-exporter.js';
 
 export class CSVExporter extends BaseExporter {
@@ -13,7 +14,7 @@ export class CSVExporter extends BaseExporter {
 
   async export(session: SessionState, options: ExportOptions): Promise<ExportResult> {
     const content = this.generateCSV(session, options);
-    
+
     return {
       content,
       filename: this.generateFilename(session, 'csv'),
@@ -23,8 +24,8 @@ export class CSVExporter extends BaseExporter {
         sessionId: session.id,
         techniqueUsed: session.technique,
         totalSteps: session.totalSteps,
-        completedSteps: session.currentStep
-      }
+        completedSteps: session.currentStep,
+      },
     };
   }
 
@@ -39,17 +40,17 @@ export class CSVExporter extends BaseExporter {
 
   private generateDetailedCSV(session: SessionState, options: ExportOptions): string {
     const rows: string[][] = [];
-    
+
     // Determine headers based on what data is available
     const headers = this.determineHeaders(session);
     rows.push(headers);
-    
+
     // Process each history entry
     session.history.forEach((entry, index) => {
       const row = this.createDetailedRow(entry.input, index + 1, session);
       rows.push(row);
     });
-    
+
     // Convert to CSV format
     return rows.map(row => row.map(cell => this.escapeCSV(cell)).join(',')).join('\n');
   }
@@ -57,11 +58,11 @@ export class CSVExporter extends BaseExporter {
   private determineHeaders(session: SessionState): string[] {
     const baseHeaders = ['Step', 'Timestamp', 'Technique'];
     const dynamicHeaders: string[] = [];
-    
+
     // Check what fields are present in the history
     const sampleEntry = session.history[0]?.input;
     if (!sampleEntry) return baseHeaders.concat(['Output']);
-    
+
     // Technique-specific headers
     if (session.technique === 'six_hats' && sampleEntry.hatColor) {
       dynamicHeaders.push('Hat Color');
@@ -81,42 +82,56 @@ export class CSVExporter extends BaseExporter {
     if (session.technique === 'yes_and' && sampleEntry.initialIdea) {
       dynamicHeaders.push('Initial Idea');
     }
-    
+
     // Main output
     dynamicHeaders.push('Output');
-    
+
     // Check for arrays in any entry
     const hasRisks = session.history.some(h => h.input.risks && h.input.risks.length > 0);
-    const hasMitigations = session.history.some(h => h.input.mitigations && h.input.mitigations.length > 0);
-    const hasConnections = session.history.some(h => h.input.connections && h.input.connections.length > 0);
-    const hasPrinciples = session.history.some(h => h.input.principles && h.input.principles.length > 0);
-    const hasConcepts = session.history.some(h => h.input.extractedConcepts && h.input.extractedConcepts.length > 0);
-    const hasApplications = session.history.some(h => h.input.applications && h.input.applications.length > 0);
-    
+    const hasMitigations = session.history.some(
+      h => h.input.mitigations && h.input.mitigations.length > 0
+    );
+    const hasConnections = session.history.some(
+      h => h.input.connections && h.input.connections.length > 0
+    );
+    const hasPrinciples = session.history.some(
+      h => h.input.principles && h.input.principles.length > 0
+    );
+    const hasConcepts = session.history.some(
+      h => h.input.extractedConcepts && h.input.extractedConcepts.length > 0
+    );
+    const hasApplications = session.history.some(
+      h => h.input.applications && h.input.applications.length > 0
+    );
+
     if (hasRisks) dynamicHeaders.push('Risks');
     if (hasMitigations) dynamicHeaders.push('Mitigations');
     if (hasConnections) dynamicHeaders.push('Connections');
     if (hasPrinciples) dynamicHeaders.push('Principles');
     if (hasConcepts) dynamicHeaders.push('Concepts');
     if (hasApplications) dynamicHeaders.push('Applications');
-    
+
     // Revision/branch info
     const hasRevisions = session.history.some(h => h.input.isRevision);
     const hasBranches = session.history.some(h => h.input.branchFromStep);
-    
+
     if (hasRevisions) dynamicHeaders.push('Is Revision', 'Revises Step');
     if (hasBranches) dynamicHeaders.push('Branch From', 'Branch ID');
-    
+
     return baseHeaders.concat(dynamicHeaders);
   }
 
-  private createDetailedRow(entry: LateralThinkingInput, stepNumber: number, session: SessionState): string[] {
+  private createDetailedRow(
+    entry: LateralThinkingInput,
+    stepNumber: number,
+    session: SessionState
+  ): string[] {
     const row: string[] = [
       stepNumber.toString(),
       this.formatDate(new Date(Date.now())), // timestamp is on the parent object
-      this.getTechniqueDisplayName(session.technique)
+      this.getTechniqueDisplayName(session.technique),
     ];
-    
+
     // Technique-specific fields
     if (session.technique === 'six_hats' && entry.hatColor !== undefined) {
       row.push(entry.hatColor.toUpperCase());
@@ -136,13 +151,13 @@ export class CSVExporter extends BaseExporter {
     if (session.technique === 'yes_and' && entry.initialIdea !== undefined) {
       row.push(entry.initialIdea);
     }
-    
+
     // Main output
     row.push(entry.output);
-    
+
     // Arrays (join with semicolons)
     const headers = this.determineHeaders(session);
-    
+
     if (headers.includes('Risks')) {
       row.push(entry.risks ? entry.risks.join('; ') : '');
     }
@@ -161,7 +176,7 @@ export class CSVExporter extends BaseExporter {
     if (headers.includes('Applications')) {
       row.push(entry.applications ? entry.applications.join('; ') : '');
     }
-    
+
     // Revision/branch info
     if (headers.includes('Is Revision')) {
       row.push(entry.isRevision ? 'Yes' : 'No');
@@ -171,22 +186,23 @@ export class CSVExporter extends BaseExporter {
       row.push(entry.branchFromStep ? entry.branchFromStep.toString() : '');
       row.push(entry.branchId || '');
     }
-    
+
     return row;
   }
 
   private generateMetricsCSV(sessions: SessionState[]): string {
     const rows: string[][] = [];
-    
+
     // Headers for metrics CSV
     rows.push(CSV_HEADERS.metrics);
-    
+
     // Process each session
     sessions.forEach(session => {
-      const duration = session.startTime && session.endTime 
-        ? Math.round((session.endTime - session.startTime) / 60000) // minutes
-        : 0;
-      
+      const duration =
+        session.startTime && session.endTime
+          ? Math.round((session.endTime - session.startTime) / 60000) // minutes
+          : 0;
+
       const row = [
         session.id,
         session.problem,
@@ -195,12 +211,12 @@ export class CSVExporter extends BaseExporter {
         `${session.currentStep}/${session.totalSteps}`,
         (session.metrics?.creativityScore || 0).toString(),
         (session.metrics?.risksCaught || 0).toString(),
-        session.insights.length.toString()
+        session.insights.length.toString(),
       ];
-      
+
       rows.push(row);
     });
-    
+
     // Convert to CSV format
     return rows.map(row => row.map(cell => this.escapeCSV(cell)).join(',')).join('\n');
   }
@@ -211,7 +227,7 @@ export class CSVExporter extends BaseExporter {
   async exportMultiple(sessions: SessionState[], options: ExportOptions): Promise<ExportResult> {
     const content = this.generateMetricsCSV(sessions);
     const date = new Date().toISOString().split('T')[0];
-    
+
     return {
       content,
       filename: `creative-thinking-sessions-${date}.csv`,
@@ -219,8 +235,8 @@ export class CSVExporter extends BaseExporter {
       metadata: {
         exportedAt: new Date(),
         sessionCount: sessions.length,
-        exportFormat: 'csv'
-      }
+        exportFormat: 'csv',
+      },
     };
   }
 }

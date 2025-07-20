@@ -42,7 +42,7 @@ export class ExportFactory {
             includeMetrics: true,
             includeBranches: true,
             dateFormat: 'default',
-            ...options
+            ...options,
         };
         // Validate options if the exporter supports it
         if ('validateOptions' in exporter && typeof exporter.validateOptions === 'function') {

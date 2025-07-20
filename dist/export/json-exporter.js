@@ -18,8 +18,8 @@ export class JSONExporter extends BaseExporter {
                 sessionId: session.id,
                 techniqueUsed: session.technique,
                 totalSteps: session.totalSteps,
-                completedSteps: session.currentStep
-            }
+                completedSteps: session.currentStep,
+            },
         };
     }
     prepareData(session, options) {
@@ -27,7 +27,7 @@ export class JSONExporter extends BaseExporter {
             exportMetadata: {
                 exportedAt: new Date().toISOString(),
                 exportVersion: '1.0',
-                tool: 'Creative Thinking MCP Tool'
+                tool: 'Creative Thinking MCP Tool',
             },
             sessionId: session.id,
             problem: session.problem,
@@ -36,8 +36,8 @@ export class JSONExporter extends BaseExporter {
             progress: {
                 currentStep: session.currentStep,
                 totalSteps: session.totalSteps,
-                percentComplete: Math.round((session.currentStep / session.totalSteps) * 100)
-            }
+                percentComplete: Math.round((session.currentStep / session.totalSteps) * 100),
+            },
         };
         // Add optional metadata
         if (options.includeMetadata !== false) {
@@ -46,7 +46,7 @@ export class JSONExporter extends BaseExporter {
                 tags: session.tags || [],
                 startTime: session.startTime ? new Date(session.startTime).toISOString() : null,
                 endTime: session.endTime ? new Date(session.endTime).toISOString() : null,
-                duration: this.calculateDuration(session.startTime, session.endTime)
+                duration: this.calculateDuration(session.startTime, session.endTime),
             };
         }
         // Add history with enhanced structure
@@ -57,14 +57,14 @@ export class JSONExporter extends BaseExporter {
         if (options.includeInsights !== false && session.insights.length > 0) {
             data.insights = {
                 count: session.insights.length,
-                items: session.insights
+                items: session.insights,
             };
         }
         // Add metrics
         if (options.includeMetrics !== false && session.metrics) {
             data.metrics = {
                 ...session.metrics,
-                summary: this.generateMetricsSummary(session.metrics)
+                summary: this.generateMetricsSummary(session.metrics),
             };
         }
         // Add branches if present
@@ -73,8 +73,8 @@ export class JSONExporter extends BaseExporter {
                 count: Object.keys(session.branches).length,
                 details: Object.entries(session.branches).map(([id, branch]) => ({
                     branchId: id,
-                    stepsInBranch: branch.length
-                }))
+                    stepsInBranch: branch.length,
+                })),
             };
         }
         // Add statistics
@@ -86,7 +86,7 @@ export class JSONExporter extends BaseExporter {
             step: stepNumber,
             timestamp: timestamp,
             output: entry.output,
-            technique: entry.technique
+            technique: entry.technique,
         };
         // Add technique-specific fields
         if (entry.hatColor)
@@ -113,7 +113,7 @@ export class JSONExporter extends BaseExporter {
             additions: 'additions',
             evaluations: 'evaluations',
             antifragileProperties: 'antifragileProperties',
-            blackSwans: 'blackSwans'
+            blackSwans: 'blackSwans',
         };
         Object.entries(arrays).forEach(([key, field]) => {
             if (entry[key] && entry[key].length > 0) {
@@ -124,14 +124,14 @@ export class JSONExporter extends BaseExporter {
         if (entry.isRevision) {
             enhanced.revision = {
                 isRevision: true,
-                revisesStep: entry.revisesStep
+                revisesStep: entry.revisesStep,
             };
         }
         // Add branch information if present
         if (entry.branchFromStep) {
             enhanced.branch = {
                 fromStep: entry.branchFromStep,
-                branchId: entry.branchId
+                branchId: entry.branchId,
             };
         }
         return enhanced;
@@ -140,7 +140,7 @@ export class JSONExporter extends BaseExporter {
         return {
             overallCreativity: this.categorizeScore(metrics.creativityScore || 0, 'creativity'),
             riskAwareness: this.categorizeScore(metrics.risksCaught || 0, 'risk'),
-            robustness: this.categorizeScore(metrics.antifragileFeatures || 0, 'robustness')
+            robustness: this.categorizeScore(metrics.antifragileFeatures || 0, 'robustness'),
         };
     }
     categorizeScore(score, type) {
@@ -179,7 +179,7 @@ export class JSONExporter extends BaseExporter {
             averageOutputLength: 0,
             uniqueConceptsCount: 0,
             revisionCount: 0,
-            branchingPoints: 0
+            branchingPoints: 0,
         };
         // Calculate output statistics
         const outputs = session.history.map(h => h.input.output);
@@ -188,8 +188,15 @@ export class JSONExporter extends BaseExporter {
         // Count unique concepts across all arrays
         const allConcepts = new Set();
         session.history.forEach(h => {
-            ['risks', 'mitigations', 'connections', 'principles', 'extractedConcepts',
-                'applications', 'antifragileProperties'].forEach(field => {
+            [
+                'risks',
+                'mitigations',
+                'connections',
+                'principles',
+                'extractedConcepts',
+                'applications',
+                'antifragileProperties',
+            ].forEach(field => {
                 const items = h.input[field];
                 if (items && Array.isArray(items)) {
                     items.forEach(item => allConcepts.add(item.toLowerCase()));

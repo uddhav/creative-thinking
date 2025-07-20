@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { MarkdownExporter } from '../markdown-exporter.js';
-import { SessionState } from '../../persistence/types.js';
+import type { SessionState } from '../../persistence/types.js';
 
 describe('MarkdownExporter', () => {
   const exporter = new MarkdownExporter();
@@ -22,7 +22,7 @@ describe('MarkdownExporter', () => {
           totalSteps: 6,
           output: 'We need to analyze our collaboration systematically...',
           nextStepNeeded: true,
-          hatColor: 'blue'
+          hatColor: 'blue',
         },
         output: {
           technique: 'six_hats',
@@ -31,8 +31,8 @@ describe('MarkdownExporter', () => {
           totalSteps: 6,
           output: 'We need to analyze our collaboration systematically...',
           nextStepNeeded: true,
-          hatColor: 'blue'
-        }
+          hatColor: 'blue',
+        },
       },
       {
         step: 2,
@@ -46,7 +46,7 @@ describe('MarkdownExporter', () => {
           nextStepNeeded: true,
           hatColor: 'white',
           risks: ['Communication delays', 'Meeting fatigue'],
-          mitigations: ['Async communication tools', 'Meeting recordings']
+          mitigations: ['Async communication tools', 'Meeting recordings'],
         },
         output: {
           technique: 'six_hats',
@@ -55,9 +55,9 @@ describe('MarkdownExporter', () => {
           totalSteps: 6,
           output: 'Current facts: 8 team members, 3 time zones, 2 weekly meetings',
           nextStepNeeded: true,
-          hatColor: 'white'
-        }
-      }
+          hatColor: 'white',
+        },
+      },
     ],
     branches: {},
     insights: ['Async communication is critical', 'Time zone awareness needed'],
@@ -65,10 +65,10 @@ describe('MarkdownExporter', () => {
     metrics: {
       creativityScore: 75,
       risksCaught: 2,
-      antifragileFeatures: 1
+      antifragileFeatures: 1,
     },
     tags: ['collaboration', 'remote-work'],
-    name: 'Team Collaboration Analysis'
+    name: 'Team Collaboration Analysis',
   });
 
   it('should export session to markdown format', async () => {
@@ -78,7 +78,7 @@ describe('MarkdownExporter', () => {
       includeMetadata: true,
       includeHistory: true,
       includeInsights: true,
-      includeMetrics: true
+      includeMetrics: true,
     });
 
     expect(result.content).toBeTruthy();
@@ -90,7 +90,7 @@ describe('MarkdownExporter', () => {
   it('should include session metadata in markdown', async () => {
     const session = createTestSession();
     const result = await exporter.export(session, { format: 'markdown' });
-    
+
     const content = result.content.toString();
     expect(content).toContain('# How to improve team collaboration');
     expect(content).toContain('Six Thinking Hats');
@@ -101,7 +101,7 @@ describe('MarkdownExporter', () => {
   it('should format history entries with technique-specific details', async () => {
     const session = createTestSession();
     const result = await exporter.export(session, { format: 'markdown' });
-    
+
     const content = result.content.toString();
     expect(content).toContain('🔵 Step 1');
     expect(content).toContain('BLUE HAT - Process Control');
@@ -112,7 +112,7 @@ describe('MarkdownExporter', () => {
   it('should include risks and mitigations when present', async () => {
     const session = createTestSession();
     const result = await exporter.export(session, { format: 'markdown' });
-    
+
     const content = result.content.toString();
     expect(content).toContain('⚠️ Risks Identified');
     expect(content).toContain('Communication delays');
@@ -123,7 +123,7 @@ describe('MarkdownExporter', () => {
   it('should include insights section', async () => {
     const session = createTestSession();
     const result = await exporter.export(session, { format: 'markdown' });
-    
+
     const content = result.content.toString();
     expect(content).toContain('## Key Insights');
     expect(content).toContain('Async communication is critical');
@@ -132,11 +132,11 @@ describe('MarkdownExporter', () => {
 
   it('should include metrics when enabled', async () => {
     const session = createTestSession();
-    const result = await exporter.export(session, { 
+    const result = await exporter.export(session, {
       format: 'markdown',
-      includeMetrics: true 
+      includeMetrics: true,
     });
-    
+
     const content = result.content.toString();
     expect(content).toContain('## Performance Metrics');
     expect(content).toContain('**Creativity Score**: 75');
@@ -147,20 +147,20 @@ describe('MarkdownExporter', () => {
     const session = createTestSession();
     session.insights = [];
     const result = await exporter.export(session, { format: 'markdown' });
-    
+
     const content = result.content.toString();
     expect(content).not.toContain('## Key Insights');
   });
 
   it('should respect export options', async () => {
     const session = createTestSession();
-    const result = await exporter.export(session, { 
+    const result = await exporter.export(session, {
       format: 'markdown',
       includeHistory: false,
       includeInsights: false,
-      includeMetrics: false
+      includeMetrics: false,
     });
-    
+
     const content = result.content.toString();
     expect(content).not.toContain('## Thinking Process');
     expect(content).not.toContain('## Key Insights');

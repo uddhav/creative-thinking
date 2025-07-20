@@ -1,8 +1,8 @@
 /**
  * Factory for creating exporters
  */
-import { ExportFormat, Exporter, ExportOptions, ExportResult } from './types.js';
-import { SessionState } from '../persistence/types.js';
+import type { ExportFormat, Exporter, ExportOptions, ExportResult } from './types.js';
+import type { SessionState } from '../persistence/types.js';
 export declare class ExportFactory {
     private static exporters;
     /**

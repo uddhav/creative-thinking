@@ -2,13 +2,13 @@
  * Core persistence adapter interface
  */
 
-import {
+import type {
   SessionState,
   SessionMetadata,
   ListOptions,
   SearchQuery,
   ExportFormat,
-  PersistenceConfig
+  PersistenceConfig,
 } from './types.js';
 
 /**

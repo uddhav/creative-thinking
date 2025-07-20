@@ -22,9 +22,11 @@ export const DEFAULT_MARKDOWN_TEMPLATE = `# {{problem}}
 - **Antifragile Features**: {{metrics.antifragileFeatures}}
 {{/if}}
 
+{{#if history}}
 ## Thinking Process
 
 {{history}}
+{{/if}}
 
 {{#if insights}}
 ## Key Insights
@@ -41,7 +43,25 @@ export const DEFAULT_MARKDOWN_TEMPLATE = `# {{problem}}
 // CSV headers for different export types
 export const CSV_HEADERS = {
     basic: ['Step', 'Timestamp', 'Technique', 'Output'],
-    detailed: ['Step', 'Timestamp', 'Technique', 'HatColor', 'Action', 'Output', 'Risks', 'Mitigations'],
-    metrics: ['SessionID', 'Problem', 'Technique', 'Duration', 'Steps', 'CreativityScore', 'RisksIdentified', 'Insights']
+    detailed: [
+        'Step',
+        'Timestamp',
+        'Technique',
+        'HatColor',
+        'Action',
+        'Output',
+        'Risks',
+        'Mitigations',
+    ],
+    metrics: [
+        'SessionID',
+        'Problem',
+        'Technique',
+        'Duration',
+        'Steps',
+        'CreativityScore',
+        'RisksIdentified',
+        'Insights',
+    ],
 };
 //# sourceMappingURL=types.js.map

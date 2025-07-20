@@ -18,8 +18,8 @@ export class MarkdownExporter extends BaseExporter {
                 sessionId: session.id,
                 techniqueUsed: session.technique,
                 totalSteps: session.totalSteps,
-                completedSteps: session.currentStep
-            }
+                completedSteps: session.currentStep,
+            },
         };
     }
     generateMarkdown(session, options) {
@@ -37,11 +37,13 @@ export class MarkdownExporter extends BaseExporter {
             branchCount: Object.keys(session.branches).length,
             insightCount: session.insights.length,
             metrics: options.includeMetrics !== false ? session.metrics : null,
-            history: options.includeHistory !== false ? this.formatHistory(session) : '',
+            history: options.includeHistory !== false ? this.formatHistory(session) : null,
             insights: options.includeInsights !== false && session.insights.length > 0
-                ? this.formatInsights(session.insights) : '',
+                ? this.formatInsights(session.insights)
+                : '',
             branches: options.includeBranches !== false && Object.keys(session.branches).length > 0
-                ? this.formatBranches(session.branches) : ''
+                ? this.formatBranches(session.branches)
+                : '',
         };
         // Simple template replacement (in production, use a proper template engine)
         let result = template;
@@ -125,8 +127,12 @@ export class MarkdownExporter extends BaseExporter {
         switch (technique) {
             case 'six_hats':
                 const hatEmojis = {
-                    blue: '🔵', white: '⚪', red: '🔴',
-                    yellow: '🟡', black: '⚫', green: '🟢'
+                    blue: '🔵',
+                    white: '⚪',
+                    red: '🔴',
+                    yellow: '🟡',
+                    black: '⚫',
+                    green: '🟢',
                 };
                 return hatEmojis[entry.hatColor || 'blue'] || '🎩';
             case 'po':
@@ -135,9 +141,13 @@ export class MarkdownExporter extends BaseExporter {
                 return '🎲';
             case 'scamper':
                 const actionEmojis = {
-                    substitute: '🔄', combine: '🔗', adapt: '🔧',
-                    modify: '🔍', put_to_other_use: '🎯',
-                    eliminate: '✂️', reverse: '🔃'
+                    substitute: '🔄',
+                    combine: '🔗',
+                    adapt: '🔧',
+                    modify: '🔍',
+                    put_to_other_use: '🎯',
+                    eliminate: '✂️',
+                    reverse: '🔃',
                 };
                 return actionEmojis[entry.scamperAction || ''] || '🔄';
             case 'concept_extraction':
@@ -158,7 +168,7 @@ export class MarkdownExporter extends BaseExporter {
                         red: 'Emotions & Intuition',
                         yellow: 'Optimism & Benefits',
                         black: 'Critical Judgment',
-                        green: 'Creativity & Alternatives'
+                        green: 'Creativity & Alternatives',
                     };
                     return `${entry.hatColor.toUpperCase()} HAT - ${hatNames[entry.hatColor]}`;
                 }

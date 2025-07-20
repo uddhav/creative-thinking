@@ -18,8 +18,8 @@ export class CSVExporter extends BaseExporter {
                 sessionId: session.id,
                 techniqueUsed: session.technique,
                 totalSteps: session.totalSteps,
-                completedSteps: session.currentStep
-            }
+                completedSteps: session.currentStep,
+            },
         };
     }
     generateCSV(session, options) {
@@ -104,7 +104,7 @@ export class CSVExporter extends BaseExporter {
         const row = [
             stepNumber.toString(),
             this.formatDate(new Date(Date.now())), // timestamp is on the parent object
-            this.getTechniqueDisplayName(session.technique)
+            this.getTechniqueDisplayName(session.technique),
         ];
         // Technique-specific fields
         if (session.technique === 'six_hats' && entry.hatColor !== undefined) {
@@ -175,7 +175,7 @@ export class CSVExporter extends BaseExporter {
                 `${session.currentStep}/${session.totalSteps}`,
                 (session.metrics?.creativityScore || 0).toString(),
                 (session.metrics?.risksCaught || 0).toString(),
-                session.insights.length.toString()
+                session.insights.length.toString(),
             ];
             rows.push(row);
         });
@@ -195,8 +195,8 @@ export class CSVExporter extends BaseExporter {
             metadata: {
                 exportedAt: new Date(),
                 sessionCount: sessions.length,
-                exportFormat: 'csv'
-            }
+                exportFormat: 'csv',
+            },
         };
     }
 }

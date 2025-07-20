@@ -2,8 +2,8 @@
  * Enhanced JSON exporter with flexible output options
  */
 
-import { SessionState } from '../persistence/types.js';
-import { ExportOptions, ExportResult } from './types.js';
+import type { SessionState } from '../persistence/types.js';
+import type { ExportOptions, ExportResult } from './types.js';
 import { BaseExporter } from './base-exporter.js';
 
 export class JSONExporter extends BaseExporter {
@@ -14,7 +14,7 @@ export class JSONExporter extends BaseExporter {
   async export(session: SessionState, options: ExportOptions): Promise<ExportResult> {
     const data = this.prepareData(session, options);
     const content = JSON.stringify(data, null, 2);
-    
+
     return {
       content,
       filename: this.generateFilename(session, 'json'),
@@ -24,8 +24,8 @@ export class JSONExporter extends BaseExporter {
         sessionId: session.id,
         techniqueUsed: session.technique,
         totalSteps: session.totalSteps,
-        completedSteps: session.currentStep
-      }
+        completedSteps: session.currentStep,
+      },
     };
   }
 
@@ -34,7 +34,7 @@ export class JSONExporter extends BaseExporter {
       exportMetadata: {
         exportedAt: new Date().toISOString(),
         exportVersion: '1.0',
-        tool: 'Creative Thinking MCP Tool'
+        tool: 'Creative Thinking MCP Tool',
       },
       sessionId: session.id,
       problem: session.problem,
@@ -43,8 +43,8 @@ export class JSONExporter extends BaseExporter {
       progress: {
         currentStep: session.currentStep,
         totalSteps: session.totalSteps,
-        percentComplete: Math.round((session.currentStep / session.totalSteps) * 100)
-      }
+        percentComplete: Math.round((session.currentStep / session.totalSteps) * 100),
+      },
     };
 
     // Add optional metadata
@@ -54,20 +54,22 @@ export class JSONExporter extends BaseExporter {
         tags: session.tags || [],
         startTime: session.startTime ? new Date(session.startTime).toISOString() : null,
         endTime: session.endTime ? new Date(session.endTime).toISOString() : null,
-        duration: this.calculateDuration(session.startTime, session.endTime)
+        duration: this.calculateDuration(session.startTime, session.endTime),
       };
     }
 
     // Add history with enhanced structure
     if (options.includeHistory !== false) {
-      data.history = session.history.map((entry, index) => this.enhanceHistoryEntry(entry.input, entry.timestamp, index + 1));
+      data.history = session.history.map((entry, index) =>
+        this.enhanceHistoryEntry(entry.input, entry.timestamp, index + 1)
+      );
     }
 
     // Add insights
     if (options.includeInsights !== false && session.insights.length > 0) {
       data.insights = {
         count: session.insights.length,
-        items: session.insights
+        items: session.insights,
       };
     }
 
@@ -75,7 +77,7 @@ export class JSONExporter extends BaseExporter {
     if (options.includeMetrics !== false && session.metrics) {
       data.metrics = {
         ...session.metrics,
-        summary: this.generateMetricsSummary(session.metrics)
+        summary: this.generateMetricsSummary(session.metrics),
       };
     }
 
@@ -85,8 +87,8 @@ export class JSONExporter extends BaseExporter {
         count: Object.keys(session.branches).length,
         details: Object.entries(session.branches).map(([id, branch]) => ({
           branchId: id,
-          stepsInBranch: branch.length
-        }))
+          stepsInBranch: branch.length,
+        })),
       };
     }
 
@@ -101,7 +103,7 @@ export class JSONExporter extends BaseExporter {
       step: stepNumber,
       timestamp: timestamp,
       output: entry.output,
-      technique: entry.technique
+      technique: entry.technique,
     };
 
     // Add technique-specific fields
@@ -124,7 +126,7 @@ export class JSONExporter extends BaseExporter {
       additions: 'additions',
       evaluations: 'evaluations',
       antifragileProperties: 'antifragileProperties',
-      blackSwans: 'blackSwans'
+      blackSwans: 'blackSwans',
     };
 
     Object.entries(arrays).forEach(([key, field]) => {
@@ -137,7 +139,7 @@ export class JSONExporter extends BaseExporter {
     if (entry.isRevision) {
       enhanced.revision = {
         isRevision: true,
-        revisesStep: entry.revisesStep
+        revisesStep: entry.revisesStep,
       };
     }
 
@@ -145,7 +147,7 @@ export class JSONExporter extends BaseExporter {
     if (entry.branchFromStep) {
       enhanced.branch = {
         fromStep: entry.branchFromStep,
-        branchId: entry.branchId
+        branchId: entry.branchId,
       };
     }
 
@@ -156,7 +158,7 @@ export class JSONExporter extends BaseExporter {
     return {
       overallCreativity: this.categorizeScore(metrics.creativityScore || 0, 'creativity'),
       riskAwareness: this.categorizeScore(metrics.risksCaught || 0, 'risk'),
-      robustness: this.categorizeScore(metrics.antifragileFeatures || 0, 'robustness')
+      robustness: this.categorizeScore(metrics.antifragileFeatures || 0, 'robustness'),
     };
   }
 
@@ -167,19 +169,19 @@ export class JSONExporter extends BaseExporter {
         if (score >= 60) return 'Creative';
         if (score >= 40) return 'Moderately Creative';
         return 'Developing';
-      
+
       case 'risk':
         if (score >= 10) return 'Excellent Risk Awareness';
         if (score >= 5) return 'Good Risk Awareness';
         if (score >= 2) return 'Some Risk Awareness';
         return 'Limited Risk Awareness';
-      
+
       case 'robustness':
         if (score >= 8) return 'Highly Robust';
         if (score >= 4) return 'Robust';
         if (score >= 2) return 'Somewhat Robust';
         return 'Basic';
-      
+
       default:
         return 'Unknown';
     }
@@ -191,7 +193,7 @@ export class JSONExporter extends BaseExporter {
       averageOutputLength: 0,
       uniqueConceptsCount: 0,
       revisionCount: 0,
-      branchingPoints: 0
+      branchingPoints: 0,
     };
 
     // Calculate output statistics
@@ -202,8 +204,15 @@ export class JSONExporter extends BaseExporter {
     // Count unique concepts across all arrays
     const allConcepts = new Set<string>();
     session.history.forEach(h => {
-      ['risks', 'mitigations', 'connections', 'principles', 'extractedConcepts', 
-       'applications', 'antifragileProperties'].forEach(field => {
+      [
+        'risks',
+        'mitigations',
+        'connections',
+        'principles',
+        'extractedConcepts',
+        'applications',
+        'antifragileProperties',
+      ].forEach(field => {
         const items = (h.input as any)[field];
         if (items && Array.isArray(items)) {
           items.forEach(item => allConcepts.add(item.toLowerCase()));

@@ -81,7 +81,7 @@ export class BaseExporter {
             random_entry: 'Random Entry',
             scamper: 'SCAMPER',
             concept_extraction: 'Concept Extraction',
-            yes_and: 'Yes, And...'
+            yes_and: 'Yes, And...',
         };
         return names[technique] || technique.replace(/_/g, ' ').toUpperCase();
     }
