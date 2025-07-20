@@ -1,6 +1,6 @@
 // Examples demonstrating the enhanced techniques with unified framework
 
-const enhancedTechniquesExamples = {
+const _enhancedTechniquesExamples = {
   // 1. Six Hats Plus with Black Swan Awareness
   sixHatsEnhanced: {
     blueHatPlus: {
@@ -229,7 +229,7 @@ const enhancedTechniquesExamples = {
 };
 
 // Example showing complete session with metrics
-const completedEnhancedSession = {
+const _completedEnhancedSession = {
   sessionId: 'session_xyz',
   technique: 'po',
   currentStep: 4,

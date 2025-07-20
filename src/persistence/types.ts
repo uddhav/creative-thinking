@@ -187,7 +187,7 @@ export class PersistenceError extends Error {
   constructor(
     message: string,
     public code: PersistenceErrorCode,
-    public details?: any
+    public details?: unknown
   ) {
     super(message);
     this.name = 'PersistenceError';

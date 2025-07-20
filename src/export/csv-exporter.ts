@@ -12,7 +12,7 @@ export class CSVExporter extends BaseExporter {
     super('csv');
   }
 
-  async export(session: SessionState, options: ExportOptions): Promise<ExportResult> {
+  export(session: SessionState, options: ExportOptions): ExportResult {
     const content = this.generateCSV(session, options);
 
     return {
@@ -38,7 +38,7 @@ export class CSVExporter extends BaseExporter {
     }
   }
 
-  private generateDetailedCSV(session: SessionState, options: ExportOptions): string {
+  private generateDetailedCSV(session: SessionState, _options: ExportOptions): string {
     const rows: string[][] = [];
 
     // Determine headers based on what data is available
@@ -224,7 +224,7 @@ export class CSVExporter extends BaseExporter {
   /**
    * Special method to export multiple sessions as a comparative CSV
    */
-  async exportMultiple(sessions: SessionState[], options: ExportOptions): Promise<ExportResult> {
+  exportMultiple(sessions: SessionState[], _options: ExportOptions): ExportResult {
     const content = this.generateMetricsCSV(sessions);
     const date = new Date().toISOString().split('T')[0];
 

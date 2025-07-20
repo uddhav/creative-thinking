@@ -12,7 +12,7 @@ export class MarkdownExporter extends BaseExporter {
     super('markdown');
   }
 
-  async export(session: SessionState, options: ExportOptions): Promise<ExportResult> {
+  export(session: SessionState, options: ExportOptions): ExportResult {
     const content = this.generateMarkdown(session, options);
 
     return {
@@ -65,7 +65,8 @@ export class MarkdownExporter extends BaseExporter {
     // Replace variables
     Object.entries(data).forEach(([key, value]) => {
       const regex = new RegExp(`{{${key}}}`, 'g');
-      result = result.replace(regex, String(value || ''));
+      const valueStr = value !== null && value !== undefined ? String(value) : '';
+      result = result.replace(regex, valueStr);
     });
 
     // Handle nested properties (e.g., metrics.creativityScore)
@@ -79,7 +80,7 @@ export class MarkdownExporter extends BaseExporter {
     return result.trim();
   }
 
-  private processConditionals(template: string, data: any): string {
+  private processConditionals(template: string, data: Record<string, unknown>): string {
     // Simple conditional processing
     const conditionalRegex = /{{#if\s+(\w+)}}([\s\S]*?){{\/if}}/g;
 
@@ -166,7 +167,7 @@ export class MarkdownExporter extends BaseExporter {
 
   private getStepEmoji(technique: string, entry: LateralThinkingInput): string {
     switch (technique) {
-      case 'six_hats':
+      case 'six_hats': {
         const hatEmojis: Record<string, string> = {
           blue: '🔵',
           white: '⚪',
@@ -176,6 +177,7 @@ export class MarkdownExporter extends BaseExporter {
           green: '🟢',
         };
         return hatEmojis[entry.hatColor || 'blue'] || '🎩';
+      }
 
       case 'po':
         return '💡';
@@ -183,7 +185,7 @@ export class MarkdownExporter extends BaseExporter {
       case 'random_entry':
         return '🎲';
 
-      case 'scamper':
+      case 'scamper': {
         const actionEmojis: Record<string, string> = {
           substitute: '🔄',
           combine: '🔗',
@@ -194,6 +196,7 @@ export class MarkdownExporter extends BaseExporter {
           reverse: '🔃',
         };
         return actionEmojis[entry.scamperAction || ''] || '🔄';
+      }
 
       case 'concept_extraction':
         return '🔍';

@@ -1,6 +1,6 @@
 // Example demonstrating improved concurrent session handling
 
-const concurrentSessionsExample = {
+const _concurrentSessionsExample = {
   // Session 1: Start a Six Hats session
   session1_step1: {
     technique: 'six_hats',
@@ -63,7 +63,7 @@ const concurrentSessionsExample = {
 
 // Expected responses:
 
-const session1Response = {
+const _session1Response = {
   sessionId: 'session_abc123-uuid',
   technique: 'six_hats',
   currentStep: 1,
@@ -74,7 +74,7 @@ const session1Response = {
   nextStepGuidance: 'Next: White Hat - Focus on Facts and information',
 };
 
-const session2Response = {
+const _session2Response = {
   sessionId: 'session_def456-uuid',
   technique: 'po',
   currentStep: 1,
@@ -85,7 +85,7 @@ const session2Response = {
   nextStepGuidance: 'Suspend judgment and explore the provocation',
 };
 
-const errorResponse = {
+const _errorResponse = {
   error: 'Session session_old-expired-uuid not found. It may have expired.',
   status: 'failed',
 };

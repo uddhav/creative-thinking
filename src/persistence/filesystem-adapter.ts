@@ -67,7 +67,7 @@ export class FilesystemAdapter implements PersistenceAdapter {
       this.initialized = true;
     } catch (error) {
       throw new PersistenceError(
-        `Failed to initialize filesystem adapter: ${error}`,
+        `Failed to initialize filesystem adapter: ${String(error)}`,
         PersistenceErrorCode.IO_ERROR,
         error
       );
@@ -108,7 +108,7 @@ export class FilesystemAdapter implements PersistenceAdapter {
       await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2), 'utf8');
     } catch (error) {
       throw new PersistenceError(
-        `Failed to save session ${sessionId}: ${error}`,
+        `Failed to save session ${sessionId}: ${String(error)}`,
         PersistenceErrorCode.IO_ERROR,
         error
       );
@@ -130,12 +130,12 @@ export class FilesystemAdapter implements PersistenceAdapter {
       }
 
       return parsed.data;
-    } catch (error: any) {
-      if (error.code === 'ENOENT') {
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
         return null;
       }
       throw new PersistenceError(
-        `Failed to load session ${sessionId}: ${error}`,
+        `Failed to load session ${sessionId}: ${String(error)}`,
         PersistenceErrorCode.IO_ERROR,
         error
       );
@@ -152,12 +152,12 @@ export class FilesystemAdapter implements PersistenceAdapter {
       await fs.unlink(sessionPath);
       await fs.unlink(metadataPath).catch(() => {}); // Ignore metadata deletion errors
       return true;
-    } catch (error: any) {
-      if (error.code === 'ENOENT') {
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
         return false;
       }
       throw new PersistenceError(
-        `Failed to delete session ${sessionId}: ${error}`,
+        `Failed to delete session ${sessionId}: ${String(error)}`,
         PersistenceErrorCode.IO_ERROR,
         error
       );
@@ -213,7 +213,7 @@ export class FilesystemAdapter implements PersistenceAdapter {
       return metadata;
     } catch (error) {
       throw new PersistenceError(
-        `Failed to list sessions: ${error}`,
+        `Failed to list sessions: ${String(error)}`,
         PersistenceErrorCode.IO_ERROR,
         error
       );
@@ -239,7 +239,7 @@ export class FilesystemAdapter implements PersistenceAdapter {
         const searchText = query.text.toLowerCase();
         const searchableContent = [
           session.problem,
-          ...session.history.map(h => h.output),
+          ...session.history.map(h => JSON.stringify(h.output)),
           ...session.insights,
         ]
           .join(' ')
@@ -320,7 +320,7 @@ export class FilesystemAdapter implements PersistenceAdapter {
       return session.id;
     } catch (error) {
       throw new PersistenceError(
-        `Failed to import session: ${error}`,
+        `Failed to import session: ${String(error)}`,
         PersistenceErrorCode.INVALID_FORMAT,
         error
       );
@@ -369,7 +369,7 @@ export class FilesystemAdapter implements PersistenceAdapter {
     return this.deleteBatch(toDelete);
   }
 
-  async close(): Promise<void> {
+  close(): void {
     // No resources to clean up for filesystem adapter
     this.initialized = false;
   }

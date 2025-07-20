@@ -31,7 +31,12 @@ export default [
         Buffer: 'readonly',
         __dirname: 'readonly',
         __filename: 'readonly',
-        URL: 'readonly'
+        URL: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        NodeJS: 'readonly'
       }
     },
     plugins: {

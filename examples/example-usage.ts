@@ -2,7 +2,7 @@
 // This demonstrates how to use each technique step by step
 
 // Example 1: Six Thinking Hats for "Improving Customer Service"
-const sixHatsExample = [
+const _sixHatsExample = [
   {
     technique: 'six_hats',
     problem: 'How to improve customer service response times',
@@ -37,7 +37,7 @@ const sixHatsExample = [
 ];
 
 // Example 2: PO Technique for "Reducing Meeting Time"
-const poExample = [
+const _poExample = [
   {
     technique: 'po',
     problem: 'How to make meetings more efficient',
@@ -84,7 +84,7 @@ const poExample = [
 ];
 
 // Example 3: Random Entry for "New Product Ideas"
-const randomEntryExample = [
+const _randomEntryExample = [
   {
     technique: 'random_entry',
     problem: 'Generate ideas for a new fitness product',
@@ -122,7 +122,7 @@ const randomEntryExample = [
 ];
 
 // Example 4: SCAMPER for "Improving Water Bottle Design"
-const scamperExample = [
+const _scamperExample = [
   {
     technique: 'scamper',
     problem: 'Redesign a water bottle for hikers',
@@ -147,7 +147,7 @@ const scamperExample = [
 ];
 
 // Example 5: Using Revision Feature
-const revisionExample = {
+const _revisionExample = {
   technique: 'six_hats',
   problem: 'How to improve customer service response times',
   currentStep: 3,
@@ -161,7 +161,7 @@ const revisionExample = {
 };
 
 // Example 6: Using Branching Feature
-const branchExample = {
+const _branchExample = {
   technique: 'scamper',
   problem: 'Redesign a water bottle for hikers',
   currentStep: 4,
@@ -175,7 +175,7 @@ const branchExample = {
 };
 
 // Example 7: Concept Extraction Workflow
-const conceptExtractionExample = [
+const _conceptExtractionExample = [
   {
     technique: 'concept_extraction',
     problem: 'How to improve employee onboarding process',

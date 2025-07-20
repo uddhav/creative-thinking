@@ -1,6 +1,6 @@
 // Example demonstrating unified framework features with risk/adversarial thinking
 
-const unifiedFrameworkExample = {
+const _unifiedFrameworkExample = {
   // Six Hats with Black Swan Awareness - Black Hat example
   sixHatsBlackHat: {
     technique: 'six_hats',
@@ -104,7 +104,7 @@ const unifiedFrameworkExample = {
 };
 
 // Example showing meta-learning data in response
-const completedSessionResponse = {
+const _completedSessionResponse = {
   sessionId: 'session_1234567890_abc123',
   technique: 'concept_extraction',
   currentStep: 4,

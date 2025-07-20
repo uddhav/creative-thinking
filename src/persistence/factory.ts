@@ -41,7 +41,7 @@ export async function createAdapter(config: PersistenceConfig): Promise<Persiste
 
     default:
       throw new PersistenceError(
-        `Unknown adapter type: ${config.adapter}`,
+        `Unknown adapter type: ${config.adapter as string}`,
         PersistenceErrorCode.INVALID_FORMAT
       );
   }

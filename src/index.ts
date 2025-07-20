@@ -160,14 +160,14 @@ class LateralThinkingServer {
   private currentSessionId: string | null = null;
   private disableThoughtLogging: boolean;
   private readonly SESSION_TTL = 24 * 60 * 60 * 1000; // 24 hours
-  private cleanupInterval: NodeJS.Timeout | null = null;
+  private cleanupInterval: number | null = null;
   private persistenceAdapter: PersistenceAdapter | null = null;
 
   constructor() {
     this.disableThoughtLogging =
       (process.env.DISABLE_THOUGHT_LOGGING || '').toLowerCase() === 'true';
     this.startSessionCleanup();
-    this.initializePersistence();
+    void this.initializePersistence();
   }
 
   private async initializePersistence(): Promise<void> {
@@ -301,7 +301,10 @@ class LateralThinkingServer {
         throw new Error('No active session to save');
       }
 
-      const session = this.sessions.get(this.currentSessionId)!;
+      const session = this.sessions.get(this.currentSessionId);
+      if (!session) {
+        throw new Error('Session not found');
+      }
 
       // Update session with save options
       if (input.saveOptions?.sessionName) {
@@ -360,7 +363,10 @@ class LateralThinkingServer {
         throw new Error('Session ID required for load operation');
       }
 
-      const loadedState = await this.persistenceAdapter!.load(input.loadOptions.sessionId);
+      if (!this.persistenceAdapter) {
+        throw new Error('Persistence adapter not initialized');
+      }
+      const loadedState = await this.persistenceAdapter.load(input.loadOptions.sessionId);
       if (!loadedState) {
         throw new Error('Session not found');
       }
@@ -369,7 +375,7 @@ class LateralThinkingServer {
       const session: SessionData = {
         technique: loadedState.technique,
         problem: loadedState.problem,
-        history: loadedState.history.map((h: any) => ({
+        history: loadedState.history.map(h => ({
           ...h.input,
           timestamp: h.timestamp,
         })),
@@ -443,7 +449,10 @@ class LateralThinkingServer {
   ): Promise<{ content: Array<{ type: string; text: string }> }> {
     try {
       const options = input.listOptions || {};
-      const metadata = await this.persistenceAdapter!.list(options);
+      if (!this.persistenceAdapter) {
+        throw new Error('Persistence adapter not initialized');
+      }
+      const metadata = await this.persistenceAdapter.list(options);
 
       // Format visual output
       const visualOutput = this.formatSessionList(metadata);
@@ -486,7 +495,10 @@ class LateralThinkingServer {
         throw new Error('Session ID required for delete operation');
       }
 
-      const deleted = await this.persistenceAdapter!.delete(input.deleteOptions.sessionId);
+      if (!this.persistenceAdapter) {
+        throw new Error('Persistence adapter not initialized');
+      }
+      const deleted = await this.persistenceAdapter.delete(input.deleteOptions.sessionId);
 
       return {
         content: [
@@ -534,7 +546,10 @@ class LateralThinkingServer {
         throw new Error('Session ID and format required for export operation');
       }
 
-      const data = await this.persistenceAdapter!.export(
+      if (!this.persistenceAdapter) {
+        throw new Error('Persistence adapter not initialized');
+      }
+      const data = await this.persistenceAdapter.export(
         input.exportOptions.sessionId,
         input.exportOptions.format as ExportFormat
       );
@@ -655,7 +670,7 @@ class LateralThinkingServer {
    * Format progress bar
    */
   private formatProgress(completed: number, total: number): string {
-    const percentage = Math.round((completed / total) * 100);
+    const _percentage = Math.round((completed / total) * 100);
     const filled = Math.round((completed / total) * 10);
     const empty = 10 - filled;
     return '█'.repeat(filled) + '░'.repeat(empty);
@@ -898,17 +913,17 @@ class LateralThinkingServer {
       }
 
       // Validate operation-specific options
-      if (data.sessionOperation === 'load' && !(data.loadOptions as any)?.sessionId) {
+      if (data.sessionOperation === 'load' && !data.loadOptions?.sessionId) {
         throw new Error('sessionId is required in loadOptions for load operation');
       }
-      if (data.sessionOperation === 'delete' && !(data.deleteOptions as any)?.sessionId) {
+      if (data.sessionOperation === 'delete' && !data.deleteOptions?.sessionId) {
         throw new Error('sessionId is required in deleteOptions for delete operation');
       }
       if (data.sessionOperation === 'export') {
-        if (!(data.exportOptions as any)?.sessionId) {
+        if (!data.exportOptions?.sessionId) {
           throw new Error('sessionId is required in exportOptions for export operation');
         }
-        if (!(data.exportOptions as any)?.format) {
+        if (!data.exportOptions?.format) {
           throw new Error('format is required in exportOptions for export operation');
         }
       }
@@ -1123,7 +1138,7 @@ class LateralThinkingServer {
           }
         }
         break;
-      case 'concept_extraction':
+      case 'concept_extraction': {
         emoji = '🔍';
         const stepNames = [
           'Identify Success',
@@ -1136,7 +1151,8 @@ class LateralThinkingServer {
           techniqueInfo += `: ${successExample}`;
         }
         break;
-      case 'yes_and':
+      }
+      case 'yes_and': {
         emoji = '🤝';
         const yesAndSteps = ['Accept (Yes)', 'Build (And)', 'Evaluate (But)', 'Integrate'];
         techniqueInfo = yesAndSteps[currentStep - 1];
@@ -1144,6 +1160,7 @@ class LateralThinkingServer {
           techniqueInfo += `: ${initialIdea}`;
         }
         break;
+      }
     }
 
     if (data.isRevision) {
@@ -1259,7 +1276,7 @@ class LateralThinkingServer {
       case 'six_hats':
         insights.push('Comprehensive analysis from multiple perspectives completed');
         break;
-      case 'po':
+      case 'po': {
         const principles = session.history
           .filter(h => h.principles)
           .flatMap(h => h.principles || []);
@@ -1267,7 +1284,8 @@ class LateralThinkingServer {
           insights.push(`Extracted principles: ${principles.join(', ')}`);
         }
         break;
-      case 'random_entry':
+      }
+      case 'random_entry': {
         const connections = session.history
           .filter(h => h.connections)
           .flatMap(h => h.connections || []);
@@ -1275,10 +1293,11 @@ class LateralThinkingServer {
           insights.push(`Creative connections discovered: ${connections.length}`);
         }
         break;
+      }
       case 'scamper':
         insights.push('Systematic transformation completed across all dimensions');
         break;
-      case 'concept_extraction':
+      case 'concept_extraction': {
         const concepts = session.history
           .filter(h => h.extractedConcepts)
           .flatMap(h => h.extractedConcepts || []);
@@ -1299,7 +1318,8 @@ class LateralThinkingServer {
           insights.push(`${applications.length} new applications generated for your problem`);
         }
         break;
-      case 'yes_and':
+      }
+      case 'yes_and': {
         const additions = session.history.filter(h => h.additions).flatMap(h => h.additions || []);
         const evaluations = session.history
           .filter(h => h.evaluations)
@@ -1317,6 +1337,7 @@ class LateralThinkingServer {
           insights.push('Final synthesis achieved');
         }
         break;
+      }
     }
 
     return insights;
@@ -1482,7 +1503,7 @@ class LateralThinkingServer {
     const nextStep = data.currentStep + 1;
 
     switch (data.technique) {
-      case 'six_hats':
+      case 'six_hats': {
         const hatOrder: SixHatsColor[] = ['blue', 'white', 'red', 'yellow', 'black', 'green'];
         if (nextStep <= 6) {
           const nextHat = hatOrder[nextStep - 1];
@@ -1490,8 +1511,9 @@ class LateralThinkingServer {
           return `Next: ${hatInfo.name} - Focus on ${hatInfo.enhancedFocus || hatInfo.focus}`;
         }
         break;
+      }
 
-      case 'po':
+      case 'po': {
         const poSteps = [
           'Create a provocative statement (Po:)',
           'Suspend judgment and explore the provocation (then challenge it)',
@@ -1499,16 +1521,18 @@ class LateralThinkingServer {
           'Develop robust solutions addressing failure modes',
         ];
         return poSteps[nextStep - 1] || 'Complete the process';
+      }
 
-      case 'random_entry':
+      case 'random_entry': {
         const randomSteps = [
           'Introduce a random stimulus word/concept',
           'Generate connections with systematic doubt ("Is this always true?")',
           'Validate insights before developing solutions',
         ];
         return randomSteps[nextStep - 1] || 'Complete the process';
+      }
 
-      case 'scamper':
+      case 'scamper': {
         const scamperOrder: ScamperAction[] = [
           'substitute',
           'combine',
@@ -1524,8 +1548,9 @@ class LateralThinkingServer {
           return `Next: ${nextAction.toUpperCase()} - ${actionInfo.description}`;
         }
         break;
+      }
 
-      case 'concept_extraction':
+      case 'concept_extraction': {
         const conceptSteps = [
           'Identify a successful solution/example from any domain',
           "Extract key concepts and analyze where they wouldn't work",
@@ -1533,8 +1558,9 @@ class LateralThinkingServer {
           'Apply patterns only where success probability is high',
         ];
         return conceptSteps[nextStep - 1] || 'Complete the process';
+      }
 
-      case 'yes_and':
+      case 'yes_and': {
         const yesAndSteps = [
           'Accept the initial idea or contribution (Yes)',
           'Build upon it with creative additions (And)',
@@ -1542,6 +1568,7 @@ class LateralThinkingServer {
           'Integrate insights into a robust solution',
         ];
         return yesAndSteps[nextStep - 1] || 'Complete the process';
+      }
     }
 
     return 'Continue with the next step';
@@ -1882,7 +1909,7 @@ const server = new Server(
 
 const lateralServer = new LateralThinkingServer();
 
-server.setRequestHandler(ListToolsRequestSchema, async () => ({
+server.setRequestHandler(ListToolsRequestSchema, () => ({
   tools: [LATERAL_THINKING_TOOL],
 }));
 

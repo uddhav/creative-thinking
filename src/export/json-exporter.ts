@@ -2,8 +2,9 @@
  * Enhanced JSON exporter with flexible output options
  */
 
-import type { SessionState } from '../persistence/types.js';
+import type { SessionState, LateralThinkingInput } from '../persistence/types.js';
 import type { ExportOptions, ExportResult } from './types.js';
+import type { LateralThinkingData } from '../index.js';
 import { BaseExporter } from './base-exporter.js';
 
 export class JSONExporter extends BaseExporter {
@@ -11,8 +12,8 @@ export class JSONExporter extends BaseExporter {
     super('json');
   }
 
-  async export(session: SessionState, options: ExportOptions): Promise<ExportResult> {
-    const data = this.prepareData(session, options);
+  export(session: SessionState, options: ExportOptions): ExportResult {
+    const data: Record<string, unknown> = this.prepareData(session, options);
     const content = JSON.stringify(data, null, 2);
 
     return {
@@ -29,8 +30,8 @@ export class JSONExporter extends BaseExporter {
     };
   }
 
-  private prepareData(session: SessionState, options: ExportOptions): any {
-    const data: any = {
+  private prepareData(session: SessionState, options: ExportOptions): Record<string, unknown> {
+    const data: Record<string, unknown> = {
       exportMetadata: {
         exportedAt: new Date().toISOString(),
         exportVersion: '1.0',
@@ -98,8 +99,12 @@ export class JSONExporter extends BaseExporter {
     return data;
   }
 
-  private enhanceHistoryEntry(entry: any, timestamp: string, stepNumber: number): any {
-    const enhanced: any = {
+  private enhanceHistoryEntry(
+    entry: LateralThinkingInput,
+    timestamp: string,
+    stepNumber: number
+  ): Record<string, unknown> {
+    const enhanced: Record<string, unknown> = {
       step: stepNumber,
       timestamp: timestamp,
       output: entry.output,
@@ -130,8 +135,9 @@ export class JSONExporter extends BaseExporter {
     };
 
     Object.entries(arrays).forEach(([key, field]) => {
-      if (entry[key] && entry[key].length > 0) {
-        enhanced[field] = entry[key];
+      const value = (entry as Record<string, unknown>)[key];
+      if (Array.isArray(value) && value.length > 0) {
+        enhanced[field] = value;
       }
     });
 
@@ -139,26 +145,28 @@ export class JSONExporter extends BaseExporter {
     if (entry.isRevision) {
       enhanced.revision = {
         isRevision: true,
-        revisesStep: entry.revisesStep,
+        revisesStep: (entry as LateralThinkingData).revisesStep,
       };
     }
 
     // Add branch information if present
     if (entry.branchFromStep) {
       enhanced.branch = {
-        fromStep: entry.branchFromStep,
-        branchId: entry.branchId,
+        fromStep: (entry as LateralThinkingData).branchFromStep,
+        branchId: (entry as LateralThinkingData).branchId,
       };
     }
 
     return enhanced;
   }
 
-  private generateMetricsSummary(metrics: any): any {
+  private generateMetricsSummary(
+    metrics: NonNullable<SessionState['metrics']>
+  ): Record<string, string> {
     return {
-      overallCreativity: this.categorizeScore(metrics.creativityScore || 0, 'creativity'),
-      riskAwareness: this.categorizeScore(metrics.risksCaught || 0, 'risk'),
-      robustness: this.categorizeScore(metrics.antifragileFeatures || 0, 'robustness'),
+      overallCreativity: this.categorizeScore(metrics.creativityScore ?? 0, 'creativity'),
+      riskAwareness: this.categorizeScore(metrics.risksCaught ?? 0, 'risk'),
+      robustness: this.categorizeScore(metrics.antifragileFeatures ?? 0, 'robustness'),
     };
   }
 
@@ -187,8 +195,8 @@ export class JSONExporter extends BaseExporter {
     }
   }
 
-  private generateStatistics(session: SessionState): any {
-    const stats: any = {
+  private generateStatistics(session: SessionState): Record<string, number> {
+    const stats: Record<string, number> = {
       totalOutputLength: 0,
       averageOutputLength: 0,
       uniqueConceptsCount: 0,
@@ -213,16 +221,22 @@ export class JSONExporter extends BaseExporter {
         'applications',
         'antifragileProperties',
       ].forEach(field => {
-        const items = (h.input as any)[field];
+        const items = (h.input as Record<string, unknown>)[field];
         if (items && Array.isArray(items)) {
-          items.forEach(item => allConcepts.add(item.toLowerCase()));
+          items.forEach(item => {
+            if (typeof item === 'string') {
+              allConcepts.add(item.toLowerCase());
+            }
+          });
         }
       });
     });
     stats.uniqueConceptsCount = allConcepts.size;
 
     // Count revisions and branches
-    stats.revisionCount = session.history.filter(h => h.input.isRevision).length;
+    stats.revisionCount = session.history.filter(
+      h => (h.input as LateralThinkingData).isRevision
+    ).length;
     stats.branchingPoints = Object.keys(session.branches).length;
 
     return stats;

@@ -1,6 +1,6 @@
 // Example demonstrating improved validation for unified framework fields
 
-const validationTestExamples = {
+const _validationTestExamples = {
   // Valid example - all string arrays
   validExample: {
     technique: 'po',

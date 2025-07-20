@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { FilesystemAdapter } from '../filesystem-adapter.js';
-import { PersistenceError, PersistenceErrorCode } from '../types.js';
+import { PersistenceError } from '../types.js';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import { tmpdir } from 'os';
@@ -9,7 +9,7 @@ describe('FilesystemAdapter', () => {
   let adapter: FilesystemAdapter;
   let testBasePath: string;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     // Create a temporary directory for tests
     testBasePath = path.join(tmpdir(), `creative-thinking-test-${Date.now()}`);
     adapter = new FilesystemAdapter();
@@ -19,7 +19,7 @@ describe('FilesystemAdapter', () => {
     // Clean up test directory
     try {
       await fs.rm(testBasePath, { recursive: true, force: true });
-    } catch (error) {
+    } catch {
       // Ignore cleanup errors
     }
   });
