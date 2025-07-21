@@ -111,10 +111,26 @@ jobs:
       - name: 🚀 Test CLI execution
         run: |
           # Test that the CLI starts without errors
-          timeout 5s node dist/index.js || exit_code=$?
-          if [ "$exit_code" != "124" ] && [ "$exit_code" != "0" ]; then
-            echo "CLI failed to start properly"
-            exit 1
+          # Use platform-specific timeout command
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            # macOS doesn't have timeout by default, use alternative
+            node dist/index.js &
+            CLI_PID=$!
+            sleep 2
+            if kill -0 $CLI_PID 2>/dev/null; then
+              kill $CLI_PID
+              echo "CLI started successfully"
+            else
+              echo "CLI failed to start"
+              exit 1
+            fi
+          else
+            # Linux and Windows (Git Bash) have timeout
+            timeout 5s node dist/index.js || exit_code=$?
+            if [ "$exit_code" != "124" ] && [ "$exit_code" != "0" ]; then
+              echo "CLI failed to start properly"
+              exit 1
+            fi
           fi
         shell: bash
 
