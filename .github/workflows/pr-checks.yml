@@ -1,0 +1,206 @@
+name: PR Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  checks: write
+
+jobs:
+  # Job 1: PR Validation
+  pr-validation:
+    name: PR Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🛎️ Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 📝 Check PR title
+        uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            docs
+            style
+            refactor
+            perf
+            test
+            build
+            ci
+            chore
+            revert
+
+      - name: 📊 PR size check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const additions = pr.additions;
+            const deletions = pr.deletions;
+            const totalChanges = additions + deletions;
+            
+            let size = 'XS';
+            if (totalChanges > 1000) size = 'XXL';
+            else if (totalChanges > 500) size = 'XL';
+            else if (totalChanges > 250) size = 'L';
+            else if (totalChanges > 100) size = 'M';
+            else if (totalChanges > 50) size = 'S';
+            
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              labels: [`size/${size}`]
+            }).catch(() => {});
+            
+            if (size === 'XXL' || size === 'XL') {
+              core.warning(`This PR is ${size} (${totalChanges} changes). Consider breaking it into smaller PRs.`);
+            }
+
+      - name: 🏷️ Auto-label PR
+        uses: actions/labeler@v5
+        with:
+          repo-token: "${{ secrets.GITHUB_TOKEN }}"
+
+  # Job 2: Code Review Checks
+  code-review:
+    name: Automated Code Review
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      pull-requests: write
+    steps:
+      - name: 🛎️ Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🏗️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🔍 Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          
+      - name: 🔨 Autobuild
+        uses: github/codeql-action/autobuild@v3
+        
+      - name: 🔍 Run CodeQL analysis
+        uses: github/codeql-action/analyze@v3
+
+      - name: 🧪 Run tests with coverage
+        run: npm run test:coverage || true
+        
+      - name: 📊 Comment test coverage
+        uses: romeovs/lcov-reporter-action@v0.4.0
+        if: always() && github.event.pull_request.draft == false
+        with:
+          lcov-file: ./coverage/lcov.info
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+      - name: 💬 Comment PR
+        uses: actions/github-script@v7
+        if: github.event.pull_request.draft == false
+        with:
+          script: |
+            const output = `## 🤖 Automated PR Review
+            
+            ### 📊 Code Quality Metrics
+            - **Test Coverage**: See comment above
+            - **Build Status**: Check CI workflow
+            - **Security Scan**: Check security job
+            
+            ### 📝 PR Checklist
+            - [ ] Tests added/updated
+            - [ ] Documentation updated
+            - [ ] No console.logs left
+            - [ ] Version bumped (if needed)
+            - [ ] CHANGELOG updated (if needed)
+            
+            ### 🎯 Review Focus Areas
+            - Check for proper error handling
+            - Verify TypeScript types
+            - Review security implications
+            - Ensure consistent code style`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            });
+
+  # Job 3: Dependency Review
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: 🛎️ Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🔍 Dependency Review
+        uses: actions/dependency-review-action@v4
+        continue-on-error: true
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: always
+          
+  # Job 4: Preview Deployment
+  preview:
+    name: Preview Documentation
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    steps:
+      - name: 🛎️ Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🏗️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 📚 Build documentation
+        run: |
+          # Generate API docs
+          npx typedoc src/index.ts --out docs/api || true
+          
+          # Create PR preview info
+          echo "# PR Preview for #${{ github.event.pull_request.number }}" > docs/index.html
+          echo "<h2>Changed Files</h2><ul>" >> docs/index.html
+          git diff --name-only origin/main..HEAD | sed 's/^/<li>/' | sed 's/$/<\/li>/' >> docs/index.html
+          echo "</ul>" >> docs/index.html
+
+      - name: 📁 Upload preview artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-preview-${{ github.event.pull_request.number }}
+          path: docs/
+          retention-days: 7

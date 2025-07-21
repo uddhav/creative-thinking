@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { CallToolRequestSchema, ListToolsRequestSchema, } from "@modelcontextprotocol/sdk/types.js";
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import chalk from 'chalk';
 import { randomUUID } from 'crypto';
 import { createAdapter, getDefaultConfig } from './persistence/index.js';
@@ -13,9 +13,10 @@ class LateralThinkingServer {
     cleanupInterval = null;
     persistenceAdapter = null;
     constructor() {
-        this.disableThoughtLogging = (process.env.DISABLE_THOUGHT_LOGGING || "").toLowerCase() === "true";
+        this.disableThoughtLogging =
+            (process.env.DISABLE_THOUGHT_LOGGING || '').toLowerCase() === 'true';
         this.startSessionCleanup();
-        this.initializePersistence();
+        void this.initializePersistence();
     }
     async initializePersistence() {
         try {
@@ -77,14 +78,16 @@ class LateralThinkingServer {
     async handleSessionOperation(input) {
         if (!this.persistenceAdapter) {
             return {
-                content: [{
-                        type: "text",
+                content: [
+                    {
+                        type: 'text',
                         text: JSON.stringify({
-                            error: "Persistence not available",
-                            status: 'failed'
-                        }, null, 2)
-                    }],
-                isError: true
+                            error: 'Persistence not available',
+                            status: 'failed',
+                        }, null, 2),
+                    },
+                ],
+                isError: true,
             };
         }
         switch (input.sessionOperation) {
@@ -100,14 +103,16 @@ class LateralThinkingServer {
                 return this.handleExportOperation(input);
             default:
                 return {
-                    content: [{
-                            type: "text",
+                    content: [
+                        {
+                            type: 'text',
                             text: JSON.stringify({
                                 error: `Unknown session operation: ${input.sessionOperation}`,
-                                status: 'failed'
-                            }, null, 2)
-                        }],
-                    isError: true
+                                status: 'failed',
+                            }, null, 2),
+                        },
+                    ],
+                    isError: true,
                 };
         }
     }
@@ -120,6 +125,9 @@ class LateralThinkingServer {
                 throw new Error('No active session to save');
             }
             const session = this.sessions.get(this.currentSessionId);
+            if (!session) {
+                throw new Error('Session not found');
+            }
             // Update session with save options
             if (input.saveOptions?.sessionName) {
                 session.name = input.saveOptions.sessionName;
@@ -129,26 +137,30 @@ class LateralThinkingServer {
             }
             await this.saveSessionToPersistence(this.currentSessionId, session);
             return {
-                content: [{
-                        type: "text",
+                content: [
+                    {
+                        type: 'text',
                         text: JSON.stringify({
                             success: true,
                             sessionId: this.currentSessionId,
                             message: 'Session saved successfully',
-                            savedAt: new Date().toISOString()
-                        }, null, 2)
-                    }]
+                            savedAt: new Date().toISOString(),
+                        }, null, 2),
+                    },
+                ],
             };
         }
         catch (error) {
             return {
-                content: [{
-                        type: "text",
+                content: [
+                    {
+                        type: 'text',
                         text: JSON.stringify({
                             error: error instanceof Error ? error.message : String(error),
-                            status: 'failed'
-                        }, null, 2)
-                    }]
+                            status: 'failed',
+                        }, null, 2),
+                    },
+                ],
             };
         }
     }
@@ -160,6 +172,9 @@ class LateralThinkingServer {
             if (!input.loadOptions?.sessionId) {
                 throw new Error('Session ID required for load operation');
             }
+            if (!this.persistenceAdapter) {
+                throw new Error('Persistence adapter not initialized');
+            }
             const loadedState = await this.persistenceAdapter.load(input.loadOptions.sessionId);
             if (!loadedState) {
                 throw new Error('Session not found');
@@ -168,9 +183,12 @@ class LateralThinkingServer {
             const session = {
                 technique: loadedState.technique,
                 problem: loadedState.problem,
-                history: loadedState.history.map((h) => ({
+                history: loadedState.history.map(h => ({
                     ...h.input,
-                    timestamp: h.timestamp
+                    timestamp: h.timestamp,
+                    // Ensure technique-specific fields are typed correctly
+                    hatColor: h.input.hatColor,
+                    scamperAction: h.input.scamperAction,
                 })),
                 branches: Object.entries(loadedState.branches).reduce((acc, [key, value]) => {
                     acc[key] = value;
@@ -181,15 +199,16 @@ class LateralThinkingServer {
                 endTime: loadedState.endTime,
                 metrics: loadedState.metrics,
                 tags: loadedState.tags,
-                name: loadedState.name
+                name: loadedState.name,
             };
             // Load into memory
             this.sessions.set(loadedState.id, session);
             this.currentSessionId = loadedState.id;
             const continueFrom = input.loadOptions.continueFrom || session.history.length;
             return {
-                content: [{
-                        type: "text",
+                content: [
+                    {
+                        type: 'text',
                         text: JSON.stringify({
                             success: true,
                             sessionId: loadedState.id,
@@ -198,20 +217,23 @@ class LateralThinkingServer {
                             currentStep: continueFrom,
                             totalSteps: session.history[0]?.totalSteps || this.getTechniqueSteps(session.technique),
                             message: 'Session loaded successfully',
-                            continueFrom
-                        }, null, 2)
-                    }]
+                            continueFrom,
+                        }, null, 2),
+                    },
+                ],
             };
         }
         catch (error) {
             return {
-                content: [{
-                        type: "text",
+                content: [
+                    {
+                        type: 'text',
                         text: JSON.stringify({
                             error: error instanceof Error ? error.message : String(error),
-                            status: 'failed'
-                        }, null, 2)
-                    }]
+                            status: 'failed',
+                        }, null, 2),
+                    },
+                ],
             };
         }
     }
@@ -221,25 +243,32 @@ class LateralThinkingServer {
     async handleListOperation(input) {
         try {
             const options = input.listOptions || {};
+            if (!this.persistenceAdapter) {
+                throw new Error('Persistence adapter not initialized');
+            }
             const metadata = await this.persistenceAdapter.list(options);
             // Format visual output
             const visualOutput = this.formatSessionList(metadata);
             return {
-                content: [{
-                        type: "text",
-                        text: visualOutput
-                    }]
+                content: [
+                    {
+                        type: 'text',
+                        text: visualOutput,
+                    },
+                ],
             };
         }
         catch (error) {
             return {
-                content: [{
-                        type: "text",
+                content: [
+                    {
+                        type: 'text',
                         text: JSON.stringify({
                             error: error instanceof Error ? error.message : String(error),
-                            status: 'failed'
-                        }, null, 2)
-                    }]
+                            status: 'failed',
+                        }, null, 2),
+                    },
+                ],
             };
         }
     }
@@ -251,27 +280,34 @@ class LateralThinkingServer {
             if (!input.deleteOptions?.sessionId) {
                 throw new Error('Session ID required for delete operation');
             }
+            if (!this.persistenceAdapter) {
+                throw new Error('Persistence adapter not initialized');
+            }
             const deleted = await this.persistenceAdapter.delete(input.deleteOptions.sessionId);
             return {
-                content: [{
-                        type: "text",
+                content: [
+                    {
+                        type: 'text',
                         text: JSON.stringify({
                             success: deleted,
                             sessionId: input.deleteOptions.sessionId,
-                            message: deleted ? 'Session deleted successfully' : 'Session not found'
-                        }, null, 2)
-                    }]
+                            message: deleted ? 'Session deleted successfully' : 'Session not found',
+                        }, null, 2),
+                    },
+                ],
             };
         }
         catch (error) {
             return {
-                content: [{
-                        type: "text",
+                content: [
+                    {
+                        type: 'text',
                         text: JSON.stringify({
                             error: error instanceof Error ? error.message : String(error),
-                            status: 'failed'
-                        }, null, 2)
-                    }]
+                            status: 'failed',
+                        }, null, 2),
+                    },
+                ],
             };
         }
     }
@@ -283,23 +319,30 @@ class LateralThinkingServer {
             if (!input.exportOptions?.sessionId || !input.exportOptions?.format) {
                 throw new Error('Session ID and format required for export operation');
             }
+            if (!this.persistenceAdapter) {
+                throw new Error('Persistence adapter not initialized');
+            }
             const data = await this.persistenceAdapter.export(input.exportOptions.sessionId, input.exportOptions.format);
             return {
-                content: [{
-                        type: "text",
-                        text: data.toString()
-                    }]
+                content: [
+                    {
+                        type: 'text',
+                        text: data.toString(),
+                    },
+                ],
             };
         }
         catch (error) {
             return {
-                content: [{
-                        type: "text",
+                content: [
+                    {
+                        type: 'text',
                         text: JSON.stringify({
                             error: error instanceof Error ? error.message : String(error),
-                            status: 'failed'
-                        }, null, 2)
-                    }]
+                            status: 'failed',
+                        }, null, 2),
+                    },
+                ],
             };
         }
     }
@@ -319,7 +362,7 @@ class LateralThinkingServer {
                 step: index + 1,
                 timestamp: item.timestamp || new Date().toISOString(),
                 input: item,
-                output: item
+                output: item,
             })),
             branches: session.branches,
             insights: session.insights,
@@ -327,7 +370,7 @@ class LateralThinkingServer {
             endTime: session.endTime,
             metrics: session.metrics,
             tags: session.tags,
-            name: session.name
+            name: session.name,
         };
         await this.persistenceAdapter.save(sessionId, state);
     }
@@ -339,7 +382,7 @@ class LateralThinkingServer {
             '',
             chalk.bold('📚 Saved Creative Thinking Sessions'),
             '═'.repeat(50),
-            ''
+            '',
         ];
         if (metadata.length === 0) {
             lines.push('No saved sessions found.');
@@ -372,7 +415,7 @@ class LateralThinkingServer {
             random_entry: '🎲',
             scamper: '🔄',
             concept_extraction: '🔍',
-            yes_and: '🤝'
+            yes_and: '🤝',
         };
         return emojis[technique] || '🧠';
     }
@@ -380,7 +423,7 @@ class LateralThinkingServer {
      * Format progress bar
      */
     formatProgress(completed, total) {
-        const percentage = Math.round((completed / total) * 100);
+        const _percentage = Math.round((completed / total) * 100);
         const filled = Math.round((completed / total) * 10);
         const empty = 10 - filled;
         return '█'.repeat(filled) + '░'.repeat(empty);
@@ -413,38 +456,38 @@ class LateralThinkingServer {
                 name: 'Blue Hat Plus',
                 focus: 'Process control and overview',
                 emoji: '🔵',
-                enhancedFocus: 'Process control with meta-uncertainty awareness'
+                enhancedFocus: 'Process control with meta-uncertainty awareness',
             },
             white: {
                 name: 'White Hat Plus',
                 focus: 'Facts and information',
                 emoji: '⚪',
-                enhancedFocus: 'Facts and information including unknown unknowns'
+                enhancedFocus: 'Facts and information including unknown unknowns',
             },
             red: {
                 name: 'Red Hat Plus',
                 focus: 'Emotions and intuition',
                 emoji: '🔴',
-                enhancedFocus: 'Emotions, intuition, and collective behavior prediction'
+                enhancedFocus: 'Emotions, intuition, and collective behavior prediction',
             },
             yellow: {
                 name: 'Yellow Hat Plus',
                 focus: 'Optimism and benefits',
                 emoji: '🟡',
-                enhancedFocus: 'Optimism, benefits, and positive black swans'
+                enhancedFocus: 'Optimism, benefits, and positive black swans',
             },
             black: {
                 name: 'Black Hat Plus',
                 focus: 'Critical judgment and caution',
                 emoji: '⚫',
-                enhancedFocus: 'Critical judgment and catastrophic discontinuities'
+                enhancedFocus: 'Critical judgment and catastrophic discontinuities',
             },
             green: {
                 name: 'Green Hat Plus',
                 focus: 'Creativity and alternatives',
                 emoji: '🟢',
-                enhancedFocus: 'Creativity and antifragile innovations'
-            }
+                enhancedFocus: 'Creativity and antifragile innovations',
+            },
         };
         return hatsInfo[color];
     }
@@ -458,44 +501,45 @@ class LateralThinkingServer {
             substitute: {
                 description: 'Replace parts with alternatives',
                 emoji: '🔄',
-                riskQuestion: 'What could go wrong with this substitution?'
+                riskQuestion: 'What could go wrong with this substitution?',
             },
             combine: {
                 description: 'Merge with other ideas or functions',
                 emoji: '🔗',
-                riskQuestion: 'What conflicts might arise from combining?'
+                riskQuestion: 'What conflicts might arise from combining?',
             },
             adapt: {
                 description: 'Adjust for different contexts',
                 emoji: '🔧',
-                riskQuestion: 'What assumptions might fail in new contexts?'
+                riskQuestion: 'What assumptions might fail in new contexts?',
             },
             modify: {
                 description: 'Magnify, minimize, or modify attributes',
                 emoji: '🔍',
-                riskQuestion: 'What breaks when scaled up or down?'
+                riskQuestion: 'What breaks when scaled up or down?',
             },
             put_to_other_use: {
                 description: 'Find new applications',
                 emoji: '🎯',
-                riskQuestion: 'What unintended uses could be harmful?'
+                riskQuestion: 'What unintended uses could be harmful?',
             },
             eliminate: {
                 description: 'Remove unnecessary elements',
                 emoji: '✂️',
-                riskQuestion: 'What dependencies might we be overlooking?'
+                riskQuestion: 'What dependencies might we be overlooking?',
             },
             reverse: {
                 description: 'Invert or rearrange components',
                 emoji: '🔃',
-                riskQuestion: 'What assumptions break when reversed?'
-            }
+                riskQuestion: 'What assumptions break when reversed?',
+            },
         };
         return scamperInfo[action];
     }
     validateInput(input) {
         const data = input;
-        if (!data.technique || !['six_hats', 'po', 'random_entry', 'scamper', 'concept_extraction', 'yes_and'].includes(data.technique)) {
+        if (!data.technique ||
+            !['six_hats', 'po', 'random_entry', 'scamper', 'concept_extraction', 'yes_and'].includes(data.technique)) {
             throw new Error('Invalid technique: must be one of six_hats, po, random_entry, scamper, concept_extraction, or yes_and');
         }
         if (!data.problem || typeof data.problem !== 'string') {
@@ -515,12 +559,22 @@ class LateralThinkingServer {
         }
         // Validate technique-specific fields
         const technique = data.technique;
-        if (technique === 'six_hats' && data.hatColor &&
+        if (technique === 'six_hats' &&
+            data.hatColor &&
             !['blue', 'white', 'red', 'yellow', 'black', 'green'].includes(data.hatColor)) {
             throw new Error('Invalid hatColor for six_hats technique');
         }
-        if (technique === 'scamper' && data.scamperAction &&
-            !['substitute', 'combine', 'adapt', 'modify', 'put_to_other_use', 'eliminate', 'reverse'].includes(data.scamperAction)) {
+        if (technique === 'scamper' &&
+            data.scamperAction &&
+            ![
+                'substitute',
+                'combine',
+                'adapt',
+                'modify',
+                'put_to_other_use',
+                'eliminate',
+                'reverse',
+            ].includes(data.scamperAction)) {
             throw new Error('Invalid scamperAction for scamper technique');
         }
         // Validate concept extraction specific fields
@@ -539,16 +593,21 @@ class LateralThinkingServer {
         if (data.risks && (!Array.isArray(data.risks) || data.risks.some(r => typeof r !== 'string'))) {
             throw new Error('risks must be an array of strings');
         }
-        if (data.failureModes && (!Array.isArray(data.failureModes) || data.failureModes.some(f => typeof f !== 'string'))) {
+        if (data.failureModes &&
+            (!Array.isArray(data.failureModes) || data.failureModes.some(f => typeof f !== 'string'))) {
             throw new Error('failureModes must be an array of strings');
         }
-        if (data.mitigations && (!Array.isArray(data.mitigations) || data.mitigations.some(m => typeof m !== 'string'))) {
+        if (data.mitigations &&
+            (!Array.isArray(data.mitigations) || data.mitigations.some(m => typeof m !== 'string'))) {
             throw new Error('mitigations must be an array of strings');
         }
-        if (data.antifragileProperties && (!Array.isArray(data.antifragileProperties) || data.antifragileProperties.some(a => typeof a !== 'string'))) {
+        if (data.antifragileProperties &&
+            (!Array.isArray(data.antifragileProperties) ||
+                data.antifragileProperties.some(a => typeof a !== 'string'))) {
             throw new Error('antifragileProperties must be an array of strings');
         }
-        if (data.blackSwans && (!Array.isArray(data.blackSwans) || data.blackSwans.some(b => typeof b !== 'string'))) {
+        if (data.blackSwans &&
+            (!Array.isArray(data.blackSwans) || data.blackSwans.some(b => typeof b !== 'string'))) {
             throw new Error('blackSwans must be an array of strings');
         }
         // Validate session management operations
@@ -567,10 +626,12 @@ class LateralThinkingServer {
                 data.nextStepNeeded = data.nextStepNeeded ?? false; // dummy value
             }
             // Validate operation-specific options
-            if (data.sessionOperation === 'load' && !data.loadOptions?.sessionId) {
+            if (data.sessionOperation === 'load' &&
+                !data.loadOptions?.sessionId) {
                 throw new Error('sessionId is required in loadOptions for load operation');
             }
-            if (data.sessionOperation === 'delete' && !data.deleteOptions?.sessionId) {
+            if (data.sessionOperation === 'delete' &&
+                !data.deleteOptions?.sessionId) {
                 throw new Error('sessionId is required in deleteOptions for delete operation');
             }
             if (data.sessionOperation === 'export') {
@@ -634,7 +695,7 @@ class LateralThinkingServer {
             concept_extraction: [2, 4], // Extract limitations and Apply with risk assessment
             po: [2, 3, 4], // All verification and testing steps
             random_entry: [2, 3], // Doubt generation and validation steps
-            scamper: [] // Risk questions integrated into each action
+            scamper: [], // Risk questions integrated into each action
         };
         return criticalSteps[technique] || [];
     }
@@ -660,7 +721,7 @@ class LateralThinkingServer {
         }
         return {
             color: isCritical ? chalk.yellow : chalk.green,
-            symbol: isCritical ? '⚠️ ' : '✨ '
+            symbol: isCritical ? '⚠️ ' : '✨ ',
         };
     }
     /**
@@ -709,7 +770,7 @@ class LateralThinkingServer {
         return parts;
     }
     formatOutput(data) {
-        const { technique, currentStep, totalSteps, output, hatColor, scamperAction, randomStimulus, provocation, successExample, initialIdea } = data;
+        const { technique, currentStep, totalSteps, output, hatColor, scamperAction, randomStimulus, provocation, successExample, initialIdea, } = data;
         const parts = [];
         let header = '';
         let techniqueInfo = '';
@@ -745,20 +806,21 @@ class LateralThinkingServer {
                     }
                 }
                 break;
-            case 'concept_extraction':
+            case 'concept_extraction': {
                 emoji = '🔍';
                 const stepNames = [
                     'Identify Success',
                     'Extract & Analyze Limitations',
                     'Abstract with Boundaries',
-                    'Apply with Risk Assessment'
+                    'Apply with Risk Assessment',
                 ];
                 techniqueInfo = stepNames[currentStep - 1];
                 if (successExample && currentStep === 1) {
                     techniqueInfo += `: ${successExample}`;
                 }
                 break;
-            case 'yes_and':
+            }
+            case 'yes_and': {
                 emoji = '🤝';
                 const yesAndSteps = ['Accept (Yes)', 'Build (And)', 'Evaluate (But)', 'Integrate'];
                 techniqueInfo = yesAndSteps[currentStep - 1];
@@ -766,6 +828,7 @@ class LateralThinkingServer {
                     techniqueInfo += `: ${initialIdea}`;
                 }
                 break;
+            }
         }
         if (data.isRevision) {
             header = chalk.yellow(`🔄 Revision of Step ${data.revisesStep}`);
@@ -834,20 +897,27 @@ class LateralThinkingServer {
             metrics: {
                 creativityScore: 0,
                 risksCaught: 0,
-                antifragileFeatures: 0
-            }
+                antifragileFeatures: 0,
+            },
         });
         return sessionId;
     }
     getTechniqueSteps(technique) {
         switch (technique) {
-            case 'six_hats': return 6;
-            case 'po': return 4; // Create provocation, verify provocation, extract & test principles, develop robust solutions
-            case 'random_entry': return 3; // Random stimulus, generate connections, develop solutions
-            case 'scamper': return 7;
-            case 'concept_extraction': return 4; // Identify success, extract concepts, abstract patterns, apply to problem
-            case 'yes_and': return 4; // Accept (Yes), Build (And), Evaluate (But), Integrate
-            default: return 5;
+            case 'six_hats':
+                return 6;
+            case 'po':
+                return 4; // Create provocation, verify provocation, extract & test principles, develop robust solutions
+            case 'random_entry':
+                return 3; // Random stimulus, generate connections, develop solutions
+            case 'scamper':
+                return 7;
+            case 'concept_extraction':
+                return 4; // Identify success, extract concepts, abstract patterns, apply to problem
+            case 'yes_and':
+                return 4; // Accept (Yes), Build (And), Evaluate (But), Integrate
+            default:
+                return 5;
         }
     }
     extractInsights(session) {
@@ -857,25 +927,37 @@ class LateralThinkingServer {
             case 'six_hats':
                 insights.push('Comprehensive analysis from multiple perspectives completed');
                 break;
-            case 'po':
-                const principles = session.history.filter(h => h.principles).flatMap(h => h.principles || []);
+            case 'po': {
+                const principles = session.history
+                    .filter(h => h.principles)
+                    .flatMap(h => h.principles || []);
                 if (principles.length > 0) {
                     insights.push(`Extracted principles: ${principles.join(', ')}`);
                 }
                 break;
-            case 'random_entry':
-                const connections = session.history.filter(h => h.connections).flatMap(h => h.connections || []);
+            }
+            case 'random_entry': {
+                const connections = session.history
+                    .filter(h => h.connections)
+                    .flatMap(h => h.connections || []);
                 if (connections.length > 0) {
                     insights.push(`Creative connections discovered: ${connections.length}`);
                 }
                 break;
+            }
             case 'scamper':
                 insights.push('Systematic transformation completed across all dimensions');
                 break;
-            case 'concept_extraction':
-                const concepts = session.history.filter(h => h.extractedConcepts).flatMap(h => h.extractedConcepts || []);
-                const patterns = session.history.filter(h => h.abstractedPatterns).flatMap(h => h.abstractedPatterns || []);
-                const applications = session.history.filter(h => h.applications).flatMap(h => h.applications || []);
+            case 'concept_extraction': {
+                const concepts = session.history
+                    .filter(h => h.extractedConcepts)
+                    .flatMap(h => h.extractedConcepts || []);
+                const patterns = session.history
+                    .filter(h => h.abstractedPatterns)
+                    .flatMap(h => h.abstractedPatterns || []);
+                const applications = session.history
+                    .filter(h => h.applications)
+                    .flatMap(h => h.applications || []);
                 if (concepts.length > 0) {
                     insights.push(`Core concepts identified: ${concepts.join(', ')}`);
                 }
@@ -886,9 +968,12 @@ class LateralThinkingServer {
                     insights.push(`${applications.length} new applications generated for your problem`);
                 }
                 break;
-            case 'yes_and':
+            }
+            case 'yes_and': {
                 const additions = session.history.filter(h => h.additions).flatMap(h => h.additions || []);
-                const evaluations = session.history.filter(h => h.evaluations).flatMap(h => h.evaluations || []);
+                const evaluations = session.history
+                    .filter(h => h.evaluations)
+                    .flatMap(h => h.evaluations || []);
                 const synthesis = session.history.find(h => h.synthesis)?.synthesis;
                 insights.push('Collaborative ideation with critical evaluation completed');
                 if (additions.length > 0) {
@@ -901,6 +986,7 @@ class LateralThinkingServer {
                     insights.push('Final synthesis achieved');
                 }
                 break;
+            }
         }
         return insights;
     }
@@ -914,7 +1000,9 @@ class LateralThinkingServer {
             let sessionId;
             let session;
             // Handle session initialization or continuation
-            if (validatedInput.currentStep === 1 && !validatedInput.isRevision && !validatedInput.sessionId) {
+            if (validatedInput.currentStep === 1 &&
+                !validatedInput.isRevision &&
+                !validatedInput.sessionId) {
                 // Create new session
                 sessionId = this.initializeSession(validatedInput.technique, validatedInput.problem);
                 validatedInput.totalSteps = this.getTechniqueSteps(validatedInput.technique);
@@ -937,21 +1025,26 @@ class LateralThinkingServer {
             // Add to history with proper timestamp
             const historyEntry = {
                 ...validatedInput,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
             };
             session.history.push(historyEntry);
             // Update metrics
             if (session.metrics) {
                 // Count risks identified
                 if (validatedInput.risks && validatedInput.risks.length > 0) {
-                    session.metrics.risksCaught = (session.metrics.risksCaught || 0) + validatedInput.risks.length;
+                    session.metrics.risksCaught =
+                        (session.metrics.risksCaught || 0) + validatedInput.risks.length;
                 }
                 // Count antifragile properties
-                if (validatedInput.antifragileProperties && validatedInput.antifragileProperties.length > 0) {
-                    session.metrics.antifragileFeatures = (session.metrics.antifragileFeatures || 0) + validatedInput.antifragileProperties.length;
+                if (validatedInput.antifragileProperties &&
+                    validatedInput.antifragileProperties.length > 0) {
+                    session.metrics.antifragileFeatures =
+                        (session.metrics.antifragileFeatures || 0) +
+                            validatedInput.antifragileProperties.length;
                 }
                 // Simple creativity score based on output length and variety
-                session.metrics.creativityScore = (session.metrics.creativityScore || 0) + Math.min(validatedInput.output.length / 100, 5);
+                session.metrics.creativityScore =
+                    (session.metrics.creativityScore || 0) + Math.min(validatedInput.output.length / 100, 5);
             }
             // Handle branches
             if (validatedInput.branchFromStep && validatedInput.branchId) {
@@ -973,7 +1066,7 @@ class LateralThinkingServer {
                 totalSteps: validatedInput.totalSteps,
                 nextStepNeeded: validatedInput.nextStepNeeded,
                 historyLength: session.history.length,
-                branches: Object.keys(session.branches)
+                branches: Object.keys(session.branches),
             };
             // Add completion summary if done
             if (!validatedInput.nextStepNeeded) {
@@ -987,7 +1080,7 @@ class LateralThinkingServer {
                         duration: session.endTime - (session.startTime || 0),
                         creativityScore: Math.round((session.metrics.creativityScore || 0) * 10) / 10,
                         risksCaught: session.metrics.risksCaught,
-                        antifragileFeatures: session.metrics.antifragileFeatures
+                        antifragileFeatures: session.metrics.antifragileFeatures,
                     };
                 }
             }
@@ -1007,29 +1100,33 @@ class LateralThinkingServer {
                 }
             }
             return {
-                content: [{
-                        type: "text",
-                        text: JSON.stringify(response, null, 2)
-                    }]
+                content: [
+                    {
+                        type: 'text',
+                        text: JSON.stringify(response, null, 2),
+                    },
+                ],
             };
         }
         catch (error) {
             return {
-                content: [{
-                        type: "text",
+                content: [
+                    {
+                        type: 'text',
                         text: JSON.stringify({
                             error: error instanceof Error ? error.message : String(error),
-                            status: 'failed'
-                        }, null, 2)
-                    }],
-                isError: true
+                            status: 'failed',
+                        }, null, 2),
+                    },
+                ],
+                isError: true,
             };
         }
     }
     getNextStepGuidance(data) {
         const nextStep = data.currentStep + 1;
         switch (data.technique) {
-            case 'six_hats':
+            case 'six_hats': {
                 const hatOrder = ['blue', 'white', 'red', 'yellow', 'black', 'green'];
                 if (nextStep <= 6) {
                     const nextHat = hatOrder[nextStep - 1];
@@ -1037,25 +1134,33 @@ class LateralThinkingServer {
                     return `Next: ${hatInfo.name} - Focus on ${hatInfo.enhancedFocus || hatInfo.focus}`;
                 }
                 break;
-            case 'po':
+            }
+            case 'po': {
                 const poSteps = [
                     'Create a provocative statement (Po:)',
                     'Suspend judgment and explore the provocation (then challenge it)',
                     'Extract and verify principles through hypothesis testing',
-                    'Develop robust solutions addressing failure modes'
+                    'Develop robust solutions addressing failure modes',
                 ];
                 return poSteps[nextStep - 1] || 'Complete the process';
-            case 'random_entry':
+            }
+            case 'random_entry': {
                 const randomSteps = [
                     'Introduce a random stimulus word/concept',
                     'Generate connections with systematic doubt ("Is this always true?")',
-                    'Validate insights before developing solutions'
+                    'Validate insights before developing solutions',
                 ];
                 return randomSteps[nextStep - 1] || 'Complete the process';
-            case 'scamper':
+            }
+            case 'scamper': {
                 const scamperOrder = [
-                    'substitute', 'combine', 'adapt', 'modify',
-                    'put_to_other_use', 'eliminate', 'reverse'
+                    'substitute',
+                    'combine',
+                    'adapt',
+                    'modify',
+                    'put_to_other_use',
+                    'eliminate',
+                    'reverse',
                 ];
                 if (nextStep <= 7) {
                     const nextAction = scamperOrder[nextStep - 1];
@@ -1063,28 +1168,31 @@ class LateralThinkingServer {
                     return `Next: ${nextAction.toUpperCase()} - ${actionInfo.description}`;
                 }
                 break;
-            case 'concept_extraction':
+            }
+            case 'concept_extraction': {
                 const conceptSteps = [
                     'Identify a successful solution/example from any domain',
-                    'Extract key concepts and analyze where they wouldn\'t work',
+                    "Extract key concepts and analyze where they wouldn't work",
                     'Abstract patterns with domain boundary identification',
-                    'Apply patterns only where success probability is high'
+                    'Apply patterns only where success probability is high',
                 ];
                 return conceptSteps[nextStep - 1] || 'Complete the process';
-            case 'yes_and':
+            }
+            case 'yes_and': {
                 const yesAndSteps = [
                     'Accept the initial idea or contribution (Yes)',
                     'Build upon it with creative additions (And)',
                     'Critically evaluate potential issues (But)',
-                    'Integrate insights into a robust solution'
+                    'Integrate insights into a robust solution',
                 ];
                 return yesAndSteps[nextStep - 1] || 'Complete the process';
+            }
         }
         return 'Continue with the next step';
     }
 }
 const LATERAL_THINKING_TOOL = {
-    name: "lateralthinking",
+    name: 'lateralthinking',
     description: `A unified creative-adversarial thinking tool that combines generative techniques with systematic verification.
 This enhanced framework integrates creative problem-solving with critical analysis and risk assessment.
 
@@ -1140,290 +1248,300 @@ When to use:
 - When robust, stress-tested solutions are needed
 - Breaking mental models while maintaining critical thinking`,
     inputSchema: {
-        type: "object",
+        type: 'object',
         properties: {
             sessionId: {
-                type: "string",
-                description: "Session ID from previous response (required for steps 2+)"
+                type: 'string',
+                description: 'Session ID from previous response (required for steps 2+)',
             },
             technique: {
-                type: "string",
-                enum: ["six_hats", "po", "random_entry", "scamper", "concept_extraction", "yes_and"],
-                description: "The lateral thinking technique to use"
+                type: 'string',
+                enum: ['six_hats', 'po', 'random_entry', 'scamper', 'concept_extraction', 'yes_and'],
+                description: 'The lateral thinking technique to use',
             },
             problem: {
-                type: "string",
-                description: "The problem or challenge to address"
+                type: 'string',
+                description: 'The problem or challenge to address',
             },
             currentStep: {
-                type: "integer",
-                description: "Current step number in the technique",
-                minimum: 1
+                type: 'integer',
+                description: 'Current step number in the technique',
+                minimum: 1,
             },
             totalSteps: {
-                type: "integer",
-                description: "Total steps for this technique",
-                minimum: 1
+                type: 'integer',
+                description: 'Total steps for this technique',
+                minimum: 1,
             },
             output: {
-                type: "string",
-                description: "Your creative output for this step"
+                type: 'string',
+                description: 'Your creative output for this step',
             },
             nextStepNeeded: {
-                type: "boolean",
-                description: "Whether another step is needed"
+                type: 'boolean',
+                description: 'Whether another step is needed',
             },
             hatColor: {
-                type: "string",
-                enum: ["blue", "white", "red", "yellow", "black", "green"],
-                description: "Current hat color (for six_hats technique)"
+                type: 'string',
+                enum: ['blue', 'white', 'red', 'yellow', 'black', 'green'],
+                description: 'Current hat color (for six_hats technique)',
             },
             provocation: {
-                type: "string",
-                description: "The provocative statement (for po technique)"
+                type: 'string',
+                description: 'The provocative statement (for po technique)',
             },
             principles: {
-                type: "array",
-                items: { type: "string" },
-                description: "Extracted principles (for po technique)"
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Extracted principles (for po technique)',
             },
             randomStimulus: {
-                type: "string",
-                description: "The random word/concept (for random_entry technique)"
+                type: 'string',
+                description: 'The random word/concept (for random_entry technique)',
             },
             connections: {
-                type: "array",
-                items: { type: "string" },
-                description: "Generated connections (for random_entry technique)"
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Generated connections (for random_entry technique)',
             },
             scamperAction: {
-                type: "string",
-                enum: ["substitute", "combine", "adapt", "modify", "put_to_other_use", "eliminate", "reverse"],
-                description: "Current SCAMPER action"
+                type: 'string',
+                enum: [
+                    'substitute',
+                    'combine',
+                    'adapt',
+                    'modify',
+                    'put_to_other_use',
+                    'eliminate',
+                    'reverse',
+                ],
+                description: 'Current SCAMPER action',
             },
             successExample: {
-                type: "string",
-                description: "A successful solution/example to analyze (for concept_extraction technique)"
+                type: 'string',
+                description: 'A successful solution/example to analyze (for concept_extraction technique)',
             },
             extractedConcepts: {
-                type: "array",
-                items: { type: "string" },
-                description: "Key concepts extracted from the success example (for concept_extraction technique)"
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Key concepts extracted from the success example (for concept_extraction technique)',
             },
             abstractedPatterns: {
-                type: "array",
-                items: { type: "string" },
-                description: "Abstracted patterns from the concepts (for concept_extraction technique)"
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Abstracted patterns from the concepts (for concept_extraction technique)',
             },
             applications: {
-                type: "array",
-                items: { type: "string" },
-                description: "Applications of patterns to the problem (for concept_extraction technique)"
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Applications of patterns to the problem (for concept_extraction technique)',
             },
             initialIdea: {
-                type: "string",
-                description: "The initial idea or contribution to build upon (for yes_and technique)"
+                type: 'string',
+                description: 'The initial idea or contribution to build upon (for yes_and technique)',
             },
             additions: {
-                type: "array",
-                items: { type: "string" },
-                description: "Creative additions building on the idea (for yes_and technique)"
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Creative additions building on the idea (for yes_and technique)',
             },
             evaluations: {
-                type: "array",
-                items: { type: "string" },
-                description: "Critical evaluations of potential issues (for yes_and technique)"
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Critical evaluations of potential issues (for yes_and technique)',
             },
             synthesis: {
-                type: "string",
-                description: "Final integrated solution combining insights (for yes_and technique)"
+                type: 'string',
+                description: 'Final integrated solution combining insights (for yes_and technique)',
             },
             isRevision: {
-                type: "boolean",
-                description: "Whether this revises a previous step"
+                type: 'boolean',
+                description: 'Whether this revises a previous step',
             },
             revisesStep: {
-                type: "integer",
-                description: "Which step is being revised",
-                minimum: 1
+                type: 'integer',
+                description: 'Which step is being revised',
+                minimum: 1,
             },
             branchFromStep: {
-                type: "integer",
-                description: "Step number to branch from",
-                minimum: 1
+                type: 'integer',
+                description: 'Step number to branch from',
+                minimum: 1,
             },
             branchId: {
-                type: "string",
-                description: "Identifier for the branch"
+                type: 'string',
+                description: 'Identifier for the branch',
             },
             risks: {
-                type: "array",
-                items: { type: "string" },
-                description: "Risks or potential issues identified (unified framework)"
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Risks or potential issues identified (unified framework)',
             },
             failureModes: {
-                type: "array",
-                items: { type: "string" },
-                description: "Ways this solution could fail (unified framework)"
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Ways this solution could fail (unified framework)',
             },
             mitigations: {
-                type: "array",
-                items: { type: "string" },
-                description: "Strategies to address risks (unified framework)"
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Strategies to address risks (unified framework)',
             },
             antifragileProperties: {
-                type: "array",
-                items: { type: "string" },
-                description: "Ways the solution benefits from stress/change (unified framework)"
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Ways the solution benefits from stress/change (unified framework)',
             },
             blackSwans: {
-                type: "array",
-                items: { type: "string" },
-                description: "Low probability, high impact events to consider (unified framework)"
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Low probability, high impact events to consider (unified framework)',
             },
             sessionOperation: {
-                type: "string",
-                enum: ["save", "load", "list", "delete", "export"],
-                description: "Session management operation to perform"
+                type: 'string',
+                enum: ['save', 'load', 'list', 'delete', 'export'],
+                description: 'Session management operation to perform',
             },
             saveOptions: {
-                type: "object",
+                type: 'object',
                 properties: {
                     sessionName: {
-                        type: "string",
-                        description: "Name for the saved session"
+                        type: 'string',
+                        description: 'Name for the saved session',
                     },
                     tags: {
-                        type: "array",
-                        items: { type: "string" },
-                        description: "Tags to categorize the session"
+                        type: 'array',
+                        items: { type: 'string' },
+                        description: 'Tags to categorize the session',
                     },
                     asTemplate: {
-                        type: "boolean",
-                        description: "Save as a template for reuse"
-                    }
+                        type: 'boolean',
+                        description: 'Save as a template for reuse',
+                    },
                 },
-                description: "Options for save operation"
+                description: 'Options for save operation',
             },
             loadOptions: {
-                type: "object",
+                type: 'object',
                 properties: {
                     sessionId: {
-                        type: "string",
-                        description: "ID of the session to load"
+                        type: 'string',
+                        description: 'ID of the session to load',
                     },
                     continueFrom: {
-                        type: "integer",
-                        description: "Step to continue from",
-                        minimum: 1
-                    }
+                        type: 'integer',
+                        description: 'Step to continue from',
+                        minimum: 1,
+                    },
                 },
-                required: ["sessionId"],
-                description: "Options for load operation"
+                required: ['sessionId'],
+                description: 'Options for load operation',
             },
             listOptions: {
-                type: "object",
+                type: 'object',
                 properties: {
                     limit: {
-                        type: "integer",
-                        description: "Maximum number of sessions to return"
+                        type: 'integer',
+                        description: 'Maximum number of sessions to return',
                     },
                     technique: {
-                        type: "string",
-                        enum: ["six_hats", "po", "random_entry", "scamper", "concept_extraction", "yes_and"],
-                        description: "Filter by technique"
+                        type: 'string',
+                        enum: ['six_hats', 'po', 'random_entry', 'scamper', 'concept_extraction', 'yes_and'],
+                        description: 'Filter by technique',
                     },
                     status: {
-                        type: "string",
-                        enum: ["active", "completed", "all"],
-                        description: "Filter by session status"
+                        type: 'string',
+                        enum: ['active', 'completed', 'all'],
+                        description: 'Filter by session status',
                     },
                     tags: {
-                        type: "array",
-                        items: { type: "string" },
-                        description: "Filter by tags"
+                        type: 'array',
+                        items: { type: 'string' },
+                        description: 'Filter by tags',
                     },
                     searchTerm: {
-                        type: "string",
-                        description: "Search in session content"
-                    }
+                        type: 'string',
+                        description: 'Search in session content',
+                    },
                 },
-                description: "Options for list operation"
+                description: 'Options for list operation',
             },
             deleteOptions: {
-                type: "object",
+                type: 'object',
                 properties: {
                     sessionId: {
-                        type: "string",
-                        description: "ID of the session to delete"
+                        type: 'string',
+                        description: 'ID of the session to delete',
                     },
                     confirm: {
-                        type: "boolean",
-                        description: "Confirmation flag"
-                    }
+                        type: 'boolean',
+                        description: 'Confirmation flag',
+                    },
                 },
-                required: ["sessionId"],
-                description: "Options for delete operation"
+                required: ['sessionId'],
+                description: 'Options for delete operation',
             },
             exportOptions: {
-                type: "object",
+                type: 'object',
                 properties: {
                     sessionId: {
-                        type: "string",
-                        description: "ID of the session to export"
+                        type: 'string',
+                        description: 'ID of the session to export',
                     },
                     format: {
-                        type: "string",
-                        enum: ["json", "markdown", "csv"],
-                        description: "Export format"
+                        type: 'string',
+                        enum: ['json', 'markdown', 'csv'],
+                        description: 'Export format',
                     },
                     outputPath: {
-                        type: "string",
-                        description: "Optional output file path"
-                    }
+                        type: 'string',
+                        description: 'Optional output file path',
+                    },
                 },
-                required: ["sessionId", "format"],
-                description: "Options for export operation"
+                required: ['sessionId', 'format'],
+                description: 'Options for export operation',
             },
             autoSave: {
-                type: "boolean",
-                description: "Enable automatic session saving"
-            }
+                type: 'boolean',
+                description: 'Enable automatic session saving',
+            },
         },
-        required: ["technique", "problem", "currentStep", "totalSteps", "output", "nextStepNeeded"]
-    }
+        required: ['technique', 'problem', 'currentStep', 'totalSteps', 'output', 'nextStepNeeded'],
+    },
 };
 const server = new Server({
-    name: "creative-thinking-server",
-    version: "0.1.0",
+    name: 'creative-thinking-server',
+    version: '0.1.0',
 }, {
     capabilities: {
         tools: {},
     },
 });
 const lateralServer = new LateralThinkingServer();
-server.setRequestHandler(ListToolsRequestSchema, async () => ({
+server.setRequestHandler(ListToolsRequestSchema, () => ({
     tools: [LATERAL_THINKING_TOOL],
 }));
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    if (request.params.name === "lateralthinking") {
+    if (request.params.name === 'lateralthinking') {
         return lateralServer.processLateralThinking(request.params.arguments);
     }
     return {
-        content: [{
-                type: "text",
-                text: `Unknown tool: ${request.params.name}`
-            }],
-        isError: true
+        content: [
+            {
+                type: 'text',
+                text: `Unknown tool: ${request.params.name}`,
+            },
+        ],
+        isError: true,
     };
 });
 async function runServer() {
     const transport = new StdioServerTransport();
     await server.connect(transport);
-    console.error("Creative Thinking MCP Server running on stdio");
+    console.error('Creative Thinking MCP Server running on stdio');
 }
-runServer().catch((error) => {
-    console.error("Fatal error running server:", error);
+runServer().catch(error => {
+    console.error('Fatal error running server:', error);
     process.exit(1);
 });
 //# sourceMappingURL=index.js.map

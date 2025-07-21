@@ -2,8 +2,8 @@
  * Factory for creating exporters
  */
 
-import { ExportFormat, Exporter, ExportOptions, ExportResult } from './types.js';
-import { SessionState } from '../persistence/types.js';
+import type { ExportFormat, Exporter, ExportOptions, ExportResult } from './types.js';
+import type { SessionState } from '../persistence/types.js';
 import { MarkdownExporter } from './markdown-exporter.js';
 import { JSONExporter } from './json-exporter.js';
 import { CSVExporter } from './csv-exporter.js';
@@ -30,11 +30,11 @@ export class ExportFactory {
    */
   static getExporter(format: ExportFormat): Exporter {
     const exporter = this.exporters.get(format);
-    
+
     if (!exporter) {
       throw new Error(`No exporter registered for format: ${format}`);
     }
-    
+
     return exporter;
   }
 
@@ -42,12 +42,12 @@ export class ExportFactory {
    * Export a session in the specified format
    */
   static async export(
-    session: SessionState, 
-    format: ExportFormat, 
+    session: SessionState,
+    format: ExportFormat,
     options?: Partial<ExportOptions>
   ): Promise<ExportResult> {
     const exporter = this.getExporter(format);
-    
+
     // Merge with default options
     const fullOptions: ExportOptions = {
       format,
@@ -57,14 +57,14 @@ export class ExportFactory {
       includeMetrics: true,
       includeBranches: true,
       dateFormat: 'default',
-      ...options
+      ...options,
     };
-    
+
     // Validate options if the exporter supports it
     if ('validateOptions' in exporter && typeof exporter.validateOptions === 'function') {
       exporter.validateOptions(fullOptions);
     }
-    
+
     return exporter.export(session, fullOptions);
   }
 

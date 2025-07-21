@@ -3,7 +3,13 @@
  */
 
 // Define LateralTechnique type locally to avoid circular dependency
-export type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 'concept_extraction' | 'yes_and';
+export type LateralTechnique =
+  | 'six_hats'
+  | 'po'
+  | 'random_entry'
+  | 'scamper'
+  | 'concept_extraction'
+  | 'yes_and';
 
 /**
  * Represents input data for a lateral thinking step
@@ -15,7 +21,7 @@ export interface LateralThinkingInput {
   totalSteps: number;
   output: string;
   nextStepNeeded: boolean;
-  
+
   // Technique-specific fields
   hatColor?: string;
   provocation?: string;
@@ -31,14 +37,14 @@ export interface LateralThinkingInput {
   additions?: string[];
   evaluations?: string[];
   synthesis?: string;
-  
+
   // Risk/adversarial fields
   risks?: string[];
   failureModes?: string[];
   mitigations?: string[];
   antifragileProperties?: string[];
   blackSwans?: string[];
-  
+
   // Session fields
   sessionId?: string;
   isRevision?: boolean;
@@ -119,11 +125,11 @@ export interface ListOptions {
  * Search query options
  */
 export interface SearchQuery {
-  text?: string;           // Full-text search
-  problem?: string;        // Search in problem statements
-  outputs?: string;        // Search in outputs
-  insights?: string;       // Search in insights
-  matchAll?: boolean;      // AND vs OR
+  text?: string; // Full-text search
+  problem?: string; // Search in problem statements
+  outputs?: string; // Search in outputs
+  insights?: string; // Search in insights
+  matchAll?: boolean; // AND vs OR
 }
 
 /**
@@ -147,12 +153,12 @@ export interface StorageFormat {
 export interface PersistenceConfig {
   adapter: 'filesystem' | 'sqlite' | 'postgres' | 'memory';
   options: {
-    path?: string;           // For filesystem
+    path?: string; // For filesystem
     connectionString?: string; // For databases
-    maxSize?: number;        // Storage limits
-    autoSave?: boolean;      // Auto-save on changes
-    saveInterval?: number;   // Auto-save interval (ms)
-    compression?: boolean;   // Enable compression
+    maxSize?: number; // Storage limits
+    autoSave?: boolean; // Auto-save on changes
+    saveInterval?: number; // Auto-save interval (ms)
+    compression?: boolean; // Enable compression
     encryption?: {
       enabled: boolean;
       key?: string;
@@ -171,7 +177,7 @@ export enum PersistenceErrorCode {
   PERMISSION_DENIED = 'PERMISSION_DENIED',
   CORRUPTION = 'CORRUPTION',
   IO_ERROR = 'IO_ERROR',
-  EXPORT_FAILED = 'EXPORT_FAILED'
+  EXPORT_FAILED = 'EXPORT_FAILED',
 }
 
 /**
@@ -181,7 +187,7 @@ export class PersistenceError extends Error {
   constructor(
     message: string,
     public code: PersistenceErrorCode,
-    public details?: any
+    public details?: unknown
   ) {
     super(message);
     this.name = 'PersistenceError';

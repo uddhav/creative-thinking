@@ -1,0 +1,74 @@
+# Configuration for PR labeler action v5
+# This file uses minimatch patterns: https://github.com/isaacs/minimatch
+
+documentation:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/*.md'
+      - 'docs/**/*'
+      - 'examples/**/*'
+
+tests:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/*.test.ts'
+      - '**/*.spec.ts'
+      - '**/test/**/*'
+      - '**/__tests__/**/*'
+      - 'vitest.config.ts'
+
+dependencies:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'yarn.lock'
+      - '.npmignore'
+
+ci:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '.github/**/*'
+      - '.circleci/**/*'
+      - '.travis.yml'
+      - 'azure-pipelines.yml'
+
+docker:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'Dockerfile'
+      - 'docker-compose.yml'
+      - '.dockerignore'
+
+techniques:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'src/index.ts'
+      - 'src/**/*technique*'
+      - 'src/**/*lateral*'
+
+config:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'tsconfig.json'
+      - 'tsconfig.*.json'
+      - 'vitest.config.ts'
+      - 'eslint.config.js'
+      - '.eslintrc*'
+      - '.prettierrc*'
+      - '.prettierignore'
+      - 'codecov.yml'
+
+build:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'dist/**/*'
+      - 'tsconfig.json'
+      - 'package.json'
+
+security:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '.github/workflows/security.yml'
+      - '.github/dependabot.yml'
+      - 'LICENSE'

@@ -1,8 +1,8 @@
 /**
  * Filesystem implementation of PersistenceAdapter
  */
-import { PersistenceAdapter } from './adapter.js';
-import { SessionState, SessionMetadata, ListOptions, SearchQuery, ExportFormat, PersistenceConfig } from './types.js';
+import type { PersistenceAdapter } from './adapter.js';
+import type { SessionState, SessionMetadata, ListOptions, SearchQuery, ExportFormat, PersistenceConfig } from './types.js';
 /**
  * Filesystem-based persistence adapter
  * Stores sessions as JSON files in a directory structure

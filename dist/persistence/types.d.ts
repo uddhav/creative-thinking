@@ -164,7 +164,7 @@ export declare enum PersistenceErrorCode {
  */
 export declare class PersistenceError extends Error {
     code: PersistenceErrorCode;
-    details?: any | undefined;
-    constructor(message: string, code: PersistenceErrorCode, details?: any | undefined);
+    details?: unknown | undefined;
+    constructor(message: string, code: PersistenceErrorCode, details?: unknown | undefined);
 }
 //# sourceMappingURL=types.d.ts.map

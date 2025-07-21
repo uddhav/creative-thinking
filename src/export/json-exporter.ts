@@ -2,8 +2,8 @@
  * Enhanced JSON exporter with flexible output options
  */
 
-import { SessionState } from '../persistence/types.js';
-import { ExportOptions, ExportResult } from './types.js';
+import type { SessionState, LateralThinkingInput } from '../persistence/types.js';
+import type { ExportOptions, ExportResult } from './types.js';
 import { BaseExporter } from './base-exporter.js';
 
 export class JSONExporter extends BaseExporter {
@@ -11,10 +11,11 @@ export class JSONExporter extends BaseExporter {
     super('json');
   }
 
+  // eslint-disable-next-line @typescript-eslint/require-await
   async export(session: SessionState, options: ExportOptions): Promise<ExportResult> {
-    const data = this.prepareData(session, options);
+    const data: Record<string, unknown> = this.prepareData(session, options);
     const content = JSON.stringify(data, null, 2);
-    
+
     return {
       content,
       filename: this.generateFilename(session, 'json'),
@@ -24,17 +25,17 @@ export class JSONExporter extends BaseExporter {
         sessionId: session.id,
         techniqueUsed: session.technique,
         totalSteps: session.totalSteps,
-        completedSteps: session.currentStep
-      }
+        completedSteps: session.currentStep,
+      },
     };
   }
 
-  private prepareData(session: SessionState, options: ExportOptions): any {
-    const data: any = {
+  private prepareData(session: SessionState, options: ExportOptions): Record<string, unknown> {
+    const data: Record<string, unknown> = {
       exportMetadata: {
         exportedAt: new Date().toISOString(),
         exportVersion: '1.0',
-        tool: 'Creative Thinking MCP Tool'
+        tool: 'Creative Thinking MCP Tool',
       },
       sessionId: session.id,
       problem: session.problem,
@@ -43,8 +44,8 @@ export class JSONExporter extends BaseExporter {
       progress: {
         currentStep: session.currentStep,
         totalSteps: session.totalSteps,
-        percentComplete: Math.round((session.currentStep / session.totalSteps) * 100)
-      }
+        percentComplete: Math.round((session.currentStep / session.totalSteps) * 100),
+      },
     };
 
     // Add optional metadata
@@ -54,20 +55,22 @@ export class JSONExporter extends BaseExporter {
         tags: session.tags || [],
         startTime: session.startTime ? new Date(session.startTime).toISOString() : null,
         endTime: session.endTime ? new Date(session.endTime).toISOString() : null,
-        duration: this.calculateDuration(session.startTime, session.endTime)
+        duration: this.calculateDuration(session.startTime, session.endTime),
       };
     }
 
     // Add history with enhanced structure
     if (options.includeHistory !== false) {
-      data.history = session.history.map((entry, index) => this.enhanceHistoryEntry(entry.input, entry.timestamp, index + 1));
+      data.history = session.history.map((entry, index) =>
+        this.enhanceHistoryEntry(entry.input, entry.timestamp, index + 1)
+      );
     }
 
     // Add insights
     if (options.includeInsights !== false && session.insights.length > 0) {
       data.insights = {
         count: session.insights.length,
-        items: session.insights
+        items: session.insights,
       };
     }
 
@@ -75,7 +78,7 @@ export class JSONExporter extends BaseExporter {
     if (options.includeMetrics !== false && session.metrics) {
       data.metrics = {
         ...session.metrics,
-        summary: this.generateMetricsSummary(session.metrics)
+        summary: this.generateMetricsSummary(session.metrics),
       };
     }
 
@@ -85,8 +88,8 @@ export class JSONExporter extends BaseExporter {
         count: Object.keys(session.branches).length,
         details: Object.entries(session.branches).map(([id, branch]) => ({
           branchId: id,
-          stepsInBranch: branch.length
-        }))
+          stepsInBranch: branch.length,
+        })),
       };
     }
 
@@ -96,12 +99,16 @@ export class JSONExporter extends BaseExporter {
     return data;
   }
 
-  private enhanceHistoryEntry(entry: any, timestamp: string, stepNumber: number): any {
-    const enhanced: any = {
+  private enhanceHistoryEntry(
+    entry: LateralThinkingInput,
+    timestamp: string,
+    stepNumber: number
+  ): Record<string, unknown> {
+    const enhanced: Record<string, unknown> = {
       step: stepNumber,
       timestamp: timestamp,
       output: entry.output,
-      technique: entry.technique
+      technique: entry.technique,
     };
 
     // Add technique-specific fields
@@ -124,39 +131,42 @@ export class JSONExporter extends BaseExporter {
       additions: 'additions',
       evaluations: 'evaluations',
       antifragileProperties: 'antifragileProperties',
-      blackSwans: 'blackSwans'
+      blackSwans: 'blackSwans',
     };
 
     Object.entries(arrays).forEach(([key, field]) => {
-      if (entry[key] && entry[key].length > 0) {
-        enhanced[field] = entry[key];
+      const value = (entry as unknown as Record<string, unknown>)[key];
+      if (Array.isArray(value) && value.length > 0) {
+        enhanced[field] = value;
       }
     });
 
     // Add revision information if present
-    if (entry.isRevision) {
+    if ('isRevision' in entry && entry.isRevision) {
       enhanced.revision = {
         isRevision: true,
-        revisesStep: entry.revisesStep
+        revisesStep: 'revisesStep' in entry ? entry.revisesStep : undefined,
       };
     }
 
     // Add branch information if present
-    if (entry.branchFromStep) {
+    if ('branchFromStep' in entry && entry.branchFromStep) {
       enhanced.branch = {
         fromStep: entry.branchFromStep,
-        branchId: entry.branchId
+        branchId: 'branchId' in entry ? entry.branchId : undefined,
       };
     }
 
     return enhanced;
   }
 
-  private generateMetricsSummary(metrics: any): any {
+  private generateMetricsSummary(
+    metrics: NonNullable<SessionState['metrics']>
+  ): Record<string, string> {
     return {
-      overallCreativity: this.categorizeScore(metrics.creativityScore || 0, 'creativity'),
-      riskAwareness: this.categorizeScore(metrics.risksCaught || 0, 'risk'),
-      robustness: this.categorizeScore(metrics.antifragileFeatures || 0, 'robustness')
+      overallCreativity: this.categorizeScore(metrics.creativityScore ?? 0, 'creativity'),
+      riskAwareness: this.categorizeScore(metrics.risksCaught ?? 0, 'risk'),
+      robustness: this.categorizeScore(metrics.antifragileFeatures ?? 0, 'robustness'),
     };
   }
 
@@ -167,31 +177,31 @@ export class JSONExporter extends BaseExporter {
         if (score >= 60) return 'Creative';
         if (score >= 40) return 'Moderately Creative';
         return 'Developing';
-      
+
       case 'risk':
         if (score >= 10) return 'Excellent Risk Awareness';
         if (score >= 5) return 'Good Risk Awareness';
         if (score >= 2) return 'Some Risk Awareness';
         return 'Limited Risk Awareness';
-      
+
       case 'robustness':
         if (score >= 8) return 'Highly Robust';
         if (score >= 4) return 'Robust';
         if (score >= 2) return 'Somewhat Robust';
         return 'Basic';
-      
+
       default:
         return 'Unknown';
     }
   }
 
-  private generateStatistics(session: SessionState): any {
-    const stats: any = {
+  private generateStatistics(session: SessionState): Record<string, number> {
+    const stats: Record<string, number> = {
       totalOutputLength: 0,
       averageOutputLength: 0,
       uniqueConceptsCount: 0,
       revisionCount: 0,
-      branchingPoints: 0
+      branchingPoints: 0,
     };
 
     // Calculate output statistics
@@ -202,18 +212,31 @@ export class JSONExporter extends BaseExporter {
     // Count unique concepts across all arrays
     const allConcepts = new Set<string>();
     session.history.forEach(h => {
-      ['risks', 'mitigations', 'connections', 'principles', 'extractedConcepts', 
-       'applications', 'antifragileProperties'].forEach(field => {
-        const items = (h.input as any)[field];
+      [
+        'risks',
+        'mitigations',
+        'connections',
+        'principles',
+        'extractedConcepts',
+        'applications',
+        'antifragileProperties',
+      ].forEach(field => {
+        const items = (h.input as unknown as Record<string, unknown>)[field];
         if (items && Array.isArray(items)) {
-          items.forEach(item => allConcepts.add(item.toLowerCase()));
+          items.forEach(item => {
+            if (typeof item === 'string') {
+              allConcepts.add(item.toLowerCase());
+            }
+          });
         }
       });
     });
     stats.uniqueConceptsCount = allConcepts.size;
 
     // Count revisions and branches
-    stats.revisionCount = session.history.filter(h => h.input.isRevision).length;
+    stats.revisionCount = session.history.filter(h => {
+      return 'isRevision' in h.input && h.input.isRevision === true;
+    }).length;
     stats.branchingPoints = Object.keys(session.branches).length;
 
     return stats;

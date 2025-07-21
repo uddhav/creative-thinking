@@ -1,7 +1,7 @@
 /**
  * Export format types and interfaces
  */
-import { SessionState, LateralTechnique } from '../persistence/types.js';
+import type { SessionState, LateralTechnique } from '../persistence/types.js';
 export type ExportFormat = 'json' | 'markdown' | 'csv';
 export interface ExportOptions {
     format: ExportFormat;
@@ -17,7 +17,7 @@ export interface ExportResult {
     content: string | Buffer;
     filename: string;
     mimeType: string;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
 }
 export interface Exporter {
     format: ExportFormat;
@@ -33,7 +33,7 @@ export interface ExportMetadata {
     completedSteps: number;
     duration?: number;
 }
-export declare const DEFAULT_MARKDOWN_TEMPLATE = "# {{problem}}\n\n**Date**: {{date}}  \n**Technique**: {{technique}}  \n**Session ID**: {{sessionId}}  \n**Status**: {{status}}\n\n## Session Overview\n- **Duration**: {{duration}}\n- **Steps Completed**: {{currentStep}}/{{totalSteps}}\n- **Branches**: {{branchCount}}\n- **Insights Generated**: {{insightCount}}\n\n{{#if metrics}}\n## Performance Metrics\n- **Creativity Score**: {{metrics.creativityScore}}\n- **Risks Identified**: {{metrics.risksCaught}}\n- **Antifragile Features**: {{metrics.antifragileFeatures}}\n{{/if}}\n\n## Thinking Process\n\n{{history}}\n\n{{#if insights}}\n## Key Insights\n{{insights}}\n{{/if}}\n\n{{#if branches}}\n## Alternative Paths Explored\n{{branches}}\n{{/if}}\n\n---\n*Exported from Creative Thinking MCP Tool*";
+export declare const DEFAULT_MARKDOWN_TEMPLATE = "# {{problem}}\n\n**Date**: {{date}}  \n**Technique**: {{technique}}  \n**Session ID**: {{sessionId}}  \n**Status**: {{status}}\n\n## Session Overview\n- **Duration**: {{duration}}\n- **Steps Completed**: {{currentStep}}/{{totalSteps}}\n- **Branches**: {{branchCount}}\n- **Insights Generated**: {{insightCount}}\n\n{{#if metrics}}\n## Performance Metrics\n- **Creativity Score**: {{metrics.creativityScore}}\n- **Risks Identified**: {{metrics.risksCaught}}\n- **Antifragile Features**: {{metrics.antifragileFeatures}}\n{{/if}}\n\n{{#if history}}\n## Thinking Process\n\n{{history}}\n{{/if}}\n\n{{#if insights}}\n## Key Insights\n{{insights}}\n{{/if}}\n\n{{#if branches}}\n## Alternative Paths Explored\n{{branches}}\n{{/if}}\n\n---\n*Exported from Creative Thinking MCP Tool*";
 export declare const CSV_HEADERS: {
     basic: string[];
     detailed: string[];

@@ -5,18 +5,17 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import { randomUUID } from 'crypto';
-import { PersistenceAdapter } from './adapter.js';
-import {
+import type { PersistenceAdapter } from './adapter.js';
+import type {
   SessionState,
   SessionMetadata,
   ListOptions,
   SearchQuery,
   ExportFormat,
   PersistenceConfig,
-  PersistenceError,
-  PersistenceErrorCode,
-  StorageFormat
+  StorageFormat,
 } from './types.js';
+import { PersistenceError, PersistenceErrorCode } from './types.js';
 import { ExportFactory } from '../export/index.js';
 
 /**
@@ -37,17 +36,25 @@ export class FilesystemAdapter implements PersistenceAdapter {
     }
 
     this.config = config;
-    
+
     // Validate and sanitize the base path
     const providedPath = config.options.path || path.join(process.cwd(), '.creative-thinking');
-    
-    // Resolve to absolute path and normalize
-    this.basePath = path.resolve(path.normalize(providedPath));
-    
-    // Ensure the path doesn't contain dangerous patterns
-    if (this.basePath.includes('..') || !path.isAbsolute(this.basePath)) {
+
+    // Check for path traversal patterns before normalization
+    if (providedPath.includes('..') || providedPath.includes('~')) {
       throw new PersistenceError(
         'Invalid base path: Path traversal detected',
+        PersistenceErrorCode.PERMISSION_DENIED
+      );
+    }
+
+    // Resolve to absolute path and normalize
+    this.basePath = path.resolve(path.normalize(providedPath));
+
+    // Additional check after resolution
+    if (!path.isAbsolute(this.basePath)) {
+      throw new PersistenceError(
+        'Invalid base path: Must be an absolute path',
         PersistenceErrorCode.PERMISSION_DENIED
       );
     }
@@ -60,7 +67,7 @@ export class FilesystemAdapter implements PersistenceAdapter {
       this.initialized = true;
     } catch (error) {
       throw new PersistenceError(
-        `Failed to initialize filesystem adapter: ${error}`,
+        `Failed to initialize filesystem adapter: ${String(error)}`,
         PersistenceErrorCode.IO_ERROR,
         error
       );
@@ -80,13 +87,13 @@ export class FilesystemAdapter implements PersistenceAdapter {
         format: 'json',
         compressed: false,
         encrypted: false,
-        data: state
+        data: state,
       };
 
       // Serialize and check size limit (10MB max)
       const serialized = JSON.stringify(sessionData, null, 2);
       const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-      
+
       if (Buffer.byteLength(serialized, 'utf8') > MAX_FILE_SIZE) {
         throw new PersistenceError(
           `Session data too large: exceeds ${MAX_FILE_SIZE} bytes limit`,
@@ -94,22 +101,14 @@ export class FilesystemAdapter implements PersistenceAdapter {
         );
       }
 
-      await fs.writeFile(
-        sessionPath,
-        serialized,
-        'utf8'
-      );
+      await fs.writeFile(sessionPath, serialized, 'utf8');
 
       // Save metadata for fast listing
       const metadata = this.extractMetadata(state);
-      await fs.writeFile(
-        metadataPath,
-        JSON.stringify(metadata, null, 2),
-        'utf8'
-      );
+      await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2), 'utf8');
     } catch (error) {
       throw new PersistenceError(
-        `Failed to save session ${sessionId}: ${error}`,
+        `Failed to save session ${sessionId}: ${String(error)}`,
         PersistenceErrorCode.IO_ERROR,
         error
       );
@@ -124,19 +123,19 @@ export class FilesystemAdapter implements PersistenceAdapter {
     try {
       const data = await fs.readFile(sessionPath, 'utf8');
       const parsed = JSON.parse(data) as StorageFormat & { data: SessionState };
-      
+
       // Version checking for future migrations
       if (parsed.version !== '1.0.0') {
         console.warn(`Loading session with version ${parsed.version}, current version is 1.0.0`);
       }
 
       return parsed.data;
-    } catch (error: any) {
-      if (error.code === 'ENOENT') {
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
         return null;
       }
       throw new PersistenceError(
-        `Failed to load session ${sessionId}: ${error}`,
+        `Failed to load session ${sessionId}: ${String(error)}`,
         PersistenceErrorCode.IO_ERROR,
         error
       );
@@ -153,12 +152,12 @@ export class FilesystemAdapter implements PersistenceAdapter {
       await fs.unlink(sessionPath);
       await fs.unlink(metadataPath).catch(() => {}); // Ignore metadata deletion errors
       return true;
-    } catch (error: any) {
-      if (error.code === 'ENOENT') {
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
         return false;
       }
       throw new PersistenceError(
-        `Failed to delete session ${sessionId}: ${error}`,
+        `Failed to delete session ${sessionId}: ${String(error)}`,
         PersistenceErrorCode.IO_ERROR,
         error
       );
@@ -169,7 +168,7 @@ export class FilesystemAdapter implements PersistenceAdapter {
     this.ensureInitialized();
 
     const sessionPath = this.getSessionPath(sessionId);
-    
+
     try {
       await fs.access(sessionPath);
       return true;
@@ -182,7 +181,7 @@ export class FilesystemAdapter implements PersistenceAdapter {
     this.ensureInitialized();
 
     const metadataDir = path.join(this.basePath, 'metadata');
-    
+
     try {
       const files = await fs.readdir(metadataDir);
       const metadataPromises = files
@@ -214,7 +213,7 @@ export class FilesystemAdapter implements PersistenceAdapter {
       return metadata;
     } catch (error) {
       throw new PersistenceError(
-        `Failed to list sessions: ${error}`,
+        `Failed to list sessions: ${String(error)}`,
         PersistenceErrorCode.IO_ERROR,
         error
       );
@@ -240,9 +239,11 @@ export class FilesystemAdapter implements PersistenceAdapter {
         const searchText = query.text.toLowerCase();
         const searchableContent = [
           session.problem,
-          ...session.history.map(h => h.output),
-          ...session.insights
-        ].join(' ').toLowerCase();
+          ...session.history.map(h => JSON.stringify(h.output)),
+          ...session.insights,
+        ]
+          .join(' ')
+          .toLowerCase();
 
         matches = searchableContent.includes(searchText);
       }
@@ -260,16 +261,12 @@ export class FilesystemAdapter implements PersistenceAdapter {
   }
 
   async saveBatch(sessions: Map<string, SessionState>): Promise<void> {
-    const promises = Array.from(sessions.entries()).map(([id, state]) =>
-      this.save(id, state)
-    );
+    const promises = Array.from(sessions.entries()).map(([id, state]) => this.save(id, state));
     await Promise.all(promises);
   }
 
   async deleteBatch(sessionIds: string[]): Promise<number> {
-    const results = await Promise.all(
-      sessionIds.map(id => this.delete(id))
-    );
+    const results = await Promise.all(sessionIds.map(id => this.delete(id)));
     return results.filter(Boolean).length;
   }
 
@@ -278,21 +275,18 @@ export class FilesystemAdapter implements PersistenceAdapter {
 
     const session = await this.load(sessionId);
     if (!session) {
-      throw new PersistenceError(
-        `Session ${sessionId} not found`,
-        PersistenceErrorCode.NOT_FOUND
-      );
+      throw new PersistenceError(`Session ${sessionId} not found`, PersistenceErrorCode.NOT_FOUND);
     }
 
     try {
       // Use the new export factory
       const result = await ExportFactory.export(session, format);
-      
+
       // Convert string content to Buffer if needed
       if (typeof result.content === 'string') {
         return Buffer.from(result.content);
       }
-      
+
       return result.content;
     } catch (error) {
       throw new PersistenceError(
@@ -312,7 +306,7 @@ export class FilesystemAdapter implements PersistenceAdapter {
         case 'json':
           session = JSON.parse(data.toString()) as SessionState;
           break;
-        
+
         default:
           throw new PersistenceError(
             `Import not supported for format: ${format}`,
@@ -326,7 +320,7 @@ export class FilesystemAdapter implements PersistenceAdapter {
       return session.id;
     } catch (error) {
       throw new PersistenceError(
-        `Failed to import session: ${error}`,
+        `Failed to import session: ${String(error)}`,
         PersistenceErrorCode.INVALID_FORMAT,
         error
       );
@@ -343,7 +337,7 @@ export class FilesystemAdapter implements PersistenceAdapter {
 
     const sessionsDir = path.join(this.basePath, 'sessions');
     const files = await fs.readdir(sessionsDir);
-    
+
     let totalSize = 0;
     let oldestTime: number | undefined;
     let newestTime: number | undefined;
@@ -362,7 +356,7 @@ export class FilesystemAdapter implements PersistenceAdapter {
       totalSessions: files.length,
       totalSize,
       oldestSession: oldestTime ? new Date(oldestTime) : undefined,
-      newestSession: newestTime ? new Date(newestTime) : undefined
+      newestSession: newestTime ? new Date(newestTime) : undefined,
     };
   }
 
@@ -370,13 +364,12 @@ export class FilesystemAdapter implements PersistenceAdapter {
     this.ensureInitialized();
 
     const metadata = await this.list();
-    const toDelete = metadata
-      .filter(m => m.updatedAt < olderThan)
-      .map(m => m.id);
+    const toDelete = metadata.filter(m => m.updatedAt < olderThan).map(m => m.id);
 
     return this.deleteBatch(toDelete);
   }
 
+  // eslint-disable-next-line @typescript-eslint/require-await
   async close(): Promise<void> {
     // No resources to clean up for filesystem adapter
     this.initialized = false;
@@ -386,24 +379,21 @@ export class FilesystemAdapter implements PersistenceAdapter {
 
   private ensureInitialized(): void {
     if (!this.initialized) {
-      throw new PersistenceError(
-        'Adapter not initialized',
-        PersistenceErrorCode.INVALID_FORMAT
-      );
+      throw new PersistenceError('Adapter not initialized', PersistenceErrorCode.INVALID_FORMAT);
     }
   }
 
   private validateSessionId(sessionId: string): void {
     // Allow only alphanumeric, underscore, and hyphen
     const validIdPattern = /^[a-zA-Z0-9_-]+$/;
-    
+
     if (!sessionId || !validIdPattern.test(sessionId)) {
       throw new PersistenceError(
         'Invalid session ID: Must contain only alphanumeric characters, underscores, and hyphens',
         PersistenceErrorCode.INVALID_FORMAT
       );
     }
-    
+
     if (sessionId.length > 255) {
       throw new PersistenceError(
         'Invalid session ID: Too long (max 255 characters)',
@@ -415,7 +405,7 @@ export class FilesystemAdapter implements PersistenceAdapter {
   private getSessionPath(sessionId: string): string {
     this.validateSessionId(sessionId);
     const safePath = path.join(this.basePath, 'sessions', `${sessionId}.json`);
-    
+
     // Double-check the resulting path is within basePath
     const resolvedPath = path.resolve(safePath);
     if (!resolvedPath.startsWith(this.basePath)) {
@@ -424,14 +414,14 @@ export class FilesystemAdapter implements PersistenceAdapter {
         PersistenceErrorCode.PERMISSION_DENIED
       );
     }
-    
+
     return resolvedPath;
   }
 
   private getMetadataPath(sessionId: string): string {
     this.validateSessionId(sessionId);
     const safePath = path.join(this.basePath, 'metadata', `${sessionId}.json`);
-    
+
     // Double-check the resulting path is within basePath
     const resolvedPath = path.resolve(safePath);
     if (!resolvedPath.startsWith(this.basePath)) {
@@ -440,14 +430,14 @@ export class FilesystemAdapter implements PersistenceAdapter {
         PersistenceErrorCode.PERMISSION_DENIED
       );
     }
-    
+
     return resolvedPath;
   }
 
   private extractMetadata(state: SessionState): SessionMetadata {
     const now = new Date();
     const status = state.endTime ? 'completed' : 'active';
-    
+
     return {
       id: state.id,
       name: state.name,
@@ -462,7 +452,7 @@ export class FilesystemAdapter implements PersistenceAdapter {
       tags: state.tags || [],
       insights: state.insights.length,
       branches: Object.keys(state.branches).length,
-      metrics: state.metrics
+      metrics: state.metrics,
     };
   }
 
@@ -493,7 +483,7 @@ export class FilesystemAdapter implements PersistenceAdapter {
   ): SessionMetadata[] {
     const sorted = [...metadata].sort((a, b) => {
       let comparison = 0;
-      
+
       switch (sortBy) {
         case 'created':
           comparison = a.createdAt.getTime() - b.createdAt.getTime();
@@ -514,5 +504,4 @@ export class FilesystemAdapter implements PersistenceAdapter {
 
     return sorted;
   }
-
 }

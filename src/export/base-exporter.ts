@@ -2,8 +2,8 @@
  * Base exporter class with common functionality
  */
 
-import { SessionState } from '../persistence/types.js';
-import { ExportOptions, ExportResult, Exporter, ExportFormat } from './types.js';
+import type { SessionState } from '../persistence/types.js';
+import type { ExportOptions, ExportResult, Exporter, ExportFormat } from './types.js';
 
 export abstract class BaseExporter implements Exporter {
   constructor(public readonly format: ExportFormat) {}
@@ -20,7 +20,7 @@ export abstract class BaseExporter implements Exporter {
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .substring(0, 50);
-    
+
     return `${technique}-${problemSlug}-${date}.${extension}`;
   }
 
@@ -29,9 +29,9 @@ export abstract class BaseExporter implements Exporter {
    */
   protected formatDate(date: Date | number | undefined, format?: string): string {
     if (!date) return 'N/A';
-    
+
     const d = typeof date === 'number' ? new Date(date) : date;
-    
+
     if (format === 'iso') {
       return d.toISOString();
     } else if (format === 'locale') {
@@ -47,13 +47,13 @@ export abstract class BaseExporter implements Exporter {
    */
   protected calculateDuration(startTime?: number, endTime?: number): string {
     if (!startTime) return 'N/A';
-    
+
     const end = endTime || Date.now();
     const durationMs = end - startTime;
     const minutes = Math.floor(durationMs / 60000);
     const hours = Math.floor(minutes / 60);
     const days = Math.floor(hours / 24);
-    
+
     if (days > 0) {
       return `${days} day${days > 1 ? 's' : ''}, ${hours % 24} hour${hours % 24 !== 1 ? 's' : ''}`;
     } else if (hours > 0) {
@@ -86,9 +86,9 @@ export abstract class BaseExporter implements Exporter {
       random_entry: 'Random Entry',
       scamper: 'SCAMPER',
       concept_extraction: 'Concept Extraction',
-      yes_and: 'Yes, And...'
+      yes_and: 'Yes, And...',
     };
-    
+
     return names[technique] || technique.replace(/_/g, ' ').toUpperCase();
   }
 

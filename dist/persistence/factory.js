@@ -39,32 +39,32 @@ export function getDefaultConfig(adapter) {
                     path: '.creative-thinking',
                     autoSave: true,
                     saveInterval: 60000, // 1 minute
-                    compression: false
-                }
+                    compression: false,
+                },
             };
         case 'memory':
             return {
                 adapter: 'memory',
                 options: {
                     maxSize: 100 * 1024 * 1024, // 100MB
-                    autoSave: false
-                }
+                    autoSave: false,
+                },
             };
         case 'sqlite':
             return {
                 adapter: 'sqlite',
                 options: {
                     path: 'creative-thinking.db',
-                    autoSave: true
-                }
+                    autoSave: true,
+                },
             };
         case 'postgres':
             return {
                 adapter: 'postgres',
                 options: {
                     connectionString: process.env.DATABASE_URL || 'postgres://localhost/creative_thinking',
-                    autoSave: true
-                }
+                    autoSave: true,
+                },
             };
     }
 }

@@ -1,8 +1,8 @@
 /**
  * Base exporter class with common functionality
  */
-import { SessionState } from '../persistence/types.js';
-import { ExportOptions, ExportResult, Exporter, ExportFormat } from './types.js';
+import type { SessionState } from '../persistence/types.js';
+import type { ExportOptions, ExportResult, Exporter, ExportFormat } from './types.js';
 export declare abstract class BaseExporter implements Exporter {
     readonly format: ExportFormat;
     constructor(format: ExportFormat);

@@ -7,6 +7,7 @@ export class CSVExporter extends BaseExporter {
     constructor() {
         super('csv');
     }
+    // eslint-disable-next-line @typescript-eslint/require-await
     async export(session, options) {
         const content = this.generateCSV(session, options);
         return {
@@ -18,8 +19,8 @@ export class CSVExporter extends BaseExporter {
                 sessionId: session.id,
                 techniqueUsed: session.technique,
                 totalSteps: session.totalSteps,
-                completedSteps: session.currentStep
-            }
+                completedSteps: session.currentStep,
+            },
         };
     }
     generateCSV(session, options) {
@@ -31,7 +32,7 @@ export class CSVExporter extends BaseExporter {
             return this.generateDetailedCSV(session, options);
         }
     }
-    generateDetailedCSV(session, options) {
+    generateDetailedCSV(session, _options) {
         const rows = [];
         // Determine headers based on what data is available
         const headers = this.determineHeaders(session);
@@ -104,7 +105,7 @@ export class CSVExporter extends BaseExporter {
         const row = [
             stepNumber.toString(),
             this.formatDate(new Date(Date.now())), // timestamp is on the parent object
-            this.getTechniqueDisplayName(session.technique)
+            this.getTechniqueDisplayName(session.technique),
         ];
         // Technique-specific fields
         if (session.technique === 'six_hats' && entry.hatColor !== undefined) {
@@ -175,7 +176,7 @@ export class CSVExporter extends BaseExporter {
                 `${session.currentStep}/${session.totalSteps}`,
                 (session.metrics?.creativityScore || 0).toString(),
                 (session.metrics?.risksCaught || 0).toString(),
-                session.insights.length.toString()
+                session.insights.length.toString(),
             ];
             rows.push(row);
         });
@@ -185,7 +186,7 @@ export class CSVExporter extends BaseExporter {
     /**
      * Special method to export multiple sessions as a comparative CSV
      */
-    async exportMultiple(sessions, options) {
+    exportMultiple(sessions, _options) {
         const content = this.generateMetricsCSV(sessions);
         const date = new Date().toISOString().split('T')[0];
         return {
@@ -195,8 +196,8 @@ export class CSVExporter extends BaseExporter {
             metadata: {
                 exportedAt: new Date(),
                 sessionCount: sessions.length,
-                exportFormat: 'csv'
-            }
+                exportFormat: 'csv',
+            },
         };
     }
 }

@@ -1,7 +1,7 @@
 /**
  * Core persistence adapter interface
  */
-import { SessionState, SessionMetadata, ListOptions, SearchQuery, ExportFormat, PersistenceConfig } from './types.js';
+import type { SessionState, SessionMetadata, ListOptions, SearchQuery, ExportFormat, PersistenceConfig } from './types.js';
 /**
  * Abstract interface for session persistence
  * Implementations can use filesystem, database, or cloud storage

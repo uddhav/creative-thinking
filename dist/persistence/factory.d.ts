@@ -1,8 +1,8 @@
 /**
  * Factory for creating persistence adapters
  */
-import { PersistenceAdapter } from './adapter.js';
-import { PersistenceConfig } from './types.js';
+import type { PersistenceAdapter } from './adapter.js';
+import type { PersistenceConfig } from './types.js';
 /**
  * Create a persistence adapter based on configuration
  */
