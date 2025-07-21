@@ -166,7 +166,7 @@ jobs:
           Compress-Archive -Path creative-thinking-${{ matrix.platform }}/* -DestinationPath creative-thinking-${{ matrix.platform }}-${{ needs.create-release.outputs.version }}.zip
 
       - name: 📤 Upload Release Asset
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.create-release.outputs.version }}
           files: creative-thinking-${{ matrix.platform }}-${{ needs.create-release.outputs.version }}.${{ matrix.archive }}
