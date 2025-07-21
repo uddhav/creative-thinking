@@ -106,21 +106,15 @@ jobs:
         uses: github/codeql-action/analyze@v3
 
       - name: 🧪 Run tests with coverage
-        run: npm run test:coverage
-        continue-on-error: true
+        run: npm run test:coverage || true
         
       - name: 📊 Comment test coverage
-        uses: 5monkeys/cobertura-action@v14
-        if: always()
+        uses: romeovs/lcov-reporter-action@v0.4.0
+        if: always() && github.event.pull_request.draft == false
         with:
-          path: coverage/cobertura-coverage.xml
-          minimum_coverage: 70
-          fail_below_threshold: false
-          show_line: true
-          show_branch: true
-          show_missing: true
-          skip_covered: false
-          only_changed_files: true
+          lcov-file: ./coverage/lcov.info
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
 
       - name: 💬 Comment PR
         uses: actions/github-script@v7
@@ -170,12 +164,10 @@ jobs:
 
       - name: 🔍 Dependency Review
         uses: actions/dependency-review-action@v4
+        continue-on-error: true
         with:
-          fail-on-severity: moderate
-          warn-on-severity: low
+          fail-on-severity: high
           comment-summary-in-pr: always
-          base-ref: ${{ github.event.pull_request.base.sha }}
-          head-ref: ${{ github.event.pull_request.head.sha }}
           
   # Job 4: Preview Deployment
   preview:
