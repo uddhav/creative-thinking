@@ -16,7 +16,20 @@ npm run dev          # Run TypeScript compiler in watch mode
 npm start            # Run the compiled server
 ```
 
-### Testing the Server
+### Testing
+```bash
+# Run tests
+npm test             # Run tests in watch mode
+npm run test:run     # Run tests once
+npm run test:coverage # Run tests with coverage report
+
+# The project includes comprehensive test suites:
+# - Export functionality tests (CSV, JSON, Markdown exporters)
+# - Persistence adapter tests (filesystem operations)
+# - All tests use Vitest framework with coverage reporting
+```
+
+### Running the Server
 ```bash
 # Run the server directly after building
 node dist/index.js

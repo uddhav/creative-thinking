@@ -57,7 +57,7 @@ jobs:
 
       - name: 🔒 Run npm audit
         run: |
-          npm audit --json > audit-report.json || true
+          npm audit --json > audit-report.json
           cat audit-report.json | jq '.vulnerabilities | to_entries | map(select(.value.severity == "critical" or .value.severity == "high")) | length' > high-vulns-count.txt
           HIGH_VULNS=$(cat high-vulns-count.txt)
           if [ "$HIGH_VULNS" -gt 0 ]; then

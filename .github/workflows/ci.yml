@@ -110,27 +110,17 @@ jobs:
 
       - name: 🚀 Test CLI execution
         run: |
-          # Test that the CLI starts without errors
-          # Use platform-specific timeout command
-          if [[ "$RUNNER_OS" == "macOS" ]]; then
-            # macOS doesn't have timeout by default, use alternative
-            node dist/index.js &
-            CLI_PID=$!
-            sleep 2
-            if kill -0 $CLI_PID 2>/dev/null; then
-              kill $CLI_PID
-              echo "CLI started successfully"
-            else
-              echo "CLI failed to start"
-              exit 1
-            fi
+          # Test that the CLI starts without errors using a unified approach
+          node dist/index.js &
+          CLI_PID=$!
+          sleep 2
+          
+          if kill -0 $CLI_PID 2>/dev/null; then
+            kill $CLI_PID
+            echo "✅ CLI started successfully"
           else
-            # Linux and Windows (Git Bash) have timeout
-            timeout 5s node dist/index.js || exit_code=$?
-            if [ "$exit_code" != "124" ] && [ "$exit_code" != "0" ]; then
-              echo "CLI failed to start properly"
-              exit 1
-            fi
+            echo "❌ CLI failed to start"
+            exit 1
           fi
         shell: bash
 
@@ -159,8 +149,7 @@ jobs:
         run: npm ci
 
       - name: 🔒 Run npm audit
-        run: |
-          npm audit --production --audit-level=high || echo "::warning::npm audit found vulnerabilities"
+        run: npm audit --production --audit-level=high
 
       - name: 🔍 Run Snyk security scan
         if: env.SNYK_TOKEN != ''
