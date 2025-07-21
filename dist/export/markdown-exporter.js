@@ -7,6 +7,7 @@ export class MarkdownExporter extends BaseExporter {
     constructor() {
         super('markdown');
     }
+    // eslint-disable-next-line @typescript-eslint/require-await
     async export(session, options) {
         const content = this.generateMarkdown(session, options);
         return {
@@ -36,7 +37,6 @@ export class MarkdownExporter extends BaseExporter {
             totalSteps: session.totalSteps,
             branchCount: Object.keys(session.branches).length,
             insightCount: session.insights.length,
-            metrics: options.includeMetrics !== false ? session.metrics : null,
             history: options.includeHistory !== false ? this.formatHistory(session) : null,
             insights: options.includeInsights !== false && session.insights.length > 0
                 ? this.formatInsights(session.insights)
@@ -45,20 +45,23 @@ export class MarkdownExporter extends BaseExporter {
                 ? this.formatBranches(session.branches)
                 : '',
         };
+        // Store metrics separately to handle properly
+        const metrics = options.includeMetrics !== false ? session.metrics : null;
         // Simple template replacement (in production, use a proper template engine)
         let result = template;
         // Handle conditionals
-        result = this.processConditionals(result, data);
+        result = this.processConditionals(result, { ...data, metrics });
         // Replace variables
         Object.entries(data).forEach(([key, value]) => {
             const regex = new RegExp(`{{${key}}}`, 'g');
-            result = result.replace(regex, String(value || ''));
+            const valueStr = value !== null && value !== undefined ? String(value) : '';
+            result = result.replace(regex, valueStr);
         });
         // Handle nested properties (e.g., metrics.creativityScore)
-        if (data.metrics) {
-            Object.entries(data.metrics).forEach(([key, value]) => {
+        if (metrics && typeof metrics === 'object') {
+            Object.entries(metrics).forEach(([key, value]) => {
                 const regex = new RegExp(`{{metrics\\.${key}}}`, 'g');
-                result = result.replace(regex, String(value || 0));
+                result = result.replace(regex, String(value ?? 0));
             });
         }
         return result.trim();
@@ -66,7 +69,7 @@ export class MarkdownExporter extends BaseExporter {
     processConditionals(template, data) {
         // Simple conditional processing
         const conditionalRegex = /{{#if\s+(\w+)}}([\s\S]*?){{\/if}}/g;
-        return template.replace(conditionalRegex, (match, condition, content) => {
+        return template.replace(conditionalRegex, (_match, condition, content) => {
             if (data[condition]) {
                 return content;
             }
@@ -125,7 +128,7 @@ export class MarkdownExporter extends BaseExporter {
     }
     getStepEmoji(technique, entry) {
         switch (technique) {
-            case 'six_hats':
+            case 'six_hats': {
                 const hatEmojis = {
                     blue: '🔵',
                     white: '⚪',
@@ -135,11 +138,12 @@ export class MarkdownExporter extends BaseExporter {
                     green: '🟢',
                 };
                 return hatEmojis[entry.hatColor || 'blue'] || '🎩';
+            }
             case 'po':
                 return '💡';
             case 'random_entry':
                 return '🎲';
-            case 'scamper':
+            case 'scamper': {
                 const actionEmojis = {
                     substitute: '🔄',
                     combine: '🔗',
@@ -150,6 +154,7 @@ export class MarkdownExporter extends BaseExporter {
                     reverse: '🔃',
                 };
                 return actionEmojis[entry.scamperAction || ''] || '🔄';
+            }
             case 'concept_extraction':
                 return '🔍';
             case 'yes_and':

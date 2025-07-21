@@ -12,7 +12,8 @@ export class CSVExporter extends BaseExporter {
     super('csv');
   }
 
-  export(session: SessionState, options: ExportOptions): ExportResult {
+  // eslint-disable-next-line @typescript-eslint/require-await
+  async export(session: SessionState, options: ExportOptions): Promise<ExportResult> {
     const content = this.generateCSV(session, options);
 
     return {

@@ -12,7 +12,8 @@ export class MarkdownExporter extends BaseExporter {
     super('markdown');
   }
 
-  export(session: SessionState, options: ExportOptions): ExportResult {
+  // eslint-disable-next-line @typescript-eslint/require-await
+  async export(session: SessionState, options: ExportOptions): Promise<ExportResult> {
     const content = this.generateMarkdown(session, options);
 
     return {
@@ -33,7 +34,7 @@ export class MarkdownExporter extends BaseExporter {
     const template = options.template || DEFAULT_MARKDOWN_TEMPLATE;
 
     // Prepare template data
-    const data = {
+    const data: Record<string, string | number | null | undefined> = {
       problem: session.problem,
       date: this.formatDate(session.startTime, options.dateFormat),
       technique: this.getTechniqueDisplayName(session.technique),
@@ -44,7 +45,6 @@ export class MarkdownExporter extends BaseExporter {
       totalSteps: session.totalSteps,
       branchCount: Object.keys(session.branches).length,
       insightCount: session.insights.length,
-      metrics: options.includeMetrics !== false ? session.metrics : null,
       history: options.includeHistory !== false ? this.formatHistory(session) : null,
       insights:
         options.includeInsights !== false && session.insights.length > 0
@@ -56,11 +56,14 @@ export class MarkdownExporter extends BaseExporter {
           : '',
     };
 
+    // Store metrics separately to handle properly
+    const metrics = options.includeMetrics !== false ? session.metrics : null;
+
     // Simple template replacement (in production, use a proper template engine)
     let result = template;
 
     // Handle conditionals
-    result = this.processConditionals(result, data);
+    result = this.processConditionals(result, { ...data, metrics });
 
     // Replace variables
     Object.entries(data).forEach(([key, value]) => {
@@ -70,10 +73,10 @@ export class MarkdownExporter extends BaseExporter {
     });
 
     // Handle nested properties (e.g., metrics.creativityScore)
-    if (data.metrics) {
-      Object.entries(data.metrics).forEach(([key, value]) => {
+    if (metrics && typeof metrics === 'object') {
+      Object.entries(metrics).forEach(([key, value]) => {
         const regex = new RegExp(`{{metrics\\.${key}}}`, 'g');
-        result = result.replace(regex, String(value || 0));
+        result = result.replace(regex, String(value ?? 0));
       });
     }
 
@@ -84,7 +87,7 @@ export class MarkdownExporter extends BaseExporter {
     // Simple conditional processing
     const conditionalRegex = /{{#if\s+(\w+)}}([\s\S]*?){{\/if}}/g;
 
-    return template.replace(conditionalRegex, (match, condition, content) => {
+    return template.replace(conditionalRegex, (_match, condition: string, content: string) => {
       if (data[condition]) {
         return content;
       }
@@ -269,7 +272,7 @@ export class MarkdownExporter extends BaseExporter {
     return lines.join('\n');
   }
 
-  private formatBranches(branches: Record<string, any[]>): string {
+  private formatBranches(branches: Record<string, unknown[]>): string {
     const lines: string[] = [];
 
     Object.entries(branches).forEach(([branchId, branchData]) => {

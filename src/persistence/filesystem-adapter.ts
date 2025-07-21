@@ -369,7 +369,8 @@ export class FilesystemAdapter implements PersistenceAdapter {
     return this.deleteBatch(toDelete);
   }
 
-  close(): void {
+  // eslint-disable-next-line @typescript-eslint/require-await
+  async close(): Promise<void> {
     // No resources to clean up for filesystem adapter
     this.initialized = false;
   }

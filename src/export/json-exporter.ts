@@ -4,7 +4,6 @@
 
 import type { SessionState, LateralThinkingInput } from '../persistence/types.js';
 import type { ExportOptions, ExportResult } from './types.js';
-import type { LateralThinkingData } from '../index.js';
 import { BaseExporter } from './base-exporter.js';
 
 export class JSONExporter extends BaseExporter {
@@ -12,7 +11,8 @@ export class JSONExporter extends BaseExporter {
     super('json');
   }
 
-  export(session: SessionState, options: ExportOptions): ExportResult {
+  // eslint-disable-next-line @typescript-eslint/require-await
+  async export(session: SessionState, options: ExportOptions): Promise<ExportResult> {
     const data: Record<string, unknown> = this.prepareData(session, options);
     const content = JSON.stringify(data, null, 2);
 
@@ -135,25 +135,25 @@ export class JSONExporter extends BaseExporter {
     };
 
     Object.entries(arrays).forEach(([key, field]) => {
-      const value = (entry as Record<string, unknown>)[key];
+      const value = (entry as unknown as Record<string, unknown>)[key];
       if (Array.isArray(value) && value.length > 0) {
         enhanced[field] = value;
       }
     });
 
     // Add revision information if present
-    if (entry.isRevision) {
+    if ('isRevision' in entry && entry.isRevision) {
       enhanced.revision = {
         isRevision: true,
-        revisesStep: (entry as LateralThinkingData).revisesStep,
+        revisesStep: 'revisesStep' in entry ? entry.revisesStep : undefined,
       };
     }
 
     // Add branch information if present
-    if (entry.branchFromStep) {
+    if ('branchFromStep' in entry && entry.branchFromStep) {
       enhanced.branch = {
-        fromStep: (entry as LateralThinkingData).branchFromStep,
-        branchId: (entry as LateralThinkingData).branchId,
+        fromStep: entry.branchFromStep,
+        branchId: 'branchId' in entry ? entry.branchId : undefined,
       };
     }
 
@@ -221,7 +221,7 @@ export class JSONExporter extends BaseExporter {
         'applications',
         'antifragileProperties',
       ].forEach(field => {
-        const items = (h.input as Record<string, unknown>)[field];
+        const items = (h.input as unknown as Record<string, unknown>)[field];
         if (items && Array.isArray(items)) {
           items.forEach(item => {
             if (typeof item === 'string') {
@@ -234,9 +234,9 @@ export class JSONExporter extends BaseExporter {
     stats.uniqueConceptsCount = allConcepts.size;
 
     // Count revisions and branches
-    stats.revisionCount = session.history.filter(
-      h => (h.input as LateralThinkingData).isRevision
-    ).length;
+    stats.revisionCount = session.history.filter(h => {
+      return 'isRevision' in h.input && h.input.isRevision === true;
+    }).length;
     stats.branchingPoints = Object.keys(session.branches).length;
 
     return stats;

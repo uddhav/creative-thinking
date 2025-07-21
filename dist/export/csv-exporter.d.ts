@@ -15,6 +15,6 @@ export declare class CSVExporter extends BaseExporter {
     /**
      * Special method to export multiple sessions as a comparative CSV
      */
-    exportMultiple(sessions: SessionState[], options: ExportOptions): Promise<ExportResult>;
+    exportMultiple(sessions: SessionState[], _options: ExportOptions): ExportResult;
 }
 //# sourceMappingURL=csv-exporter.d.ts.map

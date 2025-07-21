@@ -6,6 +6,7 @@ export class JSONExporter extends BaseExporter {
     constructor() {
         super('json');
     }
+    // eslint-disable-next-line @typescript-eslint/require-await
     async export(session, options) {
         const data = this.prepareData(session, options);
         const content = JSON.stringify(data, null, 2);
@@ -116,31 +117,32 @@ export class JSONExporter extends BaseExporter {
             blackSwans: 'blackSwans',
         };
         Object.entries(arrays).forEach(([key, field]) => {
-            if (entry[key] && entry[key].length > 0) {
-                enhanced[field] = entry[key];
+            const value = entry[key];
+            if (Array.isArray(value) && value.length > 0) {
+                enhanced[field] = value;
             }
         });
         // Add revision information if present
-        if (entry.isRevision) {
+        if ('isRevision' in entry && entry.isRevision) {
             enhanced.revision = {
                 isRevision: true,
-                revisesStep: entry.revisesStep,
+                revisesStep: 'revisesStep' in entry ? entry.revisesStep : undefined,
             };
         }
         // Add branch information if present
-        if (entry.branchFromStep) {
+        if ('branchFromStep' in entry && entry.branchFromStep) {
             enhanced.branch = {
                 fromStep: entry.branchFromStep,
-                branchId: entry.branchId,
+                branchId: 'branchId' in entry ? entry.branchId : undefined,
             };
         }
         return enhanced;
     }
     generateMetricsSummary(metrics) {
         return {
-            overallCreativity: this.categorizeScore(metrics.creativityScore || 0, 'creativity'),
-            riskAwareness: this.categorizeScore(metrics.risksCaught || 0, 'risk'),
-            robustness: this.categorizeScore(metrics.antifragileFeatures || 0, 'robustness'),
+            overallCreativity: this.categorizeScore(metrics.creativityScore ?? 0, 'creativity'),
+            riskAwareness: this.categorizeScore(metrics.risksCaught ?? 0, 'risk'),
+            robustness: this.categorizeScore(metrics.antifragileFeatures ?? 0, 'robustness'),
         };
     }
     categorizeScore(score, type) {
@@ -199,13 +201,19 @@ export class JSONExporter extends BaseExporter {
             ].forEach(field => {
                 const items = h.input[field];
                 if (items && Array.isArray(items)) {
-                    items.forEach(item => allConcepts.add(item.toLowerCase()));
+                    items.forEach(item => {
+                        if (typeof item === 'string') {
+                            allConcepts.add(item.toLowerCase());
+                        }
+                    });
                 }
             });
         });
         stats.uniqueConceptsCount = allConcepts.size;
         // Count revisions and branches
-        stats.revisionCount = session.history.filter(h => h.input.isRevision).length;
+        stats.revisionCount = session.history.filter(h => {
+            return 'isRevision' in h.input && h.input.isRevision === true;
+        }).length;
         stats.branchingPoints = Object.keys(session.branches).length;
         return stats;
     }

@@ -160,7 +160,7 @@ class LateralThinkingServer {
   private currentSessionId: string | null = null;
   private disableThoughtLogging: boolean;
   private readonly SESSION_TTL = 24 * 60 * 60 * 1000; // 24 hours
-  private cleanupInterval: number | null = null;
+  private cleanupInterval: NodeJS.Timeout | null = null;
   private persistenceAdapter: PersistenceAdapter | null = null;
 
   constructor() {
@@ -378,6 +378,9 @@ class LateralThinkingServer {
         history: loadedState.history.map(h => ({
           ...h.input,
           timestamp: h.timestamp,
+          // Ensure technique-specific fields are typed correctly
+          hatColor: h.input.hatColor as SixHatsColor | undefined,
+          scamperAction: h.input.scamperAction as ScamperAction | undefined,
         })),
         branches: Object.entries(loadedState.branches).reduce(
           (acc, [key, value]) => {
@@ -913,17 +916,23 @@ class LateralThinkingServer {
       }
 
       // Validate operation-specific options
-      if (data.sessionOperation === 'load' && !data.loadOptions?.sessionId) {
+      if (
+        data.sessionOperation === 'load' &&
+        !(data.loadOptions as Record<string, unknown>)?.sessionId
+      ) {
         throw new Error('sessionId is required in loadOptions for load operation');
       }
-      if (data.sessionOperation === 'delete' && !data.deleteOptions?.sessionId) {
+      if (
+        data.sessionOperation === 'delete' &&
+        !(data.deleteOptions as Record<string, unknown>)?.sessionId
+      ) {
         throw new Error('sessionId is required in deleteOptions for delete operation');
       }
       if (data.sessionOperation === 'export') {
-        if (!data.exportOptions?.sessionId) {
+        if (!(data.exportOptions as Record<string, unknown>)?.sessionId) {
           throw new Error('sessionId is required in exportOptions for export operation');
         }
-        if (!data.exportOptions?.format) {
+        if (!(data.exportOptions as Record<string, unknown>)?.format) {
           throw new Error('format is required in exportOptions for export operation');
         }
       }

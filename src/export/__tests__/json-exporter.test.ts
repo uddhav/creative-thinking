@@ -77,7 +77,13 @@ describe('JSONExporter', () => {
     const session = createTestSession();
     const result = await exporter.export(session, { format: 'json' });
 
-    const data = JSON.parse(result.content.toString());
+    const data = JSON.parse(result.content.toString()) as {
+      exportMetadata: {
+        exportVersion: string;
+        tool: string;
+        exportedAt: string;
+      };
+    };
     expect(data.exportMetadata).toBeDefined();
     expect(data.exportMetadata.exportVersion).toBe('1.0');
     expect(data.exportMetadata.tool).toBe('Creative Thinking MCP Tool');
@@ -88,7 +94,16 @@ describe('JSONExporter', () => {
     const session = createTestSession();
     const result = await exporter.export(session, { format: 'json' });
 
-    const data = JSON.parse(result.content.toString());
+    const data = JSON.parse(result.content.toString()) as {
+      sessionId: string;
+      problem: string;
+      technique: string;
+      progress: {
+        currentStep: number;
+        totalSteps: number;
+        percentComplete: number;
+      };
+    };
     expect(data.sessionId).toBe('test-session-456');
     expect(data.problem).toBe('How to reduce customer complaints');
     expect(data.technique).toBe('scamper');
@@ -101,7 +116,16 @@ describe('JSONExporter', () => {
     const session = createTestSession();
     const result = await exporter.export(session, { format: 'json' });
 
-    const data = JSON.parse(result.content.toString());
+    const data = JSON.parse(result.content.toString()) as {
+      history: Array<{
+        step: number;
+        timestamp: string;
+        output: string;
+        scamperAction: string;
+        risks: string[];
+        mitigations: string[];
+      }>;
+    };
     const historyEntry = data.history[0];
 
     expect(historyEntry.step).toBe(1);
@@ -116,7 +140,16 @@ describe('JSONExporter', () => {
     const session = createTestSession();
     const result = await exporter.export(session, { format: 'json' });
 
-    const data = JSON.parse(result.content.toString());
+    const data = JSON.parse(result.content.toString()) as {
+      metrics: {
+        creativityScore: number;
+        risksCaught: number;
+        summary: {
+          overallCreativity: string;
+          riskAwareness: string;
+        };
+      };
+    };
     expect(data.metrics.creativityScore).toBe(82);
     expect(data.metrics.risksCaught).toBe(1);
     expect(data.metrics.summary.overallCreativity).toBe('Highly Creative');
@@ -127,7 +160,15 @@ describe('JSONExporter', () => {
     const session = createTestSession();
     const result = await exporter.export(session, { format: 'json' });
 
-    const data = JSON.parse(result.content.toString());
+    const data = JSON.parse(result.content.toString()) as {
+      branches: {
+        count: number;
+        details: Array<{
+          branchId: string;
+          stepsInBranch: number;
+        }>;
+      };
+    };
     expect(data.branches.count).toBe(1);
     expect(data.branches.details[0].branchId).toBe('branch-1');
     expect(data.branches.details[0].stepsInBranch).toBe(1);
@@ -137,7 +178,15 @@ describe('JSONExporter', () => {
     const session = createTestSession();
     const result = await exporter.export(session, { format: 'json' });
 
-    const data = JSON.parse(result.content.toString());
+    const data = JSON.parse(result.content.toString()) as {
+      statistics: {
+        totalOutputLength: number;
+        averageOutputLength: number;
+        uniqueConceptsCount: number;
+        revisionCount: number;
+        branchingPoints: number;
+      };
+    };
     expect(data.statistics).toBeDefined();
     expect(data.statistics.totalOutputLength).toBeGreaterThan(0);
     expect(data.statistics.averageOutputLength).toBeGreaterThan(0);
@@ -155,7 +204,11 @@ describe('JSONExporter', () => {
       includeBranches: false,
     });
 
-    const data = JSON.parse(result.content.toString());
+    const data = JSON.parse(result.content.toString()) as {
+      history?: any;
+      metrics?: any;
+      branches?: any;
+    };
     expect(data.history).toBeUndefined();
     expect(data.metrics).toBeUndefined();
     expect(data.branches).toBeUndefined();
@@ -166,7 +219,9 @@ describe('JSONExporter', () => {
     delete session.metrics;
 
     const result = await exporter.export(session, { format: 'json' });
-    const data = JSON.parse(result.content.toString());
+    const data = JSON.parse(result.content.toString()) as {
+      metrics?: any;
+    };
 
     expect(data.metrics).toBeUndefined();
   });

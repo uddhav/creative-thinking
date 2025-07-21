@@ -17,7 +17,7 @@ export interface ExportResult {
     content: string | Buffer;
     filename: string;
     mimeType: string;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
 }
 export interface Exporter {
     format: ExportFormat;

@@ -7,6 +7,7 @@ export class CSVExporter extends BaseExporter {
     constructor() {
         super('csv');
     }
+    // eslint-disable-next-line @typescript-eslint/require-await
     async export(session, options) {
         const content = this.generateCSV(session, options);
         return {
@@ -31,7 +32,7 @@ export class CSVExporter extends BaseExporter {
             return this.generateDetailedCSV(session, options);
         }
     }
-    generateDetailedCSV(session, options) {
+    generateDetailedCSV(session, _options) {
         const rows = [];
         // Determine headers based on what data is available
         const headers = this.determineHeaders(session);
@@ -185,7 +186,7 @@ export class CSVExporter extends BaseExporter {
     /**
      * Special method to export multiple sessions as a comparative CSV
      */
-    async exportMultiple(sessions, options) {
+    exportMultiple(sessions, _options) {
         const content = this.generateMetricsCSV(sessions);
         const date = new Date().toISOString().split('T')[0];
         return {
