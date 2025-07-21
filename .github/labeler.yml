@@ -1,46 +1,74 @@
-# Configuration for PR labeler action
+# Configuration for PR labeler action v5
+# This file uses minimatch patterns: https://github.com/isaacs/minimatch
 
 documentation:
-  - '**/*.md'
-  - 'docs/**/*'
-  - 'examples/**/*'
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/*.md'
+      - 'docs/**/*'
+      - 'examples/**/*'
 
 tests:
-  - '**/*.test.ts'
-  - '**/*.spec.ts'
-  - '**/test/**/*'
-  - '**/__tests__/**/*'
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/*.test.ts'
+      - '**/*.spec.ts'
+      - '**/test/**/*'
+      - '**/__tests__/**/*'
+      - 'vitest.config.ts'
 
 dependencies:
-  - 'package.json'
-  - 'package-lock.json'
-  - 'yarn.lock'
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'yarn.lock'
+      - '.npmignore'
 
 ci:
-  - '.github/**/*'
-  - '.circleci/**/*'
-  - '.travis.yml'
-  - 'azure-pipelines.yml'
+  - changed-files:
+    - any-glob-to-any-file:
+      - '.github/**/*'
+      - '.circleci/**/*'
+      - '.travis.yml'
+      - 'azure-pipelines.yml'
 
 docker:
-  - 'Dockerfile'
-  - 'docker-compose.yml'
-  - '.dockerignore'
-
-export:
-  - 'src/export/**/*'
-  - 'dist/export/**/*'
-
-persistence:
-  - 'src/persistence/**/*'
-  - 'dist/persistence/**/*'
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'Dockerfile'
+      - 'docker-compose.yml'
+      - '.dockerignore'
 
 techniques:
-  - 'src/techniques/**/*'
-  - 'src/index.ts'
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'src/index.ts'
+      - 'src/**/*technique*'
+      - 'src/**/*lateral*'
 
 config:
-  - 'tsconfig.json'
-  - 'vitest.config.ts'
-  - '.eslintrc*'
-  - '.prettierrc*'
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'tsconfig.json'
+      - 'tsconfig.*.json'
+      - 'vitest.config.ts'
+      - 'eslint.config.js'
+      - '.eslintrc*'
+      - '.prettierrc*'
+      - '.prettierignore'
+      - 'codecov.yml'
+
+build:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'dist/**/*'
+      - 'tsconfig.json'
+      - 'package.json'
+
+security:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '.github/workflows/security.yml'
+      - '.github/dependabot.yml'
+      - 'LICENSE'
