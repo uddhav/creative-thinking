@@ -1,10 +1,32 @@
 # Creative Thinking MCP Server
 
-An MCP server implementation that provides structured lateral and creative thinking techniques for problem-solving and ideation.
+A Model Context Protocol (MCP) server that provides structured creative thinking techniques for problem-solving and ideation. This server implements a unified framework combining generative creativity with systematic risk assessment.
+
+## Architecture Principles
+
+This project follows a three-layer tool architecture as its core design principle:
+
+1. **Discovery** - Intelligent technique selection based on problem analysis
+2. **Planning** - Structured workflow creation combining multiple techniques  
+3. **Execution** - Guided step-by-step implementation with state management
+
+All current and future technique additions must integrate with this layered approach to ensure consistency and usability.
+
+## Overview
+
+The three-layer architecture guides you through comprehensive problem-solving:
+
+1. **Discovery Layer** (`discover_techniques`) - Analyzes problems and recommends suitable thinking techniques based on characteristics, context, and desired outcomes.
+
+2. **Planning Layer** (`plan_thinking_session`) - Creates structured workflows that combine techniques, providing step-by-step guidance adapted to your timeframe.
+
+3. **Execution Layer** (`execute_thinking_step`) - Guides you through each thinking step while maintaining session state and integrating risk assessment.
+
+This layered approach ensures efficient problem-solving by matching techniques to problems, creating comprehensive workflows, and maintaining focus throughout the creative process.
 
 ## Installation
 
-### Quick Install with npx
+### Using npx
 
 ```bash
 # Run directly from GitHub
@@ -31,54 +53,96 @@ npm run build
 node dist/index.js
 ```
 
-## Features
+## Core Features
 
-### Creative Thinking Techniques (Enhanced with Unified Framework)
+### Eight Enhanced Thinking Techniques
 
-All techniques integrate creative generation with critical evaluation for robust, antifragile solutions:
+Each technique integrates creative generation with systematic verification:
 
-- **Six Thinking Hats Plus**: Enhanced with Black Swan awareness - each hat considers unknown unknowns and extreme events
-- **PO (Provocative Operation)**: With systematic verification - provocations are tested through hypothesis validation
-- **Random Entry**: With systematic doubt - connections validated through Cartesian questioning
-- **SCAMPER**: With pre-mortem analysis - each transformation includes "What could go wrong?" assessment
-- **Concept Extraction**: With failure mode analysis - identifies where patterns won't work
-- **Yes, And...**: With critical evaluation - includes "But" step for risk assessment
-- **Design Thinking**: With embedded risk management - 5 stages integrating threat modeling and failure harvesting
-- **TRIZ**: Enhanced with Via Negativa - systematic innovation through both addition and removal
+- **Six Thinking Hats Plus** - Multi-perspective analysis with meta-uncertainty awareness
+- **Provocative Operation (PO)** - Pattern-breaking through systematic verification
+- **Random Entry** - Creative connections validated through systematic doubt
+- **SCAMPER** - Systematic transformations with integrated pre-mortem analysis
+- **Concept Extraction** - Cross-domain pattern transfer with boundary awareness
+- **Yes, And** - Collaborative ideation with built-in critical evaluation
+- **Design Thinking** - Human-centered innovation with embedded risk management
+- **TRIZ** - Contradiction resolution through addition and systematic removal
 
-### Key Features of the Unified Framework
+### Unified Framework Features
 
-- **Dual Thinking Modes**: Visual indicators (✨ creative, ⚠️ critical) show whether you're in generative or adversarial mode
-- **Risk & Failure Mode Tracking**: All techniques support identifying risks, failure modes, and mitigations
-- **Antifragile Properties**: Solutions designed to benefit from stress and volatility
-- **Black Swan Consideration**: Techniques account for low-probability, high-impact events
-- **Meta-Learning Metrics**: Track creativity scores, risks caught, and antifragile features across sessions
+- Dual thinking modes with visual indicators for creative and critical phases
+- Comprehensive risk and failure mode tracking across all techniques
+- Antifragile solution design that benefits from stress and change
+- Consideration of low-probability, high-impact events
+- Meta-learning metrics to track session effectiveness
 
-### Session Management Features
+### Session Management
 
-- **Session Persistence**: Save, load, list, delete, and export thinking sessions
-- **Auto-save**: Automatically persist progress after each step
-- **Tagging & Organization**: Categorize sessions with names and tags
-- **Multiple Export Formats**: Export sessions as JSON, Markdown, or CSV
-- Visual progress tracking with emojis and formatted output
-- Support for revisions and branching in creative exploration
-- Session management with unique IDs and history tracking
-- Insights extraction and summary when sessions complete
-- Colored console output with chalk (can be disabled with DISABLE_THOUGHT_LOGGING environment variable)
+- Full session persistence with save, load, list, delete, and export capabilities
+- Automatic progress saving and session tagging for organization
+- Multiple export formats (JSON, Markdown, CSV) for different use cases
+- Support for revisions and branching during creative exploration
+- Progress tracking with visual indicators and formatted output
+- Insights extraction and summary generation upon completion
 
-## Tool
+## Tools
 
-### lateralthinking
+### 🔍 discover_techniques
 
-Guides users through proven lateral thinking techniques for creative problem-solving.
+Analyzes your problem and recommends the most suitable creative thinking techniques.
 
 **Inputs:**
-- `technique` (string): The lateral thinking technique to use ("six_hats", "po", "random_entry", "scamper", "concept_extraction", "yes_and", "design_thinking", "triz")
-- `problem` (string): The problem or challenge to address
-- `currentStep` (integer): Current step number in the technique
-- `totalSteps` (integer): Total steps for this technique
-- `output` (string): Your creative output for this step
-- `nextStepNeeded` (boolean): Whether another step is needed
+- `problem` (string, required): The problem or challenge you want to solve
+- `context` (string, optional): Additional context about the situation
+- `preferredOutcome` (string, optional): The type of solution you prefer
+  - Options: 'innovative', 'systematic', 'risk-aware', 'collaborative', 'analytical'
+- `constraints` (array, optional): Any constraints or limitations to consider
+
+**Example:**
+```json
+{
+  "problem": "How can we reduce customer churn while maintaining profitability?",
+  "context": "SaaS business with increasing competition",
+  "preferredOutcome": "systematic",
+  "constraints": ["Limited development resources", "Cannot reduce prices"]
+}
+```
+
+### 📋 plan_thinking_session
+
+Creates a structured workflow for applying one or more creative thinking techniques.
+
+**Inputs:**
+- `problem` (string, required): The problem to solve
+- `techniques` (array, required): The techniques to include in the workflow
+  - Options: 'six_hats', 'po', 'random_entry', 'scamper', 'concept_extraction', 'yes_and', 'design_thinking', 'triz'
+- `objectives` (array, optional): Specific objectives for this session
+- `constraints` (array, optional): Constraints to work within
+- `timeframe` (string, optional): How much time/depth to invest
+  - Options: 'quick', 'thorough', 'comprehensive'
+
+**Example:**
+```json
+{
+  "problem": "Redesign onboarding process for better user retention",
+  "techniques": ["design_thinking", "scamper"],
+  "objectives": ["Reduce time to first value", "Increase completion rate"],
+  "timeframe": "thorough"
+}
+```
+
+### 🎯 execute_thinking_step
+
+Executes a single step in your creative thinking process.
+
+**Inputs:**
+- `planId` (string, optional): ID from plan_thinking_session
+- `technique` (string, required): The lateral thinking technique to use
+- `problem` (string, required): The problem or challenge to address
+- `currentStep` (integer, required): Current step number in the technique
+- `totalSteps` (integer, required): Total steps for this technique
+- `output` (string, required): Your creative output for this step
+- `nextStepNeeded` (boolean, required): Whether another step is needed
 
 **Technique-specific inputs:**
 - `hatColor` (string, optional): Current hat color for six_hats technique
@@ -120,120 +184,115 @@ Guides users through proven lateral thinking techniques for creative problem-sol
 - `branchFromStep` (integer, optional): Step number to branch from
 - `branchId` (string, optional): Identifier for the branch
 
-## Techniques
+## Thinking Techniques
 
-### Six Thinking Hats Plus (Enhanced with Black Swan Awareness)
-Edward de Bono's method enhanced with meta-uncertainty and extreme event consideration:
-1. **Blue Hat Plus** 🔵: Process control with meta-uncertainty awareness - "What if our process assumptions are wrong?"
-2. **White Hat Plus** ⚪: Facts and information including unknown unknowns - "What data might be hiding black swans?"
-3. **Red Hat Plus** 🔴: Emotions, intuition, and collective behavior prediction - "What collective madness might emerge?"
-4. **Yellow Hat Plus** 🟡: Optimism, benefits, and positive black swans - "What explosive upsides might we miss?"
-5. **Black Hat Plus** ⚫: Critical judgment and catastrophic discontinuities - "What could destroy everything?"
-6. **Green Hat Plus** 🟢: Creativity and antifragile innovations - "What solutions get stronger under stress?"
+### Six Thinking Hats Plus
+Multi-perspective analysis enhanced with meta-uncertainty awareness:
+1. **Blue Hat** - Process control with meta-uncertainty awareness
+2. **White Hat** - Facts and data including unknown unknowns
+3. **Red Hat** - Emotions, intuition, and collective behavior
+4. **Yellow Hat** - Optimism and positive possibilities
+5. **Black Hat** - Critical judgment and risk assessment
+6. **Green Hat** - Creative solutions and antifragile innovations
 
-### PO (Provocative Operation with Systematic Verification)
-Four-step process for escaping mental patterns with hypothesis testing:
-1. Create a provocative statement (Po: ...)
-2. Suspend judgment and explore the provocation (then challenge it)
-3. Extract and verify principles through hypothesis testing
-4. Develop robust solutions addressing failure modes
+### Provocative Operation (PO)
+Four-step process for breaking mental patterns:
+1. Create provocative statements
+2. Explore without judgment, then systematically challenge
+3. Extract and verify underlying principles
+4. Develop robust solutions with failure mode analysis
 
-### Random Entry (With Systematic Doubt)
-Three-step creative connection process with validation:
-1. Introduce a random stimulus (word, image, concept)
-2. Generate connections with systematic doubt ("Is this always true?")
-3. Validate insights before developing solutions
+### Random Entry
+Three-step process for unexpected connections:
+1. Introduce random stimuli
+2. Generate connections while questioning assumptions
+3. Validate insights before solution development
 
-### SCAMPER (With Pre-Mortem Analysis)
-Seven systematic transformations, each with risk assessment:
-- **S**ubstitute: Replace parts with alternatives | "What dependencies break?"
-- **C**ombine: Merge with other ideas or functions | "What conflicts arise?"
-- **A**dapt: Adjust for different contexts | "What new vulnerabilities emerge?"
-- **M**odify: Magnify, minimize, or modify attributes | "What breaks under enhancement?"
-- **P**ut to other use: Find new applications | "What context-specific dangers?"
-- **E**liminate: Remove unnecessary elements | "What's actually load-bearing?"
-- **R**everse: Invert or rearrange components | "Which assumptions must hold?"
+### SCAMPER
+Seven transformations with integrated risk assessment:
+- **Substitute** - Replace elements while identifying dependencies
+- **Combine** - Merge concepts while managing conflicts
+- **Adapt** - Adjust for new contexts and vulnerabilities
+- **Modify** - Scale attributes up or down systematically
+- **Put to other use** - Find new applications and contexts
+- **Eliminate** - Remove elements while preserving core function
+- **Reverse** - Invert or rearrange while testing assumptions
 
-### Concept Extraction (With Failure Mode Analysis)
-Four-step process for transferring successful principles across domains:
-1. **Identify Success**: Analyze a successful solution from any domain
-2. **Extract & Analyze Limitations**: Identify key principles AND where they wouldn't work
-3. **Abstract with Boundaries**: Generalize patterns with clear domain boundaries
-4. **Apply with Risk Assessment**: Transfer patterns only where success probability is high
+### Concept Extraction
+Four-step cross-domain pattern transfer:
+1. **Identify** - Analyze successful solutions from any domain
+2. **Extract** - Isolate key principles and their limitations
+3. **Abstract** - Generalize patterns with clear boundaries
+4. **Apply** - Transfer patterns with risk assessment
 
-### Yes, And... (With Critical Evaluation)
-Four-step collaborative ideation process from improv theater:
-1. **Accept (Yes)**: Acknowledge and accept the initial idea or contribution
-2. **Build (And)**: Add creative expansions and possibilities
-3. **Evaluate (But)**: Critically assess potential issues and risks
-4. **Integrate**: Synthesize insights into a robust solution
+### Yes, And
+Four-step collaborative ideation process:
+1. **Accept** - Acknowledge initial ideas
+2. **Build** - Add creative expansions
+3. **Evaluate** - Assess risks and issues
+4. **Integrate** - Synthesize into robust solutions
 
-### Design Thinking (With Embedded Risk Management)
-Five-stage human-centered design process with integrated threat modeling:
-1. **Empathize + Threat Modeling**: Understand user needs AND potential misuse cases
-2. **Define + Problem Inversion**: Frame the problem AND ask "How might we fail?"
-3. **Ideate + Devil's Advocate**: Generate solutions with internal critic for each idea
-4. **Prototype + Stress Testing**: Build quick tests including edge cases and failure modes
-5. **Test + Failure Harvesting**: Gather user feedback AND analyze what breaks
+### Design Thinking
+Five-stage human-centered process with risk integration:
+1. **Empathize** - Understand users and potential misuse cases
+2. **Define** - Frame problems with failure mode consideration
+3. **Ideate** - Generate solutions with built-in critique
+4. **Prototype** - Build tests including edge cases
+5. **Test** - Gather feedback and harvest failure insights
 
-### TRIZ (Enhanced with Via Negativa)
-Four-step systematic innovation through contradiction resolution:
-1. **Identify Contradiction**: Find the core conflict (Need X but get Y)
-2. **Via Negativa - What to Remove?**: Ask what can be eliminated before adding
-3. **Apply Inventive Principles**: Use TRIZ principles both additively and subtractively
-4. **Minimal Solution**: Achieve more by doing less - optimize through removal
+### TRIZ
+Four-step innovation through contradiction resolution:
+1. **Identify** - Find core contradictions
+2. **Remove** - Apply via negativa before adding
+3. **Apply** - Use inventive principles bidirectionally
+4. **Minimize** - Achieve more through systematic removal
 
-## Usage Examples
+## Example Workflow
 
-### Six Thinking Hats Example
+1. **Discover suitable techniques:**
 ```json
 {
-  "technique": "six_hats",
-  "problem": "How to improve team collaboration in remote work",
-  "currentStep": 1,
-  "totalSteps": 6,
-  "hatColor": "blue",
-  "output": "We need a systematic approach to analyze our remote collaboration challenges. Let's examine this from all perspectives to find comprehensive solutions.",
-  "nextStepNeeded": true
+  "tool": "discover_techniques",
+  "arguments": {
+    "problem": "Improve team collaboration in remote work",
+    "preferredOutcome": "collaborative"
+  }
 }
 ```
 
-### SCAMPER Example
+2. **Create a structured plan:**
 ```json
 {
-  "technique": "scamper",
-  "problem": "Redesign the coffee mug for better user experience",
-  "currentStep": 3,
-  "totalSteps": 7,
-  "scamperAction": "adapt",
-  "output": "Adapt the mug handle design from ergonomic tools - add a thumb rest and finger grooves like those found on professional photography equipment for better grip and reduced fatigue.",
-  "nextStepNeeded": true
+  "tool": "plan_thinking_session",
+  "arguments": {
+    "problem": "Improve team collaboration in remote work",
+    "techniques": ["yes_and", "six_hats"],
+    "timeframe": "thorough"
+  }
 }
 ```
 
-### Concept Extraction Example
+3. **Execute thinking steps:**
 ```json
 {
-  "technique": "concept_extraction",
-  "problem": "How to improve employee onboarding process",
-  "currentStep": 3,
-  "totalSteps": 4,
-  "abstractedPatterns": [
-    "Orchestrated parallel workflows",
-    "Role clarity through visual systems",
-    "Time-boxed task completion",
-    "Cross-functional visibility"
-  ],
-  "output": "Abstract patterns: Create systems where multiple activities happen simultaneously with clear visual indicators, time boundaries, and everyone understanding the full picture.",
-  "nextStepNeeded": true
+  "tool": "execute_thinking_step",
+  "arguments": {
+    "technique": "six_hats",
+    "problem": "Improve team collaboration in remote work",
+    "currentStep": 1,
+    "totalSteps": 6,
+    "hatColor": "blue",
+    "output": "Establishing systematic approach to analyze collaboration challenges",
+    "nextStepNeeded": true
+  }
 }
 ```
 
 ## Configuration
 
-### Usage with Claude Desktop
+### For Desktop Applications
 
-Add this to your `claude_desktop_config.json`:
+Add to your MCP configuration file:
 
 ```json
 {
@@ -249,9 +308,9 @@ Add this to your `claude_desktop_config.json`:
 }
 ```
 
-### Usage with VS Code
+### For Code Editors
 
-Add the following to your VS Code settings:
+Add to your editor's MCP settings:
 
 ```json
 {
@@ -273,7 +332,7 @@ To disable visual output logging, set the environment variable: `DISABLE_THOUGHT
 
 ## Session Management
 
-The Creative Thinking tool now supports full session persistence, allowing you to save your creative thinking progress and return to it later.
+Save and resume your creative thinking sessions at any time.
 
 ### Session Operations
 
@@ -332,24 +391,17 @@ Export a session:
 
 ### Export Formats
 
-The tool supports three export formats:
+- **Markdown** - Human-readable reports with formatting
+- **JSON** - Structured data for analysis and integration
+- **CSV** - Tabular format for spreadsheet applications
 
-- **Markdown**: Human-readable reports with rich formatting
-- **JSON**: Complete structured data for analysis and integration
-- **CSV**: Tabular data for spreadsheets and data visualization
+### Persistence Options
 
-See [examples/export-formats.md](examples/export-formats.md) for detailed export examples and use cases.
+- `PERSISTENCE_TYPE` - Choose between filesystem or memory storage
+- `PERSISTENCE_PATH` - Customize session storage location
+- `autoSave` - Enable automatic progress saving
 
-### Auto-Save
-
-Enable automatic saving after each step by adding `"autoSave": true` to your thinking step requests.
-
-### Configuration
-
-- `PERSISTENCE_TYPE`: Storage backend (`filesystem` or `memory`)
-- `PERSISTENCE_PATH`: Custom storage path (default: `~/.creative-thinking/sessions`)
-
-For detailed session management examples, see [examples/session-management.md](examples/session-management.md).
+For detailed examples, see the [examples directory](examples/).
 
 ## Building
 
@@ -366,14 +418,21 @@ npm install
 npm run build
 ```
 
-## Usage Tips
+## Best Practices
 
-1. **Start with Blue Hat**: For Six Hats technique, always begin with the Blue Hat to establish process and goals
-2. **Embrace Absurdity**: For PO technique, the more provocative the statement, the better the creative leaps
-3. **True Randomness**: For Random Entry, use genuinely random words - avoid choosing "relevant" stimuli
-4. **Complete SCAMPER**: Work through all seven actions even if some seem less applicable
-5. **Session Continuity**: The server maintains session state, allowing for natural creative flow
-6. **Revision Support**: Use the revision feature to refine earlier creative outputs as insights develop
+### Getting Started
+1. Use `discover_techniques` to find the best approach for your problem
+2. Create comprehensive workflows with `plan_thinking_session`
+3. Follow the structured guidance through `execute_thinking_step`
+4. Combine multiple techniques for complex challenges
+
+### Technique-Specific Tips
+- **Six Hats** - Begin with the Blue Hat to establish process and objectives
+- **PO** - The more provocative the statement, the better the creative breakthrough
+- **Random Entry** - Use genuinely random stimuli for unexpected connections
+- **SCAMPER** - Complete all seven transformations for comprehensive exploration
+- **Design Thinking** - Engage real users throughout the process
+- **TRIZ** - Focus on identifying and resolving core contradictions
 
 ## License
 
