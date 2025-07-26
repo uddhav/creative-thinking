@@ -10,7 +10,8 @@ export type LateralTechnique =
   | 'scamper'
   | 'concept_extraction'
   | 'yes_and'
-  | 'design_thinking';
+  | 'design_thinking'
+  | 'triz';
 
 /**
  * Represents input data for a lateral thinking step
@@ -49,6 +50,12 @@ export interface LateralThinkingInput {
   stressTestResults?: string[];
   userFeedback?: string[];
   failureInsights?: string[];
+  
+  // TRIZ specific fields
+  contradiction?: string;
+  inventivePrinciples?: string[];
+  viaNegativaRemovals?: string[];
+  minimalSolution?: string;
 
   // Risk/adversarial fields
   risks?: string[];

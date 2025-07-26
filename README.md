@@ -33,12 +33,29 @@ node dist/index.js
 
 ## Features
 
-- **Six Thinking Hats**: Systematic exploration of problems from six distinct perspectives
-- **PO (Provocative Operation)**: Break thinking patterns through deliberate provocation
-- **Random Entry**: Generate creative connections through random stimuli
-- **SCAMPER**: Systematic ideation through seven transformation actions
-- **Concept Extraction**: Transfer successful patterns across domains
-- **Yes, And...**: Collaborative ideation with critical evaluation
+### Creative Thinking Techniques (Enhanced with Unified Framework)
+
+All techniques integrate creative generation with critical evaluation for robust, antifragile solutions:
+
+- **Six Thinking Hats Plus**: Enhanced with Black Swan awareness - each hat considers unknown unknowns and extreme events
+- **PO (Provocative Operation)**: With systematic verification - provocations are tested through hypothesis validation
+- **Random Entry**: With systematic doubt - connections validated through Cartesian questioning
+- **SCAMPER**: With pre-mortem analysis - each transformation includes "What could go wrong?" assessment
+- **Concept Extraction**: With failure mode analysis - identifies where patterns won't work
+- **Yes, And...**: With critical evaluation - includes "But" step for risk assessment
+- **Design Thinking**: With embedded risk management - 5 stages integrating threat modeling and failure harvesting
+- **TRIZ**: Enhanced with Via Negativa - systematic innovation through both addition and removal
+
+### Key Features of the Unified Framework
+
+- **Dual Thinking Modes**: Visual indicators (✨ creative, ⚠️ critical) show whether you're in generative or adversarial mode
+- **Risk & Failure Mode Tracking**: All techniques support identifying risks, failure modes, and mitigations
+- **Antifragile Properties**: Solutions designed to benefit from stress and volatility
+- **Black Swan Consideration**: Techniques account for low-probability, high-impact events
+- **Meta-Learning Metrics**: Track creativity scores, risks caught, and antifragile features across sessions
+
+### Session Management Features
+
 - **Session Persistence**: Save, load, list, delete, and export thinking sessions
 - **Auto-save**: Automatically persist progress after each step
 - **Tagging & Organization**: Categorize sessions with names and tags
@@ -56,7 +73,7 @@ node dist/index.js
 Guides users through proven lateral thinking techniques for creative problem-solving.
 
 **Inputs:**
-- `technique` (string): The lateral thinking technique to use ("six_hats", "po", "random_entry", "scamper")
+- `technique` (string): The lateral thinking technique to use ("six_hats", "po", "random_entry", "scamper", "concept_extraction", "yes_and", "design_thinking", "triz")
 - `problem` (string): The problem or challenge to address
 - `currentStep` (integer): Current step number in the technique
 - `totalSteps` (integer): Total steps for this technique
@@ -70,6 +87,32 @@ Guides users through proven lateral thinking techniques for creative problem-sol
 - `randomStimulus` (string, optional): The random word/concept for random_entry
 - `connections` (array, optional): Generated connections for random_entry
 - `scamperAction` (string, optional): Current SCAMPER action
+- `successExample` (string, optional): Successful solution to analyze for concept_extraction
+- `extractedConcepts` (array, optional): Key concepts from success example
+- `abstractedPatterns` (array, optional): Generalized patterns from concepts
+- `applications` (array, optional): Applications of patterns to problem
+- `initialIdea` (string, optional): Starting idea for yes_and technique
+- `additions` (array, optional): Creative additions building on idea
+- `evaluations` (array, optional): Critical evaluations of potential issues
+- `synthesis` (string, optional): Final integrated solution
+- `designStage` (string, optional): Current Design Thinking stage
+- `empathyInsights` (array, optional): User needs and threat vectors
+- `problemStatement` (string, optional): Framed problem with failure modes
+- `ideaList` (array, optional): Generated ideas with risk assessment
+- `prototypeDescription` (string, optional): Prototype including edge cases
+- `userFeedback` (array, optional): Feedback from testing
+- `failureInsights` (array, optional): Insights from failure analysis
+- `contradiction` (string, optional): Core contradiction for TRIZ
+- `inventivePrinciples` (array, optional): TRIZ principles applied
+- `viaNegativaRemovals` (array, optional): Elements removed via negativa
+- `minimalSolution` (string, optional): Final minimal solution
+
+**Unified Framework fields (applicable to all techniques):**
+- `risks` (array, optional): Identified risks or potential issues
+- `failureModes` (array, optional): Ways the solution could fail
+- `mitigations` (array, optional): Strategies to address risks
+- `antifragileProperties` (array, optional): Ways solution benefits from stress
+- `blackSwans` (array, optional): Low probability, high impact events to consider
 
 **Advanced features:**
 - `isRevision` (boolean, optional): Whether this revises a previous step
@@ -79,44 +122,66 @@ Guides users through proven lateral thinking techniques for creative problem-sol
 
 ## Techniques
 
-### Six Thinking Hats
-Edward de Bono's method for parallel thinking:
-1. **Blue Hat** 🔵: Process control and overview
-2. **White Hat** ⚪: Facts and information only
-3. **Red Hat** 🔴: Emotions, feelings, and intuition
-4. **Yellow Hat** 🟡: Optimism, benefits, and positive thinking
-5. **Black Hat** ⚫: Critical judgment, caution, and risk assessment
-6. **Green Hat** 🟢: Creativity, alternatives, and new ideas
+### Six Thinking Hats Plus (Enhanced with Black Swan Awareness)
+Edward de Bono's method enhanced with meta-uncertainty and extreme event consideration:
+1. **Blue Hat Plus** 🔵: Process control with meta-uncertainty awareness - "What if our process assumptions are wrong?"
+2. **White Hat Plus** ⚪: Facts and information including unknown unknowns - "What data might be hiding black swans?"
+3. **Red Hat Plus** 🔴: Emotions, intuition, and collective behavior prediction - "What collective madness might emerge?"
+4. **Yellow Hat Plus** 🟡: Optimism, benefits, and positive black swans - "What explosive upsides might we miss?"
+5. **Black Hat Plus** ⚫: Critical judgment and catastrophic discontinuities - "What could destroy everything?"
+6. **Green Hat Plus** 🟢: Creativity and antifragile innovations - "What solutions get stronger under stress?"
 
-### PO (Provocative Operation)
-Four-step process for escaping mental patterns:
+### PO (Provocative Operation with Systematic Verification)
+Four-step process for escaping mental patterns with hypothesis testing:
 1. Create a provocative statement (Po: ...)
-2. Suspend judgment about the provocation
-3. Extract useful principles from the provocation
-4. Develop practical ideas from the principles
+2. Suspend judgment and explore the provocation (then challenge it)
+3. Extract and verify principles through hypothesis testing
+4. Develop robust solutions addressing failure modes
 
-### Random Entry
-Three-step creative connection process:
+### Random Entry (With Systematic Doubt)
+Three-step creative connection process with validation:
 1. Introduce a random stimulus (word, image, concept)
-2. Generate connections between stimulus and problem
-3. Develop solutions from the connections
+2. Generate connections with systematic doubt ("Is this always true?")
+3. Validate insights before developing solutions
 
-### SCAMPER
-Seven systematic transformations:
-- **S**ubstitute: Replace parts with alternatives
-- **C**ombine: Merge with other ideas or functions
-- **A**dapt: Adjust for different contexts
-- **M**odify: Magnify, minimize, or modify attributes
-- **P**ut to other use: Find new applications
-- **E**liminate: Remove unnecessary elements
-- **R**everse: Invert or rearrange components
+### SCAMPER (With Pre-Mortem Analysis)
+Seven systematic transformations, each with risk assessment:
+- **S**ubstitute: Replace parts with alternatives | "What dependencies break?"
+- **C**ombine: Merge with other ideas or functions | "What conflicts arise?"
+- **A**dapt: Adjust for different contexts | "What new vulnerabilities emerge?"
+- **M**odify: Magnify, minimize, or modify attributes | "What breaks under enhancement?"
+- **P**ut to other use: Find new applications | "What context-specific dangers?"
+- **E**liminate: Remove unnecessary elements | "What's actually load-bearing?"
+- **R**everse: Invert or rearrange components | "Which assumptions must hold?"
 
-### Concept Extraction
+### Concept Extraction (With Failure Mode Analysis)
 Four-step process for transferring successful principles across domains:
 1. **Identify Success**: Analyze a successful solution from any domain
-2. **Extract Concepts**: Identify the key principles that make it work
-3. **Abstract Patterns**: Generalize concepts into transferable patterns
-4. **Apply to Problem**: Transfer abstracted patterns to your specific challenge
+2. **Extract & Analyze Limitations**: Identify key principles AND where they wouldn't work
+3. **Abstract with Boundaries**: Generalize patterns with clear domain boundaries
+4. **Apply with Risk Assessment**: Transfer patterns only where success probability is high
+
+### Yes, And... (With Critical Evaluation)
+Four-step collaborative ideation process from improv theater:
+1. **Accept (Yes)**: Acknowledge and accept the initial idea or contribution
+2. **Build (And)**: Add creative expansions and possibilities
+3. **Evaluate (But)**: Critically assess potential issues and risks
+4. **Integrate**: Synthesize insights into a robust solution
+
+### Design Thinking (With Embedded Risk Management)
+Five-stage human-centered design process with integrated threat modeling:
+1. **Empathize + Threat Modeling**: Understand user needs AND potential misuse cases
+2. **Define + Problem Inversion**: Frame the problem AND ask "How might we fail?"
+3. **Ideate + Devil's Advocate**: Generate solutions with internal critic for each idea
+4. **Prototype + Stress Testing**: Build quick tests including edge cases and failure modes
+5. **Test + Failure Harvesting**: Gather user feedback AND analyze what breaks
+
+### TRIZ (Enhanced with Via Negativa)
+Four-step systematic innovation through contradiction resolution:
+1. **Identify Contradiction**: Find the core conflict (Need X but get Y)
+2. **Via Negativa - What to Remove?**: Ask what can be eliminated before adding
+3. **Apply Inventive Principles**: Use TRIZ principles both additively and subtractively
+4. **Minimal Solution**: Achieve more by doing less - optimize through removal
 
 ## Usage Examples
 

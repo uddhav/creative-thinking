@@ -418,6 +418,7 @@ class LateralThinkingServer {
             concept_extraction: '🔍',
             yes_and: '🤝',
             design_thinking: '💭',
+            triz: '⚙️',
         };
         return emojis[technique] || '🧠';
     }
@@ -601,8 +602,8 @@ class LateralThinkingServer {
     validateInput(input) {
         const data = input;
         if (!data.technique ||
-            !['six_hats', 'po', 'random_entry', 'scamper', 'concept_extraction', 'yes_and', 'design_thinking'].includes(data.technique)) {
-            throw new Error('Invalid technique: must be one of six_hats, po, random_entry, scamper, concept_extraction, yes_and, or design_thinking');
+            !['six_hats', 'po', 'random_entry', 'scamper', 'concept_extraction', 'yes_and', 'design_thinking', 'triz'].includes(data.technique)) {
+            throw new Error('Invalid technique: must be one of six_hats, po, random_entry, scamper, concept_extraction, yes_and, design_thinking, or triz');
         }
         if (!data.problem || typeof data.problem !== 'string') {
             throw new Error('Invalid problem: must be a string');
@@ -736,6 +737,10 @@ class LateralThinkingServer {
             stressTestResults: data.stressTestResults,
             userFeedback: data.userFeedback,
             failureInsights: data.failureInsights,
+            contradiction: data.contradiction,
+            inventivePrinciples: data.inventivePrinciples,
+            viaNegativaRemovals: data.viaNegativaRemovals,
+            minimalSolution: data.minimalSolution,
             risks: data.risks,
             failureModes: data.failureModes,
             mitigations: data.mitigations,
@@ -768,6 +773,7 @@ class LateralThinkingServer {
             random_entry: [2, 3], // Doubt generation and validation steps
             scamper: [], // Risk questions integrated into each action
             design_thinking: [], // Critical lens integrated into each stage
+            triz: [2], // Via Negativa removal step
         };
         return criticalSteps[technique] || [];
     }
@@ -910,6 +916,20 @@ class LateralThinkingServer {
                 techniqueInfo += ` + ${stageInfo.criticalLens}`;
                 break;
             }
+            case 'triz': {
+                emoji = '⚙️';
+                const trizSteps = [
+                    'Identify Contradiction',
+                    'Via Negativa - What to Remove?',
+                    'Apply Inventive Principles',
+                    'Minimal Solution'
+                ];
+                techniqueInfo = trizSteps[currentStep - 1];
+                if (data.contradiction && currentStep === 1) {
+                    techniqueInfo += `: ${data.contradiction}`;
+                }
+                break;
+            }
         }
         if (data.isRevision) {
             header = chalk.yellow(`🔄 Revision of Step ${data.revisesStep}`);
@@ -999,6 +1019,8 @@ class LateralThinkingServer {
                 return 4; // Accept (Yes), Build (And), Evaluate (But), Integrate
             case 'design_thinking':
                 return 5; // Empathize, Define, Ideate, Prototype, Test
+            case 'triz':
+                return 4; // Identify contradiction, Via Negativa removal, Apply principles, Minimal solution
             default:
                 return 5;
         }
@@ -1090,6 +1112,26 @@ class LateralThinkingServer {
                     insights.push(`Failure insights harvested: ${failures.join(', ')}`);
                 }
                 insights.push('Design thinking process completed with embedded risk management');
+                break;
+            }
+            case 'triz': {
+                const removals = session.history
+                    .filter(h => h.viaNegativaRemovals)
+                    .flatMap(h => h.viaNegativaRemovals || []);
+                const principles = session.history
+                    .filter(h => h.inventivePrinciples)
+                    .flatMap(h => h.inventivePrinciples || []);
+                const solution = session.history.find(h => h.minimalSolution)?.minimalSolution;
+                if (removals.length > 0) {
+                    insights.push(`Elements removed via negativa: ${removals.join(', ')}`);
+                }
+                if (principles.length > 0) {
+                    insights.push(`Inventive principles applied: ${principles.join(', ')}`);
+                }
+                if (solution) {
+                    insights.push(`Minimal solution achieved: ${solution}`);
+                }
+                insights.push('TRIZ process completed with subtractive innovation');
                 break;
             }
         }
@@ -1301,6 +1343,15 @@ class LateralThinkingServer {
                 }
                 break;
             }
+            case 'triz': {
+                const trizSteps = [
+                    'Identify the core contradiction in your problem',
+                    'Apply Via Negativa - What can you remove to solve this?',
+                    'Apply TRIZ inventive principles (both additive and subtractive)',
+                    'Synthesize a minimal solution that does more with less'
+                ];
+                return trizSteps[nextStep - 1] || 'Complete the process';
+            }
         }
         return 'Continue with the next step';
     }
@@ -1355,6 +1406,12 @@ Enhanced Techniques (with Unified Framework):
    - Prototype + Stress Testing: Build tests including edge cases
    - Test + Failure Harvesting: User feedback plus failure analysis
 
+8. **triz**: TRIZ Enhanced with Via Negativa
+   - Identify contradictions in the problem
+   - Ask "What can we remove?" before adding
+   - Apply inventive principles both additively and subtractively
+   - Create minimal solutions that achieve more by doing less
+
 Key Features:
 - Dual creative/critical thinking modes
 - Risk and failure mode identification
@@ -1377,7 +1434,7 @@ When to use:
             },
             technique: {
                 type: 'string',
-                enum: ['six_hats', 'po', 'random_entry', 'scamper', 'concept_extraction', 'yes_and', 'design_thinking'],
+                enum: ['six_hats', 'po', 'random_entry', 'scamper', 'concept_extraction', 'yes_and', 'design_thinking', 'triz'],
                 description: 'The lateral thinking technique to use',
             },
             problem: {
@@ -1561,6 +1618,24 @@ When to use:
                 items: { type: 'string' },
                 description: 'Insights from failure analysis (for design_thinking - test stage)',
             },
+            contradiction: {
+                type: 'string',
+                description: 'The contradiction to resolve (for triz technique)',
+            },
+            inventivePrinciples: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'TRIZ inventive principles applied (for triz technique)',
+            },
+            viaNegativaRemovals: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Elements removed via negativa approach (for triz technique)',
+            },
+            minimalSolution: {
+                type: 'string',
+                description: 'The minimal solution achieved (for triz technique)',
+            },
             sessionOperation: {
                 type: 'string',
                 enum: ['save', 'load', 'list', 'delete', 'export'],
@@ -1610,7 +1685,7 @@ When to use:
                     },
                     technique: {
                         type: 'string',
-                        enum: ['six_hats', 'po', 'random_entry', 'scamper', 'concept_extraction', 'yes_and', 'design_thinking'],
+                        enum: ['six_hats', 'po', 'random_entry', 'scamper', 'concept_extraction', 'yes_and', 'design_thinking', 'triz'],
                         description: 'Filter by technique',
                     },
                     status: {
