@@ -1780,7 +1780,9 @@ export class LateralThinkingServer {
                 'Multiple solution options generated',
                 'Risks identified and addressed',
                 'Solutions tested against failure modes',
-                ...(args.timeframe === 'thorough' || args.timeframe === 'comprehensive' ? ['Thorough analysis from all angles'] : []),
+                ...(args.timeframe === 'thorough' || args.timeframe === 'comprehensive'
+                    ? ['Thorough analysis from all angles']
+                    : []),
             ];
             const output = {
                 planId,
