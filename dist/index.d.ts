@@ -77,9 +77,11 @@ export interface LateralThinkingData {
 }
 export declare class LateralThinkingServer {
     private sessions;
+    private plans;
     private currentSessionId;
     private disableThoughtLogging;
     private readonly SESSION_TTL;
+    private readonly PLAN_TTL;
     private cleanupInterval;
     private persistenceAdapter;
     constructor();

@@ -7,9 +7,11 @@ import { randomUUID } from 'crypto';
 import { createAdapter, getDefaultConfig } from './persistence/index.js';
 export class LateralThinkingServer {
     sessions = new Map();
+    plans = new Map();
     currentSessionId = null;
     disableThoughtLogging;
     SESSION_TTL = 24 * 60 * 60 * 1000; // 24 hours
+    PLAN_TTL = 4 * 60 * 60 * 1000; // 4 hours for plans
     cleanupInterval = null;
     persistenceAdapter = null;
     constructor() {
@@ -1791,6 +1793,8 @@ export class LateralThinkingServer {
                 objectives,
                 successCriteria,
             };
+            // Store the plan
+            this.plans.set(planId, output);
             return Promise.resolve({
                 content: [
                     {
@@ -1817,12 +1821,61 @@ export class LateralThinkingServer {
     }
     // Execution Layer: Execute individual thinking steps
     async executeThinkingStep(input) {
-        // This is essentially the same as processLateralThinking but with the new interface
-        // Convert ExecuteThinkingStepInput to LateralThinkingData format
         const execInput = input;
+        // Validate planId is provided
+        if (!execInput.planId) {
+            return Promise.resolve({
+                content: [{
+                        type: 'text',
+                        text: JSON.stringify({
+                            error: 'planId is required',
+                            message: 'You must first create a plan using plan_thinking_session before executing steps.',
+                            workflow: 'discover_techniques → plan_thinking_session → execute_thinking_step',
+                            example: {
+                                step1: "discover_techniques({ problem: 'How to improve X' })",
+                                step2: "plan_thinking_session({ problem: 'How to improve X', techniques: ['six_hats'] })",
+                                step3: "execute_thinking_step({ planId: 'plan_xxx', technique: 'six_hats', ... })"
+                            }
+                        }, null, 2)
+                    }],
+                isError: true
+            });
+        }
+        // Validate planId exists
+        const plan = this.plans.get(execInput.planId);
+        if (!plan) {
+            return Promise.resolve({
+                content: [{
+                        type: 'text',
+                        text: JSON.stringify({
+                            error: 'Invalid planId',
+                            message: `Plan '${execInput.planId}' not found. Please create a plan first using plan_thinking_session.`,
+                            availablePlans: Array.from(this.plans.keys())
+                        }, null, 2)
+                    }],
+                isError: true
+            });
+        }
+        // Validate technique matches plan
+        const plannedTechniques = plan.workflow.map(step => step.technique);
+        if (!plannedTechniques.includes(execInput.technique)) {
+            return Promise.resolve({
+                content: [{
+                        type: 'text',
+                        text: JSON.stringify({
+                            error: 'Technique mismatch',
+                            message: `Technique '${execInput.technique}' is not part of the plan.`,
+                            plannedTechniques: [...new Set(plannedTechniques)],
+                            suggestion: 'Use one of the planned techniques or create a new plan.'
+                        }, null, 2)
+                    }],
+                isError: true
+            });
+        }
+        // Convert to LateralThinkingData and continue with existing logic
         const lateralInput = {
             ...execInput,
-            // Map any additional fields as needed
+            // Associate with plan for tracking
         };
         // Delegate to existing processLateralThinking
         return this.processLateralThinking(lateralInput);
@@ -1950,16 +2003,18 @@ Use this after discovering which techniques to apply, or when you know you need 
 const EXECUTE_THINKING_STEP_TOOL = {
     name: 'execute_thinking_step',
     description: `Executes a single step in your creative thinking process.
-This is the execution layer that guides you through individual thinking steps.
+This requires a plan created by plan_thinking_session.
 
-Works with or without a plan from plan_thinking_session.
-Maintains session state and supports all 8 enhanced techniques with unified framework.`,
+The three-layer workflow ensures systematic creative thinking:
+1. discover_techniques - Find the best techniques for your problem
+2. plan_thinking_session - Create a structured workflow  
+3. execute_thinking_step - Execute the plan step by step`,
     inputSchema: {
         type: 'object',
         properties: {
             planId: {
                 type: 'string',
-                description: 'ID from plan_thinking_session (optional)',
+                description: 'Required: ID from plan_thinking_session',
             },
             technique: {
                 type: 'string',
@@ -2053,7 +2108,7 @@ Maintains session state and supports all 8 enhanced techniques with unified fram
             branchFromStep: { type: 'integer', minimum: 1 },
             branchId: { type: 'string' },
         },
-        required: ['technique', 'problem', 'currentStep', 'totalSteps', 'output', 'nextStepNeeded'],
+        required: ['planId', 'technique', 'problem', 'currentStep', 'totalSteps', 'output', 'nextStepNeeded'],
     },
 };
 // Server initialization
