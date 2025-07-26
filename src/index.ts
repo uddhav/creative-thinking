@@ -20,7 +20,8 @@ export type LateralTechnique =
   | 'random_entry'
   | 'scamper'
   | 'concept_extraction'
-  | 'yes_and';
+  | 'yes_and'
+  | 'design_thinking';
 export type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green';
 export type ScamperAction =
   | 'substitute'
@@ -30,6 +31,7 @@ export type ScamperAction =
   | 'put_to_other_use'
   | 'eliminate'
   | 'reverse';
+export type DesignThinkingStage = 'empathize' | 'define' | 'ideate' | 'prototype' | 'test';
 
 interface LateralThinkingData {
   sessionId?: string; // For continuing existing sessions
@@ -59,6 +61,17 @@ interface LateralThinkingData {
   additions?: string[];
   evaluations?: string[];
   synthesis?: string;
+
+  // Design Thinking specific
+  designStage?: DesignThinkingStage;
+  empathyInsights?: string[];
+  problemStatement?: string;
+  failureModesPredicted?: string[];
+  ideaList?: string[];
+  prototypeDescription?: string;
+  stressTestResults?: string[];
+  userFeedback?: string[];
+  failureInsights?: string[];
 
   // Unified Framework: Risk/Adversarial fields
   risks?: string[];
@@ -381,6 +394,7 @@ class LateralThinkingServer {
           // Ensure technique-specific fields are typed correctly
           hatColor: h.input.hatColor as SixHatsColor | undefined,
           scamperAction: h.input.scamperAction as ScamperAction | undefined,
+          designStage: h.input.designStage as DesignThinkingStage | undefined,
         })),
         branches: Object.entries(loadedState.branches).reduce(
           (acc, [key, value]) => {
@@ -665,6 +679,7 @@ class LateralThinkingServer {
       scamper: '🔄',
       concept_extraction: '🔍',
       yes_and: '🤝',
+      design_thinking: '💭',
     };
     return emojis[technique] || '🧠';
   }
@@ -797,17 +812,83 @@ class LateralThinkingServer {
     return scamperInfo[action];
   }
 
+  /**
+   * Get Design Thinking stage information with embedded risk management
+   * @param stage - The Design Thinking stage to get information for
+   * @returns Stage information with description, emoji, and critical lens
+   */
+  private getDesignThinkingInfo(stage: DesignThinkingStage): {
+    description: string;
+    emoji: string;
+    criticalLens: string;
+    prompts: string[];
+  } {
+    const stageInfo = {
+      empathize: {
+        description: 'Understand user needs deeply',
+        emoji: '💭',
+        criticalLens: 'Threat Modeling',
+        prompts: [
+          'What are the user\'s core needs and pain points?',
+          'How might this solution be misused or abused?',
+          'What are the extreme use cases we need to consider?'
+        ],
+      },
+      define: {
+        description: 'Frame the problem clearly',
+        emoji: '🎯',
+        criticalLens: 'Problem Inversion',
+        prompts: [
+          'What is the core problem we\'re solving?',
+          'How might we fail to solve this problem?',
+          'What are the failure modes we must avoid?'
+        ],
+      },
+      ideate: {
+        description: 'Generate creative solutions',
+        emoji: '💡',
+        criticalLens: 'Devil\'s Advocate',
+        prompts: [
+          'What are all possible solutions?',
+          'What could go wrong with each idea?',
+          'How can we rank ideas by innovation AND robustness?'
+        ],
+      },
+      prototype: {
+        description: 'Build quick tests',
+        emoji: '🔨',
+        criticalLens: 'Stress Testing',
+        prompts: [
+          'What\'s the simplest way to test this idea?',
+          'What edge cases must our prototype handle?',
+          'How can we ensure it fails gracefully?'
+        ],
+      },
+      test: {
+        description: 'Learn from user feedback',
+        emoji: '🧪',
+        criticalLens: 'Failure Harvesting',
+        prompts: [
+          'What do users think of our solution?',
+          'What failures or issues did we discover?',
+          'What insights can we extract from both successes and failures?'
+        ],
+      },
+    };
+    return stageInfo[stage];
+  }
+
   private validateInput(input: unknown): LateralThinkingData {
     const data = input as Record<string, unknown>;
 
     if (
       !data.technique ||
-      !['six_hats', 'po', 'random_entry', 'scamper', 'concept_extraction', 'yes_and'].includes(
+      !['six_hats', 'po', 'random_entry', 'scamper', 'concept_extraction', 'yes_and', 'design_thinking'].includes(
         data.technique as string
       )
     ) {
       throw new Error(
-        'Invalid technique: must be one of six_hats, po, random_entry, scamper, concept_extraction, or yes_and'
+        'Invalid technique: must be one of six_hats, po, random_entry, scamper, concept_extraction, yes_and, or design_thinking'
       );
     }
     if (!data.problem || typeof data.problem !== 'string') {
@@ -960,6 +1041,15 @@ class LateralThinkingServer {
       additions: data.additions as string[] | undefined,
       evaluations: data.evaluations as string[] | undefined,
       synthesis: data.synthesis as string | undefined,
+      designStage: data.designStage as DesignThinkingStage | undefined,
+      empathyInsights: data.empathyInsights as string[] | undefined,
+      problemStatement: data.problemStatement as string | undefined,
+      failureModesPredicted: data.failureModesPredicted as string[] | undefined,
+      ideaList: data.ideaList as string[] | undefined,
+      prototypeDescription: data.prototypeDescription as string | undefined,
+      stressTestResults: data.stressTestResults as string[] | undefined,
+      userFeedback: data.userFeedback as string[] | undefined,
+      failureInsights: data.failureInsights as string[] | undefined,
       risks: data.risks as string[] | undefined,
       failureModes: data.failureModes as string[] | undefined,
       mitigations: data.mitigations as string[] | undefined,
@@ -1010,6 +1100,7 @@ class LateralThinkingServer {
       po: [2, 3, 4], // All verification and testing steps
       random_entry: [2, 3], // Doubt generation and validation steps
       scamper: [], // Risk questions integrated into each action
+      design_thinking: [], // Critical lens integrated into each stage
     };
     return criticalSteps[technique] || [];
   }
@@ -1170,6 +1261,15 @@ class LateralThinkingServer {
         }
         break;
       }
+      case 'design_thinking': {
+        const stages: DesignThinkingStage[] = ['empathize', 'define', 'ideate', 'prototype', 'test'];
+        const stage = data.designStage || stages[currentStep - 1];
+        const stageInfo = this.getDesignThinkingInfo(stage);
+        emoji = stageInfo.emoji;
+        techniqueInfo = `${stage.charAt(0).toUpperCase() + stage.slice(1)}: ${stageInfo.description}`;
+        techniqueInfo += ` + ${stageInfo.criticalLens}`;
+        break;
+      }
     }
 
     if (data.isRevision) {
@@ -1272,6 +1372,8 @@ class LateralThinkingServer {
         return 4; // Identify success, extract concepts, abstract patterns, apply to problem
       case 'yes_and':
         return 4; // Accept (Yes), Build (And), Evaluate (But), Integrate
+      case 'design_thinking':
+        return 5; // Empathize, Define, Ideate, Prototype, Test
       default:
         return 5;
     }
@@ -1345,6 +1447,29 @@ class LateralThinkingServer {
         if (synthesis) {
           insights.push('Final synthesis achieved');
         }
+        break;
+      }
+      case 'design_thinking': {
+        const empathyInsights = session.history
+          .filter(h => h.empathyInsights)
+          .flatMap(h => h.empathyInsights || []);
+        const ideas = session.history
+          .filter(h => h.ideaList)
+          .flatMap(h => h.ideaList || []);
+        const failures = session.history
+          .filter(h => h.failureInsights)
+          .flatMap(h => h.failureInsights || []);
+        
+        if (empathyInsights.length > 0) {
+          insights.push(`User needs and threat vectors identified: ${empathyInsights.length}`);
+        }
+        if (ideas.length > 0) {
+          insights.push(`${ideas.length} ideas generated with risk assessment`);
+        }
+        if (failures.length > 0) {
+          insights.push(`Failure insights harvested: ${failures.join(', ')}`);
+        }
+        insights.push('Design thinking process completed with embedded risk management');
         break;
       }
     }
@@ -1578,6 +1703,15 @@ class LateralThinkingServer {
         ];
         return yesAndSteps[nextStep - 1] || 'Complete the process';
       }
+      case 'design_thinking': {
+        const stages: DesignThinkingStage[] = ['empathize', 'define', 'ideate', 'prototype', 'test'];
+        if (nextStep <= 5) {
+          const nextStage = stages[nextStep - 1];
+          const stageInfo = this.getDesignThinkingInfo(nextStage);
+          return `Next: ${nextStage.charAt(0).toUpperCase() + nextStage.slice(1)} - ${stageInfo.description} + ${stageInfo.criticalLens}`;
+        }
+        break;
+      }
     }
 
     return 'Continue with the next step';
@@ -1627,6 +1761,13 @@ Enhanced Techniques (with Unified Framework):
    - Evaluate risks and issues (But)
    - Integrate into robust solutions
 
+7. **design_thinking**: Design Thinking with Embedded Risk Management
+   - Empathize + Threat Modeling: Understand user needs AND potential misuse
+   - Define + Problem Inversion: Frame problem AND "How might we fail?"
+   - Ideate + Devil's Advocate: Generate solutions with internal critic
+   - Prototype + Stress Testing: Build tests including edge cases
+   - Test + Failure Harvesting: User feedback plus failure analysis
+
 Key Features:
 - Dual creative/critical thinking modes
 - Risk and failure mode identification
@@ -1649,7 +1790,7 @@ When to use:
       },
       technique: {
         type: 'string',
-        enum: ['six_hats', 'po', 'random_entry', 'scamper', 'concept_extraction', 'yes_and'],
+        enum: ['six_hats', 'po', 'random_entry', 'scamper', 'concept_extraction', 'yes_and', 'design_thinking'],
         description: 'The lateral thinking technique to use',
       },
       problem: {
@@ -1791,6 +1932,49 @@ When to use:
         items: { type: 'string' },
         description: 'Low probability, high impact events to consider (unified framework)',
       },
+      designStage: {
+        type: 'string',
+        enum: ['empathize', 'define', 'ideate', 'prototype', 'test'],
+        description: 'Current Design Thinking stage (for design_thinking technique)',
+      },
+      empathyInsights: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'User needs and potential misuse cases (for design_thinking - empathize stage)',
+      },
+      problemStatement: {
+        type: 'string',
+        description: 'Framed problem with failure modes (for design_thinking - define stage)',
+      },
+      failureModesPredicted: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Predicted failure modes (for design_thinking - define stage)',
+      },
+      ideaList: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Generated ideas with risk assessment (for design_thinking - ideate stage)',
+      },
+      prototypeDescription: {
+        type: 'string',
+        description: 'Prototype description including edge cases (for design_thinking - prototype stage)',
+      },
+      stressTestResults: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Results from stress testing (for design_thinking - prototype stage)',
+      },
+      userFeedback: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'User feedback from testing (for design_thinking - test stage)',
+      },
+      failureInsights: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Insights from failure analysis (for design_thinking - test stage)',
+      },
       sessionOperation: {
         type: 'string',
         enum: ['save', 'load', 'list', 'delete', 'export'],
@@ -1840,7 +2024,7 @@ When to use:
           },
           technique: {
             type: 'string',
-            enum: ['six_hats', 'po', 'random_entry', 'scamper', 'concept_extraction', 'yes_and'],
+            enum: ['six_hats', 'po', 'random_entry', 'scamper', 'concept_extraction', 'yes_and', 'design_thinking'],
             description: 'Filter by technique',
           },
           status: {

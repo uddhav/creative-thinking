@@ -9,7 +9,8 @@ export type LateralTechnique =
   | 'random_entry'
   | 'scamper'
   | 'concept_extraction'
-  | 'yes_and';
+  | 'yes_and'
+  | 'design_thinking';
 
 /**
  * Represents input data for a lateral thinking step
@@ -37,6 +38,17 @@ export interface LateralThinkingInput {
   additions?: string[];
   evaluations?: string[];
   synthesis?: string;
+  
+  // Design thinking specific fields
+  designStage?: string;
+  empathyInsights?: string[];
+  problemStatement?: string;
+  failureModesPredicted?: string[];
+  ideaList?: string[];
+  prototypeDescription?: string;
+  stressTestResults?: string[];
+  userFeedback?: string[];
+  failureInsights?: string[];
 
   // Risk/adversarial fields
   risks?: string[];
