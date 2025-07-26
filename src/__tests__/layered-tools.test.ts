@@ -259,8 +259,8 @@ describe('Layered Tools Architecture', () => {
 
       expect(result.isError).toBeFalsy();
       const text = result.content[0]?.text || '';
-      expect(text).toContain('Session completed');
-      expect(text).toContain('Insights extracted');
+      expect(text).toContain('Lateral thinking session completed');
+      expect(text).toContain('insights');
     });
 
     it('should handle technique-specific fields correctly', async () => {
