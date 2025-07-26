@@ -11,13 +11,14 @@ export default [
       'dist/',
       'node_modules/',
       'coverage/',
+      'examples/',
       '*.js',
       '*.d.ts',
       '!eslint.config.js'
     ]
   },
   {
-    files: ['src/**/*.ts', 'vitest.config.ts', 'examples/**/*.ts'],
+    files: ['src/**/*.ts', 'vitest.config.ts'],
     languageOptions: {
       parser: typescriptParser,
       parserOptions: {

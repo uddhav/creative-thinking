@@ -5,7 +5,7 @@ import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprot
 import chalk from 'chalk';
 import { randomUUID } from 'crypto';
 import { createAdapter, getDefaultConfig } from './persistence/index.js';
-class LateralThinkingServer {
+export class LateralThinkingServer {
     sessions = new Map();
     currentSessionId = null;
     disableThoughtLogging;
@@ -151,7 +151,7 @@ class LateralThinkingServer {
             };
         }
         catch (error) {
-            return {
+            return Promise.resolve({
                 content: [
                     {
                         type: 'text',
@@ -161,7 +161,7 @@ class LateralThinkingServer {
                         }, null, 2),
                     },
                 ],
-            };
+            });
         }
     }
     /**
@@ -225,7 +225,7 @@ class LateralThinkingServer {
             };
         }
         catch (error) {
-            return {
+            return Promise.resolve({
                 content: [
                     {
                         type: 'text',
@@ -235,7 +235,7 @@ class LateralThinkingServer {
                         }, null, 2),
                     },
                 ],
-            };
+            });
         }
     }
     /**
@@ -260,7 +260,7 @@ class LateralThinkingServer {
             };
         }
         catch (error) {
-            return {
+            return Promise.resolve({
                 content: [
                     {
                         type: 'text',
@@ -270,7 +270,7 @@ class LateralThinkingServer {
                         }, null, 2),
                     },
                 ],
-            };
+            });
         }
     }
     /**
@@ -299,7 +299,7 @@ class LateralThinkingServer {
             };
         }
         catch (error) {
-            return {
+            return Promise.resolve({
                 content: [
                     {
                         type: 'text',
@@ -309,7 +309,7 @@ class LateralThinkingServer {
                         }, null, 2),
                     },
                 ],
-            };
+            });
         }
     }
     /**
@@ -334,7 +334,7 @@ class LateralThinkingServer {
             };
         }
         catch (error) {
-            return {
+            return Promise.resolve({
                 content: [
                     {
                         type: 'text',
@@ -344,7 +344,7 @@ class LateralThinkingServer {
                         }, null, 2),
                     },
                 ],
-            };
+            });
         }
     }
     /**
@@ -551,9 +551,9 @@ class LateralThinkingServer {
                 emoji: '💭',
                 criticalLens: 'Threat Modeling',
                 prompts: [
-                    'What are the user\'s core needs and pain points?',
+                    "What are the user's core needs and pain points?",
                     'How might this solution be misused or abused?',
-                    'What are the extreme use cases we need to consider?'
+                    'What are the extreme use cases we need to consider?',
                 ],
             },
             define: {
@@ -561,19 +561,19 @@ class LateralThinkingServer {
                 emoji: '🎯',
                 criticalLens: 'Problem Inversion',
                 prompts: [
-                    'What is the core problem we\'re solving?',
+                    "What is the core problem we're solving?",
                     'How might we fail to solve this problem?',
-                    'What are the failure modes we must avoid?'
+                    'What are the failure modes we must avoid?',
                 ],
             },
             ideate: {
                 description: 'Generate creative solutions',
                 emoji: '💡',
-                criticalLens: 'Devil\'s Advocate',
+                criticalLens: "Devil's Advocate",
                 prompts: [
                     'What are all possible solutions?',
                     'What could go wrong with each idea?',
-                    'How can we rank ideas by innovation AND robustness?'
+                    'How can we rank ideas by innovation AND robustness?',
                 ],
             },
             prototype: {
@@ -581,9 +581,9 @@ class LateralThinkingServer {
                 emoji: '🔨',
                 criticalLens: 'Stress Testing',
                 prompts: [
-                    'What\'s the simplest way to test this idea?',
+                    "What's the simplest way to test this idea?",
                     'What edge cases must our prototype handle?',
-                    'How can we ensure it fails gracefully?'
+                    'How can we ensure it fails gracefully?',
                 ],
             },
             test: {
@@ -593,7 +593,7 @@ class LateralThinkingServer {
                 prompts: [
                     'What do users think of our solution?',
                     'What failures or issues did we discover?',
-                    'What insights can we extract from both successes and failures?'
+                    'What insights can we extract from both successes and failures?',
                 ],
             },
         };
@@ -602,7 +602,16 @@ class LateralThinkingServer {
     validateInput(input) {
         const data = input;
         if (!data.technique ||
-            !['six_hats', 'po', 'random_entry', 'scamper', 'concept_extraction', 'yes_and', 'design_thinking', 'triz'].includes(data.technique)) {
+            ![
+                'six_hats',
+                'po',
+                'random_entry',
+                'scamper',
+                'concept_extraction',
+                'yes_and',
+                'design_thinking',
+                'triz',
+            ].includes(data.technique)) {
             throw new Error('Invalid technique: must be one of six_hats, po, random_entry, scamper, concept_extraction, yes_and, design_thinking, or triz');
         }
         if (!data.problem || typeof data.problem !== 'string') {
@@ -908,7 +917,13 @@ class LateralThinkingServer {
                 break;
             }
             case 'design_thinking': {
-                const stages = ['empathize', 'define', 'ideate', 'prototype', 'test'];
+                const stages = [
+                    'empathize',
+                    'define',
+                    'ideate',
+                    'prototype',
+                    'test',
+                ];
                 const stage = data.designStage || stages[currentStep - 1];
                 const stageInfo = this.getDesignThinkingInfo(stage);
                 emoji = stageInfo.emoji;
@@ -922,7 +937,7 @@ class LateralThinkingServer {
                     'Identify Contradiction',
                     'Via Negativa - What to Remove?',
                     'Apply Inventive Principles',
-                    'Minimal Solution'
+                    'Minimal Solution',
                 ];
                 techniqueInfo = trizSteps[currentStep - 1];
                 if (data.contradiction && currentStep === 1) {
@@ -1096,9 +1111,7 @@ class LateralThinkingServer {
                 const empathyInsights = session.history
                     .filter(h => h.empathyInsights)
                     .flatMap(h => h.empathyInsights || []);
-                const ideas = session.history
-                    .filter(h => h.ideaList)
-                    .flatMap(h => h.ideaList || []);
+                const ideas = session.history.filter(h => h.ideaList).flatMap(h => h.ideaList || []);
                 const failures = session.history
                     .filter(h => h.failureInsights)
                     .flatMap(h => h.failureInsights || []);
@@ -1256,7 +1269,7 @@ class LateralThinkingServer {
             };
         }
         catch (error) {
-            return {
+            return Promise.resolve({
                 content: [
                     {
                         type: 'text',
@@ -1267,7 +1280,7 @@ class LateralThinkingServer {
                     },
                 ],
                 isError: true,
-            };
+            });
         }
     }
     getNextStepGuidance(data) {
@@ -1335,7 +1348,13 @@ class LateralThinkingServer {
                 return yesAndSteps[nextStep - 1] || 'Complete the process';
             }
             case 'design_thinking': {
-                const stages = ['empathize', 'define', 'ideate', 'prototype', 'test'];
+                const stages = [
+                    'empathize',
+                    'define',
+                    'ideate',
+                    'prototype',
+                    'test',
+                ];
                 if (nextStep <= 5) {
                     const nextStage = stages[nextStep - 1];
                     const stageInfo = this.getDesignThinkingInfo(nextStage);
@@ -1348,7 +1367,7 @@ class LateralThinkingServer {
                     'Identify the core contradiction in your problem',
                     'Apply Via Negativa - What can you remove to solve this?',
                     'Apply TRIZ inventive principles (both additive and subtractive)',
-                    'Synthesize a minimal solution that does more with less'
+                    'Synthesize a minimal solution that does more with less',
                 ];
                 return trizSteps[nextStep - 1] || 'Complete the process';
             }
@@ -1356,7 +1375,7 @@ class LateralThinkingServer {
         return 'Continue with the next step';
     }
     // Discovery Layer: Analyze problem and recommend techniques
-    async discoverTechniques(input) {
+    discoverTechniques(input) {
         try {
             // Validate input
             const args = input;
@@ -1379,7 +1398,7 @@ class LateralThinkingServer {
                     score: 0.9,
                     reasoning: 'Six Hats Plus provides comprehensive multi-perspective analysis with risk awareness',
                     bestFor: ['team decisions', 'complex analysis', 'avoiding blind spots', 'group dynamics'],
-                    limitations: ['time-intensive', 'requires discipline to stay in role']
+                    limitations: ['time-intensive', 'requires discipline to stay in role'],
                 });
             }
             // PO - Good for breaking assumptions
@@ -1393,7 +1412,10 @@ class LateralThinkingServer {
                     score: 0.85,
                     reasoning: 'PO technique excels at breaking mental patterns through provocative statements',
                     bestFor: ['breaking assumptions', 'radical innovation', 'paradigm shifts'],
-                    limitations: ['requires suspension of judgment', 'may produce impractical ideas initially']
+                    limitations: [
+                        'requires suspension of judgment',
+                        'may produce impractical ideas initially',
+                    ],
                 });
             }
             // Random Entry - Good for fresh perspectives
@@ -1407,7 +1429,7 @@ class LateralThinkingServer {
                     score: 0.8,
                     reasoning: 'Random Entry provides unexpected connections and fresh perspectives',
                     bestFor: ['creative blocks', 'new product ideas', 'marketing concepts'],
-                    limitations: ['may seem disconnected initially', 'requires creative confidence']
+                    limitations: ['may seem disconnected initially', 'requires creative confidence'],
                 });
             }
             // SCAMPER - Good for improvement
@@ -1421,7 +1443,7 @@ class LateralThinkingServer {
                     score: 0.9,
                     reasoning: 'SCAMPER systematically explores modifications with risk assessment',
                     bestFor: ['product improvement', 'process optimization', 'iterative design'],
-                    limitations: ['focused on existing solutions', 'may miss radical innovations']
+                    limitations: ['focused on existing solutions', 'may miss radical innovations'],
                 });
             }
             // Concept Extraction - Good for pattern transfer
@@ -1435,7 +1457,7 @@ class LateralThinkingServer {
                     score: 0.85,
                     reasoning: 'Concept Extraction transfers successful patterns with boundary awareness',
                     bestFor: ['cross-industry innovation', 'best practice adoption', 'pattern recognition'],
-                    limitations: ['requires good examples', 'domain boundaries may limit application']
+                    limitations: ['requires good examples', 'domain boundaries may limit application'],
                 });
             }
             // Yes, And - Good for collaboration
@@ -1449,7 +1471,7 @@ class LateralThinkingServer {
                     score: 0.85,
                     reasoning: 'Yes, And fosters collaborative ideation with integrated critical evaluation',
                     bestFor: ['team brainstorming', 'building on ideas', 'positive environments'],
-                    limitations: ['requires group participation', 'may delay critical evaluation']
+                    limitations: ['requires group participation', 'may delay critical evaluation'],
                 });
             }
             // Design Thinking - Good for user-centered problems
@@ -1463,7 +1485,7 @@ class LateralThinkingServer {
                     score: 0.9,
                     reasoning: 'Design Thinking provides human-centered innovation with threat modeling',
                     bestFor: ['user experience', 'service design', 'customer problems', 'prototyping'],
-                    limitations: ['time-intensive', 'requires user access', 'may miss technical constraints']
+                    limitations: ['time-intensive', 'requires user access', 'may miss technical constraints'],
                 });
             }
             // TRIZ - Good for technical contradictions
@@ -1477,8 +1499,13 @@ class LateralThinkingServer {
                     technique: 'triz',
                     score: 0.9,
                     reasoning: 'TRIZ systematically resolves contradictions using inventive principles and removal',
-                    bestFor: ['technical problems', 'engineering challenges', 'optimization', 'simplification'],
-                    limitations: ['requires problem abstraction', 'learning curve for principles']
+                    bestFor: [
+                        'technical problems',
+                        'engineering challenges',
+                        'optimization',
+                        'simplification',
+                    ],
+                    limitations: ['requires problem abstraction', 'learning curve for principles'],
                 });
             }
             // If no specific matches, provide general recommendations
@@ -1489,7 +1516,7 @@ class LateralThinkingServer {
                         score: 0.7,
                         reasoning: 'Six Hats Plus includes Black Hat for critical risk assessment',
                         bestFor: ['risk analysis', 'careful evaluation'],
-                        limitations: ['time-intensive']
+                        limitations: ['time-intensive'],
                     });
                 }
                 else if (args.preferredOutcome === 'analytical') {
@@ -1498,7 +1525,7 @@ class LateralThinkingServer {
                         score: 0.7,
                         reasoning: 'Concept Extraction provides analytical pattern recognition',
                         bestFor: ['pattern analysis', 'systematic transfer'],
-                        limitations: ['requires examples']
+                        limitations: ['requires examples'],
                     });
                 }
                 else {
@@ -1508,14 +1535,14 @@ class LateralThinkingServer {
                         score: 0.6,
                         reasoning: 'SCAMPER is versatile and systematic for general improvement',
                         bestFor: ['general improvement', 'systematic exploration'],
-                        limitations: ['may not produce radical innovation']
+                        limitations: ['may not produce radical innovation'],
                     });
                     recommendations.push({
                         technique: 'six_hats',
                         score: 0.6,
                         reasoning: 'Six Hats provides comprehensive coverage for any problem',
                         bestFor: ['thorough analysis', 'multiple perspectives'],
-                        limitations: ['time investment needed']
+                        limitations: ['time investment needed'],
                     });
                 }
             }
@@ -1524,29 +1551,33 @@ class LateralThinkingServer {
             // Generate workflow suggestion for top techniques
             let suggestedWorkflow = '';
             if (recommendations.length > 1 && recommendations[0].score > 0.8) {
-                if (recommendations[0].technique === 'six_hats' && recommendations.find(r => r.technique === 'scamper')) {
-                    suggestedWorkflow = 'Consider using Six Hats for initial analysis, then SCAMPER for systematic improvement';
+                if (recommendations[0].technique === 'six_hats' &&
+                    recommendations.find(r => r.technique === 'scamper')) {
+                    suggestedWorkflow =
+                        'Consider using Six Hats for initial analysis, then SCAMPER for systematic improvement';
                 }
-                else if (recommendations[0].technique === 'design_thinking' && recommendations.find(r => r.technique === 'triz')) {
-                    suggestedWorkflow = 'Start with Design Thinking for user insights, then use TRIZ for technical optimization';
+                else if (recommendations[0].technique === 'design_thinking' &&
+                    recommendations.find(r => r.technique === 'triz')) {
+                    suggestedWorkflow =
+                        'Start with Design Thinking for user insights, then use TRIZ for technical optimization';
                 }
             }
             const output = {
                 recommendations: recommendations.slice(0, 3), // Top 3 recommendations
                 reasoning: `Based on your problem involving "${args.problem.substring(0, 100)}..."${args.preferredOutcome ? ` with ${args.preferredOutcome} outcomes` : ''}, I recommend these techniques.`,
-                suggestedWorkflow
+                suggestedWorkflow,
             };
-            return {
+            return Promise.resolve({
                 content: [
                     {
                         type: 'text',
                         text: JSON.stringify(output, null, 2),
                     },
                 ],
-            };
+            });
         }
         catch (error) {
-            return {
+            return Promise.resolve({
                 content: [
                     {
                         type: 'text',
@@ -1557,11 +1588,11 @@ class LateralThinkingServer {
                     },
                 ],
                 isError: true,
-            };
+            });
         }
     }
     // Planning Layer: Create structured workflow
-    async planThinkingSession(input) {
+    planThinkingSession(input) {
         try {
             const args = input;
             if (!args.problem || !args.techniques || args.techniques.length === 0) {
@@ -1574,7 +1605,7 @@ class LateralThinkingServer {
             for (const technique of args.techniques) {
                 const techniqueSteps = this.getTechniqueSteps(technique);
                 switch (technique) {
-                    case 'six_hats':
+                    case 'six_hats': {
                         const hats = ['blue', 'white', 'red', 'yellow', 'black', 'green'];
                         for (let i = 0; i < techniqueSteps; i++) {
                             const hat = hats[i];
@@ -1586,19 +1617,20 @@ class LateralThinkingServer {
                                 expectedOutputs: [
                                     `${hat} hat perspective on the problem`,
                                     'Identified risks or opportunities',
-                                    'Insights specific to this thinking mode'
+                                    'Insights specific to this thinking mode',
                                 ],
-                                riskConsiderations: hat === 'black' ? ['Critical risks', 'Failure modes'] : undefined
+                                riskConsiderations: hat === 'black' ? ['Critical risks', 'Failure modes'] : undefined,
                             });
                         }
                         break;
+                    }
                     case 'po':
                         workflow.push({
                             technique,
                             stepNumber: stepNumber++,
                             description: 'Create a provocative statement',
                             expectedOutputs: ['Bold Po: statement', 'Challenge to assumptions'],
-                            riskConsiderations: ['May seem absurd initially']
+                            riskConsiderations: ['May seem absurd initially'],
                         }, {
                             technique,
                             stepNumber: stepNumber++,
@@ -1609,35 +1641,50 @@ class LateralThinkingServer {
                             stepNumber: stepNumber++,
                             description: 'Extract and verify principles',
                             expectedOutputs: ['Key principles', 'Hypothesis tests'],
-                            riskConsiderations: ['Verification needed']
+                            riskConsiderations: ['Verification needed'],
                         }, {
                             technique,
                             stepNumber: stepNumber++,
                             description: 'Develop robust solutions',
                             expectedOutputs: ['Practical solutions', 'Failure mode analysis'],
-                            riskConsiderations: ['Implementation challenges']
+                            riskConsiderations: ['Implementation challenges'],
                         });
                         break;
-                    case 'scamper':
-                        const actions = ['substitute', 'combine', 'adapt', 'modify', 'put_to_other_use', 'eliminate', 'reverse'];
+                    case 'scamper': {
+                        const actions = [
+                            'substitute',
+                            'combine',
+                            'adapt',
+                            'modify',
+                            'put_to_other_use',
+                            'eliminate',
+                            'reverse',
+                        ];
                         for (const action of actions) {
                             workflow.push({
                                 technique,
                                 stepNumber: stepNumber++,
                                 description: `${action.charAt(0).toUpperCase() + action.slice(1).replace(/_/g, ' ')}: ${this.getScamperDescription(action)}`,
                                 expectedOutputs: [`Ideas for ${action}`, 'Risk assessment'],
-                                riskConsiderations: [`What could go wrong with ${action}?`]
+                                riskConsiderations: [`What could go wrong with ${action}?`],
                             });
                         }
                         break;
-                    case 'design_thinking':
-                        const stages = ['empathize', 'define', 'ideate', 'prototype', 'test'];
+                    }
+                    case 'design_thinking': {
+                        const stages = [
+                            'empathize',
+                            'define',
+                            'ideate',
+                            'prototype',
+                            'test',
+                        ];
                         const stageDescriptions = {
                             empathize: 'Understand users and identify threat vectors',
                             define: 'Frame problem and potential failure modes',
-                            ideate: 'Generate solutions with devil\'s advocate',
+                            ideate: "Generate solutions with devil's advocate",
                             prototype: 'Build quick tests including edge cases',
-                            test: 'Gather feedback and harvest failures'
+                            test: 'Gather feedback and harvest failures',
                         };
                         for (const stage of stages) {
                             workflow.push({
@@ -1645,17 +1692,18 @@ class LateralThinkingServer {
                                 stepNumber: stepNumber++,
                                 description: `${stage.charAt(0).toUpperCase() + stage.slice(1)}: ${stageDescriptions[stage]}`,
                                 expectedOutputs: this.getDesignThinkingOutputs(stage),
-                                riskConsiderations: stage === 'define' ? ['Failure modes', 'Edge cases'] : undefined
+                                riskConsiderations: stage === 'define' ? ['Failure modes', 'Edge cases'] : undefined,
                             });
                         }
                         break;
+                    }
                     case 'triz':
                         workflow.push({
                             technique,
                             stepNumber: stepNumber++,
                             description: 'Identify core contradiction',
                             expectedOutputs: ['Clear contradiction statement', 'Conflicting parameters'],
-                            riskConsiderations: ['Oversimplification risk']
+                            riskConsiderations: ['Oversimplification risk'],
                         }, {
                             technique,
                             stepNumber: stepNumber++,
@@ -1671,7 +1719,7 @@ class LateralThinkingServer {
                             stepNumber: stepNumber++,
                             description: 'Develop minimal solution',
                             expectedOutputs: ['Simplified solution', 'Achieved through removal'],
-                            riskConsiderations: ['Verify nothing essential removed']
+                            riskConsiderations: ['Verify nothing essential removed'],
                         });
                         break;
                     default:
@@ -1682,7 +1730,7 @@ class LateralThinkingServer {
                                 stepNumber: stepNumber++,
                                 description: `${technique} step ${i + 1}`,
                                 expectedOutputs: ['Creative output', 'Insights'],
-                                riskConsiderations: i === techniqueSteps - 1 ? ['Final validation'] : undefined
+                                riskConsiderations: i === techniqueSteps - 1 ? ['Final validation'] : undefined,
                             });
                         }
                 }
@@ -1691,33 +1739,33 @@ class LateralThinkingServer {
             const objectives = args.objectives || [
                 'Generate diverse creative solutions',
                 'Identify and mitigate risks',
-                'Develop robust, antifragile approaches'
+                'Develop robust, antifragile approaches',
             ];
             // Define success criteria
             const successCriteria = [
                 'Multiple solution options generated',
                 'Risks identified and addressed',
                 'Solutions tested against failure modes',
-                ...(args.timeframe === 'comprehensive' ? ['Thorough analysis from all angles'] : [])
+                ...(args.timeframe === 'comprehensive' ? ['Thorough analysis from all angles'] : []),
             ];
             const output = {
                 planId,
                 workflow,
                 estimatedSteps: workflow.length,
                 objectives,
-                successCriteria
+                successCriteria,
             };
-            return {
+            return Promise.resolve({
                 content: [
                     {
                         type: 'text',
                         text: JSON.stringify(output, null, 2),
                     },
                 ],
-            };
+            });
         }
         catch (error) {
-            return {
+            return Promise.resolve({
                 content: [
                     {
                         type: 'text',
@@ -1728,7 +1776,7 @@ class LateralThinkingServer {
                     },
                 ],
                 isError: true,
-            };
+            });
         }
     }
     // Execution Layer: Execute individual thinking steps
@@ -1751,7 +1799,7 @@ class LateralThinkingServer {
             modify: 'Magnify, minimize, or modify attributes',
             put_to_other_use: 'Find new applications or users',
             eliminate: 'Remove unnecessary elements',
-            reverse: 'Invert, reverse, or rearrange'
+            reverse: 'Invert, reverse, or rearrange',
         };
         return descriptions[action];
     }
@@ -1761,7 +1809,7 @@ class LateralThinkingServer {
             define: ['Problem statement', 'Success metrics', 'Failure modes'],
             ideate: ['Solution ideas', 'Risk assessments', 'Creative alternatives'],
             prototype: ['Prototype description', 'Test plan', 'Edge cases covered'],
-            test: ['User feedback', 'Failure insights', 'Iteration opportunities']
+            test: ['User feedback', 'Failure insights', 'Iteration opportunities'],
         };
         return outputs[stage];
     }
@@ -1785,27 +1833,27 @@ Use this when you're not sure which creative thinking technique to apply.`,
         properties: {
             problem: {
                 type: 'string',
-                description: 'The problem or challenge you want to solve'
+                description: 'The problem or challenge you want to solve',
             },
             context: {
                 type: 'string',
-                description: 'Additional context about the situation'
+                description: 'Additional context about the situation',
             },
             preferredOutcome: {
                 type: 'string',
                 enum: ['innovative', 'systematic', 'risk-aware', 'collaborative', 'analytical'],
-                description: 'The type of solution you prefer'
+                description: 'The type of solution you prefer',
             },
             constraints: {
                 type: 'array',
                 items: { type: 'string' },
-                description: 'Any constraints or limitations to consider'
-            }
+                description: 'Any constraints or limitations to consider',
+            },
         },
-        required: ['problem']
-    }
+        required: ['problem'],
+    },
 };
-// Planning Layer Tool  
+// Planning Layer Tool
 const PLAN_THINKING_SESSION_TOOL = {
     name: 'plan_thinking_session',
     description: `Creates a structured workflow for applying one or more creative thinking techniques.
@@ -1824,34 +1872,43 @@ Use this after discovering which techniques to apply, or when you know you need 
         properties: {
             problem: {
                 type: 'string',
-                description: 'The problem to solve'
+                description: 'The problem to solve',
             },
             techniques: {
                 type: 'array',
                 items: {
                     type: 'string',
-                    enum: ['six_hats', 'po', 'random_entry', 'scamper', 'concept_extraction', 'yes_and', 'design_thinking', 'triz']
+                    enum: [
+                        'six_hats',
+                        'po',
+                        'random_entry',
+                        'scamper',
+                        'concept_extraction',
+                        'yes_and',
+                        'design_thinking',
+                        'triz',
+                    ],
                 },
-                description: 'The techniques to include in the workflow'
+                description: 'The techniques to include in the workflow',
             },
             objectives: {
                 type: 'array',
                 items: { type: 'string' },
-                description: 'Specific objectives for this session'
+                description: 'Specific objectives for this session',
             },
             constraints: {
                 type: 'array',
                 items: { type: 'string' },
-                description: 'Constraints to work within'
+                description: 'Constraints to work within',
             },
             timeframe: {
                 type: 'string',
                 enum: ['quick', 'thorough', 'comprehensive'],
-                description: 'How much time/depth to invest'
-            }
+                description: 'How much time/depth to invest',
+            },
         },
-        required: ['problem', 'techniques']
-    }
+        required: ['problem', 'techniques'],
+    },
 };
 // Execution Layer Tool (refactored from original)
 const EXECUTE_THINKING_STEP_TOOL = {
@@ -1866,39 +1923,48 @@ Maintains session state and supports all 8 enhanced techniques with unified fram
         properties: {
             planId: {
                 type: 'string',
-                description: 'ID from plan_thinking_session (optional)'
+                description: 'ID from plan_thinking_session (optional)',
             },
             technique: {
                 type: 'string',
-                enum: ['six_hats', 'po', 'random_entry', 'scamper', 'concept_extraction', 'yes_and', 'design_thinking', 'triz'],
-                description: 'The lateral thinking technique to use'
+                enum: [
+                    'six_hats',
+                    'po',
+                    'random_entry',
+                    'scamper',
+                    'concept_extraction',
+                    'yes_and',
+                    'design_thinking',
+                    'triz',
+                ],
+                description: 'The lateral thinking technique to use',
             },
             problem: {
                 type: 'string',
-                description: 'The problem or challenge to address'
+                description: 'The problem or challenge to address',
             },
             currentStep: {
                 type: 'integer',
                 description: 'Current step number in the technique',
-                minimum: 1
+                minimum: 1,
             },
             totalSteps: {
                 type: 'integer',
                 description: 'Total steps for this technique',
-                minimum: 1
+                minimum: 1,
             },
             output: {
                 type: 'string',
-                description: 'Your creative output for this step'
+                description: 'Your creative output for this step',
             },
             nextStepNeeded: {
                 type: 'boolean',
-                description: 'Whether another step is needed'
+                description: 'Whether another step is needed',
             },
             // Include all technique-specific fields...
             hatColor: {
                 type: 'string',
-                enum: ['blue', 'white', 'red', 'yellow', 'black', 'green']
+                enum: ['blue', 'white', 'red', 'yellow', 'black', 'green'],
             },
             provocation: { type: 'string' },
             principles: { type: 'array', items: { type: 'string' } },
@@ -1906,7 +1972,15 @@ Maintains session state and supports all 8 enhanced techniques with unified fram
             connections: { type: 'array', items: { type: 'string' } },
             scamperAction: {
                 type: 'string',
-                enum: ['substitute', 'combine', 'adapt', 'modify', 'put_to_other_use', 'eliminate', 'reverse']
+                enum: [
+                    'substitute',
+                    'combine',
+                    'adapt',
+                    'modify',
+                    'put_to_other_use',
+                    'eliminate',
+                    'reverse',
+                ],
             },
             successExample: { type: 'string' },
             extractedConcepts: { type: 'array', items: { type: 'string' } },
@@ -1918,7 +1992,7 @@ Maintains session state and supports all 8 enhanced techniques with unified fram
             synthesis: { type: 'string' },
             designStage: {
                 type: 'string',
-                enum: ['empathize', 'define', 'ideate', 'prototype', 'test']
+                enum: ['empathize', 'define', 'ideate', 'prototype', 'test'],
             },
             empathyInsights: { type: 'array', items: { type: 'string' } },
             problemStatement: { type: 'string' },
@@ -1941,10 +2015,10 @@ Maintains session state and supports all 8 enhanced techniques with unified fram
             isRevision: { type: 'boolean' },
             revisesStep: { type: 'integer', minimum: 1 },
             branchFromStep: { type: 'integer', minimum: 1 },
-            branchId: { type: 'string' }
+            branchId: { type: 'string' },
         },
-        required: ['technique', 'problem', 'currentStep', 'totalSteps', 'output', 'nextStepNeeded']
-    }
+        required: ['technique', 'problem', 'currentStep', 'totalSteps', 'output', 'nextStepNeeded'],
+    },
 };
 // Server initialization
 const server = new Server({
@@ -1957,11 +2031,7 @@ const server = new Server({
 });
 const lateralServer = new LateralThinkingServer();
 server.setRequestHandler(ListToolsRequestSchema, () => ({
-    tools: [
-        DISCOVER_TECHNIQUES_TOOL,
-        PLAN_THINKING_SESSION_TOOL,
-        EXECUTE_THINKING_STEP_TOOL
-    ],
+    tools: [DISCOVER_TECHNIQUES_TOOL, PLAN_THINKING_SESSION_TOOL, EXECUTE_THINKING_STEP_TOOL],
 }));
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
     switch (request.params.name) {

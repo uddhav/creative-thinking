@@ -39,7 +39,7 @@ export interface LateralThinkingInput {
   additions?: string[];
   evaluations?: string[];
   synthesis?: string;
-  
+
   // Design thinking specific fields
   designStage?: string;
   empathyInsights?: string[];
@@ -50,7 +50,7 @@ export interface LateralThinkingInput {
   stressTestResults?: string[];
   userFeedback?: string[];
   failureInsights?: string[];
-  
+
   // TRIZ specific fields
   contradiction?: string;
   inventivePrinciples?: string[];

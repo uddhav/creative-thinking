@@ -1,78 +1,113 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { CallToolRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { LateralThinkingServer } from '../index.js';
 
-// Mock the server module
-vi.mock('@modelcontextprotocol/sdk/server/index.js', () => ({
-  Server: vi.fn().mockImplementation(() => ({
-    setRequestHandler: vi.fn(),
-    connect: vi.fn(),
-  }))
-}));
+// Type for the response from server methods
+type ServerResponse = {
+  content: Array<{ type: string; text: string }>;
+  isError?: boolean;
+};
 
 describe('Layered Tools Architecture', () => {
+  let server: LateralThinkingServer;
+
+  beforeEach(() => {
+    server = new LateralThinkingServer();
+  });
+
   describe('Discovery Layer - discover_techniques', () => {
     it('should recommend techniques based on problem keywords', async () => {
       const input = {
         problem: 'How can we improve our product design to be more user-friendly?',
-        preferredOutcome: 'systematic'
+        preferredOutcome: 'systematic' as const,
       };
 
-      // Expected to recommend SCAMPER for improvement, Design Thinking for user focus
-      const expectedTechniques = ['scamper', 'design_thinking'];
-      
-      // Mock response would include these techniques with high scores
-      expect(expectedTechniques).toContain('scamper');
-      expect(expectedTechniques).toContain('design_thinking');
+      const result = (await server.discoverTechniques(input)) as ServerResponse;
+
+      expect(result.isError).toBeFalsy();
+      expect(result.content).toBeDefined();
+      expect(result.content.length).toBeGreaterThan(0);
+
+      const text = result.content[0]?.text || '';
+      expect(text).toContain('recommendations');
+      // Should recommend SCAMPER for improvement and Design Thinking for user focus
+      expect(text.toLowerCase()).toMatch(/scamper|design[_\s]thinking/);
     });
 
     it('should handle technical contradiction problems', async () => {
       const input = {
-        problem: 'Need to make the system faster but also more secure, which typically slows it down',
-        context: 'Engineering challenge with conflicting requirements'
+        problem:
+          'Need to make the system faster but also more secure, which typically slows it down',
+        context: 'Engineering challenge with conflicting requirements',
       };
 
+      const result = (await server.discoverTechniques(input)) as ServerResponse;
+
+      expect(result.isError).toBeFalsy();
+      const text = result.content[0]?.text || '';
       // Should recommend TRIZ for contradictions
-      const expectedTechnique = 'triz';
-      expect(expectedTechnique).toBe('triz');
+      expect(text.toLowerCase()).toContain('triz');
     });
 
     it('should provide default recommendations when no specific match', async () => {
       const input = {
-        problem: 'General problem that needs solving'
+        problem: 'General problem that needs solving',
       };
 
-      // Should provide versatile techniques like SCAMPER or Six Hats
-      const defaultTechniques = ['scamper', 'six_hats'];
-      expect(defaultTechniques.length).toBeGreaterThan(0);
+      const result = (await server.discoverTechniques(input)) as ServerResponse;
+
+      expect(result.isError).toBeFalsy();
+      expect(result.content.length).toBeGreaterThan(0);
+      // Should provide versatile techniques
+      const text = result.content[0]?.text || '';
+      expect(text).toContain('recommendations');
     });
 
     it('should consider preferred outcomes', async () => {
-      const riskAwareInput = {
+      const riskAwareResult = (await server.discoverTechniques({
         problem: 'How to launch a new product',
-        preferredOutcome: 'risk-aware'
-      };
-      
-      // Should recommend Six Hats for risk awareness (Black Hat)
-      expect('six_hats').toBe('six_hats');
+        preferredOutcome: 'risk-aware' as const,
+      })) as ServerResponse;
 
-      const collaborativeInput = {
+      expect(riskAwareResult.isError).toBeFalsy();
+      const riskText = riskAwareResult.content[0]?.text || '';
+      // Should recommend Six Hats for risk awareness (Black Hat)
+      expect(riskText.toLowerCase()).toContain('six_hats');
+
+      const collaborativeResult = (await server.discoverTechniques({
         problem: 'Team brainstorming session needed',
-        preferredOutcome: 'collaborative'
-      };
-      
+        preferredOutcome: 'collaborative' as const,
+      })) as ServerResponse;
+
+      expect(collaborativeResult.isError).toBeFalsy();
+      const collabText = collaborativeResult.content[0]?.text || '';
       // Should recommend Yes, And for collaboration
-      expect('yes_and').toBe('yes_and');
+      expect(collabText.toLowerCase()).toContain('yes_and');
     });
 
     it('should limit recommendations to top 3', async () => {
       const input = {
-        problem: 'Complex problem that could match many techniques: improve user experience, reduce technical debt, innovate product features, optimize performance'
+        problem:
+          'Complex problem that could match many techniques: improve user experience, reduce technical debt, innovate product features, optimize performance',
       };
 
-      // Even if many techniques match, should only return top 3
-      const maxRecommendations = 3;
-      expect(maxRecommendations).toBeLessThanOrEqual(3);
+      const result = (await server.discoverTechniques(input)) as ServerResponse;
+
+      expect(result.isError).toBeFalsy();
+      const text = result.content[0]?.text || '';
+      // Count technique occurrences in the recommendations
+      const techniqueMatches = text.match(/"technique":\s*"[^"]+"/g) || [];
+      expect(techniqueMatches.length).toBeLessThanOrEqual(3);
+    });
+
+    it('should handle invalid input', async () => {
+      const result = (await server.discoverTechniques({
+        // Missing required 'problem' field
+        preferredOutcome: 'systematic' as const,
+      })) as ServerResponse;
+
+      expect(result.isError).toBeTruthy();
+      const errorText = result.content[0]?.text || '';
+      expect(errorText).toContain('Problem description is required');
     });
   });
 
@@ -80,216 +115,213 @@ describe('Layered Tools Architecture', () => {
     it('should create workflow for single technique', async () => {
       const input = {
         problem: 'How to improve team dynamics',
-        techniques: ['six_hats']
+        techniques: ['six_hats'] as const,
+        objectives: ['Better team communication'],
       };
 
+      const result = (await server.planThinkingSession(input)) as ServerResponse;
+
+      expect(result.isError).toBeFalsy();
+      const text = result.content[0]?.text || '';
+      expect(text).toContain('workflow');
       // Should create 6 steps for Six Hats
-      const expectedSteps = 6;
-      expect(expectedSteps).toBe(6);
+      const stepMatches = text.match(/"stepNumber":\s*\d+/g) || [];
+      expect(stepMatches.length).toBe(6);
     });
 
     it('should combine multiple techniques in workflow', async () => {
       const input = {
         problem: 'Redesign product for better user experience',
-        techniques: ['design_thinking', 'scamper']
+        techniques: ['design_thinking', 'scamper'] as const,
+        objectives: ['Improve UX', 'Reduce complexity'],
       };
 
+      const result = (await server.planThinkingSession(input)) as ServerResponse;
+
+      expect(result.isError).toBeFalsy();
+      const text = result.content[0]?.text || '';
       // Design Thinking (5 steps) + SCAMPER (7 steps) = 12 total
-      const expectedTotalSteps = 12;
-      expect(expectedTotalSteps).toBe(12);
+      const stepMatches = text.match(/"stepNumber":\s*\d+/g) || [];
+      expect(stepMatches.length).toBe(12);
     });
 
     it('should include risk considerations for appropriate steps', async () => {
       const input = {
-        problem: 'Technical optimization',
-        techniques: ['triz']
+        problem: 'Technical optimization requiring careful analysis',
+        techniques: ['design_thinking'] as const,
+        objectives: ['Optimize performance'],
       };
 
-      // TRIZ step 1 (contradiction) and step 4 (minimal solution) should have risk considerations
-      const stepsWithRisks = 2;
-      expect(stepsWithRisks).toBeGreaterThan(0);
+      const result = (await server.planThinkingSession(input)) as ServerResponse;
+
+      expect(result.isError).toBeFalsy();
+      const text = result.content[0]?.text || '';
+      // Should include risk considerations
+      expect(text).toContain('riskConsiderations');
     });
 
-    it('should generate unique plan IDs', async () => {
+    it('should handle thorough timeframe', async () => {
       const input = {
+        problem: 'Complex strategic planning',
+        techniques: ['six_hats', 'triz'] as const,
+        objectives: ['Long-term strategy'],
+        timeframe: 'thorough' as const,
+      };
+
+      const result = (await server.planThinkingSession(input)) as ServerResponse;
+
+      expect(result.isError).toBeFalsy();
+      const text = result.content[0]?.text || '';
+      expect(text).toContain('successCriteria');
+      expect(text).toContain('Thorough analysis from all angles');
+    });
+
+    it('should handle invalid techniques', async () => {
+      const result = (await server.planThinkingSession({
         problem: 'Test problem',
-        techniques: ['po']
-      };
+        techniques: [], // Empty techniques array
+        objectives: ['Test objective'],
+      })) as ServerResponse;
 
-      // Plan ID should start with 'plan_'
-      const planIdPrefix = 'plan_';
-      expect(planIdPrefix).toBe('plan_');
-    });
-
-    it('should handle different timeframes', async () => {
-      const quickInput = {
-        problem: 'Quick solution needed',
-        techniques: ['random_entry'],
-        timeframe: 'quick'
-      };
-
-      const comprehensiveInput = {
-        problem: 'Thorough analysis required',
-        techniques: ['six_hats'],
-        timeframe: 'comprehensive'
-      };
-
-      // Comprehensive should have additional success criteria
-      expect('comprehensive').toBe('comprehensive');
-    });
-
-    it('should provide default objectives when not specified', async () => {
-      const input = {
-        problem: 'Problem without specific objectives',
-        techniques: ['yes_and']
-      };
-
-      // Should have default objectives
-      const hasDefaultObjectives = true;
-      expect(hasDefaultObjectives).toBe(true);
+      expect(result.isError).toBeTruthy();
+      const errorText = result.content[0]?.text || '';
+      expect(errorText).toContain('at least one technique');
     });
   });
 
   describe('Execution Layer - execute_thinking_step', () => {
-    it('should accept plan ID from planning layer', async () => {
+    it('should execute first step of a technique', async () => {
       const input = {
-        planId: 'plan_123',
-        technique: 'scamper',
-        problem: 'Improve product',
+        technique: 'six_hats' as const,
+        problem: 'How to reduce operational costs',
         currentStep: 1,
-        totalSteps: 7,
-        scamperAction: 'substitute',
-        output: 'Replace metal with recycled plastic',
-        nextStepNeeded: true
+        totalSteps: 6,
+        output: 'Analyzing the problem systematically',
+        hatColor: 'blue' as const,
+        nextStepNeeded: true,
       };
 
-      // Should process with plan context
-      expect(input.planId).toBe('plan_123');
+      const result = (await server.executeThinkingStep(input)) as ServerResponse;
+
+      expect(result.isError).toBeFalsy();
+      expect(result.content.length).toBeGreaterThan(0);
+      const text = result.content[0]?.text || '';
+      expect(text).toContain('sessionId');
     });
 
-    it('should work without plan ID (standalone)', async () => {
-      const input = {
-        technique: 'po',
-        problem: 'Break assumptions about remote work',
+    it('should maintain session state across steps', async () => {
+      // First step
+      const step1Result = (await server.executeThinkingStep({
+        technique: 'po' as const,
+        problem: 'How to make meetings more productive',
         currentStep: 1,
         totalSteps: 4,
-        provocation: 'Po: All meetings should be walking meetings',
-        output: 'Exploring how movement could enhance creativity',
-        nextStepNeeded: true
-      };
+        output: 'PO: Meetings should have no agenda',
+        provocation: 'Meetings should have no agenda',
+        nextStepNeeded: true,
+      })) as ServerResponse;
 
-      // Should work without planId
-      expect(input.planId).toBeUndefined();
-    });
+      expect(step1Result.isError).toBeFalsy();
+      const step1Text = step1Result.content[0]?.text || '';
+      const sessionIdMatch = step1Text.match(/"sessionId":\s*"([^"]+)"/);
+      const sessionId = sessionIdMatch?.[1];
+      expect(sessionId).toBeDefined();
 
-    it('should maintain compatibility with original tool', async () => {
-      // ExecuteThinkingStepInput should be compatible with LateralThinkingData
-      const input = {
-        technique: 'concept_extraction',
-        problem: 'Apply restaurant efficiency to healthcare',
+      // Second step using session ID
+      const step2Result = (await server.executeThinkingStep({
+        technique: 'po' as const,
+        problem: 'How to make meetings more productive',
         currentStep: 2,
         totalSteps: 4,
-        output: 'Extracting key concepts from fast food operations',
-        extractedConcepts: ['assembly line service', 'standardized processes', 'predictable wait times'],
-        nextStepNeeded: true
-      };
+        sessionId,
+        output: 'This challenges the assumption that structure is necessary',
+        principles: ['Flexibility over rigidity', 'Emergence over planning'],
+        nextStepNeeded: true,
+      })) as ServerResponse;
 
-      // All fields should be compatible
-      expect(input.technique).toBe('concept_extraction');
-      expect(input.extractedConcepts).toBeDefined();
+      expect(step2Result.isError).toBeFalsy();
+      const step2Text = step2Result.content[0]?.text || '';
+      expect(step2Text).toContain('historyLength');
+      expect(step2Text).toContain('"historyLength": 2');
+    });
+
+    it('should complete a session when nextStepNeeded is false', async () => {
+      const result = (await server.executeThinkingStep({
+        technique: 'random_entry' as const,
+        problem: 'How to improve office productivity',
+        currentStep: 3,
+        totalSteps: 3,
+        output: 'Final solution combining all insights',
+        randomStimulus: 'Clock',
+        connections: ['Time management', 'Scheduling', 'Deadlines'],
+        nextStepNeeded: false,
+      })) as ServerResponse;
+
+      expect(result.isError).toBeFalsy();
+      const text = result.content[0]?.text || '';
+      expect(text).toContain('Session completed');
+      expect(text).toContain('Insights extracted');
+    });
+
+    it('should handle technique-specific fields correctly', async () => {
+      const result = (await server.executeThinkingStep({
+        technique: 'design_thinking' as const,
+        problem: 'Improve customer onboarding',
+        currentStep: 1,
+        totalSteps: 5,
+        designStage: 'empathize' as const,
+        output: 'Conducted user interviews',
+        empathyInsights: [
+          'Users find current process confusing',
+          'Too many steps required',
+          'Lack of guidance',
+        ],
+        risks: ['Selection bias in interviews'],
+        nextStepNeeded: true,
+      })) as ServerResponse;
+
+      expect(result.isError).toBeFalsy();
+      const text = result.content[0]?.text || '';
+      expect(text).toContain('sessionId');
+      // Verify the step was processed
+      expect(text).toContain('historyLength');
     });
   });
 
-  describe('Tool Integration', () => {
-    it('should support full workflow from discovery to execution', () => {
-      // 1. Discovery finds suitable techniques
-      const discoveryResult = {
-        recommendations: [
-          { technique: 'design_thinking', score: 0.9 },
-          { technique: 'triz', score: 0.85 }
-        ]
-      };
+  describe('Integration - Full Workflow', () => {
+    it('should complete a full discovery-planning-execution workflow', async () => {
+      // Step 1: Discovery
+      const discoveryResult = (await server.discoverTechniques({
+        problem: 'How to reduce software bugs in production',
+        preferredOutcome: 'systematic' as const,
+      })) as ServerResponse;
 
-      // 2. Planning creates workflow from recommendations
-      const planningResult = {
-        planId: 'plan_456',
-        workflow: [
-          { technique: 'design_thinking', stepNumber: 1 },
-          { technique: 'design_thinking', stepNumber: 2 },
-          { technique: 'triz', stepNumber: 3 }
-        ]
-      };
+      expect(discoveryResult.isError).toBeFalsy();
 
-      // 3. Execution uses plan to guide steps
-      const executionWithPlan = {
-        planId: 'plan_456',
-        technique: 'design_thinking',
-        currentStep: 1
-      };
+      // Step 2: Planning
+      const planResult = (await server.planThinkingSession({
+        problem: 'How to reduce software bugs in production',
+        techniques: ['triz'] as const, // Based on discovery
+        objectives: ['Identify root causes', 'Find systematic solutions'],
+      })) as ServerResponse;
 
-      expect(discoveryResult.recommendations.length).toBeGreaterThan(0);
-      expect(planningResult.workflow.length).toBeGreaterThan(0);
-      expect(executionWithPlan.planId).toBe(planningResult.planId);
-    });
+      expect(planResult.isError).toBeFalsy();
 
-    it('should handle errors gracefully in each layer', () => {
-      // Discovery with missing problem
-      const discoveryError = {
-        error: 'Problem description is required',
-        status: 'failed'
-      };
+      // Step 3: Execution
+      const execResult = (await server.executeThinkingStep({
+        technique: 'triz' as const,
+        problem: 'How to reduce software bugs in production',
+        currentStep: 1,
+        totalSteps: 4,
+        output: 'Identifying the core contradiction',
+        contradiction: 'Need thorough testing BUT need fast deployment',
+        risks: ['Testing takes time', 'Fast deployment may skip tests'],
+        nextStepNeeded: true,
+      })) as ServerResponse;
 
-      // Planning with empty techniques
-      const planningError = {
-        error: 'Problem and at least one technique are required',
-        status: 'failed'
-      };
-
-      // Execution with invalid step
-      const executionError = {
-        error: 'Current step must be positive',
-        status: 'failed'
-      };
-
-      expect(discoveryError.status).toBe('failed');
-      expect(planningError.status).toBe('failed');
-      expect(executionError.status).toBe('failed');
-    });
-  });
-
-  describe('Technique Matching Logic', () => {
-    it('should match keywords to appropriate techniques', () => {
-      const keywordMappings = {
-        'improve': ['scamper'],
-        'user': ['design_thinking'],
-        'team': ['six_hats', 'yes_and'],
-        'stuck': ['po'],
-        'creative': ['random_entry'],
-        'pattern': ['concept_extraction'],
-        'technical': ['triz'],
-        'contradiction': ['triz']
-      };
-
-      Object.entries(keywordMappings).forEach(([keyword, techniques]) => {
-        expect(techniques.length).toBeGreaterThan(0);
-      });
-    });
-
-    it('should score techniques based on match strength', () => {
-      // Strong match (multiple keywords)
-      const strongMatch = {
-        problem: 'improve product design for better user experience',
-        expectedTopTechnique: 'design_thinking',
-        expectedScore: 0.9
-      };
-
-      // Weak match (general keywords)
-      const weakMatch = {
-        problem: 'need help with a problem',
-        expectedScore: 0.6
-      };
-
-      expect(strongMatch.expectedScore).toBeGreaterThan(weakMatch.expectedScore);
+      expect(execResult.isError).toBeFalsy();
+      const text = execResult.content[0]?.text || '';
+      expect(text).toContain('sessionId');
     });
   });
 });

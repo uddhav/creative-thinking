@@ -5,12 +5,12 @@ describe('Design Thinking Type Definitions', () => {
   it('should include design_thinking in LateralTechnique type', () => {
     const techniques: LateralTechnique[] = [
       'six_hats',
-      'po', 
+      'po',
       'random_entry',
       'scamper',
       'concept_extraction',
       'yes_and',
-      'design_thinking'
+      'design_thinking',
     ];
     expect(techniques).toContain('design_thinking');
   });
@@ -41,7 +41,7 @@ describe('Design Thinking Type Definitions', () => {
       prototypeDescription: 'MVP description',
       stressTestResults: ['test1', 'test2'],
       userFeedback: ['feedback1', 'feedback2'],
-      failureInsights: ['learning1', 'learning2']
+      failureInsights: ['learning1', 'learning2'],
     };
 
     expect(designThinkingData.technique).toBe('design_thinking');
@@ -57,7 +57,7 @@ describe('Design Thinking Type Definitions', () => {
       currentStep: 1,
       designStage: 'empathize',
       empathyInsights: ['User needs X', 'User struggles with Y'],
-      risks: ['Potential misuse', 'Privacy concerns']
+      risks: ['Potential misuse', 'Privacy concerns'],
     };
     expect(empathizeData.designStage).toBe('empathize');
     expect(empathizeData.empathyInsights).toBeDefined();
@@ -68,7 +68,7 @@ describe('Design Thinking Type Definitions', () => {
       currentStep: 2,
       designStage: 'define',
       problemStatement: 'How might we solve X while avoiding Y?',
-      failureModesPredicted: ['Could fail if...', 'Might not work when...']
+      failureModesPredicted: ['Could fail if...', 'Might not work when...'],
     };
     expect(defineData.designStage).toBe('define');
     expect(defineData.problemStatement).toBeDefined();
@@ -80,7 +80,7 @@ describe('Design Thinking Type Definitions', () => {
       currentStep: 3,
       designStage: 'ideate',
       ideaList: ['Solution 1 (Risk: X)', 'Solution 2 (Risk: Y)'],
-      risks: ['Implementation challenges', 'User adoption']
+      risks: ['Implementation challenges', 'User adoption'],
     };
     expect(ideateData.designStage).toBe('ideate');
     expect(ideateData.ideaList).toBeDefined();
@@ -92,7 +92,7 @@ describe('Design Thinking Type Definitions', () => {
       designStage: 'prototype',
       prototypeDescription: 'MVP with features A, B, C',
       stressTestResults: ['Failed under load X', 'Edge case Y not handled'],
-      mitigations: ['Add caching', 'Implement fallback']
+      mitigations: ['Add caching', 'Implement fallback'],
     };
     expect(prototypeData.designStage).toBe('prototype');
     expect(prototypeData.prototypeDescription).toBeDefined();
@@ -105,7 +105,7 @@ describe('Design Thinking Type Definitions', () => {
       designStage: 'test',
       userFeedback: ['Users love X', 'Users confused by Y'],
       failureInsights: ['Feature Z not used', 'Assumption A was wrong'],
-      antifragileProperties: ['System improved from user feedback', 'Failures led to better UX']
+      antifragileProperties: ['System improved from user feedback', 'Failures led to better UX'],
     };
     expect(testData.designStage).toBe('test');
     expect(testData.userFeedback).toBeDefined();

@@ -5,13 +5,13 @@ describe('TRIZ Type Definitions', () => {
   it('should include triz in LateralTechnique type', () => {
     const techniques: LateralTechnique[] = [
       'six_hats',
-      'po', 
+      'po',
       'random_entry',
       'scamper',
       'concept_extraction',
       'yes_and',
       'design_thinking',
-      'triz'
+      'triz',
     ];
     expect(techniques).toContain('triz');
   });
@@ -27,7 +27,7 @@ describe('TRIZ Type Definitions', () => {
       contradiction: 'Need high capacity BUT need fast charging',
       inventivePrinciples: ['Principle 2: Taking out', 'Principle 35: Parameter changes'],
       viaNegativaRemovals: ['Remove heat generation', 'Remove chemical degradation'],
-      minimalSolution: 'Solid-state battery with optimized ion paths'
+      minimalSolution: 'Solid-state battery with optimized ion paths',
     };
 
     expect(trizData.technique).toBe('triz');
@@ -43,7 +43,7 @@ describe('TRIZ Type Definitions', () => {
       technique: 'triz',
       currentStep: 1,
       contradiction: 'Need X but get Y',
-      risks: ['Traditional solutions are complex', 'Cost increases with performance']
+      risks: ['Traditional solutions are complex', 'Cost increases with performance'],
     };
     expect(step1Data.contradiction).toBeDefined();
 
@@ -54,9 +54,9 @@ describe('TRIZ Type Definitions', () => {
       viaNegativaRemovals: [
         'Remove unnecessary components',
         'Remove process steps',
-        'Remove material waste'
+        'Remove material waste',
       ],
-      risks: ['May compromise functionality', 'Requires careful analysis']
+      risks: ['May compromise functionality', 'Requires careful analysis'],
     };
     expect(step2Data.viaNegativaRemovals).toBeDefined();
     expect(step2Data.viaNegativaRemovals).toHaveLength(3);
@@ -68,9 +68,9 @@ describe('TRIZ Type Definitions', () => {
       inventivePrinciples: [
         'Principle 1: Segmentation',
         'Principle 2: Taking out',
-        'Principle 35: Parameter changes'
+        'Principle 35: Parameter changes',
       ],
-      mitigations: ['Test each principle', 'Combine complementary approaches']
+      mitigations: ['Test each principle', 'Combine complementary approaches'],
     };
     expect(step3Data.inventivePrinciples).toBeDefined();
     expect(step3Data.inventivePrinciples).toHaveLength(3);
@@ -79,12 +79,13 @@ describe('TRIZ Type Definitions', () => {
     const step4Data: Partial<LateralThinkingData> = {
       technique: 'triz',
       currentStep: 4,
-      minimalSolution: 'Achieve goal with 50% fewer components through systematic removal and optimization',
+      minimalSolution:
+        'Achieve goal with 50% fewer components through systematic removal and optimization',
       antifragileProperties: [
         'Solution improves with stress',
         'Failures guide optimization',
-        'Simpler design more robust'
-      ]
+        'Simpler design more robust',
+      ],
     };
     expect(step4Data.minimalSolution).toBeDefined();
     expect(step4Data.antifragileProperties).toBeDefined();
@@ -96,9 +97,9 @@ describe('TRIZ Type Definitions', () => {
       'Identify Contradiction',
       'Via Negativa - What to Remove?',
       'Apply Inventive Principles',
-      'Minimal Solution'
+      'Minimal Solution',
     ];
-    
+
     expect(trizSteps).toHaveLength(4);
     expect(trizSteps[0]).toContain('Contradiction');
     expect(trizSteps[1]).toContain('Via Negativa');

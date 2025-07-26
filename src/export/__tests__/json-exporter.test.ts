@@ -205,9 +205,18 @@ describe('JSONExporter', () => {
     });
 
     const data = JSON.parse(result.content.toString()) as {
-      history?: any;
-      metrics?: any;
-      branches?: any;
+      history?: Array<{
+        step: number;
+        timestamp: string;
+        input: unknown;
+        output: unknown;
+      }>;
+      metrics?: {
+        creativityScore?: number;
+        risksCaught?: number;
+        antifragileFeatures?: number;
+      };
+      branches?: Record<string, unknown[]>;
     };
     expect(data.history).toBeUndefined();
     expect(data.metrics).toBeUndefined();
@@ -220,7 +229,11 @@ describe('JSONExporter', () => {
 
     const result = await exporter.export(session, { format: 'json' });
     const data = JSON.parse(result.content.toString()) as {
-      metrics?: any;
+      metrics?: {
+        creativityScore?: number;
+        risksCaught?: number;
+        antifragileFeatures?: number;
+      };
     };
 
     expect(data.metrics).toBeUndefined();
