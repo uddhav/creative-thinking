@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a **Creative Thinking MCP Server** that implements a unified creative-adversarial framework combining generative thinking techniques with systematic verification and risk assessment. The server provides six enhanced methodologies: Six Thinking Hats Plus (with Black Swan awareness), PO with Systematic Verification, Random Entry with Systematic Doubt, SCAMPER with Pre-Mortem Analysis, Concept Extraction with Failure Mode Analysis, and Yes, And with Critical Evaluation.
+This is a **Creative Thinking MCP Server** implementing a three-layer tool architecture for structured problem-solving. The server provides eight enhanced thinking techniques through a unified framework that combines generative creativity with systematic risk assessment.
 
 ## Development Commands
 
@@ -47,23 +47,40 @@ docker build -t creative-thinking .
 docker run -it creative-thinking
 ```
 
-Note: No test suite is included in this project.
 
 ## Architecture
 
 ### Core Structure
-- **Single file implementation**: All server logic is in `src/index.ts`
-- **Single tool design**: Exposes one `lateralthinking` tool with technique-specific parameters
-- **Session management**: Maintains state across multiple thinking steps with revision support
-- **Visual output**: Uses chalk for colored, formatted console output with emojis and box-drawing
+- **Three-layer architecture**: Discovery, Planning, and Execution layers
+- **Three primary tools**: `discover_techniques`, `plan_thinking_session`, `execute_thinking_step`
+- **Eight thinking techniques**: Six Hats, PO, Random Entry, SCAMPER, Concept Extraction, Yes And, Design Thinking, TRIZ
+- **Session management**: Full state persistence with branching and revision support
+- **Visual output**: Structured console output with progress tracking
 
 ### Key Types and Interfaces
 ```typescript
-type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 'concept_extraction' | 'yes_and';
+type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 'concept_extraction' | 'yes_and' | 'design_thinking' | 'triz';
 type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green';
 type ScamperAction = 'substitute' | 'combine' | 'adapt' | 'modify' | 'put_to_other_use' | 'eliminate' | 'reverse';
+type DesignThinkingStage = 'empathize' | 'define' | 'ideate' | 'prototype' | 'test';
 
-interface LateralThinkingArgs {
+// Layer-specific interfaces
+interface DiscoverTechniquesInput {
+  problem: string;
+  context?: string;
+  preferredOutcome?: 'innovative' | 'systematic' | 'risk-aware' | 'collaborative' | 'analytical';
+  constraints?: string[];
+}
+
+interface PlanThinkingSessionInput {
+  problem: string;
+  techniques: LateralTechnique[];
+  objectives?: string[];
+  constraints?: string[];
+  timeframe?: 'quick' | 'thorough' | 'comprehensive';
+}
+
+interface ExecuteThinkingStepInput {
   technique: LateralTechnique;
   problem: string;
   currentStep: number;
@@ -126,13 +143,16 @@ The server follows the standard MCP server pattern:
 1. Initialize with `Server` from `@modelcontextprotocol/sdk`
 2. Set up stdio transport
 3. Implement request handlers for `tools/list` and `tools/call`
-4. Handle the single `lateralthinking` tool with parameter validation
+4. Route requests to appropriate tool handlers:
+   - `discover_techniques` → `discoverTechniques()`
+   - `plan_thinking_session` → `planThinkingSession()`
+   - `execute_thinking_step` → `executeThinkingStep()`
 
 ### Visual Output System
-- Uses chalk for terminal colors
-- Emojis as technique indicators (🎩, 💥, 🎲, 🔄, 🔍, 🤝)
-- Box-drawing characters for structured display
-- Controlled by `DISABLE_THOUGHT_LOGGING` environment variable
+- Chalk for terminal colors and formatting
+- Progress indicators with visual feedback
+- Structured display with box-drawing characters
+- Environment variable `DISABLE_THOUGHT_LOGGING` for output control
 
 ## Unified Framework Integration
 
@@ -157,20 +177,37 @@ The implementation now supports the unified generative/adversarial framework fro
    - Progress indicators with filled/empty circles
 7. **Step Validation**: Ensures steps are sequential and within bounds for each technique
 8. **Technique Step Counts**:
-   - Six Hats Plus: 6 steps (enhanced hat colors with meta-awareness)
-   - PO Verified: 4 steps (provocation, verify provocation, extract & test principles, develop robust solutions)
-   - Random Entry Doubted: 3 steps (stimulus, connections with doubt, validated solutions)
-   - SCAMPER Pre-Mortem: 7 steps (each action with "what could go wrong?" analysis)
-   - Concept Extraction Bounded: 4 steps (identify, extract with limitations, abstract with boundaries, apply with risk assessment)
-   - Yes, And Evaluated: 4 steps (accept (yes), build (and), evaluate risks (but), integrate)
+   - Six Hats: 6 steps (one per thinking hat)
+   - PO: 4 steps (provocation → exploration → verification → solution)
+   - Random Entry: 3 steps (stimulus → connections → validation)
+   - SCAMPER: 7 steps (one per transformation action)
+   - Concept Extraction: 4 steps (identify → extract → abstract → apply)
+   - Yes, And: 4 steps (accept → build → evaluate → integrate)
+   - Design Thinking: 5 steps (empathize → define → ideate → prototype → test)
+   - TRIZ: 4 steps (identify → remove → apply → minimize)
+
+## Architecture Principles
+
+### Three-Layer Design (Core Principle)
+All features must integrate with the layered architecture:
+1. **Discovery** - Problem analysis and technique recommendation
+2. **Planning** - Workflow creation and step sequencing
+3. **Execution** - Guided implementation with state management
+
+### Adding New Techniques
+When adding new thinking techniques:
+1. Update `LateralTechnique` type
+2. Add matching logic in `discoverTechniques()`
+3. Implement workflow generation in `planThinkingSession()`
+4. Ensure proper step handling in `executeThinkingStep()`
+5. Include unified framework fields (risks, mitigations, etc.)
 
 ## Code Style Guidelines
 
-- Use TypeScript strict mode
-- Async/await pattern for all asynchronous operations
-- Comprehensive error messages with actionable guidance
-- Consistent use of template literals for string formatting
-- Visual output should be clear and structured with proper spacing
+- TypeScript strict mode required
+- Async/await for all asynchronous operations
+- Clear, actionable error messages
+- Consistent formatting and naming conventions
 
 ## Package Distribution
 
