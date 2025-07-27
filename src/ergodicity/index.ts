@@ -5,11 +5,14 @@
 export * from './types.js';
 export * from './pathMemory.js';
 export * from './metrics.js';
+export * from './earlyWarning/index.js';
 
 import { PathMemoryManager } from './pathMemory.js';
 import { MetricsCalculator } from './metrics.js';
+import { AbsorbingBarrierEarlyWarning, ResponseProtocolSystem } from './earlyWarning/index.js';
 import type { PathMemory, FlexibilityMetrics, PathEvent, ErgodicityWarning } from './types.js';
-import type { LateralTechnique } from '../index.js';
+import type { LateralTechnique, SessionData } from '../index.js';
+import type { EarlyWarningState, EscapeProtocol } from './earlyWarning/types.js';
 
 /**
  * Main ergodicity manager that coordinates path tracking and metrics
@@ -17,16 +20,22 @@ import type { LateralTechnique } from '../index.js';
 export class ErgodicityManager {
   private pathMemoryManager: PathMemoryManager;
   private metricsCalculator: MetricsCalculator;
+  private earlyWarningSystem: AbsorbingBarrierEarlyWarning;
+  private responseProtocolSystem: ResponseProtocolSystem;
+  private lastWarningState: EarlyWarningState | null = null;
+  private autoEscapeEnabled: boolean = true;
 
   constructor() {
     this.pathMemoryManager = new PathMemoryManager();
     this.metricsCalculator = new MetricsCalculator();
+    this.earlyWarningSystem = new AbsorbingBarrierEarlyWarning();
+    this.responseProtocolSystem = new ResponseProtocolSystem();
   }
 
   /**
-   * Record a thinking step and its path impacts
+   * Record a thinking step and its path impacts with early warning monitoring
    */
-  recordThinkingStep(
+  async recordThinkingStep(
     technique: LateralTechnique,
     step: number,
     decision: string,
@@ -35,12 +44,15 @@ export class ErgodicityManager {
       optionsClosed?: string[];
       reversibilityCost?: number;
       commitmentLevel?: number;
-    }
-  ): {
+    },
+    sessionData?: SessionData
+  ): Promise<{
     event: PathEvent;
     metrics: FlexibilityMetrics;
     warnings: ErgodicityWarning[];
-  } {
+    earlyWarningState?: EarlyWarningState;
+    escapeRecommendation?: EscapeProtocol;
+  }> {
     // Record the path event
     const event = this.pathMemoryManager.recordPathEvent(technique, step, decision, impact);
 
@@ -48,10 +60,37 @@ export class ErgodicityManager {
     const pathMemory = this.pathMemoryManager.getPathMemory();
     const metrics = this.metricsCalculator.calculateMetrics(pathMemory);
 
-    // Generate warnings
+    // Generate traditional warnings
     const warnings = this.metricsCalculator.generateWarnings(metrics);
 
-    return { event, metrics, warnings };
+    // Run early warning system if session data available
+    let earlyWarningState: EarlyWarningState | undefined;
+    let escapeRecommendation: EscapeProtocol | undefined;
+
+    if (sessionData) {
+      earlyWarningState = await this.earlyWarningSystem.continuousMonitoring(
+        pathMemory,
+        sessionData
+      );
+      this.lastWarningState = earlyWarningState;
+
+      // Check if escape protocol is needed
+      if (
+        earlyWarningState.recommendedAction === 'escape' &&
+        earlyWarningState.activeWarnings.length > 0
+      ) {
+        const criticalWarning = earlyWarningState.activeWarnings[0];
+        const recommendation = this.responseProtocolSystem.recommendProtocol(
+          criticalWarning,
+          pathMemory
+        );
+        if (recommendation !== null) {
+          escapeRecommendation = recommendation;
+        }
+      }
+    }
+
+    return { event, metrics, warnings, earlyWarningState, escapeRecommendation };
   }
 
   /**
@@ -94,8 +133,33 @@ export class ErgodicityManager {
 
     let status = metricsSummary;
 
+    // Include early warning state if available
+    if (this.lastWarningState) {
+      const { activeWarnings, recommendedAction } = this.lastWarningState;
+
+      if (activeWarnings.length > 0) {
+        status += '\n\n🚨 Absorbing Barrier Warnings:';
+        activeWarnings.slice(0, 3).forEach(warning => {
+          status += `\n├─ ${warning.visualIndicator} ${warning.message}`;
+          if (warning.reading.timeToImpact) {
+            status += ` (Impact in ~${warning.reading.timeToImpact} steps)`;
+          }
+        });
+
+        if (recommendedAction !== 'continue') {
+          const actionEmoji =
+            {
+              caution: '⚡',
+              pivot: '🔄',
+              escape: '🚨',
+            }[recommendedAction] || '❓';
+          status += `\n└─ ${actionEmoji} Recommended Action: ${recommendedAction.toUpperCase()}`;
+        }
+      }
+    }
+
     if (warnings.length > 0) {
-      status += '\n\n⚠️ Active Warnings:';
+      status += '\n\n⚠️ Path Dependency Warnings:';
       warnings.forEach(warning => {
         status += `\n├─ ${warning}`;
       });
@@ -110,6 +174,71 @@ export class ErgodicityManager {
     }
 
     return status;
+  }
+
+  /**
+   * Get current early warning state
+   */
+  async getEarlyWarningState(sessionData: SessionData): Promise<EarlyWarningState | null> {
+    if (!sessionData) return this.lastWarningState;
+
+    const pathMemory = this.pathMemoryManager.getPathMemory();
+    const state = await this.earlyWarningSystem.continuousMonitoring(pathMemory, sessionData);
+    this.lastWarningState = state;
+    return state;
+  }
+
+  /**
+   * Execute an escape protocol
+   */
+  async executeEscapeProtocol(
+    protocol: EscapeProtocol,
+    sessionData: SessionData,
+    userConfirmation: boolean = true
+  ) {
+    const pathMemory = this.pathMemoryManager.getPathMemory();
+    return await this.responseProtocolSystem.executeProtocol(
+      protocol,
+      pathMemory,
+      sessionData,
+      userConfirmation
+    );
+  }
+
+  /**
+   * Get available escape protocols for current state
+   */
+  getAvailableEscapeProtocols(): EscapeProtocol[] {
+    return this.responseProtocolSystem.getAvailableProtocols();
+  }
+
+  /**
+   * Get sensor status
+   */
+  getSensorStatus() {
+    return this.earlyWarningSystem.getSensorStatus();
+  }
+
+  /**
+   * Get warning history
+   */
+  getWarningHistory(sessionId?: string) {
+    return this.earlyWarningSystem.getWarningHistory(sessionId);
+  }
+
+  /**
+   * Toggle auto-escape mode
+   */
+  setAutoEscapeEnabled(enabled: boolean) {
+    this.autoEscapeEnabled = enabled;
+  }
+
+  /**
+   * Reset early warning system
+   */
+  resetEarlyWarning() {
+    this.earlyWarningSystem.reset();
+    this.lastWarningState = null;
   }
 
   /**

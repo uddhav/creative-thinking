@@ -36,7 +36,7 @@ export class MetricsCalculator {
     calculateReversibilityIndex(pathMemory) {
         if (pathMemory.pathHistory.length === 0)
             return 1.0;
-        const reversibleCount = pathMemory.pathHistory.filter((event) => event.reversibilityCost < 0.5).length;
+        const reversibleCount = pathMemory.pathHistory.filter(event => event.reversibilityCost < 0.5).length;
         return reversibleCount / pathMemory.pathHistory.length;
     }
     /**
@@ -47,7 +47,7 @@ export class MetricsCalculator {
         // Simple model: each step increases divergence
         const stepDivergence = pathMemory.pathHistory.length * 0.05;
         // High-commitment decisions increase divergence more
-        const commitmentDivergence = pathMemory.pathHistory.reduce((sum, event) => sum + (event.commitmentLevel * 0.1), 0);
+        const commitmentDivergence = pathMemory.pathHistory.reduce((sum, event) => sum + event.commitmentLevel * 0.1, 0);
         return stepDivergence + commitmentDivergence;
     }
     /**
@@ -210,8 +210,8 @@ export class MetricsCalculator {
         if (metrics.barrierProximity.length > 0) {
             lines.push('\n⚠️ Barrier Warnings:');
             metrics.barrierProximity
-                .filter((p) => p.distance < 0.5)
-                .forEach((p) => {
+                .filter(p => p.distance < 0.5)
+                .forEach(p => {
                 lines.push(`├─ ${p.barrier.name}: ${Math.round(p.distance * 100)}% away`);
             });
         }

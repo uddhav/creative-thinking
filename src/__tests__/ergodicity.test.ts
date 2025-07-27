@@ -83,11 +83,11 @@ describe('Ergodicity and Path Dependency Tracking', () => {
   });
 
   describe('Path Memory System', () => {
-    it('should track path events and calculate metrics', () => {
+    it('should track path events and calculate metrics', async () => {
       const ergodicityManager = new ErgodicityManager();
 
       // Record a low-commitment decision
-      const result1 = ergodicityManager.recordThinkingStep(
+      const result1 = await ergodicityManager.recordThinkingStep(
         'random_entry',
         1,
         'Exploring random connections',
@@ -102,7 +102,7 @@ describe('Ergodicity and Path Dependency Tracking', () => {
       expect(result1.metrics.reversibilityIndex).toBe(1.0);
 
       // Record a high-commitment decision
-      const result2 = ergodicityManager.recordThinkingStep(
+      const result2 = await ergodicityManager.recordThinkingStep(
         'design_thinking',
         4,
         'Building prototype',
@@ -117,12 +117,12 @@ describe('Ergodicity and Path Dependency Tracking', () => {
       expect(result2.metrics.reversibilityIndex).toBeLessThan(1.0);
     });
 
-    it('should generate warnings when flexibility is low', () => {
+    it('should generate warnings when flexibility is low', async () => {
       const ergodicityManager = new ErgodicityManager();
 
       // Make several high-commitment decisions
       for (let i = 0; i < 5; i++) {
-        ergodicityManager.recordThinkingStep('scamper', i + 1, `Eliminating option ${i}`, {
+        await ergodicityManager.recordThinkingStep('scamper', i + 1, `Eliminating option ${i}`, {
           optionsClosed: [`Option ${i}`],
           reversibilityCost: 0.8,
           commitmentLevel: 0.7,
@@ -136,12 +136,12 @@ describe('Ergodicity and Path Dependency Tracking', () => {
   });
 
   describe('Absorbing Barrier Detection', () => {
-    it('should detect approaching cognitive lock-in', () => {
+    it('should detect approaching cognitive lock-in', async () => {
       const ergodicityManager = new ErgodicityManager();
 
       // Simulate repeated use of same technique
       for (let i = 0; i < 10; i++) {
-        ergodicityManager.recordThinkingStep('six_hats', 1, 'Using same approach again', {
+        await ergodicityManager.recordThinkingStep('six_hats', 1, 'Using same approach again', {
           commitmentLevel: 0.5,
           reversibilityCost: 0.3,
         });
@@ -156,12 +156,12 @@ describe('Ergodicity and Path Dependency Tracking', () => {
       expect(cognitiveBarrier?.proximity).toBeGreaterThan(0.5);
     });
 
-    it('should provide escape routes when flexibility is low', () => {
+    it('should provide escape routes when flexibility is low', async () => {
       const ergodicityManager = new ErgodicityManager();
 
       // Close many options
       for (let i = 0; i < 8; i++) {
-        ergodicityManager.recordThinkingStep('yes_and', i + 1, `Adding constraint ${i}`, {
+        await ergodicityManager.recordThinkingStep('yes_and', i + 1, `Adding constraint ${i}`, {
           optionsClosed: [`Alternative ${i}`],
           commitmentLevel: 0.6,
           reversibilityCost: 0.6,

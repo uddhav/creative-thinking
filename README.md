@@ -100,6 +100,17 @@ The server now tracks path dependencies and non-ergodic effects in creative thin
 
 The system recognizes that creative processes are non-ergodic: each decision permanently changes the landscape of future possibilities. This helps you maintain awareness of path dependencies and avoid getting trapped in absorbing states.
 
+### 🚨 Absorbing Barrier Early Warning System
+
+The integrated early warning system continuously monitors for approaching "points of no return" in your creative process:
+
+- **Multi-Sensor Monitoring**: Tracks cognitive rigidity, resource depletion, and technical debt accumulation
+- **Four Warning Levels**: 🟢 SAFE > 🟡 CAUTION > 🟠 WARNING > 🔴 CRITICAL
+- **Escape Protocols**: Provides actionable strategies to regain flexibility before hitting barriers
+- **Visual Alerts**: Critical warnings appear prominently in the output to ensure timely action
+
+When barriers are detected, the system recommends specific escape protocols ranging from simple pattern interruption to strategic pivots, each calibrated to your current flexibility level.
+
 ## Tools
 
 ### 🔍 discover_techniques

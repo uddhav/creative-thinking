@@ -15,6 +15,8 @@ import type {
 import { createAdapter, getDefaultConfig } from './persistence/index.js';
 import type { PathMemory } from './ergodicity/index.js';
 import { ErgodicityManager } from './ergodicity/index.js';
+import { BarrierWarningLevel } from './ergodicity/earlyWarning/types.js';
+import type { EarlyWarningState, EscapeProtocol } from './ergodicity/earlyWarning/types.js';
 
 export type LateralTechnique =
   | 'six_hats'
@@ -233,7 +235,7 @@ export interface LateralThinkingData {
   autoSave?: boolean;
 }
 
-interface SessionData {
+export interface SessionData {
   technique: LateralTechnique;
   problem: string;
   history: Array<LateralThinkingData & { timestamp: string }>;
@@ -253,6 +255,9 @@ interface SessionData {
   // Ergodicity tracking
   pathMemory?: PathMemory;
   ergodicityManager?: ErgodicityManager;
+  // Early warning system
+  earlyWarningState?: EarlyWarningState;
+  escapeRecommendation?: EscapeProtocol;
 }
 
 interface LateralThinkingResponse {
@@ -1591,6 +1596,32 @@ export class LateralThinkingServer {
     // Add ergodicity status if available
     if (data.sessionId) {
       const session = this.sessions.get(data.sessionId);
+
+      // Display critical early warnings prominently
+      if (session?.earlyWarningState && session.earlyWarningState.activeWarnings.length > 0) {
+        const criticalWarning = session.earlyWarningState.activeWarnings.find(
+          w => w.severity === BarrierWarningLevel.CRITICAL
+        );
+
+        if (criticalWarning) {
+          parts.push(`├${border}┤`);
+          parts.push(
+            `│ ${chalk.red.bold('🚨 CRITICAL BARRIER WARNING 🚨').padEnd(maxLength - 2)} │`
+          );
+          parts.push(`│ ${chalk.red(criticalWarning.message).padEnd(maxLength - 2)} │`);
+          if (criticalWarning.reading.timeToImpact) {
+            parts.push(
+              `│ ${chalk.yellow(`Impact in ~${criticalWarning.reading.timeToImpact} steps`).padEnd(maxLength - 2)} │`
+            );
+          }
+          if (session.escapeRecommendation) {
+            parts.push(
+              `│ ${chalk.green(`💡 Escape: ${session.escapeRecommendation.name}`).padEnd(maxLength - 2)} │`
+            );
+          }
+        }
+      }
+
       if (session?.ergodicityManager) {
         const ergodicityStatus = session.ergodicityManager.getErgodicityStatus();
         if (ergodicityStatus) {
@@ -1829,16 +1860,38 @@ export class LateralThinkingServer {
       // Track path dependencies if ergodicity manager exists
       if (session.ergodicityManager) {
         const pathImpact = this.calculatePathImpact(validatedInput);
-        const { warnings } = session.ergodicityManager.recordThinkingStep(
-          validatedInput.technique,
-          validatedInput.currentStep,
-          validatedInput.output,
-          pathImpact
-        );
+        const sessionData: SessionData = {
+          history: session.history,
+          insights: session.insights,
+          metrics: session.metrics,
+          technique: validatedInput.technique,
+          problem: validatedInput.problem,
+          branches: session.branches,
+          startTime: session.history[0]?.timestamp
+            ? new Date(session.history[0].timestamp).getTime()
+            : Date.now(),
+        };
+
+        const { warnings, earlyWarningState, escapeRecommendation } =
+          await session.ergodicityManager.recordThinkingStep(
+            validatedInput.technique,
+            validatedInput.currentStep,
+            validatedInput.output,
+            pathImpact,
+            sessionData
+          );
 
         // Store any critical warnings for display
         if (warnings.length > 0) {
           session.pathMemory = session.ergodicityManager.getPathMemory();
+        }
+
+        // Store early warning state
+        if (earlyWarningState) {
+          session.earlyWarningState = earlyWarningState;
+          if (escapeRecommendation) {
+            session.escapeRecommendation = escapeRecommendation;
+          }
         }
       }
 

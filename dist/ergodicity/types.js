@@ -9,6 +9,6 @@ export var ErgodicityWarningLevel;
     ErgodicityWarningLevel["INFO"] = "info";
     ErgodicityWarningLevel["CAUTION"] = "caution";
     ErgodicityWarningLevel["WARNING"] = "warning";
-    ErgodicityWarningLevel["CRITICAL"] = "critical"; // < 0.2 flexibility
+    ErgodicityWarningLevel["CRITICAL"] = "critical";
 })(ErgodicityWarningLevel || (ErgodicityWarningLevel = {}));
 //# sourceMappingURL=types.js.map
