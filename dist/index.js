@@ -66,6 +66,12 @@ export class LateralThinkingServer {
                 }
             }
         }
+        // Clean up old plans
+        for (const [planId, plan] of this.plans) {
+            if (plan.createdAt && now - plan.createdAt > this.PLAN_TTL) {
+                this.plans.delete(planId);
+            }
+        }
     }
     destroy() {
         if (this.cleanupInterval) {
@@ -1792,6 +1798,7 @@ export class LateralThinkingServer {
                 estimatedSteps: workflow.length,
                 objectives,
                 successCriteria,
+                createdAt: Date.now(),
             };
             // Store the plan
             this.plans.set(planId, output);
@@ -1825,7 +1832,8 @@ export class LateralThinkingServer {
         // Validate planId is provided
         if (!execInput.planId) {
             return Promise.resolve({
-                content: [{
+                content: [
+                    {
                         type: 'text',
                         text: JSON.stringify({
                             error: 'planId is required',
@@ -1834,42 +1842,47 @@ export class LateralThinkingServer {
                             example: {
                                 step1: "discover_techniques({ problem: 'How to improve X' })",
                                 step2: "plan_thinking_session({ problem: 'How to improve X', techniques: ['six_hats'] })",
-                                step3: "execute_thinking_step({ planId: 'plan_xxx', technique: 'six_hats', ... })"
-                            }
-                        }, null, 2)
-                    }],
-                isError: true
+                                step3: "execute_thinking_step({ planId: 'plan_xxx', technique: 'six_hats', ... })",
+                            },
+                        }, null, 2),
+                    },
+                ],
+                isError: true,
             });
         }
         // Validate planId exists
         const plan = this.plans.get(execInput.planId);
         if (!plan) {
             return Promise.resolve({
-                content: [{
+                content: [
+                    {
                         type: 'text',
                         text: JSON.stringify({
                             error: 'Invalid planId',
                             message: `Plan '${execInput.planId}' not found. Please create a plan first using plan_thinking_session.`,
-                            availablePlans: Array.from(this.plans.keys())
-                        }, null, 2)
-                    }],
-                isError: true
+                            availablePlans: Array.from(this.plans.keys()),
+                        }, null, 2),
+                    },
+                ],
+                isError: true,
             });
         }
         // Validate technique matches plan
         const plannedTechniques = plan.workflow.map(step => step.technique);
         if (!plannedTechniques.includes(execInput.technique)) {
             return Promise.resolve({
-                content: [{
+                content: [
+                    {
                         type: 'text',
                         text: JSON.stringify({
                             error: 'Technique mismatch',
                             message: `Technique '${execInput.technique}' is not part of the plan.`,
                             plannedTechniques: [...new Set(plannedTechniques)],
-                            suggestion: 'Use one of the planned techniques or create a new plan.'
-                        }, null, 2)
-                    }],
-                isError: true
+                            suggestion: 'Use one of the planned techniques or create a new plan.',
+                        }, null, 2),
+                    },
+                ],
+                isError: true,
             });
         }
         // Convert to LateralThinkingData and continue with existing logic
@@ -2108,7 +2121,15 @@ The three-layer workflow ensures systematic creative thinking:
             branchFromStep: { type: 'integer', minimum: 1 },
             branchId: { type: 'string' },
         },
-        required: ['planId', 'technique', 'problem', 'currentStep', 'totalSteps', 'output', 'nextStepNeeded'],
+        required: [
+            'planId',
+            'technique',
+            'problem',
+            'currentStep',
+            'totalSteps',
+            'output',
+            'nextStepNeeded',
+        ],
     },
 };
 // Server initialization
