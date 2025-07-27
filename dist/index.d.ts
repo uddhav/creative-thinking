@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 export type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 'concept_extraction' | 'yes_and' | 'design_thinking' | 'triz';
-export type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green';
+export type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green' | 'purple';
 export type ScamperAction = 'substitute' | 'combine' | 'adapt' | 'modify' | 'put_to_other_use' | 'eliminate' | 'reverse';
 export type DesignThinkingStage = 'empathize' | 'define' | 'ideate' | 'prototype' | 'test';
 export interface LateralThinkingData {
@@ -186,6 +186,10 @@ export declare class LateralThinkingServer {
      * @returns Formatted lines for the mitigation section
      */
     private formatMitigationSection;
+    /**
+     * Calculate path impact based on the thinking step
+     */
+    private calculatePathImpact;
     private formatOutput;
     private initializeSession;
     private getTechniqueSteps;
