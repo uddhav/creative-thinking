@@ -404,8 +404,8 @@ export class CognitiveAssessor extends Sensor {
             return 0.5;
         const firstHalf = sessionData.history.slice(0, sessionData.history.length / 2);
         const secondHalf = sessionData.history.slice(sessionData.history.length / 2);
-        const firstTechniques = new Set(firstHalf.map((h) => h.technique));
-        const secondTechniques = new Set(secondHalf.map((h) => h.technique));
+        const firstTechniques = new Set(firstHalf.map(h => h.technique));
+        const secondTechniques = new Set(secondHalf.map(h => h.technique));
         // More techniques in second half indicates evolution
         return secondTechniques.size > firstTechniques.size ? 0.8 : 0.4;
     }

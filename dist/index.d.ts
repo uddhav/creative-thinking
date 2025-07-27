@@ -6,7 +6,7 @@ export type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 
 export type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green' | 'purple';
 export type ScamperAction = 'substitute' | 'combine' | 'adapt' | 'modify' | 'put_to_other_use' | 'eliminate' | 'reverse';
 export type DesignThinkingStage = 'empathize' | 'define' | 'ideate' | 'prototype' | 'test';
-export interface LateralThinkingData {
+export interface ThinkingOperationData {
     sessionId?: string;
     technique: LateralTechnique;
     problem: string;
@@ -50,7 +50,10 @@ export interface LateralThinkingData {
     revisesStep?: number;
     branchFromStep?: number;
     branchId?: string;
-    sessionOperation?: 'save' | 'load' | 'list' | 'delete' | 'export';
+    autoSave?: boolean;
+}
+export interface SessionOperationData {
+    sessionOperation: 'save' | 'load' | 'list' | 'delete' | 'export';
     saveOptions?: {
         sessionName?: string;
         tags?: string[];
@@ -76,15 +79,15 @@ export interface LateralThinkingData {
         format: 'json' | 'markdown' | 'csv';
         outputPath?: string;
     };
-    autoSave?: boolean;
 }
+export type LateralThinkingData = ThinkingOperationData | SessionOperationData;
 export interface SessionData {
     technique: LateralTechnique;
     problem: string;
-    history: Array<LateralThinkingData & {
+    history: Array<ThinkingOperationData & {
         timestamp: string;
     }>;
-    branches: Record<string, LateralThinkingData[]>;
+    branches: Record<string, ThinkingOperationData[]>;
     insights: string[];
     startTime?: number;
     endTime?: number;
@@ -177,7 +180,10 @@ export declare class LateralThinkingServer {
      * @returns Stage information with description, emoji, and critical lens
      */
     private getDesignThinkingInfo;
+    private isSessionOperation;
     private validateInput;
+    private validateSessionOperation;
+    private validateThinkingOperation;
     /**
      * Get critical thinking steps for a technique where adversarial mode is emphasized
      * @param technique - The lateral thinking technique

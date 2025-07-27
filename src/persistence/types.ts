@@ -16,6 +16,8 @@ export type LateralTechnique =
 /**
  * Represents input data for a lateral thinking step
  */
+// LateralThinkingInput is the same as ThinkingOperationData
+// but defined here to avoid circular dependencies
 export interface LateralThinkingInput {
   technique: LateralTechnique;
   problem: string;
