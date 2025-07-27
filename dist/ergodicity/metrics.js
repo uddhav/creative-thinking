@@ -215,6 +215,20 @@ export class MetricsCalculator {
                 lines.push(`├─ ${p.barrier.name}: ${Math.round(p.distance * 100)}% away`);
             });
         }
+        // Add escape velocity indicator if flexibility is low
+        if (metrics.flexibilityScore < 0.3) {
+            lines.push('\n🚀 Escape Velocity Status:');
+            if (metrics.flexibilityScore < 0.1) {
+                lines.push('├─ 🔴 CRITICAL: Immediate escape protocol required!');
+            }
+            else if (metrics.flexibilityScore < 0.2) {
+                lines.push('├─ 🟠 HIGH: Escape velocity protocols recommended');
+            }
+            else {
+                lines.push('├─ 🟡 MEDIUM: Consider escape protocols soon');
+            }
+            lines.push(`└─ Available protocols based on ${this.formatPercentage(metrics.flexibilityScore)} flexibility`);
+        }
         return lines.join('\n');
     }
     /**

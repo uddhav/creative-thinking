@@ -5,9 +5,12 @@ export * from './types.js';
 export * from './pathMemory.js';
 export * from './metrics.js';
 export * from './earlyWarning/index.js';
-import type { PathMemory, FlexibilityMetrics, PathEvent, ErgodicityWarning } from './types.js';
+export { EscapeVelocitySystem, EscapeLevel, type EscapeAnalysis, type EscapeContext, type EscapeAttemptResult, } from './escapeProtocols/index.js';
+import type { PathMemory, FlexibilityMetrics, PathEvent, ErgodicityWarning, FlexibilityState } from './types.js';
 import type { LateralTechnique, SessionData } from '../index.js';
 import type { EarlyWarningState, EscapeProtocol, EarlyWarningConfig } from './earlyWarning/types.js';
+import type { EscapeAnalysis, EscapeAttemptResult, EscapeProtocol as EscapeVelocityProtocol } from './escapeProtocols/types.js';
+import { EscapeLevel } from './escapeProtocols/types.js';
 /**
  * Main ergodicity manager that coordinates path tracking and metrics
  */
@@ -16,6 +19,7 @@ export declare class ErgodicityManager {
     private metricsCalculator;
     private earlyWarningSystem;
     private responseProtocolSystem;
+    private escapeVelocitySystem;
     private lastWarningState;
     private autoEscapeEnabled;
     constructor(warningConfig?: EarlyWarningConfig);
@@ -33,6 +37,7 @@ export declare class ErgodicityManager {
         warnings: ErgodicityWarning[];
         earlyWarningState?: EarlyWarningState;
         escapeRecommendation?: EscapeProtocol;
+        escapeVelocityNeeded?: boolean;
     }>;
     /**
      * Get current path memory state
@@ -42,6 +47,10 @@ export declare class ErgodicityManager {
      * Get current flexibility metrics
      */
     getMetrics(): FlexibilityMetrics;
+    /**
+     * Get current flexibility state
+     */
+    getCurrentFlexibility(): FlexibilityState;
     /**
      * Get current warnings
      */
@@ -82,6 +91,34 @@ export declare class ErgodicityManager {
      * Reset early warning system
      */
     resetEarlyWarning(): void;
+    /**
+     * Analyze escape velocity requirements
+     */
+    analyzeEscapeVelocity(sessionData: SessionData): EscapeAnalysis;
+    /**
+     * Execute escape velocity protocol
+     */
+    executeEscapeVelocityProtocol(level: EscapeLevel, sessionData: SessionData, userApproval?: boolean): EscapeAttemptResult;
+    /**
+     * Get available escape velocity protocols
+     */
+    getAvailableEscapeVelocityProtocols(currentFlexibility?: number): EscapeVelocityProtocol[];
+    /**
+     * Check if escape velocity is needed
+     */
+    isEscapeVelocityNeeded(): boolean;
+    /**
+     * Get escape urgency level
+     */
+    getEscapeUrgency(): 'critical' | 'high' | 'medium' | 'low';
+    /**
+     * Get escape velocity monitoring data
+     */
+    getEscapeMonitoring(): import("./escapeProtocols/types.js").EscapeMonitoring;
+    /**
+     * Create escape context from session data
+     */
+    private createEscapeContext;
     /**
      * Analyze a specific technique for its path impact
      */

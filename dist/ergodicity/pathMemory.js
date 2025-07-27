@@ -489,5 +489,36 @@ export class PathMemoryManager {
         }
         return warnings;
     }
+    /**
+     * Record a path event (public method for escape protocols)
+     */
+    recordEvent(event) {
+        // Generate ID if not provided
+        if (!event.id) {
+            event.id = `event_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+        }
+        // Add to path history
+        this.pathMemory.pathHistory.push(event);
+        // Update options based on event
+        this.pathMemory.availableOptions = this.pathMemory.availableOptions.filter(opt => !event.optionsClosed.includes(opt));
+        this.pathMemory.availableOptions.push(...event.optionsOpened);
+        this.pathMemory.foreclosedOptions.push(...event.optionsClosed);
+        // Create constraints if specified
+        event.constraintsCreated.forEach(constraintId => {
+            const constraint = {
+                id: constraintId,
+                type: 'creative',
+                description: `Created by ${event.decision}`,
+                createdAt: event.timestamp,
+                createdBy: event,
+                strength: event.commitmentLevel,
+                affectedOptions: event.optionsClosed,
+                reversibilityCost: event.reversibilityCost,
+            };
+            this.pathMemory.constraints.push(constraint);
+        });
+        // Update flexibility metrics
+        this.updateBarrierProximity();
+    }
 }
 //# sourceMappingURL=pathMemory.js.map

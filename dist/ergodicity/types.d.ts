@@ -19,7 +19,7 @@ export interface Constraint {
  * Represents a decision or action that creates path dependencies
  */
 export interface PathEvent {
-    id: string;
+    id?: string;
     timestamp: string;
     technique: LateralTechnique;
     step: number;
@@ -29,6 +29,7 @@ export interface PathEvent {
     reversibilityCost: number;
     commitmentLevel: number;
     constraintsCreated: string[];
+    flexibilityImpact?: number;
 }
 /**
  * Types of absorbing barriers in creative/critical thinking
@@ -65,6 +66,10 @@ export interface FlexibilityMetrics {
     optionVelocity: number;
     commitmentDepth: number;
 }
+/**
+ * Current flexibility state (alias for FlexibilityMetrics)
+ */
+export type FlexibilityState = FlexibilityMetrics;
 /**
  * Proximity to a specific barrier
  */
