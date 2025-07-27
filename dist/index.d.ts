@@ -109,6 +109,7 @@ export declare class LateralThinkingServer {
     private readonly PLAN_TTL;
     private cleanupInterval;
     private persistenceAdapter;
+    private ergodicityManager;
     constructor();
     private initializePersistence;
     private startSessionCleanup;
@@ -250,5 +251,21 @@ export declare class LateralThinkingServer {
     }>;
     private getScamperDescription;
     private getDesignThinkingOutputs;
+    analyzeEscapeVelocity(input: unknown): Promise<{
+        content: Array<{
+            type: string;
+            text: string;
+        }>;
+        isError?: boolean;
+    }>;
+    executeEscapeProtocol(input: unknown): Promise<{
+        content: Array<{
+            type: string;
+            text: string;
+        }>;
+        isError?: boolean;
+    }>;
+    private formatEscapeAnalysis;
+    private formatEscapeResult;
 }
 //# sourceMappingURL=index.d.ts.map

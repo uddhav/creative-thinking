@@ -13,8 +13,9 @@ import type {
   ExportFormat,
 } from './persistence/index.js';
 import { createAdapter, getDefaultConfig } from './persistence/index.js';
-import type { PathMemory } from './ergodicity/index.js';
+import type { PathMemory, EscapeAnalysis, EscapeAttemptResult } from './ergodicity/index.js';
 import { ErgodicityManager } from './ergodicity/index.js';
+import type { EscapeLevel } from './ergodicity/index.js';
 import { BarrierWarningLevel } from './ergodicity/earlyWarning/types.js';
 import type { EarlyWarningState, EscapeProtocol } from './ergodicity/earlyWarning/types.js';
 
@@ -290,10 +291,12 @@ export class LateralThinkingServer {
   private readonly PLAN_TTL = 4 * 60 * 60 * 1000; // 4 hours for plans
   private cleanupInterval: NodeJS.Timeout | null = null;
   private persistenceAdapter: PersistenceAdapter | null = null;
+  private ergodicityManager: ErgodicityManager;
 
   constructor() {
     this.disableThoughtLogging =
       (process.env.DISABLE_THOUGHT_LOGGING || '').toLowerCase() === 'true';
+    this.ergodicityManager = new ErgodicityManager();
     this.startSessionCleanup();
     void this.initializePersistence();
   }
@@ -2753,6 +2756,204 @@ export class LateralThinkingServer {
     };
     return outputs[stage];
   }
+
+  // Escape Velocity Analysis
+  public async analyzeEscapeVelocity(
+    input: unknown
+  ): Promise<{ content: Array<{ type: string; text: string }>; isError?: boolean }> {
+    try {
+      const { sessionId } = input as { sessionId: string };
+
+      if (!sessionId) {
+        throw new Error('Session ID is required');
+      }
+
+      const session = this.sessions.get(sessionId);
+      if (!session) {
+        throw new Error(`Session ${sessionId} not found`);
+      }
+
+      // Get escape analysis from ergodicity manager
+      const analysis = this.ergodicityManager.analyzeEscapeVelocity(session);
+
+      const formattedOutput = this.formatEscapeAnalysis(analysis);
+
+      return Promise.resolve({
+        content: [
+          {
+            type: 'text',
+            text: formattedOutput,
+          },
+        ],
+      });
+    } catch (error) {
+      return Promise.resolve({
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(
+              {
+                error: error instanceof Error ? error.message : String(error),
+                status: 'failed',
+              },
+              null,
+              2
+            ),
+          },
+        ],
+        isError: true,
+      });
+    }
+  }
+
+  // Execute Escape Protocol
+  public async executeEscapeProtocol(
+    input: unknown
+  ): Promise<{ content: Array<{ type: string; text: string }>; isError?: boolean }> {
+    try {
+      const {
+        sessionId,
+        level,
+        userApproval = true,
+      } = input as {
+        sessionId: string;
+        level: number;
+        userApproval?: boolean;
+      };
+
+      if (!sessionId) {
+        throw new Error('Session ID is required');
+      }
+
+      if (!level || level < 1 || level > 5) {
+        throw new Error('Protocol level must be between 1 and 5');
+      }
+
+      const session = this.sessions.get(sessionId);
+      if (!session) {
+        throw new Error(`Session ${sessionId} not found`);
+      }
+
+      // Execute the escape protocol
+      const result = this.ergodicityManager.executeEscapeVelocityProtocol(
+        level as EscapeLevel,
+        session,
+        userApproval
+      );
+
+      const formattedOutput = this.formatEscapeResult(result);
+
+      return Promise.resolve({
+        content: [
+          {
+            type: 'text',
+            text: formattedOutput,
+          },
+        ],
+      });
+    } catch (error) {
+      return Promise.resolve({
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(
+              {
+                error: error instanceof Error ? error.message : String(error),
+                status: 'failed',
+              },
+              null,
+              2
+            ),
+          },
+        ],
+        isError: true,
+      });
+    }
+  }
+
+  // Format escape analysis for display
+  private formatEscapeAnalysis(analysis: EscapeAnalysis): string {
+    const lines: string[] = [
+      '🚀 Escape Velocity Analysis',
+      '='.repeat(50),
+      '',
+      `Current Flexibility: ${(analysis.currentFlexibility * 100).toFixed(0)}%`,
+      `Constraint Strength: ${(analysis.constraintStrength * 100).toFixed(0)}%`,
+      `Escape Force Needed: ${(analysis.escapeForceNeeded * 100).toFixed(0)}%`,
+      `Available Resources: ${(analysis.availableResources * 100).toFixed(0)}%`,
+      '',
+      `Feasibility: ${analysis.feasibility ? '✅ Possible' : '❌ Difficult'}`,
+      `Success Probability: ${(analysis.successProbability * 100).toFixed(0)}%`,
+      '',
+    ];
+
+    if (analysis.optimalTrajectory) {
+      lines.push('Recommended Protocol:');
+      lines.push(
+        `  ${analysis.optimalTrajectory.protocol.name} (Level ${analysis.optimalTrajectory.protocol.level})`
+      );
+      lines.push(`  Duration: ${analysis.optimalTrajectory.totalDuration}`);
+      lines.push(
+        `  Flexibility Gain: +${(analysis.optimalTrajectory.protocol.estimatedFlexibilityGain * 100).toFixed(0)}%`
+      );
+      lines.push('');
+    }
+
+    if (analysis.executionPlan) {
+      lines.push('Immediate Actions:');
+      analysis.executionPlan.immediateActions.forEach((action: string) => {
+        lines.push(`  • ${action}`);
+      });
+      lines.push('');
+    }
+
+    if (analysis.warnings && analysis.warnings.length > 0) {
+      lines.push('⚠️ Warnings:');
+      analysis.warnings.forEach((warning: string) => {
+        lines.push(`  • ${warning}`);
+      });
+    }
+
+    return lines.join('\n');
+  }
+
+  // Format escape result for display
+  private formatEscapeResult(result: EscapeAttemptResult): string {
+    const lines: string[] = [
+      `🚀 ${result.protocol.name} Execution ${result.success ? 'Successful' : 'Failed'}`,
+      '='.repeat(50),
+      '',
+      `Flexibility Before: ${(result.flexibilityBefore * 100).toFixed(0)}%`,
+      `Flexibility After: ${(result.flexibilityAfter * 100).toFixed(0)}%`,
+      `Flexibility Gained: +${(result.flexibilityGained * 100).toFixed(0)}%`,
+      '',
+    ];
+
+    if (result.constraintsRemoved.length > 0) {
+      lines.push('Constraints Removed:');
+      result.constraintsRemoved.forEach((constraint: string) => {
+        lines.push(`  ✓ ${constraint}`);
+      });
+      lines.push('');
+    }
+
+    if (result.newOptionsCreated.length > 0) {
+      lines.push('New Options Created:');
+      result.newOptionsCreated.forEach((option: string) => {
+        lines.push(`  + ${option}`);
+      });
+      lines.push('');
+    }
+
+    if (result.executionNotes.length > 0) {
+      lines.push('Execution Notes:');
+      result.executionNotes.forEach((note: string) => {
+        lines.push(`  • ${note}`);
+      });
+    }
+
+    return lines.join('\n');
+  }
 }
 
 // Discovery Layer Tool
@@ -2975,6 +3176,67 @@ The three-layer workflow ensures systematic creative thinking:
 };
 
 // Server initialization
+// Escape Velocity Tools
+const ANALYZE_ESCAPE_VELOCITY_TOOL = {
+  name: 'analyze_escape_velocity',
+  description: `Analyzes current constraints and calculates escape velocity requirements.
+This tool helps identify when you're stuck in low-flexibility situations and need to break free.
+
+Features:
+- Constraint strength analysis
+- Resource inventory assessment
+- Escape trajectory optimization
+- Success probability calculation
+- Detailed execution planning
+
+Use this when flexibility is critically low or you feel stuck in your thinking process.`,
+  inputSchema: {
+    type: 'object',
+    properties: {
+      sessionId: {
+        type: 'string',
+        description: 'Current session ID',
+      },
+    },
+    required: ['sessionId'],
+  },
+};
+
+const EXECUTE_ESCAPE_PROTOCOL_TOOL = {
+  name: 'execute_escape_protocol',
+  description: `Executes a specific escape velocity protocol to break free from constraints.
+
+Available protocols:
+1. Pattern Interruption - Quick mental reset (5-15 min)
+2. Resource Reallocation - Strategic resource shifting (1-2 hours)
+3. Stakeholder Reset - Renegotiate commitments (1-2 days)
+4. Technical Refactoring - Deep architectural changes (1-2 weeks)
+5. Strategic Pivot - Fundamental direction change (2-4 weeks)
+
+Each level requires different flexibility levels and provides different gains.`,
+  inputSchema: {
+    type: 'object',
+    properties: {
+      sessionId: {
+        type: 'string',
+        description: 'Current session ID',
+      },
+      level: {
+        type: 'integer',
+        minimum: 1,
+        maximum: 5,
+        description: 'Escape protocol level (1-5)',
+      },
+      userApproval: {
+        type: 'boolean',
+        description: 'User approval for executing the protocol',
+        default: true,
+      },
+    },
+    required: ['sessionId', 'level'],
+  },
+};
+
 const server = new Server(
   {
     name: 'creative-thinking-server',
@@ -2990,7 +3252,13 @@ const server = new Server(
 const lateralServer = new LateralThinkingServer();
 
 server.setRequestHandler(ListToolsRequestSchema, () => ({
-  tools: [DISCOVER_TECHNIQUES_TOOL, PLAN_THINKING_SESSION_TOOL, EXECUTE_THINKING_STEP_TOOL],
+  tools: [
+    DISCOVER_TECHNIQUES_TOOL,
+    PLAN_THINKING_SESSION_TOOL,
+    EXECUTE_THINKING_STEP_TOOL,
+    ANALYZE_ESCAPE_VELOCITY_TOOL,
+    EXECUTE_ESCAPE_PROTOCOL_TOOL,
+  ],
 }));
 
 server.setRequestHandler(CallToolRequestSchema, async request => {
@@ -3001,6 +3269,10 @@ server.setRequestHandler(CallToolRequestSchema, async request => {
       return lateralServer.planThinkingSession(request.params.arguments);
     case 'execute_thinking_step':
       return lateralServer.executeThinkingStep(request.params.arguments);
+    case 'analyze_escape_velocity':
+      return lateralServer.analyzeEscapeVelocity(request.params.arguments);
+    case 'execute_escape_protocol':
+      return lateralServer.executeEscapeProtocol(request.params.arguments);
     default:
       return {
         content: [
