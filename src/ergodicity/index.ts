@@ -96,7 +96,7 @@ export class ErgodicityManager {
 
     if (warnings.length > 0) {
       status += '\n\n⚠️ Active Warnings:';
-      warnings.forEach((warning) => {
+      warnings.forEach(warning => {
         status += `\n├─ ${warning}`;
       });
     }
@@ -104,7 +104,7 @@ export class ErgodicityManager {
     const escapeRoutes = this.pathMemoryManager.generateEscapeRoutes();
     if (escapeRoutes.length > 0 && metrics.flexibilityScore < 0.4) {
       status += '\n\n🚪 Escape Routes Available:';
-      escapeRoutes.forEach((route) => {
+      escapeRoutes.forEach(route => {
         status += `\n├─ ${route.name} (feasibility: ${Math.round(route.feasibility * 100)}%)`;
       });
     }

@@ -9,7 +9,14 @@ import type { LateralTechnique } from '../index.js';
  */
 export interface Constraint {
   id: string;
-  type: 'technical' | 'resource' | 'cognitive' | 'relational' | 'market' | 'regulatory' | 'creative';
+  type:
+    | 'technical'
+    | 'resource'
+    | 'cognitive'
+    | 'relational'
+    | 'market'
+    | 'regulatory'
+    | 'creative';
   description: string;
   createdAt: string;
   createdBy: PathEvent;
@@ -42,7 +49,7 @@ export type BarrierType = 'creative' | 'critical';
 /**
  * Specific barrier categories
  */
-export type CreativeBarrier = 
+export type CreativeBarrier =
   | 'reputational_ruin'
   | 'resource_depletion'
   | 'cognitive_lock_in'
@@ -51,7 +58,7 @@ export type CreativeBarrier =
   | 'technical_debt'
   | 'brand_association';
 
-export type CriticalBarrier = 
+export type CriticalBarrier =
   | 'analysis_paralysis'
   | 'cynicism'
   | 'over_optimization'
@@ -133,7 +140,7 @@ export enum ErgodicityWarningLevel {
   INFO = 'info', // > 0.6 flexibility
   CAUTION = 'caution', // 0.4-0.6 flexibility
   WARNING = 'warning', // 0.2-0.4 flexibility
-  CRITICAL = 'critical' // < 0.2 flexibility
+  CRITICAL = 'critical', // < 0.2 flexibility
 }
 
 /**

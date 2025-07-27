@@ -1044,7 +1044,9 @@ export class LateralThinkingServer {
     if (
       technique === 'six_hats' &&
       data.hatColor &&
-      !['blue', 'white', 'red', 'yellow', 'black', 'green', 'purple'].includes(data.hatColor as string)
+      !['blue', 'white', 'red', 'yellow', 'black', 'green', 'purple'].includes(
+        data.hatColor as string
+      )
     ) {
       throw new Error('Invalid hatColor for six_hats technique');
     }
@@ -1402,8 +1404,8 @@ export class LateralThinkingServer {
 
       case 'yes_and':
         // Each addition builds commitment
-        impact.commitmentLevel = 0.4 + (data.currentStep * 0.1);
-        impact.reversibilityCost = 0.3 + (data.currentStep * 0.1);
+        impact.commitmentLevel = 0.4 + data.currentStep * 0.1;
+        impact.reversibilityCost = 0.3 + data.currentStep * 0.1;
         if (data.additions && data.additions.length > 0) {
           impact.optionsOpened = data.additions;
         }
@@ -1624,7 +1626,7 @@ export class LateralThinkingServer {
     } while (this.sessions.has(sessionId));
 
     const ergodicityManager = new ErgodicityManager();
-    
+
     this.sessions.set(sessionId, {
       technique,
       problem,
@@ -1833,7 +1835,7 @@ export class LateralThinkingServer {
           validatedInput.output,
           pathImpact
         );
-        
+
         // Store any critical warnings for display
         if (warnings.length > 0) {
           session.pathMemory = session.ergodicityManager.getPathMemory();
@@ -1953,7 +1955,15 @@ export class LateralThinkingServer {
 
     switch (data.technique) {
       case 'six_hats': {
-        const hatOrder: SixHatsColor[] = ['blue', 'white', 'red', 'yellow', 'black', 'green', 'purple'];
+        const hatOrder: SixHatsColor[] = [
+          'blue',
+          'white',
+          'red',
+          'yellow',
+          'black',
+          'green',
+          'purple',
+        ];
         if (nextStep <= 7) {
           const nextHat = hatOrder[nextStep - 1];
           const hatInfo = this.getSixHatsInfo(nextHat);
@@ -2365,7 +2375,15 @@ export class LateralThinkingServer {
 
         switch (technique) {
           case 'six_hats': {
-            const hats: SixHatsColor[] = ['blue', 'white', 'red', 'yellow', 'black', 'green', 'purple'];
+            const hats: SixHatsColor[] = [
+              'blue',
+              'white',
+              'red',
+              'yellow',
+              'black',
+              'green',
+              'purple',
+            ];
             for (let i = 0; i < techniqueSteps; i++) {
               const hat = hats[i];
               const hatInfo = this.getSixHatsInfo(hat);

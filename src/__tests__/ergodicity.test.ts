@@ -83,31 +83,41 @@ describe('Ergodicity and Path Dependency Tracking', () => {
   });
 
   describe('Path Memory System', () => {
-    it('should track path events and calculate metrics', async () => {
+    it('should track path events and calculate metrics', () => {
       const ergodicityManager = new ErgodicityManager();
 
       // Record a low-commitment decision
-      const result1 = ergodicityManager.recordThinkingStep('random_entry', 1, 'Exploring random connections', {
-        optionsOpened: ['New perspective A', 'Alternative approach B'],
-        reversibilityCost: 0.1,
-        commitmentLevel: 0.1,
-      });
+      const result1 = ergodicityManager.recordThinkingStep(
+        'random_entry',
+        1,
+        'Exploring random connections',
+        {
+          optionsOpened: ['New perspective A', 'Alternative approach B'],
+          reversibilityCost: 0.1,
+          commitmentLevel: 0.1,
+        }
+      );
 
       expect(result1.metrics.flexibilityScore).toBeGreaterThan(0.8);
       expect(result1.metrics.reversibilityIndex).toBe(1.0);
 
       // Record a high-commitment decision
-      const result2 = ergodicityManager.recordThinkingStep('design_thinking', 4, 'Building prototype', {
-        optionsClosed: ['Alternative design approach', 'Different technology stack'],
-        reversibilityCost: 0.7,
-        commitmentLevel: 0.8,
-      });
+      const result2 = ergodicityManager.recordThinkingStep(
+        'design_thinking',
+        4,
+        'Building prototype',
+        {
+          optionsClosed: ['Alternative design approach', 'Different technology stack'],
+          reversibilityCost: 0.7,
+          commitmentLevel: 0.8,
+        }
+      );
 
       expect(result2.metrics.flexibilityScore).toBeLessThan(result1.metrics.flexibilityScore);
       expect(result2.metrics.reversibilityIndex).toBeLessThan(1.0);
     });
 
-    it('should generate warnings when flexibility is low', async () => {
+    it('should generate warnings when flexibility is low', () => {
       const ergodicityManager = new ErgodicityManager();
 
       // Make several high-commitment decisions
@@ -121,12 +131,12 @@ describe('Ergodicity and Path Dependency Tracking', () => {
 
       const warnings = ergodicityManager.getWarnings();
       expect(warnings.length).toBeGreaterThan(0);
-      expect(warnings.some((w) => w.level === ErgodicityWarningLevel.WARNING)).toBe(true);
+      expect(warnings.some(w => w.level === ErgodicityWarningLevel.WARNING)).toBe(true);
     });
   });
 
   describe('Absorbing Barrier Detection', () => {
-    it('should detect approaching cognitive lock-in', async () => {
+    it('should detect approaching cognitive lock-in', () => {
       const ergodicityManager = new ErgodicityManager();
 
       // Simulate repeated use of same technique
@@ -139,14 +149,14 @@ describe('Ergodicity and Path Dependency Tracking', () => {
 
       const pathMemory = ergodicityManager.getPathMemory();
       const cognitiveBarrier = pathMemory.absorbingBarriers.find(
-        (b) => b.subtype === 'cognitive_lock_in'
+        b => b.subtype === 'cognitive_lock_in'
       );
 
       expect(cognitiveBarrier).toBeDefined();
-      expect(cognitiveBarrier!.proximity).toBeGreaterThan(0.5);
+      expect(cognitiveBarrier?.proximity).toBeGreaterThan(0.5);
     });
 
-    it('should provide escape routes when flexibility is low', async () => {
+    it('should provide escape routes when flexibility is low', () => {
       const ergodicityManager = new ErgodicityManager();
 
       // Close many options
@@ -160,7 +170,9 @@ describe('Ergodicity and Path Dependency Tracking', () => {
 
       const escapeRoutes = ergodicityManager.getEscapeRoutes();
       expect(escapeRoutes.length).toBeGreaterThan(0);
-      expect(escapeRoutes.some((r) => r.name.includes('Pattern') || r.name.includes('Constraint'))).toBe(true);
+      expect(
+        escapeRoutes.some(r => r.name.includes('Pattern') || r.name.includes('Constraint'))
+      ).toBe(true);
     });
   });
 
@@ -175,7 +187,6 @@ describe('Ergodicity and Path Dependency Tracking', () => {
       const planData = JSON.parse(planResult.content[0]?.text || '{}') as { planId: string };
 
       // Execute several SCAMPER steps to create path dependencies
-      let sessionId: string | undefined;
 
       // Step 1: Eliminate (high commitment)
       const step1Result = (await server.executeThinkingStep({
@@ -191,12 +202,12 @@ describe('Ergodicity and Path Dependency Tracking', () => {
       })) as ServerResponse;
 
       const step1Data = JSON.parse(step1Result.content[0]?.text || '{}') as { sessionId: string };
-      sessionId = step1Data.sessionId;
+      const sessionIdFromStep1 = step1Data.sessionId;
 
       // Step 2: Combine (medium commitment)
       const step2Result = (await server.executeThinkingStep({
         planId: planData.planId,
-        sessionId,
+        sessionId: sessionIdFromStep1,
         technique: 'scamper' as const,
         problem: 'Complex decision with many constraints',
         currentStep: 2,
@@ -207,7 +218,7 @@ describe('Ergodicity and Path Dependency Tracking', () => {
       })) as ServerResponse;
 
       expect(step2Result.isError).toBeFalsy();
-      
+
       // The formatted output should include ergodicity metrics
       // Note: Visual output goes to console.error, so we're checking the response
       expect(step2Result.content[0]?.text).toContain('completed');
@@ -215,7 +226,7 @@ describe('Ergodicity and Path Dependency Tracking', () => {
   });
 
   describe('Technique Impact Analysis', () => {
-    it('should correctly assess technique path impacts', async () => {
+    it('should correctly assess technique path impacts', () => {
       const ergodicityManager = new ErgodicityManager();
 
       const sixHatsImpact = ergodicityManager.analyzeTechniqueImpact('six_hats');

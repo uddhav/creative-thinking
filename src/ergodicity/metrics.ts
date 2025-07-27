@@ -2,12 +2,7 @@
  * Path-dependent metrics calculation system
  */
 
-import type {
-  FlexibilityMetrics,
-  PathMemory,
-  PathEvent,
-  ErgodicityWarning,
-} from './types.js';
+import type { FlexibilityMetrics, PathMemory, ErgodicityWarning } from './types.js';
 import { ErgodicityWarningLevel } from './types.js';
 
 export class MetricsCalculator {
@@ -31,14 +26,14 @@ export class MetricsCalculator {
    */
   private calculateFlexibilityScore(pathMemory: PathMemory): number {
     const totalOptions = pathMemory.availableOptions.length + pathMemory.foreclosedOptions.length;
-    
+
     if (totalOptions === 0) return 1.0; // Start with full flexibility
-    
+
     const availableRatio = pathMemory.availableOptions.length / totalOptions;
-    
+
     // Factor in constraint strength
     const constraintPenalty = pathMemory.constraints.reduce((sum, c) => sum + c.strength, 0) * 0.1;
-    
+
     return Math.max(0, Math.min(1, availableRatio - constraintPenalty));
   }
 
@@ -48,11 +43,11 @@ export class MetricsCalculator {
    */
   private calculateReversibilityIndex(pathMemory: PathMemory): number {
     if (pathMemory.pathHistory.length === 0) return 1.0;
-    
+
     const reversibleCount = pathMemory.pathHistory.filter(
-      (event) => event.reversibilityCost < 0.5
+      event => event.reversibilityCost < 0.5
     ).length;
-    
+
     return reversibleCount / pathMemory.pathHistory.length;
   }
 
@@ -63,13 +58,13 @@ export class MetricsCalculator {
   private calculatePathDivergence(pathMemory: PathMemory): number {
     // Simple model: each step increases divergence
     const stepDivergence = pathMemory.pathHistory.length * 0.05;
-    
+
     // High-commitment decisions increase divergence more
     const commitmentDivergence = pathMemory.pathHistory.reduce(
-      (sum, event) => sum + (event.commitmentLevel * 0.1),
+      (sum, event) => sum + event.commitmentLevel * 0.1,
       0
     );
-    
+
     return stepDivergence + commitmentDivergence;
   }
 
@@ -80,19 +75,13 @@ export class MetricsCalculator {
   private calculateOptionVelocity(pathMemory: PathMemory): number {
     const recentWindow = 5;
     const recentEvents = pathMemory.pathHistory.slice(-recentWindow);
-    
+
     if (recentEvents.length === 0) return 0;
-    
-    const optionsOpened = recentEvents.reduce(
-      (sum, event) => sum + event.optionsOpened.length,
-      0
-    );
-    
-    const optionsClosed = recentEvents.reduce(
-      (sum, event) => sum + event.optionsClosed.length,
-      0
-    );
-    
+
+    const optionsOpened = recentEvents.reduce((sum, event) => sum + event.optionsOpened.length, 0);
+
+    const optionsClosed = recentEvents.reduce((sum, event) => sum + event.optionsClosed.length, 0);
+
     return (optionsOpened - optionsClosed) / recentEvents.length;
   }
 
@@ -101,12 +90,12 @@ export class MetricsCalculator {
    */
   private calculateCommitmentDepth(pathMemory: PathMemory): number {
     if (pathMemory.pathHistory.length === 0) return 0;
-    
+
     const totalCommitment = pathMemory.pathHistory.reduce(
       (sum, event) => sum + event.commitmentLevel,
       0
     );
-    
+
     return totalCommitment / pathMemory.pathHistory.length;
   }
 
@@ -253,8 +242,8 @@ export class MetricsCalculator {
     if (metrics.barrierProximity.length > 0) {
       lines.push('\n⚠️ Barrier Warnings:');
       metrics.barrierProximity
-        .filter((p) => p.distance < 0.5)
-        .forEach((p) => {
+        .filter(p => p.distance < 0.5)
+        .forEach(p => {
           lines.push(`├─ ${p.barrier.name}: ${Math.round(p.distance * 100)}% away`);
         });
     }
