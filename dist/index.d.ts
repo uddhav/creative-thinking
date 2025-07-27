@@ -251,21 +251,5 @@ export declare class LateralThinkingServer {
     }>;
     private getScamperDescription;
     private getDesignThinkingOutputs;
-    analyzeEscapeVelocity(input: unknown): Promise<{
-        content: Array<{
-            type: string;
-            text: string;
-        }>;
-        isError?: boolean;
-    }>;
-    executeEscapeProtocol(input: unknown): Promise<{
-        content: Array<{
-            type: string;
-            text: string;
-        }>;
-        isError?: boolean;
-    }>;
-    private formatEscapeAnalysis;
-    private formatEscapeResult;
 }
 //# sourceMappingURL=index.d.ts.map

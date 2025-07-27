@@ -151,6 +151,9 @@ export class EscapeVelocityCalculator {
         if (!protocol) {
             // Flexibility too low for any protocol - use emergency pattern interruption
             const emergencyProtocol = this.protocolFactory.getProtocol(EscapeLevel.PATTERN_INTERRUPTION);
+            if (!emergencyProtocol) {
+                throw new Error('Critical: Pattern interruption protocol not available. System configuration error.');
+            }
             return this.createEmergencyTrajectory(emergencyProtocol);
         }
         // Create phases based on protocol
@@ -223,24 +226,33 @@ export class EscapeVelocityCalculator {
     /**
      * Generate execution plan
      */
-    generateEscapePlan(trajectory, _constraints) {
+    generateEscapePlan(trajectory, constraints) {
         const contingencies = new Map();
-        // Add contingencies for major risks
-        contingencies.set('resource_shortage', [
-            'Reduce scope to critical constraints',
-            'Seek additional resources',
-            'Extend timeline',
-        ]);
-        contingencies.set('stakeholder_resistance', [
-            'Enhanced communication plan',
-            'Phased approach',
-            'Success story demonstration',
-        ]);
-        contingencies.set('technical_failure', [
-            'Fallback to simpler protocol',
-            'External expertise',
-            'Incremental approach',
-        ]);
+        // Add contingencies based on actual constraint analysis
+        if (constraints.constraints.some(c => c.type === 'financial')) {
+            contingencies.set('resource_shortage', [
+                'Reduce scope to critical constraints',
+                'Seek additional resources',
+                'Extend timeline',
+                `Focus on ${constraints.dominantConstraint.name} first`,
+            ]);
+        }
+        if (constraints.constraints.some(c => c.type === 'social')) {
+            contingencies.set('stakeholder_resistance', [
+                'Enhanced communication plan',
+                'Phased approach',
+                'Success story demonstration',
+                `Address ${constraints.dominantConstraint.dependencies.join(', ')} concerns`,
+            ]);
+        }
+        if (constraints.constraints.some(c => c.type === 'technical')) {
+            contingencies.set('technical_failure', [
+                'Fallback to simpler protocol',
+                'External expertise',
+                'Incremental approach',
+                `Break down ${constraints.dominantConstraint.name}`,
+            ]);
+        }
         return {
             immediateActions: trajectory.phases[0].actions,
             shortTermActions: trajectory.protocol.steps.slice(0, 3),
@@ -300,9 +312,20 @@ export class EscapeVelocityCalculator {
             return 0.1;
         return recentCommitments.reduce((sum, c) => sum + c, 0) / recentCommitments.length;
     }
-    assessFinancialConstraints(_context) {
-        // Simplified assessment - could be enhanced with actual resource tracking
-        return 0.4; // Default moderate financial constraints
+    assessFinancialConstraints(context) {
+        // Assess based on resource-related constraints and decisions
+        const resourceConstraints = context.pathMemory.constraints.filter(c => c.type === 'resource' ||
+            c.description.toLowerCase().includes('budget') ||
+            c.description.toLowerCase().includes('cost') ||
+            c.description.toLowerCase().includes('financial'));
+        // Higher number of resource constraints = higher financial limitations
+        const constraintScore = Math.min(resourceConstraints.length * 0.2, 0.6);
+        // Check if recent decisions involved high-cost options
+        const recentHighCostDecisions = context.pathMemory.pathHistory
+            .slice(-10)
+            .filter(e => e.reversibilityCost > 0.7).length;
+        const costScore = Math.min(recentHighCostDecisions * 0.1, 0.3);
+        return Math.min(0.4 + constraintScore + costScore, 0.9); // Base 0.4 + adjustments, max 0.9
     }
     estimateTimeResource(context) {
         const sessionDuration = context.sessionData.endTime

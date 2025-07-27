@@ -194,6 +194,24 @@ All features must integrate with the layered architecture:
 2. **Planning** - Workflow creation and step sequencing
 3. **Execution** - Guided implementation with state management
 
+### Fundamental Design Decision: Three Tools Only
+**IMPORTANT**: This MCP server exposes EXACTLY three tools, no more, no less:
+- `discover_techniques` - Analyzes problems and recommends techniques
+- `plan_thinking_session` - Creates structured workflows
+- `execute_thinking_step` - Executes individual steps in the workflow
+
+**This is a hard constraint that must never be violated.** All functionality must be integrated into these three tools:
+- Escape velocity analysis → Internal to discovery/planning phases
+- Option generation → Automatic within discovery when flexibility is low
+- Session management → Internal state management
+- Any future features → Must be integrated into the existing three-tool workflow
+
+Rationale:
+- Clean, focused API that mirrors the natural workflow
+- Prevents tool proliferation and API complexity
+- Forces thoughtful integration of new features
+- Maintains consistency with the three-layer architecture
+
 ### Adding New Techniques
 When adding new thinking techniques:
 1. Update `LateralTechnique` type

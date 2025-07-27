@@ -211,7 +211,12 @@ export class EscapeVelocityCalculator {
 
     if (!protocol) {
       // Flexibility too low for any protocol - use emergency pattern interruption
-      const emergencyProtocol = this.protocolFactory.getProtocol(EscapeLevel.PATTERN_INTERRUPTION)!;
+      const emergencyProtocol = this.protocolFactory.getProtocol(EscapeLevel.PATTERN_INTERRUPTION);
+      if (!emergencyProtocol) {
+        throw new Error(
+          'Critical: Pattern interruption protocol not available. System configuration error.'
+        );
+      }
       return this.createEmergencyTrajectory(emergencyProtocol);
     }
 
@@ -310,28 +315,37 @@ export class EscapeVelocityCalculator {
    */
   private generateEscapePlan(
     trajectory: EscapeTrajectory,
-    _constraints: ConstraintAnalysis
+    constraints: ConstraintAnalysis
   ): EscapeExecutionPlan {
     const contingencies = new Map<string, string[]>();
 
-    // Add contingencies for major risks
-    contingencies.set('resource_shortage', [
-      'Reduce scope to critical constraints',
-      'Seek additional resources',
-      'Extend timeline',
-    ]);
+    // Add contingencies based on actual constraint analysis
+    if (constraints.constraints.some(c => c.type === 'financial')) {
+      contingencies.set('resource_shortage', [
+        'Reduce scope to critical constraints',
+        'Seek additional resources',
+        'Extend timeline',
+        `Focus on ${constraints.dominantConstraint.name} first`,
+      ]);
+    }
 
-    contingencies.set('stakeholder_resistance', [
-      'Enhanced communication plan',
-      'Phased approach',
-      'Success story demonstration',
-    ]);
+    if (constraints.constraints.some(c => c.type === 'social')) {
+      contingencies.set('stakeholder_resistance', [
+        'Enhanced communication plan',
+        'Phased approach',
+        'Success story demonstration',
+        `Address ${constraints.dominantConstraint.dependencies.join(', ')} concerns`,
+      ]);
+    }
 
-    contingencies.set('technical_failure', [
-      'Fallback to simpler protocol',
-      'External expertise',
-      'Incremental approach',
-    ]);
+    if (constraints.constraints.some(c => c.type === 'technical')) {
+      contingencies.set('technical_failure', [
+        'Fallback to simpler protocol',
+        'External expertise',
+        'Incremental approach',
+        `Break down ${constraints.dominantConstraint.name}`,
+      ]);
+    }
 
     return {
       immediateActions: trajectory.phases[0].actions,
@@ -410,9 +424,26 @@ export class EscapeVelocityCalculator {
     return recentCommitments.reduce((sum, c) => sum + c, 0) / recentCommitments.length;
   }
 
-  private assessFinancialConstraints(_context: EscapeContext): number {
-    // Simplified assessment - could be enhanced with actual resource tracking
-    return 0.4; // Default moderate financial constraints
+  private assessFinancialConstraints(context: EscapeContext): number {
+    // Assess based on resource-related constraints and decisions
+    const resourceConstraints = context.pathMemory.constraints.filter(
+      c =>
+        c.type === 'resource' ||
+        c.description.toLowerCase().includes('budget') ||
+        c.description.toLowerCase().includes('cost') ||
+        c.description.toLowerCase().includes('financial')
+    );
+
+    // Higher number of resource constraints = higher financial limitations
+    const constraintScore = Math.min(resourceConstraints.length * 0.2, 0.6);
+
+    // Check if recent decisions involved high-cost options
+    const recentHighCostDecisions = context.pathMemory.pathHistory
+      .slice(-10)
+      .filter(e => e.reversibilityCost > 0.7).length;
+    const costScore = Math.min(recentHighCostDecisions * 0.1, 0.3);
+
+    return Math.min(0.4 + constraintScore + costScore, 0.9); // Base 0.4 + adjustments, max 0.9
   }
 
   private estimateTimeResource(context: EscapeContext): number {

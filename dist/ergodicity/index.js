@@ -6,10 +6,12 @@ export * from './pathMemory.js';
 export * from './metrics.js';
 export * from './earlyWarning/index.js';
 export { EscapeVelocitySystem, EscapeLevel, } from './escapeProtocols/index.js';
+export { OptionGenerationEngine, } from './optionGeneration/index.js';
 import { PathMemoryManager } from './pathMemory.js';
 import { MetricsCalculator } from './metrics.js';
 import { AbsorbingBarrierEarlyWarning, ResponseProtocolSystem } from './earlyWarning/index.js';
 import { EscapeVelocitySystem } from './escapeProtocols/index.js';
+import { OptionGenerationEngine } from './optionGeneration/index.js';
 import { ErgodicityWarningLevel } from './types.js';
 import { EscapeLevel } from './escapeProtocols/types.js';
 /**
@@ -21,6 +23,7 @@ export class ErgodicityManager {
     earlyWarningSystem;
     responseProtocolSystem;
     escapeVelocitySystem;
+    optionGenerationEngine;
     lastWarningState = null;
     autoEscapeEnabled = true;
     constructor(warningConfig) {
@@ -29,6 +32,7 @@ export class ErgodicityManager {
         this.earlyWarningSystem = new AbsorbingBarrierEarlyWarning(warningConfig);
         this.responseProtocolSystem = new ResponseProtocolSystem();
         this.escapeVelocitySystem = new EscapeVelocitySystem();
+        this.optionGenerationEngine = new OptionGenerationEngine();
     }
     /**
      * Record a thinking step and its path impacts with early warning monitoring
@@ -332,6 +336,97 @@ export class ErgodicityManager {
             },
         };
         return profiles[technique];
+    }
+    /**
+     * Generate options to increase flexibility
+     */
+    generateOptions(sessionData, targetCount = 10) {
+        const context = this.createOptionGenerationContext(sessionData);
+        return this.optionGenerationEngine.generateOptions(context, targetCount);
+    }
+    /**
+     * Generate options using specific strategies
+     */
+    generateOptionsWithStrategies(sessionData, strategies, targetCount = 10) {
+        const context = this.createOptionGenerationContext(sessionData);
+        return this.optionGenerationEngine.generateWithStrategies(context, strategies, targetCount);
+    }
+    /**
+     * Check if option generation is recommended
+     */
+    shouldGenerateOptions() {
+        // Create a minimal SessionState for checking if options are needed
+        const mockSessionState = {
+            id: 'check_' + Date.now(),
+            problem: 'Unknown',
+            technique: 'six_hats',
+            currentStep: 1,
+            totalSteps: 1,
+            history: [],
+            branches: {},
+            insights: [],
+        };
+        const pathMemory = this.getPathMemory();
+        const context = {
+            sessionState: mockSessionState,
+            pathMemory: {
+                constraints: pathMemory.constraints,
+                pathHistory: pathMemory.pathHistory,
+                flexibilityOverTime: [],
+                availableOptions: pathMemory.availableOptions,
+            },
+            currentFlexibility: this.getCurrentFlexibility(),
+            targetOptionCount: 10,
+        };
+        return this.optionGenerationEngine.shouldGenerateOptions(context);
+    }
+    /**
+     * Get a quick option without full generation
+     */
+    getQuickOption(sessionData) {
+        const context = this.createOptionGenerationContext(sessionData);
+        return this.optionGenerationEngine.getQuickOption(context);
+    }
+    /**
+     * Get available option generation strategies
+     */
+    getAvailableOptionStrategies() {
+        return this.optionGenerationEngine.getAvailableStrategies();
+    }
+    /**
+     * Create option generation context from session data
+     */
+    createOptionGenerationContext(sessionData) {
+        // Convert SessionData to SessionState format
+        const sessionState = {
+            id: 'temp_' + Date.now(),
+            problem: sessionData.problem || 'Unknown problem',
+            technique: sessionData.technique || 'six_hats',
+            currentStep: sessionData.history.length || 1,
+            totalSteps: 10, // Default estimate
+            history: sessionData.history.map((h, index) => ({
+                step: index + 1,
+                timestamp: h.timestamp,
+                input: h,
+                output: h,
+            })),
+            branches: {},
+            insights: sessionData.insights || [],
+            startTime: sessionData.startTime,
+            endTime: sessionData.endTime,
+        };
+        const pathMemory = this.getPathMemory();
+        return {
+            sessionState,
+            pathMemory: {
+                constraints: pathMemory.constraints,
+                pathHistory: pathMemory.pathHistory,
+                flexibilityOverTime: [],
+                availableOptions: pathMemory.availableOptions,
+            },
+            currentFlexibility: this.getCurrentFlexibility(),
+            targetOptionCount: 10,
+        };
     }
 }
 //# sourceMappingURL=index.js.map
