@@ -453,7 +453,8 @@ ${barrier.description}
    * Update warning history
    */
   private updateWarningHistory(state: EarlyWarningState, sessionData: SessionData): void {
-    const sessionId = sessionData.history[0]?.sessionId || 'unknown';
+    // Use technique and problem as a session identifier since SessionData doesn't have sessionId
+    const sessionId = `${sessionData.technique}-${sessionData.problem.substring(0, 20)}`;
 
     let history = this.warningHistory.find(h => h.sessionId === sessionId);
     if (!history) {

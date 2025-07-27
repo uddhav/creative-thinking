@@ -172,7 +172,8 @@ interface ExecuteThinkingStepInput {
   branchId?: string;
 }
 
-export interface LateralThinkingData {
+// Base interface for thinking operations
+export interface ThinkingOperationData {
   sessionId?: string; // For continuing existing sessions
   technique: LateralTechnique;
   problem: string;
@@ -231,8 +232,13 @@ export interface LateralThinkingData {
   branchFromStep?: number;
   branchId?: string;
 
-  // Session management operations
-  sessionOperation?: 'save' | 'load' | 'list' | 'delete' | 'export';
+  // Auto-save preference
+  autoSave?: boolean;
+}
+
+// Interface for session management operations
+export interface SessionOperationData {
+  sessionOperation: 'save' | 'load' | 'list' | 'delete' | 'export';
 
   // Save operation options
   saveOptions?: {
@@ -268,16 +274,16 @@ export interface LateralThinkingData {
     format: 'json' | 'markdown' | 'csv';
     outputPath?: string;
   };
-
-  // Auto-save preference
-  autoSave?: boolean;
 }
+
+// Union type for all lateral thinking operations
+export type LateralThinkingData = ThinkingOperationData | SessionOperationData;
 
 export interface SessionData {
   technique: LateralTechnique;
   problem: string;
-  history: Array<LateralThinkingData & { timestamp: string }>;
-  branches: Record<string, LateralThinkingData[]>;
+  history: Array<ThinkingOperationData & { timestamp: string }>;
+  branches: Record<string, ThinkingOperationData[]>;
   insights: string[];
   // Meta-learning data
   startTime?: number;
@@ -413,7 +419,7 @@ export class LateralThinkingServer {
    * Handle session management operations
    */
   private async handleSessionOperation(
-    input: LateralThinkingData
+    input: SessionOperationData
   ): Promise<{ content: Array<{ type: string; text: string }>; isError?: boolean }> {
     if (!this.persistenceAdapter) {
       return {
@@ -452,7 +458,7 @@ export class LateralThinkingServer {
               type: 'text',
               text: JSON.stringify(
                 {
-                  error: `Unknown session operation: ${input.sessionOperation}`,
+                  error: `Unknown session operation: ${input.sessionOperation as string}`,
                   status: 'failed',
                 },
                 null,
@@ -469,7 +475,7 @@ export class LateralThinkingServer {
    * Save current session
    */
   private async handleSaveOperation(
-    input: LateralThinkingData
+    input: SessionOperationData
   ): Promise<{ content: Array<{ type: string; text: string }> }> {
     try {
       if (!this.currentSessionId || !this.sessions.has(this.currentSessionId)) {
@@ -531,7 +537,7 @@ export class LateralThinkingServer {
    * Load a saved session
    */
   private async handleLoadOperation(
-    input: LateralThinkingData
+    input: SessionOperationData
   ): Promise<{ content: Array<{ type: string; text: string }> }> {
     try {
       if (!input.loadOptions?.sessionId) {
@@ -560,10 +566,10 @@ export class LateralThinkingServer {
         })),
         branches: Object.entries(loadedState.branches).reduce(
           (acc, [key, value]) => {
-            acc[key] = value as LateralThinkingData[];
+            acc[key] = value as ThinkingOperationData[];
             return acc;
           },
-          {} as Record<string, LateralThinkingData[]>
+          {} as Record<string, ThinkingOperationData[]>
         ),
         insights: loadedState.insights,
         startTime: loadedState.startTime,
@@ -624,7 +630,7 @@ export class LateralThinkingServer {
    * List saved sessions
    */
   private async handleListOperation(
-    input: LateralThinkingData
+    input: SessionOperationData
   ): Promise<{ content: Array<{ type: string; text: string }> }> {
     try {
       const options = input.listOptions || {};
@@ -667,7 +673,7 @@ export class LateralThinkingServer {
    * Delete a saved session
    */
   private async handleDeleteOperation(
-    input: LateralThinkingData
+    input: SessionOperationData
   ): Promise<{ content: Array<{ type: string; text: string }> }> {
     try {
       if (!input.deleteOptions?.sessionId) {
@@ -718,7 +724,7 @@ export class LateralThinkingServer {
    * Export a session
    */
   private async handleExportOperation(
-    input: LateralThinkingData
+    input: SessionOperationData
   ): Promise<{ content: Array<{ type: string; text: string }> }> {
     try {
       if (!input.exportOptions?.sessionId || !input.exportOptions?.format) {
@@ -1047,9 +1053,58 @@ export class LateralThinkingServer {
     return stageInfo[stage];
   }
 
+  // Type guard to check if input is a session operation
+  private isSessionOperation(data: unknown): data is SessionOperationData {
+    const record = data as Record<string, unknown>;
+    return (
+      record.sessionOperation !== undefined &&
+      ['save', 'load', 'list', 'delete', 'export'].includes(record.sessionOperation as string)
+    );
+  }
+
   private validateInput(input: unknown): LateralThinkingData {
     const data = input as Record<string, unknown>;
 
+    // Check if this is a session operation
+    if (this.isSessionOperation(data)) {
+      return this.validateSessionOperation(data);
+    } else {
+      return this.validateThinkingOperation(data);
+    }
+  }
+
+  private validateSessionOperation(data: Record<string, unknown>): SessionOperationData {
+    if (!['save', 'load', 'list', 'delete', 'export'].includes(data.sessionOperation as string)) {
+      throw new Error('Invalid sessionOperation: must be one of save, load, list, delete, export');
+    }
+
+    // Validate operation-specific options
+    if (
+      data.sessionOperation === 'load' &&
+      !(data.loadOptions as Record<string, unknown>)?.sessionId
+    ) {
+      throw new Error('sessionId is required in loadOptions for load operation');
+    }
+    if (
+      data.sessionOperation === 'delete' &&
+      !(data.deleteOptions as Record<string, unknown>)?.sessionId
+    ) {
+      throw new Error('sessionId is required in deleteOptions for delete operation');
+    }
+    if (data.sessionOperation === 'export') {
+      const exportOpts = data.exportOptions as Record<string, unknown> | undefined;
+      if (!exportOpts?.sessionId) {
+        throw new Error('sessionId is required in exportOptions for export operation');
+      }
+      if (!['json', 'markdown', 'csv'].includes(exportOpts.format as string)) {
+        throw new Error('Invalid export format: must be one of json, markdown, csv');
+      }
+    }
+
+    return data as unknown as SessionOperationData;
+  }
+
+  private validateThinkingOperation(data: Record<string, unknown>): ThinkingOperationData {
     if (
       !data.technique ||
       ![
@@ -1155,118 +1210,7 @@ export class LateralThinkingServer {
       throw new Error('blackSwans must be an array of strings');
     }
 
-    // Validate session management operations
-    if (data.sessionOperation) {
-      if (!['save', 'load', 'list', 'delete', 'export'].includes(data.sessionOperation as string)) {
-        throw new Error(
-          'Invalid sessionOperation: must be one of save, load, list, delete, export'
-        );
-      }
-
-      // For regular operations, technique and problem are not required
-      if (data.sessionOperation !== 'save') {
-        // Override the required field checks for session operations
-        data.technique = data.technique || 'six_hats'; // dummy value
-        data.problem = data.problem || 'session operation'; // dummy value
-        data.currentStep = data.currentStep || 1; // dummy value
-        data.totalSteps = data.totalSteps || 1; // dummy value
-        data.output = data.output || ''; // dummy value
-        data.nextStepNeeded = data.nextStepNeeded ?? false; // dummy value
-      }
-
-      // Validate operation-specific options
-      if (
-        data.sessionOperation === 'load' &&
-        !(data.loadOptions as Record<string, unknown>)?.sessionId
-      ) {
-        throw new Error('sessionId is required in loadOptions for load operation');
-      }
-      if (
-        data.sessionOperation === 'delete' &&
-        !(data.deleteOptions as Record<string, unknown>)?.sessionId
-      ) {
-        throw new Error('sessionId is required in deleteOptions for delete operation');
-      }
-      if (data.sessionOperation === 'export') {
-        if (!(data.exportOptions as Record<string, unknown>)?.sessionId) {
-          throw new Error('sessionId is required in exportOptions for export operation');
-        }
-        if (!(data.exportOptions as Record<string, unknown>)?.format) {
-          throw new Error('format is required in exportOptions for export operation');
-        }
-      }
-    }
-
-    return {
-      sessionId: data.sessionId as string | undefined,
-      technique: data.technique as LateralTechnique,
-      problem: data.problem as string,
-      currentStep: data.currentStep as number,
-      totalSteps: data.totalSteps as number,
-      output: data.output as string,
-      nextStepNeeded: data.nextStepNeeded as boolean,
-      hatColor: data.hatColor as SixHatsColor | undefined,
-      provocation: data.provocation as string | undefined,
-      principles: data.principles as string[] | undefined,
-      randomStimulus: data.randomStimulus as string | undefined,
-      connections: data.connections as string[] | undefined,
-      scamperAction: data.scamperAction as ScamperAction | undefined,
-      successExample: data.successExample as string | undefined,
-      extractedConcepts: data.extractedConcepts as string[] | undefined,
-      abstractedPatterns: data.abstractedPatterns as string[] | undefined,
-      applications: data.applications as string[] | undefined,
-      initialIdea: data.initialIdea as string | undefined,
-      additions: data.additions as string[] | undefined,
-      evaluations: data.evaluations as string[] | undefined,
-      synthesis: data.synthesis as string | undefined,
-      designStage: data.designStage as DesignThinkingStage | undefined,
-      empathyInsights: data.empathyInsights as string[] | undefined,
-      problemStatement: data.problemStatement as string | undefined,
-      failureModesPredicted: data.failureModesPredicted as string[] | undefined,
-      ideaList: data.ideaList as string[] | undefined,
-      prototypeDescription: data.prototypeDescription as string | undefined,
-      stressTestResults: data.stressTestResults as string[] | undefined,
-      userFeedback: data.userFeedback as string[] | undefined,
-      failureInsights: data.failureInsights as string[] | undefined,
-      contradiction: data.contradiction as string | undefined,
-      inventivePrinciples: data.inventivePrinciples as string[] | undefined,
-      viaNegativaRemovals: data.viaNegativaRemovals as string[] | undefined,
-      minimalSolution: data.minimalSolution as string | undefined,
-      risks: data.risks as string[] | undefined,
-      failureModes: data.failureModes as string[] | undefined,
-      mitigations: data.mitigations as string[] | undefined,
-      antifragileProperties: data.antifragileProperties as string[] | undefined,
-      blackSwans: data.blackSwans as string[] | undefined,
-      isRevision: data.isRevision as boolean | undefined,
-      revisesStep: data.revisesStep as number | undefined,
-      branchFromStep: data.branchFromStep as number | undefined,
-      branchId: data.branchId as string | undefined,
-      sessionOperation: data.sessionOperation as
-        | 'save'
-        | 'load'
-        | 'list'
-        | 'delete'
-        | 'export'
-        | undefined,
-      saveOptions: data.saveOptions as
-        | { sessionName?: string; tags?: string[]; asTemplate?: boolean }
-        | undefined,
-      loadOptions: data.loadOptions as { sessionId: string; continueFrom?: number } | undefined,
-      listOptions: data.listOptions as
-        | {
-            limit?: number;
-            technique?: LateralTechnique;
-            status?: 'active' | 'completed' | 'all';
-            tags?: string[];
-            searchTerm?: string;
-          }
-        | undefined,
-      deleteOptions: data.deleteOptions as { sessionId: string; confirm?: boolean } | undefined,
-      exportOptions: data.exportOptions as
-        | { sessionId: string; format: 'json' | 'markdown' | 'csv'; outputPath?: string }
-        | undefined,
-      autoSave: data.autoSave as boolean | undefined,
-    };
+    return data as unknown as ThinkingOperationData;
   }
 
   /**
@@ -1293,7 +1237,7 @@ export class LateralThinkingServer {
    * @param data - The lateral thinking data with current step info
    * @returns Color and symbol for visual mode indication
    */
-  private getModeIndicator(data: LateralThinkingData): { color: typeof chalk; symbol: string } {
+  private getModeIndicator(data: ThinkingOperationData): { color: typeof chalk; symbol: string } {
     // Check if current step is in critical steps list
     const criticalSteps = this.getCriticalSteps(data.technique);
     let isCritical = criticalSteps.includes(data.currentStep);
@@ -1374,7 +1318,7 @@ export class LateralThinkingServer {
   /**
    * Calculate path impact based on the thinking step
    */
-  private calculatePathImpact(data: LateralThinkingData): {
+  private calculatePathImpact(data: ThinkingOperationData): {
     optionsOpened?: string[];
     optionsClosed?: string[];
     reversibilityCost?: number;
@@ -1479,7 +1423,7 @@ export class LateralThinkingServer {
     return impact;
   }
 
-  private formatOutput(data: LateralThinkingData): string {
+  private formatOutput(data: ThinkingOperationData): string {
     const {
       technique,
       currentStep,
@@ -1862,26 +1806,28 @@ export class LateralThinkingServer {
       const validatedInput = this.validateInput(input);
 
       // Handle session operations first
-      if (validatedInput.sessionOperation) {
+      if ('sessionOperation' in validatedInput) {
         return await this.handleSessionOperation(validatedInput);
       }
+      // Now we know it's a thinking operation
+      const thinkingInput = validatedInput;
 
       let sessionId: string;
       let session: SessionData | undefined;
 
       // Handle session initialization or continuation
-      if (validatedInput.sessionId) {
+      if (thinkingInput.sessionId) {
         // Continue existing session
-        sessionId = validatedInput.sessionId;
+        sessionId = thinkingInput.sessionId;
         session = this.sessions.get(sessionId);
         if (!session) {
           throw new Error(`Session ${sessionId} not found. It may have expired.`);
         }
       } else {
         // Create new session (even if not step 1, for testing purposes)
-        sessionId = this.initializeSession(validatedInput.technique, validatedInput.problem);
-        if (!validatedInput.totalSteps) {
-          validatedInput.totalSteps = this.getTechniqueSteps(validatedInput.technique);
+        sessionId = this.initializeSession(thinkingInput.technique, thinkingInput.problem);
+        if (!thinkingInput.totalSteps) {
+          thinkingInput.totalSteps = this.getTechniqueSteps(thinkingInput.technique);
         }
         session = this.sessions.get(sessionId);
       }
@@ -1892,20 +1838,20 @@ export class LateralThinkingServer {
 
       // Add to history with proper timestamp
       const historyEntry = {
-        ...validatedInput,
+        ...thinkingInput,
         timestamp: new Date().toISOString(),
       };
       session.history.push(historyEntry);
 
       // Track path dependencies if ergodicity manager exists
       if (session.ergodicityManager) {
-        const pathImpact = this.calculatePathImpact(validatedInput);
+        const pathImpact = this.calculatePathImpact(thinkingInput);
         const sessionData: SessionData = {
           history: session.history,
           insights: session.insights,
           metrics: session.metrics,
-          technique: validatedInput.technique,
-          problem: validatedInput.problem,
+          technique: thinkingInput.technique,
+          problem: thinkingInput.problem,
           branches: session.branches,
           startTime: session.history[0]?.timestamp
             ? new Date(session.history[0].timestamp).getTime()
@@ -1914,9 +1860,9 @@ export class LateralThinkingServer {
 
         const { warnings, earlyWarningState, escapeRecommendation } =
           await session.ergodicityManager.recordThinkingStep(
-            validatedInput.technique,
-            validatedInput.currentStep,
-            validatedInput.output,
+            thinkingInput.technique,
+            thinkingInput.currentStep,
+            thinkingInput.output,
             pathImpact,
             sessionData
           );
@@ -1938,55 +1884,51 @@ export class LateralThinkingServer {
       // Update metrics
       if (session.metrics) {
         // Count risks identified
-        if (validatedInput.risks && validatedInput.risks.length > 0) {
+        if (thinkingInput.risks && thinkingInput.risks.length > 0) {
           session.metrics.risksCaught =
-            (session.metrics.risksCaught || 0) + validatedInput.risks.length;
+            (session.metrics.risksCaught || 0) + thinkingInput.risks.length;
         }
         // Count antifragile properties
-        if (
-          validatedInput.antifragileProperties &&
-          validatedInput.antifragileProperties.length > 0
-        ) {
+        if (thinkingInput.antifragileProperties && thinkingInput.antifragileProperties.length > 0) {
           session.metrics.antifragileFeatures =
-            (session.metrics.antifragileFeatures || 0) +
-            validatedInput.antifragileProperties.length;
+            (session.metrics.antifragileFeatures || 0) + thinkingInput.antifragileProperties.length;
         }
         // Simple creativity score based on output length and variety
         session.metrics.creativityScore =
-          (session.metrics.creativityScore || 0) + Math.min(validatedInput.output.length / 100, 5);
+          (session.metrics.creativityScore || 0) + Math.min(thinkingInput.output.length / 100, 5);
       }
 
       // Handle branches
-      if (validatedInput.branchFromStep && validatedInput.branchId) {
-        if (!session.branches[validatedInput.branchId]) {
-          session.branches[validatedInput.branchId] = [];
+      if (thinkingInput.branchFromStep && thinkingInput.branchId) {
+        if (!session.branches[thinkingInput.branchId]) {
+          session.branches[thinkingInput.branchId] = [];
         }
-        session.branches[validatedInput.branchId].push(validatedInput);
+        session.branches[thinkingInput.branchId].push(thinkingInput);
       }
 
       // Log formatted output
       if (!this.disableThoughtLogging) {
-        const formattedOutput = this.formatOutput({ ...validatedInput, sessionId });
+        const formattedOutput = this.formatOutput({ ...thinkingInput, sessionId });
         console.error(formattedOutput);
       }
 
       // Generate response
       const response: LateralThinkingResponse = {
         sessionId: sessionId,
-        technique: validatedInput.technique,
-        currentStep: validatedInput.currentStep,
-        totalSteps: validatedInput.totalSteps,
-        nextStepNeeded: validatedInput.nextStepNeeded,
+        technique: thinkingInput.technique,
+        currentStep: thinkingInput.currentStep,
+        totalSteps: thinkingInput.totalSteps,
+        nextStepNeeded: thinkingInput.nextStepNeeded,
         historyLength: session.history.length,
         branches: Object.keys(session.branches),
       };
 
       // Add completion summary if done
-      if (!validatedInput.nextStepNeeded) {
+      if (!thinkingInput.nextStepNeeded) {
         session.endTime = Date.now();
         response.completed = true;
         response.insights = this.extractInsights(session);
-        response.summary = `Lateral thinking session completed using ${validatedInput.technique} technique`;
+        response.summary = `Lateral thinking session completed using ${thinkingInput.technique} technique`;
 
         // Add metrics to response
         if (session.metrics) {
@@ -2000,12 +1942,12 @@ export class LateralThinkingServer {
       }
 
       // Add technique-specific guidance for next step
-      if (validatedInput.nextStepNeeded) {
-        response.nextStepGuidance = this.getNextStepGuidance(validatedInput);
+      if (thinkingInput.nextStepNeeded) {
+        response.nextStepGuidance = this.getNextStepGuidance(thinkingInput);
       }
 
       // Auto-save if enabled
-      if (validatedInput.autoSave && this.persistenceAdapter && session) {
+      if (thinkingInput.autoSave && this.persistenceAdapter && session) {
         try {
           await this.saveSessionToPersistence(sessionId, session);
         } catch (error) {
@@ -2043,7 +1985,7 @@ export class LateralThinkingServer {
     }
   }
 
-  private getNextStepGuidance(data: LateralThinkingData): string {
+  private getNextStepGuidance(data: ThinkingOperationData): string {
     const nextStep = data.currentStep + 1;
 
     switch (data.technique) {
@@ -2916,14 +2858,8 @@ export class LateralThinkingServer {
       });
     }
 
-    // Convert to LateralThinkingData and continue with existing logic
-    const lateralInput: LateralThinkingData = {
-      ...execInput,
-      // Associate with plan for tracking
-    };
-
     // Delegate to existing processLateralThinking
-    return this.processLateralThinking(lateralInput);
+    return this.processLateralThinking(execInput);
   }
 
   private getScamperDescription(action: ScamperAction): string {

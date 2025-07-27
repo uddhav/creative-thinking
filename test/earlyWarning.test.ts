@@ -343,7 +343,6 @@ describe('Early Warning System', () => {
         output: 'Initial',
         nextStepNeeded: true,
         timestamp: new Date().toISOString(),
-        sessionId: 'test-session-123',
       };
 
       // Generate some warnings
@@ -362,7 +361,8 @@ describe('Early Warning System', () => {
         );
       }
 
-      const history = ergodicityManager.getWarningHistory('test-session-123');
+      // Use the format that matches how warningSystem generates sessionId
+      const history = ergodicityManager.getWarningHistory('six_hats-Test problem');
       expect(history).toBeDefined();
       expect(history.length).toBeGreaterThan(0);
     });
