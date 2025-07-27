@@ -9,7 +9,7 @@ export class TechnicalDebtAnalyzer extends Sensor {
     /**
      * Calculate technical debt level
      */
-    async getRawReading(pathMemory, sessionData) {
+    getRawReading(pathMemory, sessionData) {
         const metrics = this.calculateTechnicalDebtMetrics(pathMemory, sessionData);
         // Weighted combination of debt factors
         const weights = {
@@ -28,12 +28,12 @@ export class TechnicalDebtAnalyzer extends Sensor {
             velocityDebt * weights.velocity +
             modularityDebt * weights.modularity +
             couplingDebt * weights.coupling;
-        return Math.min(1, Math.max(0, overallDebt));
+        return Promise.resolve(Math.min(1, Math.max(0, overallDebt)));
     }
     /**
      * Detect specific technical debt indicators
      */
-    async detectIndicators(pathMemory, sessionData) {
+    detectIndicators(pathMemory, sessionData) {
         const indicators = [];
         const metrics = this.calculateTechnicalDebtMetrics(pathMemory, sessionData);
         // Entropy indicators
@@ -63,20 +63,20 @@ export class TechnicalDebtAnalyzer extends Sensor {
         if (this.detectHackyPatterns(pathMemory)) {
             indicators.push('Quick-fix patterns accumulating');
         }
-        return indicators;
+        return Promise.resolve(indicators);
     }
     /**
      * Gather technical debt context
      */
-    async gatherContext(pathMemory, sessionData) {
+    gatherContext(pathMemory, sessionData) {
         const metrics = this.calculateTechnicalDebtMetrics(pathMemory, sessionData);
-        return {
+        return Promise.resolve({
             technicalDebtMetrics: metrics,
             quickFixCount: this.countQuickFixes(pathMemory),
             irreversibleDecisions: this.countIrreversibleDecisions(pathMemory),
             solutionComplexity: this.calculateSolutionComplexity(pathMemory),
             refactorOpportunities: this.identifyRefactorOpportunities(pathMemory),
-        };
+        });
     }
     /**
      * Calculate technical debt metrics

@@ -15,7 +15,7 @@ export class ResourceMonitor extends Sensor {
   /**
    * Calculate resource depletion level
    */
-  protected async getRawReading(pathMemory: PathMemory, sessionData: SessionData): Promise<number> {
+  protected getRawReading(pathMemory: PathMemory, sessionData: SessionData): Promise<number> {
     const metrics = this.calculateResourceMetrics(pathMemory, sessionData);
 
     // Weighted combination of different resource factors
@@ -42,13 +42,13 @@ export class ResourceMonitor extends Sensor {
     // Apply context factors
     const contextAdjusted = this.applyContextFactors(overallDepletion, pathMemory);
 
-    return Math.min(1, Math.max(0, contextAdjusted));
+    return Promise.resolve(Math.min(1, Math.max(0, contextAdjusted)));
   }
 
   /**
    * Detect specific resource depletion indicators
    */
-  protected async detectIndicators(pathMemory: PathMemory, sessionData: SessionData): Promise<string[]> {
+  protected detectIndicators(pathMemory: PathMemory, sessionData: SessionData): Promise<string[]> {
     const indicators: string[] = [];
     const metrics = this.calculateResourceMetrics(pathMemory, sessionData);
 
@@ -88,26 +88,26 @@ export class ResourceMonitor extends Sensor {
       indicators.push('Low resource reserves');
     }
 
-    return indicators;
+    return Promise.resolve(indicators);
   }
 
   /**
    * Gather resource-specific context
    */
-  protected async gatherContext(
+  protected gatherContext(
     pathMemory: PathMemory,
     sessionData: SessionData
   ): Promise<Record<string, unknown>> {
     const metrics = this.calculateResourceMetrics(pathMemory, sessionData);
 
-    return {
+    return Promise.resolve({
       resourceMetrics: metrics,
       sessionDuration: this.calculateSessionDuration(sessionData),
       stepCount: pathMemory.pathHistory.length,
       averageStepTime: this.calculateAverageStepTime(sessionData),
       wastedEffort: this.calculateWastedEffort(pathMemory),
       resourceTrend: this.calculateResourceTrend(),
-    };
+    });
   }
 
   /**

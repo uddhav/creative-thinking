@@ -15,7 +15,7 @@ export class TechnicalDebtAnalyzer extends Sensor {
   /**
    * Calculate technical debt level
    */
-  protected async getRawReading(pathMemory: PathMemory, sessionData: SessionData): Promise<number> {
+  protected getRawReading(pathMemory: PathMemory, sessionData: SessionData): Promise<number> {
     const metrics = this.calculateTechnicalDebtMetrics(pathMemory, sessionData);
 
     // Weighted combination of debt factors
@@ -39,13 +39,13 @@ export class TechnicalDebtAnalyzer extends Sensor {
       modularityDebt * weights.modularity +
       couplingDebt * weights.coupling;
 
-    return Math.min(1, Math.max(0, overallDebt));
+    return Promise.resolve(Math.min(1, Math.max(0, overallDebt)));
   }
 
   /**
    * Detect specific technical debt indicators
    */
-  protected async detectIndicators(pathMemory: PathMemory, sessionData: SessionData): Promise<string[]> {
+  protected detectIndicators(pathMemory: PathMemory, sessionData: SessionData): Promise<string[]> {
     const indicators: string[] = [];
     const metrics = this.calculateTechnicalDebtMetrics(pathMemory, sessionData);
 
@@ -82,25 +82,25 @@ export class TechnicalDebtAnalyzer extends Sensor {
       indicators.push('Quick-fix patterns accumulating');
     }
 
-    return indicators;
+    return Promise.resolve(indicators);
   }
 
   /**
    * Gather technical debt context
    */
-  protected async gatherContext(
+  protected gatherContext(
     pathMemory: PathMemory,
     sessionData: SessionData
   ): Promise<Record<string, unknown>> {
     const metrics = this.calculateTechnicalDebtMetrics(pathMemory, sessionData);
 
-    return {
+    return Promise.resolve({
       technicalDebtMetrics: metrics,
       quickFixCount: this.countQuickFixes(pathMemory),
       irreversibleDecisions: this.countIrreversibleDecisions(pathMemory),
       solutionComplexity: this.calculateSolutionComplexity(pathMemory),
       refactorOpportunities: this.identifyRefactorOpportunities(pathMemory),
-    };
+    });
   }
 
   /**

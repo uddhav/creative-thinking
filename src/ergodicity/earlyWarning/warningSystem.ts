@@ -34,22 +34,27 @@ export class AbsorbingBarrierEarlyWarning {
   private lastMeasurementTime: Map<SensorType, number> = new Map();
   private readonly measurementThrottleMs: number;
   private readonly defaultCalibration: Partial<SensorCalibration>;
-  private readonly onError: (error: Error, context: { sensor?: SensorType; operation: string }) => void;
+  private readonly onError: (
+    error: Error,
+    context: { sensor?: SensorType; operation: string }
+  ) => void;
   private sensorFailures: Map<SensorType, number> = new Map();
   private readonly maxConsecutiveFailures = 3;
 
   constructor(config: EarlyWarningConfig = {}) {
     // Apply configuration with defaults
     this.maxHistorySize = config.maxHistorySize ?? 100;
-    this.historyTTL = config.historyTTL ?? (24 * 60 * 60 * 1000); // 24 hours
+    this.historyTTL = config.historyTTL ?? 24 * 60 * 60 * 1000; // 24 hours
     this.measurementThrottleMs = config.measurementThrottleMs ?? 5000; // 5 seconds
     this.defaultCalibration = config.defaultCalibration ?? {};
-    this.onError = config.onError ?? ((error, context) => {
-      console.error(`Early Warning System Error [${context.operation}]:`, error);
-      if (context.sensor) {
-        console.error(`Sensor: ${context.sensor}`);
-      }
-    });
+    this.onError =
+      config.onError ??
+      ((error, context) => {
+        console.error(`Early Warning System Error [${context.operation}]:`, error);
+        if (context.sensor) {
+          console.error(`Sensor: ${context.sensor}`);
+        }
+      });
 
     // Initialize sensors with calibration
     this.sensors = new Map<SensorType, Sensor>();
@@ -81,7 +86,12 @@ export class AbsorbingBarrierEarlyWarning {
           if (cachedReading) {
             sensorReadings.set(sensorType, cachedReading);
             // Still check for warnings with cached reading
-            const warnings = this.generateWarningsFromReading(cachedReading, sensor, pathMemory, sessionData);
+            const warnings = this.generateWarningsFromReading(
+              cachedReading,
+              sensor,
+              pathMemory,
+              sessionData
+            );
             activeWarnings.push(...warnings);
             continue;
           }
@@ -99,7 +109,7 @@ export class AbsorbingBarrierEarlyWarning {
         this.sensorFailures.set(sensorType, 0);
       } catch (error) {
         this.handleSensorError(error as Error, sensorType);
-        
+
         // Use fallback reading if available
         const fallbackReading = this.createFallbackReading(sensorType);
         if (fallbackReading) {
@@ -481,17 +491,24 @@ ${barrier.description}
 
     // Remove old sessions based on TTL
     this.warningHistory = this.warningHistory.filter(history => {
-      const lastWarningTime = history.warnings.length > 0
-        ? new Date(history.warnings[history.warnings.length - 1].timestamp).getTime()
-        : now;
+      const lastWarningTime =
+        history.warnings.length > 0
+          ? new Date(history.warnings[history.warnings.length - 1].timestamp).getTime()
+          : now;
       return lastWarningTime > cutoffTime;
     });
 
     // If still too many sessions, keep only the most recent
     if (this.warningHistory.length > this.maxHistorySize) {
       this.warningHistory.sort((a, b) => {
-        const aTime = a.warnings.length > 0 ? new Date(a.warnings[a.warnings.length - 1].timestamp).getTime() : 0;
-        const bTime = b.warnings.length > 0 ? new Date(b.warnings[b.warnings.length - 1].timestamp).getTime() : 0;
+        const aTime =
+          a.warnings.length > 0
+            ? new Date(a.warnings[a.warnings.length - 1].timestamp).getTime()
+            : 0;
+        const bTime =
+          b.warnings.length > 0
+            ? new Date(b.warnings[b.warnings.length - 1].timestamp).getTime()
+            : 0;
         return bTime - aTime;
       });
       this.warningHistory = this.warningHistory.slice(0, this.maxHistorySize);
@@ -655,7 +672,7 @@ ${barrier.description}
       if (lastReading) {
         const age = Date.now() - new Date(lastReading.timestamp).getTime();
         const ageMinutes = age / (1000 * 60);
-        
+
         // Only use readings less than 30 minutes old
         if (ageMinutes < 30) {
           return {

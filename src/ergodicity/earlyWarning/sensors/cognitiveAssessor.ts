@@ -25,7 +25,7 @@ export class CognitiveAssessor extends Sensor {
   /**
    * Calculate cognitive rigidity level
    */
-  protected async getRawReading(pathMemory: PathMemory, sessionData: SessionData): Promise<number> {
+  protected getRawReading(pathMemory: PathMemory, sessionData: SessionData): Promise<number> {
     const metrics = this.calculateCognitiveMetrics(pathMemory, sessionData);
 
     // Weighted combination of cognitive factors
@@ -52,13 +52,13 @@ export class CognitiveAssessor extends Sensor {
     // Apply pattern-based adjustments
     const patternAdjusted = this.adjustForCognitivePatterns(overallRigidity, pathMemory);
 
-    return Math.min(1, Math.max(0, patternAdjusted));
+    return Promise.resolve(Math.min(1, Math.max(0, patternAdjusted)));
   }
 
   /**
    * Detect specific cognitive rigidity indicators
    */
-  protected async detectIndicators(pathMemory: PathMemory, sessionData: SessionData): Promise<string[]> {
+  protected detectIndicators(pathMemory: PathMemory, sessionData: SessionData): Promise<string[]> {
     const indicators: string[] = [];
     const metrics = this.calculateCognitiveMetrics(pathMemory, sessionData);
 
@@ -102,19 +102,19 @@ export class CognitiveAssessor extends Sensor {
       indicators.push('Repetitive thinking patterns');
     }
 
-    return indicators;
+    return Promise.resolve(indicators);
   }
 
   /**
    * Gather cognitive-specific context
    */
-  protected async gatherContext(
+  protected gatherContext(
     pathMemory: PathMemory,
     sessionData: SessionData
   ): Promise<Record<string, unknown>> {
     const metrics = this.calculateCognitiveMetrics(pathMemory, sessionData);
 
-    return {
+    return Promise.resolve({
       cognitiveMetrics: metrics,
       uniqueTechniquesUsed: this.countUniqueTechniques(pathMemory),
       perspectiveShifts: this.countPerspectiveShifts(pathMemory),
@@ -122,7 +122,7 @@ export class CognitiveAssessor extends Sensor {
       dominantTechnique: this.identifyDominantTechnique(pathMemory),
       thinkingLoops: this.detectThinkingLoops(pathMemory),
       cognitiveLoad: this.estimateCognitiveLoad(pathMemory),
-    };
+    });
   }
 
   /**

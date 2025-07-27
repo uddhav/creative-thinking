@@ -9,7 +9,7 @@ export class ResourceMonitor extends Sensor {
     /**
      * Calculate resource depletion level
      */
-    async getRawReading(pathMemory, sessionData) {
+    getRawReading(pathMemory, sessionData) {
         const metrics = this.calculateResourceMetrics(pathMemory, sessionData);
         // Weighted combination of different resource factors
         const weights = {
@@ -30,12 +30,12 @@ export class ResourceMonitor extends Sensor {
             efficiencyDepletion * weights.efficiency;
         // Apply context factors
         const contextAdjusted = this.applyContextFactors(overallDepletion, pathMemory);
-        return Math.min(1, Math.max(0, contextAdjusted));
+        return Promise.resolve(Math.min(1, Math.max(0, contextAdjusted)));
     }
     /**
      * Detect specific resource depletion indicators
      */
-    async detectIndicators(pathMemory, sessionData) {
+    detectIndicators(pathMemory, sessionData) {
         const indicators = [];
         const metrics = this.calculateResourceMetrics(pathMemory, sessionData);
         // Energy indicators
@@ -69,21 +69,21 @@ export class ResourceMonitor extends Sensor {
         if (metrics.reserves < 0.2) {
             indicators.push('Low resource reserves');
         }
-        return indicators;
+        return Promise.resolve(indicators);
     }
     /**
      * Gather resource-specific context
      */
-    async gatherContext(pathMemory, sessionData) {
+    gatherContext(pathMemory, sessionData) {
         const metrics = this.calculateResourceMetrics(pathMemory, sessionData);
-        return {
+        return Promise.resolve({
             resourceMetrics: metrics,
             sessionDuration: this.calculateSessionDuration(sessionData),
             stepCount: pathMemory.pathHistory.length,
             averageStepTime: this.calculateAverageStepTime(sessionData),
             wastedEffort: this.calculateWastedEffort(pathMemory),
             resourceTrend: this.calculateResourceTrend(),
-        };
+        });
     }
     /**
      * Calculate comprehensive resource metrics

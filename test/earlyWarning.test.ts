@@ -131,10 +131,10 @@ describe('Early Warning System', () => {
     it('should detect cognitive lock-in patterns', async () => {
       // Create extreme cognitive rigidity to ensure warning triggers
       // Need to push cognitive raw reading above 0.5 for CAUTION level
-      
+
       // Create enough history to trigger repetitive thinking detection
       // Need at least 10 path history items with < 4 unique decisions
-      
+
       // Use only 2 unique decisions repeatedly to ensure detection
       const decisions = ['Apply standard fix', 'Apply standard fix', 'Use standard approach'];
       for (let i = 0; i < 20; i++) {
@@ -152,7 +152,7 @@ describe('Early Warning System', () => {
           sessionData
         );
       }
-      
+
       // Update session history to match
       for (let i = 0; i < 15; i++) {
         sessionData.history.push({
@@ -169,63 +169,36 @@ describe('Early Warning System', () => {
       const result = await ergodicityManager.getEarlyWarningState(sessionData);
 
       expect(result).toBeDefined();
-      // Debug output
-      console.log('Early warning state:', {
-        overallRisk: result?.overallRisk,
-        warningCount: result?.activeWarnings?.length || 0,
-        sensorCount: result?.sensorReadings?.size || 0,
-        recommendedAction: result?.recommendedAction,
-      });
-      
-      if (result?.sensorReadings) {
-        console.log('Sensor readings:');
-        for (const [sensor, reading] of result.sensorReadings) {
-          console.log(`  ${sensor}: raw=${reading.rawValue.toFixed(2)}, distance=${reading.distance.toFixed(2)}, level=${reading.warningLevel}`);
-        }
-      }
-      
-      if (result?.activeWarnings && result.activeWarnings.length > 0) {
-        console.log('Active warnings:', result.activeWarnings.map(w => ({
-          sensor: w.sensor,
-          level: w.severity,
-          indicators: w.reading.indicators
-        })));
-      }
       // Check if cognitive sensor is close to warning threshold
       const cognitiveReading = result?.sensorReadings?.get('cognitive');
-      console.log('Cognitive sensor details:', {
-        rawValue: cognitiveReading?.rawValue,
-        indicators: cognitiveReading?.indicators,
-        confidence: cognitiveReading?.confidence
-      });
-      
+
       // Check that cognitive sensor is detecting rigidity
       const cognitiveWarning = result?.activeWarnings.find(w => w.sensor === 'cognitive');
       const cognitiveIndicators = cognitiveReading?.indicators || [];
-      
+
       // Accept any indicator that suggests cognitive rigidity
       const rigidityIndicators = [
         'Repetitive thinking patterns',
         'Rarely questioning assumptions',
         'Low creative divergence',
-        'Limited perspective diversity'
+        'Limited perspective diversity',
       ];
-      
-      const hasRigidityIndicator = rigidityIndicators.some(indicator => 
+
+      const hasRigidityIndicator = rigidityIndicators.some(indicator =>
         cognitiveIndicators.includes(indicator)
       );
-      
+
       // Test passes if:
       // 1. Cognitive sensor shows high rigidity (close to warning threshold)
       // 2. OR there's an actual cognitive warning
       // 3. OR cognitive indicators suggest rigidity
-      const cognitiveRigidityDetected = 
+      const cognitiveRigidityDetected =
         (cognitiveReading?.rawValue && cognitiveReading.rawValue > 0.45) ||
         cognitiveWarning ||
         hasRigidityIndicator;
-      
+
       expect(cognitiveRigidityDetected).toBeTruthy();
-      
+
       // Verify the sensor is measuring cognitive patterns
       expect(cognitiveReading).toBeDefined();
       expect(cognitiveReading?.rawValue).toBeGreaterThan(0.4); // Should show some rigidity
@@ -234,13 +207,13 @@ describe('Early Warning System', () => {
     it('should recommend escape protocols for critical warnings', async () => {
       // Create severe conditions that will trigger multiple critical warnings
       // This should trigger technical debt, resource depletion, and cognitive lock-in
-      
+
       // Create extreme conditions to trigger CRITICAL warnings
       // Need to push sensors past their critical thresholds (distance < 0.15)
-      
+
       // Set session to be very long for resource depletion
       sessionData.startTime = Date.now() - 6 * 60 * 60 * 1000; // 6 hours ago
-      
+
       // Rapidly accumulate extreme technical debt and cognitive lock-in
       for (let i = 0; i < 40; i++) {
         await ergodicityManager.recordThinkingStep(
@@ -256,7 +229,7 @@ describe('Early Warning System', () => {
           },
           sessionData
         );
-        
+
         // Update session history with spread out timestamps for long duration
         sessionData.history.push({
           technique: 'scamper',
@@ -268,7 +241,7 @@ describe('Early Warning System', () => {
           timestamp: new Date(Date.now() - (40 - i) * 9 * 60 * 1000).toISOString(), // ~6 hours
         });
       }
-      
+
       // Final step that should trigger multiple critical warnings
       const result = await ergodicityManager.recordThinkingStep(
         'scamper',
@@ -285,45 +258,22 @@ describe('Early Warning System', () => {
       );
 
       expect(result.earlyWarningState).toBeDefined();
-      
-      // Debug output
-      console.log('Escape test - Early warning state:', {
-        overallRisk: result.earlyWarningState?.overallRisk,
-        warningCount: result.earlyWarningState?.activeWarnings?.length || 0,
-        compoundRisk: result.earlyWarningState?.compoundRisk,
-        recommendedAction: result.earlyWarningState?.recommendedAction,
-      });
-      
-      if (result.earlyWarningState?.activeWarnings) {
-        console.log('Warnings by severity:');
-        const bySeverity = result.earlyWarningState.activeWarnings.reduce((acc, w) => {
-          acc[w.severity] = (acc[w.severity] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>);
-        console.log(bySeverity);
-        
-        console.log('Warning details:', result.earlyWarningState.activeWarnings.map(w => ({
-          sensor: w.sensor,
-          severity: w.severity,
-          distance: w.reading.distance
-        })));
-      }
-      
+
       // With WARNING level warnings, the system recommends 'pivot'
       // 'escape' is only for CRITICAL warnings or compound risk
       expect(result.earlyWarningState?.recommendedAction).toBe('pivot');
-      
+
       // Check that we have significant warnings
       expect(result.earlyWarningState?.activeWarnings.length).toBeGreaterThan(0);
-      
+
       // Check escape routes are available even at WARNING level
       const escapeRoutes = result.earlyWarningState?.escapeRoutesAvailable;
       expect(escapeRoutes).toBeDefined();
-      
+
       // Escape routes may be filtered by flexibility requirements
       // Just verify the structure is correct
       expect(Array.isArray(escapeRoutes)).toBeTruthy();
-      
+
       // Verify the system is detecting serious issues
       const hasWarningLevel = result.earlyWarningState?.activeWarnings.some(
         w => w.severity === BarrierWarningLevel.WARNING

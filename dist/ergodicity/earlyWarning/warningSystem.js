@@ -22,15 +22,17 @@ export class AbsorbingBarrierEarlyWarning {
     constructor(config = {}) {
         // Apply configuration with defaults
         this.maxHistorySize = config.maxHistorySize ?? 100;
-        this.historyTTL = config.historyTTL ?? (24 * 60 * 60 * 1000); // 24 hours
+        this.historyTTL = config.historyTTL ?? 24 * 60 * 60 * 1000; // 24 hours
         this.measurementThrottleMs = config.measurementThrottleMs ?? 5000; // 5 seconds
         this.defaultCalibration = config.defaultCalibration ?? {};
-        this.onError = config.onError ?? ((error, context) => {
-            console.error(`Early Warning System Error [${context.operation}]:`, error);
-            if (context.sensor) {
-                console.error(`Sensor: ${context.sensor}`);
-            }
-        });
+        this.onError =
+            config.onError ??
+                ((error, context) => {
+                    console.error(`Early Warning System Error [${context.operation}]:`, error);
+                    if (context.sensor) {
+                        console.error(`Sensor: ${context.sensor}`);
+                    }
+                });
         // Initialize sensors with calibration
         this.sensors = new Map();
         this.sensors.set('resource', new ResourceMonitor(this.defaultCalibration));
@@ -386,8 +388,12 @@ ${barrier.description}
         // If still too many sessions, keep only the most recent
         if (this.warningHistory.length > this.maxHistorySize) {
             this.warningHistory.sort((a, b) => {
-                const aTime = a.warnings.length > 0 ? new Date(a.warnings[a.warnings.length - 1].timestamp).getTime() : 0;
-                const bTime = b.warnings.length > 0 ? new Date(b.warnings[b.warnings.length - 1].timestamp).getTime() : 0;
+                const aTime = a.warnings.length > 0
+                    ? new Date(a.warnings[a.warnings.length - 1].timestamp).getTime()
+                    : 0;
+                const bTime = b.warnings.length > 0
+                    ? new Date(b.warnings[b.warnings.length - 1].timestamp).getTime()
+                    : 0;
                 return bTime - aTime;
             });
             this.warningHistory = this.warningHistory.slice(0, this.maxHistorySize);
