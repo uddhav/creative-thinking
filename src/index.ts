@@ -458,7 +458,7 @@ export class LateralThinkingServer {
               type: 'text',
               text: JSON.stringify(
                 {
-                  error: `Unknown session operation: ${input.sessionOperation}`,
+                  error: `Unknown session operation: ${input.sessionOperation as string}`,
                   status: 'failed',
                 },
                 null,
@@ -1054,10 +1054,11 @@ export class LateralThinkingServer {
   }
 
   // Type guard to check if input is a session operation
-  private isSessionOperation(data: any): data is SessionOperationData {
+  private isSessionOperation(data: unknown): data is SessionOperationData {
+    const record = data as Record<string, unknown>;
     return (
-      data.sessionOperation !== undefined &&
-      ['save', 'load', 'list', 'delete', 'export'].includes(data.sessionOperation as string)
+      record.sessionOperation !== undefined &&
+      ['save', 'load', 'list', 'delete', 'export'].includes(record.sessionOperation as string)
     );
   }
 
@@ -1074,9 +1075,7 @@ export class LateralThinkingServer {
 
   private validateSessionOperation(data: Record<string, unknown>): SessionOperationData {
     if (!['save', 'load', 'list', 'delete', 'export'].includes(data.sessionOperation as string)) {
-      throw new Error(
-        'Invalid sessionOperation: must be one of save, load, list, delete, export'
-      );
+      throw new Error('Invalid sessionOperation: must be one of save, load, list, delete, export');
     }
 
     // Validate operation-specific options
@@ -1098,9 +1097,7 @@ export class LateralThinkingServer {
         throw new Error('sessionId is required in exportOptions for export operation');
       }
       if (!['json', 'markdown', 'csv'].includes(exportOpts.format as string)) {
-        throw new Error(
-          'Invalid export format: must be one of json, markdown, csv'
-        );
+        throw new Error('Invalid export format: must be one of json, markdown, csv');
       }
     }
 
@@ -1810,10 +1807,10 @@ export class LateralThinkingServer {
 
       // Handle session operations first
       if ('sessionOperation' in validatedInput) {
-        return await this.handleSessionOperation(validatedInput as SessionOperationData);
+        return await this.handleSessionOperation(validatedInput);
       }
       // Now we know it's a thinking operation
-      const thinkingInput = validatedInput as ThinkingOperationData;
+      const thinkingInput = validatedInput;
 
       let sessionId: string;
       let session: SessionData | undefined;
@@ -1892,13 +1889,9 @@ export class LateralThinkingServer {
             (session.metrics.risksCaught || 0) + thinkingInput.risks.length;
         }
         // Count antifragile properties
-        if (
-          thinkingInput.antifragileProperties &&
-          thinkingInput.antifragileProperties.length > 0
-        ) {
+        if (thinkingInput.antifragileProperties && thinkingInput.antifragileProperties.length > 0) {
           session.metrics.antifragileFeatures =
-            (session.metrics.antifragileFeatures || 0) +
-            thinkingInput.antifragileProperties.length;
+            (session.metrics.antifragileFeatures || 0) + thinkingInput.antifragileProperties.length;
         }
         // Simple creativity score based on output length and variety
         session.metrics.creativityScore =

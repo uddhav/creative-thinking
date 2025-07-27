@@ -619,8 +619,9 @@ export class LateralThinkingServer {
     }
     // Type guard to check if input is a session operation
     isSessionOperation(data) {
-        return (data.sessionOperation !== undefined &&
-            ['save', 'load', 'list', 'delete', 'export'].includes(data.sessionOperation));
+        const record = data;
+        return (record.sessionOperation !== undefined &&
+            ['save', 'load', 'list', 'delete', 'export'].includes(record.sessionOperation));
     }
     validateInput(input) {
         const data = input;
@@ -1321,11 +1322,9 @@ export class LateralThinkingServer {
                         (session.metrics.risksCaught || 0) + thinkingInput.risks.length;
                 }
                 // Count antifragile properties
-                if (thinkingInput.antifragileProperties &&
-                    thinkingInput.antifragileProperties.length > 0) {
+                if (thinkingInput.antifragileProperties && thinkingInput.antifragileProperties.length > 0) {
                     session.metrics.antifragileFeatures =
-                        (session.metrics.antifragileFeatures || 0) +
-                            thinkingInput.antifragileProperties.length;
+                        (session.metrics.antifragileFeatures || 0) + thinkingInput.antifragileProperties.length;
                 }
                 // Simple creativity score based on output length and variety
                 session.metrics.creativityScore =
