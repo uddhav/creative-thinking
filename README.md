@@ -124,6 +124,21 @@ The integrated early warning system continuously monitors for approaching "point
 
 When barriers are detected, the system recommends specific escape protocols ranging from simple pattern interruption to strategic pivots, each calibrated to your current flexibility level.
 
+### 🌱 Option Generation Engine
+
+When flexibility drops below 0.4, the system automatically activates the Option Generation Engine to create new possibilities through eight strategic approaches:
+
+- **Decomposition** - Break monolithic commitments into flexible modules
+- **Temporal** - Adjust time parameters (delay commitments, accelerate options)
+- **Abstraction** - Move up abstraction levels to find new solution spaces
+- **Inversion** - Flip constraints into features and reverse assumptions
+- **Stakeholder** - Introduce new perspectives and collaborative opportunities
+- **Resource** - Reallocate or discover untapped resources
+- **Capability** - Leverage hidden skills or develop new competencies
+- **Recombination** - Mix existing elements in novel ways
+
+The engine evaluates each generated option for flexibility gain, implementation cost, reversibility, and synergy with existing choices, ensuring practical and effective recommendations.
+
 ## Tools
 
 ### 🔍 discover_techniques

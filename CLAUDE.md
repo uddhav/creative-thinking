@@ -26,7 +26,11 @@ npm run test:coverage # Run tests with coverage report
 # The project includes comprehensive test suites:
 # - Export functionality tests (CSV, JSON, Markdown exporters)
 # - Persistence adapter tests (filesystem operations)
-# - All tests use Vitest framework with coverage reporting
+# - Option Generation Engine tests (all 8 strategies, evaluation, caching)
+# - Layered tools architecture tests (discovery, planning, execution)
+# - Ergodicity and path dependency tracking tests
+# - Early warning system and escape protocol tests
+# - All tests use Vitest v3 framework with coverage reporting
 ```
 
 ### Running the Server
@@ -56,6 +60,9 @@ docker run -it creative-thinking
 - **Eight thinking techniques**: Six Hats, PO, Random Entry, SCAMPER, Concept Extraction, Yes And, Design Thinking, TRIZ
 - **Session management**: Full state persistence with branching and revision support
 - **Visual output**: Structured console output with progress tracking
+- **Option Generation Engine**: Automatic activation when flexibility < 0.4 with 8 generation strategies
+- **Ergodicity tracking**: Path dependency awareness and absorbing barrier detection
+- **Early Warning System**: Multi-level alerts for approaching creative constraints
 
 ### Key Types and Interfaces
 ```typescript
@@ -130,7 +137,7 @@ interface SessionState {
   history: Array<{
     step: number;
     timestamp: string;
-    input: LateralThinkingArgs;
+    input: ExecuteThinkingStepInput;
     output: any;
   }>;
   branches: Map<string, SessionState>;

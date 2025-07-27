@@ -20,6 +20,7 @@ The framework demonstrates how creative decisions create irreversible constraint
 8. Part VI: The Ergodicity Toolkit for Innovation
 9. Part VII: Advanced Integration in Non-Ergodic Systems
 10. Conclusion: Navigating the Path-Dependent Future of AI Reasoning
+11. Current Implementation: Three-Layer Architecture
 
 ## Introduction: The Duality of Creative Intelligence in Non-Ergodic Reality
 
@@ -3098,7 +3099,222 @@ WorkOS. (2023). *Why AI still needs you: Exploring human-in-the-loop systems*. h
 
 [x]cube LABS. (2023). *Human-AI collaboration: Enhancing creativity with generative AI*. https://www.xcubelabs.com/blog/human-ai-collaboration-enhancing-creativity-with-generative-ai/
 
-Yasunaga, M., Kasai, J., Zhang, R., Fabbri, A. R., Li, I., Friedman, D., & Radev, D. R. (2023). *Analogical prompting: Enhancing large language models with analogical reasoning*. Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing.
+## Current Implementation: Three-Layer Architecture
 
-Zuidgeest, M. M., Brouwer, H. J., & Perquin, C. W. (2024). [Most Psychological Researchers Assume Their Samples Are Ergodic: Evidence From a Year of Articles in Three Major Journals](https://online.ucpress.edu/collabra/article/10/1/92888/200006/Most-Psychological-Researchers-Assume-Their). *Collabra: Psychology*, 10(1), 92888.
+### Overview
+
+The Creative Thinking MCP Server implements the comprehensive framework described above through a **three-layer architecture** that maps the theoretical concepts to practical tools. This design ensures that all the path-dependent, ergodicity-aware, and unified generative/adversarial concepts are accessible through a clean, focused API.
+
+### Fundamental Design Principle: Three Tools Only
+
+The server exposes **EXACTLY three tools** that encompass all functionality:
+
+1. **`discover_techniques`** - Discovery Layer
+2. **`plan_thinking_session`** - Planning Layer  
+3. **`execute_thinking_step`** - Execution Layer
+
+This constraint ensures:
+- Clean API that mirrors natural creative workflows
+- Prevention of tool proliferation
+- Thoughtful integration of all features
+- Consistency with layered thinking processes
+
+### Layer 1: Discovery (`discover_techniques`)
+
+The Discovery layer analyzes problems and recommends suitable techniques based on:
+- Problem characteristics and context
+- Preferred outcomes (innovative, systematic, risk-aware, collaborative, analytical)
+- Current flexibility score (triggers Option Generation Engine when < 0.4)
+- Constraint analysis and path dependency awareness
+- Absorbing barrier detection
+
+**Integrates from framework**:
+- Path dependency analysis
+- Ergodicity awareness
+- Absorbing barrier detection
+- Option Generation Engine (8 strategies)
+- Technique suitability scoring
+
+### Layer 2: Planning (`plan_thinking_session`)
+
+The Planning layer creates structured workflows that:
+- Combine multiple techniques in synergistic sequences
+- Account for time constraints (quick/thorough/comprehensive)
+- Map objectives to technique capabilities
+- Design escape routes and flexibility preservation
+- Integrate risk assessment throughout
+
+**Integrates from framework**:
+- Path-aware workflow design
+- Constraint evolution planning
+- Exit strategy preparation
+- Multi-technique integration patterns
+- Time-sensitive adaptation
+
+### Layer 3: Execution (`execute_thinking_step`)
+
+The Execution layer guides step-by-step implementation with:
+- Full session state management
+- Visual progress indicators
+- Path dependency metrics display
+- Early warning system alerts
+- Automatic option generation when needed
+- Branching and revision support
+
+**Integrates from framework**:
+- All 8 enhanced thinking techniques
+- Unified generative/adversarial fields
+- Real-time ergodicity tracking
+- Absorbing barrier warnings
+- Escape protocol recommendations
+
+### Eight Implemented Techniques
+
+Each technique incorporates the unified framework enhancements:
+
+1. **Six Thinking Hats Plus** (7 steps including Purple Hat)
+   - Blue: Process control with meta-uncertainty
+   - White: Facts including unknown unknowns
+   - Red: Emotions and collective behavior
+   - Yellow: Optimism seeking positive black swans
+   - Black: Critical judgment of catastrophic discontinuities
+   - Green: Creativity focused on antifragile innovations
+   - Purple: Path dependencies and ergodicity awareness
+
+2. **Provocative Operation (PO)** (4 steps)
+   - Provocation creation
+   - Exploration with systematic doubt
+   - Principle extraction and verification
+   - Solution development with failure modes
+
+3. **Random Entry** (3 steps)
+   - Random stimulus introduction
+   - Connection generation with assumption questioning
+   - Insight validation before solution development
+
+4. **SCAMPER** (7 steps)
+   - Each transformation includes pre-mortem analysis
+   - Risk assessment integrated into each action
+   - Path dependency awareness for each change
+
+5. **Concept Extraction** (4 steps)
+   - Success example identification
+   - Concept extraction with limitation awareness
+   - Pattern abstraction with boundary definition
+   - Application with domain-specific risk assessment
+
+6. **Yes, And** (4 steps)
+   - Initial idea acceptance
+   - Creative building phase
+   - Critical evaluation phase
+   - Synthesis into robust solutions
+
+7. **Design Thinking** (5 steps)
+   - Empathize with threat modeling
+   - Define with failure mode consideration
+   - Ideate with built-in critique
+   - Prototype including edge cases
+   - Test with failure harvesting
+
+8. **TRIZ** (4 steps)
+   - Contradiction identification
+   - Via negativa application
+   - Inventive principles (bidirectional)
+   - Minimal solution achievement
+
+### Key Implementation Features
+
+#### Ergodicity Tracking System
+- **Path Memory**: Records all decisions and their irreversible effects
+- **Flexibility Metrics**: Real-time monitoring (0-1 scale)
+- **Option Velocity**: Rate of option creation vs closure
+- **Commitment Depth**: Measure of irreversibility
+- **Barrier Proximity**: Distance to absorbing states
+
+#### Early Warning System
+- **Multi-Sensor Architecture**:
+  - ResourceMonitor (energy, time, materials)
+  - CognitiveAssessor (rigidity, perspective diversity)
+  - TechnicalDebtAnalyzer (complexity, coupling)
+- **Four Warning Levels**: 🟢 SAFE > 🟡 CAUTION > 🟠 WARNING > 🔴 CRITICAL
+- **Escape Protocols**: Five levels from pattern interruption to strategic pivot
+
+#### Option Generation Engine
+Activates automatically when flexibility < 0.4:
+- **Decomposition**: Break monoliths into modules
+- **Temporal**: Adjust time parameters
+- **Abstraction**: Move up conceptual levels
+- **Inversion**: Flip constraints to features
+- **Stakeholder**: New perspective introduction
+- **Resource**: Reallocation and discovery
+- **Capability**: Skill leverage and development
+- **Recombination**: Novel element mixing
+
+#### Session Management
+- **Full Persistence**: Save/load/export capabilities
+- **Branching Support**: Explore alternative paths
+- **Export Formats**: JSON, Markdown, CSV
+- **Revision Tracking**: Complete history preservation
+- **Insight Extraction**: Automatic summary generation
+
+### Visual Output System
+
+All outputs include:
+- Technique-specific formatting and colors
+- Progress indicators (step X/Y)
+- Path dependency metrics display
+- Warning alerts when approaching barriers
+- Risk/mitigation sections (color-coded)
+- Creative/critical mode indicators (✨/⚠️)
+
+### Integration Points
+
+#### With Claude Desktop or MCP-Compatible Tools
+```json
+{
+  "mcpServers": {
+    "creative-thinking": {
+      "command": "npx",
+      "args": ["-y", "github:uddhav/creative-thinking"]
+    }
+  }
+}
+```
+
+#### Environment Variables
+- `DISABLE_THOUGHT_LOGGING`: Suppress visual output
+- `PERSISTENCE_TYPE`: Choose storage backend
+- `PERSISTENCE_PATH`: Custom session storage location
+
+### Testing Coverage
+
+Comprehensive test suites ensure reliability:
+- Export functionality (CSV, JSON, Markdown)
+- Persistence operations
+- Option Generation Engine (all 8 strategies)
+- Layered architecture integration
+- Ergodicity tracking accuracy
+- Early warning system triggers
+- Session management operations
+- All using Vitest v3 with coverage reporting
+
+### Technology Stack
+
+- **Runtime**: Node.js with TypeScript
+- **MCP SDK**: @modelcontextprotocol/sdk v1.16.0
+- **Testing**: Vitest v3.2.4
+- **Visual Output**: Chalk for terminal formatting
+- **State Management**: In-memory with optional persistence
+- **Export**: Multiple format support
+
+### Future Integration Paths
+
+While maintaining the three-tool constraint:
+- Machine learning for personalized thresholds
+- Team-level barrier detection
+- External monitoring system integration
+- Advanced visualization options
+- Collaborative session support
+
+All future features must integrate within the existing three-layer architecture, ensuring the framework's theoretical richness remains accessible through a clean, focused interface.
 
