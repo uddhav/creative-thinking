@@ -9,10 +9,7 @@ export class ResourceMonitor extends Sensor {
     /**
      * Calculate resource depletion level
      */
-    getRawReading(pathMemory, sessionData) {
-        return Promise.resolve(this.getRawReadingSync(pathMemory, sessionData));
-    }
-    getRawReadingSync(pathMemory, sessionData) {
+    async getRawReading(pathMemory, sessionData) {
         const metrics = this.calculateResourceMetrics(pathMemory, sessionData);
         // Weighted combination of different resource factors
         const weights = {
@@ -38,10 +35,7 @@ export class ResourceMonitor extends Sensor {
     /**
      * Detect specific resource depletion indicators
      */
-    detectIndicators(pathMemory, sessionData) {
-        return Promise.resolve(this.detectIndicatorsSync(pathMemory, sessionData));
-    }
-    detectIndicatorsSync(pathMemory, sessionData) {
+    async detectIndicators(pathMemory, sessionData) {
         const indicators = [];
         const metrics = this.calculateResourceMetrics(pathMemory, sessionData);
         // Energy indicators
@@ -80,10 +74,7 @@ export class ResourceMonitor extends Sensor {
     /**
      * Gather resource-specific context
      */
-    gatherContext(pathMemory, sessionData) {
-        return Promise.resolve(this.gatherContextSync(pathMemory, sessionData));
-    }
-    gatherContextSync(pathMemory, sessionData) {
+    async gatherContext(pathMemory, sessionData) {
         const metrics = this.calculateResourceMetrics(pathMemory, sessionData);
         return {
             resourceMetrics: metrics,
@@ -258,7 +249,7 @@ export class ResourceMonitor extends Sensor {
         const recentTechniques = pathMemory.pathHistory.slice(-10).map(d => d.technique);
         const totalTechniques = recentTechniques.length;
         const uniqueTechniques = new Set(recentTechniques).size;
-        return 1 - uniqueTechniques / totalTechniques;
+        return totalTechniques > 0 ? 1 - uniqueTechniques / totalTechniques : 0;
     }
     /**
      * Calculate session duration in milliseconds
@@ -279,7 +270,7 @@ export class ResourceMonitor extends Sensor {
         if (steps === 0) {
             return 0;
         }
-        return duration / steps;
+        return steps > 0 ? duration / steps : 0;
     }
     /**
      * Calculate wasted effort
@@ -316,7 +307,7 @@ export class ResourceMonitor extends Sensor {
             return undefined;
         }
         // Simple model: energy / burn rate = time units remaining
-        return energyLevel / burnRate;
+        return burnRate > 0 ? energyLevel / burnRate : undefined;
     }
     /**
      * Estimate budget remaining (simplified)

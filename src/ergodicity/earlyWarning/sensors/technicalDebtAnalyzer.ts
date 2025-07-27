@@ -15,11 +15,7 @@ export class TechnicalDebtAnalyzer extends Sensor {
   /**
    * Calculate technical debt level
    */
-  protected getRawReading(pathMemory: PathMemory, sessionData: SessionData): Promise<number> {
-    return Promise.resolve(this.getRawReadingSync(pathMemory, sessionData));
-  }
-
-  private getRawReadingSync(pathMemory: PathMemory, sessionData: SessionData): number {
+  protected async getRawReading(pathMemory: PathMemory, sessionData: SessionData): Promise<number> {
     const metrics = this.calculateTechnicalDebtMetrics(pathMemory, sessionData);
 
     // Weighted combination of debt factors
@@ -49,11 +45,7 @@ export class TechnicalDebtAnalyzer extends Sensor {
   /**
    * Detect specific technical debt indicators
    */
-  protected detectIndicators(pathMemory: PathMemory, sessionData: SessionData): Promise<string[]> {
-    return Promise.resolve(this.detectIndicatorsSync(pathMemory, sessionData));
-  }
-
-  private detectIndicatorsSync(pathMemory: PathMemory, sessionData: SessionData): string[] {
+  protected async detectIndicators(pathMemory: PathMemory, sessionData: SessionData): Promise<string[]> {
     const indicators: string[] = [];
     const metrics = this.calculateTechnicalDebtMetrics(pathMemory, sessionData);
 
@@ -96,17 +88,10 @@ export class TechnicalDebtAnalyzer extends Sensor {
   /**
    * Gather technical debt context
    */
-  protected gatherContext(
+  protected async gatherContext(
     pathMemory: PathMemory,
     sessionData: SessionData
   ): Promise<Record<string, unknown>> {
-    return Promise.resolve(this.gatherContextSync(pathMemory, sessionData));
-  }
-
-  private gatherContextSync(
-    pathMemory: PathMemory,
-    sessionData: SessionData
-  ): Record<string, unknown> {
     const metrics = this.calculateTechnicalDebtMetrics(pathMemory, sessionData);
 
     return {
@@ -246,8 +231,7 @@ export class TechnicalDebtAnalyzer extends Sensor {
     const olderDebt = this.calculateAverageDebt(older);
 
     // Rate of increase
-    if (olderDebt === 0) return 1;
-    return recentDebt / olderDebt;
+    return olderDebt > 0 ? recentDebt / olderDebt : 1;
   }
 
   /**
@@ -260,7 +244,7 @@ export class TechnicalDebtAnalyzer extends Sensor {
       .map((e: PathMemory['pathHistory'][0]) => e.commitmentLevel * 0.5 + e.reversibilityCost * 0.5)
       .reduce((a: number, b: number) => a + b, 0);
 
-    return totalDebt / events.length;
+    return events.length > 0 ? totalDebt / events.length : 0;
   }
 
   /**

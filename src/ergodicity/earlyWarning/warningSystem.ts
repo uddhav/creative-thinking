@@ -13,6 +13,8 @@ import type {
   EscapeProtocol,
   WarningHistory,
   WarningPattern,
+  EarlyWarningConfig,
+  SensorCalibration,
 } from './types.js';
 import type { PathMemory, Barrier } from '../types.js';
 import type { SessionData } from '../../index.js';
@@ -27,12 +29,33 @@ export class AbsorbingBarrierEarlyWarning {
   private sensors: Map<SensorType, Sensor>;
   private warningHistory: WarningHistory[] = [];
   private lastWarningState: EarlyWarningState | null = null;
+  private readonly maxHistorySize: number;
+  private readonly historyTTL: number;
+  private lastMeasurementTime: Map<SensorType, number> = new Map();
+  private readonly measurementThrottleMs: number;
+  private readonly defaultCalibration: Partial<SensorCalibration>;
+  private readonly onError: (error: Error, context: { sensor?: SensorType; operation: string }) => void;
+  private sensorFailures: Map<SensorType, number> = new Map();
+  private readonly maxConsecutiveFailures = 3;
 
-  constructor() {
+  constructor(config: EarlyWarningConfig = {}) {
+    // Apply configuration with defaults
+    this.maxHistorySize = config.maxHistorySize ?? 100;
+    this.historyTTL = config.historyTTL ?? (24 * 60 * 60 * 1000); // 24 hours
+    this.measurementThrottleMs = config.measurementThrottleMs ?? 5000; // 5 seconds
+    this.defaultCalibration = config.defaultCalibration ?? {};
+    this.onError = config.onError ?? ((error, context) => {
+      console.error(`Early Warning System Error [${context.operation}]:`, error);
+      if (context.sensor) {
+        console.error(`Sensor: ${context.sensor}`);
+      }
+    });
+
+    // Initialize sensors with calibration
     this.sensors = new Map<SensorType, Sensor>();
-    this.sensors.set('resource', new ResourceMonitor());
-    this.sensors.set('cognitive', new CognitiveAssessor());
-    this.sensors.set('technical_debt', new TechnicalDebtAnalyzer());
+    this.sensors.set('resource', new ResourceMonitor(this.defaultCalibration));
+    this.sensors.set('cognitive', new CognitiveAssessor(this.defaultCalibration));
+    this.sensors.set('technical_debt', new TechnicalDebtAnalyzer(this.defaultCalibration));
   }
 
   /**
@@ -44,18 +67,44 @@ export class AbsorbingBarrierEarlyWarning {
   ): Promise<EarlyWarningState> {
     const sensorReadings = new Map<SensorType, SensorReading>();
     const activeWarnings: BarrierWarning[] = [];
+    const now = Date.now();
 
-    // Run all sensors
+    // Run all sensors with throttling
     for (const [sensorType, sensor] of this.sensors) {
       try {
+        const lastMeasurement = this.lastMeasurementTime.get(sensorType) || 0;
+        const timeSinceLastMeasurement = now - lastMeasurement;
+
+        // Use cached reading if within throttle window
+        if (timeSinceLastMeasurement < this.measurementThrottleMs && this.lastWarningState) {
+          const cachedReading = this.lastWarningState.sensorReadings.get(sensorType);
+          if (cachedReading) {
+            sensorReadings.set(sensorType, cachedReading);
+            // Still check for warnings with cached reading
+            const warnings = this.generateWarningsFromReading(cachedReading, sensor, pathMemory, sessionData);
+            activeWarnings.push(...warnings);
+            continue;
+          }
+        }
+
+        // Take new measurement
         const reading = await sensor.measure(pathMemory, sessionData);
         sensorReadings.set(sensorType, reading);
+        this.lastMeasurementTime.set(sensorType, now);
 
         // Generate warnings if needed
         const warnings = this.generateWarningsFromReading(reading, sensor, pathMemory, sessionData);
         activeWarnings.push(...warnings);
+        // Reset failure count on success
+        this.sensorFailures.set(sensorType, 0);
       } catch (error) {
-        console.error(`Sensor ${sensorType} failed:`, error);
+        this.handleSensorError(error as Error, sensorType);
+        
+        // Use fallback reading if available
+        const fallbackReading = this.createFallbackReading(sensorType);
+        if (fallbackReading) {
+          sensorReadings.set(sensorType, fallbackReading);
+        }
       }
     }
 
@@ -109,12 +158,15 @@ export class AbsorbingBarrierEarlyWarning {
     const monitoredBarriers = sensor.getMonitoredBarriers();
 
     for (const barrier of monitoredBarriers) {
-      // Update barrier proximity from reading
-      barrier.proximity = reading.rawValue;
+      // Create a copy of barrier with updated proximity
+      const barrierWithProximity = {
+        ...barrier,
+        proximity: reading.rawValue,
+      };
 
       // Generate warning if threshold exceeded
       if (reading.warningLevel !== BarrierWarningLevel.SAFE) {
-        const warning = this.createBarrierWarning(reading, barrier, sensor.type);
+        const warning = this.createBarrierWarning(reading, barrierWithProximity, sensor.type);
         warnings.push(warning);
       }
     }
@@ -415,6 +467,35 @@ ${barrier.description}
     // Extract learnings
     const learnings = this.extractLearnings(history);
     history.learnings = learnings;
+
+    // Clean up old sessions
+    this.cleanupWarningHistory();
+  }
+
+  /**
+   * Clean up old warning history to prevent memory leaks
+   */
+  private cleanupWarningHistory(): void {
+    const now = Date.now();
+    const cutoffTime = now - this.historyTTL;
+
+    // Remove old sessions based on TTL
+    this.warningHistory = this.warningHistory.filter(history => {
+      const lastWarningTime = history.warnings.length > 0
+        ? new Date(history.warnings[history.warnings.length - 1].timestamp).getTime()
+        : now;
+      return lastWarningTime > cutoffTime;
+    });
+
+    // If still too many sessions, keep only the most recent
+    if (this.warningHistory.length > this.maxHistorySize) {
+      this.warningHistory.sort((a, b) => {
+        const aTime = a.warnings.length > 0 ? new Date(a.warnings[a.warnings.length - 1].timestamp).getTime() : 0;
+        const bTime = b.warnings.length > 0 ? new Date(b.warnings[b.warnings.length - 1].timestamp).getTime() : 0;
+        return bTime - aTime;
+      });
+      this.warningHistory = this.warningHistory.slice(0, this.maxHistorySize);
+    }
   }
 
   /**
@@ -537,5 +618,56 @@ ${barrier.description}
       sensor.reset();
     }
     this.lastWarningState = null;
+    this.sensorFailures.clear();
+  }
+
+  /**
+   * Handle sensor errors with proper reporting
+   */
+  private handleSensorError(error: Error, sensorType: SensorType): void {
+    const failures = (this.sensorFailures.get(sensorType) ?? 0) + 1;
+    this.sensorFailures.set(sensorType, failures);
+
+    const context = {
+      sensor: sensorType,
+      operation: 'sensor measurement',
+      consecutiveFailures: failures,
+    };
+
+    this.onError(error, context);
+
+    // Disable sensor after too many failures
+    if (failures >= this.maxConsecutiveFailures) {
+      this.onError(
+        new Error(`Sensor ${sensorType} disabled after ${failures} consecutive failures`),
+        { sensor: sensorType, operation: 'sensor disabled' }
+      );
+    }
+  }
+
+  /**
+   * Create a fallback reading for a failed sensor
+   */
+  private createFallbackReading(sensorType: SensorType): SensorReading | null {
+    // If we have a recent reading, use it with reduced confidence
+    if (this.lastWarningState) {
+      const lastReading = this.lastWarningState.sensorReadings.get(sensorType);
+      if (lastReading) {
+        const age = Date.now() - new Date(lastReading.timestamp).getTime();
+        const ageMinutes = age / (1000 * 60);
+        
+        // Only use readings less than 30 minutes old
+        if (ageMinutes < 30) {
+          return {
+            ...lastReading,
+            timestamp: new Date().toISOString(),
+            confidence: Math.max(0.1, lastReading.confidence * (1 - ageMinutes / 30)),
+            indicators: [...lastReading.indicators, 'Using cached reading due to sensor failure'],
+          };
+        }
+      }
+    }
+
+    return null;
   }
 }

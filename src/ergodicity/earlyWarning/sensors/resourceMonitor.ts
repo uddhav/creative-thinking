@@ -15,11 +15,7 @@ export class ResourceMonitor extends Sensor {
   /**
    * Calculate resource depletion level
    */
-  protected getRawReading(pathMemory: PathMemory, sessionData: SessionData): Promise<number> {
-    return Promise.resolve(this.getRawReadingSync(pathMemory, sessionData));
-  }
-
-  private getRawReadingSync(pathMemory: PathMemory, sessionData: SessionData): number {
+  protected async getRawReading(pathMemory: PathMemory, sessionData: SessionData): Promise<number> {
     const metrics = this.calculateResourceMetrics(pathMemory, sessionData);
 
     // Weighted combination of different resource factors
@@ -52,11 +48,7 @@ export class ResourceMonitor extends Sensor {
   /**
    * Detect specific resource depletion indicators
    */
-  protected detectIndicators(pathMemory: PathMemory, sessionData: SessionData): Promise<string[]> {
-    return Promise.resolve(this.detectIndicatorsSync(pathMemory, sessionData));
-  }
-
-  private detectIndicatorsSync(pathMemory: PathMemory, sessionData: SessionData): string[] {
+  protected async detectIndicators(pathMemory: PathMemory, sessionData: SessionData): Promise<string[]> {
     const indicators: string[] = [];
     const metrics = this.calculateResourceMetrics(pathMemory, sessionData);
 
@@ -102,17 +94,10 @@ export class ResourceMonitor extends Sensor {
   /**
    * Gather resource-specific context
    */
-  protected gatherContext(
+  protected async gatherContext(
     pathMemory: PathMemory,
     sessionData: SessionData
   ): Promise<Record<string, unknown>> {
-    return Promise.resolve(this.gatherContextSync(pathMemory, sessionData));
-  }
-
-  private gatherContextSync(
-    pathMemory: PathMemory,
-    sessionData: SessionData
-  ): Record<string, unknown> {
     const metrics = this.calculateResourceMetrics(pathMemory, sessionData);
 
     return {
@@ -331,7 +316,7 @@ export class ResourceMonitor extends Sensor {
     const totalTechniques = recentTechniques.length;
     const uniqueTechniques = new Set(recentTechniques).size;
 
-    return 1 - uniqueTechniques / totalTechniques;
+    return totalTechniques > 0 ? 1 - uniqueTechniques / totalTechniques : 0;
   }
 
   /**
@@ -357,7 +342,7 @@ export class ResourceMonitor extends Sensor {
       return 0;
     }
 
-    return duration / steps;
+    return steps > 0 ? duration / steps : 0;
   }
 
   /**
@@ -401,7 +386,7 @@ export class ResourceMonitor extends Sensor {
     }
 
     // Simple model: energy / burn rate = time units remaining
-    return energyLevel / burnRate;
+    return burnRate > 0 ? energyLevel / burnRate : undefined;
   }
 
   /**

@@ -213,9 +213,10 @@ export abstract class Sensor {
 
     // Calculate steps to impact based on current rate
     // Assuming each step moves us approachRate * 0.1 closer
-    const stepsToImpact = distance / (approachRate * 0.1);
+    const approachSpeed = approachRate * 0.1;
+    const stepsToImpact = approachSpeed > 0 ? distance / approachSpeed : undefined;
 
-    return Math.round(stepsToImpact);
+    return stepsToImpact !== undefined ? Math.round(stepsToImpact) : undefined;
   }
 
   /**

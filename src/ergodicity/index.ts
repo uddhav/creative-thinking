@@ -12,7 +12,7 @@ import { MetricsCalculator } from './metrics.js';
 import { AbsorbingBarrierEarlyWarning, ResponseProtocolSystem } from './earlyWarning/index.js';
 import type { PathMemory, FlexibilityMetrics, PathEvent, ErgodicityWarning } from './types.js';
 import type { LateralTechnique, SessionData } from '../index.js';
-import type { EarlyWarningState, EscapeProtocol } from './earlyWarning/types.js';
+import type { EarlyWarningState, EscapeProtocol, EarlyWarningConfig } from './earlyWarning/types.js';
 
 /**
  * Main ergodicity manager that coordinates path tracking and metrics
@@ -25,10 +25,10 @@ export class ErgodicityManager {
   private lastWarningState: EarlyWarningState | null = null;
   private autoEscapeEnabled: boolean = true;
 
-  constructor() {
+  constructor(warningConfig?: EarlyWarningConfig) {
     this.pathMemoryManager = new PathMemoryManager();
     this.metricsCalculator = new MetricsCalculator();
-    this.earlyWarningSystem = new AbsorbingBarrierEarlyWarning();
+    this.earlyWarningSystem = new AbsorbingBarrierEarlyWarning(warningConfig);
     this.responseProtocolSystem = new ResponseProtocolSystem();
   }
 

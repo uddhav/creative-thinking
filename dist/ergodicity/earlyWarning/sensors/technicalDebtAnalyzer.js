@@ -9,10 +9,7 @@ export class TechnicalDebtAnalyzer extends Sensor {
     /**
      * Calculate technical debt level
      */
-    getRawReading(pathMemory, sessionData) {
-        return Promise.resolve(this.getRawReadingSync(pathMemory, sessionData));
-    }
-    getRawReadingSync(pathMemory, sessionData) {
+    async getRawReading(pathMemory, sessionData) {
         const metrics = this.calculateTechnicalDebtMetrics(pathMemory, sessionData);
         // Weighted combination of debt factors
         const weights = {
@@ -36,10 +33,7 @@ export class TechnicalDebtAnalyzer extends Sensor {
     /**
      * Detect specific technical debt indicators
      */
-    detectIndicators(pathMemory, sessionData) {
-        return Promise.resolve(this.detectIndicatorsSync(pathMemory, sessionData));
-    }
-    detectIndicatorsSync(pathMemory, sessionData) {
+    async detectIndicators(pathMemory, sessionData) {
         const indicators = [];
         const metrics = this.calculateTechnicalDebtMetrics(pathMemory, sessionData);
         // Entropy indicators
@@ -74,10 +68,7 @@ export class TechnicalDebtAnalyzer extends Sensor {
     /**
      * Gather technical debt context
      */
-    gatherContext(pathMemory, sessionData) {
-        return Promise.resolve(this.gatherContextSync(pathMemory, sessionData));
-    }
-    gatherContextSync(pathMemory, sessionData) {
+    async gatherContext(pathMemory, sessionData) {
         const metrics = this.calculateTechnicalDebtMetrics(pathMemory, sessionData);
         return {
             technicalDebtMetrics: metrics,
@@ -181,9 +172,7 @@ export class TechnicalDebtAnalyzer extends Sensor {
         const recentDebt = this.calculateAverageDebt(recent);
         const olderDebt = this.calculateAverageDebt(older);
         // Rate of increase
-        if (olderDebt === 0)
-            return 1;
-        return recentDebt / olderDebt;
+        return olderDebt > 0 ? recentDebt / olderDebt : 1;
     }
     /**
      * Calculate average debt for a set of events
@@ -194,7 +183,7 @@ export class TechnicalDebtAnalyzer extends Sensor {
         const totalDebt = events
             .map((e) => e.commitmentLevel * 0.5 + e.reversibilityCost * 0.5)
             .reduce((a, b) => a + b, 0);
-        return totalDebt / events.length;
+        return events.length > 0 ? totalDebt / events.length : 0;
     }
     /**
      * Detect hacky patterns

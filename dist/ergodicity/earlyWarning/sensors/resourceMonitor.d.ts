@@ -11,17 +11,14 @@ export declare class ResourceMonitor extends Sensor {
      * Calculate resource depletion level
      */
     protected getRawReading(pathMemory: PathMemory, sessionData: SessionData): Promise<number>;
-    private getRawReadingSync;
     /**
      * Detect specific resource depletion indicators
      */
     protected detectIndicators(pathMemory: PathMemory, sessionData: SessionData): Promise<string[]>;
-    private detectIndicatorsSync;
     /**
      * Gather resource-specific context
      */
     protected gatherContext(pathMemory: PathMemory, sessionData: SessionData): Promise<Record<string, unknown>>;
-    private gatherContextSync;
     /**
      * Calculate comprehensive resource metrics
      */

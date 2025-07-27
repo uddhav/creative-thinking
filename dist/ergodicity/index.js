@@ -18,10 +18,10 @@ export class ErgodicityManager {
     responseProtocolSystem;
     lastWarningState = null;
     autoEscapeEnabled = true;
-    constructor() {
+    constructor(warningConfig) {
         this.pathMemoryManager = new PathMemoryManager();
         this.metricsCalculator = new MetricsCalculator();
-        this.earlyWarningSystem = new AbsorbingBarrierEarlyWarning();
+        this.earlyWarningSystem = new AbsorbingBarrierEarlyWarning(warningConfig);
         this.responseProtocolSystem = new ResponseProtocolSystem();
     }
     /**

@@ -7,7 +7,7 @@ export * from './metrics.js';
 export * from './earlyWarning/index.js';
 import type { PathMemory, FlexibilityMetrics, PathEvent, ErgodicityWarning } from './types.js';
 import type { LateralTechnique, SessionData } from '../index.js';
-import type { EarlyWarningState, EscapeProtocol } from './earlyWarning/types.js';
+import type { EarlyWarningState, EscapeProtocol, EarlyWarningConfig } from './earlyWarning/types.js';
 /**
  * Main ergodicity manager that coordinates path tracking and metrics
  */
@@ -18,7 +18,7 @@ export declare class ErgodicityManager {
     private responseProtocolSystem;
     private lastWarningState;
     private autoEscapeEnabled;
-    constructor();
+    constructor(warningConfig?: EarlyWarningConfig);
     /**
      * Record a thinking step and its path impacts with early warning monitoring
      */

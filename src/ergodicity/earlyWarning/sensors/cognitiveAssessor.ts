@@ -25,11 +25,7 @@ export class CognitiveAssessor extends Sensor {
   /**
    * Calculate cognitive rigidity level
    */
-  protected getRawReading(pathMemory: PathMemory, sessionData: SessionData): Promise<number> {
-    return Promise.resolve(this.getRawReadingSync(pathMemory, sessionData));
-  }
-
-  private getRawReadingSync(pathMemory: PathMemory, sessionData: SessionData): number {
+  protected async getRawReading(pathMemory: PathMemory, sessionData: SessionData): Promise<number> {
     const metrics = this.calculateCognitiveMetrics(pathMemory, sessionData);
 
     // Weighted combination of cognitive factors
@@ -62,11 +58,7 @@ export class CognitiveAssessor extends Sensor {
   /**
    * Detect specific cognitive rigidity indicators
    */
-  protected detectIndicators(pathMemory: PathMemory, sessionData: SessionData): Promise<string[]> {
-    return Promise.resolve(this.detectIndicatorsSync(pathMemory, sessionData));
-  }
-
-  private detectIndicatorsSync(pathMemory: PathMemory, sessionData: SessionData): string[] {
+  protected async detectIndicators(pathMemory: PathMemory, sessionData: SessionData): Promise<string[]> {
     const indicators: string[] = [];
     const metrics = this.calculateCognitiveMetrics(pathMemory, sessionData);
 
@@ -116,17 +108,10 @@ export class CognitiveAssessor extends Sensor {
   /**
    * Gather cognitive-specific context
    */
-  protected gatherContext(
+  protected async gatherContext(
     pathMemory: PathMemory,
     sessionData: SessionData
   ): Promise<Record<string, unknown>> {
-    return Promise.resolve(this.gatherContextSync(pathMemory, sessionData));
-  }
-
-  private gatherContextSync(
-    pathMemory: PathMemory,
-    sessionData: SessionData
-  ): Record<string, unknown> {
     const metrics = this.calculateCognitiveMetrics(pathMemory, sessionData);
 
     return {

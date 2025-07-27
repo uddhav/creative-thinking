@@ -11,17 +11,14 @@ export declare class CognitiveAssessor extends Sensor {
      * Calculate cognitive rigidity level
      */
     protected getRawReading(pathMemory: PathMemory, sessionData: SessionData): Promise<number>;
-    private getRawReadingSync;
     /**
      * Detect specific cognitive rigidity indicators
      */
     protected detectIndicators(pathMemory: PathMemory, sessionData: SessionData): Promise<string[]>;
-    private detectIndicatorsSync;
     /**
      * Gather cognitive-specific context
      */
     protected gatherContext(pathMemory: PathMemory, sessionData: SessionData): Promise<Record<string, unknown>>;
-    private gatherContextSync;
     /**
      * Calculate comprehensive cognitive metrics
      */

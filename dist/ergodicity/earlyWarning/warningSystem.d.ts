@@ -2,14 +2,22 @@
  * Absorbing Barrier Early Warning System
  * Coordinates multiple sensors to detect approaching points of no return
  */
-import type { SensorType, EarlyWarningState, WarningHistory } from './types.js';
+import type { SensorType, EarlyWarningState, WarningHistory, EarlyWarningConfig } from './types.js';
 import type { PathMemory } from '../types.js';
 import type { SessionData } from '../../index.js';
 export declare class AbsorbingBarrierEarlyWarning {
     private sensors;
     private warningHistory;
     private lastWarningState;
-    constructor();
+    private readonly maxHistorySize;
+    private readonly historyTTL;
+    private lastMeasurementTime;
+    private readonly measurementThrottleMs;
+    private readonly defaultCalibration;
+    private readonly onError;
+    private sensorFailures;
+    private readonly maxConsecutiveFailures;
+    constructor(config?: EarlyWarningConfig);
     /**
      * Perform continuous monitoring of all sensors
      */
@@ -71,6 +79,10 @@ export declare class AbsorbingBarrierEarlyWarning {
      */
     private updateWarningHistory;
     /**
+     * Clean up old warning history to prevent memory leaks
+     */
+    private cleanupWarningHistory;
+    /**
      * Detect patterns in warning history
      */
     private detectWarningPatterns;
@@ -98,5 +110,13 @@ export declare class AbsorbingBarrierEarlyWarning {
      * Reset warning system
      */
     reset(): void;
+    /**
+     * Handle sensor errors with proper reporting
+     */
+    private handleSensorError;
+    /**
+     * Create a fallback reading for a failed sensor
+     */
+    private createFallbackReading;
 }
 //# sourceMappingURL=warningSystem.d.ts.map

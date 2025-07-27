@@ -223,3 +223,23 @@ export interface WarningPattern {
   commonTriggers: string[];
   effectiveEscapes: EscapeProtocol[];
 }
+
+/**
+ * Configuration for the early warning system
+ */
+export interface EarlyWarningConfig {
+  maxHistorySize?: number;
+  historyTTL?: number;
+  measurementThrottleMs?: number;
+  defaultCalibration?: Partial<SensorCalibration>;
+  onError?: (error: Error, context: { sensor?: SensorType; operation: string }) => void;
+}
+
+/**
+ * Sensor error with context
+ */
+export interface SensorError extends Error {
+  sensor: SensorType;
+  operation: string;
+  recoverable: boolean;
+}

@@ -11,17 +11,14 @@ export declare class TechnicalDebtAnalyzer extends Sensor {
      * Calculate technical debt level
      */
     protected getRawReading(pathMemory: PathMemory, sessionData: SessionData): Promise<number>;
-    private getRawReadingSync;
     /**
      * Detect specific technical debt indicators
      */
     protected detectIndicators(pathMemory: PathMemory, sessionData: SessionData): Promise<string[]>;
-    private detectIndicatorsSync;
     /**
      * Gather technical debt context
      */
     protected gatherContext(pathMemory: PathMemory, sessionData: SessionData): Promise<Record<string, unknown>>;
-    private gatherContextSync;
     /**
      * Calculate technical debt metrics
      */

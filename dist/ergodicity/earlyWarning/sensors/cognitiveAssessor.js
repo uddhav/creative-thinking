@@ -19,10 +19,7 @@ export class CognitiveAssessor extends Sensor {
     /**
      * Calculate cognitive rigidity level
      */
-    getRawReading(pathMemory, sessionData) {
-        return Promise.resolve(this.getRawReadingSync(pathMemory, sessionData));
-    }
-    getRawReadingSync(pathMemory, sessionData) {
+    async getRawReading(pathMemory, sessionData) {
         const metrics = this.calculateCognitiveMetrics(pathMemory, sessionData);
         // Weighted combination of cognitive factors
         const weights = {
@@ -48,10 +45,7 @@ export class CognitiveAssessor extends Sensor {
     /**
      * Detect specific cognitive rigidity indicators
      */
-    detectIndicators(pathMemory, sessionData) {
-        return Promise.resolve(this.detectIndicatorsSync(pathMemory, sessionData));
-    }
-    detectIndicatorsSync(pathMemory, sessionData) {
+    async detectIndicators(pathMemory, sessionData) {
         const indicators = [];
         const metrics = this.calculateCognitiveMetrics(pathMemory, sessionData);
         // Perspective diversity indicators
@@ -94,10 +88,7 @@ export class CognitiveAssessor extends Sensor {
     /**
      * Gather cognitive-specific context
      */
-    gatherContext(pathMemory, sessionData) {
-        return Promise.resolve(this.gatherContextSync(pathMemory, sessionData));
-    }
-    gatherContextSync(pathMemory, sessionData) {
+    async gatherContext(pathMemory, sessionData) {
         const metrics = this.calculateCognitiveMetrics(pathMemory, sessionData);
         return {
             cognitiveMetrics: metrics,
