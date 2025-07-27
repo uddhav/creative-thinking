@@ -85,6 +85,21 @@ Each technique integrates creative generation with systematic verification:
 - Progress tracking with visual indicators and formatted output
 - Insights extraction and summary generation upon completion
 
+### Ergodicity Awareness (NEW)
+
+The server now tracks path dependencies and non-ergodic effects in creative thinking:
+
+- **Path Memory System** - Tracks how each decision creates irreversible constraints
+- **Flexibility Metrics** - Real-time monitoring of remaining creative options
+- **Absorbing Barrier Detection** - Warns about approaching irreversible states like:
+  - Cognitive lock-in (stuck in one way of thinking)
+  - Analysis paralysis (overthinking preventing action)
+  - Perfectionism trap (standards preventing completion)
+- **Escape Routes** - Suggests ways to regain flexibility when options are limited
+- **Visual Indicators** - Shows path metrics in every thinking step output
+
+The system recognizes that creative processes are non-ergodic: each decision permanently changes the landscape of future possibilities. This helps you maintain awareness of path dependencies and avoid getting trapped in absorbing states.
+
 ## Tools
 
 ### 🔍 discover_techniques
@@ -186,14 +201,15 @@ Executes a single step in your creative thinking process.
 
 ## Thinking Techniques
 
-### Six Thinking Hats Plus
-Multi-perspective analysis enhanced with meta-uncertainty awareness:
+### Six Thinking Hats Plus with Purple Hat
+Multi-perspective analysis enhanced with meta-uncertainty awareness and path dependency tracking:
 1. **Blue Hat** - Process control with meta-uncertainty awareness
 2. **White Hat** - Facts and data including unknown unknowns
 3. **Red Hat** - Emotions, intuition, and collective behavior
 4. **Yellow Hat** - Optimism and positive possibilities
 5. **Black Hat** - Critical judgment and risk assessment
 6. **Green Hat** - Creative solutions and antifragile innovations
+7. **Purple Hat** (NEW) - Path dependencies, constraints, and ergodicity awareness
 
 ### Provocative Operation (PO)
 Four-step process for breaking mental patterns:

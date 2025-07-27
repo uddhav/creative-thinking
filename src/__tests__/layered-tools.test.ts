@@ -124,9 +124,9 @@ describe('Layered Tools Architecture', () => {
       expect(result.isError).toBeFalsy();
       const text = result.content[0]?.text || '';
       expect(text).toContain('workflow');
-      // Should create 6 steps for Six Hats
+      // Should create 7 steps for Six Hats (now includes Purple Hat)
       const stepMatches = text.match(/"stepNumber":\s*\d+/g) || [];
-      expect(stepMatches.length).toBe(6);
+      expect(stepMatches.length).toBe(7);
     });
 
     it('should combine multiple techniques in workflow', async () => {

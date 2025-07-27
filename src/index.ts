@@ -13,6 +13,8 @@ import type {
   ExportFormat,
 } from './persistence/index.js';
 import { createAdapter, getDefaultConfig } from './persistence/index.js';
+import type { PathMemory } from './ergodicity/index.js';
+import { ErgodicityManager } from './ergodicity/index.js';
 
 export type LateralTechnique =
   | 'six_hats'
@@ -23,7 +25,7 @@ export type LateralTechnique =
   | 'yes_and'
   | 'design_thinking'
   | 'triz';
-export type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green';
+export type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green' | 'purple';
 export type ScamperAction =
   | 'substitute'
   | 'combine'
@@ -248,6 +250,9 @@ interface SessionData {
   // Session management fields
   tags?: string[];
   name?: string;
+  // Ergodicity tracking
+  pathMemory?: PathMemory;
+  ergodicityManager?: ErgodicityManager;
 }
 
 interface LateralThinkingResponse {
@@ -871,6 +876,12 @@ export class LateralThinkingServer {
         emoji: '🟢',
         enhancedFocus: 'Creativity and antifragile innovations',
       },
+      purple: {
+        name: 'Purple Hat',
+        focus: 'Path analysis and constraint mapping',
+        emoji: '🟣',
+        enhancedFocus: 'Path dependencies, constraints, and ergodicity awareness',
+      },
     };
     return hatsInfo[color];
   }
@@ -1033,7 +1044,9 @@ export class LateralThinkingServer {
     if (
       technique === 'six_hats' &&
       data.hatColor &&
-      !['blue', 'white', 'red', 'yellow', 'black', 'green'].includes(data.hatColor as string)
+      !['blue', 'white', 'red', 'yellow', 'black', 'green', 'purple'].includes(
+        data.hatColor as string
+      )
     ) {
       throw new Error('Invalid hatColor for six_hats technique');
     }
@@ -1313,6 +1326,114 @@ export class LateralThinkingServer {
     return parts;
   }
 
+  /**
+   * Calculate path impact based on the thinking step
+   */
+  private calculatePathImpact(data: LateralThinkingData): {
+    optionsOpened?: string[];
+    optionsClosed?: string[];
+    reversibilityCost?: number;
+    commitmentLevel?: number;
+  } {
+    const impact: {
+      optionsOpened?: string[];
+      optionsClosed?: string[];
+      reversibilityCost?: number;
+      commitmentLevel?: number;
+    } = {};
+
+    // Technique-specific impact analysis
+    switch (data.technique) {
+      case 'six_hats':
+        if (data.hatColor === 'purple') {
+          // Purple hat opens path analysis options
+          impact.optionsOpened = ['Path analysis completed', 'Constraints mapped'];
+          impact.reversibilityCost = 0.1;
+          impact.commitmentLevel = 0.1;
+        } else if (data.hatColor === 'black') {
+          // Black hat might close some risky options
+          impact.optionsClosed = data.risks || [];
+          impact.reversibilityCost = 0.2;
+          impact.commitmentLevel = 0.3;
+        } else {
+          // Other hats are mostly exploratory
+          impact.reversibilityCost = 0.1;
+          impact.commitmentLevel = 0.1;
+        }
+        break;
+
+      case 'po':
+        if (data.currentStep === 4) {
+          // Final solution development has higher commitment
+          impact.commitmentLevel = 0.6;
+          impact.reversibilityCost = 0.4;
+        } else {
+          // Exploration phases
+          impact.commitmentLevel = 0.2;
+          impact.reversibilityCost = 0.1;
+        }
+        break;
+
+      case 'scamper':
+        // SCAMPER modifications can have varying impacts
+        if (data.scamperAction === 'eliminate') {
+          impact.optionsClosed = ['Eliminated feature/component'];
+          impact.reversibilityCost = 0.7;
+          impact.commitmentLevel = 0.6;
+        } else if (data.scamperAction === 'combine') {
+          impact.optionsClosed = ['Independent operation of combined elements'];
+          impact.reversibilityCost = 0.5;
+          impact.commitmentLevel = 0.5;
+        } else {
+          impact.reversibilityCost = 0.3;
+          impact.commitmentLevel = 0.4;
+        }
+        break;
+
+      case 'design_thinking':
+        if (data.designStage === 'prototype' || data.designStage === 'test') {
+          // Later stages have higher commitment
+          impact.commitmentLevel = 0.7;
+          impact.reversibilityCost = 0.5;
+          impact.optionsClosed = ['Alternative design directions'];
+        } else {
+          impact.commitmentLevel = 0.3;
+          impact.reversibilityCost = 0.2;
+        }
+        break;
+
+      case 'yes_and':
+        // Each addition builds commitment
+        impact.commitmentLevel = 0.4 + data.currentStep * 0.1;
+        impact.reversibilityCost = 0.3 + data.currentStep * 0.1;
+        if (data.additions && data.additions.length > 0) {
+          impact.optionsOpened = data.additions;
+        }
+        break;
+
+      case 'triz':
+        // TRIZ solutions tend to be more technical and harder to reverse
+        impact.commitmentLevel = 0.6;
+        impact.reversibilityCost = 0.6;
+        if (data.viaNegativaRemovals && data.viaNegativaRemovals.length > 0) {
+          impact.optionsClosed = data.viaNegativaRemovals;
+        }
+        break;
+
+      default:
+        // Default low impact for exploration
+        impact.commitmentLevel = 0.2;
+        impact.reversibilityCost = 0.2;
+    }
+
+    // Factor in explicit risk considerations
+    if (data.risks && data.risks.length > 0) {
+      impact.commitmentLevel = Math.min(1.0, (impact.commitmentLevel || 0.2) + 0.1);
+    }
+
+    return impact;
+  }
+
   private formatOutput(data: LateralThinkingData): string {
     const {
       technique,
@@ -1467,6 +1588,23 @@ export class LateralThinkingServer {
       parts.push(...this.formatMitigationSection(data.mitigations, maxLength, !!data.risks));
     }
 
+    // Add ergodicity status if available
+    if (data.sessionId) {
+      const session = this.sessions.get(data.sessionId);
+      if (session?.ergodicityManager) {
+        const ergodicityStatus = session.ergodicityManager.getErgodicityStatus();
+        if (ergodicityStatus) {
+          parts.push(`├${border}┤`);
+          const statusLines = ergodicityStatus.split('\n');
+          statusLines.forEach(line => {
+            if (line.trim()) {
+              parts.push(`│ ${line.padEnd(maxLength - 2)} │`);
+            }
+          });
+        }
+      }
+    }
+
     parts.push(`└${border}┘`);
 
     return parts.join('\n');
@@ -1487,12 +1625,15 @@ export class LateralThinkingServer {
       }
     } while (this.sessions.has(sessionId));
 
+    const ergodicityManager = new ErgodicityManager();
+
     this.sessions.set(sessionId, {
       technique,
       problem,
       history: [],
       branches: {},
       insights: [],
+      ergodicityManager,
       startTime: Date.now(),
       metrics: {
         creativityScore: 0,
@@ -1506,7 +1647,7 @@ export class LateralThinkingServer {
   private getTechniqueSteps(technique: LateralTechnique): number {
     switch (technique) {
       case 'six_hats':
-        return 6;
+        return 7; // Now includes Purple Hat for path analysis
       case 'po':
         return 4; // Create provocation, verify provocation, extract & test principles, develop robust solutions
       case 'random_entry':
@@ -1685,6 +1826,22 @@ export class LateralThinkingServer {
       };
       session.history.push(historyEntry);
 
+      // Track path dependencies if ergodicity manager exists
+      if (session.ergodicityManager) {
+        const pathImpact = this.calculatePathImpact(validatedInput);
+        const { warnings } = session.ergodicityManager.recordThinkingStep(
+          validatedInput.technique,
+          validatedInput.currentStep,
+          validatedInput.output,
+          pathImpact
+        );
+
+        // Store any critical warnings for display
+        if (warnings.length > 0) {
+          session.pathMemory = session.ergodicityManager.getPathMemory();
+        }
+      }
+
       // Update metrics
       if (session.metrics) {
         // Count risks identified
@@ -1716,7 +1873,7 @@ export class LateralThinkingServer {
 
       // Log formatted output
       if (!this.disableThoughtLogging) {
-        const formattedOutput = this.formatOutput(validatedInput);
+        const formattedOutput = this.formatOutput({ ...validatedInput, sessionId });
         console.error(formattedOutput);
       }
 
@@ -1798,8 +1955,16 @@ export class LateralThinkingServer {
 
     switch (data.technique) {
       case 'six_hats': {
-        const hatOrder: SixHatsColor[] = ['blue', 'white', 'red', 'yellow', 'black', 'green'];
-        if (nextStep <= 6) {
+        const hatOrder: SixHatsColor[] = [
+          'blue',
+          'white',
+          'red',
+          'yellow',
+          'black',
+          'green',
+          'purple',
+        ];
+        if (nextStep <= 7) {
           const nextHat = hatOrder[nextStep - 1];
           const hatInfo = this.getSixHatsInfo(nextHat);
           return `Next: ${hatInfo.name} - Focus on ${hatInfo.enhancedFocus || hatInfo.focus}`;
@@ -2210,7 +2375,15 @@ export class LateralThinkingServer {
 
         switch (technique) {
           case 'six_hats': {
-            const hats: SixHatsColor[] = ['blue', 'white', 'red', 'yellow', 'black', 'green'];
+            const hats: SixHatsColor[] = [
+              'blue',
+              'white',
+              'red',
+              'yellow',
+              'black',
+              'green',
+              'purple',
+            ];
             for (let i = 0; i < techniqueSteps; i++) {
               const hat = hats[i];
               const hatInfo = this.getSixHatsInfo(hat);
