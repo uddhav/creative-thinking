@@ -78,6 +78,7 @@ interface PlanThinkingSessionOutput {
   estimatedSteps: number;
   objectives: string[];
   successCriteria: string[];
+  createdAt: number; // Timestamp for TTL cleanup
 }
 
 interface ExecuteThinkingStepInput {
@@ -339,6 +340,13 @@ export class LateralThinkingServer {
         if (this.currentSessionId === id) {
           this.currentSessionId = null;
         }
+      }
+    }
+
+    // Clean up old plans
+    for (const [planId, plan] of this.plans) {
+      if (plan.createdAt && now - plan.createdAt > this.PLAN_TTL) {
+        this.plans.delete(planId);
       }
     }
   }
@@ -2372,6 +2380,7 @@ export class LateralThinkingServer {
         estimatedSteps: workflow.length,
         objectives,
         successCriteria,
+        createdAt: Date.now(),
       };
 
       // Store the plan
