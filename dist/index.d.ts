@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+import type { PathMemory } from './ergodicity/index.js';
+import { ErgodicityManager } from './ergodicity/index.js';
+import type { EarlyWarningState, EscapeProtocol } from './ergodicity/earlyWarning/types.js';
 export type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 'concept_extraction' | 'yes_and' | 'design_thinking' | 'triz';
 export type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green' | 'purple';
 export type ScamperAction = 'substitute' | 'combine' | 'adapt' | 'modify' | 'put_to_other_use' | 'eliminate' | 'reverse';
@@ -74,6 +77,28 @@ export interface LateralThinkingData {
         outputPath?: string;
     };
     autoSave?: boolean;
+}
+export interface SessionData {
+    technique: LateralTechnique;
+    problem: string;
+    history: Array<LateralThinkingData & {
+        timestamp: string;
+    }>;
+    branches: Record<string, LateralThinkingData[]>;
+    insights: string[];
+    startTime?: number;
+    endTime?: number;
+    metrics?: {
+        creativityScore?: number;
+        risksCaught?: number;
+        antifragileFeatures?: number;
+    };
+    tags?: string[];
+    name?: string;
+    pathMemory?: PathMemory;
+    ergodicityManager?: ErgodicityManager;
+    earlyWarningState?: EarlyWarningState;
+    escapeRecommendation?: EscapeProtocol;
 }
 export declare class LateralThinkingServer {
     private sessions;

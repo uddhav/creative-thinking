@@ -111,7 +111,7 @@ export class PathMemoryManager {
         ];
         const barriers = [];
         // Add creative barriers
-        creativeBarriers.forEach((b) => {
+        creativeBarriers.forEach(b => {
             barriers.push({
                 id: randomUUID(),
                 type: 'creative',
@@ -126,7 +126,7 @@ export class PathMemoryManager {
             });
         });
         // Add critical barriers
-        criticalBarriers.forEach((b) => {
+        criticalBarriers.forEach(b => {
             barriers.push({
                 id: randomUUID(),
                 type: 'critical',
@@ -255,7 +255,7 @@ export class PathMemoryManager {
         // Update available/foreclosed options
         if (impact.optionsClosed) {
             this.pathMemory.foreclosedOptions.push(...impact.optionsClosed);
-            this.pathMemory.availableOptions = this.pathMemory.availableOptions.filter((opt) => !impact.optionsClosed.includes(opt));
+            this.pathMemory.availableOptions = this.pathMemory.availableOptions.filter(opt => !impact.optionsClosed?.includes(opt));
         }
         if (impact.optionsOpened) {
             this.pathMemory.availableOptions.push(...impact.optionsOpened);
@@ -315,7 +315,7 @@ export class PathMemoryManager {
         // Calculate flexibility score
         this.pathMemory.currentFlexibility.flexibilityScore = availableRatio;
         // Calculate reversibility index
-        const reversibleDecisions = this.pathMemory.pathHistory.filter((e) => e.reversibilityCost < 0.5).length;
+        const reversibleDecisions = this.pathMemory.pathHistory.filter(e => e.reversibilityCost < 0.5).length;
         const totalDecisions = Math.max(this.pathMemory.pathHistory.length, 1);
         this.pathMemory.currentFlexibility.reversibilityIndex = reversibleDecisions / totalDecisions;
         // Calculate path divergence
@@ -357,7 +357,7 @@ export class PathMemoryManager {
         switch (barrier.subtype) {
             case 'cognitive_lock_in': {
                 // Check for repeated patterns
-                const recentTechniques = this.pathMemory.pathHistory.slice(-10).map((e) => e.technique);
+                const recentTechniques = this.pathMemory.pathHistory.slice(-10).map(e => e.technique);
                 const uniqueTechniques = new Set(recentTechniques).size;
                 const repetitionScore = 1 - uniqueTechniques / Math.max(recentTechniques.length, 1);
                 return repetitionScore * 0.8;
@@ -369,17 +369,18 @@ export class PathMemoryManager {
             }
             case 'analysis_paralysis': {
                 // Check for high analysis without decisions
-                const analysisSteps = this.pathMemory.pathHistory.filter((e) => e.technique === 'six_hats' && e.commitmentLevel < 0.3).length;
+                const analysisSteps = this.pathMemory.pathHistory.filter(e => e.technique === 'six_hats' && e.commitmentLevel < 0.3).length;
                 return Math.min(analysisSteps / 15, 1) * 0.8;
             }
             case 'perfectionism': {
                 // Check for excessive refinement
-                const refinementRatio = this.pathMemory.criticalDecisions.length / Math.max(this.pathMemory.pathHistory.length, 1);
+                const refinementRatio = this.pathMemory.criticalDecisions.length /
+                    Math.max(this.pathMemory.pathHistory.length, 1);
                 return (1 - refinementRatio) * 0.7;
             }
             case 'cynicism': {
                 // Check for negative patterns (simplified)
-                const negativeIndicators = this.pathMemory.pathHistory.filter((e) => e.optionsClosed.length > e.optionsOpened.length * 2).length;
+                const negativeIndicators = this.pathMemory.pathHistory.filter(e => e.optionsClosed.length > e.optionsOpened.length * 2).length;
                 return Math.min(negativeIndicators / 10, 1) * 0.8;
             }
             default:

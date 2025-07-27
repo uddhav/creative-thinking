@@ -18,7 +18,7 @@ export default [
     ]
   },
   {
-    files: ['src/**/*.ts', 'vitest.config.ts'],
+    files: ['src/**/*.ts', 'test/**/*.ts', 'vitest.config.ts'],
     languageOptions: {
       parser: typescriptParser,
       parserOptions: {
