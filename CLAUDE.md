@@ -209,6 +209,14 @@ When adding new thinking techniques:
 - Clear, actionable error messages
 - Consistent formatting and naming conventions
 
+## Code Submission Guidelines
+
+- Always make sure that Conventional commit format in PR title
+- All tests passing
+- No linting errors
+- Prettier formatting fixed
+- Test coverage acceptable before committing changes
+
 ## Package Distribution
 
 - **Binary**: The package exposes a `creative-thinking` command via `dist/index.js`

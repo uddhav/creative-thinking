@@ -136,7 +136,7 @@ Creates a structured workflow for applying one or more creative thinking techniq
 Executes a single step in your creative thinking process.
 
 **Inputs:**
-- `planId` (string, optional): ID from plan_thinking_session
+- `planId` (string, required): ID from plan_thinking_session
 - `technique` (string, required): The lateral thinking technique to use
 - `problem` (string, required): The problem or challenge to address
 - `currentStep` (integer, required): Current step number in the technique
@@ -277,6 +277,7 @@ Four-step innovation through contradiction resolution:
 {
   "tool": "execute_thinking_step",
   "arguments": {
+    "planId": "plan_7f8a9b2c-3d4e-5f6a",
     "technique": "six_hats",
     "problem": "Improve team collaboration in remote work",
     "currentStep": 1,

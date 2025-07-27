@@ -190,8 +190,35 @@ describe('Layered Tools Architecture', () => {
   });
 
   describe('Execution Layer - execute_thinking_step', () => {
+    // Helper function to create a plan for testing
+    async function createTestPlan(
+      problem: string,
+      techniques: (
+        | 'six_hats'
+        | 'po'
+        | 'random_entry'
+        | 'scamper'
+        | 'concept_extraction'
+        | 'yes_and'
+        | 'design_thinking'
+        | 'triz'
+      )[]
+    ): Promise<string> {
+      const planResult = (await server.planThinkingSession({
+        problem,
+        techniques,
+      })) as ServerResponse;
+
+      const planData = JSON.parse(planResult.content[0]?.text || '{}') as { planId: string };
+      return planData.planId;
+    }
+
     it('should execute first step of a technique', async () => {
+      // First create a plan
+      const planId = await createTestPlan('How to reduce operational costs', ['six_hats']);
+
       const input = {
+        planId,
         technique: 'six_hats' as const,
         problem: 'How to reduce operational costs',
         currentStep: 1,
@@ -210,8 +237,12 @@ describe('Layered Tools Architecture', () => {
     });
 
     it('should maintain session state across steps', async () => {
+      // Create a plan first
+      const planId = await createTestPlan('How to make meetings more productive', ['po']);
+
       // First step
       const step1Result = (await server.executeThinkingStep({
+        planId,
         technique: 'po' as const,
         problem: 'How to make meetings more productive',
         currentStep: 1,
@@ -229,6 +260,7 @@ describe('Layered Tools Architecture', () => {
 
       // Second step using session ID
       const step2Result = (await server.executeThinkingStep({
+        planId,
         technique: 'po' as const,
         problem: 'How to make meetings more productive',
         currentStep: 2,
@@ -246,7 +278,10 @@ describe('Layered Tools Architecture', () => {
     });
 
     it('should complete a session when nextStepNeeded is false', async () => {
+      const planId = await createTestPlan('How to improve office productivity', ['random_entry']);
+
       const result = (await server.executeThinkingStep({
+        planId,
         technique: 'random_entry' as const,
         problem: 'How to improve office productivity',
         currentStep: 3,
@@ -264,7 +299,10 @@ describe('Layered Tools Architecture', () => {
     });
 
     it('should handle technique-specific fields correctly', async () => {
+      const planId = await createTestPlan('Improve customer onboarding', ['design_thinking']);
+
       const result = (await server.executeThinkingStep({
+        planId,
         technique: 'design_thinking' as const,
         problem: 'Improve customer onboarding',
         currentStep: 1,
@@ -285,6 +323,66 @@ describe('Layered Tools Architecture', () => {
       expect(text).toContain('sessionId');
       // Verify the step was processed
       expect(text).toContain('historyLength');
+    });
+
+    it('should require planId', async () => {
+      const result = (await server.executeThinkingStep({
+        // Missing planId - intentionally omitted for test
+        technique: 'six_hats' as const,
+        problem: 'Test problem',
+        currentStep: 1,
+        totalSteps: 6,
+        output: 'Test output',
+        nextStepNeeded: true,
+      } as unknown)) as ServerResponse;
+
+      expect(result.isError).toBeTruthy();
+      const errorText = result.content[0]?.text || '';
+      const errorData = JSON.parse(errorText) as { error: string; workflow: string };
+      expect(errorData.error).toBe('planId is required');
+      expect(errorData.workflow).toContain(
+        'discover_techniques → plan_thinking_session → execute_thinking_step'
+      );
+    });
+
+    it('should validate planId exists', async () => {
+      const result = (await server.executeThinkingStep({
+        planId: 'invalid_plan_id',
+        technique: 'six_hats' as const,
+        problem: 'Test problem',
+        currentStep: 1,
+        totalSteps: 6,
+        output: 'Test output',
+        nextStepNeeded: true,
+      })) as ServerResponse;
+
+      expect(result.isError).toBeTruthy();
+      const errorText = result.content[0]?.text || '';
+      const errorData = JSON.parse(errorText) as { error: string; message: string };
+      expect(errorData.error).toBe('Invalid planId');
+      expect(errorData.message).toContain('not found');
+    });
+
+    it('should validate technique matches plan', async () => {
+      // Create a plan for six_hats
+      const planId = await createTestPlan('Test problem', ['six_hats']);
+
+      // Try to execute with different technique
+      const result = (await server.executeThinkingStep({
+        planId,
+        technique: 'po' as const, // Wrong technique
+        problem: 'Test problem',
+        currentStep: 1,
+        totalSteps: 4,
+        output: 'Test output',
+        nextStepNeeded: true,
+      })) as ServerResponse;
+
+      expect(result.isError).toBeTruthy();
+      const errorText = result.content[0]?.text || '';
+      const errorData = JSON.parse(errorText) as { error: string; plannedTechniques: string[] };
+      expect(errorData.error).toBe('Technique mismatch');
+      expect(errorData.plannedTechniques).toContain('six_hats');
     });
   });
 
@@ -307,8 +405,14 @@ describe('Layered Tools Architecture', () => {
 
       expect(planResult.isError).toBeFalsy();
 
+      // Extract planId from the plan result
+      const planText = planResult.content[0]?.text || '';
+      const planData = JSON.parse(planText) as { planId: string };
+      expect(planData.planId).toBeDefined();
+
       // Step 3: Execution
       const execResult = (await server.executeThinkingStep({
+        planId: planData.planId,
         technique: 'triz' as const,
         problem: 'How to reduce software bugs in production',
         currentStep: 1,
