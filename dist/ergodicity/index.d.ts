@@ -6,11 +6,13 @@ export * from './pathMemory.js';
 export * from './metrics.js';
 export * from './earlyWarning/index.js';
 export { EscapeVelocitySystem, EscapeLevel, type EscapeAnalysis, type EscapeContext, type EscapeAttemptResult, } from './escapeProtocols/index.js';
+export { OptionGenerationEngine, type Option, type OptionGenerationResult, type OptionEvaluation, type OptionGenerationContext, } from './optionGeneration/index.js';
 import type { PathMemory, FlexibilityMetrics, PathEvent, ErgodicityWarning, FlexibilityState } from './types.js';
 import type { LateralTechnique, SessionData } from '../index.js';
 import type { EarlyWarningState, EscapeProtocol, EarlyWarningConfig } from './earlyWarning/types.js';
 import type { EscapeAnalysis, EscapeAttemptResult, EscapeProtocol as EscapeVelocityProtocol } from './escapeProtocols/types.js';
 import { EscapeLevel } from './escapeProtocols/types.js';
+import type { Option, OptionGenerationResult, OptionGenerationStrategy } from './optionGeneration/types.js';
 /**
  * Main ergodicity manager that coordinates path tracking and metrics
  */
@@ -20,6 +22,7 @@ export declare class ErgodicityManager {
     private earlyWarningSystem;
     private responseProtocolSystem;
     private escapeVelocitySystem;
+    private optionGenerationEngine;
     private lastWarningState;
     private autoEscapeEnabled;
     constructor(warningConfig?: EarlyWarningConfig);
@@ -127,5 +130,36 @@ export declare class ErgodicityManager {
         typicalCommitment: number;
         riskProfile: string;
     };
+    /**
+     * Generate options to increase flexibility
+     */
+    generateOptions(sessionData: SessionData, targetCount?: number): OptionGenerationResult;
+    /**
+     * Generate options using specific strategies
+     */
+    generateOptionsWithStrategies(sessionData: SessionData, strategies: OptionGenerationStrategy[], targetCount?: number): OptionGenerationResult;
+    /**
+     * Check if option generation is recommended
+     */
+    shouldGenerateOptions(): boolean;
+    /**
+     * Get a quick option without full generation
+     */
+    getQuickOption(sessionData: SessionData): Option | null;
+    /**
+     * Get available option generation strategies
+     */
+    getAvailableOptionStrategies(): {
+        name: OptionGenerationStrategy;
+        description: string;
+        typicalGain: {
+            min: number;
+            max: number;
+        };
+    }[];
+    /**
+     * Create option generation context from session data
+     */
+    private createOptionGenerationContext;
 }
 //# sourceMappingURL=index.d.ts.map

@@ -1776,10 +1776,76 @@ export class LateralThinkingServer {
                         'Start with Design Thinking for user insights, then use TRIZ for technical optimization';
                 }
             }
+            // Check flexibility and generate options if low
+            let flexibilityWarning;
+            let generatedOptions;
+            // Determine flexibility - use provided value or check session
+            let currentFlexibility = args.currentFlexibility;
+            if (args.sessionId && !currentFlexibility) {
+                const session = this.sessions.get(args.sessionId);
+                if (session) {
+                    // Calculate flexibility from session state
+                    currentFlexibility = this.ergodicityManager.getCurrentFlexibility().flexibilityScore;
+                }
+            }
+            // If flexibility is low (below 40%), generate options
+            if (currentFlexibility !== undefined && currentFlexibility < 0.4) {
+                flexibilityWarning = {
+                    currentFlexibility,
+                    isLow: true,
+                    message: `Warning: Your current flexibility is critically low at ${(currentFlexibility * 100).toFixed(0)}%. Generating options to increase your degrees of freedom before applying creative techniques.`,
+                };
+                // Generate options if we have session context
+                if (args.sessionId) {
+                    const session = this.sessions.get(args.sessionId);
+                    if (session) {
+                        const optionResult = this.ergodicityManager.generateOptions(session, 5); // Generate top 5 options
+                        generatedOptions = {
+                            totalOptions: optionResult.options.length,
+                            topOptions: optionResult.options.slice(0, 5).map(opt => ({
+                                name: opt.name,
+                                description: opt.description,
+                                strategy: opt.strategy,
+                                flexibilityGain: opt.flexibilityGain || 0,
+                                actions: opt.actions,
+                            })),
+                            recommendation: 'Consider implementing one or more of these options before proceeding with creative techniques. This will give you more room to maneuver and better results.',
+                        };
+                    }
+                }
+            }
+            // Check if escape velocity analysis is needed
+            let escapeVelocityAnalysis;
+            if (currentFlexibility !== undefined && currentFlexibility < 0.3 && args.sessionId) {
+                const session = this.sessions.get(args.sessionId);
+                if (session) {
+                    // Check if escape is needed
+                    const isEscapeNeeded = this.ergodicityManager.isEscapeVelocityNeeded();
+                    const urgency = this.ergodicityManager.getEscapeUrgency();
+                    if (isEscapeNeeded) {
+                        // Get available protocols based on flexibility
+                        const availableProtocols = this.ergodicityManager.getAvailableEscapeVelocityProtocols(currentFlexibility);
+                        // Perform escape analysis
+                        const analysis = this.ergodicityManager.analyzeEscapeVelocity(session);
+                        escapeVelocityAnalysis = {
+                            needed: true,
+                            urgency,
+                            constraintStrength: analysis.constraintStrength,
+                            availableProtocols: availableProtocols.map(p => `${p.name} (${p.executionTime})`),
+                            recommendation: urgency === 'critical'
+                                ? 'CRITICAL: Your flexibility is severely constrained. Consider executing an escape protocol before attempting creative techniques.'
+                                : 'Escape velocity protocols are available to help break free from constraints if needed.',
+                        };
+                    }
+                }
+            }
             const output = {
                 recommendations: recommendations.slice(0, 3), // Top 3 recommendations
                 reasoning: `Based on your problem involving "${args.problem.substring(0, 100)}..."${args.preferredOutcome ? ` with ${args.preferredOutcome} outcomes` : ''}, I recommend these techniques.`,
                 suggestedWorkflow,
+                flexibilityWarning,
+                generatedOptions,
+                escapeVelocityAnalysis,
             };
             return Promise.resolve({
                 content: [
@@ -1972,6 +2038,72 @@ export class LateralThinkingServer {
                     ? ['Thorough analysis from all angles']
                     : []),
             ];
+            // Check flexibility and add option generation phase if needed
+            let optionGenerationPhase;
+            if (args.sessionId || args.includeOptions) {
+                let currentFlexibility = 0.5; // Default moderate flexibility
+                if (args.sessionId) {
+                    const session = this.sessions.get(args.sessionId);
+                    if (session) {
+                        currentFlexibility = this.ergodicityManager.getCurrentFlexibility().flexibilityScore;
+                    }
+                }
+                // Determine if option generation is needed
+                if (currentFlexibility < 0.4) {
+                    optionGenerationPhase = {
+                        reason: `Current flexibility is critically low at ${(currentFlexibility * 100).toFixed(0)}%. Option generation is essential before creative techniques can be effective.`,
+                        suggestedOptions: 5,
+                        priority: 'critical',
+                    };
+                }
+                else if (currentFlexibility < 0.6 && args.includeOptions) {
+                    optionGenerationPhase = {
+                        reason: `Current flexibility is moderate at ${(currentFlexibility * 100).toFixed(0)}%. Option generation recommended for better results.`,
+                        suggestedOptions: 3,
+                        priority: 'recommended',
+                    };
+                }
+                else if (args.includeOptions) {
+                    optionGenerationPhase = {
+                        reason: `Flexibility is adequate at ${(currentFlexibility * 100).toFixed(0)}%, but additional options can enhance creative outcomes.`,
+                        suggestedOptions: 2,
+                        priority: 'optional',
+                    };
+                }
+            }
+            // Check if escape protocol is needed
+            let escapeProtocolPhase;
+            if (args.sessionId) {
+                const session = this.sessions.get(args.sessionId);
+                if (session) {
+                    const flexibility = this.ergodicityManager.getCurrentFlexibility().flexibilityScore;
+                    // If flexibility is critically low, recommend escape protocol
+                    if (flexibility < 0.2) {
+                        const availableProtocols = this.ergodicityManager.getAvailableEscapeVelocityProtocols(flexibility);
+                        const recommendedProtocol = availableProtocols[0]; // Get the most suitable protocol
+                        if (recommendedProtocol) {
+                            escapeProtocolPhase = {
+                                needed: true,
+                                protocol: `${recommendedProtocol.name} (${recommendedProtocol.executionTime})`,
+                                reason: `Flexibility is critically low at ${(flexibility * 100).toFixed(0)}%. Escape protocol recommended to break free from constraints before creative techniques.`,
+                                prerequisite: true, // Must be done first
+                            };
+                        }
+                    }
+                    else if (flexibility < 0.35) {
+                        // Optional escape protocol for moderate constraints
+                        const availableProtocols = this.ergodicityManager.getAvailableEscapeVelocityProtocols(flexibility);
+                        if (availableProtocols.length > 0) {
+                            escapeProtocolPhase = {
+                                needed: true,
+                                protocol: availableProtocols.map(p => p.name).join(', '),
+                                reason: 'Escape protocols available to increase flexibility if constraints become too limiting.',
+                                prerequisite: false, // Can be done during workflow if needed
+                            };
+                        }
+                    }
+                }
+            }
             const output = {
                 planId,
                 workflow,
@@ -1979,6 +2111,8 @@ export class LateralThinkingServer {
                 objectives,
                 successCriteria,
                 createdAt: Date.now(),
+                optionGenerationPhase,
+                escapeProtocolPhase,
             };
             // Store the plan
             this.plans.set(planId, output);
@@ -2095,155 +2229,6 @@ export class LateralThinkingServer {
         };
         return outputs[stage];
     }
-    // Escape Velocity Analysis
-    async analyzeEscapeVelocity(input) {
-        try {
-            const { sessionId } = input;
-            if (!sessionId) {
-                throw new Error('Session ID is required');
-            }
-            const session = this.sessions.get(sessionId);
-            if (!session) {
-                throw new Error(`Session ${sessionId} not found`);
-            }
-            // Get escape analysis from ergodicity manager
-            const analysis = this.ergodicityManager.analyzeEscapeVelocity(session);
-            const formattedOutput = this.formatEscapeAnalysis(analysis);
-            return Promise.resolve({
-                content: [
-                    {
-                        type: 'text',
-                        text: formattedOutput,
-                    },
-                ],
-            });
-        }
-        catch (error) {
-            return Promise.resolve({
-                content: [
-                    {
-                        type: 'text',
-                        text: JSON.stringify({
-                            error: error instanceof Error ? error.message : String(error),
-                            status: 'failed',
-                        }, null, 2),
-                    },
-                ],
-                isError: true,
-            });
-        }
-    }
-    // Execute Escape Protocol
-    async executeEscapeProtocol(input) {
-        try {
-            const { sessionId, level, userApproval = true, } = input;
-            if (!sessionId) {
-                throw new Error('Session ID is required');
-            }
-            if (!level || level < 1 || level > 5) {
-                throw new Error('Protocol level must be between 1 and 5');
-            }
-            const session = this.sessions.get(sessionId);
-            if (!session) {
-                throw new Error(`Session ${sessionId} not found`);
-            }
-            // Execute the escape protocol
-            const result = this.ergodicityManager.executeEscapeVelocityProtocol(level, session, userApproval);
-            const formattedOutput = this.formatEscapeResult(result);
-            return Promise.resolve({
-                content: [
-                    {
-                        type: 'text',
-                        text: formattedOutput,
-                    },
-                ],
-            });
-        }
-        catch (error) {
-            return Promise.resolve({
-                content: [
-                    {
-                        type: 'text',
-                        text: JSON.stringify({
-                            error: error instanceof Error ? error.message : String(error),
-                            status: 'failed',
-                        }, null, 2),
-                    },
-                ],
-                isError: true,
-            });
-        }
-    }
-    // Format escape analysis for display
-    formatEscapeAnalysis(analysis) {
-        const lines = [
-            '🚀 Escape Velocity Analysis',
-            '='.repeat(50),
-            '',
-            `Current Flexibility: ${(analysis.currentFlexibility * 100).toFixed(0)}%`,
-            `Constraint Strength: ${(analysis.constraintStrength * 100).toFixed(0)}%`,
-            `Escape Force Needed: ${(analysis.escapeForceNeeded * 100).toFixed(0)}%`,
-            `Available Resources: ${(analysis.availableResources * 100).toFixed(0)}%`,
-            '',
-            `Feasibility: ${analysis.feasibility ? '✅ Possible' : '❌ Difficult'}`,
-            `Success Probability: ${(analysis.successProbability * 100).toFixed(0)}%`,
-            '',
-        ];
-        if (analysis.optimalTrajectory) {
-            lines.push('Recommended Protocol:');
-            lines.push(`  ${analysis.optimalTrajectory.protocol.name} (Level ${analysis.optimalTrajectory.protocol.level})`);
-            lines.push(`  Duration: ${analysis.optimalTrajectory.totalDuration}`);
-            lines.push(`  Flexibility Gain: +${(analysis.optimalTrajectory.protocol.estimatedFlexibilityGain * 100).toFixed(0)}%`);
-            lines.push('');
-        }
-        if (analysis.executionPlan) {
-            lines.push('Immediate Actions:');
-            analysis.executionPlan.immediateActions.forEach((action) => {
-                lines.push(`  • ${action}`);
-            });
-            lines.push('');
-        }
-        if (analysis.warnings && analysis.warnings.length > 0) {
-            lines.push('⚠️ Warnings:');
-            analysis.warnings.forEach((warning) => {
-                lines.push(`  • ${warning}`);
-            });
-        }
-        return lines.join('\n');
-    }
-    // Format escape result for display
-    formatEscapeResult(result) {
-        const lines = [
-            `🚀 ${result.protocol.name} Execution ${result.success ? 'Successful' : 'Failed'}`,
-            '='.repeat(50),
-            '',
-            `Flexibility Before: ${(result.flexibilityBefore * 100).toFixed(0)}%`,
-            `Flexibility After: ${(result.flexibilityAfter * 100).toFixed(0)}%`,
-            `Flexibility Gained: +${(result.flexibilityGained * 100).toFixed(0)}%`,
-            '',
-        ];
-        if (result.constraintsRemoved.length > 0) {
-            lines.push('Constraints Removed:');
-            result.constraintsRemoved.forEach((constraint) => {
-                lines.push(`  ✓ ${constraint}`);
-            });
-            lines.push('');
-        }
-        if (result.newOptionsCreated.length > 0) {
-            lines.push('New Options Created:');
-            result.newOptionsCreated.forEach((option) => {
-                lines.push(`  + ${option}`);
-            });
-            lines.push('');
-        }
-        if (result.executionNotes.length > 0) {
-            lines.push('Execution Notes:');
-            result.executionNotes.forEach((note) => {
-                lines.push(`  • ${note}`);
-            });
-        }
-        return lines.join('\n');
-    }
 }
 // Discovery Layer Tool
 const DISCOVER_TECHNIQUES_TOOL = {
@@ -2257,6 +2242,7 @@ Features:
 - Considers your preferred outcomes and constraints
 - Provides reasoning for recommendations
 - Suggests workflows for complex problems
+- Automatically generates options when flexibility is low
 
 Use this when you're not sure which creative thinking technique to apply.`,
     inputSchema: {
@@ -2280,6 +2266,16 @@ Use this when you're not sure which creative thinking technique to apply.`,
                 items: { type: 'string' },
                 description: 'Any constraints or limitations to consider',
             },
+            sessionId: {
+                type: 'string',
+                description: 'Optional: Current session ID to check flexibility and generate options',
+            },
+            currentFlexibility: {
+                type: 'number',
+                description: 'Optional: Current flexibility score (0-1). If not provided, will be calculated from session',
+                minimum: 0,
+                maximum: 1,
+            },
         },
         required: ['problem'],
     },
@@ -2296,6 +2292,7 @@ Features:
 - Risk considerations for each step
 - Time-based planning (quick/thorough/comprehensive)
 - Success criteria definition
+- Automatic flexibility assessment and option generation recommendation
 
 Use this after discovering which techniques to apply, or when you know you need multiple techniques.`,
     inputSchema: {
@@ -2336,6 +2333,15 @@ Use this after discovering which techniques to apply, or when you know you need 
                 type: 'string',
                 enum: ['quick', 'thorough', 'comprehensive'],
                 description: 'How much time/depth to invest',
+            },
+            sessionId: {
+                type: 'string',
+                description: 'Optional: Current session ID to assess flexibility',
+            },
+            includeOptions: {
+                type: 'boolean',
+                description: 'Whether to include option generation phase in the plan',
+                default: false,
             },
         },
         required: ['problem', 'techniques'],
@@ -2462,65 +2468,11 @@ The three-layer workflow ensures systematic creative thinking:
     },
 };
 // Server initialization
-// Escape Velocity Tools
-const ANALYZE_ESCAPE_VELOCITY_TOOL = {
-    name: 'analyze_escape_velocity',
-    description: `Analyzes current constraints and calculates escape velocity requirements.
-This tool helps identify when you're stuck in low-flexibility situations and need to break free.
-
-Features:
-- Constraint strength analysis
-- Resource inventory assessment
-- Escape trajectory optimization
-- Success probability calculation
-- Detailed execution planning
-
-Use this when flexibility is critically low or you feel stuck in your thinking process.`,
-    inputSchema: {
-        type: 'object',
-        properties: {
-            sessionId: {
-                type: 'string',
-                description: 'Current session ID',
-            },
-        },
-        required: ['sessionId'],
-    },
-};
-const EXECUTE_ESCAPE_PROTOCOL_TOOL = {
-    name: 'execute_escape_protocol',
-    description: `Executes a specific escape velocity protocol to break free from constraints.
-
-Available protocols:
-1. Pattern Interruption - Quick mental reset (5-15 min)
-2. Resource Reallocation - Strategic resource shifting (1-2 hours)
-3. Stakeholder Reset - Renegotiate commitments (1-2 days)
-4. Technical Refactoring - Deep architectural changes (1-2 weeks)
-5. Strategic Pivot - Fundamental direction change (2-4 weeks)
-
-Each level requires different flexibility levels and provides different gains.`,
-    inputSchema: {
-        type: 'object',
-        properties: {
-            sessionId: {
-                type: 'string',
-                description: 'Current session ID',
-            },
-            level: {
-                type: 'integer',
-                minimum: 1,
-                maximum: 5,
-                description: 'Escape protocol level (1-5)',
-            },
-            userApproval: {
-                type: 'boolean',
-                description: 'User approval for executing the protocol',
-                default: true,
-            },
-        },
-        required: ['sessionId', 'level'],
-    },
-};
+// NOTE: Escape Velocity and Option Generation are NOT exposed as separate tools
+// They are integrated into the three-layer workflow:
+// - Low flexibility warnings and option generation in discover_techniques
+// - Option generation phase recommendations in plan_thinking_session
+// - Escape protocols can be triggered internally when needed
 const server = new Server({
     name: 'creative-thinking-server',
     version: '0.1.0',
@@ -2531,13 +2483,7 @@ const server = new Server({
 });
 const lateralServer = new LateralThinkingServer();
 server.setRequestHandler(ListToolsRequestSchema, () => ({
-    tools: [
-        DISCOVER_TECHNIQUES_TOOL,
-        PLAN_THINKING_SESSION_TOOL,
-        EXECUTE_THINKING_STEP_TOOL,
-        ANALYZE_ESCAPE_VELOCITY_TOOL,
-        EXECUTE_ESCAPE_PROTOCOL_TOOL,
-    ],
+    tools: [DISCOVER_TECHNIQUES_TOOL, PLAN_THINKING_SESSION_TOOL, EXECUTE_THINKING_STEP_TOOL],
 }));
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
     switch (request.params.name) {
@@ -2547,10 +2493,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             return lateralServer.planThinkingSession(request.params.arguments);
         case 'execute_thinking_step':
             return lateralServer.executeThinkingStep(request.params.arguments);
-        case 'analyze_escape_velocity':
-            return lateralServer.analyzeEscapeVelocity(request.params.arguments);
-        case 'execute_escape_protocol':
-            return lateralServer.executeEscapeProtocol(request.params.arguments);
         default:
             return {
                 content: [

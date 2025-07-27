@@ -10,7 +10,20 @@ This project follows a three-layer tool architecture as its core design principl
 2. **Planning** - Structured workflow creation combining multiple techniques  
 3. **Execution** - Guided step-by-step implementation with state management
 
-All current and future technique additions must integrate with this layered approach to ensure consistency and usability.
+### Fundamental Design Decision: Three Tools Only
+
+**This MCP server exposes EXACTLY three tools - no more, no less:**
+- `discover_techniques` - Analyzes problems and recommends techniques
+- `plan_thinking_session` - Creates structured workflows
+- `execute_thinking_step` - Executes individual steps
+
+**All functionality must be integrated into these three tools.** This includes:
+- Escape velocity analysis (integrated into discovery/planning)
+- Option generation (automatic in discovery when flexibility is low)
+- Session management (internal state management)
+- Future features (must fit within the three-tool workflow)
+
+This constraint ensures a clean, focused API that mirrors the natural creative thinking workflow and prevents tool proliferation.
 
 ## Overview
 

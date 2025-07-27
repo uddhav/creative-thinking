@@ -13,11 +13,19 @@ export {
   type EscapeContext,
   type EscapeAttemptResult,
 } from './escapeProtocols/index.js';
+export {
+  OptionGenerationEngine,
+  type Option,
+  type OptionGenerationResult,
+  type OptionEvaluation,
+  type OptionGenerationContext,
+} from './optionGeneration/index.js';
 
 import { PathMemoryManager } from './pathMemory.js';
 import { MetricsCalculator } from './metrics.js';
 import { AbsorbingBarrierEarlyWarning, ResponseProtocolSystem } from './earlyWarning/index.js';
 import { EscapeVelocitySystem } from './escapeProtocols/index.js';
+import { OptionGenerationEngine } from './optionGeneration/index.js';
 import type {
   PathMemory,
   FlexibilityMetrics,
@@ -39,6 +47,13 @@ import type {
   EscapeProtocol as EscapeVelocityProtocol,
 } from './escapeProtocols/types.js';
 import { EscapeLevel } from './escapeProtocols/types.js';
+import type {
+  Option,
+  OptionGenerationContext,
+  OptionGenerationResult,
+  OptionGenerationStrategy,
+} from './optionGeneration/types.js';
+import type { SessionState, LateralThinkingInput } from '../persistence/types.js';
 
 /**
  * Main ergodicity manager that coordinates path tracking and metrics
@@ -49,6 +64,7 @@ export class ErgodicityManager {
   private earlyWarningSystem: AbsorbingBarrierEarlyWarning;
   private responseProtocolSystem: ResponseProtocolSystem;
   private escapeVelocitySystem: EscapeVelocitySystem;
+  private optionGenerationEngine: OptionGenerationEngine;
   private lastWarningState: EarlyWarningState | null = null;
   private autoEscapeEnabled: boolean = true;
 
@@ -58,6 +74,7 @@ export class ErgodicityManager {
     this.earlyWarningSystem = new AbsorbingBarrierEarlyWarning(warningConfig);
     this.responseProtocolSystem = new ResponseProtocolSystem();
     this.escapeVelocitySystem = new EscapeVelocitySystem();
+    this.optionGenerationEngine = new OptionGenerationEngine();
   }
 
   /**
@@ -454,5 +471,96 @@ export class ErgodicityManager {
     };
 
     return profiles[technique];
+  }
+
+  /**
+   * Generate options to increase flexibility
+   */
+  generateOptions(sessionData: SessionData, targetCount: number = 10): OptionGenerationResult {
+    const context = this.createOptionGenerationContext(sessionData);
+    return this.optionGenerationEngine.generateOptions(context, targetCount);
+  }
+
+  /**
+   * Generate options using specific strategies
+   */
+  generateOptionsWithStrategies(
+    sessionData: SessionData,
+    strategies: OptionGenerationStrategy[],
+    targetCount: number = 10
+  ): OptionGenerationResult {
+    const context = this.createOptionGenerationContext(sessionData);
+    return this.optionGenerationEngine.generateWithStrategies(context, strategies, targetCount);
+  }
+
+  /**
+   * Check if option generation is recommended
+   */
+  shouldGenerateOptions(): boolean {
+    // Create a minimal SessionState for checking if options are needed
+    const mockSessionState: SessionState = {
+      id: 'check_' + Date.now(),
+      problem: 'Unknown',
+      technique: 'six_hats',
+      currentStep: 1,
+      totalSteps: 1,
+      history: [],
+      branches: {},
+      insights: [],
+    };
+
+    const context: OptionGenerationContext = {
+      sessionState: mockSessionState,
+      pathMemory: this.getPathMemory(),
+      currentFlexibility: this.getCurrentFlexibility(),
+      targetOptionCount: 10,
+    };
+    return this.optionGenerationEngine.shouldGenerateOptions(context);
+  }
+
+  /**
+   * Get a quick option without full generation
+   */
+  getQuickOption(sessionData: SessionData): Option | null {
+    const context = this.createOptionGenerationContext(sessionData);
+    return this.optionGenerationEngine.getQuickOption(context);
+  }
+
+  /**
+   * Get available option generation strategies
+   */
+  getAvailableOptionStrategies() {
+    return this.optionGenerationEngine.getAvailableStrategies();
+  }
+
+  /**
+   * Create option generation context from session data
+   */
+  private createOptionGenerationContext(sessionData: SessionData): OptionGenerationContext {
+    // Convert SessionData to SessionState format
+    const sessionState: SessionState = {
+      id: 'temp_' + Date.now(),
+      problem: sessionData.problem || 'Unknown problem',
+      technique: sessionData.technique || 'six_hats',
+      currentStep: sessionData.history.length || 1,
+      totalSteps: 10, // Default estimate
+      history: sessionData.history.map((h, index) => ({
+        step: index + 1,
+        timestamp: h.timestamp,
+        input: h as LateralThinkingInput,
+        output: h as LateralThinkingInput,
+      })),
+      branches: {},
+      insights: sessionData.insights || [],
+      startTime: sessionData.startTime,
+      endTime: sessionData.endTime,
+    };
+
+    return {
+      sessionState,
+      pathMemory: this.getPathMemory(),
+      currentFlexibility: this.getCurrentFlexibility(),
+      targetOptionCount: 10,
+    };
   }
 }
