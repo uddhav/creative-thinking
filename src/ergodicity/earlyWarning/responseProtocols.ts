@@ -180,7 +180,7 @@ export class ResponseProtocolSystem {
   /**
    * Execute an escape protocol
    */
-  async executeProtocol(
+  executeProtocol(
     protocol: EscapeProtocol,
     pathMemory: PathMemory,
     sessionData: SessionData,
@@ -190,7 +190,7 @@ export class ResponseProtocolSystem {
 
     // Check if protocol can be executed
     if (flexibilityBefore < protocol.requiredFlexibility) {
-      return {
+      return Promise.resolve({
         protocol,
         executionTime: new Date().toISOString(),
         success: false,
@@ -200,7 +200,7 @@ export class ResponseProtocolSystem {
         sideEffects: ['Insufficient flexibility to execute protocol'],
         nextSteps: ['Try lower-level protocol first'],
         newConstraints: [],
-      };
+      });
     }
 
     // Simulate protocol execution
@@ -234,7 +234,7 @@ export class ResponseProtocolSystem {
     // Record in history
     this.protocolHistory.push(response);
 
-    return response;
+    return Promise.resolve(response);
   }
 
   /**

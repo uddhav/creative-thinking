@@ -168,11 +168,11 @@ export class ResponseProtocolSystem {
     /**
      * Execute an escape protocol
      */
-    async executeProtocol(protocol, pathMemory, sessionData, _userConfirmation = true) {
+    executeProtocol(protocol, pathMemory, sessionData, _userConfirmation = true) {
         const flexibilityBefore = pathMemory.currentFlexibility.flexibilityScore;
         // Check if protocol can be executed
         if (flexibilityBefore < protocol.requiredFlexibility) {
-            return {
+            return Promise.resolve({
                 protocol,
                 executionTime: new Date().toISOString(),
                 success: false,
@@ -182,7 +182,7 @@ export class ResponseProtocolSystem {
                 sideEffects: ['Insufficient flexibility to execute protocol'],
                 nextSteps: ['Try lower-level protocol first'],
                 newConstraints: [],
-            };
+            });
         }
         // Simulate protocol execution
         const success = Math.random() < protocol.successProbability;
@@ -209,7 +209,7 @@ export class ResponseProtocolSystem {
         };
         // Record in history
         this.protocolHistory.push(response);
-        return response;
+        return Promise.resolve(response);
     }
     /**
      * Generate side effects from protocol execution
