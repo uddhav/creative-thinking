@@ -5,9 +5,13 @@ export * from './types.js';
 export * from './pathMemory.js';
 export * from './metrics.js';
 export * from './earlyWarning/index.js';
+export { EscapeVelocitySystem, EscapeLevel, } from './escapeProtocols/index.js';
 import { PathMemoryManager } from './pathMemory.js';
 import { MetricsCalculator } from './metrics.js';
 import { AbsorbingBarrierEarlyWarning, ResponseProtocolSystem } from './earlyWarning/index.js';
+import { EscapeVelocitySystem } from './escapeProtocols/index.js';
+import { ErgodicityWarningLevel } from './types.js';
+import { EscapeLevel } from './escapeProtocols/types.js';
 /**
  * Main ergodicity manager that coordinates path tracking and metrics
  */
@@ -16,6 +20,7 @@ export class ErgodicityManager {
     metricsCalculator;
     earlyWarningSystem;
     responseProtocolSystem;
+    escapeVelocitySystem;
     lastWarningState = null;
     autoEscapeEnabled = true;
     constructor(warningConfig) {
@@ -23,6 +28,7 @@ export class ErgodicityManager {
         this.metricsCalculator = new MetricsCalculator();
         this.earlyWarningSystem = new AbsorbingBarrierEarlyWarning(warningConfig);
         this.responseProtocolSystem = new ResponseProtocolSystem();
+        this.escapeVelocitySystem = new EscapeVelocitySystem();
     }
     /**
      * Record a thinking step and its path impacts with early warning monitoring
@@ -51,7 +57,34 @@ export class ErgodicityManager {
                 }
             }
         }
-        return { event, metrics, warnings, earlyWarningState, escapeRecommendation };
+        // Also check escape velocity if flexibility is critically low
+        let escapeVelocityNeeded = false;
+        if (metrics.flexibilityScore < 0.2) {
+            escapeVelocityNeeded = true;
+            // Add warning if not already present
+            const velocityWarning = {
+                level: ErgodicityWarningLevel.CRITICAL,
+                message: `Critical flexibility (${(metrics.flexibilityScore * 100).toFixed(0)}%) - Escape velocity protocol recommended`,
+                metric: 'flexibilityScore',
+                value: metrics.flexibilityScore,
+                threshold: 0.2,
+                recommendations: [
+                    'Execute Pattern Interruption protocol immediately',
+                    'Consider Resource Reallocation if flexibility > 0.2',
+                    'Prepare for Strategic Pivot if other protocols fail',
+                    `Urgency: ${this.getEscapeUrgency()}`,
+                ],
+            };
+            warnings.push(velocityWarning);
+        }
+        return {
+            event,
+            metrics,
+            warnings,
+            earlyWarningState,
+            escapeRecommendation,
+            escapeVelocityNeeded,
+        };
     }
     /**
      * Get current path memory state
@@ -65,6 +98,12 @@ export class ErgodicityManager {
     getMetrics() {
         const pathMemory = this.pathMemoryManager.getPathMemory();
         return this.metricsCalculator.calculateMetrics(pathMemory);
+    }
+    /**
+     * Get current flexibility state
+     */
+    getCurrentFlexibility() {
+        return this.getMetrics();
     }
     /**
      * Get current warnings
@@ -171,6 +210,80 @@ export class ErgodicityManager {
     resetEarlyWarning() {
         this.earlyWarningSystem.reset();
         this.lastWarningState = null;
+    }
+    /**
+     * Analyze escape velocity requirements
+     */
+    analyzeEscapeVelocity(sessionData) {
+        const context = this.createEscapeContext(sessionData);
+        return this.escapeVelocitySystem.analyzeEscapeNeeds(context);
+    }
+    /**
+     * Execute escape velocity protocol
+     */
+    executeEscapeVelocityProtocol(level, sessionData, userApproval = true) {
+        const context = this.createEscapeContext(sessionData);
+        if (!userApproval && level > EscapeLevel.RESOURCE_REALLOCATION) {
+            throw new Error('User approval required for protocols above Level 2');
+        }
+        const result = this.escapeVelocitySystem.executeProtocol(level, context);
+        // Update path memory with escape results
+        if (result.success) {
+            const event = {
+                timestamp: result.timestamp,
+                technique: 'escape_protocol',
+                step: 0,
+                decision: `Executed ${result.protocol.name}`,
+                commitmentLevel: 0.1,
+                reversibilityCost: 0.1,
+                optionsOpened: result.newOptionsCreated,
+                optionsClosed: [],
+                constraintsCreated: [],
+                flexibilityImpact: result.flexibilityGained,
+            };
+            this.pathMemoryManager.recordEvent(event);
+        }
+        return result;
+    }
+    /**
+     * Get available escape velocity protocols
+     */
+    getAvailableEscapeVelocityProtocols(currentFlexibility) {
+        const flexibility = currentFlexibility ?? this.getCurrentFlexibility().flexibilityScore;
+        return this.escapeVelocitySystem.getAvailableProtocols(flexibility);
+    }
+    /**
+     * Check if escape velocity is needed
+     */
+    isEscapeVelocityNeeded() {
+        const flexibility = this.getCurrentFlexibility().flexibilityScore;
+        return this.escapeVelocitySystem.isEscapeNeeded(flexibility);
+    }
+    /**
+     * Get escape urgency level
+     */
+    getEscapeUrgency() {
+        const flexibility = this.getCurrentFlexibility().flexibilityScore;
+        return this.escapeVelocitySystem.getEscapeUrgency(flexibility);
+    }
+    /**
+     * Get escape velocity monitoring data
+     */
+    getEscapeMonitoring() {
+        return this.escapeVelocitySystem.getMonitoringData();
+    }
+    /**
+     * Create escape context from session data
+     */
+    createEscapeContext(sessionData) {
+        return {
+            pathMemory: this.pathMemoryManager.getPathMemory(),
+            sessionData,
+            currentFlexibility: this.getCurrentFlexibility(),
+            triggerReason: 'User requested',
+            userApproval: true,
+            automaticMode: false,
+        };
     }
     /**
      * Analyze a specific technique for its path impact

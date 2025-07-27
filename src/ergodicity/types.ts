@@ -29,7 +29,7 @@ export interface Constraint {
  * Represents a decision or action that creates path dependencies
  */
 export interface PathEvent {
-  id: string;
+  id?: string;
   timestamp: string;
   technique: LateralTechnique;
   step: number;
@@ -39,6 +39,7 @@ export interface PathEvent {
   reversibilityCost: number; // 0.0-1.0, where 1.0 is irreversible
   commitmentLevel: number; // 0.0-1.0, how much this commits future paths
   constraintsCreated: string[]; // IDs of constraints created by this event
+  flexibilityImpact?: number; // Impact on overall flexibility
 }
 
 /**
@@ -94,6 +95,11 @@ export interface FlexibilityMetrics {
   optionVelocity: number; // Rate of option creation vs. destruction
   commitmentDepth: number; // Average commitment level of decisions
 }
+
+/**
+ * Current flexibility state (alias for FlexibilityMetrics)
+ */
+export type FlexibilityState = FlexibilityMetrics;
 
 /**
  * Proximity to a specific barrier

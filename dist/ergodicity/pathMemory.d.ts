@@ -71,5 +71,9 @@ export declare class PathMemoryManager {
      * Get warnings based on current metrics
      */
     getWarnings(): string[];
+    /**
+     * Record a path event (public method for escape protocols)
+     */
+    recordEvent(event: PathEvent): void;
 }
 //# sourceMappingURL=pathMemory.d.ts.map
