@@ -9,6 +9,7 @@ import type {
   OptionCategory,
   TemporalOpportunity,
 } from '../types.js';
+import { COMMITMENT_THRESHOLDS } from '../constants.js';
 
 export class TemporalStrategy extends BaseOptionStrategy {
   readonly strategyName = 'temporal' as const;
@@ -28,7 +29,7 @@ export class TemporalStrategy extends BaseOptionStrategy {
 
     const hasSequentialCommitments =
       context.pathMemory.pathHistory.length > 3 &&
-      context.pathMemory.pathHistory.some(e => e.commitmentLevel > 0.4);
+      context.pathMemory.pathHistory.some(e => e.commitmentLevel > COMMITMENT_THRESHOLDS.MEDIUM);
 
     return hasTimeConstraints || hasSequentialCommitments;
   }
@@ -94,11 +95,12 @@ export class TemporalStrategy extends BaseOptionStrategy {
     });
 
     // Look for options that might expire
-    const expiringOptions = context.pathMemory.availableOptions.filter(
-      opt => opt.includes('time') || opt.includes('now') || opt.includes('soon')
-    );
+    const expiringOptions =
+      context.pathMemory.availableOptions?.filter(
+        (opt: string) => opt.includes('time') || opt.includes('now') || opt.includes('soon')
+      ) || [];
 
-    expiringOptions.forEach((option, index) => {
+    expiringOptions.forEach((option: string, index: number) => {
       opportunities.push({
         id: `expiring_${index}`,
         description: option,

@@ -90,10 +90,25 @@ export class OptionEvaluator {
     const categoryBonus = this.calculateCategoryBonus(option, context);
 
     // Calculate final gain (capped at 0.5)
-    const gain = Math.min(0.5, baseGain * urgencyMultiplier + categoryBonus);
+    let gain = Math.min(0.5, baseGain * urgencyMultiplier + categoryBonus);
 
-    // Store for later use
-    option.flexibilityGain = gain;
+    // If option has a flexibility gain range, ensure we're within it
+    if (
+      option.flexibilityGain &&
+      typeof option.flexibilityGain === 'object' &&
+      'min' in option.flexibilityGain &&
+      'max' in option.flexibilityGain
+    ) {
+      const flexGain = option.flexibilityGain as { min: number; max: number };
+      const min = flexGain.min || 0;
+      const max = flexGain.max;
+      // If max is explicitly 0, return 0
+      if (max === 0) {
+        gain = 0;
+      } else {
+        gain = Math.max(min, Math.min(max || 1, gain));
+      }
+    }
 
     return gain;
   }
@@ -405,6 +420,9 @@ export class OptionEvaluator {
 
   private hasConflict(option: Option, constraint: Constraint): boolean {
     // Check if option might conflict with constraint
+    if (!constraint.affectedOptions || !Array.isArray(constraint.affectedOptions)) {
+      return false;
+    }
     return constraint.affectedOptions.some((affected: string) =>
       option.actions.some(action => action.toLowerCase().includes(affected.toLowerCase()))
     );

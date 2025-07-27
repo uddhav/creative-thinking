@@ -9,6 +9,7 @@ import type {
   OptionCategory,
   DecomposableCommitment,
 } from '../types.js';
+import { COMMITMENT_THRESHOLDS, CONSTRAINT_THRESHOLDS } from '../constants.js';
 
 export class DecompositionStrategy extends BaseOptionStrategy {
   readonly strategyName = 'decomposition' as const;
@@ -19,10 +20,12 @@ export class DecompositionStrategy extends BaseOptionStrategy {
   isApplicable(context: OptionGenerationContext): boolean {
     // Look for monolithic commitments or high coupling
     const hasMonolithicStructure = context.pathMemory.constraints.some(
-      c => c.type === 'technical' && c.strength > 0.6
+      c => c.type === 'technical' && c.strength > CONSTRAINT_THRESHOLDS.STRONG
     );
 
-    const hasHighCommitments = context.pathMemory.pathHistory.some(e => e.commitmentLevel > 0.6);
+    const hasHighCommitments = context.pathMemory.pathHistory.some(
+      e => e.commitmentLevel > COMMITMENT_THRESHOLDS.HIGH
+    );
 
     return hasMonolithicStructure || hasHighCommitments;
   }

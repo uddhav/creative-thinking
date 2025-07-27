@@ -10,12 +10,15 @@ import { ResourceStrategy } from './strategies/resource.js';
 import { CapabilityStrategy } from './strategies/capability.js';
 import { RecombinationStrategy } from './strategies/recombination.js';
 import { OptionEvaluator } from './evaluator.js';
+import { OPTION_GENERATION, FLEXIBILITY_THRESHOLDS, BARRIER_THRESHOLDS, RESOURCE_LIMITS, TEXT_LIMITS, CONSTRAINT_THRESHOLDS, } from './constants.js';
 /**
  * Option Generation Engine that systematically creates new possibilities
  */
 export class OptionGenerationEngine {
     strategies;
     evaluator;
+    errors = [];
+    optionCache = new Map();
     constructor() {
         this.strategies = new Map();
         this.strategies.set('decomposition', new DecompositionStrategy());
@@ -29,38 +32,187 @@ export class OptionGenerationEngine {
         this.evaluator = new OptionEvaluator();
     }
     /**
+     * Validate option generation context
+     */
+    validateContext(context) {
+        if (!context) {
+            throw new Error('Context is required for option generation');
+        }
+        if (!context.currentFlexibility) {
+            throw new Error('Current flexibility state is required');
+        }
+        const flexScore = context.currentFlexibility.flexibilityScore;
+        if (typeof flexScore !== 'number' || flexScore < 0 || flexScore > 1) {
+            throw new Error('Flexibility score must be a number between 0 and 1');
+        }
+        if (!context.pathMemory) {
+            throw new Error('Path memory is required');
+        }
+        if (!Array.isArray(context.pathMemory.pathHistory)) {
+            throw new Error('Path history must be an array');
+        }
+        if (!Array.isArray(context.pathMemory.constraints)) {
+            throw new Error('Constraints must be an array');
+        }
+    }
+    /**
+     * Sanitize string input to prevent injection and limit length
+     */
+    sanitizeString(input, maxLength = TEXT_LIMITS.MAX_DESCRIPTION_LENGTH) {
+        if (typeof input !== 'string')
+            return '';
+        return input
+            .replace(/[<>]/g, '') // Remove potential HTML tags
+            .trim()
+            .slice(0, maxLength);
+    }
+    /**
+     * Clean and validate generated options
+     */
+    cleanOptions(options) {
+        return options
+            .filter(option => option && option.id && option.name)
+            .map(option => ({
+            ...option,
+            name: this.sanitizeString(option.name, TEXT_LIMITS.MAX_NAME_LENGTH),
+            description: this.sanitizeString(option.description, TEXT_LIMITS.MAX_DESCRIPTION_LENGTH),
+            actions: option.actions
+                .slice(0, TEXT_LIMITS.MAX_ACTIONS)
+                .map(action => this.sanitizeString(action, TEXT_LIMITS.MAX_ACTION_LENGTH)),
+            prerequisites: option.prerequisites
+                .slice(0, TEXT_LIMITS.MAX_PREREQUISITES)
+                .map(prereq => this.sanitizeString(prereq, TEXT_LIMITS.MAX_ACTION_LENGTH)),
+        }));
+    }
+    /**
+     * Report an error during option generation
+     */
+    reportError(strategy, error, context) {
+        this.errors.push({
+            strategy,
+            error,
+            timestamp: Date.now(),
+            context,
+        });
+        // Keep only recent errors
+        const oneHourAgo = Date.now() - 3600000;
+        this.errors = this.errors.filter(e => e.timestamp > oneHourAgo);
+    }
+    /**
+     * Get reported errors
+     */
+    getErrors() {
+        return [...this.errors];
+    }
+    /**
+     * Generate cache key from context
+     */
+    getCacheKey(context) {
+        const key = `${context.currentFlexibility.flexibilityScore.toFixed(2)}-${context.pathMemory.constraints.length}-${context.pathMemory.pathHistory.length}`;
+        return key;
+    }
+    /**
+     * Get cached options if available and fresh
+     */
+    getCachedOptions(key) {
+        const cached = this.optionCache.get(key);
+        if (cached && Date.now() - cached.timestamp < RESOURCE_LIMITS.CACHE_EXPIRY_MS) {
+            return cached.options;
+        }
+        return null;
+    }
+    /**
+     * Clean up expired options and cache entries
+     */
+    cleanupExpiredOptions() {
+        const now = Date.now();
+        // Clean cache
+        for (const [key, value] of this.optionCache.entries()) {
+            if (now - value.timestamp > RESOURCE_LIMITS.CACHE_EXPIRY_MS) {
+                this.optionCache.delete(key);
+            }
+        }
+        // Limit cache size
+        if (this.optionCache.size > RESOURCE_LIMITS.CACHE_SIZE_LIMIT) {
+            const entries = Array.from(this.optionCache.entries()).sort((a, b) => b[1].timestamp - a[1].timestamp);
+            // Keep only the most recent entries
+            this.optionCache.clear();
+            entries.slice(0, RESOURCE_LIMITS.CACHE_SIZE_LIMIT / 2).forEach(([k, v]) => {
+                this.optionCache.set(k, v);
+            });
+        }
+    }
+    /**
      * Generate options to increase flexibility
      */
-    generateOptions(context, targetCount = 10) {
+    generateOptions(context, targetCount = OPTION_GENERATION.DEFAULT_TARGET_COUNT) {
         const startTime = Date.now();
+        try {
+            // Validate context
+            this.validateContext(context);
+        }
+        catch (error) {
+            this.reportError('validation', error, 'Context validation failed');
+            return this.createEmptyResult(context);
+        }
+        // Check cache
+        const cacheKey = this.getCacheKey(context);
+        const cachedOptions = this.getCachedOptions(cacheKey);
+        if (cachedOptions) {
+            const evaluations = this.evaluator.evaluateOptions(cachedOptions, context);
+            // Ensure minimum generation time even for cached results
+            const generationTime = Math.max(1, Date.now() - startTime);
+            return this.createResult(cachedOptions, evaluations, [], generationTime, context);
+        }
+        // Clean up periodically
+        this.cleanupExpiredOptions();
         const options = [];
         const strategiesUsed = [];
+        // Limit target count
+        targetCount = Math.min(targetCount, RESOURCE_LIMITS.MAX_OPTIONS_TOTAL);
         // Get applicable strategies sorted by priority
         const applicableStrategies = this.getApplicableStrategies(context);
         // Generate options from each strategy until target reached
         for (const [strategyName, strategy] of applicableStrategies) {
             if (options.length >= targetCount)
                 break;
+            // Check time limit
+            if (Date.now() - startTime > RESOURCE_LIMITS.MAX_GENERATION_TIME_MS) {
+                this.reportError('timeout', new Error('Generation timeout'), 'Exceeded time limit');
+                break;
+            }
             try {
-                const strategyOptions = strategy.generate(context);
+                const strategyOptions = strategy
+                    .generate(context)
+                    .slice(0, OPTION_GENERATION.MAX_OPTIONS_PER_STRATEGY);
                 if (strategyOptions.length > 0) {
-                    options.push(...strategyOptions);
+                    const cleanedOptions = this.cleanOptions(strategyOptions);
+                    options.push(...cleanedOptions);
                     strategiesUsed.push(strategyName);
                 }
             }
             catch (error) {
-                console.error(`Error in ${strategyName} strategy:`, error);
+                this.reportError(strategyName, error, `Strategy execution failed`);
             }
+        }
+        // Cache successful results
+        if (options.length > 0) {
+            this.optionCache.set(cacheKey, { options, timestamp: Date.now() });
         }
         // Evaluate all options
         const evaluations = this.evaluator.evaluateOptions(options, context);
+        return this.createResult(options, evaluations, strategiesUsed, Date.now() - startTime, context);
+    }
+    /**
+     * Create result object
+     */
+    createResult(options, evaluations, strategiesUsed, generationTime, context) {
         // Find top recommendation
         const topRecommendation = evaluations.length > 0 ? options.find(o => o.id === evaluations[0].optionId) || null : null;
         // Calculate projected flexibility
         const projectedFlexibility = this.calculateProjectedFlexibility(context.currentFlexibility.flexibilityScore, evaluations);
         // Identify critical constraints being addressed
         const criticalConstraints = this.identifyCriticalConstraints(options, context);
-        const generationTime = Date.now() - startTime;
         return {
             options,
             evaluations,
@@ -75,7 +227,25 @@ export class OptionGenerationEngine {
         };
     }
     /**
+     * Create empty result for error cases
+     */
+    createEmptyResult(context) {
+        return {
+            options: [],
+            evaluations: [],
+            topRecommendation: null,
+            strategiesUsed: [],
+            generationTime: 0,
+            context: {
+                initialFlexibility: context.currentFlexibility?.flexibilityScore || 0,
+                projectedFlexibility: context.currentFlexibility?.flexibilityScore || 0,
+                criticalConstraints: [],
+            },
+        };
+    }
+    /**
      * Generate options using specific strategies
+     * @deprecated Use generateOptions with preferredStrategies in context
      */
     generateWithStrategies(context, strategies, targetCount = 10) {
         // Filter context to use only specified strategies
@@ -86,18 +256,27 @@ export class OptionGenerationEngine {
         return this.generateOptions(filteredContext, targetCount);
     }
     /**
+     * Generate options with specific strategies (alias for tests)
+     */
+    generateOptionsWithStrategies(context, strategies, targetCount = 10) {
+        return this.generateWithStrategies(context, strategies, targetCount);
+    }
+    /**
      * Check if option generation is recommended
      */
     shouldGenerateOptions(context) {
         const flexibility = context.currentFlexibility.flexibilityScore;
-        // Recommend when flexibility is low
-        if (flexibility < 0.4)
+        // Recommend when flexibility is below moderate threshold
+        if (flexibility < FLEXIBILITY_THRESHOLDS.MODERATE)
+            return true;
+        // Critical situation - always generate
+        if (flexibility < FLEXIBILITY_THRESHOLDS.CRITICAL)
             return true;
         // Also recommend when options are being closed faster than opened
-        if (context.currentFlexibility.optionVelocity < 0)
+        if (context.currentFlexibility.optionVelocity && context.currentFlexibility.optionVelocity < 0)
             return true;
         // Recommend when approaching barriers
-        const approachingBarrier = context.currentFlexibility.barrierProximity.some(bp => bp.distance < 0.3);
+        const approachingBarrier = context.pathMemory?.barrierProximity?.some(bp => bp.distance < BARRIER_THRESHOLDS.DANGER_ZONE) || false;
         return approachingBarrier;
     }
     /**
@@ -171,17 +350,19 @@ export class OptionGenerationEngine {
         });
         // Assume 50% of recommended options might be implemented
         recommended.slice(0, 3).forEach(evaluation => {
-            projectedGain += evaluation.flexibilityGain * 0.5;
+            projectedGain += evaluation.flexibilityGain * OPTION_GENERATION.FLEXIBILITY_GAIN_WEIGHT;
         });
         // Account for diminishing returns
         projectedGain *= 0.8;
+        // Cap gains to be realistic
+        projectedGain = Math.min(projectedGain, FLEXIBILITY_THRESHOLDS.LOW);
         return Math.min(1.0, currentFlexibility + projectedGain);
     }
     identifyCriticalConstraints(options, context) {
         const criticalConstraints = new Set();
         // Find constraints with high strength
         const strongConstraints = context.pathMemory.constraints
-            .filter(c => c.strength > 0.6)
+            .filter(c => c.strength > CONSTRAINT_THRESHOLDS.STRONG)
             .sort((a, b) => b.strength - a.strength)
             .slice(0, 3);
         strongConstraints.forEach(constraint => {

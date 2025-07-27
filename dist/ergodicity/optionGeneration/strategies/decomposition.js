@@ -2,6 +2,7 @@
  * Decomposition Strategy - Break monolithic commitments into flexible pieces
  */
 import { BaseOptionStrategy } from './base.js';
+import { COMMITMENT_THRESHOLDS, CONSTRAINT_THRESHOLDS } from '../constants.js';
 export class DecompositionStrategy extends BaseOptionStrategy {
     strategyName = 'decomposition';
     description = 'Break monolithic commitments into smaller, flexible pieces';
@@ -9,8 +10,8 @@ export class DecompositionStrategy extends BaseOptionStrategy {
     applicableCategories = ['structural', 'technical', 'process'];
     isApplicable(context) {
         // Look for monolithic commitments or high coupling
-        const hasMonolithicStructure = context.pathMemory.constraints.some(c => c.type === 'technical' && c.strength > 0.6);
-        const hasHighCommitments = context.pathMemory.pathHistory.some(e => e.commitmentLevel > 0.6);
+        const hasMonolithicStructure = context.pathMemory.constraints.some(c => c.type === 'technical' && c.strength > CONSTRAINT_THRESHOLDS.STRONG);
+        const hasHighCommitments = context.pathMemory.pathHistory.some(e => e.commitmentLevel > COMMITMENT_THRESHOLDS.HIGH);
         return hasMonolithicStructure || hasHighCommitments;
     }
     generate(context) {

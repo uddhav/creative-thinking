@@ -2,7 +2,25 @@
  * Core types for the Option Generation Engine
  */
 import type { SessionState } from '../../persistence/types.js';
-import type { PathMemory, FlexibilityState } from '../types.js';
+import type { FlexibilityState, Constraint, PathEvent, Barrier } from '../types.js';
+/**
+ * Session data for tracking option generation metrics
+ */
+export interface SessionData {
+    sessionId: string;
+    startTime: number;
+    endTime?: number;
+    problemStatement: string;
+    techniquesUsed: string[];
+    totalSteps: number;
+    insights: string[];
+    pathDependencyMetrics: {
+        optionSpaceSize: number;
+        pathDivergence: number;
+        commitmentDepth: number;
+        reversibilityIndex: number;
+    };
+}
 /**
  * Represents a generated option for increasing flexibility
  */
@@ -48,13 +66,32 @@ export interface OptionEvaluation {
 /**
  * Context for option generation
  */
+/**
+ * Path memory specific to option generation context
+ */
+export interface PathMemory {
+    constraints: Constraint[];
+    pathHistory: PathEvent[];
+    flexibilityOverTime: Array<{
+        step: number;
+        score: number;
+        timestamp: number;
+    }>;
+    barrierProximity?: Array<{
+        barrier: Barrier;
+        distance: number;
+    }>;
+    absorbingBarriers?: Barrier[];
+    availableOptions?: string[];
+}
 export interface OptionGenerationContext {
     sessionState: SessionState;
     pathMemory: PathMemory;
     currentFlexibility: FlexibilityState;
-    targetOptionCount: number;
+    targetOptionCount?: number;
     preferredStrategies?: OptionGenerationStrategy[];
     constraints?: GenerationConstraint[];
+    sessionData?: SessionData;
 }
 /**
  * Constraints on option generation

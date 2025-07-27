@@ -2,6 +2,7 @@
  * Temporal Strategy - Create options by changing time parameters
  */
 import { BaseOptionStrategy } from './base.js';
+import { COMMITMENT_THRESHOLDS } from '../constants.js';
 export class TemporalStrategy extends BaseOptionStrategy {
     strategyName = 'temporal';
     description = 'Create flexibility by changing time parameters - delay, accelerate, or sequence differently';
@@ -13,7 +14,7 @@ export class TemporalStrategy extends BaseOptionStrategy {
             c.description.toLowerCase().includes('schedule') ||
             c.description.toLowerCase().includes('time'));
         const hasSequentialCommitments = context.pathMemory.pathHistory.length > 3 &&
-            context.pathMemory.pathHistory.some(e => e.commitmentLevel > 0.4);
+            context.pathMemory.pathHistory.some(e => e.commitmentLevel > COMMITMENT_THRESHOLDS.MEDIUM);
         return hasTimeConstraints || hasSequentialCommitments;
     }
     generate(context) {
@@ -71,7 +72,7 @@ export class TemporalStrategy extends BaseOptionStrategy {
             }
         });
         // Look for options that might expire
-        const expiringOptions = context.pathMemory.availableOptions.filter(opt => opt.includes('time') || opt.includes('now') || opt.includes('soon'));
+        const expiringOptions = context.pathMemory.availableOptions?.filter((opt) => opt.includes('time') || opt.includes('now') || opt.includes('soon')) || [];
         expiringOptions.forEach((option, index) => {
             opportunities.push({
                 id: `expiring_${index}`,

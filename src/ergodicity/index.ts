@@ -509,9 +509,15 @@ export class ErgodicityManager {
       insights: [],
     };
 
+    const pathMemory = this.getPathMemory();
     const context: OptionGenerationContext = {
       sessionState: mockSessionState,
-      pathMemory: this.getPathMemory(),
+      pathMemory: {
+        constraints: pathMemory.constraints,
+        pathHistory: pathMemory.pathHistory,
+        flexibilityOverTime: [],
+        availableOptions: pathMemory.availableOptions,
+      },
       currentFlexibility: this.getCurrentFlexibility(),
       targetOptionCount: 10,
     };
@@ -556,9 +562,15 @@ export class ErgodicityManager {
       endTime: sessionData.endTime,
     };
 
+    const pathMemory = this.getPathMemory();
     return {
       sessionState,
-      pathMemory: this.getPathMemory(),
+      pathMemory: {
+        constraints: pathMemory.constraints,
+        pathHistory: pathMemory.pathHistory,
+        flexibilityOverTime: [],
+        availableOptions: pathMemory.availableOptions,
+      },
       currentFlexibility: this.getCurrentFlexibility(),
       targetOptionCount: 10,
     };

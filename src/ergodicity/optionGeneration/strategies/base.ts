@@ -72,10 +72,15 @@ export abstract class BaseOptionStrategy {
     actions: string[],
     prerequisites: string[] = []
   ): Option {
+    // Truncate very long descriptions and names
+    const truncatedName = name.length > 200 ? name.substring(0, 197) + '...' : name;
+    const truncatedDescription =
+      description.length > 1000 ? description.substring(0, 997) + '...' : description;
+
     return {
       id: this.createOptionId(),
-      name,
-      description,
+      name: truncatedName,
+      description: truncatedDescription,
       strategy: this.strategyName,
       category,
       actions,

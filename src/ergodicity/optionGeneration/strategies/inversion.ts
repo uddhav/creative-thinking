@@ -171,8 +171,14 @@ export class InversionStrategy extends BaseOptionStrategy {
       return this.createGenericConstraintInversion();
     }
 
+    // Truncate long constraint descriptions
+    const constraintDesc =
+      invertibleConstraint.description.length > 100
+        ? invertibleConstraint.description.substring(0, 97) + '...'
+        : invertibleConstraint.description;
+
     const actions = [
-      `Identify the constraint: ${invertibleConstraint.description}`,
+      `Identify the constraint: ${constraintDesc}`,
       'List all negative impacts of the constraint',
       'Brainstorm how each negative could become a positive',
       'Design features that leverage the constraint',
@@ -181,7 +187,7 @@ export class InversionStrategy extends BaseOptionStrategy {
 
     return this.createOption(
       'Turn Constraint into Feature',
-      `Transform the limitation "${invertibleConstraint.description}" into a unique selling point or differentiator. What seems like a restriction can become a source of innovation and competitive advantage.`,
+      `Transform the limitation "${constraintDesc}" into a unique selling point or differentiator. What seems like a restriction can become a source of innovation and competitive advantage.`,
       'conceptual',
       actions,
       ['Marketing team alignment', 'Customer feedback on constraint perception']
