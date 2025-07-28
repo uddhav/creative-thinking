@@ -34,7 +34,8 @@ export type LateralTechnique =
   | 'concept_extraction'
   | 'yes_and'
   | 'design_thinking'
-  | 'triz';
+  | 'triz'
+  | 'neural_state';
 export type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green' | 'purple';
 export type ScamperAction =
   | 'substitute'
@@ -178,6 +179,12 @@ interface ExecuteThinkingStepInput {
   revisesStep?: number;
   branchFromStep?: number;
   branchId?: string;
+
+  // Neural State Optimization fields
+  dominantNetwork?: 'dmn' | 'ecn'; // Default Mode Network vs Executive Control Network
+  suppressionDepth?: number;
+  switchingRhythm?: string[];
+  integrationInsights?: string[];
 }
 
 // Base interface for thinking operations
@@ -242,6 +249,12 @@ export interface ThinkingOperationData {
 
   // Auto-save preference
   autoSave?: boolean;
+
+  // Neural State Optimization fields
+  dominantNetwork?: 'dmn' | 'ecn'; // Default Mode Network vs Executive Control Network
+  suppressionDepth?: number;
+  switchingRhythm?: string[];
+  integrationInsights?: string[];
 }
 
 // Interface for session management operations
@@ -984,6 +997,7 @@ export class LateralThinkingServer {
       yes_and: '🤝',
       design_thinking: '💭',
       triz: '⚙️',
+      neural_state: '🧩',
     };
     return emojis[technique] || '🧠';
   }
@@ -1271,11 +1285,12 @@ export class LateralThinkingServer {
         'yes_and',
         'design_thinking',
         'triz',
+        'neural_state',
       ].includes(data.technique as string)
     ) {
       throw new ValidationError(
         ErrorCode.INVALID_TECHNIQUE,
-        'Invalid technique: must be one of six_hats, po, random_entry, scamper, concept_extraction, yes_and, design_thinking, or triz',
+        'Invalid technique: must be one of six_hats, po, random_entry, scamper, concept_extraction, yes_and, design_thinking, triz, or neural_state',
         'technique'
       );
     }
@@ -1445,6 +1460,7 @@ export class LateralThinkingServer {
       scamper: [], // Risk questions integrated into each action
       design_thinking: [], // Critical lens integrated into each stage
       triz: [2], // Via Negativa removal step
+      neural_state: [2], // Network suppression identification is critical
     };
     return criticalSteps[technique] || [];
   }
@@ -1626,6 +1642,15 @@ export class LateralThinkingServer {
         }
         break;
 
+      case 'neural_state':
+        // Neural state optimization is mostly reversible but requires habit formation
+        impact.commitmentLevel = 0.3;
+        impact.reversibilityCost = 0.2;
+        if (data.switchingRhythm && data.switchingRhythm.length > 0) {
+          impact.optionsOpened = data.switchingRhythm.map(r => `Cognitive pattern: ${r}`);
+        }
+        break;
+
       default:
         // Default low impact for exploration
         impact.commitmentLevel = 0.2;
@@ -1739,6 +1764,25 @@ export class LateralThinkingServer {
         techniqueInfo = trizSteps[currentStep - 1];
         if (data.contradiction && currentStep === 1) {
           techniqueInfo += `: ${data.contradiction}`;
+        }
+        break;
+      }
+      case 'neural_state': {
+        emoji = '🧩';
+        const neuralSteps = [
+          'Assess Current Neural State',
+          'Identify Network Suppression',
+          'Develop Switching Rhythm',
+          'Integrate Insights',
+        ];
+        techniqueInfo = neuralSteps[currentStep - 1];
+        if (data.dominantNetwork && currentStep === 1) {
+          const networkName =
+            data.dominantNetwork === 'dmn' ? 'Default Mode Network' : 'Executive Control Network';
+          techniqueInfo += ` - Currently: ${networkName}`;
+        }
+        if (data.suppressionDepth && currentStep === 2) {
+          techniqueInfo += ` - Depth: ${data.suppressionDepth}/10`;
         }
         break;
       }
@@ -1908,6 +1952,8 @@ export class LateralThinkingServer {
         return 5; // Empathize, Define, Ideate, Prototype, Test
       case 'triz':
         return 4; // Identify contradiction, Via Negativa removal, Apply principles, Minimal solution
+      case 'neural_state':
+        return 4; // Assess current state, Identify network suppression, Develop switching rhythm, Integrate insights
       default:
         return 5;
     }
@@ -2023,6 +2069,32 @@ export class LateralThinkingServer {
           insights.push(`Minimal solution achieved: ${solution}`);
         }
         insights.push('TRIZ process completed with subtractive innovation');
+        break;
+      }
+      case 'neural_state': {
+        const dominantNetworks = session.history
+          .filter(h => h.dominantNetwork)
+          .map(h => h.dominantNetwork);
+        const switchingRhythms = session.history
+          .filter(h => h.switchingRhythm)
+          .flatMap(h => h.switchingRhythm || []);
+        const integrationInsights = session.history
+          .filter(h => h.integrationInsights)
+          .flatMap(h => h.integrationInsights || []);
+
+        if (dominantNetworks.length > 0) {
+          const networkNames = dominantNetworks.map(n =>
+            n === 'dmn' ? 'Default Mode Network' : 'Executive Control Network'
+          );
+          insights.push(`Neural networks assessed: ${[...new Set(networkNames)].join(', ')}`);
+        }
+        if (switchingRhythms.length > 0) {
+          insights.push(`Switching rhythms developed: ${switchingRhythms.join(', ')}`);
+        }
+        if (integrationInsights.length > 0) {
+          insights.push(`Cognitive integration achieved: ${integrationInsights.join(', ')}`);
+        }
+        insights.push('Neural State Optimization completed for enhanced cognitive flexibility');
         break;
       }
     }
@@ -2325,6 +2397,15 @@ export class LateralThinkingServer {
         ];
         return trizSteps[nextStep - 1] || 'Complete the process';
       }
+      case 'neural_state': {
+        const neuralSteps = [
+          'Assess your current dominant neural network (DMN for wandering/creative or ECN for focused/analytical)',
+          'Identify patterns of network suppression and cognitive rigidity',
+          'Develop a personalized rhythm for switching between networks',
+          'Integrate insights to achieve optimal cognitive flexibility',
+        ];
+        return neuralSteps[nextStep - 1] || 'Complete the neural optimization process';
+      }
     }
 
     return 'Continue with the next step';
@@ -2411,6 +2492,16 @@ export class LateralThinkingServer {
       case 'triz':
         if (input.contradiction && currentStep === 1) {
           return 'Technical contradiction identified, seeking inventive resolution';
+        }
+        break;
+      case 'neural_state':
+        if (input.dominantNetwork && currentStep === 1) {
+          const networkName =
+            input.dominantNetwork === 'dmn' ? 'Default Mode Network' : 'Executive Control Network';
+          return `${networkName} dominance detected, exploring cognitive flexibility options`;
+        }
+        if (input.suppressionDepth && currentStep === 2) {
+          return `Network suppression depth: ${input.suppressionDepth}/10 - ${input.suppressionDepth > 7 ? 'High rigidity detected' : 'Moderate flexibility present'}`;
         }
         break;
     }
@@ -2756,6 +2847,35 @@ export class LateralThinkingServer {
             'simplification',
           ],
           limitations: ['requires problem abstraction', 'learning curve for principles'],
+        });
+      }
+
+      // Neural State Optimization - Good for cognitive optimization
+      if (
+        combined.includes('focus') ||
+        combined.includes('cognit') ||
+        combined.includes('attention') ||
+        combined.includes('mental') ||
+        combined.includes('state') ||
+        combined.includes('flow') ||
+        combined.includes('productivity') ||
+        combined.includes('creative block') ||
+        combined.includes('switch') ||
+        combined.includes('balance')
+      ) {
+        recommendations.push({
+          technique: 'neural_state',
+          score: 0.88,
+          reasoning:
+            'Neural State Optimization leverages brain network switching for optimal cognition',
+          bestFor: [
+            'cognitive optimization',
+            'creative blocks',
+            'focus challenges',
+            'mental state management',
+            'productivity enhancement',
+          ],
+          limitations: ['requires self-awareness', 'individual variation in effectiveness'],
         });
       }
 
@@ -3128,6 +3248,52 @@ export class LateralThinkingServer {
                 description: 'Develop minimal solution',
                 expectedOutputs: ['Simplified solution', 'Achieved through removal'],
                 riskConsiderations: ['Verify nothing essential removed'],
+              }
+            );
+            break;
+          case 'neural_state':
+            workflow.push(
+              {
+                technique,
+                stepNumber: stepNumber++,
+                description: 'Assess current neural state (DMN vs ECN dominance)',
+                expectedOutputs: [
+                  'Current dominant network identification',
+                  'Cognitive patterns observed',
+                  'Attention/focus challenges',
+                ],
+                riskConsiderations: ['Individual variation in neural patterns'],
+              },
+              {
+                technique,
+                stepNumber: stepNumber++,
+                description: 'Identify network suppression patterns',
+                expectedOutputs: [
+                  'Suppression depth analysis',
+                  'Stuck patterns identified',
+                  'Cognitive flexibility barriers',
+                ],
+              },
+              {
+                technique,
+                stepNumber: stepNumber++,
+                description: 'Develop network switching rhythm',
+                expectedOutputs: [
+                  'Switching techniques identified',
+                  'Rhythm patterns established',
+                  'Transition triggers defined',
+                ],
+                riskConsiderations: ['Avoid forced switching that disrupts flow'],
+              },
+              {
+                technique,
+                stepNumber: stepNumber++,
+                description: 'Integrate insights for optimal cognition',
+                expectedOutputs: [
+                  'Personal neural optimization strategy',
+                  'Integration of DMN creativity with ECN focus',
+                  'Sustainable cognitive patterns',
+                ],
               }
             );
             break;

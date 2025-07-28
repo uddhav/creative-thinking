@@ -334,6 +334,11 @@ export class ErgodicityManager {
                 typicalCommitment: 0.6,
                 riskProfile: 'Medium - Technical solutions may lock in',
             },
+            neural_state: {
+                typicalReversibility: 0.8,
+                typicalCommitment: 0.3,
+                riskProfile: 'Low - Cognitive patterns are adaptable',
+            },
         };
         return profiles[technique];
     }
