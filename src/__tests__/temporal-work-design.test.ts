@@ -485,5 +485,42 @@ describe('Temporal Work Design', () => {
       // Should not have contextual insight without temporal landscape data
       expect(result.contextualInsight).toBeUndefined();
     });
+
+    it('should provide contextual guidance based on previous steps', async () => {
+      const planId = await createPlan('Test contextual guidance', ['temporal_work']);
+
+      // Step 1: Map landscape with specific dead zones
+      const step1 = await executeStep(planId, {
+        technique: 'temporal_work',
+        problem: 'Test contextual guidance',
+        currentStep: 1,
+        totalSteps: 5,
+        output: 'Mapped landscape',
+        temporalLandscape: {
+          fixedDeadlines: ['Project launch'],
+          deadZones: ['Post-lunch slump', 'Monday meetings'],
+          pressurePoints: ['Week before launch'],
+        },
+        nextStepNeeded: true,
+      });
+
+      expect(step1.currentStep).toBe(1);
+
+      // Step 2: Check guidance includes reference to dead zones from step 1
+      const step2 = await executeStep(planId, {
+        sessionId: step1.sessionId,
+        technique: 'temporal_work',
+        problem: 'Test contextual guidance',
+        currentStep: 2,
+        totalSteps: 5,
+        output: 'Analyzing rhythms',
+        circadianAlignment: ['Morning focus', 'Afternoon collaboration'],
+        nextStepNeeded: true,
+      });
+
+      // Step 3 guidance should reference pressure points from step 1
+      expect(step2.nextStepGuidance).toContain('Week before launch');
+      expect(step2.nextStepGuidance).toContain('creative catalysts');
+    });
   });
 });

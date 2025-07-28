@@ -1471,6 +1471,50 @@ export class LateralThinkingServer {
       );
     }
 
+    // Validate temporal work design fields
+    if (technique === 'temporal_work' && data.temporalLandscape) {
+      const landscape = data.temporalLandscape as Record<string, unknown>;
+
+      // Validate temporal landscape structure
+      if (landscape.fixedDeadlines && !Array.isArray(landscape.fixedDeadlines)) {
+        throw new ValidationError(
+          ErrorCode.INVALID_FIELD_VALUE,
+          'temporalLandscape.fixedDeadlines must be an array',
+          'temporalLandscape.fixedDeadlines'
+        );
+      }
+
+      if (landscape.pressurePoints && !Array.isArray(landscape.pressurePoints)) {
+        throw new ValidationError(
+          ErrorCode.INVALID_FIELD_VALUE,
+          'temporalLandscape.pressurePoints must be an array',
+          'temporalLandscape.pressurePoints'
+        );
+      }
+
+      // Validate logical consistency: deadlines should create pressure points
+      if (landscape.fixedDeadlines && landscape.pressurePoints) {
+        const deadlineCount = (landscape.fixedDeadlines as string[]).length;
+        const pressureCount = (landscape.pressurePoints as string[]).length;
+
+        if (deadlineCount > 0 && pressureCount === 0) {
+          console.warn('Warning: Fixed deadlines exist but no pressure points identified');
+        }
+      }
+
+      // Validate kairos opportunities exist when there are dead zones
+      if (landscape.deadZones && landscape.kairosOpportunities) {
+        const deadZoneCount = Array.isArray(landscape.deadZones) ? landscape.deadZones.length : 0;
+        const kairosCount = Array.isArray(landscape.kairosOpportunities)
+          ? landscape.kairosOpportunities.length
+          : 0;
+
+        if (deadZoneCount > 0 && kairosCount === 0) {
+          console.warn('Warning: Dead zones identified but no kairos opportunities found');
+        }
+      }
+    }
+
     return data as unknown as ThinkingOperationData;
   }
 
@@ -2496,14 +2540,62 @@ export class LateralThinkingServer {
         return neuralSteps[nextStep - 1] || 'Complete the neural optimization process';
       }
       case 'temporal_work': {
-        const temporalSteps = [
-          'Map your temporal landscape: identify fixed deadlines, flexible windows, pressure points, dead zones, and kairos opportunities',
-          'Analyze circadian rhythms: identify peak creative hours, off-peak insight windows, and optimal task-time alignment',
-          'Transform pressure: convert deadline stress into creative energy using crunches and recovery periods',
-          'Balance async/sync work: allocate solo exploration time and group integration sessions',
-          'Design escape routes: create buffer zones, time loans, and graceful degradation plans',
-        ];
-        return temporalSteps[nextStep - 1] || 'Complete the temporal design process';
+        // Get session context for contextual guidance
+        const sessionId = data.sessionId || this.currentSessionId;
+        const session = sessionId ? this.sessions.get(sessionId) : null;
+        const history = session?.history || [];
+
+        // Make guidance contextual based on previous steps
+        switch (nextStep) {
+          case 1:
+            return 'Map your temporal landscape: identify fixed deadlines, flexible windows, pressure points, dead zones, and kairos opportunities';
+
+          case 2: {
+            // Reference landscape from step 1
+            const step1 = history.find(h => h.currentStep === 1 && h.technique === 'temporal_work');
+            if (
+              step1?.temporalLandscape?.deadZones &&
+              step1.temporalLandscape.deadZones.length > 0
+            ) {
+              return `Analyze circadian rhythms to work around identified dead zones (${step1.temporalLandscape.deadZones.join(', ')})`;
+            }
+            return 'Analyze circadian rhythms: identify peak creative hours and optimal task-time alignment';
+          }
+
+          case 3: {
+            // Reference pressure points from step 1
+            const step1 = history.find(h => h.currentStep === 1 && h.technique === 'temporal_work');
+            if (
+              step1?.temporalLandscape?.pressurePoints &&
+              step1.temporalLandscape.pressurePoints.length > 0
+            ) {
+              return `Transform identified pressure points (${step1.temporalLandscape.pressurePoints.join(', ')}) into creative catalysts`;
+            }
+            return 'Transform pressure: convert deadline stress into creative energy';
+          }
+
+          case 4: {
+            // Reference circadian insights from step 2
+            const step2 = history.find(h => h.currentStep === 2 && h.technique === 'temporal_work');
+            if (step2?.circadianAlignment && step2.circadianAlignment.length > 0) {
+              return `Balance async/sync work based on your rhythm: ${step2.circadianAlignment[0]}`;
+            }
+            return 'Balance async/sync work: allocate solo exploration and group integration time';
+          }
+
+          case 5: {
+            // Reference all constraints from previous steps
+            const step1 = history.find(h => h.currentStep === 1 && h.technique === 'temporal_work');
+            const deadlineCount = step1?.temporalLandscape?.fixedDeadlines?.length || 0;
+            if (deadlineCount > 0) {
+              return `Design escape routes for ${deadlineCount} fixed deadlines with buffer zones and graceful degradation`;
+            }
+            return 'Design escape routes: create buffer zones, time loans, and graceful degradation plans';
+          }
+
+          default:
+            return 'Complete the temporal design process';
+        }
       }
     }
 
@@ -2991,13 +3083,20 @@ export class LateralThinkingServer {
       // Temporal Work Design (time, deadline, schedule, circadian, pressure)
       if (
         combined.includes('time') ||
+        combined.includes('timeline') ||
         combined.includes('deadline') ||
+        combined.includes('due date') ||
         combined.includes('schedule') ||
         combined.includes('circadian') ||
         combined.includes('pressure') ||
+        combined.includes('crunch') ||
+        combined.includes('sprint') ||
+        combined.includes('milestone') ||
         combined.includes('kairos') ||
         combined.includes('chronos') ||
-        combined.includes('temporal')
+        combined.includes('temporal') ||
+        combined.includes('urgent') ||
+        combined.includes('rhythm')
       ) {
         recommendations.push({
           technique: 'temporal_work',
