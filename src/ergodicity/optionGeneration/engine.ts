@@ -70,6 +70,10 @@ export class OptionGenerationEngine {
       throw new Error('Context is required for option generation');
     }
 
+    if (!context.sessionState) {
+      throw new Error('Session state is required');
+    }
+
     if (!context.currentFlexibility) {
       throw new Error('Current flexibility state is required');
     }
@@ -385,6 +389,13 @@ export class OptionGenerationEngine {
    * Get a quick option without full generation
    */
   getQuickOption(context: OptionGenerationContext): Option | null {
+    // Validate context first
+    try {
+      this.validateContext(context);
+    } catch {
+      return null;
+    }
+
     // Find the highest priority applicable strategy
     const applicableStrategies = this.getApplicableStrategies(context);
 
