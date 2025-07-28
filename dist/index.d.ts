@@ -247,6 +247,15 @@ export declare class LateralThinkingServer {
         isError?: boolean;
     }>;
     private getNextStepGuidance;
+    private generateMemorySuggestiveOutputs;
+    private generateContextualInsight;
+    private generateHistoricalNote;
+    private identifyPattern;
+    private categorizeProblem;
+    private identifySolutionPattern;
+    private assessBreakthroughLevel;
+    private extractPathDependencies;
+    private identifyNoteworthyPattern;
     discoverTechniques(input: unknown): Promise<{
         content: Array<{
             type: string;
