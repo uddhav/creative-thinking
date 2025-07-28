@@ -7,12 +7,10 @@ import {
   EscapeVelocitySystem,
   EscapeLevel,
   type EscapeContext,
-  type EscapeAnalysis,
-  type EscapeAttemptResult,
 } from '../../ergodicity/escapeProtocols/index.js';
 import { EscapeProtocolFactory } from '../../ergodicity/escapeProtocols/protocols.js';
 import { EscapeVelocityCalculator } from '../../ergodicity/escapeProtocols/calculator.js';
-import type { PathMemory, FlexibilityState } from '../../ergodicity/types.js';
+import type { PathMemory } from '../../ergodicity/types.js';
 import type { SessionData } from '../../index.js';
 
 describe('Escape Protocols', () => {
@@ -128,7 +126,7 @@ describe('Escape Protocols', () => {
     it('should reset monitoring data', () => {
       // Execute a protocol to populate monitoring
       escapeSystem.executeProtocol(EscapeLevel.PATTERN_INTERRUPTION, mockContext);
-      
+
       const monitoringBefore = escapeSystem.getMonitoringData();
       expect(monitoringBefore.attemptCount).toBe(1);
 
@@ -201,7 +199,8 @@ describe('Escape Protocols', () => {
     });
 
     it('should execute Pattern Interruption with proper results', () => {
-      const protocol = factory.getProtocol(EscapeLevel.PATTERN_INTERRUPTION)!;
+      const protocol = factory.getProtocol(EscapeLevel.PATTERN_INTERRUPTION);
+      if (!protocol) throw new Error('Protocol not found');
       const result = protocol.execute(mockContext);
 
       expect(result.success).toBe(true);
@@ -216,8 +215,9 @@ describe('Escape Protocols', () => {
     it('should execute Resource Reallocation with proper results', () => {
       // Update context for sufficient flexibility
       mockContext.currentFlexibility.flexibilityScore = 0.3;
-      
-      const protocol = factory.getProtocol(EscapeLevel.RESOURCE_REALLOCATION)!;
+
+      const protocol = factory.getProtocol(EscapeLevel.RESOURCE_REALLOCATION);
+      if (!protocol) throw new Error('Protocol not found');
       const result = protocol.execute(mockContext);
 
       expect(result.success).toBe(true);
@@ -231,8 +231,9 @@ describe('Escape Protocols', () => {
     it('should execute Stakeholder Reset with proper results', () => {
       // Update context for sufficient flexibility
       mockContext.currentFlexibility.flexibilityScore = 0.4;
-      
-      const protocol = factory.getProtocol(EscapeLevel.STAKEHOLDER_RESET)!;
+
+      const protocol = factory.getProtocol(EscapeLevel.STAKEHOLDER_RESET);
+      if (!protocol) throw new Error('Protocol not found');
       const result = protocol.execute(mockContext);
 
       expect(result.success).toBe(true);
@@ -246,8 +247,9 @@ describe('Escape Protocols', () => {
     it('should execute Technical Refactoring with proper results', () => {
       // Update context for sufficient flexibility
       mockContext.currentFlexibility.flexibilityScore = 0.5;
-      
-      const protocol = factory.getProtocol(EscapeLevel.TECHNICAL_REFACTORING)!;
+
+      const protocol = factory.getProtocol(EscapeLevel.TECHNICAL_REFACTORING);
+      if (!protocol) throw new Error('Protocol not found');
       const result = protocol.execute(mockContext);
 
       expect(result.success).toBe(true);
@@ -261,8 +263,9 @@ describe('Escape Protocols', () => {
     it('should execute Strategic Pivot with proper results', () => {
       // Update context for sufficient flexibility
       mockContext.currentFlexibility.flexibilityScore = 0.6;
-      
-      const protocol = factory.getProtocol(EscapeLevel.STRATEGIC_PIVOT)!;
+
+      const protocol = factory.getProtocol(EscapeLevel.STRATEGIC_PIVOT);
+      if (!protocol) throw new Error('Protocol not found');
       const result = protocol.execute(mockContext);
 
       expect(result.success).toBe(true);
@@ -320,9 +323,16 @@ describe('Escape Protocols', () => {
           constraints: [
             { id: '1', type: 'resource' as const, description: 'Budget limitation', strength: 0.8 },
             { id: '2', type: 'technical' as const, description: 'Technical debt', strength: 0.9 },
-            { id: '3', type: 'social' as const, description: 'Stakeholder resistance', strength: 0.7 },
+            {
+              id: '3',
+              type: 'social' as const,
+              description: 'Stakeholder resistance',
+              strength: 0.7,
+            },
           ],
-          foreclosedOptions: Array(10).fill(null).map((_, i) => `option${i}`),
+          foreclosedOptions: Array(10)
+            .fill(null)
+            .map((_, i) => `option${i}`),
         },
         currentFlexibility: {
           flexibilityScore: 0.05,
@@ -364,11 +374,14 @@ describe('Escape Protocols', () => {
       });
 
       // Higher level protocols should have more risks
-      const patternInterruption = factory.getProtocol(EscapeLevel.PATTERN_INTERRUPTION)!;
-      const strategicPivot = factory.getProtocol(EscapeLevel.STRATEGIC_PIVOT)!;
-      
+      const patternInterruption = factory.getProtocol(EscapeLevel.PATTERN_INTERRUPTION);
+      const strategicPivot = factory.getProtocol(EscapeLevel.STRATEGIC_PIVOT);
+      if (!patternInterruption || !strategicPivot) throw new Error('Protocols not found');
+
       expect(strategicPivot.risks.length).toBeGreaterThan(patternInterruption.risks.length);
-      expect(strategicPivot.successProbability).toBeLessThan(patternInterruption.successProbability);
+      expect(strategicPivot.successProbability).toBeLessThan(
+        patternInterruption.successProbability
+      );
     });
 
     it('should have progressive flexibility requirements', () => {
@@ -426,16 +439,16 @@ describe('Escape Protocols', () => {
 
     it('should handle zero flexibility scenario', () => {
       mockContext.currentFlexibility.flexibilityScore = 0;
-      
+
       const analysis = escapeSystem.analyzeEscapeNeeds(mockContext);
       expect(analysis.constraintStrength).toBeGreaterThan(0);
       expect(analysis.feasibility).toBeDefined();
       expect(analysis.successProbability).toBeDefined();
-      
+
       // Should still have a trajectory (emergency protocol)
       expect(analysis.optimalTrajectory).toBeDefined();
       expect(analysis.optimalTrajectory.protocol.name).toBe('Pattern Interruption');
-      
+
       // With zero flexibility, available protocols should be minimal
       const availableProtocols = escapeSystem.getAvailableProtocols(0);
       expect(availableProtocols.length).toBe(0); // No protocols available at 0 flexibility
@@ -443,7 +456,7 @@ describe('Escape Protocols', () => {
 
     it('should cap flexibility at 1.0 after protocol execution', () => {
       mockContext.currentFlexibility.flexibilityScore = 0.9;
-      
+
       const result = escapeSystem.executeProtocol(EscapeLevel.PATTERN_INTERRUPTION, mockContext);
       expect(result.flexibilityAfter).toBeLessThanOrEqual(1.0);
     });
