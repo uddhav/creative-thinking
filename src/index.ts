@@ -6,6 +6,14 @@ import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import chalk from 'chalk';
 import { randomUUID } from 'crypto';
+import {
+  ErrorCode,
+  ValidationError,
+  SessionError,
+  ExecutionError,
+  PersistenceError,
+  createErrorResponse,
+} from './errors/index.js';
 import type {
   PersistenceAdapter,
   SessionState as PersistenceSessionState,
@@ -527,18 +535,15 @@ export class LateralThinkingServer {
     input: SessionOperationData
   ): Promise<{ content: Array<{ type: string; text: string }>; isError?: boolean }> {
     if (!this.persistenceAdapter) {
+      const errorResponse = createErrorResponse(
+        new PersistenceError(ErrorCode.PERSISTENCE_NOT_AVAILABLE, 'Persistence not available'),
+        'persistence'
+      );
       return {
         content: [
           {
             type: 'text',
-            text: JSON.stringify(
-              {
-                error: 'Persistence not available',
-                status: 'failed',
-              },
-              null,
-              2
-            ),
+            text: JSON.stringify(errorResponse, null, 2),
           },
         ],
         isError: true,
@@ -556,23 +561,25 @@ export class LateralThinkingServer {
         return this.handleDeleteOperation(input);
       case 'export':
         return this.handleExportOperation(input);
-      default:
+      default: {
+        const errorResponse = createErrorResponse(
+          new ValidationError(
+            ErrorCode.INVALID_FIELD_VALUE,
+            `Unknown session operation: ${input.sessionOperation as string}`,
+            'sessionOperation'
+          ),
+          'session'
+        );
         return {
           content: [
             {
               type: 'text',
-              text: JSON.stringify(
-                {
-                  error: `Unknown session operation: ${input.sessionOperation as string}`,
-                  status: 'failed',
-                },
-                null,
-                2
-              ),
+              text: JSON.stringify(errorResponse, null, 2),
             },
           ],
           isError: true,
         };
+      }
     }
   }
 
@@ -584,12 +591,20 @@ export class LateralThinkingServer {
   ): Promise<{ content: Array<{ type: string; text: string }> }> {
     try {
       if (!this.currentSessionId || !this.sessions.has(this.currentSessionId)) {
-        throw new Error('No active session to save');
+        throw new SessionError(
+          ErrorCode.SESSION_NOT_FOUND,
+          'No active session to save',
+          this.currentSessionId || undefined
+        );
       }
 
       const session = this.sessions.get(this.currentSessionId);
       if (!session) {
-        throw new Error('Session not found');
+        throw new SessionError(
+          ErrorCode.SESSION_NOT_FOUND,
+          'Session not found',
+          this.currentSessionId || undefined
+        );
       }
       this.touchSession(this.currentSessionId);
 
@@ -621,18 +636,12 @@ export class LateralThinkingServer {
         ],
       };
     } catch (error) {
+      const errorResponse = createErrorResponse(error, 'session');
       return Promise.resolve({
         content: [
           {
             type: 'text',
-            text: JSON.stringify(
-              {
-                error: error instanceof Error ? error.message : String(error),
-                status: 'failed',
-              },
-              null,
-              2
-            ),
+            text: JSON.stringify(errorResponse, null, 2),
           },
         ],
       });
@@ -647,15 +656,26 @@ export class LateralThinkingServer {
   ): Promise<{ content: Array<{ type: string; text: string }> }> {
     try {
       if (!input.loadOptions?.sessionId) {
-        throw new Error('Session ID required for load operation');
+        throw new ValidationError(
+          ErrorCode.MISSING_REQUIRED_FIELD,
+          'Session ID required for load operation',
+          'loadOptions.sessionId'
+        );
       }
 
       if (!this.persistenceAdapter) {
-        throw new Error('Persistence adapter not initialized');
+        throw new PersistenceError(
+          ErrorCode.PERSISTENCE_NOT_AVAILABLE,
+          'Persistence adapter not initialized'
+        );
       }
       const loadedState = await this.persistenceAdapter.load(input.loadOptions.sessionId);
       if (!loadedState) {
-        throw new Error('Session not found');
+        throw new SessionError(
+          ErrorCode.SESSION_NOT_FOUND,
+          'Session not found',
+          this.currentSessionId || undefined
+        );
       }
 
       // Convert persistence state to session data
@@ -715,18 +735,12 @@ export class LateralThinkingServer {
         ],
       };
     } catch (error) {
+      const errorResponse = createErrorResponse(error, 'session');
       return Promise.resolve({
         content: [
           {
             type: 'text',
-            text: JSON.stringify(
-              {
-                error: error instanceof Error ? error.message : String(error),
-                status: 'failed',
-              },
-              null,
-              2
-            ),
+            text: JSON.stringify(errorResponse, null, 2),
           },
         ],
       });
@@ -742,7 +756,10 @@ export class LateralThinkingServer {
     try {
       const options = input.listOptions || {};
       if (!this.persistenceAdapter) {
-        throw new Error('Persistence adapter not initialized');
+        throw new PersistenceError(
+          ErrorCode.PERSISTENCE_NOT_AVAILABLE,
+          'Persistence adapter not initialized'
+        );
       }
       const metadata = await this.persistenceAdapter.list(options);
 
@@ -758,18 +775,12 @@ export class LateralThinkingServer {
         ],
       };
     } catch (error) {
+      const errorResponse = createErrorResponse(error, 'persistence');
       return Promise.resolve({
         content: [
           {
             type: 'text',
-            text: JSON.stringify(
-              {
-                error: error instanceof Error ? error.message : String(error),
-                status: 'failed',
-              },
-              null,
-              2
-            ),
+            text: JSON.stringify(errorResponse, null, 2),
           },
         ],
       });
@@ -784,11 +795,18 @@ export class LateralThinkingServer {
   ): Promise<{ content: Array<{ type: string; text: string }> }> {
     try {
       if (!input.deleteOptions?.sessionId) {
-        throw new Error('Session ID required for delete operation');
+        throw new ValidationError(
+          ErrorCode.MISSING_REQUIRED_FIELD,
+          'Session ID required for delete operation',
+          'deleteOptions.sessionId'
+        );
       }
 
       if (!this.persistenceAdapter) {
-        throw new Error('Persistence adapter not initialized');
+        throw new PersistenceError(
+          ErrorCode.PERSISTENCE_NOT_AVAILABLE,
+          'Persistence adapter not initialized'
+        );
       }
       const deleted = await this.persistenceAdapter.delete(input.deleteOptions.sessionId);
 
@@ -809,18 +827,12 @@ export class LateralThinkingServer {
         ],
       };
     } catch (error) {
+      const errorResponse = createErrorResponse(error, 'persistence');
       return Promise.resolve({
         content: [
           {
             type: 'text',
-            text: JSON.stringify(
-              {
-                error: error instanceof Error ? error.message : String(error),
-                status: 'failed',
-              },
-              null,
-              2
-            ),
+            text: JSON.stringify(errorResponse, null, 2),
           },
         ],
       });
@@ -835,11 +847,17 @@ export class LateralThinkingServer {
   ): Promise<{ content: Array<{ type: string; text: string }> }> {
     try {
       if (!input.exportOptions?.sessionId || !input.exportOptions?.format) {
-        throw new Error('Session ID and format required for export operation');
+        throw new ValidationError(
+          ErrorCode.MISSING_REQUIRED_FIELD,
+          'Session ID and format required for export operation'
+        );
       }
 
       if (!this.persistenceAdapter) {
-        throw new Error('Persistence adapter not initialized');
+        throw new PersistenceError(
+          ErrorCode.PERSISTENCE_NOT_AVAILABLE,
+          'Persistence adapter not initialized'
+        );
       }
       const data = await this.persistenceAdapter.export(
         input.exportOptions.sessionId,
@@ -855,18 +873,12 @@ export class LateralThinkingServer {
         ],
       };
     } catch (error) {
+      const errorResponse = createErrorResponse(error, 'persistence');
       return Promise.resolve({
         content: [
           {
             type: 'text',
-            text: JSON.stringify(
-              {
-                error: error instanceof Error ? error.message : String(error),
-                status: 'failed',
-              },
-              null,
-              2
-            ),
+            text: JSON.stringify(errorResponse, null, 2),
           },
         ],
       });
@@ -1182,7 +1194,11 @@ export class LateralThinkingServer {
 
   private validateSessionOperation(data: Record<string, unknown>): SessionOperationData {
     if (!['save', 'load', 'list', 'delete', 'export'].includes(data.sessionOperation as string)) {
-      throw new Error('Invalid sessionOperation: must be one of save, load, list, delete, export');
+      throw new ValidationError(
+        ErrorCode.INVALID_FIELD_VALUE,
+        'Invalid sessionOperation: must be one of save, load, list, delete, export',
+        'sessionOperation'
+      );
     }
 
     // Validate operation-specific options
@@ -1190,21 +1206,37 @@ export class LateralThinkingServer {
       data.sessionOperation === 'load' &&
       !(data.loadOptions as Record<string, unknown>)?.sessionId
     ) {
-      throw new Error('sessionId is required in loadOptions for load operation');
+      throw new ValidationError(
+        ErrorCode.MISSING_REQUIRED_FIELD,
+        'sessionId is required in loadOptions for load operation',
+        'loadOptions.sessionId'
+      );
     }
     if (
       data.sessionOperation === 'delete' &&
       !(data.deleteOptions as Record<string, unknown>)?.sessionId
     ) {
-      throw new Error('sessionId is required in deleteOptions for delete operation');
+      throw new ValidationError(
+        ErrorCode.MISSING_REQUIRED_FIELD,
+        'sessionId is required in deleteOptions for delete operation',
+        'deleteOptions.sessionId'
+      );
     }
     if (data.sessionOperation === 'export') {
       const exportOpts = data.exportOptions as Record<string, unknown> | undefined;
       if (!exportOpts?.sessionId) {
-        throw new Error('sessionId is required in exportOptions for export operation');
+        throw new ValidationError(
+          ErrorCode.MISSING_REQUIRED_FIELD,
+          'sessionId is required in exportOptions for export operation',
+          'exportOptions.sessionId'
+        );
       }
       if (!['json', 'markdown', 'csv'].includes(exportOpts.format as string)) {
-        throw new Error('Invalid export format: must be one of json, markdown, csv');
+        throw new ValidationError(
+          ErrorCode.INVALID_FIELD_VALUE,
+          'Invalid export format: must be one of json, markdown, csv',
+          'exportOptions.format'
+        );
       }
     }
 
@@ -1225,24 +1257,46 @@ export class LateralThinkingServer {
         'triz',
       ].includes(data.technique as string)
     ) {
-      throw new Error(
-        'Invalid technique: must be one of six_hats, po, random_entry, scamper, concept_extraction, yes_and, design_thinking, or triz'
+      throw new ValidationError(
+        ErrorCode.INVALID_TECHNIQUE,
+        'Invalid technique: must be one of six_hats, po, random_entry, scamper, concept_extraction, yes_and, design_thinking, or triz',
+        'technique'
       );
     }
     if (!data.problem || typeof data.problem !== 'string') {
-      throw new Error('Invalid problem: must be a string');
+      throw new ValidationError(
+        ErrorCode.INVALID_FIELD_VALUE,
+        'Invalid problem: must be a string',
+        'problem'
+      );
     }
     if (!data.currentStep || typeof data.currentStep !== 'number') {
-      throw new Error('Invalid currentStep: must be a number');
+      throw new ValidationError(
+        ErrorCode.INVALID_FIELD_VALUE,
+        'Invalid currentStep: must be a number',
+        'currentStep'
+      );
     }
     if (!data.totalSteps || typeof data.totalSteps !== 'number') {
-      throw new Error('Invalid totalSteps: must be a number');
+      throw new ValidationError(
+        ErrorCode.INVALID_FIELD_VALUE,
+        'Invalid totalSteps: must be a number',
+        'totalSteps'
+      );
     }
     if (!data.output || typeof data.output !== 'string') {
-      throw new Error('Invalid output: must be a string');
+      throw new ValidationError(
+        ErrorCode.INVALID_FIELD_VALUE,
+        'Invalid output: must be a string',
+        'output'
+      );
     }
     if (typeof data.nextStepNeeded !== 'boolean') {
-      throw new Error('Invalid nextStepNeeded: must be a boolean');
+      throw new ValidationError(
+        ErrorCode.INVALID_FIELD_VALUE,
+        'Invalid nextStepNeeded: must be a boolean',
+        'nextStepNeeded'
+      );
     }
 
     // Validate technique-specific fields
@@ -1255,7 +1309,11 @@ export class LateralThinkingServer {
         data.hatColor as string
       )
     ) {
-      throw new Error('Invalid hatColor for six_hats technique');
+      throw new ValidationError(
+        ErrorCode.INVALID_FIELD_VALUE,
+        'Invalid hatColor for six_hats technique',
+        'hatColor'
+      );
     }
 
     if (
@@ -1271,50 +1329,86 @@ export class LateralThinkingServer {
         'reverse',
       ].includes(data.scamperAction as string)
     ) {
-      throw new Error('Invalid scamperAction for scamper technique');
+      throw new ValidationError(
+        ErrorCode.INVALID_FIELD_VALUE,
+        'Invalid scamperAction for scamper technique',
+        'scamperAction'
+      );
     }
 
     // Validate concept extraction specific fields
     if (technique === 'concept_extraction') {
       if (data.extractedConcepts && !Array.isArray(data.extractedConcepts)) {
-        throw new Error('extractedConcepts must be an array for concept_extraction technique');
+        throw new ValidationError(
+          ErrorCode.INVALID_FIELD_VALUE,
+          'extractedConcepts must be an array for concept_extraction technique',
+          'extractedConcepts'
+        );
       }
       if (data.abstractedPatterns && !Array.isArray(data.abstractedPatterns)) {
-        throw new Error('abstractedPatterns must be an array for concept_extraction technique');
+        throw new ValidationError(
+          ErrorCode.INVALID_FIELD_VALUE,
+          'abstractedPatterns must be an array for concept_extraction technique',
+          'abstractedPatterns'
+        );
       }
       if (data.applications && !Array.isArray(data.applications)) {
-        throw new Error('applications must be an array for concept_extraction technique');
+        throw new ValidationError(
+          ErrorCode.INVALID_FIELD_VALUE,
+          'applications must be an array for concept_extraction technique',
+          'applications'
+        );
       }
     }
 
     // Validate unified framework fields
     if (data.risks && (!Array.isArray(data.risks) || data.risks.some(r => typeof r !== 'string'))) {
-      throw new Error('risks must be an array of strings');
+      throw new ValidationError(
+        ErrorCode.INVALID_FIELD_VALUE,
+        'risks must be an array of strings',
+        'risks'
+      );
     }
     if (
       data.failureModes &&
       (!Array.isArray(data.failureModes) || data.failureModes.some(f => typeof f !== 'string'))
     ) {
-      throw new Error('failureModes must be an array of strings');
+      throw new ValidationError(
+        ErrorCode.INVALID_FIELD_VALUE,
+        'failureModes must be an array of strings',
+        'failureModes'
+      );
     }
     if (
       data.mitigations &&
       (!Array.isArray(data.mitigations) || data.mitigations.some(m => typeof m !== 'string'))
     ) {
-      throw new Error('mitigations must be an array of strings');
+      throw new ValidationError(
+        ErrorCode.INVALID_FIELD_VALUE,
+        'mitigations must be an array of strings',
+        'mitigations'
+      );
     }
     if (
       data.antifragileProperties &&
       (!Array.isArray(data.antifragileProperties) ||
         data.antifragileProperties.some(a => typeof a !== 'string'))
     ) {
-      throw new Error('antifragileProperties must be an array of strings');
+      throw new ValidationError(
+        ErrorCode.INVALID_FIELD_VALUE,
+        'antifragileProperties must be an array of strings',
+        'antifragileProperties'
+      );
     }
     if (
       data.blackSwans &&
       (!Array.isArray(data.blackSwans) || data.blackSwans.some(b => typeof b !== 'string'))
     ) {
-      throw new Error('blackSwans must be an array of strings');
+      throw new ValidationError(
+        ErrorCode.INVALID_FIELD_VALUE,
+        'blackSwans must be an array of strings',
+        'blackSwans'
+      );
     }
 
     return data as unknown as ThinkingOperationData;
@@ -1746,7 +1840,10 @@ export class LateralThinkingServer {
       attempts++;
 
       if (attempts > MAX_ATTEMPTS) {
-        throw new Error('Failed to generate unique session ID after 10 attempts');
+        throw new ExecutionError(
+          ErrorCode.INTERNAL_ERROR,
+          'Failed to generate unique session ID after 10 attempts'
+        );
       }
     } while (this.sessions.has(sessionId));
 
@@ -1939,7 +2036,11 @@ export class LateralThinkingServer {
         sessionId = thinkingInput.sessionId;
         session = this.sessions.get(sessionId);
         if (!session) {
-          throw new Error(`Session ${sessionId} not found. It may have expired.`);
+          throw new SessionError(
+            ErrorCode.SESSION_NOT_FOUND,
+            `Session ${sessionId} not found. It may have expired.`,
+            sessionId
+          );
         }
         this.touchSession(sessionId);
       } else {
@@ -1955,7 +2056,7 @@ export class LateralThinkingServer {
       }
 
       if (!session) {
-        throw new Error('Failed to get or create session.');
+        throw new SessionError(ErrorCode.INTERNAL_ERROR, 'Failed to get or create session.');
       }
 
       // Add to history with proper timestamp
@@ -2089,18 +2190,12 @@ export class LateralThinkingServer {
         ],
       };
     } catch (error) {
+      const errorResponse = createErrorResponse(error, 'execution');
       return Promise.resolve({
         content: [
           {
             type: 'text',
-            text: JSON.stringify(
-              {
-                error: error instanceof Error ? error.message : String(error),
-                status: 'failed',
-              },
-              null,
-              2
-            ),
+            text: JSON.stringify(errorResponse, null, 2),
           },
         ],
         isError: true,
@@ -2223,7 +2318,11 @@ export class LateralThinkingServer {
       // Validate input
       const args = input as DiscoverTechniquesInput;
       if (!args.problem) {
-        throw new Error('Problem description is required');
+        throw new ValidationError(
+          ErrorCode.MISSING_REQUIRED_FIELD,
+          'Problem description is required',
+          'problem'
+        );
       }
 
       // Analyze problem characteristics
@@ -2576,18 +2675,12 @@ export class LateralThinkingServer {
         ],
       });
     } catch (error) {
+      const errorResponse = createErrorResponse(error, 'execution');
       return Promise.resolve({
         content: [
           {
             type: 'text',
-            text: JSON.stringify(
-              {
-                error: error instanceof Error ? error.message : String(error),
-                status: 'failed',
-              },
-              null,
-              2
-            ),
+            text: JSON.stringify(errorResponse, null, 2),
           },
         ],
         isError: true,
@@ -2603,7 +2696,10 @@ export class LateralThinkingServer {
       const args = input as PlanThinkingSessionInput;
 
       if (!args.problem || !args.techniques || args.techniques.length === 0) {
-        throw new Error('Problem and at least one technique are required');
+        throw new ValidationError(
+          ErrorCode.MISSING_REQUIRED_FIELD,
+          'Problem and at least one technique are required'
+        );
       }
 
       const planId = `plan_${randomUUID()}`;
@@ -2887,18 +2983,12 @@ export class LateralThinkingServer {
         ],
       });
     } catch (error) {
+      const errorResponse = createErrorResponse(error, 'execution');
       return Promise.resolve({
         content: [
           {
             type: 'text',
-            text: JSON.stringify(
-              {
-                error: error instanceof Error ? error.message : String(error),
-                status: 'failed',
-              },
-              null,
-              2
-            ),
+            text: JSON.stringify(errorResponse, null, 2),
           },
         ],
         isError: true,

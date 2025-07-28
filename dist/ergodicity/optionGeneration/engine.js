@@ -11,6 +11,7 @@ import { CapabilityStrategy } from './strategies/capability.js';
 import { RecombinationStrategy } from './strategies/recombination.js';
 import { OptionEvaluator } from './evaluator.js';
 import { OPTION_GENERATION, FLEXIBILITY_THRESHOLDS, BARRIER_THRESHOLDS, RESOURCE_LIMITS, TEXT_LIMITS, CONSTRAINT_THRESHOLDS, } from './constants.js';
+import { ErrorCode, ValidationError } from '../../errors/index.js';
 /**
  * Option Generation Engine that systematically creates new possibilities
  */
@@ -36,23 +37,26 @@ export class OptionGenerationEngine {
      */
     validateContext(context) {
         if (!context) {
-            throw new Error('Context is required for option generation');
+            throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Context is required for option generation', 'context');
+        }
+        if (!context.sessionState) {
+            throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Session state is required', 'sessionState');
         }
         if (!context.currentFlexibility) {
-            throw new Error('Current flexibility state is required');
+            throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Current flexibility state is required', 'currentFlexibility');
         }
         const flexScore = context.currentFlexibility.flexibilityScore;
         if (typeof flexScore !== 'number' || flexScore < 0 || flexScore > 1) {
-            throw new Error('Flexibility score must be a number between 0 and 1');
+            throw new ValidationError(ErrorCode.INVALID_FIELD_VALUE, 'Flexibility score must be a number between 0 and 1', 'currentFlexibility.flexibilityScore');
         }
         if (!context.pathMemory) {
-            throw new Error('Path memory is required');
+            throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Path memory is required', 'pathMemory');
         }
         if (!Array.isArray(context.pathMemory.pathHistory)) {
-            throw new Error('Path history must be an array');
+            throw new ValidationError(ErrorCode.INVALID_FIELD_VALUE, 'Path history must be an array', 'pathMemory.pathHistory');
         }
         if (!Array.isArray(context.pathMemory.constraints)) {
-            throw new Error('Constraints must be an array');
+            throw new ValidationError(ErrorCode.INVALID_FIELD_VALUE, 'Constraints must be an array', 'pathMemory.constraints');
         }
     }
     /**
@@ -283,6 +287,13 @@ export class OptionGenerationEngine {
      * Get a quick option without full generation
      */
     getQuickOption(context) {
+        // Validate context first
+        try {
+            this.validateContext(context);
+        }
+        catch {
+            return null;
+        }
         // Find the highest priority applicable strategy
         const applicableStrategies = this.getApplicableStrategies(context);
         if (applicableStrategies.length === 0)
