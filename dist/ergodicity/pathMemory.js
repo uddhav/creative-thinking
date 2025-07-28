@@ -304,6 +304,7 @@ export class PathMemoryManager {
             design_thinking: 'market',
             triz: 'technical',
             neural_state: 'cognitive',
+            temporal_work: 'resource',
         };
         return techniqueConstraintMap[event.technique] || 'creative';
     }

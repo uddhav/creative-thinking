@@ -2,7 +2,7 @@
 import type { PathMemory } from './ergodicity/index.js';
 import { ErgodicityManager } from './ergodicity/index.js';
 import type { EarlyWarningState, EscapeProtocol } from './ergodicity/earlyWarning/types.js';
-export type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 'concept_extraction' | 'yes_and' | 'design_thinking' | 'triz' | 'neural_state';
+export type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 'concept_extraction' | 'yes_and' | 'design_thinking' | 'triz' | 'neural_state' | 'temporal_work';
 export type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green' | 'purple';
 export type ScamperAction = 'substitute' | 'combine' | 'adapt' | 'modify' | 'put_to_other_use' | 'eliminate' | 'reverse';
 export type DesignThinkingStage = 'empathize' | 'define' | 'ideate' | 'prototype' | 'test';
@@ -55,6 +55,17 @@ export interface ThinkingOperationData {
     suppressionDepth?: number;
     switchingRhythm?: string[];
     integrationInsights?: string[];
+    temporalLandscape?: {
+        fixedDeadlines?: string[];
+        flexibleWindows?: string[];
+        pressurePoints?: string[];
+        deadZones?: string[];
+        kairosOpportunities?: string[];
+    };
+    circadianAlignment?: string[];
+    pressureTransformation?: string[];
+    asyncSyncBalance?: string[];
+    temporalEscapeRoutes?: string[];
 }
 export interface SessionOperationData {
     sessionOperation: 'save' | 'load' | 'list' | 'delete' | 'export';

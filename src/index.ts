@@ -35,7 +35,8 @@ export type LateralTechnique =
   | 'yes_and'
   | 'design_thinking'
   | 'triz'
-  | 'neural_state';
+  | 'neural_state'
+  | 'temporal_work';
 export type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green' | 'purple';
 export type ScamperAction =
   | 'substitute'
@@ -185,6 +186,19 @@ interface ExecuteThinkingStepInput {
   suppressionDepth?: number;
   switchingRhythm?: string[];
   integrationInsights?: string[];
+
+  // Temporal Work Design fields
+  temporalLandscape?: {
+    fixedDeadlines?: string[];
+    flexibleWindows?: string[];
+    pressurePoints?: string[];
+    deadZones?: string[];
+    kairosOpportunities?: string[];
+  };
+  circadianAlignment?: string[];
+  pressureTransformation?: string[];
+  asyncSyncBalance?: string[];
+  temporalEscapeRoutes?: string[];
 }
 
 // Base interface for thinking operations
@@ -255,6 +269,19 @@ export interface ThinkingOperationData {
   suppressionDepth?: number;
   switchingRhythm?: string[];
   integrationInsights?: string[];
+
+  // Temporal Work Design fields
+  temporalLandscape?: {
+    fixedDeadlines?: string[];
+    flexibleWindows?: string[];
+    pressurePoints?: string[];
+    deadZones?: string[];
+    kairosOpportunities?: string[];
+  };
+  circadianAlignment?: string[];
+  pressureTransformation?: string[];
+  asyncSyncBalance?: string[];
+  temporalEscapeRoutes?: string[];
 }
 
 // Interface for session management operations
@@ -998,6 +1025,7 @@ export class LateralThinkingServer {
       design_thinking: '💭',
       triz: '⚙️',
       neural_state: '🧩',
+      temporal_work: '⏰',
     };
     return emojis[technique] || '🧠';
   }
@@ -1286,11 +1314,12 @@ export class LateralThinkingServer {
         'design_thinking',
         'triz',
         'neural_state',
+        'temporal_work',
       ].includes(data.technique as string)
     ) {
       throw new ValidationError(
         ErrorCode.INVALID_TECHNIQUE,
-        'Invalid technique: must be one of six_hats, po, random_entry, scamper, concept_extraction, yes_and, design_thinking, triz, or neural_state',
+        'Invalid technique: must be one of six_hats, po, random_entry, scamper, concept_extraction, yes_and, design_thinking, triz, neural_state, or temporal_work',
         'technique'
       );
     }
@@ -1461,6 +1490,7 @@ export class LateralThinkingServer {
       design_thinking: [], // Critical lens integrated into each stage
       triz: [2], // Via Negativa removal step
       neural_state: [2], // Network suppression identification is critical
+      temporal_work: [1, 5], // Landscape constraints and escape routes are critical
     };
     return criticalSteps[technique] || [];
   }
@@ -1651,6 +1681,20 @@ export class LateralThinkingServer {
         }
         break;
 
+      case 'temporal_work':
+        // Temporal work design creates some structural commitments
+        impact.commitmentLevel = 0.4;
+        impact.reversibilityCost = 0.3;
+        if (data.temporalLandscape?.flexibleWindows) {
+          impact.optionsOpened = data.temporalLandscape.flexibleWindows.map(
+            w => `Time window: ${w}`
+          );
+        }
+        if (data.temporalLandscape?.deadZones) {
+          impact.optionsClosed = data.temporalLandscape.deadZones.map(z => `Dead zone: ${z}`);
+        }
+        break;
+
       default:
         // Default low impact for exploration
         impact.commitmentLevel = 0.2;
@@ -1784,6 +1828,18 @@ export class LateralThinkingServer {
         if (data.suppressionDepth && currentStep === 2) {
           techniqueInfo += ` - Depth: ${data.suppressionDepth}/10`;
         }
+        break;
+      }
+      case 'temporal_work': {
+        emoji = '⏰';
+        const temporalSteps = [
+          'Map Temporal Landscape',
+          'Circadian Alignment',
+          'Pressure Transformation',
+          'Async-Sync Balance',
+          'Temporal Escape Routes',
+        ];
+        techniqueInfo = temporalSteps[currentStep - 1];
         break;
       }
     }
@@ -1954,6 +2010,8 @@ export class LateralThinkingServer {
         return 4; // Identify contradiction, Via Negativa removal, Apply principles, Minimal solution
       case 'neural_state':
         return 4; // Assess current state, Identify network suppression, Develop switching rhythm, Integrate insights
+      case 'temporal_work':
+        return 5; // Map landscape, Circadian alignment, Pressure transformation, Async-sync balance, Escape routes
       default:
         return 5;
     }
@@ -2095,6 +2153,37 @@ export class LateralThinkingServer {
           insights.push(`Cognitive integration achieved: ${integrationInsights.join(', ')}`);
         }
         insights.push('Neural State Optimization completed for enhanced cognitive flexibility');
+        break;
+      }
+      case 'temporal_work': {
+        const landscapes = session.history
+          .filter(h => h.temporalLandscape)
+          .map(h => h.temporalLandscape);
+        const alignments = session.history
+          .filter(h => h.circadianAlignment)
+          .flatMap(h => h.circadianAlignment || []);
+        const transformations = session.history
+          .filter(h => h.pressureTransformation)
+          .flatMap(h => h.pressureTransformation || []);
+        const escapeRoutes = session.history
+          .filter(h => h.temporalEscapeRoutes)
+          .flatMap(h => h.temporalEscapeRoutes || []);
+
+        if (landscapes.length > 0) {
+          insights.push('Temporal landscape mapped with deadlines and opportunities');
+        }
+        if (alignments.length > 0) {
+          insights.push(`Circadian alignments identified: ${alignments.join(', ')}`);
+        }
+        if (transformations.length > 0) {
+          insights.push(
+            `Pressure transformed into creative catalysts: ${transformations.length} techniques`
+          );
+        }
+        if (escapeRoutes.length > 0) {
+          insights.push(`Temporal escape routes designed: ${escapeRoutes.join(', ')}`);
+        }
+        insights.push('Temporal Work Design completed for optimized creative scheduling');
         break;
       }
     }
@@ -2406,6 +2495,16 @@ export class LateralThinkingServer {
         ];
         return neuralSteps[nextStep - 1] || 'Complete the neural optimization process';
       }
+      case 'temporal_work': {
+        const temporalSteps = [
+          'Map your temporal landscape: identify fixed deadlines, flexible windows, pressure points, dead zones, and kairos opportunities',
+          'Analyze circadian rhythms: identify peak creative hours, off-peak insight windows, and optimal task-time alignment',
+          'Transform pressure: convert deadline stress into creative energy using crunches and recovery periods',
+          'Balance async/sync work: allocate solo exploration time and group integration sessions',
+          'Design escape routes: create buffer zones, time loans, and graceful degradation plans',
+        ];
+        return temporalSteps[nextStep - 1] || 'Complete the temporal design process';
+      }
     }
 
     return 'Continue with the next step';
@@ -2502,6 +2601,16 @@ export class LateralThinkingServer {
         }
         if (input.suppressionDepth && currentStep === 2) {
           return `Network suppression depth: ${input.suppressionDepth}/10 - ${input.suppressionDepth > 7 ? 'High rigidity detected' : 'Moderate flexibility present'}`;
+        }
+        break;
+      case 'temporal_work':
+        if (input.temporalLandscape && currentStep === 1) {
+          const deadlineCount = input.temporalLandscape.fixedDeadlines?.length || 0;
+          const kairosCount = input.temporalLandscape.kairosOpportunities?.length || 0;
+          return `Temporal landscape: ${deadlineCount} fixed constraints, ${kairosCount} kairos opportunities identified`;
+        }
+        if (input.pressureTransformation && currentStep === 3) {
+          return `Pressure transformation in progress: ${input.pressureTransformation.length} catalytic techniques applied`;
         }
         break;
     }
@@ -2876,6 +2985,33 @@ export class LateralThinkingServer {
             'productivity enhancement',
           ],
           limitations: ['requires self-awareness', 'individual variation in effectiveness'],
+        });
+      }
+
+      // Temporal Work Design (time, deadline, schedule, circadian, pressure)
+      if (
+        combined.includes('time') ||
+        combined.includes('deadline') ||
+        combined.includes('schedule') ||
+        combined.includes('circadian') ||
+        combined.includes('pressure') ||
+        combined.includes('kairos') ||
+        combined.includes('chronos') ||
+        combined.includes('temporal')
+      ) {
+        recommendations.push({
+          technique: 'temporal_work',
+          score: 0.85,
+          reasoning:
+            'Temporal Work Design transforms time constraints into creative catalysts through kairos-chronos integration',
+          bestFor: [
+            'deadline management',
+            'time optimization',
+            'creative scheduling',
+            'pressure transformation',
+            'asynchronous collaboration',
+          ],
+          limitations: ['requires temporal flexibility', 'team coordination needed'],
         });
       }
 
@@ -3298,6 +3434,71 @@ export class LateralThinkingServer {
             );
             break;
 
+          case 'temporal_work':
+            workflow.push(
+              {
+                technique,
+                stepNumber: stepNumber++,
+                description: 'Map temporal landscape (fixed deadlines, flexible windows)',
+                expectedOutputs: [
+                  'Fixed deadline identification',
+                  'Flexible time windows',
+                  'Pressure points mapped',
+                  'Creative dead zones identified',
+                  'Kairos opportunities found',
+                ],
+                riskConsiderations: ['Over-optimization can reduce adaptability'],
+              },
+              {
+                technique,
+                stepNumber: stepNumber++,
+                description: 'Align with circadian rhythms and energy patterns',
+                expectedOutputs: [
+                  'Peak creative hours identified',
+                  'Off-peak insight windows',
+                  'Energy cycle mapping',
+                  'Task-time alignment',
+                ],
+                riskConsiderations: ['Individual variations', 'Team synchronization challenges'],
+              },
+              {
+                technique,
+                stepNumber: stepNumber++,
+                description: 'Transform deadline pressure into creative catalyst',
+                expectedOutputs: [
+                  'Pressure transformation techniques',
+                  'Creative crunch design',
+                  'Recovery period planning',
+                  'Stress-to-energy conversion',
+                ],
+                riskConsiderations: ['Burnout prevention needed'],
+              },
+              {
+                technique,
+                stepNumber: stepNumber++,
+                description: 'Balance asynchronous and synchronous work',
+                expectedOutputs: [
+                  'Solo exploration time allocation',
+                  'Group integration sessions',
+                  'Convergence prevention',
+                  'Temporal flexibility maintained',
+                ],
+              },
+              {
+                technique,
+                stepNumber: stepNumber++,
+                description: 'Design temporal escape routes and buffers',
+                expectedOutputs: [
+                  'Buffer zones created',
+                  'Time loan mechanisms',
+                  'Graceful degradation plans',
+                  'Quality thresholds maintained',
+                ],
+                riskConsiderations: ['Early rushing creates quality ceiling'],
+              }
+            );
+            break;
+
           default:
             // Add generic steps for other techniques
             for (let i = 0; i < techniqueSteps; i++) {
@@ -3638,6 +3839,7 @@ Use this after discovering which techniques to apply, or when you know you need 
             'design_thinking',
             'triz',
             'neural_state',
+            'temporal_work',
           ],
         },
         description: 'The techniques to include in the workflow',
@@ -3796,6 +3998,38 @@ The three-layer workflow ensures systematic creative thinking:
         type: 'array',
         items: { type: 'string' },
         description: 'Insights from network integration',
+      },
+      // Temporal Work Design fields
+      temporalLandscape: {
+        type: 'object',
+        properties: {
+          fixedDeadlines: { type: 'array', items: { type: 'string' } },
+          flexibleWindows: { type: 'array', items: { type: 'string' } },
+          pressurePoints: { type: 'array', items: { type: 'string' } },
+          deadZones: { type: 'array', items: { type: 'string' } },
+          kairosOpportunities: { type: 'array', items: { type: 'string' } },
+        },
+        description: 'Temporal landscape mapping',
+      },
+      circadianAlignment: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Circadian rhythm alignments',
+      },
+      pressureTransformation: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Pressure transformation techniques',
+      },
+      asyncSyncBalance: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Async/sync work balance strategies',
+      },
+      temporalEscapeRoutes: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Temporal escape routes and buffers',
       },
       sessionId: { type: 'string' },
       isRevision: { type: 'boolean' },
