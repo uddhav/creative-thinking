@@ -1,7 +1,7 @@
 /**
  * Core types and interfaces for session persistence
  */
-export type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 'concept_extraction' | 'yes_and' | 'design_thinking' | 'triz' | 'neural_state' | 'temporal_work';
+export type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 'concept_extraction' | 'yes_and' | 'design_thinking' | 'triz' | 'neural_state' | 'temporal_work' | 'cross_cultural';
 /**
  * Represents input data for a lateral thinking step
  */
@@ -59,6 +59,10 @@ export interface LateralThinkingInput {
     pressureTransformation?: string[];
     asyncSyncBalance?: string[];
     temporalEscapeRoutes?: string[];
+    culturalFrameworks?: string[];
+    bridgeBuilding?: string[];
+    respectfulSynthesis?: string[];
+    parallelPaths?: string[];
     sessionId?: string;
     isRevision?: boolean;
     revisesStep?: number;
