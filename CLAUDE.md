@@ -237,8 +237,8 @@ When adding new thinking techniques:
 ## Code Submission Guidelines
 
 ## Pre-Commit Checklist (MANDATORY)
-1. **Run tests**: `npm run test:run` for affected areas
-2. **Run build**: `npm run build` to ensure TypeScript compiles
+1. **Run build**: `npm run build` to ensure TypeScript compiles
+2. **Run tests**: `npm run test:run` for affected areas
 3. **Run lint LAST**: `npm run lint` (fix with `npm run lint -- --fix`)
 4. **NEVER commit if ANY of the above fail**
 
