@@ -633,13 +633,13 @@ describe('Technique Implementations', () => {
       } as ExecuteThinkingStepInput);
 
       expect(result.isError).toBeTruthy();
-      const errorData = JSON.parse(result.content[0]?.text || '{}') as { 
-        error: { 
-          code: string; 
-          message: string; 
-          layer: string; 
-          timestamp: string; 
-        }; 
+      const errorData = JSON.parse(result.content[0]?.text || '{}') as {
+        error: {
+          code: string;
+          message: string;
+          layer: string;
+          timestamp: string;
+        };
         isError: boolean;
       };
       expect(errorData.error.message).toContain('Invalid output');
