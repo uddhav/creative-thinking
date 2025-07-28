@@ -12,11 +12,18 @@ export class LateralThinkingServer {
     plans = new Map();
     currentSessionId = null;
     disableThoughtLogging;
-    SESSION_TTL = 24 * 60 * 60 * 1000; // 24 hours
-    PLAN_TTL = 4 * 60 * 60 * 1000; // 4 hours for plans
     cleanupInterval = null;
     persistenceAdapter = null;
     ergodicityManager;
+    // Session configuration with defaults
+    config = {
+        maxSessions: parseInt(process.env.MAX_SESSIONS || '100', 10),
+        maxSessionSize: parseInt(process.env.MAX_SESSION_SIZE || String(1024 * 1024), 10), // 1MB default
+        sessionTTL: parseInt(process.env.SESSION_TTL || String(24 * 60 * 60 * 1000), 10), // 24 hours
+        cleanupInterval: parseInt(process.env.CLEANUP_INTERVAL || String(60 * 60 * 1000), 10), // 1 hour
+        enableMemoryMonitoring: process.env.ENABLE_MEMORY_MONITORING === 'true',
+    };
+    PLAN_TTL = 4 * 60 * 60 * 1000; // 4 hours for plans
     constructor() {
         this.disableThoughtLogging =
             (process.env.DISABLE_THOUGHT_LOGGING || '').toLowerCase() === 'true';
@@ -40,30 +47,25 @@ export class LateralThinkingServer {
         }
     }
     startSessionCleanup() {
-        // Run cleanup every hour
+        // Run cleanup at configured interval
         this.cleanupInterval = setInterval(() => {
             this.cleanupOldSessions();
-        }, 60 * 60 * 1000);
+        }, this.config.cleanupInterval);
+    }
+    /**
+     * Update session activity time
+     */
+    touchSession(sessionId) {
+        const session = this.sessions.get(sessionId);
+        if (session) {
+            session.lastActivityTime = Date.now();
+        }
     }
     cleanupOldSessions() {
         const now = Date.now();
+        // Simple cleanup based on lastActivityTime
         for (const [id, session] of this.sessions) {
-            // Clean up old sessions with startTime
-            if (session.startTime && now - session.startTime > this.SESSION_TTL) {
-                this.sessions.delete(id);
-                if (this.currentSessionId === id) {
-                    this.currentSessionId = null;
-                }
-            }
-            // Fallback: Clean up sessions without startTime that have been completed
-            else if (!session.startTime && session.endTime && now - session.endTime > this.SESSION_TTL) {
-                this.sessions.delete(id);
-                if (this.currentSessionId === id) {
-                    this.currentSessionId = null;
-                }
-            }
-            // Additional fallback: Clean up very old sessions without any timestamps
-            else if (!session.startTime && !session.endTime && session.history.length === 0) {
+            if (now - session.lastActivityTime > this.config.sessionTTL) {
                 this.sessions.delete(id);
                 if (this.currentSessionId === id) {
                     this.currentSessionId = null;
@@ -75,6 +77,85 @@ export class LateralThinkingServer {
             if (plan.createdAt && now - plan.createdAt > this.PLAN_TTL) {
                 this.plans.delete(planId);
             }
+        }
+        // Evict oldest sessions if we exceed max sessions
+        if (this.sessions.size > this.config.maxSessions) {
+            this.evictOldestSessions();
+        }
+        // Log memory usage if monitoring is enabled
+        if (this.config.enableMemoryMonitoring) {
+            this.logMemoryMetrics();
+        }
+    }
+    /**
+     * Evict oldest sessions using LRU (Least Recently Used) strategy
+     */
+    evictOldestSessions() {
+        // Check if we're over the session limit
+        if (this.sessions.size <= this.config.maxSessions) {
+            return;
+        }
+        // Convert sessions to array with session IDs and lastActivityTime
+        const sessionList = Array.from(this.sessions.entries()).map(([id, session]) => ({
+            id,
+            lastActivityTime: session.lastActivityTime,
+        }));
+        // Sort by lastActivityTime (oldest first)
+        sessionList.sort((a, b) => a.lastActivityTime - b.lastActivityTime);
+        // Calculate how many sessions to evict
+        const sessionsToEvict = this.sessions.size - this.config.maxSessions;
+        // Evict the oldest sessions
+        for (let i = 0; i < sessionsToEvict && i < sessionList.length; i++) {
+            const sessionId = sessionList[i].id;
+            this.sessions.delete(sessionId);
+            // Clear current session ID if it was evicted
+            if (this.currentSessionId === sessionId) {
+                this.currentSessionId = null;
+            }
+            // Log eviction if monitoring is enabled
+            if (this.config.enableMemoryMonitoring) {
+                // eslint-disable-next-line no-console
+                console.log(`[Session Eviction] Evicted session ${sessionId} (LRU)`);
+            }
+        }
+    }
+    /**
+     * Log memory usage metrics
+     */
+    logMemoryMetrics() {
+        const memoryUsage = process.memoryUsage();
+        const sessionCount = this.sessions.size;
+        const planCount = this.plans.size;
+        // Estimate session memory usage
+        let totalSessionSize = 0;
+        for (const [_, session] of this.sessions) {
+            // Rough estimate: history items * average size + base overhead
+            const historySize = session.history.length * 1024; // ~1KB per history item
+            const branchesSize = Object.keys(session.branches).length * 512; // ~512B per branch
+            const sessionSize = historySize + branchesSize + 2048; // 2KB base overhead
+            totalSessionSize += sessionSize;
+        }
+        // eslint-disable-next-line no-console
+        console.log('[Memory Metrics]', {
+            timestamp: new Date().toISOString(),
+            process: {
+                heapUsed: `${Math.round(memoryUsage.heapUsed / 1024 / 1024)}MB`,
+                heapTotal: `${Math.round(memoryUsage.heapTotal / 1024 / 1024)}MB`,
+                rss: `${Math.round(memoryUsage.rss / 1024 / 1024)}MB`,
+            },
+            sessions: {
+                count: sessionCount,
+                estimatedSize: `${Math.round(totalSessionSize / 1024)}KB`,
+                averageSize: sessionCount > 0 ? `${Math.round(totalSessionSize / sessionCount / 1024)}KB` : '0KB',
+            },
+            plans: {
+                count: planCount,
+            },
+        });
+        // Warn if memory usage is high
+        const heapUsedMB = memoryUsage.heapUsed / 1024 / 1024;
+        if (heapUsedMB > 500) {
+            console.warn('[Memory Warning] Heap usage exceeds 500MB');
         }
     }
     destroy() {
@@ -140,6 +221,7 @@ export class LateralThinkingServer {
             if (!session) {
                 throw new Error('Session not found');
             }
+            this.touchSession(this.currentSessionId);
             // Update session with save options
             if (input.saveOptions?.sessionName) {
                 session.name = input.saveOptions.sessionName;
@@ -213,6 +295,7 @@ export class LateralThinkingServer {
                 metrics: loadedState.metrics,
                 tags: loadedState.tags,
                 name: loadedState.name,
+                lastActivityTime: Date.now(), // Update activity time on load
             };
             // Load into memory
             this.sessions.set(loadedState.id, session);
@@ -1058,6 +1141,9 @@ export class LateralThinkingServer {
         // Add ergodicity status if available
         if (data.sessionId) {
             const session = this.sessions.get(data.sessionId);
+            if (session) {
+                this.touchSession(data.sessionId);
+            }
             // Display critical early warnings prominently
             if (session?.earlyWarningState && session.earlyWarningState.activeWarnings.length > 0) {
                 const criticalWarning = session.earlyWarningState.activeWarnings.find(w => w.severity === BarrierWarningLevel.CRITICAL);
@@ -1102,6 +1188,7 @@ export class LateralThinkingServer {
             }
         } while (this.sessions.has(sessionId));
         const ergodicityManager = new ErgodicityManager();
+        const now = Date.now();
         this.sessions.set(sessionId, {
             technique,
             problem,
@@ -1109,13 +1196,18 @@ export class LateralThinkingServer {
             branches: {},
             insights: [],
             ergodicityManager,
-            startTime: Date.now(),
+            startTime: now,
+            lastActivityTime: now,
             metrics: {
                 creativityScore: 0,
                 risksCaught: 0,
                 antifragileFeatures: 0,
             },
         });
+        // Check if we need to evict old sessions
+        if (this.sessions.size > this.config.maxSessions) {
+            this.evictOldestSessions();
+        }
         return sessionId;
     }
     getTechniqueSteps(technique) {
@@ -1269,6 +1361,7 @@ export class LateralThinkingServer {
                 if (!session) {
                     throw new Error(`Session ${sessionId} not found. It may have expired.`);
                 }
+                this.touchSession(sessionId);
             }
             else {
                 // Create new session (even if not step 1, for testing purposes)
@@ -1277,6 +1370,9 @@ export class LateralThinkingServer {
                     thinkingInput.totalSteps = this.getTechniqueSteps(thinkingInput.technique);
                 }
                 session = this.sessions.get(sessionId);
+                if (session) {
+                    this.touchSession(sessionId);
+                }
             }
             if (!session) {
                 throw new Error('Failed to get or create session.');
@@ -1300,6 +1396,7 @@ export class LateralThinkingServer {
                     startTime: session.history[0]?.timestamp
                         ? new Date(session.history[0].timestamp).getTime()
                         : Date.now(),
+                    lastActivityTime: session.lastActivityTime,
                 };
                 const { warnings, earlyWarningState, escapeRecommendation } = await session.ergodicityManager.recordThinkingStep(thinkingInput.technique, thinkingInput.currentStep, thinkingInput.output, pathImpact, sessionData);
                 // Store any critical warnings for display
@@ -1739,6 +1836,7 @@ export class LateralThinkingServer {
             if (args.sessionId && !currentFlexibility) {
                 const session = this.sessions.get(args.sessionId);
                 if (session) {
+                    this.touchSession(args.sessionId);
                     // Calculate flexibility from session state
                     currentFlexibility = this.ergodicityManager.getCurrentFlexibility().flexibilityScore;
                 }
@@ -1754,6 +1852,7 @@ export class LateralThinkingServer {
                 if (args.sessionId) {
                     const session = this.sessions.get(args.sessionId);
                     if (session) {
+                        this.touchSession(args.sessionId);
                         const optionResult = this.ergodicityManager.generateOptions(session, 5); // Generate top 5 options
                         generatedOptions = {
                             totalOptions: optionResult.options.length,
@@ -1774,6 +1873,7 @@ export class LateralThinkingServer {
             if (currentFlexibility !== undefined && currentFlexibility < 0.3 && args.sessionId) {
                 const session = this.sessions.get(args.sessionId);
                 if (session) {
+                    this.touchSession(args.sessionId);
                     // Check if escape is needed
                     const isEscapeNeeded = this.ergodicityManager.isEscapeVelocityNeeded();
                     const urgency = this.ergodicityManager.getEscapeUrgency();
@@ -2000,6 +2100,7 @@ export class LateralThinkingServer {
                 if (args.sessionId) {
                     const session = this.sessions.get(args.sessionId);
                     if (session) {
+                        this.touchSession(args.sessionId);
                         currentFlexibility = this.ergodicityManager.getCurrentFlexibility().flexibilityScore;
                     }
                 }
@@ -2031,6 +2132,7 @@ export class LateralThinkingServer {
             if (args.sessionId) {
                 const session = this.sessions.get(args.sessionId);
                 if (session) {
+                    this.touchSession(args.sessionId);
                     const flexibility = this.ergodicityManager.getCurrentFlexibility().flexibilityScore;
                     // If flexibility is critically low, recommend escape protocol
                     if (flexibility < 0.2) {
