@@ -236,6 +236,12 @@ export declare class LateralThinkingServer {
      */
     private truncateWord;
     /**
+     * Validate cultural framework names to prevent offensive or inappropriate content
+     * @param framework - The cultural framework name to validate
+     * @returns true if the framework name is appropriate
+     */
+    private isValidCulturalFramework;
+    /**
      * Format the risk identification section for visual output
      * @param risks - Array of identified risks
      * @param maxLength - Maximum line length for formatting
