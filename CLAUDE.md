@@ -57,7 +57,7 @@ docker run -it creative-thinking
 ### Core Structure
 - **Three-layer architecture**: Discovery, Planning, and Execution layers
 - **Three primary tools**: `discover_techniques`, `plan_thinking_session`, `execute_thinking_step`
-- **Eight thinking techniques**: Six Hats, PO, Random Entry, SCAMPER, Concept Extraction, Yes And, Design Thinking, TRIZ
+- **Nine thinking techniques**: Six Hats, PO, Random Entry, SCAMPER, Concept Extraction, Yes And, Design Thinking, TRIZ, Neural State
 - **Session management**: Full state persistence with branching and revision support
 - **Visual output**: Structured console output with progress tracking
 - **Option Generation Engine**: Automatic activation when flexibility < 0.4 with 8 generation strategies
@@ -66,7 +66,7 @@ docker run -it creative-thinking
 
 ### Key Types and Interfaces
 ```typescript
-type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 'concept_extraction' | 'yes_and' | 'design_thinking' | 'triz';
+type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 'concept_extraction' | 'yes_and' | 'design_thinking' | 'triz' | 'neural_state';
 type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green';
 type ScamperAction = 'substitute' | 'combine' | 'adapt' | 'modify' | 'put_to_other_use' | 'eliminate' | 'reverse';
 type DesignThinkingStage = 'empathize' | 'define' | 'ideate' | 'prototype' | 'test';
@@ -192,6 +192,7 @@ The implementation now supports the unified generative/adversarial framework fro
    - Yes, And: 4 steps (accept → build → evaluate → integrate)
    - Design Thinking: 5 steps (empathize → define → ideate → prototype → test)
    - TRIZ: 4 steps (identify → remove → apply → minimize)
+   - Neural State: 4 steps (assess → identify suppression → develop rhythm → integrate)
 
 ## Architecture Principles
 
@@ -236,11 +237,26 @@ When adding new thinking techniques:
 
 ## Code Submission Guidelines
 
-- Always make sure that Conventional commit format in PR title
-- All tests passing
-- No linting errors
-- Prettier formatting fixed
-- Test coverage acceptable before committing changes
+## Pre-Commit Checklist (MANDATORY)
+1. **Run build**: `npm run build` to ensure TypeScript compiles
+2. **Run tests**: `npm run test:run` for affected areas
+3. **Run lint LAST**: `npm run lint` (fix with `npm run lint -- --fix`)
+4. **NEVER commit if ANY of the above fail**
+
+## PR Review Process
+1. **ALWAYS run** `gh pr diff <PR>` to see actual changes before merging
+2. **NEVER merge** when review says "NEEDS FIXES" or "DO NOT MERGE"
+3. **Read ENTIRE review**, especially "Required Fixes" sections
+4. **Verify MCP integration** for new techniques:
+   - Check planning tool enum at src/index.ts (~line 3631-3640)
+   - Check execution tool enum at src/index.ts (~line 3692-3701)
+   - Add technique fields to execution tool schema
+   - Test through MCP protocol, not just unit tests
+
+## Integration Testing
+- Unit tests passing ≠ Feature complete
+- New techniques MUST be accessible through MCP interface
+- Always test the full user path, not just internal implementation
 
 ## Package Distribution
 
