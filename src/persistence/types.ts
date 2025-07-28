@@ -12,7 +12,8 @@ export type LateralTechnique =
   | 'yes_and'
   | 'design_thinking'
   | 'triz'
-  | 'neural_state';
+  | 'neural_state'
+  | 'temporal_work';
 
 /**
  * Represents input data for a lateral thinking step
@@ -72,6 +73,19 @@ export interface LateralThinkingInput {
   suppressionDepth?: number;
   switchingRhythm?: string[];
   integrationInsights?: string[];
+
+  // Temporal Work Design fields
+  temporalLandscape?: {
+    fixedDeadlines?: string[];
+    flexibleWindows?: string[];
+    pressurePoints?: string[];
+    deadZones?: string[];
+    kairosOpportunities?: string[];
+  };
+  circadianAlignment?: string[];
+  pressureTransformation?: string[];
+  asyncSyncBalance?: string[];
+  temporalEscapeRoutes?: string[];
 
   // Session fields
   sessionId?: string;

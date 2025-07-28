@@ -473,6 +473,11 @@ export class ErgodicityManager {
         typicalCommitment: 0.3,
         riskProfile: 'Low - Cognitive patterns are adaptable',
       },
+      temporal_work: {
+        typicalReversibility: 0.6,
+        typicalCommitment: 0.4,
+        riskProfile: 'Medium - Time structures create dependencies',
+      },
     };
 
     return profiles[technique];
