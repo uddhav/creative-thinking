@@ -37,7 +37,8 @@ export type LateralTechnique =
   | 'triz'
   | 'neural_state'
   | 'temporal_work'
-  | 'cross_cultural';
+  | 'cross_cultural'
+  | 'collective_intel';
 export type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green' | 'purple';
 export type ScamperAction =
   | 'substitute'
@@ -205,6 +206,11 @@ interface ExecuteThinkingStepInput {
   bridgeBuilding?: string[];
   respectfulSynthesis?: string[];
   parallelPaths?: string[];
+  // Collective Intelligence fields
+  wisdomSources?: string[];
+  emergentPatterns?: string[];
+  synergyCombinations?: string[];
+  collectiveInsights?: string[];
 }
 
 // Base interface for thinking operations
@@ -293,6 +299,11 @@ export interface ThinkingOperationData {
   bridgeBuilding?: string[];
   respectfulSynthesis?: string[];
   parallelPaths?: string[];
+  // Collective Intelligence fields
+  wisdomSources?: string[];
+  emergentPatterns?: string[];
+  synergyCombinations?: string[];
+  collectiveInsights?: string[];
 }
 
 // Interface for session management operations
@@ -1038,6 +1049,7 @@ export class LateralThinkingServer {
       neural_state: '🧩',
       temporal_work: '⏰',
       cross_cultural: '🌍',
+      collective_intel: '🧭',
     };
     return emojis[technique] || '🧠';
   }
@@ -1328,11 +1340,12 @@ export class LateralThinkingServer {
         'neural_state',
         'temporal_work',
         'cross_cultural',
+        'collective_intel',
       ].includes(data.technique as string)
     ) {
       throw new ValidationError(
         ErrorCode.INVALID_TECHNIQUE,
-        'Invalid technique: must be one of six_hats, po, random_entry, scamper, concept_extraction, yes_and, design_thinking, triz, neural_state, temporal_work, or cross_cultural',
+        'Invalid technique: must be one of six_hats, po, random_entry, scamper, concept_extraction, yes_and, design_thinking, triz, neural_state, temporal_work, cross_cultural, or collective_intel',
         'technique'
       );
     }
@@ -1565,6 +1578,7 @@ export class LateralThinkingServer {
       neural_state: [2], // Network suppression identification is critical
       temporal_work: [1, 5], // Landscape constraints and escape routes are critical
       cross_cultural: [2, 3], // Bridge identification and respectful synthesis are critical
+      collective_intel: [3, 4], // Emergent pattern recognition and synergy creation are critical
     };
     return criticalSteps[technique] || [];
   }
@@ -1806,6 +1820,19 @@ export class LateralThinkingServer {
         }
         break;
 
+      case 'collective_intel':
+        // Collective intelligence builds moderate commitments through synthesis
+        impact.commitmentLevel = 0.4;
+        impact.reversibilityCost = 0.3;
+        if (data.wisdomSources && data.wisdomSources.length > 0) {
+          impact.optionsOpened = data.wisdomSources.map(w => `Wisdom: ${w}`);
+        }
+        if (data.synergyCombinations && data.synergyCombinations.length > 0) {
+          impact.optionsOpened = impact.optionsOpened || [];
+          impact.optionsOpened.push(...data.synergyCombinations.map(s => `Synergy: ${s}`));
+        }
+        break;
+
       default:
         // Default low impact for exploration
         impact.commitmentLevel = 0.2;
@@ -1963,6 +1990,18 @@ export class LateralThinkingServer {
           'Validate with Stakeholders',
         ];
         techniqueInfo = crossCulturalSteps[currentStep - 1];
+        break;
+      }
+      case 'collective_intel': {
+        emoji = '🧭';
+        const collectiveSteps = [
+          'Gather Wisdom Sources',
+          'Map Knowledge Landscape',
+          'Identify Emergent Patterns',
+          'Create Synergy Combinations',
+          'Synthesize Collective Insights',
+        ];
+        techniqueInfo = collectiveSteps[currentStep - 1];
         break;
       }
     }
@@ -2137,6 +2176,8 @@ export class LateralThinkingServer {
         return 5; // Map landscape, Circadian alignment, Pressure transformation, Async-sync balance, Escape routes
       case 'cross_cultural':
         return 5; // Map frameworks, Identify bridges, Create synthesis, Develop parallel solutions, Validate
+      case 'collective_intel':
+        return 5; // Gather sources, Map landscape, Identify patterns, Create synergies, Synthesize insights
       default:
         return 5;
     }
@@ -2338,6 +2379,35 @@ export class LateralThinkingServer {
           insights.push(`Parallel implementation paths: ${parallelPaths.join(', ')}`);
         }
         insights.push('Cross-Cultural Integration completed for inclusive innovation');
+        break;
+      }
+      case 'collective_intel': {
+        const sources = session.history
+          .filter(h => h.wisdomSources)
+          .flatMap(h => h.wisdomSources || []);
+        const patterns = session.history
+          .filter(h => h.emergentPatterns)
+          .flatMap(h => h.emergentPatterns || []);
+        const synergies = session.history
+          .filter(h => h.synergyCombinations)
+          .flatMap(h => h.synergyCombinations || []);
+        const collectiveInsights = session.history
+          .filter(h => h.collectiveInsights)
+          .flatMap(h => h.collectiveInsights || []);
+
+        if (sources.length > 0) {
+          insights.push(`Wisdom sources integrated: ${sources.join(', ')}`);
+        }
+        if (patterns.length > 0) {
+          insights.push(`Emergent patterns discovered: ${patterns.join(', ')}`);
+        }
+        if (synergies.length > 0) {
+          insights.push(`Synergy combinations created: ${synergies.length}`);
+        }
+        if (collectiveInsights.length > 0) {
+          insights.push(`Collective insights synthesized: ${collectiveInsights.join(', ')}`);
+        }
+        insights.push('Collective Intelligence Orchestration completed');
         break;
       }
     }
@@ -2719,6 +2789,18 @@ export class LateralThinkingServer {
           crossCulturalSteps[nextStep - 1] || 'Complete the cross-cultural integration process'
         );
       }
+      case 'collective_intel': {
+        const collectiveSteps = [
+          'Gather wisdom sources: identify experts, knowledge repositories, cultural wisdom, and crowd insights',
+          'Map knowledge landscape: visualize connections, dependencies, and knowledge flows across sources',
+          'Identify emergent patterns: discover insights that arise from the intersection of multiple perspectives',
+          "Create synergy combinations: orchestrate knowledge elements that amplify each other's value",
+          'Synthesize collective insights: integrate all sources into actionable, holistic intelligence',
+        ];
+        return (
+          collectiveSteps[nextStep - 1] || 'Complete the collective intelligence orchestration'
+        );
+      }
     }
 
     return 'Continue with the next step';
@@ -2836,6 +2918,20 @@ export class LateralThinkingServer {
         }
         if (input.respectfulSynthesis && currentStep === 3) {
           return 'Creating inclusive solution that honors diverse worldviews';
+        }
+        break;
+      case 'collective_intel':
+        if (input.wisdomSources && currentStep === 1) {
+          return `Gathering ${input.wisdomSources.length} wisdom sources for collective intelligence`;
+        }
+        if (input.emergentPatterns && currentStep === 3) {
+          return `Emergent patterns: ${input.emergentPatterns.length} insights discovered`;
+        }
+        if (input.synergyCombinations && currentStep === 4) {
+          return `Synergy created: ${input.synergyCombinations.length} knowledge combinations`;
+        }
+        if (input.collectiveInsights && currentStep === 5) {
+          return 'Synthesizing collective intelligence into actionable insights';
         }
         break;
     }
@@ -3282,6 +3378,59 @@ export class LateralThinkingServer {
             'requires cultural sensitivity',
             'may involve complexity navigation',
             'time needed for synthesis',
+          ],
+        });
+      }
+
+      // Collective Intelligence Orchestration (multiple perspectives, consensus, synthesis)
+      const collectiveKeywords = [
+        'multiple perspectives',
+        'diverse stakeholders',
+        'collective',
+        'crowd',
+        'consensus',
+        'community',
+        'team',
+        'collaboration',
+        'group decision',
+        'stakeholder',
+        'synthesis',
+        'wisdom of crowds',
+        'distributed knowledge',
+        'emergent',
+        'swarm intelligence',
+        'bring together',
+        'aggregate',
+        'combine insights',
+        'multi-stakeholder',
+        'collaborative innovation',
+      ];
+
+      const hasCollectiveNeeds = collectiveKeywords.some(
+        keyword =>
+          combined.includes(keyword) ||
+          (combined.includes('multiple') && combined.includes('viewpoints')) ||
+          (combined.includes('bring') && combined.includes('together')) ||
+          (combined.includes('many') && combined.includes('perspectives'))
+      );
+
+      if (hasCollectiveNeeds) {
+        recommendations.push({
+          technique: 'collective_intel',
+          score: 0.85,
+          reasoning:
+            'Collective Intelligence helps synthesize multiple perspectives and knowledge sources into emergent insights',
+          bestFor: [
+            'multi-stakeholder problems',
+            'knowledge synthesis',
+            'crowdsourced solutions',
+            'emergent wisdom discovery',
+            'collaborative innovation',
+          ],
+          limitations: [
+            'requires diverse input sources',
+            'synthesis can be time-intensive',
+            'coordination complexity',
           ],
         });
       }
@@ -3836,6 +3985,81 @@ export class LateralThinkingServer {
               }
             );
             break;
+          case 'collective_intel':
+            // Collective Intelligence Orchestration: Synthesize multiple knowledge sources into emergent insights
+            // Critical consideration: Maintain source diversity and avoid groupthink
+            workflow.push(
+              {
+                technique,
+                stepNumber: stepNumber++,
+                description:
+                  'Gather wisdom sources (experts, crowds, databases, cultural knowledge)',
+                expectedOutputs: [
+                  'Expert perspectives mapped',
+                  'Crowd wisdom captured',
+                  'Knowledge repositories identified',
+                  'Cultural and indigenous wisdom included',
+                  'Source diversity verified',
+                ],
+                riskConsiderations: ['Source bias awareness', 'Echo chamber avoidance'],
+              },
+              {
+                technique,
+                stepNumber: stepNumber++,
+                description: 'Map knowledge landscape and connections',
+                expectedOutputs: [
+                  'Knowledge network visualized',
+                  'Connection patterns identified',
+                  'Knowledge gaps revealed',
+                  'Interdependencies mapped',
+                  'Flow of information traced',
+                ],
+                riskConsiderations: ['Complexity management', 'Information overload risk'],
+              },
+              {
+                technique,
+                stepNumber: stepNumber++,
+                description: 'Identify emergent patterns from collective knowledge',
+                expectedOutputs: [
+                  'Emergent themes discovered',
+                  'Pattern clusters formed',
+                  'Hidden insights revealed',
+                  'Convergence points identified',
+                  'Outlier perspectives valued',
+                ],
+                riskConsiderations: ['Pattern projection bias', 'Premature convergence'],
+              },
+              {
+                technique,
+                stepNumber: stepNumber++,
+                description: 'Create synergy combinations that amplify value',
+                expectedOutputs: [
+                  'Synergistic combinations created',
+                  'Amplification effects identified',
+                  'Novel integrations formed',
+                  'Collective innovations emerged',
+                  'Value multiplication achieved',
+                ],
+                riskConsiderations: ['Forced synthesis risk', 'Loss of nuance'],
+              },
+              {
+                technique,
+                stepNumber: stepNumber++,
+                description: 'Synthesize into actionable collective intelligence',
+                expectedOutputs: [
+                  'Collective insights synthesized',
+                  'Actionable recommendations',
+                  'Implementation pathways',
+                  'Wisdom preservation methods',
+                  'Continuous learning loops',
+                ],
+                riskConsiderations: [
+                  'Implementation complexity',
+                  'Consensus vs. innovation balance',
+                ],
+              }
+            );
+            break;
 
           default:
             // Add generic steps for other techniques
@@ -4179,6 +4403,7 @@ Use this after discovering which techniques to apply, or when you know you need 
             'neural_state',
             'temporal_work',
             'cross_cultural',
+            'collective_intel',
           ],
         },
         description: 'The techniques to include in the workflow',
@@ -4243,6 +4468,7 @@ The three-layer workflow ensures systematic creative thinking:
           'neural_state',
           'temporal_work',
           'cross_cultural',
+          'collective_intel',
         ],
         description: 'The lateral thinking technique to use',
       },
@@ -4392,6 +4618,27 @@ The three-layer workflow ensures systematic creative thinking:
         type: 'array',
         items: { type: 'string' },
         description: 'Parallel implementation paths for different contexts',
+      },
+      // Collective Intelligence Orchestration fields
+      wisdomSources: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Wisdom sources identified (experts, crowds, databases, cultural knowledge)',
+      },
+      emergentPatterns: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Emergent patterns discovered from collective knowledge',
+      },
+      synergyCombinations: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Synergistic combinations that amplify value',
+      },
+      collectiveInsights: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Synthesized collective intelligence insights',
       },
       sessionId: { type: 'string' },
       isRevision: { type: 'boolean' },

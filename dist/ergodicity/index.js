@@ -349,6 +349,11 @@ export class ErgodicityManager {
                 typicalCommitment: 0.3,
                 riskProfile: 'Low - Cultural exploration is adaptable',
             },
+            collective_intel: {
+                typicalReversibility: 0.7,
+                typicalCommitment: 0.4,
+                riskProfile: 'Low-Medium - Synthesis requires some commitment',
+            },
         };
         return profiles[technique];
     }

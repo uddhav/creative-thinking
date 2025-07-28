@@ -14,7 +14,8 @@ export type LateralTechnique =
   | 'triz'
   | 'neural_state'
   | 'temporal_work'
-  | 'cross_cultural';
+  | 'cross_cultural'
+  | 'collective_intel';
 
 /**
  * Represents input data for a lateral thinking step
@@ -93,6 +94,12 @@ export interface LateralThinkingInput {
   bridgeBuilding?: string[];
   respectfulSynthesis?: string[];
   parallelPaths?: string[];
+
+  // Collective Intelligence fields
+  wisdomSources?: string[];
+  emergentPatterns?: string[];
+  synergyCombinations?: string[];
+  collectiveInsights?: string[];
 
   // Session fields
   sessionId?: string;
