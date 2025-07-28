@@ -364,6 +364,7 @@ export class PathMemoryManager {
       neural_state: 'cognitive',
       temporal_work: 'resource',
       cross_cultural: 'relational',
+      collective_intel: 'cognitive',
     };
 
     return techniqueConstraintMap[event.technique] || 'creative';
