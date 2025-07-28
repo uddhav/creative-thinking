@@ -236,11 +236,26 @@ When adding new thinking techniques:
 
 ## Code Submission Guidelines
 
-- Always make sure that Conventional commit format in PR title
-- All tests passing
-- No linting errors
-- Prettier formatting fixed
-- Test coverage acceptable before committing changes
+## Pre-Commit Checklist (MANDATORY)
+1. **Run lint FIRST**: `npm run lint` (fix with `npm run lint -- --fix`)
+2. **Run tests**: `npm run test:run` for affected areas
+3. **Run build**: `npm run build` to ensure TypeScript compiles
+4. **NEVER commit if ANY of the above fail**
+
+## PR Review Process
+1. **ALWAYS run** `gh pr diff <PR>` to see actual changes before merging
+2. **NEVER merge** when review says "NEEDS FIXES" or "DO NOT MERGE"
+3. **Read ENTIRE review**, especially "Required Fixes" sections
+4. **Verify MCP integration** for new techniques:
+   - Check planning tool enum at src/index.ts (~line 3631-3640)
+   - Check execution tool enum at src/index.ts (~line 3692-3701)
+   - Add technique fields to execution tool schema
+   - Test through MCP protocol, not just unit tests
+
+## Integration Testing
+- Unit tests passing ≠ Feature complete
+- New techniques MUST be accessible through MCP interface
+- Always test the full user path, not just internal implementation
 
 ## Package Distribution
 
