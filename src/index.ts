@@ -179,7 +179,7 @@ interface ExecuteThinkingStepInput {
   revisesStep?: number;
   branchFromStep?: number;
   branchId?: string;
-  
+
   // Neural State Optimization fields
   dominantNetwork?: 'dmn' | 'ecn'; // Default Mode Network vs Executive Control Network
   suppressionDepth?: number;
@@ -1777,7 +1777,8 @@ export class LateralThinkingServer {
         ];
         techniqueInfo = neuralSteps[currentStep - 1];
         if (data.dominantNetwork && currentStep === 1) {
-          const networkName = data.dominantNetwork === 'dmn' ? 'Default Mode Network' : 'Executive Control Network';
+          const networkName =
+            data.dominantNetwork === 'dmn' ? 'Default Mode Network' : 'Executive Control Network';
           techniqueInfo += ` - Currently: ${networkName}`;
         }
         if (data.suppressionDepth && currentStep === 2) {
@@ -2082,7 +2083,9 @@ export class LateralThinkingServer {
           .flatMap(h => h.integrationInsights || []);
 
         if (dominantNetworks.length > 0) {
-          const networkNames = dominantNetworks.map(n => n === 'dmn' ? 'Default Mode Network' : 'Executive Control Network');
+          const networkNames = dominantNetworks.map(n =>
+            n === 'dmn' ? 'Default Mode Network' : 'Executive Control Network'
+          );
           insights.push(`Neural networks assessed: ${[...new Set(networkNames)].join(', ')}`);
         }
         if (switchingRhythms.length > 0) {
@@ -2493,7 +2496,8 @@ export class LateralThinkingServer {
         break;
       case 'neural_state':
         if (input.dominantNetwork && currentStep === 1) {
-          const networkName = input.dominantNetwork === 'dmn' ? 'Default Mode Network' : 'Executive Control Network';
+          const networkName =
+            input.dominantNetwork === 'dmn' ? 'Default Mode Network' : 'Executive Control Network';
           return `${networkName} dominance detected, exploring cognitive flexibility options`;
         }
         if (input.suppressionDepth && currentStep === 2) {

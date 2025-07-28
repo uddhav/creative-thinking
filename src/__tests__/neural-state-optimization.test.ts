@@ -8,6 +8,7 @@ import type {
   ExecuteThinkingStepInput,
   PlanThinkingSessionInput,
   DiscoverTechniquesInput,
+  LateralTechnique,
 } from '../index.js';
 
 interface ServerResponse {
@@ -87,7 +88,7 @@ describe('Neural State Optimization', () => {
   async function createPlan(problem: string, techniques: string[]): Promise<string> {
     const input: PlanThinkingSessionInput = {
       problem,
-      techniques: techniques as any,
+      techniques: techniques as LateralTechnique[],
     };
 
     const result = (await server.planThinkingSession(input)) as ServerResponse;
@@ -147,7 +148,7 @@ describe('Neural State Optimization', () => {
     it('should create a proper workflow for Neural State technique', async () => {
       const input: PlanThinkingSessionInput = {
         problem: 'Optimize cognitive flexibility for complex problem solving',
-        techniques: ['neural_state'] as any,
+        techniques: ['neural_state'] as LateralTechnique[],
       };
 
       const result = (await server.planThinkingSession(input)) as ServerResponse;
@@ -161,14 +162,20 @@ describe('Neural State Optimization', () => {
       expect(planData.workflow[3].description).toContain('Integrate insights');
 
       // Check risk considerations
-      expect(planData.workflow[0].riskConsiderations).toContain('Individual variation in neural patterns');
-      expect(planData.workflow[2].riskConsiderations).toContain('Avoid forced switching that disrupts flow');
+      expect(planData.workflow[0].riskConsiderations).toContain(
+        'Individual variation in neural patterns'
+      );
+      expect(planData.workflow[2].riskConsiderations).toContain(
+        'Avoid forced switching that disrupts flow'
+      );
     });
   });
 
   describe('Execution Phase', () => {
     it('should execute all four Neural State steps', async () => {
-      const planId = await createPlan('Overcome cognitive rigidity in problem-solving', ['neural_state']);
+      const planId = await createPlan('Overcome cognitive rigidity in problem-solving', [
+        'neural_state',
+      ]);
 
       // Step 1: Assess current state
       const step1 = await executeStep(planId, {
@@ -243,11 +250,15 @@ describe('Neural State Optimization', () => {
       expect(step4.completed).toBe(true);
       expect(step4.insights).toBeDefined();
       expect(step4.insights?.length).toBeGreaterThan(0);
-      expect(step4.insights?.some(i => i.includes('Neural State Optimization completed'))).toBe(true);
+      expect(step4.insights?.some(i => i.includes('Neural State Optimization completed'))).toBe(
+        true
+      );
     });
 
     it('should handle DMN dominance scenario', async () => {
-      const planId = await createPlan('Focus issues due to excessive mind wandering', ['neural_state']);
+      const planId = await createPlan('Focus issues due to excessive mind wandering', [
+        'neural_state',
+      ]);
 
       const step1 = await executeStep(planId, {
         technique: 'neural_state',
