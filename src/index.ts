@@ -332,6 +332,22 @@ interface LateralThinkingResponse {
   };
   nextStepGuidance?: string;
   autoSaveError?: string;
+
+  // Memory-suggestive fields
+  contextualInsight?: string;
+  historicalNote?: string;
+  patternObserved?: string;
+  sessionFingerprint?: {
+    problemType: string;
+    solutionPattern: string;
+    breakthroughLevel: number;
+    pathDependencies: string[];
+  };
+  noteworthyPatterns?: {
+    observed: string;
+    significance: string;
+    applicability: string[];
+  };
 }
 
 // Session management configuration
@@ -2170,6 +2186,10 @@ export class LateralThinkingServer {
         response.nextStepGuidance = this.getNextStepGuidance(thinkingInput);
       }
 
+      // Generate memory-suggestive outputs
+      const memoryOutputs = this.generateMemorySuggestiveOutputs(thinkingInput, session);
+      Object.assign(response, memoryOutputs);
+
       // Auto-save if enabled
       if (thinkingInput.autoSave && this.persistenceAdapter && session) {
         try {
@@ -2308,6 +2328,265 @@ export class LateralThinkingServer {
     }
 
     return 'Continue with the next step';
+  }
+
+  private generateMemorySuggestiveOutputs(
+    input: ThinkingOperationData,
+    session: SessionData
+  ): Partial<LateralThinkingResponse> {
+    const memoryOutputs: Partial<LateralThinkingResponse> = {};
+
+    // Generate contextual insight based on current technique and step
+    const contextualInsights = this.generateContextualInsight(input, session);
+    if (contextualInsights) {
+      memoryOutputs.contextualInsight = contextualInsights;
+    }
+
+    // Generate historical note if patterns emerge
+    const historicalNote = this.generateHistoricalNote(input, session);
+    if (historicalNote) {
+      memoryOutputs.historicalNote = historicalNote;
+    }
+
+    // Identify patterns observed
+    const pattern = this.identifyPattern(input, session);
+    if (pattern) {
+      memoryOutputs.patternObserved = pattern;
+    }
+
+    // Generate session fingerprint for completed sessions
+    if (!input.nextStepNeeded) {
+      memoryOutputs.sessionFingerprint = {
+        problemType: this.categorizeProblem(session.problem),
+        solutionPattern: this.identifySolutionPattern(session),
+        breakthroughLevel: this.assessBreakthroughLevel(session),
+        pathDependencies: this.extractPathDependencies(session),
+      };
+    }
+
+    // Identify noteworthy patterns for future reference
+    const noteworthyPattern = this.identifyNoteworthyPattern(input, session);
+    if (noteworthyPattern) {
+      memoryOutputs.noteworthyPatterns = noteworthyPattern;
+    }
+
+    return memoryOutputs;
+  }
+
+  private generateContextualInsight(
+    input: ThinkingOperationData,
+    session: SessionData
+  ): string | undefined {
+    const { technique, currentStep } = input;
+
+    // Technique-specific insights
+    switch (technique) {
+      case 'six_hats':
+        if (input.hatColor === 'black' && input.risks && input.risks.length > 0) {
+          return `Critical thinking revealed ${input.risks.length} risk factors that require mitigation`;
+        }
+        if (input.hatColor === 'green' && currentStep === 6) {
+          return 'Creative solutions generated after systematic analysis';
+        }
+        break;
+
+      case 'po':
+        if (currentStep === 2 && input.principles) {
+          return `Provocation successfully challenged ${input.principles.length} core assumptions`;
+        }
+        break;
+
+      case 'scamper':
+        if (input.scamperAction === 'eliminate' && session.insights.length > 0) {
+          return 'Elimination strategy revealed opportunities for simplification';
+        }
+        break;
+
+      case 'design_thinking':
+        if (input.designStage === 'empathize' && input.empathyInsights) {
+          return `User research uncovered ${input.empathyInsights.length} key pain points`;
+        }
+        break;
+
+      case 'triz':
+        if (input.contradiction && currentStep === 1) {
+          return 'Technical contradiction identified, seeking inventive resolution';
+        }
+        break;
+    }
+
+    // Generic insights based on risk/antifragile properties
+    if (input.antifragileProperties && input.antifragileProperties.length > 0) {
+      return `Discovered ${input.antifragileProperties.length} antifragile properties that strengthen under stress`;
+    }
+
+    return undefined;
+  }
+
+  private generateHistoricalNote(
+    input: ThinkingOperationData,
+    session: SessionData
+  ): string | undefined {
+    // Look for repeated patterns or themes across steps
+    const stepCount = session.history.length;
+
+    if (stepCount >= 3) {
+      // Check for risk awareness pattern
+      const riskMentions = session.history.filter(h => h.risks && h.risks.length > 0).length;
+
+      if (riskMentions >= 2) {
+        return 'This session demonstrates consistent risk awareness across multiple thinking steps';
+      }
+
+      // Check for iterative refinement
+      if (input.isRevision || Object.keys(session.branches).length > 0) {
+        return 'Solution evolved through iterative refinement and exploration of alternatives';
+      }
+    }
+
+    return undefined;
+  }
+
+  private identifyPattern(input: ThinkingOperationData, session: SessionData): string | undefined {
+    const { technique } = input;
+
+    // Pattern detection based on technique combinations
+    if (technique === 'concept_extraction' && input.abstractedPatterns) {
+      return `Cross-domain pattern transfer: ${input.abstractedPatterns.join(', ')}`;
+    }
+
+    if (technique === 'yes_and' && input.synthesis) {
+      return 'Collaborative building pattern: initial idea → additions → synthesis';
+    }
+
+    // Detect constraint-driven innovation based on problem description
+    if (session.problem.toLowerCase().includes('constraint')) {
+      return 'Constraint-driven innovation: limitations sparked creative solutions';
+    }
+
+    return undefined;
+  }
+
+  private categorizeProblem(problem: string): string {
+    const problemLower = problem.toLowerCase();
+
+    if (problemLower.includes('improve') || problemLower.includes('enhance')) {
+      return 'optimization';
+    }
+    if (problemLower.includes('create') || problemLower.includes('design')) {
+      return 'creation';
+    }
+    if (problemLower.includes('solve') || problemLower.includes('fix')) {
+      return 'problem-solving';
+    }
+    if (problemLower.includes('analyze') || problemLower.includes('understand')) {
+      return 'analysis';
+    }
+
+    return 'general';
+  }
+
+  private identifySolutionPattern(session: SessionData): string {
+    const techniques = session.history.map(h => h.technique);
+    const uniqueTechniques = new Set(techniques);
+
+    if (uniqueTechniques.size > 1) {
+      return 'multi-technique synthesis';
+    }
+
+    if (Object.keys(session.branches).length > 0) {
+      return 'branching exploration';
+    }
+
+    // Check history for subtractive patterns
+    if (
+      session.history.some(
+        h =>
+          (h.viaNegativaRemovals && h.viaNegativaRemovals.length > 0) ||
+          h.scamperAction === 'eliminate'
+      )
+    ) {
+      return 'subtractive innovation';
+    }
+
+    // Check history for integrative patterns
+    if (session.history.some(h => h.scamperAction === 'combine' || h.synthesis)) {
+      return 'integrative solution';
+    }
+
+    return 'linear progression';
+  }
+
+  private assessBreakthroughLevel(session: SessionData): number {
+    let score = 0;
+
+    // Factors that indicate breakthrough thinking
+    if (session.history.length > 5) score += 2; // Long exploration
+    if (Object.keys(session.branches).length > 0) score += 1;
+    if (session.history.some(h => h.blackSwans && h.blackSwans.length > 0)) score += 2;
+    if (session.history.some(h => h.antifragileProperties && h.antifragileProperties.length > 0))
+      score += 1;
+    if (session.history.some(h => h.principles && h.principles.length > 0)) score += 1;
+
+    // Normalize to 0-10 scale
+    return Math.min(score * 1.5, 10);
+  }
+
+  private extractPathDependencies(session: SessionData): string[] {
+    const dependencies: string[] = [];
+
+    // Extract key decisions that shaped the path
+    session.history.forEach((step, index) => {
+      if (step.technique === 'six_hats' && step.hatColor === 'purple') {
+        dependencies.push('Ergodic perspective analysis');
+      }
+
+      if (step.isRevision) {
+        dependencies.push(`Revision at step ${index + 1}`);
+      }
+
+      if (step.risks && step.risks.length > 0) {
+        dependencies.push(`Risk identification at step ${index + 1}`);
+      }
+    });
+
+    return dependencies;
+  }
+
+  private identifyNoteworthyPattern(
+    input: ThinkingOperationData,
+    session: SessionData
+  ): LateralThinkingResponse['noteworthyPatterns'] | undefined {
+    // Look for patterns worth remembering for future sessions
+
+    // Via Negativa success
+    if (input.viaNegativaRemovals && input.viaNegativaRemovals.length > 0) {
+      return {
+        observed: 'Successful application of Via Negativa principle',
+        significance: 'Simplification through removal often more effective than addition',
+        applicability: ['complex systems', 'feature creep', 'process optimization'],
+      };
+    }
+
+    // Antifragile discovery
+    if (input.antifragileProperties && input.antifragileProperties.length >= 2) {
+      return {
+        observed: 'Multiple antifragile properties identified',
+        significance: 'Solution gains strength from stressors',
+        applicability: ['volatile environments', 'long-term sustainability', 'adaptive systems'],
+      };
+    }
+
+    // Cross-technique synergy
+    if (session.history.length > 4 && new Set(session.history.map(h => h.technique)).size > 1) {
+      return {
+        observed: 'Effective multi-technique combination',
+        significance: 'Different perspectives yielded comprehensive solution',
+        applicability: ['complex problems', 'stakeholder alignment', 'holistic solutions'],
+      };
+    }
+
+    return undefined;
   }
 
   // Discovery Layer: Analyze problem and recommend techniques
