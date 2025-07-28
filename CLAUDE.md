@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a **Creative Thinking MCP Server** implementing a three-layer tool architecture for structured problem-solving. The server provides eight enhanced thinking techniques through a unified framework that combines generative creativity with systematic risk assessment.
+This is a **Creative Thinking MCP Server** implementing a three-layer tool architecture for structured problem-solving. The server provides ten enhanced thinking techniques through a unified framework that combines generative creativity with systematic risk assessment.
 
 ## Development Commands
 
@@ -66,7 +66,7 @@ docker run -it creative-thinking
 
 ### Key Types and Interfaces
 ```typescript
-type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 'concept_extraction' | 'yes_and' | 'design_thinking' | 'triz' | 'neural_state';
+type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 'concept_extraction' | 'yes_and' | 'design_thinking' | 'triz' | 'neural_state' | 'temporal_work';
 type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green';
 type ScamperAction = 'substitute' | 'combine' | 'adapt' | 'modify' | 'put_to_other_use' | 'eliminate' | 'reverse';
 type DesignThinkingStage = 'empathize' | 'define' | 'ideate' | 'prototype' | 'test';
@@ -193,6 +193,7 @@ The implementation now supports the unified generative/adversarial framework fro
    - Design Thinking: 5 steps (empathize → define → ideate → prototype → test)
    - TRIZ: 4 steps (identify → remove → apply → minimize)
    - Neural State: 4 steps (assess → identify suppression → develop rhythm → integrate)
+   - Temporal Work: 5 steps (map landscape → circadian alignment → pressure transformation → async-sync balance → escape routes)
 
 ## Architecture Principles
 

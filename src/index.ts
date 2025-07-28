@@ -1513,6 +1513,22 @@ export class LateralThinkingServer {
           console.warn('Warning: Dead zones identified but no kairos opportunities found');
         }
       }
+
+      // Validate kairos opportunities align with flexible windows
+      if (landscape.flexibleWindows && landscape.kairosOpportunities) {
+        const flexibleCount = Array.isArray(landscape.flexibleWindows)
+          ? landscape.flexibleWindows.length
+          : 0;
+        const kairosCount = Array.isArray(landscape.kairosOpportunities)
+          ? landscape.kairosOpportunities.length
+          : 0;
+
+        if (flexibleCount > 0 && kairosCount === 0) {
+          console.warn(
+            'Warning: Flexible windows exist but no kairos opportunities identified to leverage them'
+          );
+        }
+      }
     }
 
     return data as unknown as ThinkingOperationData;
