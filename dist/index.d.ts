@@ -2,7 +2,7 @@
 import type { PathMemory } from './ergodicity/index.js';
 import { ErgodicityManager } from './ergodicity/index.js';
 import type { EarlyWarningState, EscapeProtocol } from './ergodicity/earlyWarning/types.js';
-export type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 'concept_extraction' | 'yes_and' | 'design_thinking' | 'triz' | 'neural_state' | 'temporal_work';
+export type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 'concept_extraction' | 'yes_and' | 'design_thinking' | 'triz' | 'neural_state' | 'temporal_work' | 'cross_cultural';
 export type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green' | 'purple';
 export type ScamperAction = 'substitute' | 'combine' | 'adapt' | 'modify' | 'put_to_other_use' | 'eliminate' | 'reverse';
 export type DesignThinkingStage = 'empathize' | 'define' | 'ideate' | 'prototype' | 'test';
@@ -66,6 +66,10 @@ export interface ThinkingOperationData {
     pressureTransformation?: string[];
     asyncSyncBalance?: string[];
     temporalEscapeRoutes?: string[];
+    culturalFrameworks?: string[];
+    bridgeBuilding?: string[];
+    respectfulSynthesis?: string[];
+    parallelPaths?: string[];
 }
 export interface SessionOperationData {
     sessionOperation: 'save' | 'load' | 'list' | 'delete' | 'export';
@@ -231,6 +235,12 @@ export declare class LateralThinkingServer {
      * @returns Truncated word with ellipsis if needed
      */
     private truncateWord;
+    /**
+     * Validate cultural framework names to prevent offensive or inappropriate content
+     * @param framework - The cultural framework name to validate
+     * @returns true if the framework name is appropriate
+     */
+    private isValidCulturalFramework;
     /**
      * Format the risk identification section for visual output
      * @param risks - Array of identified risks

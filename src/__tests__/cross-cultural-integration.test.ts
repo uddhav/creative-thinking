@@ -1,0 +1,489 @@
+/**
+ * Tests for Cross-Cultural Integration technique implementation
+ */
+
+import { describe, it, expect, beforeEach } from 'vitest';
+import { LateralThinkingServer } from '../index.js';
+import type {
+  ExecuteThinkingStepInput,
+  PlanThinkingSessionInput,
+  DiscoverTechniquesInput,
+  LateralTechnique,
+} from '../index.js';
+
+interface ServerResponse {
+  content: Array<{ type: string; text: string }>;
+  isError?: boolean;
+}
+
+interface PlanResponse {
+  planId: string;
+  workflow: Array<{
+    technique: string;
+    stepNumber: number;
+    description: string;
+    expectedOutputs: string[];
+    riskConsiderations?: string[];
+  }>;
+}
+
+interface ExecutionResponse {
+  sessionId: string;
+  technique: string;
+  currentStep: number;
+  totalSteps: number;
+  nextStepNeeded: boolean;
+  historyLength: number;
+  branches: string[];
+  completed?: boolean;
+  insights?: string[];
+  summary?: string;
+  metrics?: {
+    duration: number;
+    creativityScore: number;
+    risksCaught?: number;
+    antifragileFeatures?: number;
+  };
+  nextStepGuidance?: string;
+  autoSaveError?: string;
+  // Memory-suggestive fields
+  contextualInsight?: string;
+  historicalNote?: string;
+  patternObserved?: string;
+  sessionFingerprint?: {
+    problemType: string;
+    solutionPattern: string;
+    breakthroughLevel: number;
+    pathDependencies: string[];
+  };
+  noteworthyPatterns?: {
+    observed: string;
+    significance: string;
+    applicability: string[];
+  };
+}
+
+interface DiscoveryResponse {
+  problem: string;
+  recommendations: Array<{
+    technique: string;
+    score: number;
+    reasoning: string;
+    bestFor: string[];
+    limitations: string[];
+  }>;
+  suggestedWorkflow?: string;
+  flexibilityScore?: number;
+  optionGenerationRecommended?: boolean;
+}
+
+describe('Cross-Cultural Integration', () => {
+  let server: LateralThinkingServer;
+
+  beforeEach(() => {
+    server = new LateralThinkingServer();
+  });
+
+  // Helper function to create a plan
+  async function createPlan(problem: string, techniques: string[]): Promise<string> {
+    const input: PlanThinkingSessionInput = {
+      problem,
+      techniques: techniques as LateralTechnique[],
+    };
+
+    const result = (await server.planThinkingSession(input)) as ServerResponse;
+    expect(result.isError).toBeFalsy();
+    const planData = JSON.parse(result.content[0]?.text || '{}') as PlanResponse;
+    return planData.planId;
+  }
+
+  // Helper function to execute a step
+  async function executeStep(
+    planId: string,
+    input: Partial<ExecuteThinkingStepInput>
+  ): Promise<ExecutionResponse> {
+    const result = (await server.executeThinkingStep({
+      planId,
+      ...input,
+    } as ExecuteThinkingStepInput)) as ServerResponse;
+
+    expect(result.isError).toBeFalsy();
+    return JSON.parse(result.content[0]?.text || '{}') as ExecutionResponse;
+  }
+
+  describe('Discovery Phase', () => {
+    it('should recommend Cross-Cultural for global and diverse perspective problems', async () => {
+      const input: DiscoverTechniquesInput = {
+        problem: 'Design a global product that resonates across cultures',
+        context: 'Need to create something that works in Eastern and Western markets',
+      };
+
+      const result = (await server.discoverTechniques(input)) as ServerResponse;
+      expect(result.isError).toBeFalsy();
+      const response = JSON.parse(result.content[0]?.text || '{}') as DiscoveryResponse;
+
+      const crossCulturalRec = response.recommendations.find(r => r.technique === 'cross_cultural');
+      expect(crossCulturalRec).toBeDefined();
+      expect(crossCulturalRec?.score).toBeGreaterThan(0.8);
+      expect(crossCulturalRec?.reasoning).toContain('diverse cultural frameworks');
+      expect(crossCulturalRec?.bestFor).toContain('global product design');
+    });
+
+    it('should recommend Cross-Cultural for inclusive innovation challenges', async () => {
+      const input: DiscoverTechniquesInput = {
+        problem: 'Create an inclusive global solution that honors diverse cultural perspectives',
+        context: 'Working with multicultural team and diverse user base across cultures',
+      };
+
+      const result = (await server.discoverTechniques(input)) as ServerResponse;
+      expect(result.isError).toBeFalsy();
+      const response = JSON.parse(result.content[0]?.text || '{}') as DiscoveryResponse;
+
+      const crossCulturalRec = response.recommendations.find(r => r.technique === 'cross_cultural');
+      expect(crossCulturalRec).toBeDefined();
+      expect(crossCulturalRec?.bestFor).toContain('inclusive solutions');
+    });
+  });
+
+  describe('Planning Phase', () => {
+    it('should create a proper workflow for Cross-Cultural technique', async () => {
+      const input: PlanThinkingSessionInput = {
+        problem: 'Design a global educational platform',
+        techniques: ['cross_cultural'] as LateralTechnique[],
+      };
+
+      const result = (await server.planThinkingSession(input)) as ServerResponse;
+      expect(result.isError).toBeFalsy();
+      const planData = JSON.parse(result.content[0]?.text || '{}') as PlanResponse;
+
+      expect(planData.workflow).toHaveLength(5);
+      expect(planData.workflow[0].description).toContain('Map cultural frameworks');
+      expect(planData.workflow[1].description).toContain('Identify cultural bridges');
+      expect(planData.workflow[2].description).toContain('Create respectful synthesis');
+      expect(planData.workflow[3].description).toContain('Develop parallel solutions');
+      expect(planData.workflow[4].description).toContain('Validate with diverse stakeholders');
+
+      // Check risk considerations
+      expect(planData.workflow[0].riskConsiderations).toContain('Cultural sensitivity required');
+      expect(planData.workflow[2].riskConsiderations).toContain('Maintain authenticity');
+    });
+  });
+
+  describe('Execution Phase', () => {
+    it('should execute all five Cross-Cultural steps', async () => {
+      const planId = await createPlan('Create culturally adaptive user interface', [
+        'cross_cultural',
+      ]);
+
+      // Step 1: Map cultural frameworks
+      const step1 = await executeStep(planId, {
+        technique: 'cross_cultural',
+        problem: 'Create culturally adaptive user interface',
+        currentStep: 1,
+        totalSteps: 5,
+        output: 'Mapped diverse cultural perspectives on design',
+        culturalFrameworks: [
+          'Eastern: circular thinking, holistic view',
+          'Western: linear logic, component focus',
+          'Indigenous: relational, nature-inspired',
+          'Local: community-centric, contextual',
+        ],
+        nextStepNeeded: true,
+      });
+
+      expect(step1.technique).toBe('cross_cultural');
+      expect(step1.currentStep).toBe(1);
+      expect(step1.nextStepGuidance).toContain('Identify cultural bridges');
+      expect(step1.contextualInsight).toContain('4 cultural perspectives');
+
+      // Step 2: Identify bridges
+      const step2 = await executeStep(planId, {
+        sessionId: step1.sessionId,
+        technique: 'cross_cultural',
+        problem: 'Create culturally adaptive user interface',
+        currentStep: 2,
+        totalSteps: 5,
+        output: 'Found common ground across cultures',
+        bridgeBuilding: [
+          'Universal need for clarity',
+          'Shared value of community',
+          'Common appreciation of beauty',
+          'Cross-cultural symbols',
+        ],
+        nextStepNeeded: true,
+      });
+
+      expect(step2.currentStep).toBe(2);
+      expect(step2.contextualInsight).toContain('4 connection points');
+
+      // Step 3: Create synthesis
+      const step3 = await executeStep(planId, {
+        sessionId: step1.sessionId,
+        technique: 'cross_cultural',
+        problem: 'Create culturally adaptive user interface',
+        currentStep: 3,
+        totalSteps: 5,
+        output: 'Synthesized perspectives into unified framework',
+        respectfulSynthesis: [
+          'Modular design allowing cultural customization',
+          'Visual language that transcends cultures',
+          'Flexible navigation patterns',
+          'Culturally neutral iconography with local options',
+        ],
+        nextStepNeeded: true,
+      });
+
+      expect(step3.currentStep).toBe(3);
+      expect(step3.contextualInsight).toContain('inclusive solution');
+
+      // Step 4: Develop parallel solutions
+      const step4 = await executeStep(planId, {
+        sessionId: step1.sessionId,
+        technique: 'cross_cultural',
+        problem: 'Create culturally adaptive user interface',
+        currentStep: 4,
+        totalSteps: 5,
+        output: 'Created context-specific variations',
+        parallelPaths: [
+          'Eastern: circular navigation, holistic dashboard',
+          'Western: linear flow, detailed analytics',
+          'Mobile-first for emerging markets',
+          'Accessibility-first for inclusive design',
+        ],
+        nextStepNeeded: true,
+      });
+
+      expect(step4.currentStep).toBe(4);
+
+      // Step 5: Validate with stakeholders
+      const step5 = await executeStep(planId, {
+        sessionId: step1.sessionId,
+        technique: 'cross_cultural',
+        problem: 'Create culturally adaptive user interface',
+        currentStep: 5,
+        totalSteps: 5,
+        output: 'Validated with diverse user groups and refined',
+        nextStepNeeded: false,
+      });
+
+      expect(step5.currentStep).toBe(5);
+      expect(step5.completed).toBe(true);
+      expect(step5.insights).toBeDefined();
+      expect(step5.insights?.length).toBeGreaterThan(0);
+      expect(step5.insights?.some(i => i.includes('Cross-Cultural Integration completed'))).toBe(
+        true
+      );
+    });
+
+    it('should handle complex cultural framework mapping', async () => {
+      const planId = await createPlan('Bridge Eastern and Western approaches to problem-solving', [
+        'cross_cultural',
+      ]);
+
+      const step1 = await executeStep(planId, {
+        technique: 'cross_cultural',
+        problem: 'Bridge Eastern and Western approaches to problem-solving',
+        currentStep: 1,
+        totalSteps: 5,
+        output: 'Comprehensive cultural framework analysis',
+        culturalFrameworks: [
+          'Eastern: yin-yang balance, wu wei (effortless action)',
+          'Western: thesis-antithesis-synthesis, scientific method',
+          'Indigenous: seven generations thinking, circle of life',
+          'African: ubuntu (I am because we are), collective wisdom',
+          'Latin: simpatía (harmonious relationships), personalismo',
+        ],
+        nextStepNeeded: true,
+      });
+
+      expect(step1.contextualInsight).toContain('5 cultural perspectives');
+    });
+
+    it('should identify critical steps for cultural sensitivity', async () => {
+      const planId = await createPlan('Develop culturally sensitive AI', ['cross_cultural']);
+
+      // Step 2 (bridge identification) should be marked as critical
+      const step2 = await executeStep(planId, {
+        technique: 'cross_cultural',
+        problem: 'Develop culturally sensitive AI',
+        currentStep: 2,
+        totalSteps: 5,
+        output: 'Identifying cultural bridges while avoiding stereotypes',
+        bridgeBuilding: ['Shared human values', 'Universal experiences'],
+        risks: ['Cultural stereotyping', 'Over-generalization'],
+        nextStepNeeded: true,
+      });
+
+      expect(step2.sessionId).toBeDefined();
+      // Step 2 is a critical step for cross-cultural
+
+      // Step 3 (synthesis) should also be critical
+      const step3 = await executeStep(planId, {
+        sessionId: step2.sessionId,
+        technique: 'cross_cultural',
+        problem: 'Develop culturally sensitive AI',
+        currentStep: 3,
+        totalSteps: 5,
+        output: 'Creating respectful synthesis',
+        respectfulSynthesis: ['Authentic representation', 'Avoid appropriation'],
+        risks: ['Cultural appropriation', 'Loss of nuance'],
+        mitigations: ['Continuous stakeholder engagement', 'Cultural consultants'],
+        nextStepNeeded: true,
+      });
+
+      expect(step3.sessionId).toBeDefined();
+    });
+
+    it('should generate memory-suggestive outputs for cultural sessions', async () => {
+      const planId = await createPlan('Design inclusive global communication platform', [
+        'cross_cultural',
+      ]);
+
+      // Complete a full session
+      const step1 = await executeStep(planId, {
+        technique: 'cross_cultural',
+        problem: 'Design inclusive global communication platform',
+        currentStep: 1,
+        totalSteps: 5,
+        output: 'Mapped frameworks',
+        culturalFrameworks: ['Eastern', 'Western', 'Indigenous', 'Local'],
+        nextStepNeeded: true,
+      });
+
+      await executeStep(planId, {
+        sessionId: step1.sessionId,
+        technique: 'cross_cultural',
+        problem: 'Design inclusive global communication platform',
+        currentStep: 2,
+        totalSteps: 5,
+        output: 'Found bridges',
+        bridgeBuilding: ['Universal values', 'Shared experiences'],
+        nextStepNeeded: true,
+      });
+
+      await executeStep(planId, {
+        sessionId: step1.sessionId,
+        technique: 'cross_cultural',
+        problem: 'Design inclusive global communication platform',
+        currentStep: 3,
+        totalSteps: 5,
+        output: 'Created synthesis',
+        respectfulSynthesis: ['Modular approach', 'Cultural adaptability'],
+        nextStepNeeded: true,
+      });
+
+      await executeStep(planId, {
+        sessionId: step1.sessionId,
+        technique: 'cross_cultural',
+        problem: 'Design inclusive global communication platform',
+        currentStep: 4,
+        totalSteps: 5,
+        output: 'Developed variations',
+        parallelPaths: ['Eastern UI', 'Western UI', 'Mobile-first'],
+        nextStepNeeded: true,
+      });
+
+      const finalStep = await executeStep(planId, {
+        sessionId: step1.sessionId,
+        technique: 'cross_cultural',
+        problem: 'Design inclusive global communication platform',
+        currentStep: 5,
+        totalSteps: 5,
+        output: 'Validated and refined',
+        nextStepNeeded: false,
+      });
+
+      expect(finalStep.sessionFingerprint).toBeDefined();
+      expect(finalStep.sessionFingerprint?.solutionPattern).toBeDefined();
+      expect(finalStep.insights?.some(i => i.includes('inclusive innovation'))).toBe(true);
+    });
+  });
+
+  describe('Integration with Other Techniques', () => {
+    it('should work well in combination with Design Thinking', async () => {
+      const planId = await createPlan('Design culturally inclusive healthcare solution', [
+        'cross_cultural',
+        'design_thinking',
+      ]);
+
+      // First understand cultural perspectives
+      const culturalStep = await executeStep(planId, {
+        technique: 'cross_cultural',
+        problem: 'Design culturally inclusive healthcare solution',
+        currentStep: 1,
+        totalSteps: 1,
+        output: 'Cultural frameworks mapped for healthcare contexts',
+        culturalFrameworks: [
+          'Eastern: holistic health, preventive care',
+          'Western: specialized treatment, evidence-based',
+          'Indigenous: traditional medicine, spiritual healing',
+        ],
+        bridgeBuilding: ['Universal desire for health', 'Family care values'],
+        nextStepNeeded: false,
+      });
+
+      expect(culturalStep.completed).toBe(true);
+
+      // Then apply design thinking with cultural insights
+      const designStep = await executeStep(planId, {
+        sessionId: culturalStep.sessionId,
+        technique: 'design_thinking',
+        problem: 'Design culturally inclusive healthcare solution',
+        currentStep: 1,
+        totalSteps: 1,
+        output: 'Empathized with diverse cultural health perspectives',
+        designStage: 'empathize',
+        empathyInsights: [
+          'Different cultural views on health',
+          'Varied trust levels in medical systems',
+          'Cultural taboos and sensitivities',
+        ],
+        nextStepNeeded: false,
+      });
+
+      expect(designStep.sessionId).toBe(culturalStep.sessionId);
+    });
+  });
+
+  describe('Error Handling', () => {
+    it('should handle missing cultural framework data gracefully', async () => {
+      const planId = await createPlan('Test cultural integration', ['cross_cultural']);
+
+      // Execute without specific cultural fields
+      const result = await executeStep(planId, {
+        technique: 'cross_cultural',
+        problem: 'Test cultural integration',
+        currentStep: 1,
+        totalSteps: 5,
+        output: 'Exploring cultural perspectives without specific data',
+        nextStepNeeded: true,
+      });
+
+      expect(result.technique).toBe('cross_cultural');
+      // Should not have contextual insight without cultural framework data
+      expect(result.contextualInsight).toBeUndefined();
+    });
+
+    it('should validate parallel paths are contextually appropriate', async () => {
+      const planId = await createPlan('Create culturally adaptive solution', ['cross_cultural']);
+
+      // Skip to step 4 with parallel paths
+      const result = await executeStep(planId, {
+        technique: 'cross_cultural',
+        problem: 'Create culturally adaptive solution',
+        currentStep: 4,
+        totalSteps: 5,
+        output: 'Developed context-specific solutions',
+        parallelPaths: [
+          'Solution A for collectivist cultures',
+          'Solution B for individualist cultures',
+          'Hybrid approach for multicultural contexts',
+        ],
+        nextStepNeeded: true,
+      });
+
+      expect(result.technique).toBe('cross_cultural');
+      expect(result.currentStep).toBe(4);
+    });
+  });
+});

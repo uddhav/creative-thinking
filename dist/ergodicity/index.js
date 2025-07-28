@@ -344,6 +344,11 @@ export class ErgodicityManager {
                 typicalCommitment: 0.4,
                 riskProfile: 'Medium - Time structures create dependencies',
             },
+            cross_cultural: {
+                typicalReversibility: 0.8,
+                typicalCommitment: 0.3,
+                riskProfile: 'Low - Cultural exploration is adaptable',
+            },
         };
         return profiles[technique];
     }

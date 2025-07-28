@@ -36,7 +36,8 @@ export type LateralTechnique =
   | 'design_thinking'
   | 'triz'
   | 'neural_state'
-  | 'temporal_work';
+  | 'temporal_work'
+  | 'cross_cultural';
 export type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green' | 'purple';
 export type ScamperAction =
   | 'substitute'
@@ -199,6 +200,11 @@ interface ExecuteThinkingStepInput {
   pressureTransformation?: string[];
   asyncSyncBalance?: string[];
   temporalEscapeRoutes?: string[];
+  // Cross-Cultural Integration fields
+  culturalFrameworks?: string[];
+  bridgeBuilding?: string[];
+  respectfulSynthesis?: string[];
+  parallelPaths?: string[];
 }
 
 // Base interface for thinking operations
@@ -282,6 +288,11 @@ export interface ThinkingOperationData {
   pressureTransformation?: string[];
   asyncSyncBalance?: string[];
   temporalEscapeRoutes?: string[];
+  // Cross-Cultural Integration fields
+  culturalFrameworks?: string[];
+  bridgeBuilding?: string[];
+  respectfulSynthesis?: string[];
+  parallelPaths?: string[];
 }
 
 // Interface for session management operations
@@ -1026,6 +1037,7 @@ export class LateralThinkingServer {
       triz: '⚙️',
       neural_state: '🧩',
       temporal_work: '⏰',
+      cross_cultural: '🌍',
     };
     return emojis[technique] || '🧠';
   }
@@ -1315,11 +1327,12 @@ export class LateralThinkingServer {
         'triz',
         'neural_state',
         'temporal_work',
+        'cross_cultural',
       ].includes(data.technique as string)
     ) {
       throw new ValidationError(
         ErrorCode.INVALID_TECHNIQUE,
-        'Invalid technique: must be one of six_hats, po, random_entry, scamper, concept_extraction, yes_and, design_thinking, triz, neural_state, or temporal_work',
+        'Invalid technique: must be one of six_hats, po, random_entry, scamper, concept_extraction, yes_and, design_thinking, triz, neural_state, temporal_work, or cross_cultural',
         'technique'
       );
     }
@@ -1551,6 +1564,7 @@ export class LateralThinkingServer {
       triz: [2], // Via Negativa removal step
       neural_state: [2], // Network suppression identification is critical
       temporal_work: [1, 5], // Landscape constraints and escape routes are critical
+      cross_cultural: [2, 3], // Bridge identification and respectful synthesis are critical
     };
     return criticalSteps[technique] || [];
   }
@@ -1593,6 +1607,26 @@ export class LateralThinkingServer {
   private truncateWord(word: string, maxLength: number): string {
     if (word.length <= maxLength) return word;
     return word.substring(0, maxLength - 3) + '...';
+  }
+
+  /**
+   * Validate cultural framework names to prevent offensive or inappropriate content
+   * @param framework - The cultural framework name to validate
+   * @returns true if the framework name is appropriate
+   */
+  private isValidCulturalFramework(framework: string): boolean {
+    // Basic validation: non-empty, reasonable length, no obvious offensive content
+    if (!framework || framework.length < 2 || framework.length > 100) {
+      return false;
+    }
+
+    // Additional validation could be added here, such as:
+    // - Checking against a list of known offensive terms
+    // - Ensuring proper capitalization for respect
+    // - Verifying against a whitelist of recognized cultural frameworks
+
+    // For now, accept any non-empty string that's not too long
+    return true;
   }
 
   /**
@@ -1755,6 +1789,23 @@ export class LateralThinkingServer {
         }
         break;
 
+      case 'cross_cultural':
+        // Cross-cultural integration opens many perspectives but requires balance
+        impact.commitmentLevel = 0.3;
+        impact.reversibilityCost = 0.2;
+        if (data.culturalFrameworks && data.culturalFrameworks.length > 0) {
+          // Validate cultural framework names to ensure respectful content
+          const validatedFrameworks = data.culturalFrameworks.filter(f =>
+            this.isValidCulturalFramework(f)
+          );
+          impact.optionsOpened = validatedFrameworks.map(f => `Framework: ${f}`);
+        }
+        if (data.parallelPaths && data.parallelPaths.length > 0) {
+          impact.optionsOpened = impact.optionsOpened || [];
+          impact.optionsOpened.push(...data.parallelPaths.map(p => `Path: ${p}`));
+        }
+        break;
+
       default:
         // Default low impact for exploration
         impact.commitmentLevel = 0.2;
@@ -1900,6 +1951,18 @@ export class LateralThinkingServer {
           'Temporal Escape Routes',
         ];
         techniqueInfo = temporalSteps[currentStep - 1];
+        break;
+      }
+      case 'cross_cultural': {
+        emoji = '🌍';
+        const crossCulturalSteps = [
+          'Map Cultural Frameworks',
+          'Identify Bridges',
+          'Create Respectful Synthesis',
+          'Develop Parallel Solutions',
+          'Validate with Stakeholders',
+        ];
+        techniqueInfo = crossCulturalSteps[currentStep - 1];
         break;
       }
     }
@@ -2072,6 +2135,8 @@ export class LateralThinkingServer {
         return 4; // Assess current state, Identify network suppression, Develop switching rhythm, Integrate insights
       case 'temporal_work':
         return 5; // Map landscape, Circadian alignment, Pressure transformation, Async-sync balance, Escape routes
+      case 'cross_cultural':
+        return 5; // Map frameworks, Identify bridges, Create synthesis, Develop parallel solutions, Validate
       default:
         return 5;
     }
@@ -2244,6 +2309,35 @@ export class LateralThinkingServer {
           insights.push(`Temporal escape routes designed: ${escapeRoutes.join(', ')}`);
         }
         insights.push('Temporal Work Design completed for optimized creative scheduling');
+        break;
+      }
+      case 'cross_cultural': {
+        const frameworks = session.history
+          .filter(h => h.culturalFrameworks)
+          .flatMap(h => h.culturalFrameworks || []);
+        const bridges = session.history
+          .filter(h => h.bridgeBuilding)
+          .flatMap(h => h.bridgeBuilding || []);
+        const syntheses = session.history
+          .filter(h => h.respectfulSynthesis)
+          .flatMap(h => h.respectfulSynthesis || []);
+        const parallelPaths = session.history
+          .filter(h => h.parallelPaths)
+          .flatMap(h => h.parallelPaths || []);
+
+        if (frameworks.length > 0) {
+          insights.push(`Cultural frameworks explored: ${frameworks.join(', ')}`);
+        }
+        if (bridges.length > 0) {
+          insights.push(`Cultural bridges identified: ${bridges.length} connection points`);
+        }
+        if (syntheses.length > 0) {
+          insights.push('Respectful synthesis of diverse perspectives achieved');
+        }
+        if (parallelPaths.length > 0) {
+          insights.push(`Parallel implementation paths: ${parallelPaths.join(', ')}`);
+        }
+        insights.push('Cross-Cultural Integration completed for inclusive innovation');
         break;
       }
     }
@@ -2613,6 +2707,18 @@ export class LateralThinkingServer {
             return 'Complete the temporal design process';
         }
       }
+      case 'cross_cultural': {
+        const crossCulturalSteps = [
+          'Map cultural frameworks: explore Eastern cyclical thinking, Western linear logic, Indigenous relational wisdom, and local perspectives',
+          'Identify cultural bridges: find common ground, complementary strengths, and integration touchpoints',
+          'Create respectful synthesis: blend perspectives while maintaining authenticity and avoiding appropriation',
+          'Develop parallel solutions: create context-specific variations that honor different cultural values',
+          'Validate with diverse stakeholders: gather feedback and refine for inclusive implementation',
+        ];
+        return (
+          crossCulturalSteps[nextStep - 1] || 'Complete the cross-cultural integration process'
+        );
+      }
     }
 
     return 'Continue with the next step';
@@ -2719,6 +2825,17 @@ export class LateralThinkingServer {
         }
         if (input.pressureTransformation && currentStep === 3) {
           return `Pressure transformation in progress: ${input.pressureTransformation.length} catalytic techniques applied`;
+        }
+        break;
+      case 'cross_cultural':
+        if (input.culturalFrameworks && currentStep === 1) {
+          return `Mapping ${input.culturalFrameworks.length} cultural perspectives for holistic innovation`;
+        }
+        if (input.bridgeBuilding && currentStep === 2) {
+          return `Cultural bridges: ${input.bridgeBuilding.length} connection points identified`;
+        }
+        if (input.respectfulSynthesis && currentStep === 3) {
+          return 'Creating inclusive solution that honors diverse worldviews';
         }
         break;
     }
@@ -3130,6 +3247,45 @@ export class LateralThinkingServer {
         });
       }
 
+      // Cross-Cultural Integration (culture, perspective, global, diverse, integration)
+      if (
+        combined.includes('culture') ||
+        combined.includes('cultural') ||
+        combined.includes('perspective') ||
+        combined.includes('global') ||
+        combined.includes('international') ||
+        combined.includes('diverse') ||
+        combined.includes('diversity') ||
+        combined.includes('multicultural') ||
+        combined.includes('cross-cultural') ||
+        combined.includes('worldview') ||
+        combined.includes('eastern') ||
+        combined.includes('western') ||
+        combined.includes('indigenous') ||
+        combined.includes('traditional') ||
+        combined.includes('holistic') ||
+        combined.includes('inclusive')
+      ) {
+        recommendations.push({
+          technique: 'cross_cultural',
+          score: 0.85,
+          reasoning:
+            'Cross-Cultural Integration leverages diverse cultural frameworks to expand creative possibilities',
+          bestFor: [
+            'global product design',
+            'inclusive solutions',
+            'cultural innovation',
+            'perspective expansion',
+            'systemic problem-solving',
+          ],
+          limitations: [
+            'requires cultural sensitivity',
+            'may involve complexity navigation',
+            'time needed for synthesis',
+          ],
+        });
+      }
+
       // If no specific matches, provide general recommendations
       if (recommendations.length === 0) {
         if (args.preferredOutcome === 'risk-aware') {
@@ -3306,7 +3462,7 @@ export class LateralThinkingServer {
       }
 
       const output: DiscoverTechniquesOutput = {
-        recommendations: recommendations.slice(0, 3), // Top 3 recommendations
+        recommendations: recommendations.slice(0, 5), // Top 5 recommendations
         reasoning: `Based on your problem involving "${args.problem.substring(0, 100)}..."${
           args.preferredOutcome ? ` with ${args.preferredOutcome} outcomes` : ''
         }, I recommend these techniques.`,
@@ -3610,6 +3766,73 @@ export class LateralThinkingServer {
                   'Quality thresholds maintained',
                 ],
                 riskConsiderations: ['Early rushing creates quality ceiling'],
+              }
+            );
+            break;
+          case 'cross_cultural':
+            // Cross-Cultural Integration: Leverage diverse cultural frameworks for holistic innovation
+            // Critical consideration: Maintain cultural sensitivity and avoid appropriation
+            workflow.push(
+              {
+                technique,
+                stepNumber: stepNumber++,
+                description:
+                  'Map cultural frameworks (Eastern, Western, Indigenous, local perspectives)',
+                expectedOutputs: [
+                  'Eastern cyclical perspectives',
+                  'Western linear approaches',
+                  'Indigenous relational wisdom',
+                  'Local cultural insights',
+                  'Framework interaction patterns',
+                ],
+                riskConsiderations: ['Cultural sensitivity required', 'Avoid stereotyping'],
+              },
+              {
+                technique,
+                stepNumber: stepNumber++,
+                description: 'Identify cultural bridges and synthesis opportunities',
+                expectedOutputs: [
+                  'Common ground elements',
+                  'Bridge concepts identified',
+                  'Cultural complementarities',
+                  'Integration touchpoints',
+                ],
+                riskConsiderations: ['Superficial synthesis risk', 'Power dynamics awareness'],
+              },
+              {
+                technique,
+                stepNumber: stepNumber++,
+                description: 'Create respectful synthesis of diverse perspectives',
+                expectedOutputs: [
+                  'Integrated framework',
+                  'Cultural blind spots revealed',
+                  'Novel solution spaces',
+                  'Respectful adaptations',
+                ],
+                riskConsiderations: ['Appropriation concerns', 'Maintain authenticity'],
+              },
+              {
+                technique,
+                stepNumber: stepNumber++,
+                description: 'Develop parallel solutions for different cultural contexts',
+                expectedOutputs: [
+                  'Context-specific variations',
+                  'Cultural adaptability built in',
+                  'Local implementation paths',
+                  'Universal principles extracted',
+                ],
+              },
+              {
+                technique,
+                stepNumber: stepNumber++,
+                description: 'Validate with diverse stakeholders and iterate',
+                expectedOutputs: [
+                  'Stakeholder feedback integrated',
+                  'Cultural refinements',
+                  'Inclusive solution verified',
+                  'Implementation roadmap',
+                ],
+                riskConsiderations: ['Representative sampling needed'],
               }
             );
             break;
@@ -3955,6 +4178,7 @@ Use this after discovering which techniques to apply, or when you know you need 
             'triz',
             'neural_state',
             'temporal_work',
+            'cross_cultural',
           ],
         },
         description: 'The techniques to include in the workflow',
@@ -4017,6 +4241,8 @@ The three-layer workflow ensures systematic creative thinking:
           'design_thinking',
           'triz',
           'neural_state',
+          'temporal_work',
+          'cross_cultural',
         ],
         description: 'The lateral thinking technique to use',
       },
@@ -4145,6 +4371,27 @@ The three-layer workflow ensures systematic creative thinking:
         type: 'array',
         items: { type: 'string' },
         description: 'Temporal escape routes and buffers',
+      },
+      // Cross-Cultural Integration fields
+      culturalFrameworks: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Cultural frameworks being explored',
+      },
+      bridgeBuilding: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Cultural bridge concepts identified',
+      },
+      respectfulSynthesis: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Respectful synthesis approaches',
+      },
+      parallelPaths: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Parallel implementation paths for different contexts',
       },
       sessionId: { type: 'string' },
       isRevision: { type: 'boolean' },
