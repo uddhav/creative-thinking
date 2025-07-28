@@ -91,6 +91,7 @@ export interface SessionData {
     insights: string[];
     startTime?: number;
     endTime?: number;
+    lastActivityTime: number;
     metrics?: {
         creativityScore?: number;
         risksCaught?: number;
@@ -108,15 +109,27 @@ export declare class LateralThinkingServer {
     private plans;
     private currentSessionId;
     private disableThoughtLogging;
-    private readonly SESSION_TTL;
-    private readonly PLAN_TTL;
     private cleanupInterval;
     private persistenceAdapter;
     private ergodicityManager;
+    private config;
+    private readonly PLAN_TTL;
     constructor();
     private initializePersistence;
     private startSessionCleanup;
+    /**
+     * Update session activity time
+     */
+    private touchSession;
     private cleanupOldSessions;
+    /**
+     * Evict oldest sessions using LRU (Least Recently Used) strategy
+     */
+    private evictOldestSessions;
+    /**
+     * Log memory usage metrics
+     */
+    private logMemoryMetrics;
     destroy(): void;
     /**
      * Handle session management operations
