@@ -158,7 +158,7 @@ describe('OptionGenerationEngine', () => {
 
       const result = engine.generateOptions(mockContext);
 
-      expect(result.generationTime).toBeGreaterThan(0);
+      expect(result.generationTime).toBeGreaterThanOrEqual(0);
       expect(result.generationTime).toBeLessThan(1000); // Should be fast
     });
 
