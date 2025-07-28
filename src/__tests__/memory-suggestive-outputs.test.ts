@@ -109,7 +109,9 @@ describe('Memory-Suggestive Outputs', () => {
         nextStepNeeded: true,
       });
 
-      expect(result.contextualInsight).toBe('Critical thinking revealed 3 risk factors that require mitigation');
+      expect(result.contextualInsight).toBe(
+        'Critical thinking revealed 3 risk factors that require mitigation'
+      );
     });
 
     it('should generate insight for antifragile properties', async () => {
@@ -125,7 +127,9 @@ describe('Memory-Suggestive Outputs', () => {
         nextStepNeeded: true,
       });
 
-      expect(result.contextualInsight).toBe('Discovered 2 antifragile properties that strengthen under stress');
+      expect(result.contextualInsight).toBe(
+        'Discovered 2 antifragile properties that strengthen under stress'
+      );
     });
 
     it('should generate technique-specific insights', async () => {
@@ -196,7 +200,9 @@ describe('Memory-Suggestive Outputs', () => {
         nextStepNeeded: true,
       });
 
-      expect(result.historicalNote).toBe('This session demonstrates consistent risk awareness across multiple thinking steps');
+      expect(result.historicalNote).toBe(
+        'This session demonstrates consistent risk awareness across multiple thinking steps'
+      );
     });
 
     it('should detect iterative refinement through revisions', async () => {
@@ -244,7 +250,9 @@ describe('Memory-Suggestive Outputs', () => {
         nextStepNeeded: false,
       });
 
-      expect(result.historicalNote).toBe('Solution evolved through iterative refinement and exploration of alternatives');
+      expect(result.historicalNote).toBe(
+        'Solution evolved through iterative refinement and exploration of alternatives'
+      );
     });
   });
 
@@ -262,7 +270,9 @@ describe('Memory-Suggestive Outputs', () => {
         nextStepNeeded: true,
       });
 
-      expect(result.patternObserved).toBe('Cross-domain pattern transfer: Network effects, Viral growth, Community building');
+      expect(result.patternObserved).toBe(
+        'Cross-domain pattern transfer: Network effects, Viral growth, Community building'
+      );
     });
 
     it('should detect collaborative building pattern', async () => {
@@ -300,7 +310,9 @@ describe('Memory-Suggestive Outputs', () => {
         nextStepNeeded: false,
       });
 
-      expect(result.patternObserved).toBe('Collaborative building pattern: initial idea → additions → synthesis');
+      expect(result.patternObserved).toBe(
+        'Collaborative building pattern: initial idea → additions → synthesis'
+      );
     });
 
     it('should identify constraint-driven innovation', async () => {
@@ -316,7 +328,9 @@ describe('Memory-Suggestive Outputs', () => {
         nextStepNeeded: false,
       });
 
-      expect(result.patternObserved).toBe('Constraint-driven innovation: limitations sparked creative solutions');
+      expect(result.patternObserved).toBe(
+        'Constraint-driven innovation: limitations sparked creative solutions'
+      );
     });
   });
 
@@ -408,8 +422,12 @@ describe('Memory-Suggestive Outputs', () => {
       });
 
       expect(result.noteworthyPatterns).toBeDefined();
-      expect(result.noteworthyPatterns?.observed).toBe('Successful application of Via Negativa principle');
-      expect(result.noteworthyPatterns?.significance).toBe('Simplification through removal often more effective than addition');
+      expect(result.noteworthyPatterns?.observed).toBe(
+        'Successful application of Via Negativa principle'
+      );
+      expect(result.noteworthyPatterns?.significance).toBe(
+        'Simplification through removal often more effective than addition'
+      );
       expect(result.noteworthyPatterns?.applicability).toContain('complex systems');
     });
 
@@ -427,8 +445,12 @@ describe('Memory-Suggestive Outputs', () => {
         nextStepNeeded: true,
       });
 
-      expect(result.noteworthyPatterns?.observed).toBe('Multiple antifragile properties identified');
-      expect(result.noteworthyPatterns?.significance).toBe('Solution gains strength from stressors');
+      expect(result.noteworthyPatterns?.observed).toBe(
+        'Multiple antifragile properties identified'
+      );
+      expect(result.noteworthyPatterns?.significance).toBe(
+        'Solution gains strength from stressors'
+      );
     });
 
     it('should detect effective multi-technique combination', async () => {
