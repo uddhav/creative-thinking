@@ -633,8 +633,16 @@ describe('Technique Implementations', () => {
       } as ExecuteThinkingStepInput);
 
       expect(result.isError).toBeTruthy();
-      const errorData = JSON.parse(result.content[0]?.text || '{}') as { error: string };
-      expect(errorData.error).toContain('Invalid output');
+      const errorData = JSON.parse(result.content[0]?.text || '{}') as {
+        error: {
+          code: string;
+          message: string;
+          layer: string;
+          timestamp: string;
+        };
+        isError: boolean;
+      };
+      expect(errorData.error.message).toContain('Invalid output');
     });
 
     it('should require matching technique with plan', async () => {

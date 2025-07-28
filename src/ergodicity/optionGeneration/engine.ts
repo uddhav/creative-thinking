@@ -28,6 +28,7 @@ import {
   TEXT_LIMITS,
   CONSTRAINT_THRESHOLDS,
 } from './constants.js';
+import { ErrorCode, ValidationError } from '../../errors/index.js';
 
 /**
  * Error reporting for option generation
@@ -67,32 +68,60 @@ export class OptionGenerationEngine {
    */
   private validateContext(context: OptionGenerationContext): void {
     if (!context) {
-      throw new Error('Context is required for option generation');
+      throw new ValidationError(
+        ErrorCode.MISSING_REQUIRED_FIELD,
+        'Context is required for option generation',
+        'context'
+      );
     }
 
     if (!context.sessionState) {
-      throw new Error('Session state is required');
+      throw new ValidationError(
+        ErrorCode.MISSING_REQUIRED_FIELD,
+        'Session state is required',
+        'sessionState'
+      );
     }
 
     if (!context.currentFlexibility) {
-      throw new Error('Current flexibility state is required');
+      throw new ValidationError(
+        ErrorCode.MISSING_REQUIRED_FIELD,
+        'Current flexibility state is required',
+        'currentFlexibility'
+      );
     }
 
     const flexScore = context.currentFlexibility.flexibilityScore;
     if (typeof flexScore !== 'number' || flexScore < 0 || flexScore > 1) {
-      throw new Error('Flexibility score must be a number between 0 and 1');
+      throw new ValidationError(
+        ErrorCode.INVALID_FIELD_VALUE,
+        'Flexibility score must be a number between 0 and 1',
+        'currentFlexibility.flexibilityScore'
+      );
     }
 
     if (!context.pathMemory) {
-      throw new Error('Path memory is required');
+      throw new ValidationError(
+        ErrorCode.MISSING_REQUIRED_FIELD,
+        'Path memory is required',
+        'pathMemory'
+      );
     }
 
     if (!Array.isArray(context.pathMemory.pathHistory)) {
-      throw new Error('Path history must be an array');
+      throw new ValidationError(
+        ErrorCode.INVALID_FIELD_VALUE,
+        'Path history must be an array',
+        'pathMemory.pathHistory'
+      );
     }
 
     if (!Array.isArray(context.pathMemory.constraints)) {
-      throw new Error('Constraints must be an array');
+      throw new ValidationError(
+        ErrorCode.INVALID_FIELD_VALUE,
+        'Constraints must be an array',
+        'pathMemory.constraints'
+      );
     }
   }
 
