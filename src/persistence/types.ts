@@ -11,7 +11,8 @@ export type LateralTechnique =
   | 'concept_extraction'
   | 'yes_and'
   | 'design_thinking'
-  | 'triz';
+  | 'triz'
+  | 'neural_state';
 
 /**
  * Represents input data for a lateral thinking step
@@ -65,6 +66,12 @@ export interface LateralThinkingInput {
   mitigations?: string[];
   antifragileProperties?: string[];
   blackSwans?: string[];
+
+  // Neural State Optimization fields
+  dominantNetwork?: 'dmn' | 'ecn';
+  suppressionDepth?: number;
+  switchingRhythm?: string[];
+  integrationInsights?: string[];
 
   // Session fields
   sessionId?: string;

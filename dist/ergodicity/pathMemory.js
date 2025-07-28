@@ -303,6 +303,7 @@ export class PathMemoryManager {
             yes_and: 'relational',
             design_thinking: 'market',
             triz: 'technical',
+            neural_state: 'cognitive',
         };
         return techniqueConstraintMap[event.technique] || 'creative';
     }
