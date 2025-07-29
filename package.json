@@ -1,6 +1,6 @@
 {
   "name": "creative-thinking",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Three-layer MCP server for structured creative problem-solving techniques",
   "license": "GPL-3.0",
   "author": "@uddhav",
@@ -35,7 +35,13 @@
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist coverage",
     "pretest": "npm run build",
-    "version": "npm run build && git add -A dist"
+    "version": "npm run build && git add -A dist",
+    "release": "standard-version",
+    "release:patch": "standard-version --release-as patch",
+    "release:minor": "standard-version --release-as minor",
+    "release:major": "standard-version --release-as major",
+    "commit": "cz",
+    "prepare": "husky"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.17.0",
@@ -43,15 +49,21 @@
     "yargs": "^17.7.2"
   },
   "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
     "@types/node": "^24",
     "@types/yargs": "^17.0.32",
     "@typescript-eslint/eslint-plugin": "^8.38.0",
     "@typescript-eslint/parser": "^8.37.0",
     "@vitest/coverage-v8": "^3.2.4",
+    "commitizen": "^4.3.1",
+    "cz-conventional-changelog": "^3.3.0",
     "eslint": "^9.32.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.3",
+    "husky": "^9.1.7",
     "prettier": "^3.6.2",
+    "standard-version": "^9.5.0",
     "typescript": "^5.3.3",
     "vitest": "^3.2.4"
   },
@@ -69,5 +81,10 @@
     "systematic-creativity",
     "risk-assessment",
     "antifragile"
-  ]
+  ],
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-conventional-changelog"
+    }
+  }
 }

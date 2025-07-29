@@ -58,7 +58,9 @@ describe('Ergodicity and Path Dependency Tracking', () => {
         nextStepNeeded: true,
       })) as ServerResponse;
 
-      const sessionData = JSON.parse(firstResult.content[0]?.text || '{}') as { sessionId: string };
+      const sessionData = JSON.parse(firstResult.content[0]?.text || '{}') as {
+        sessionId: string;
+      };
 
       // Now execute Purple Hat step
       const result = (await server.executeThinkingStep({
@@ -201,7 +203,9 @@ describe('Ergodicity and Path Dependency Tracking', () => {
         nextStepNeeded: true,
       })) as ServerResponse;
 
-      const step1Data = JSON.parse(step1Result.content[0]?.text || '{}') as { sessionId: string };
+      const step1Data = JSON.parse(step1Result.content[0]?.text || '{}') as {
+        sessionId: string;
+      };
       const sessionIdFromStep1 = step1Data.sessionId;
 
       // Step 2: Combine (medium commitment)

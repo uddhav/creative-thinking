@@ -166,7 +166,7 @@ interface PlanThinkingSessionOutput {
   createdAt: number; // Timestamp for TTL cleanup
 }
 
-interface ExecuteThinkingStepInput {
+export interface ExecuteThinkingStepInput {
   planId: string; // Now required
   sessionId?: string;
   technique: LateralTechnique;

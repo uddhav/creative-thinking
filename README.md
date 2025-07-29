@@ -68,7 +68,7 @@ node dist/index.js
 
 ## Core Features
 
-### Eight Enhanced Thinking Techniques
+### Twelve Enhanced Thinking Techniques
 
 Each technique integrates creative generation with systematic verification:
 
@@ -80,6 +80,10 @@ Each technique integrates creative generation with systematic verification:
 - **Yes, And** - Collaborative ideation with built-in critical evaluation
 - **Design Thinking** - Human-centered innovation with embedded risk management
 - **TRIZ** - Contradiction resolution through addition and systematic removal
+- **Neural State** - Cognitive mode optimization for creative breakthroughs
+- **Temporal Work Design** - Time-based problem solving and pressure transformation
+- **Cross-Cultural Integration** - Multi-perspective synthesis across cultural frameworks
+- **Collective Intelligence** - Wisdom aggregation from diverse knowledge sources
 
 ### Unified Framework Features
 
@@ -169,7 +173,7 @@ Creates a structured workflow for applying one or more creative thinking techniq
 **Inputs:**
 - `problem` (string, required): The problem to solve
 - `techniques` (array, required): The techniques to include in the workflow
-  - Options: 'six_hats', 'po', 'random_entry', 'scamper', 'concept_extraction', 'yes_and', 'design_thinking', 'triz'
+  - Options: 'six_hats', 'po', 'random_entry', 'scamper', 'concept_extraction', 'yes_and', 'design_thinking', 'triz', 'neural_state', 'temporal_work', 'cross_cultural', 'collective_intel'
 - `objectives` (array, optional): Specific objectives for this session
 - `constraints` (array, optional): Constraints to work within
 - `timeframe` (string, optional): How much time/depth to invest
@@ -301,6 +305,36 @@ Four-step innovation through contradiction resolution:
 2. **Remove** - Apply via negativa before adding
 3. **Apply** - Use inventive principles bidirectionally
 4. **Minimize** - Achieve more through systematic removal
+
+### Neural State Management
+Four-step cognitive optimization process:
+1. **Assess** - Identify dominant neural network (Default Mode vs Executive Control)
+2. **Suppress** - Strategically suppress overactive networks
+3. **Rhythm** - Develop switching patterns between cognitive modes
+4. **Integrate** - Synthesize insights from both network states
+
+### Temporal Work Design
+Five-step time-based problem solving:
+1. **Map** - Create temporal landscape (pressure points, dead zones, opportunities)
+2. **Align** - Match work with circadian rhythms and energy patterns
+3. **Transform** - Convert time pressure into creative fuel
+4. **Balance** - Optimize synchronous vs asynchronous work
+5. **Escape** - Build temporal buffers and flexibility
+
+### Cross-Cultural Integration
+Four-step multi-perspective synthesis:
+1. **Explore** - Examine problem through multiple cultural lenses
+2. **Parallel** - Develop culture-specific implementation paths
+3. **Bridge** - Build conceptual connections between approaches
+4. **Synthesize** - Create respectful integration of diverse solutions
+
+### Collective Intelligence Orchestration
+Five-step wisdom aggregation:
+1. **Assess** - Evaluate collective knowledge landscape
+2. **Orchestrate** - Coordinate diverse wisdom sources
+3. **Facilitate** - Enable emergence of collective insights
+4. **Harvest** - Extract synthesized intelligence
+5. **Evolve** - Continuously improve collective understanding
 
 ## Example Workflow
 
@@ -458,6 +492,57 @@ Export a session:
 - `autoSave` - Enable automatic progress saving
 
 For detailed examples, see the [examples directory](examples/).
+
+## Test Coverage
+
+The project includes comprehensive test suites ensuring reliability and correctness:
+
+### Unit Tests
+- **Core functionality**: All thinking techniques, session management, persistence
+- **Ergodicity system**: Path memory, flexibility tracking, barrier detection
+- **Option generation**: All 8 generation strategies with evaluation
+- **Export formats**: JSON, Markdown, and CSV exporters
+
+### Integration Tests
+- **Workflow tests**: End-to-end execution of all techniques ✅
+- **MCP protocol**: Compliance with Model Context Protocol ✅
+- **Three-layer architecture**: Discovery → Planning → Execution flow ✅
+- **Performance tests**: Concurrent operations, large sessions, memory usage ✅
+- **Persistence**: Save/load, auto-save, search, and export functionality ✅
+
+**Note**: Comprehensive integration test suites have been implemented in the `src/__tests__/integration/` 
+directory, providing complete coverage of MCP protocol compliance, three-layer architecture, 
+persistence, and performance testing.
+
+Run tests with:
+```bash
+npm test                    # Run tests in watch mode
+npm run test:run            # Run tests once
+npm run test:coverage       # Generate coverage report
+```
+
+## Recent Enhancements
+
+### PDA-SCAMPER (Path Dependency Analysis)
+SCAMPER technique now includes path dependency tracking:
+- **Commitment levels**: Low (🔄), Medium (⚠️), High (🔒), Irreversible (🔒)
+- **Flexibility tracking**: Monitors how each action reduces future options
+- **Alternative suggestions**: Recommends lower-commitment actions when flexibility is critical
+- **Recovery paths**: Shows how to undo or mitigate each transformation
+
+### Collective Intelligence Orchestration
+New technique for synthesizing insights from multiple sources:
+- **Wisdom aggregation**: Combines expert knowledge, crowd insights, and data
+- **Emergence detection**: Identifies patterns not visible to individual sources
+- **Synergy optimization**: Finds combinations that amplify collective value
+- **Integration synthesis**: Creates unified solutions from diverse perspectives
+
+### Enhanced Memory and Suggestions
+All techniques now include memory-suggestive output patterns:
+- **Contextual insights**: Related observations from session history
+- **Historical notes**: Relevant past decisions and their outcomes
+- **Pattern recognition**: Recurring themes and approaches
+- **Cross-technique learning**: Insights that transfer between methods
 
 ## Building
 
