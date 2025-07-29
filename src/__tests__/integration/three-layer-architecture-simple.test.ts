@@ -29,17 +29,17 @@ describe('Three-Layer Architecture - Simplified', () => {
 
       const result = await server.discoverTechniques(input);
       expect(result.isError).toBeFalsy();
-      
-      const data = JSON.parse(result.content[0].text);
-      
+
+      const data = JSON.parse(result.content[0].text) as any;
+
       // Should recommend appropriate techniques
       expect(data.recommendations).toBeDefined();
       expect(data.recommendations.length).toBeGreaterThan(0);
-      
+
       // Should include reasoning
       expect(data.reasoning).toBeDefined();
       expect(data.reasoning).toContain('innovation');
-      
+
       // Should suggest workflow
       expect(data.suggestedWorkflow).toBeDefined();
     });
@@ -53,8 +53,8 @@ describe('Three-Layer Architecture - Simplified', () => {
 
       for (const { problem, preferredOutcome } of problemTypes) {
         const result = await server.discoverTechniques({ problem, preferredOutcome });
-        const data = JSON.parse(result.content[0].text);
-        
+        const data = JSON.parse(result.content[0].text) as any;
+
         expect(data.recommendations).toBeDefined();
         expect(data.recommendations.length).toBeGreaterThan(0);
       }
@@ -68,10 +68,10 @@ describe('Three-Layer Architecture - Simplified', () => {
         problem: 'Improve customer experience',
         preferredOutcome: 'systematic',
       });
-      
-      const discovery = JSON.parse(discoveryResult.content[0].text);
+
+      const discovery = JSON.parse(discoveryResult.content[0].text) as any;
       const techniques = discovery.recommendations.slice(0, 2).map((r: any) => r.technique);
-      
+
       // Then plan
       const planResult = await server.planThinkingSession({
         problem: 'Improve customer experience',
@@ -79,15 +79,15 @@ describe('Three-Layer Architecture - Simplified', () => {
         objectives: ['Identify pain points', 'Design solutions'],
         timeframe: 'thorough',
       });
-      
+
       expect(planResult.isError).toBeFalsy();
-      const plan = JSON.parse(planResult.content[0].text);
-      
+      const plan = JSON.parse(planResult.content[0].text) as any;
+
       // Should create structured workflow
       expect(plan.planId).toBeDefined();
       expect(plan.workflow).toBeDefined();
       expect(plan.workflow.length).toBeGreaterThan(0);
-      
+
       // Should include all requested techniques
       const workflowTechniques = [...new Set(plan.workflow.map((w: any) => w.technique))];
       expect(workflowTechniques).toEqual(expect.arrayContaining(techniques));
@@ -99,12 +99,12 @@ describe('Three-Layer Architecture - Simplified', () => {
         techniques: ['six_hats', 'scamper', 'design_thinking'],
         objectives: ['Explore all angles', 'Generate ideas', 'Build prototypes'],
       });
-      
-      const plan = JSON.parse(planResult.content[0].text);
-      
+
+      const plan = JSON.parse(planResult.content[0].text) as any;
+
       // Should have steps for all techniques
       expect(plan.workflow.length).toBe(7 + 7 + 5); // Six hats (7) + SCAMPER (7) + Design thinking (5)
-      
+
       // Should maintain proper sequencing
       let stepNumber = 1;
       for (const step of plan.workflow) {
@@ -120,9 +120,9 @@ describe('Three-Layer Architecture - Simplified', () => {
         problem: 'Test execution layer',
         techniques: ['random_entry'],
       });
-      
-      const plan = JSON.parse(planResult.content[0].text);
-      
+
+      const plan = JSON.parse(planResult.content[0].text) as any;
+
       // Execute first step
       const execResult = await server.executeThinkingStep({
         planId: plan.planId,
@@ -134,15 +134,15 @@ describe('Three-Layer Architecture - Simplified', () => {
         output: 'Using butterfly as creative stimulus',
         nextStepNeeded: true,
       });
-      
+
       expect(execResult.isError).toBeFalsy();
-      const execData = JSON.parse(execResult.content[0].text);
-      
+      const execData = JSON.parse(execResult.content[0].text) as any;
+
       // Should track session state
       expect(execData.sessionId).toBeDefined();
       expect(execData.technique).toBe('random_entry');
       expect(execData.currentStep).toBe(1);
-      
+
       // Should provide guidance
       expect(execData.nextStepGuidance).toBeDefined();
     });
@@ -152,18 +152,21 @@ describe('Three-Layer Architecture - Simplified', () => {
         problem: 'State tracking test',
         techniques: ['yes_and'],
       });
-      
-      const plan = JSON.parse(planResult.content[0].text);
+
+      const plan = JSON.parse(planResult.content[0].text) as any;
       let sessionId: string | undefined;
-      
+
       // Execute all 4 steps of Yes, And
       const steps = [
         { output: 'Initial idea accepted', initialIdea: 'Virtual collaboration space' },
         { output: 'Building on the idea', additions: ['Add AI assistant', 'Include gamification'] },
         { output: 'Evaluating critically', evaluations: ['Privacy concerns', 'Learning curve'] },
-        { output: 'Final integrated solution', synthesis: 'Balanced virtual space with privacy controls' },
+        {
+          output: 'Final integrated solution',
+          synthesis: 'Balanced virtual space with privacy controls',
+        },
       ];
-      
+
       for (let i = 0; i < steps.length; i++) {
         const result = await server.executeThinkingStep({
           planId: plan.planId,
@@ -176,16 +179,16 @@ describe('Three-Layer Architecture - Simplified', () => {
           sessionId,
           ...steps[i],
         });
-        
-        const data = JSON.parse(result.content[0].text);
-        
+
+        const data = JSON.parse(result.content[0].text) as any;
+
         if (i === 0) {
           sessionId = data.sessionId;
         } else {
           // Should maintain same session
           expect(data.sessionId).toBe(sessionId);
         }
-        
+
         if (i === 3) {
           // Final step should include insights
           expect(data.insights).toBeDefined();
@@ -198,7 +201,7 @@ describe('Three-Layer Architecture - Simplified', () => {
   describe('Complete Three-Layer Flow', () => {
     it('should handle full discovery → planning → execution workflow', async () => {
       const problem = 'How to increase team creativity while maintaining focus';
-      
+
       // Layer 1: Discovery
       const discoveryResult = await server.discoverTechniques({
         problem,
@@ -206,16 +209,16 @@ describe('Three-Layer Architecture - Simplified', () => {
         preferredOutcome: 'innovative',
         constraints: ['Must deliver on schedule', 'Remote team'],
       });
-      
+
       expect(discoveryResult.isError).toBeFalsy();
-      const discovery = JSON.parse(discoveryResult.content[0].text);
-      
+      const discovery = JSON.parse(discoveryResult.content[0].text) as any;
+
       // Should analyze constraints and flexibility
       expect(discovery.recommendations).toBeDefined();
       const recommendedTechniques = discovery.recommendations
         .slice(0, 2)
         .map((r: any) => r.technique);
-      
+
       // Layer 2: Planning
       const planResult = await server.planThinkingSession({
         problem,
@@ -223,13 +226,13 @@ describe('Three-Layer Architecture - Simplified', () => {
         objectives: ['Balance creativity with delivery', 'Engage remote team'],
         timeframe: 'thorough',
       });
-      
+
       expect(planResult.isError).toBeFalsy();
-      const plan = JSON.parse(planResult.content[0].text);
-      
+      const plan = JSON.parse(planResult.content[0].text) as any;
+
       expect(plan.planId).toBeDefined();
       expect(plan.workflow).toBeDefined();
-      
+
       // Layer 3: Execution (at least first few steps)
       const firstStep = plan.workflow[0];
       const execInput: ExecuteThinkingStepInput = {
@@ -241,7 +244,7 @@ describe('Three-Layer Architecture - Simplified', () => {
         output: 'Beginning the creative process with team',
         nextStepNeeded: true,
       };
-      
+
       // Add technique-specific fields
       if (firstStep.technique === 'neural_state') {
         execInput.dominantNetwork = 'dmn';
@@ -254,13 +257,13 @@ describe('Three-Layer Architecture - Simplified', () => {
           kairosOpportunities: ['After standup'],
         };
       }
-      
+
       const execResult = await server.executeThinkingStep(execInput);
       expect(execResult.isError).toBeFalsy();
-      
-      const execution = JSON.parse(execResult.content[0].text);
+
+      const execution = JSON.parse(execResult.content[0].text) as any;
       expect(execution.sessionId).toBeDefined();
-      
+
       // Path dependency metrics are shown in the visual output
       // The response includes these fields
       expect(execution.technique).toBeDefined();
@@ -280,27 +283,27 @@ describe('Three-Layer Architecture - Simplified', () => {
           'Must maintain all services',
         ],
       });
-      
-      const discovery = JSON.parse(discoveryResult.content[0].text);
-      
+
+      const discovery = JSON.parse(discoveryResult.content[0].text) as any;
+
       // With 6+ constraints, should trigger low flexibility warning
       if (discovery.flexibilityWarning) {
         expect(discovery.flexibilityWarning.score).toBeLessThan(0.4);
       }
-      
+
       // Plan with option generation
       const planResult = await server.planThinkingSession({
         problem: 'Cut costs by 50% in 2 weeks',
         techniques: ['triz'], // Good for constraints
         includeOptions: true,
       });
-      
-      const plan = JSON.parse(planResult.content[0].text);
-      
+
+      const plan = JSON.parse(planResult.content[0].text) as any;
+
       // The plan should be created successfully
       expect(plan.planId).toBeDefined();
       expect(plan.workflow).toBeDefined();
-      
+
       // With includeOptions: true and constraints, option generation might be suggested
       // but it's not guaranteed to be in the plan structure
     });
@@ -309,15 +312,15 @@ describe('Three-Layer Architecture - Simplified', () => {
   describe('Advanced Three-Layer Features', () => {
     it('should support cross-technique learning', async () => {
       const problem = 'Create breakthrough product innovation';
-      
+
       // Plan multi-technique session
       const planResult = await server.planThinkingSession({
         problem,
         techniques: ['concept_extraction', 'scamper', 'po'],
       });
-      
-      const plan = JSON.parse(planResult.content[0].text);
-      
+
+      const plan = JSON.parse(planResult.content[0].text) as any;
+
       // Execute concept extraction first
       const conceptResult = await server.executeThinkingStep({
         planId: plan.planId,
@@ -329,9 +332,9 @@ describe('Three-Layer Architecture - Simplified', () => {
         output: 'Analyzing iPhone success factors',
         nextStepNeeded: true,
       });
-      
-      const sessionId = JSON.parse(conceptResult.content[0].text).sessionId;
-      
+
+      const sessionId = (JSON.parse(conceptResult.content[0].text) as any).sessionId;
+
       // Later steps should have access to earlier insights
       const scamperResult = await server.executeThinkingStep({
         planId: plan.planId,
@@ -344,8 +347,8 @@ describe('Three-Layer Architecture - Simplified', () => {
         nextStepNeeded: true,
         sessionId,
       });
-      
-      const scamperData = JSON.parse(scamperResult.content[0].text);
+
+      const scamperData = JSON.parse(scamperResult.content[0].text) as any;
       expect(scamperData.sessionId).toBe(sessionId);
     });
 
@@ -355,15 +358,15 @@ describe('Three-Layer Architecture - Simplified', () => {
         techniques: ['six_hats', 'triz'],
         objectives: ['Thorough analysis', 'Risk mitigation'],
       });
-      
-      const plan = JSON.parse(planResult.content[0].text);
-      
+
+      const plan = JSON.parse(planResult.content[0].text) as any;
+
       // Should include risk considerations in workflow
-      const blackHatStep = plan.workflow.find((w: any) => 
-        w.technique === 'six_hats' && w.description.includes('Black')
+      const blackHatStep = plan.workflow.find(
+        (w: any) => w.technique === 'six_hats' && w.description.includes('Black')
       );
       expect(blackHatStep.riskConsiderations).toBeDefined();
-      
+
       const trizSteps = plan.workflow.filter((w: any) => w.technique === 'triz');
       expect(trizSteps.some((s: any) => s.riskConsiderations)).toBe(true);
     });
@@ -382,11 +385,11 @@ describe('Three-Layer Architecture - Simplified', () => {
         output: 'Test output',
         nextStepNeeded: true,
       });
-      
+
       expect(execResult.isError).toBe(true);
-      const error = JSON.parse(execResult.content[0].text);
+      const error = JSON.parse(execResult.content[0].text) as any;
       expect(error.error).toBe('Invalid planId');
-      
+
       // Should provide helpful guidance
       expect(error.message).toContain('create a plan first');
     });
@@ -396,16 +399,17 @@ describe('Three-Layer Architecture - Simplified', () => {
       const discoveryResult = await server.discoverTechniques({
         context: 'Some context',
       } as any);
-      
+
       expect(discoveryResult.isError).toBe(true);
-      
+
       // Planning without techniques
       const planResult = await server.planThinkingSession({
         problem: 'Test',
         techniques: [],
       });
-      
+
       expect(planResult.isError).toBe(true);
     });
   });
 });
+

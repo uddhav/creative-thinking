@@ -5,7 +5,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { LateralThinkingServer } from '../../index.js';
-import type { 
+import type {
   ExecuteThinkingStepInput,
   PlanThinkingSessionInput,
   SixHatsColor,
@@ -22,21 +22,21 @@ describe('Complete Technique Workflows', () => {
   describe('Six Hats Complete Flow', () => {
     it('should complete full six hats workflow', async () => {
       const problem = 'How to improve customer retention';
-      
+
       // Plan the session
       const planInput: PlanThinkingSessionInput = {
         problem,
         techniques: ['six_hats'],
         objectives: ['Analyze retention holistically', 'Generate actionable solutions'],
       };
-      
+
       const planResult = await server.planThinkingSession(planInput);
       const plan = JSON.parse(planResult.content[0].text);
       expect(plan.planId).toBeDefined();
-      
+
       let sessionId: string | undefined;
       const hatColors: SixHatsColor[] = ['blue', 'white', 'red', 'yellow', 'black', 'green'];
-      
+
       // Execute all 6 hats
       for (let i = 0; i < 6; i++) {
         const stepInput: ExecuteThinkingStepInput = {
@@ -50,18 +50,18 @@ describe('Complete Technique Workflows', () => {
           nextStepNeeded: i < 5,
           sessionId,
         };
-        
+
         const result = await server.executeThinkingStep(stepInput);
         const stepData = JSON.parse(result.content[0].text);
-        
+
         expect(stepData.technique).toBe('six_hats');
         expect(stepData.currentStep).toBe(i + 1);
-        
+
         if (i === 0) {
           sessionId = stepData.sessionId;
           expect(sessionId).toBeDefined();
         }
-        
+
         if (i === 5) {
           // Final step
           expect(stepData.nextStepNeeded).toBe(false);
@@ -74,18 +74,18 @@ describe('Complete Technique Workflows', () => {
 
     it('should handle revision workflow', async () => {
       const problem = 'Improve team productivity';
-      
+
       // Create plan
       const planResult = await server.planThinkingSession({
         problem,
         techniques: ['six_hats'],
       });
       const plan = JSON.parse(planResult.content[0].text);
-      
+
       // Execute first 3 steps
       let sessionId: string | undefined;
       const hatColors: SixHatsColor[] = ['blue', 'white', 'red'];
-      
+
       for (let i = 0; i < 3; i++) {
         const result = await server.executeThinkingStep({
           planId: plan.planId,
@@ -98,12 +98,12 @@ describe('Complete Technique Workflows', () => {
           nextStepNeeded: true,
           sessionId,
         });
-        
+
         if (i === 0) {
           sessionId = JSON.parse(result.content[0].text).sessionId;
         }
       }
-      
+
       // Revise step 2 (white hat)
       const revisionResult = await server.executeThinkingStep({
         planId: plan.planId,
@@ -118,11 +118,11 @@ describe('Complete Technique Workflows', () => {
         isRevision: true,
         revisesStep: 2,
       });
-      
+
       const revisionData = JSON.parse(revisionResult.content[0].text);
       expect(revisionData.technique).toBe('six_hats');
       expect(revisionData.currentStep).toBe(2);
-      
+
       // Continue with step 4
       const continueResult = await server.executeThinkingStep({
         planId: plan.planId,
@@ -135,7 +135,7 @@ describe('Complete Technique Workflows', () => {
         nextStepNeeded: true,
         sessionId,
       });
-      
+
       expect(JSON.parse(continueResult.content[0].text).currentStep).toBe(4);
     });
   });
@@ -144,10 +144,15 @@ describe('Complete Technique Workflows', () => {
     it('should complete all 7 SCAMPER actions', async () => {
       const problem = 'Improve coffee mug design';
       const actions: ScamperAction[] = [
-        'substitute', 'combine', 'adapt', 'modify',
-        'put_to_other_use', 'eliminate', 'reverse'
+        'substitute',
+        'combine',
+        'adapt',
+        'modify',
+        'put_to_other_use',
+        'eliminate',
+        'reverse',
       ];
-      
+
       // Plan session
       const planResult = await server.planThinkingSession({
         problem,
@@ -155,9 +160,9 @@ describe('Complete Technique Workflows', () => {
         timeframe: 'thorough',
       });
       const plan = JSON.parse(planResult.content[0].text);
-      
+
       let sessionId: string | undefined;
-      
+
       for (let i = 0; i < actions.length; i++) {
         const result = await server.executeThinkingStep({
           planId: plan.planId,
@@ -170,22 +175,22 @@ describe('Complete Technique Workflows', () => {
           nextStepNeeded: i < 6,
           sessionId,
         });
-        
+
         const stepData = JSON.parse(result.content[0].text);
-        
+
         expect(stepData.technique).toBe('scamper');
         expect(stepData.currentStep).toBe(i + 1);
-        
+
         if (i === 0) {
           sessionId = stepData.sessionId;
         }
-        
+
         // Check PDA-SCAMPER fields
         if (stepData.pathImpact) {
           expect(stepData.pathImpact.commitmentLevel).toBeDefined();
           expect(stepData.flexibilityScore).toBeDefined();
         }
-        
+
         if (i === 6) {
           expect(stepData.nextStepNeeded).toBe(false);
           expect(stepData.summary).toBeDefined();
@@ -198,14 +203,14 @@ describe('Complete Technique Workflows', () => {
   describe('Multi-Step Techniques', () => {
     it('should complete PO technique workflow', async () => {
       const problem = 'Reduce email overload';
-      
+
       // Plan and execute PO technique
       const planResult = await server.planThinkingSession({
         problem,
         techniques: ['po'],
       });
       const plan = JSON.parse(planResult.content[0].text);
-      
+
       // Step 1: Provocation
       const step1 = await server.executeThinkingStep({
         planId: plan.planId,
@@ -218,7 +223,7 @@ describe('Complete Technique Workflows', () => {
         nextStepNeeded: true,
       });
       const sessionId = JSON.parse(step1.content[0].text).sessionId;
-      
+
       // Step 2: Principles
       const step2 = await server.executeThinkingStep({
         planId: plan.planId,
@@ -231,7 +236,7 @@ describe('Complete Technique Workflows', () => {
         nextStepNeeded: true,
         sessionId,
       });
-      
+
       // Step 3: Ideas
       const step3 = await server.executeThinkingStep({
         planId: plan.planId,
@@ -248,7 +253,7 @@ describe('Complete Technique Workflows', () => {
         nextStepNeeded: true,
         sessionId,
       });
-      
+
       // Step 4: Validation
       const step4 = await server.executeThinkingStep({
         planId: plan.planId,
@@ -262,7 +267,7 @@ describe('Complete Technique Workflows', () => {
         nextStepNeeded: false,
         sessionId,
       });
-      
+
       const finalData = JSON.parse(step4.content[0].text);
       expect(finalData.nextStepNeeded).toBe(false);
       expect(finalData.insights).toBeDefined();
@@ -273,19 +278,19 @@ describe('Complete Technique Workflows', () => {
     it('should complete Design Thinking workflow', async () => {
       const problem = 'Design better remote work experience';
       const stages = ['empathize', 'define', 'ideate', 'prototype', 'test'];
-      
+
       const planResult = await server.planThinkingSession({
         problem,
         techniques: ['design_thinking'],
         objectives: ['User-centered approach', 'Rapid prototyping'],
       });
       const plan = JSON.parse(planResult.content[0].text);
-      
+
       let sessionId: string | undefined;
-      
+
       for (let i = 0; i < 5; i++) {
         const stageInput = getDesignThinkingInput(stages[i] as any, problem);
-        
+
         const result = await server.executeThinkingStep({
           planId: plan.planId,
           technique: 'design_thinking',
@@ -298,18 +303,22 @@ describe('Complete Technique Workflows', () => {
           sessionId,
           ...stageInput.fields,
         });
-        
+
         const stepData = JSON.parse(result.content[0].text);
-        
+
         if (i === 0) {
           sessionId = stepData.sessionId;
         }
-        
+
         expect(stepData.currentStep).toBe(i + 1);
-        
+
         if (i === 4) {
           expect(stepData.nextStepNeeded).toBe(false);
-          expect(stepData.insights.some((i: string) => i.toLowerCase().includes('user') || i.includes('need'))).toBe(true);
+          expect(
+            stepData.insights.some(
+              (i: string) => i.toLowerCase().includes('user') || i.includes('need')
+            )
+          ).toBe(true);
         }
       }
     });
@@ -318,14 +327,14 @@ describe('Complete Technique Workflows', () => {
   describe('Branching and Complex Workflows', () => {
     it('should handle technique with branching paths', async () => {
       const problem = 'Increase innovation in organization';
-      
+
       // Plan session
       const planResult = await server.planThinkingSession({
         problem,
         techniques: ['concept_extraction'],
       });
       const plan = JSON.parse(planResult.content[0].text);
-      
+
       // Execute with branch
       const step1 = await server.executeThinkingStep({
         planId: plan.planId,
@@ -338,7 +347,7 @@ describe('Complete Technique Workflows', () => {
         nextStepNeeded: true,
       });
       const sessionId = JSON.parse(step1.content[0].text).sessionId;
-      
+
       // Branch to explore alternative
       const branch1 = await server.executeThinkingStep({
         planId: plan.planId,
@@ -353,7 +362,7 @@ describe('Complete Technique Workflows', () => {
         branchFromStep: 1,
         branchId: 'alternative-analysis',
       });
-      
+
       const branchData = JSON.parse(branch1.content[0].text);
       expect(branchData.sessionId).toBeDefined();
     });
@@ -407,11 +416,7 @@ function getDesignThinkingInput(stage: string, problem: string): any {
     ideate: {
       output: 'Generated 20+ ideas for virtual collaboration',
       fields: {
-        ideaList: [
-          'Virtual office spaces',
-          'Random coffee chat bot',
-          'Collaborative playlists',
-        ],
+        ideaList: ['Virtual office spaces', 'Random coffee chat bot', 'Collaborative playlists'],
       },
     },
     prototype: {

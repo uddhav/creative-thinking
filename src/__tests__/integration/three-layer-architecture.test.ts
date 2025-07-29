@@ -5,7 +5,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { LateralThinkingServer } from '../../index.js';
-import type { 
+import type {
   DiscoverTechniquesInput,
   PlanThinkingSessionInput,
   ExecuteThinkingStepInput,
@@ -28,20 +28,20 @@ describe('Three-Layer Architecture Integration', () => {
         preferredOutcome: 'collaborative',
         constraints: ['Limited budget', 'Different time zones', 'Varying tech skills'],
       };
-      
+
       const discoveryResult = await server.discoverTechniques(discoveryInput);
       expect(discoveryResult.isError).toBe(false);
-      
+
       const discovery = JSON.parse(discoveryResult.content[0].text);
       expect(discovery.recommendedTechniques).toBeDefined();
       expect(discovery.recommendedTechniques.length).toBeGreaterThan(0);
       expect(discovery.reasoning).toBeDefined();
       expect(discovery.alternativeApproaches).toBeDefined();
-      
+
       // Should recommend collaborative techniques
       const recommendedTechniques = discovery.recommendedTechniques;
       expect(recommendedTechniques).toContain('yes_and');
-      
+
       // Layer 2: Planning
       const planInput: PlanThinkingSessionInput = {
         problem: discoveryInput.problem,
@@ -50,21 +50,21 @@ describe('Three-Layer Architecture Integration', () => {
         constraints: discoveryInput.constraints,
         timeframe: 'thorough',
       };
-      
+
       const planResult = await server.planThinkingSession(planInput);
       expect(planResult.isError).toBe(false);
-      
+
       const plan = JSON.parse(planResult.content[0].text);
       expect(plan.planId).toBeDefined();
       expect(plan.workflow).toBeDefined();
       expect(plan.workflow.length).toBeGreaterThan(0);
       expect(plan.estimatedDuration).toBeDefined();
       expect(plan.successCriteria).toBeDefined();
-      
+
       // Layer 3: Execution
       let sessionId: string | undefined;
       const firstTechnique = plan.workflow[0];
-      
+
       // Execute first step
       const execInput: ExecuteThinkingStepInput = {
         planId: plan.planId,
@@ -75,25 +75,25 @@ describe('Three-Layer Architecture Integration', () => {
         output: 'Starting collaborative problem-solving process',
         nextStepNeeded: true,
       };
-      
+
       // Add technique-specific fields
       if (firstTechnique.technique === 'yes_and') {
         execInput.initialIdea = 'Create virtual coffee breaks for spontaneous conversations';
       } else if (firstTechnique.technique === 'six_hats') {
         execInput.hatColor = 'blue';
       }
-      
+
       const execResult = await server.executeThinkingStep(execInput);
       expect(execResult.isError).toBe(false);
-      
+
       const execution = JSON.parse(execResult.content[0].text);
       expect(execution.sessionId).toBeDefined();
       expect(execution.technique).toBe(firstTechnique.technique);
       expect(execution.currentStep).toBe(1);
       expect(execution.guidance).toBeDefined();
-      
+
       sessionId = execution.sessionId;
-      
+
       // Continue execution
       const exec2Input: ExecuteThinkingStepInput = {
         planId: plan.planId,
@@ -105,7 +105,7 @@ describe('Three-Layer Architecture Integration', () => {
         nextStepNeeded: firstTechnique.totalSteps > 2,
         sessionId,
       };
-      
+
       if (firstTechnique.technique === 'yes_and') {
         exec2Input.additions = [
           'Add timezone-friendly scheduling',
@@ -115,7 +115,7 @@ describe('Three-Layer Architecture Integration', () => {
       } else if (firstTechnique.technique === 'six_hats') {
         exec2Input.hatColor = 'white';
       }
-      
+
       const exec2Result = await server.executeThinkingStep(exec2Input);
       const execution2 = JSON.parse(exec2Result.content[0].text);
       expect(execution2.currentStep).toBe(2);
@@ -133,22 +133,22 @@ describe('Three-Layer Architecture Integration', () => {
         ],
         preferredOutcome: 'systematic',
       });
-      
+
       const discovery = JSON.parse(discoveryResult.content[0].text);
-      
+
       // Should detect low flexibility and suggest option generation
       expect(discovery.flexibilityScore).toBeDefined();
       expect(discovery.optionGenerationRecommended).toBe(true);
-      
+
       // Plan with option generation
       const planResult = await server.planThinkingSession({
         problem: 'Reduce manufacturing costs by 50%',
         techniques: discovery.recommendedTechniques,
         includeOptions: true,
       });
-      
+
       const plan = JSON.parse(planResult.content[0].text);
-      
+
       // Should include option generation phase
       const workflow = plan.workflow;
       expect(workflow.some((w: any) => w.description.includes('option generation'))).toBe(true);
@@ -166,7 +166,7 @@ describe('Three-Layer Architecture Integration', () => {
         output: 'Test output',
         nextStepNeeded: true,
       });
-      
+
       expect(directExecResult.isError).toBe(true);
       expect(directExecResult.content[0].text).toContain('Plan not found');
     });
@@ -180,9 +180,9 @@ describe('Three-Layer Architecture Integration', () => {
         context: 'Aging population, technology adoption challenges',
         preferredOutcome: 'innovative',
       });
-      
+
       const discovery = JSON.parse(discoveryResult.content[0].text);
-      
+
       // Plan multi-technique session
       const techniques: LateralTechnique[] = ['design_thinking', 'scamper', 'triz'];
       const planResult = await server.planThinkingSession({
@@ -195,15 +195,15 @@ describe('Three-Layer Architecture Integration', () => {
         ],
         timeframe: 'comprehensive',
       });
-      
+
       const plan = JSON.parse(planResult.content[0].text);
-      
+
       // Verify workflow includes all techniques
       const workflowTechniques = plan.workflow.map((w: any) => w.technique);
       expect(workflowTechniques).toContain('design_thinking');
       expect(workflowTechniques).toContain('scamper');
       expect(workflowTechniques).toContain('triz');
-      
+
       // Execute first technique (design thinking - empathize)
       const dt1Result = await server.executeThinkingStep({
         planId: plan.planId,
@@ -220,10 +220,10 @@ describe('Three-Layer Architecture Integration', () => {
         output: 'Conducted interviews with 20 elderly users',
         nextStepNeeded: true,
       });
-      
+
       const dt1 = JSON.parse(dt1Result.content[0].text);
       const sessionId = dt1.sessionId;
-      
+
       // Continue through design thinking
       await server.executeThinkingStep({
         planId: plan.planId,
@@ -232,12 +232,13 @@ describe('Three-Layer Architecture Integration', () => {
         currentStep: 2,
         totalSteps: 5,
         designStage: 'define',
-        problemStatement: 'Elderly users need simple tech that enhances connection without complexity',
+        problemStatement:
+          'Elderly users need simple tech that enhances connection without complexity',
         output: 'Defined core problem statement',
         nextStepNeeded: true,
         sessionId,
       });
-      
+
       // Transition to SCAMPER
       const scamperResult = await server.executeThinkingStep({
         planId: plan.planId,
@@ -250,11 +251,11 @@ describe('Three-Layer Architecture Integration', () => {
         nextStepNeeded: true,
         sessionId,
       });
-      
+
       const scamper = JSON.parse(scamperResult.content[0].text);
       expect(scamper.technique).toBe('scamper');
       expect(scamper.sessionId).toBe(sessionId); // Same session continues
-      
+
       // Verify context carries forward
       expect(scamper.contextFromPreviousTechniques).toBeDefined();
     });
@@ -267,7 +268,7 @@ describe('Three-Layer Architecture Integration', () => {
         problem: 'Test problem',
         techniques: ['six_hats', 'invalid_technique'] as any,
       });
-      
+
       expect(planResult.isError).toBe(true);
       expect(planResult.content[0].text).toContain('Unknown technique');
     });
@@ -279,7 +280,7 @@ describe('Three-Layer Architecture Integration', () => {
         techniques: ['po'],
       });
       const plan = JSON.parse(planResult.content[0].text);
-      
+
       // Execute first step
       const step1Result = await server.executeThinkingStep({
         planId: plan.planId,
@@ -292,7 +293,7 @@ describe('Three-Layer Architecture Integration', () => {
         nextStepNeeded: true,
       });
       const sessionId = JSON.parse(step1Result.content[0].text).sessionId;
-      
+
       // Try invalid step (skip step 2)
       const invalidResult = await server.executeThinkingStep({
         planId: plan.planId,
@@ -305,7 +306,7 @@ describe('Three-Layer Architecture Integration', () => {
         nextStepNeeded: true,
         sessionId,
       });
-      
+
       // Should handle gracefully
       expect(invalidResult.isError).toBe(false);
       const invalid = JSON.parse(invalidResult.content[0].text);
@@ -321,7 +322,7 @@ describe('Three-Layer Architecture Integration', () => {
         techniques: ['scamper'],
       });
       const plan = JSON.parse(planResult.content[0].text);
-      
+
       // Execute high-commitment actions
       const step1Result = await server.executeThinkingStep({
         planId: plan.planId,
@@ -334,14 +335,14 @@ describe('Three-Layer Architecture Integration', () => {
         nextStepNeeded: true,
       });
       const sessionId = JSON.parse(step1Result.content[0].text).sessionId;
-      
+
       // Check path dependency tracking
       expect(step1Result.content[0].text).toContain('pathImpact');
       const step1 = JSON.parse(step1Result.content[0].text);
       expect(step1.pathImpact).toBeDefined();
       expect(step1.pathImpact.commitmentLevel).toBe('irreversible');
       expect(step1.flexibilityScore).toBeDefined();
-      
+
       // Continue with another high-commitment action
       const step2Result = await server.executeThinkingStep({
         planId: plan.planId,
@@ -354,10 +355,10 @@ describe('Three-Layer Architecture Integration', () => {
         nextStepNeeded: true,
         sessionId,
       });
-      
+
       const step2 = JSON.parse(step2Result.content[0].text);
       expect(step2.flexibilityScore).toBeLessThan(step1.flexibilityScore);
-      
+
       // Should trigger warnings or alternatives
       if (step2.flexibilityScore < 0.3) {
         expect(step2.alternativeSuggestions).toBeDefined();
@@ -373,10 +374,10 @@ describe('Three-Layer Architecture Integration', () => {
         objectives: ['Reduce wait times', 'Improve communication'],
       });
       const plan = JSON.parse(planResult.content[0].text);
-      
+
       let sessionId: string | undefined;
       const stages = ['empathize', 'define', 'ideate', 'prototype', 'test'];
-      
+
       // Execute through all stages
       for (let i = 0; i < 5; i++) {
         const result = await server.executeThinkingStep({
@@ -390,24 +391,26 @@ describe('Three-Layer Architecture Integration', () => {
           nextStepNeeded: i < 4,
           sessionId,
           ...(i === 0 ? { empathyInsights: ['Long waits cause anxiety'] } : {}),
-          ...(i === 1 ? { problemStatement: 'Patients need clear communication during waits' } : {}),
+          ...(i === 1
+            ? { problemStatement: 'Patients need clear communication during waits' }
+            : {}),
           ...(i === 2 ? { ideaList: ['Real-time updates', 'Comfort amenities'] } : {}),
           ...(i === 3 ? { prototypeDescription: 'Mobile app for wait time updates' } : {}),
           ...(i === 4 ? { userFeedback: ['Love the updates', 'Want more detail'] } : {}),
         });
-        
+
         if (i === 0) {
           sessionId = JSON.parse(result.content[0].text).sessionId;
         }
-        
+
         const step = JSON.parse(result.content[0].text);
-        
+
         // Guidance should be contextual
         expect(step.guidance).toBeDefined();
         if (i < 4) {
           expect(step.guidance).toContain(stages[i + 1]); // Next stage
         }
-        
+
         // Final step should have comprehensive summary
         if (i === 4) {
           expect(step.summary).toBeDefined();

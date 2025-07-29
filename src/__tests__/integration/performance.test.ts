@@ -17,57 +17,59 @@ describe('Performance Integration Tests', () => {
   describe('Concurrent Operations', () => {
     it('should handle 50 concurrent discovery requests', async () => {
       const startTime = Date.now();
-      
-      const promises = Array.from({ length: 50 }, (_, i) => 
+
+      const promises = Array.from({ length: 50 }, (_, i) =>
         server.discoverTechniques({
           problem: `Concurrent discovery problem ${i}`,
           context: `Context for problem ${i}`,
           preferredOutcome: ['innovative', 'systematic', 'risk-aware'][i % 3] as any,
         })
       );
-      
+
       const results = await Promise.all(promises);
       const duration = Date.now() - startTime;
-      
+
       // All should succeed
       expect(results.every(r => !r.isError)).toBe(true);
-      expect(results.every(r => {
-        const data = JSON.parse(r.content[0].text);
-        return data.recommendedTechniques && data.recommendedTechniques.length > 0;
-      })).toBe(true);
-      
+      expect(
+        results.every(r => {
+          const data = JSON.parse(r.content[0].text);
+          return data.recommendedTechniques && data.recommendedTechniques.length > 0;
+        })
+      ).toBe(true);
+
       // Should complete reasonably quickly (adjust threshold as needed)
       expect(duration).toBeLessThan(3000); // 3 seconds for 50 requests
-      
+
       console.log(`50 concurrent discoveries completed in ${duration}ms`);
     });
 
     it('should handle 100 concurrent planning requests', async () => {
       const startTime = Date.now();
-      
+
       const techniques = ['six_hats', 'scamper', 'po', 'random_entry'];
-      
-      const promises = Array.from({ length: 100 }, (_, i) => 
+
+      const promises = Array.from({ length: 100 }, (_, i) =>
         server.planThinkingSession({
           problem: `Concurrent planning problem ${i}`,
           techniques: [techniques[i % techniques.length]] as any,
           timeframe: ['quick', 'thorough', 'comprehensive'][i % 3] as any,
         })
       );
-      
+
       const results = await Promise.all(promises);
       const duration = Date.now() - startTime;
-      
+
       // All should succeed
       expect(results.every(r => !r.isError)).toBe(true);
-      
+
       // Each should have unique planId
       const planIds = results.map(r => JSON.parse(r.content[0].text).planId);
       expect(new Set(planIds).size).toBe(100);
-      
+
       // Performance check
       expect(duration).toBeLessThan(5000); // 5 seconds for 100 plans
-      
+
       console.log(`100 concurrent plans created in ${duration}ms`);
     });
 
@@ -78,10 +80,10 @@ describe('Performance Integration Tests', () => {
         techniques: ['six_hats'],
       });
       const plan = JSON.parse(planResult.content[0].text);
-      
+
       const startTime = Date.now();
-      
-      const promises = Array.from({ length: 100 }, (_, i) => 
+
+      const promises = Array.from({ length: 100 }, (_, i) =>
         server.executeThinkingStep({
           planId: plan.planId,
           technique: 'six_hats',
@@ -93,20 +95,20 @@ describe('Performance Integration Tests', () => {
           nextStepNeeded: true,
         })
       );
-      
+
       const results = await Promise.all(promises);
       const duration = Date.now() - startTime;
-      
+
       // All should succeed
       expect(results.every(r => !r.isError)).toBe(true);
-      
+
       // Each should have unique sessionId
       const sessionIds = results.map(r => JSON.parse(r.content[0].text).sessionId);
       expect(new Set(sessionIds).size).toBe(100);
-      
+
       // Performance check
       expect(duration).toBeLessThan(5000); // 5 seconds for 100 executions
-      
+
       console.log(`100 concurrent executions completed in ${duration}ms`);
     });
   });
@@ -114,24 +116,24 @@ describe('Performance Integration Tests', () => {
   describe('Large Session Handling', () => {
     it('should handle session with 100 steps efficiently', async () => {
       const problem = 'Large session test';
-      
+
       // Create plan
       const planResult = await server.planThinkingSession({
         problem,
         techniques: ['six_hats'],
       });
       const plan = JSON.parse(planResult.content[0].text);
-      
+
       let sessionId: string | undefined;
       const hatColors: SixHatsColor[] = ['blue', 'white', 'red', 'yellow', 'black', 'green'];
-      
+
       // Execute 100 steps (cycling through hats with revisions)
       const startTime = Date.now();
-      
+
       for (let i = 0; i < 100; i++) {
         const isRevision = i > 6 && i % 7 === 0;
-        const currentStep = isRevision ? (i % 6) + 1 : ((i % 6) + 1);
-        
+        const currentStep = isRevision ? (i % 6) + 1 : (i % 6) + 1;
+
         const result = await server.executeThinkingStep({
           planId: plan.planId,
           technique: 'six_hats',
@@ -142,22 +144,24 @@ describe('Performance Integration Tests', () => {
           output: `Step ${i + 1} output`,
           nextStepNeeded: true,
           sessionId,
-          ...(isRevision ? {
-            isRevision: true,
-            revisesStep: currentStep,
-          } : {}),
+          ...(isRevision
+            ? {
+                isRevision: true,
+                revisesStep: currentStep,
+              }
+            : {}),
         });
-        
+
         if (i === 0) {
           sessionId = JSON.parse(result.content[0].text).sessionId;
         }
       }
-      
+
       const executionTime = Date.now() - startTime;
-      
+
       // Should handle 100 steps reasonably
       expect(executionTime).toBeLessThan(10000); // 10 seconds for 100 steps
-      
+
       // Verify session state
       const finalStep = await server.executeThinkingStep({
         planId: plan.planId,
@@ -170,23 +174,23 @@ describe('Performance Integration Tests', () => {
         nextStepNeeded: false,
         sessionId,
       });
-      
+
       const finalData = JSON.parse(finalStep.content[0].text);
       expect(finalData.sessionId).toBe(sessionId);
-      
+
       console.log(`100 steps executed in ${executionTime}ms`);
     });
 
     it('should handle deep revision chains efficiently', async () => {
       const problem = 'Deep revision test';
-      
+
       // Create plan
       const planResult = await server.planThinkingSession({
         problem,
         techniques: ['po'],
       });
       const plan = JSON.parse(planResult.content[0].text);
-      
+
       // Initial step
       const step1 = await server.executeThinkingStep({
         planId: plan.planId,
@@ -199,10 +203,10 @@ describe('Performance Integration Tests', () => {
         nextStepNeeded: true,
       });
       const sessionId = JSON.parse(step1.content[0].text).sessionId;
-      
+
       // Create 50 revisions of the same step
       const startTime = Date.now();
-      
+
       for (let i = 0; i < 50; i++) {
         await server.executeThinkingStep({
           planId: plan.planId,
@@ -218,12 +222,12 @@ describe('Performance Integration Tests', () => {
           revisesStep: 1,
         });
       }
-      
+
       const revisionTime = Date.now() - startTime;
-      
+
       // Should handle deep revisions efficiently
       expect(revisionTime).toBeLessThan(5000); // 5 seconds for 50 revisions
-      
+
       console.log(`50 revisions completed in ${revisionTime}ms`);
     });
   });
@@ -231,7 +235,7 @@ describe('Performance Integration Tests', () => {
   describe('Memory Usage', () => {
     it('should handle memory efficiently with many sessions', async () => {
       const sessionIds: string[] = [];
-      
+
       // Create 50 sessions
       for (let i = 0; i < 50; i++) {
         const planResult = await server.planThinkingSession({
@@ -239,7 +243,7 @@ describe('Performance Integration Tests', () => {
           techniques: ['random_entry'],
         });
         const plan = JSON.parse(planResult.content[0].text);
-        
+
         const stepResult = await server.executeThinkingStep({
           planId: plan.planId,
           technique: 'random_entry',
@@ -250,14 +254,14 @@ describe('Performance Integration Tests', () => {
           output: `Output ${i}`,
           nextStepNeeded: false,
         });
-        
+
         sessionIds.push(JSON.parse(stepResult.content[0].text).sessionId);
       }
-      
+
       // Memory should be managed (sessions should be garbage collected if needed)
       // This is a basic test - in production you'd monitor actual memory usage
       expect(sessionIds.length).toBe(50);
-      
+
       // Server should still be responsive
       const testResult = await server.discoverTechniques({
         problem: 'Final test after many sessions',
@@ -269,28 +273,28 @@ describe('Performance Integration Tests', () => {
   describe('Response Time Consistency', () => {
     it('should maintain consistent response times under load', async () => {
       const responseTimes: number[] = [];
-      
+
       // Measure response times for 20 sequential operations
       for (let i = 0; i < 20; i++) {
         const startTime = Date.now();
-        
+
         await server.discoverTechniques({
           problem: `Response time test ${i}`,
           context: 'Testing response time consistency',
         });
-        
+
         responseTimes.push(Date.now() - startTime);
       }
-      
+
       // Calculate statistics
       const avgTime = responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length;
       const maxTime = Math.max(...responseTimes);
       const minTime = Math.min(...responseTimes);
-      
+
       // Response times should be relatively consistent
       const variance = maxTime - minTime;
       expect(variance).toBeLessThan(avgTime * 2); // Variance less than 2x average
-      
+
       console.log(`Response times - Avg: ${avgTime}ms, Min: ${minTime}ms, Max: ${maxTime}ms`);
     });
   });
@@ -299,9 +303,9 @@ describe('Performance Integration Tests', () => {
     it('should handle multi-technique workflow efficiently', async () => {
       const problem = 'Complex workflow performance test';
       const techniques = ['six_hats', 'scamper', 'design_thinking'];
-      
+
       const startTime = Date.now();
-      
+
       // Plan multi-technique session
       const planResult = await server.planThinkingSession({
         problem,
@@ -309,19 +313,17 @@ describe('Performance Integration Tests', () => {
         timeframe: 'comprehensive',
       });
       const plan = JSON.parse(planResult.content[0].text);
-      
+
       let sessionId: string | undefined;
       let stepCount = 0;
-      
+
       // Execute steps for each technique
       for (const technique of techniques) {
-        const techSteps = technique === 'six_hats' ? 6 : 
-                         technique === 'scamper' ? 7 : 
-                         5; // design_thinking
-        
+        const techSteps = technique === 'six_hats' ? 6 : technique === 'scamper' ? 7 : 5; // design_thinking
+
         for (let step = 1; step <= techSteps; step++) {
           stepCount++;
-          
+
           const input: ExecuteThinkingStepInput = {
             planId: plan.planId,
             technique: technique as any,
@@ -332,29 +334,41 @@ describe('Performance Integration Tests', () => {
             nextStepNeeded: stepCount < 18, // Total steps
             sessionId,
           };
-          
+
           // Add technique-specific fields
           if (technique === 'six_hats') {
-            input.hatColor = ['blue', 'white', 'red', 'yellow', 'black', 'green'][step - 1] as SixHatsColor;
+            input.hatColor = ['blue', 'white', 'red', 'yellow', 'black', 'green'][
+              step - 1
+            ] as SixHatsColor;
           } else if (technique === 'scamper') {
-            input.scamperAction = ['substitute', 'combine', 'adapt', 'modify', 'put_to_other_use', 'eliminate', 'reverse'][step - 1] as any;
+            input.scamperAction = [
+              'substitute',
+              'combine',
+              'adapt',
+              'modify',
+              'put_to_other_use',
+              'eliminate',
+              'reverse',
+            ][step - 1] as any;
           } else if (technique === 'design_thinking') {
-            input.designStage = ['empathize', 'define', 'ideate', 'prototype', 'test'][step - 1] as any;
+            input.designStage = ['empathize', 'define', 'ideate', 'prototype', 'test'][
+              step - 1
+            ] as any;
           }
-          
+
           const result = await server.executeThinkingStep(input);
-          
+
           if (!sessionId) {
             sessionId = JSON.parse(result.content[0].text).sessionId;
           }
         }
       }
-      
+
       const totalTime = Date.now() - startTime;
-      
+
       // Should complete complex workflow efficiently
       expect(totalTime).toBeLessThan(5000); // 5 seconds for 18 steps across 3 techniques
-      
+
       console.log(`Complex workflow (${stepCount} steps) completed in ${totalTime}ms`);
     });
   });

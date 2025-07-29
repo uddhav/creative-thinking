@@ -5,10 +5,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { 
-  ListToolsRequestSchema,
-  CallToolRequestSchema,
-} from '@modelcontextprotocol/sdk/types.js';
+import { ListToolsRequestSchema, CallToolRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { LateralThinkingServer } from '../../index.js';
 
 describe('MCP Protocol Compliance', () => {
@@ -41,7 +38,7 @@ describe('MCP Protocol Compliance', () => {
 
       expect(response.result).toBeDefined();
       expect(response.result.tools).toHaveLength(3);
-      
+
       const toolNames = response.result.tools.map((t: any) => t.name);
       expect(toolNames).toContain('discover_techniques');
       expect(toolNames).toContain('plan_thinking_session');
@@ -57,12 +54,14 @@ describe('MCP Protocol Compliance', () => {
 
       const discoverTool = response.result.tools.find((t: any) => t.name === 'discover_techniques');
       expect(discoverTool.inputSchema.required).toContain('problem');
-      
+
       const planTool = response.result.tools.find((t: any) => t.name === 'plan_thinking_session');
       expect(planTool.inputSchema.required).toContain('problem');
       expect(planTool.inputSchema.required).toContain('techniques');
-      
-      const executeTool = response.result.tools.find((t: any) => t.name === 'execute_thinking_step');
+
+      const executeTool = response.result.tools.find(
+        (t: any) => t.name === 'execute_thinking_step'
+      );
       expect(executeTool.inputSchema.required).toContain('planId');
       expect(executeTool.inputSchema.required).toContain('technique');
     });
@@ -86,7 +85,7 @@ describe('MCP Protocol Compliance', () => {
 
       expect(response.error).toBeUndefined();
       expect(response.result).toBeDefined();
-      
+
       const result = JSON.parse(response.result.content[0].text);
       expect(result.recommendedTechniques).toBeDefined();
       expect(result.reasoning).toBeDefined();
@@ -208,7 +207,7 @@ describe('MCP Protocol Compliance', () => {
 async function simulateMCPRequest(server: Server, request: any): Promise<any> {
   // The server's handleMessage method expects to be called with proper context
   // We'll directly call the appropriate handler based on the request method
-  
+
   if (request.method === 'tools/list') {
     const handler = (server as any)._requestHandlers.get(ListToolsRequestSchema);
     if (handler) {
@@ -222,25 +221,25 @@ async function simulateMCPRequest(server: Server, request: any): Promise<any> {
         const result = await handler(request);
         return { result, jsonrpc: '2.0', id: request.id };
       } catch (error: any) {
-        return { 
-          error: { 
-            code: -32603, 
-            message: error.message || 'Internal error' 
-          }, 
-          jsonrpc: '2.0', 
-          id: request.id 
+        return {
+          error: {
+            code: -32603,
+            message: error.message || 'Internal error',
+          },
+          jsonrpc: '2.0',
+          id: request.id,
         };
       }
     }
   }
-  
-  return { 
-    error: { 
-      code: -32601, 
-      message: `Method not found: ${request.method}` 
-    }, 
-    jsonrpc: '2.0', 
-    id: request.id 
+
+  return {
+    error: {
+      code: -32601,
+      message: `Method not found: ${request.method}`,
+    },
+    jsonrpc: '2.0',
+    id: request.id,
   };
 }
 
@@ -251,11 +250,15 @@ function setupMCPHandlers(mcpServer: Server, thinkingServer: LateralThinkingServ
       tools: [
         {
           name: 'discover_techniques',
-          description: 'Analyzes your problem and recommends the most suitable creative thinking techniques',
+          description:
+            'Analyzes your problem and recommends the most suitable creative thinking techniques',
           inputSchema: {
             type: 'object',
             properties: {
-              problem: { type: 'string', description: 'The problem or challenge you want to solve' },
+              problem: {
+                type: 'string',
+                description: 'The problem or challenge you want to solve',
+              },
               context: { type: 'string', description: 'Additional context about the situation' },
               preferredOutcome: {
                 type: 'string',
@@ -273,7 +276,8 @@ function setupMCPHandlers(mcpServer: Server, thinkingServer: LateralThinkingServ
         },
         {
           name: 'plan_thinking_session',
-          description: 'Creates a structured workflow for applying one or more creative thinking techniques',
+          description:
+            'Creates a structured workflow for applying one or more creative thinking techniques',
           inputSchema: {
             type: 'object',
             properties: {
@@ -359,7 +363,15 @@ function setupMCPHandlers(mcpServer: Server, thinkingServer: LateralThinkingServ
               },
               // ... other fields omitted for brevity
             },
-            required: ['planId', 'technique', 'problem', 'currentStep', 'totalSteps', 'output', 'nextStepNeeded'],
+            required: [
+              'planId',
+              'technique',
+              'problem',
+              'currentStep',
+              'totalSteps',
+              'output',
+              'nextStepNeeded',
+            ],
           },
         },
       ],
@@ -371,7 +383,7 @@ function setupMCPHandlers(mcpServer: Server, thinkingServer: LateralThinkingServ
 
     try {
       let result;
-      
+
       switch (name) {
         case 'discover_techniques':
           if (!args.problem) {
@@ -379,23 +391,29 @@ function setupMCPHandlers(mcpServer: Server, thinkingServer: LateralThinkingServ
           }
           result = await thinkingServer.discoverTechniques(args);
           break;
-          
+
         case 'plan_thinking_session':
           if (!args.problem || !args.techniques) {
             throw new Error('Missing required parameters: problem and/or techniques');
           }
           result = await thinkingServer.planThinkingSession(args);
           break;
-          
+
         case 'execute_thinking_step':
-          if (!args.planId || !args.technique || !args.problem || 
-              args.currentStep === undefined || args.totalSteps === undefined || 
-              !args.output || args.nextStepNeeded === undefined) {
+          if (
+            !args.planId ||
+            !args.technique ||
+            !args.problem ||
+            args.currentStep === undefined ||
+            args.totalSteps === undefined ||
+            !args.output ||
+            args.nextStepNeeded === undefined
+          ) {
             throw new Error('Missing required parameters');
           }
           result = await thinkingServer.executeThinkingStep(args);
           break;
-          
+
         default:
           throw new Error(`Unknown tool: ${name}`);
       }
@@ -404,7 +422,9 @@ function setupMCPHandlers(mcpServer: Server, thinkingServer: LateralThinkingServ
         content: [
           {
             type: 'text',
-            text: JSON.stringify(result.content?.[0]?.text ? JSON.parse(result.content[0].text) : result),
+            text: JSON.stringify(
+              result.content?.[0]?.text ? JSON.parse(result.content[0].text) : result
+            ),
           },
         ],
       };
