@@ -1228,12 +1228,14 @@ export class LateralThinkingServer {
         enhancedFocus: 'Path dependencies, constraints, and ergodicity awareness',
       },
     };
-    return hatsInfo[color] || {
-      name: 'Unknown Hat',
-      focus: 'Unknown focus',
-      emoji: '❓',
-      enhancedFocus: 'Unknown enhanced focus',
-    };
+    return (
+      hatsInfo[color] || {
+        name: 'Unknown Hat',
+        focus: 'Unknown focus',
+        emoji: '❓',
+        enhancedFocus: 'Unknown enhanced focus',
+      }
+    );
   }
 
   /**
@@ -1283,10 +1285,12 @@ export class LateralThinkingServer {
         riskQuestion: 'What assumptions break when reversed?',
       },
     };
-    return scamperInfo[action] || {
-      description: 'Unknown action',
-      riskQuestion: 'What are the risks of this unknown action?',
-    };
+    return (
+      scamperInfo[action] || {
+        description: 'Unknown action',
+        riskQuestion: 'What are the risks of this unknown action?',
+      }
+    );
   }
 
   /**
@@ -1615,12 +1619,14 @@ export class LateralThinkingServer {
         ],
       },
     };
-    return stageInfo[stage] || {
-      description: 'Unknown stage',
-      emoji: '❓',
-      criticalLens: 'Unknown critical lens',
-      prompts: ['What are the implications of this unknown stage?'],
-    };
+    return (
+      stageInfo[stage] || {
+        description: 'Unknown stage',
+        emoji: '❓',
+        criticalLens: 'Unknown critical lens',
+        prompts: ['What are the implications of this unknown stage?'],
+      }
+    );
   }
 
   // Type guard to check if input is a session operation
@@ -2393,7 +2399,8 @@ export class LateralThinkingServer {
           'Create Synergy Combinations',
           'Synthesize Collective Insights',
         ];
-        techniqueInfo = collectiveSteps[currentStep - 1] || `Collective Intelligence Step ${currentStep}`;
+        techniqueInfo =
+          collectiveSteps[currentStep - 1] || `Collective Intelligence Step ${currentStep}`;
         break;
       }
     }
@@ -2408,11 +2415,8 @@ export class LateralThinkingServer {
       );
     }
 
-    const maxLength = Math.max(
-      header?.length || 0, 
-      techniqueInfo?.length || 0, 
-      output?.length || 0
-    ) + 4;
+    const maxLength =
+      Math.max(header?.length || 0, techniqueInfo?.length || 0, output?.length || 0) + 4;
     const border = '─'.repeat(maxLength);
 
     parts.push(`\n┌${border}┐`);
