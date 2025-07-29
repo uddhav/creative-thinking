@@ -6,6 +6,16 @@ export type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 
 export type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green' | 'purple';
 export type ScamperAction = 'substitute' | 'combine' | 'adapt' | 'modify' | 'put_to_other_use' | 'eliminate' | 'reverse';
 export type DesignThinkingStage = 'empathize' | 'define' | 'ideate' | 'prototype' | 'test';
+export type PossibilityLevel = 'impossible' | 'breakthrough-required' | 'difficult' | 'feasible';
+export type ImpossibilityType = 'logical' | 'physical' | 'technical' | 'regulatory' | 'resource' | 'social';
+export interface RealityAssessment {
+    possibilityLevel: PossibilityLevel;
+    impossibilityType?: ImpossibilityType;
+    breakthroughsRequired?: string[];
+    historicalPrecedents?: string[];
+    confidenceLevel: number;
+    mechanismExplanation?: string;
+}
 export interface ScamperPathImpact {
     reversible: boolean;
     dependenciesCreated: string[];
@@ -94,6 +104,7 @@ export interface ExecuteThinkingStepInput {
     emergentPatterns?: string[];
     synergyCombinations?: string[];
     collectiveInsights?: string[];
+    realityAssessment?: RealityAssessment;
 }
 export interface ThinkingOperationData {
     sessionId?: string;

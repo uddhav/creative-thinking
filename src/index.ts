@@ -25,6 +25,7 @@ import type { PathMemory } from './ergodicity/index.js';
 import { ErgodicityManager } from './ergodicity/index.js';
 import { BarrierWarningLevel } from './ergodicity/earlyWarning/types.js';
 import type { EarlyWarningState, EscapeProtocol } from './ergodicity/earlyWarning/types.js';
+import { RealityIntegration } from './reality/integration.js';
 
 export type LateralTechnique =
   | 'six_hats'
@@ -49,6 +50,19 @@ export type ScamperAction =
   | 'eliminate'
   | 'reverse';
 export type DesignThinkingStage = 'empathize' | 'define' | 'ideate' | 'prototype' | 'test';
+
+// Reality Assessment Types
+export type PossibilityLevel = 'impossible' | 'breakthrough-required' | 'difficult' | 'feasible';
+export type ImpossibilityType = 'logical' | 'physical' | 'technical' | 'regulatory' | 'resource' | 'social';
+
+export interface RealityAssessment {
+  possibilityLevel: PossibilityLevel;
+  impossibilityType?: ImpossibilityType;
+  breakthroughsRequired?: string[];
+  historicalPrecedents?: string[];
+  confidenceLevel: number;
+  mechanismExplanation?: string;
+}
 
 // PDA-SCAMPER Configuration Constants
 const PDA_SCAMPER_CONFIG = {
@@ -249,6 +263,9 @@ export interface ExecuteThinkingStepInput {
   emergentPatterns?: string[];
   synergyCombinations?: string[];
   collectiveInsights?: string[];
+  
+  // Reality Assessment field
+  realityAssessment?: RealityAssessment;
 }
 
 // Base interface for thinking operations
@@ -460,6 +477,9 @@ interface LateralThinkingResponse {
     significance: string;
     applicability: string[];
   };
+  
+  // Reality Assessment field
+  realityAssessment?: RealityAssessment;
 }
 
 // Session management configuration
@@ -3060,6 +3080,15 @@ export class LateralThinkingServer {
       const memoryOutputs = this.generateMemorySuggestiveOutputs(thinkingInput, session);
       Object.assign(response, memoryOutputs);
 
+      // Enhance with reality assessment
+      const { enhancedOutput, realityAssessment } = RealityIntegration.enhanceWithReality(
+        { ...thinkingInput, planId: 'direct-execution' } as ExecuteThinkingStepInput,
+        thinkingInput.output
+      );
+      if (realityAssessment) {
+        response.realityAssessment = realityAssessment;
+      }
+
       // Auto-save if enabled
       if (thinkingInput.autoSave && this.persistenceAdapter && session) {
         try {
@@ -3616,6 +3645,42 @@ export class LateralThinkingServer {
       const combined = `${problemLower} ${contextLower}`;
 
       const recommendations: TechniqueRecommendation[] = [];
+
+      // Assess reality to detect inherent contradictions
+      const { realityAssessment } = RealityIntegration.enhanceWithReality(
+        { 
+          problem: args.problem,
+          technique: 'six_hats',
+          currentStep: 1,
+          totalSteps: 1,
+          output: args.problem,
+          nextStepNeeded: false,
+          planId: 'discovery'
+        } as ExecuteThinkingStepInput,
+        args.problem
+      );
+
+      // If we detect a contradiction or impossibility, recommend TRIZ
+      if (
+        realityAssessment &&
+        (realityAssessment.possibilityLevel === 'impossible' ||
+         realityAssessment.possibilityLevel === 'breakthrough-required' ||
+         realityAssessment.impossibilityType === 'logical')
+      ) {
+        recommendations.push({
+          technique: 'triz',
+          score: 0.95,
+          reasoning:
+            'TRIZ is ideal for resolving the detected contradictions and impossibilities in this problem',
+          bestFor: [
+            'resolving contradictions',
+            'breakthrough requirements',
+            'impossible-seeming problems',
+            'systematic innovation',
+          ],
+          limitations: ['requires problem abstraction', 'learning curve for principles'],
+        });
+      }
 
       // Six Hats - Good for comprehensive analysis
       if (

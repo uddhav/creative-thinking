@@ -8,6 +8,7 @@ import { ErrorCode, ValidationError, SessionError, ExecutionError, PersistenceEr
 import { createAdapter, getDefaultConfig } from './persistence/index.js';
 import { ErgodicityManager } from './ergodicity/index.js';
 import { BarrierWarningLevel } from './ergodicity/earlyWarning/types.js';
+import { RealityIntegration } from './reality/integration.js';
 // PDA-SCAMPER Configuration Constants
 const PDA_SCAMPER_CONFIG = {
     // Flexibility decay rate per historical action
@@ -2106,6 +2107,11 @@ export class LateralThinkingServer {
             // Generate memory-suggestive outputs
             const memoryOutputs = this.generateMemorySuggestiveOutputs(thinkingInput, session);
             Object.assign(response, memoryOutputs);
+            // Enhance with reality assessment
+            const { enhancedOutput, realityAssessment } = RealityIntegration.enhanceWithReality({ ...thinkingInput, planId: 'direct-execution' }, thinkingInput.output);
+            if (realityAssessment) {
+                response.realityAssessment = realityAssessment;
+            }
             // Auto-save if enabled
             if (thinkingInput.autoSave && this.persistenceAdapter && session) {
                 try {
@@ -2571,6 +2577,34 @@ export class LateralThinkingServer {
             const contextLower = (args.context || '').toLowerCase();
             const combined = `${problemLower} ${contextLower}`;
             const recommendations = [];
+            // Assess reality to detect inherent contradictions
+            const { realityAssessment } = RealityIntegration.enhanceWithReality({
+                problem: args.problem,
+                technique: 'six_hats',
+                currentStep: 1,
+                totalSteps: 1,
+                output: args.problem,
+                nextStepNeeded: false,
+                planId: 'discovery'
+            }, args.problem);
+            // If we detect a contradiction or impossibility, recommend TRIZ
+            if (realityAssessment &&
+                (realityAssessment.possibilityLevel === 'impossible' ||
+                    realityAssessment.possibilityLevel === 'breakthrough-required' ||
+                    realityAssessment.impossibilityType === 'logical')) {
+                recommendations.push({
+                    technique: 'triz',
+                    score: 0.95,
+                    reasoning: 'TRIZ is ideal for resolving the detected contradictions and impossibilities in this problem',
+                    bestFor: [
+                        'resolving contradictions',
+                        'breakthrough requirements',
+                        'impossible-seeming problems',
+                        'systematic innovation',
+                    ],
+                    limitations: ['requires problem abstraction', 'learning curve for principles'],
+                });
+            }
             // Six Hats - Good for comprehensive analysis
             if (combined.includes('analyze') ||
                 combined.includes('comprehensive') ||
