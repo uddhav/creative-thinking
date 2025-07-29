@@ -33,13 +33,13 @@ describe('Three-Layer Architecture Integration', () => {
       expect(discoveryResult.isError).toBe(false);
 
       const discovery = JSON.parse(discoveryResult.content[0].text);
-      expect(discovery.recommendedTechniques).toBeDefined();
-      expect(discovery.recommendedTechniques.length).toBeGreaterThan(0);
+      expect(discovery.recommendations).toBeDefined();
+      expect(discovery.recommendations.length).toBeGreaterThan(0);
       expect(discovery.reasoning).toBeDefined();
-      expect(discovery.alternativeApproaches).toBeDefined();
+      expect(discovery.suggestedWorkflow).toBeDefined();
 
       // Should recommend collaborative techniques
-      const recommendedTechniques = discovery.recommendedTechniques;
+      const recommendedTechniques = discovery.recommendations.map((r: any) => r.technique);
       expect(recommendedTechniques).toContain('yes_and');
 
       // Layer 2: Planning

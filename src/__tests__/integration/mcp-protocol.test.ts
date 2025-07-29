@@ -20,7 +20,9 @@ describe('MCP Protocol Compliance', () => {
         version: '0.1.0',
       },
       {
-        capabilities: {},
+        capabilities: {
+          tools: {},
+        },
       }
     );
 
@@ -87,9 +89,9 @@ describe('MCP Protocol Compliance', () => {
       expect(response.result).toBeDefined();
 
       const result = JSON.parse(response.result.content[0].text);
-      expect(result.recommendedTechniques).toBeDefined();
+      expect(result.recommendations).toBeDefined();
       expect(result.reasoning).toBeDefined();
-      expect(result.workflow).toBeDefined();
+      expect(result.suggestedWorkflow).toBeDefined();
     });
 
     it('should handle missing required parameters', async () => {
@@ -127,7 +129,7 @@ describe('MCP Protocol Compliance', () => {
       });
 
       const discoverResult = JSON.parse(discoverResponse.result.content[0].text);
-      const recommendedTechnique = discoverResult.recommendedTechniques[0];
+      const recommendedTechnique = discoverResult.recommendations[0].technique;
 
       // Step 2: Plan session
       const planResponse = await simulateMCPRequest(mcpServer, {

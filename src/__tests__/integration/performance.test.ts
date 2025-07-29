@@ -34,7 +34,7 @@ describe('Performance Integration Tests', () => {
       expect(
         results.every(r => {
           const data = JSON.parse(r.content[0].text);
-          return data.recommendedTechniques && data.recommendedTechniques.length > 0;
+          return data.recommendations && data.recommendations.length > 0;
         })
       ).toBe(true);
 
