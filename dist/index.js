@@ -609,12 +609,12 @@ export class LateralThinkingServer {
             },
         };
         // Return default if color is invalid
-        return hatsInfo[color] || {
+        return (hatsInfo[color] || {
             name: 'Unknown Hat',
             focus: 'Unknown focus',
             emoji: '❓',
             enhancedFocus: 'Unknown enhanced focus',
-        };
+        });
     }
     /**
      * Get SCAMPER action information with pre-mortem risk questions
@@ -660,11 +660,11 @@ export class LateralThinkingServer {
             },
         };
         // Return default if action is invalid
-        return scamperInfo[action] || {
+        return (scamperInfo[action] || {
             description: 'Unknown action',
             emoji: '❓',
             riskQuestion: 'What are the risks of this unknown action?',
-        };
+        });
     }
     /**
      * Enhanced getScamperInfo for PDA-SCAMPER with path indicators and commitment levels
@@ -938,7 +938,7 @@ export class LateralThinkingServer {
             },
         };
         // Return default if stage is invalid
-        return stageInfo[stage] || {
+        return (stageInfo[stage] || {
             description: 'Unknown stage',
             emoji: '❓',
             criticalLens: 'Risk Assessment',
@@ -947,7 +947,7 @@ export class LateralThinkingServer {
                 'What could go wrong?',
                 'How do we measure success?',
             ],
-        };
+        });
     }
     // Type guard to check if input is a session operation
     isSessionOperation(data) {
@@ -2182,7 +2182,6 @@ export class LateralThinkingServer {
                     }
                 }
                 return 'Complete the Six Thinking Hats process';
-                break;
             }
             case 'po': {
                 const poSteps = [
@@ -2219,7 +2218,6 @@ export class LateralThinkingServer {
                     }
                 }
                 return 'Complete the SCAMPER process';
-                break;
             }
             case 'concept_extraction': {
                 const conceptSteps = [
@@ -2255,7 +2253,6 @@ export class LateralThinkingServer {
                     }
                 }
                 return 'Complete the Design Thinking process';
-                break;
             }
             case 'triz': {
                 const trizSteps = [
