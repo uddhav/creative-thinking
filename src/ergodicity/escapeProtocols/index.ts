@@ -124,7 +124,7 @@ export class EscapeVelocitySystem {
     }
 
     // Extract learnings
-    if (result.executionNotes.length > 0) {
+    if (result.executionNotes && result.executionNotes.length > 0) {
       this.monitoring.learnings.push(`${result.protocol.name}: ${result.executionNotes[0]}`);
     }
   }
