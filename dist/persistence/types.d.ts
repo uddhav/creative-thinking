@@ -18,6 +18,32 @@ export interface LateralThinkingInput {
     randomStimulus?: string;
     connections?: string[];
     scamperAction?: string;
+    modificationHistory?: Array<{
+        action: string;
+        modification: string;
+        timestamp: string;
+        impact: {
+            reversible: boolean;
+            dependenciesCreated: string[];
+            optionsClosed: string[];
+            optionsOpened: string[];
+            flexibilityRetention: number;
+            commitmentLevel: string;
+            recoveryPath?: string;
+        };
+        cumulativeFlexibility: number;
+    }>;
+    pathImpact?: {
+        reversible: boolean;
+        dependenciesCreated: string[];
+        optionsClosed: string[];
+        optionsOpened: string[];
+        flexibilityRetention: number;
+        commitmentLevel: string;
+        recoveryPath?: string;
+    };
+    flexibilityScore?: number;
+    alternativeSuggestions?: string[];
     successExample?: string;
     extractedConcepts?: string[];
     abstractedPatterns?: string[];

@@ -249,6 +249,7 @@ export class PathMemoryManager {
             reversibilityCost: impact.reversibilityCost || 0.1,
             commitmentLevel: impact.commitmentLevel || 0.1,
             constraintsCreated: [],
+            flexibilityImpact: impact.flexibilityImpact,
         };
         // Add to history
         this.pathMemory.pathHistory.push(event);
@@ -317,7 +318,14 @@ export class PathMemoryManager {
         const totalOptions = this.pathMemory.availableOptions.length + this.pathMemory.foreclosedOptions.length;
         const availableRatio = this.pathMemory.availableOptions.length / Math.max(totalOptions, 1);
         // Calculate flexibility score
-        this.pathMemory.currentFlexibility.flexibilityScore = availableRatio;
+        // Apply flexibility impacts from path events
+        let flexibilityScore = availableRatio;
+        for (const event of this.pathMemory.pathHistory) {
+            if (event.flexibilityImpact !== undefined) {
+                flexibilityScore *= 1 - event.flexibilityImpact;
+            }
+        }
+        this.pathMemory.currentFlexibility.flexibilityScore = flexibilityScore;
         // Calculate reversibility index
         const reversibleDecisions = this.pathMemory.pathHistory.filter(e => e.reversibilityCost < 0.5).length;
         const totalDecisions = Math.max(this.pathMemory.pathHistory.length, 1);

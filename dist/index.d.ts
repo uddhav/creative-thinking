@@ -6,6 +6,22 @@ export type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 
 export type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green' | 'purple';
 export type ScamperAction = 'substitute' | 'combine' | 'adapt' | 'modify' | 'put_to_other_use' | 'eliminate' | 'reverse';
 export type DesignThinkingStage = 'empathize' | 'define' | 'ideate' | 'prototype' | 'test';
+export interface ScamperPathImpact {
+    reversible: boolean;
+    dependenciesCreated: string[];
+    optionsClosed: string[];
+    optionsOpened: string[];
+    flexibilityRetention: number;
+    commitmentLevel: 'low' | 'medium' | 'high' | 'irreversible';
+    recoveryPath?: string;
+}
+interface ScamperModificationHistory {
+    action: ScamperAction;
+    modification: string;
+    timestamp: string;
+    impact: ScamperPathImpact;
+    cumulativeFlexibility: number;
+}
 export interface ThinkingOperationData {
     sessionId?: string;
     technique: LateralTechnique;
@@ -20,6 +36,10 @@ export interface ThinkingOperationData {
     randomStimulus?: string;
     connections?: string[];
     scamperAction?: ScamperAction;
+    modificationHistory?: ScamperModificationHistory[];
+    pathImpact?: ScamperPathImpact;
+    flexibilityScore?: number;
+    alternativeSuggestions?: string[];
     successExample?: string;
     extractedConcepts?: string[];
     abstractedPatterns?: string[];
@@ -211,6 +231,36 @@ export declare class LateralThinkingServer {
      */
     private getScamperInfo;
     /**
+     * Enhanced getScamperInfo for PDA-SCAMPER with path indicators and commitment levels
+     *
+     * Path indicators explain the level of commitment and reversibility:
+     * - 🔄 Low commitment: Easily reversible actions (modify, reverse, put_to_other_use)
+     * - ⚠️ Medium commitment: Reversible but with cost (substitute, adapt)
+     * - 🔒 High commitment: Difficult to reverse (combine)
+     * - 🔒 Irreversible: Cannot be undone (eliminate)
+     *
+     * @param action - The SCAMPER action to get information for
+     * @returns Enhanced info including path indicators and commitment levels
+     */
+    private getScamperInfoPDA;
+    /**
+     * Analyzes the path impact of a SCAMPER modification
+     *
+     * @param action - The SCAMPER action being analyzed
+     * @param modification - The specific modification being made
+     * @param history - Previous modifications in this session
+     * @returns Path impact analysis including flexibility and commitment levels
+     * @throws Error if action is invalid
+     */
+    private analyzeScamperPathImpact;
+    private identifyScamperDependencies;
+    private identifyClosedOptions;
+    private identifyOpenedOptions;
+    /**
+     * Generate alternative SCAMPER actions when flexibility is low
+     */
+    private generateScamperAlternatives;
+    /**
      * Get Design Thinking stage information with embedded risk management
      * @param stage - The Design Thinking stage to get information for
      * @returns Stage information with description, emoji, and critical lens
@@ -309,4 +359,5 @@ export declare class LateralThinkingServer {
     private getScamperDescription;
     private getDesignThinkingOutputs;
 }
+export {};
 //# sourceMappingURL=index.d.ts.map

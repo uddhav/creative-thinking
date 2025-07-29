@@ -30,6 +30,7 @@ export declare class PathMemoryManager {
         optionsClosed?: string[];
         reversibilityCost?: number;
         commitmentLevel?: number;
+        flexibilityImpact?: number;
     }): PathEvent;
     /**
      * Create a constraint from a path event
