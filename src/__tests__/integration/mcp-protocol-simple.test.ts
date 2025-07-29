@@ -32,7 +32,7 @@ describe('MCP Protocol Integration - Simplified', () => {
       expect(result.content).toBeDefined();
       expect(result.content[0].type).toBe('text');
 
-      const data = JSON.parse(result.content[0].text) as any;
+      const data = JSON.parse(result.content[0].text);
       expect(data.recommendations).toBeDefined();
       expect(data.recommendations.length).toBeGreaterThan(0);
       expect(data.reasoning).toBeDefined();
@@ -48,7 +48,7 @@ describe('MCP Protocol Integration - Simplified', () => {
       const result = await server.discoverTechniques(input);
 
       expect(result.isError).toBe(true);
-      const errorData = JSON.parse(result.content[0].text) as any;
+      const errorData = JSON.parse(result.content[0].text);
       expect(errorData.error.message).toContain('Problem description is required');
     });
 
@@ -66,7 +66,7 @@ describe('MCP Protocol Integration - Simplified', () => {
 
       const result = await server.discoverTechniques(input);
       expect(result.isError).toBeFalsy();
-      const data = JSON.parse(result.content[0].text) as any;
+      const data = JSON.parse(result.content[0].text);
 
       // With many constraints, flexibility should be detected as low
       // The discoverTechniques output doesn't always include flexibility analysis
@@ -92,7 +92,7 @@ describe('MCP Protocol Integration - Simplified', () => {
       const result = await server.planThinkingSession(input);
 
       expect(result.isError).toBeFalsy();
-      const data = JSON.parse(result.content[0].text) as any;
+      const data = JSON.parse(result.content[0].text);
 
       expect(data.planId).toBeDefined();
       expect(data.planId).toMatch(/^plan_/);
@@ -113,7 +113,7 @@ describe('MCP Protocol Integration - Simplified', () => {
 
       // The server creates generic steps for unknown techniques
       expect(result.isError).toBeFalsy();
-      const data = JSON.parse(result.content[0].text) as any;
+      const data = JSON.parse(result.content[0].text);
       expect(data.workflow).toBeDefined();
       expect(data.workflow.length).toBe(5); // Default is 5 steps
       expect(data.workflow[0].description).toContain('invalid_technique step 1');
@@ -127,7 +127,7 @@ describe('MCP Protocol Integration - Simplified', () => {
       };
 
       const result = await server.planThinkingSession(input);
-      const data = JSON.parse(result.content[0].text) as any;
+      const data = JSON.parse(result.content[0].text);
 
       // With includeOptions: true, there should be a workflow item
       expect(data.workflow).toBeDefined();
@@ -142,7 +142,7 @@ describe('MCP Protocol Integration - Simplified', () => {
         problem: 'Test execution',
         techniques: ['po'],
       });
-      const plan = JSON.parse(planResult.content[0].text) as any;
+      const plan = JSON.parse(planResult.content[0].text);
 
       // Execute first step
       const input: ExecuteThinkingStepInput = {
@@ -159,7 +159,7 @@ describe('MCP Protocol Integration - Simplified', () => {
       const result = await server.executeThinkingStep(input);
 
       expect(result.isError).toBeFalsy();
-      const data = JSON.parse(result.content[0].text) as any;
+      const data = JSON.parse(result.content[0].text);
 
       expect(data.sessionId).toBeDefined();
       expect(data.technique).toBe('po');
@@ -182,7 +182,7 @@ describe('MCP Protocol Integration - Simplified', () => {
       const result = await server.executeThinkingStep(input);
 
       expect(result.isError).toBe(true);
-      const errorData = JSON.parse(result.content[0].text) as any;
+      const errorData = JSON.parse(result.content[0].text);
       expect(errorData.error).toBe('Invalid planId');
     });
 
@@ -193,7 +193,7 @@ describe('MCP Protocol Integration - Simplified', () => {
         techniques: ['random_entry'],
         timeframe: 'quick',
       });
-      const plan = JSON.parse(planResult.content[0].text) as any;
+      const plan = JSON.parse(planResult.content[0].text);
 
       // Execute all steps
       let sessionId: string | undefined;
@@ -209,7 +209,7 @@ describe('MCP Protocol Integration - Simplified', () => {
         output: 'Using clock as stimulus',
         nextStepNeeded: true,
       });
-      sessionId = (JSON.parse(step1.content[0].text) as any).sessionId;
+      sessionId = JSON.parse(step1.content[0].text).sessionId;
 
       // Step 2: Connections
       const step2 = await server.executeThinkingStep({
@@ -236,7 +236,7 @@ describe('MCP Protocol Integration - Simplified', () => {
         sessionId,
       });
 
-      const finalData = JSON.parse(step3.content[0].text) as any;
+      const finalData = JSON.parse(step3.content[0].text);
       expect(finalData.nextStepNeeded).toBe(false);
       expect(finalData.insights).toBeDefined();
       expect(finalData.insights.length).toBeGreaterThan(0);
@@ -253,7 +253,7 @@ describe('MCP Protocol Integration - Simplified', () => {
       });
 
       expect(discoveryResult.isError).toBeFalsy();
-      const discovery = JSON.parse(discoveryResult.content[0].text) as any;
+      const discovery = JSON.parse(discoveryResult.content[0].text);
       const techniques = discovery.recommendations.slice(0, 2).map((r: any) => r.technique);
 
       // 2. Planning
@@ -264,7 +264,7 @@ describe('MCP Protocol Integration - Simplified', () => {
       });
 
       expect(planResult.isError).toBeFalsy();
-      const plan = JSON.parse(planResult.content[0].text) as any;
+      const plan = JSON.parse(planResult.content[0].text);
 
       // 3. Execution (at least first step)
       const firstWorkflowStep = plan.workflow[0];
@@ -307,7 +307,7 @@ describe('MCP Protocol Integration - Simplified', () => {
       const execResult = await server.executeThinkingStep(execInput);
       expect(execResult.isError).toBeFalsy();
 
-      const execution = JSON.parse(execResult.content[0].text) as any;
+      const execution = JSON.parse(execResult.content[0].text);
       expect(execution.sessionId).toBeDefined();
       expect(execution.nextStepGuidance).toBeDefined();
     });
@@ -331,7 +331,7 @@ describe('MCP Protocol Integration - Simplified', () => {
       });
 
       expect(planResult.isError).toBe(true);
-      const planErrorData = JSON.parse(planResult.content[0].text) as any;
+      const planErrorData = JSON.parse(planResult.content[0].text);
       expect(planErrorData.error.message).toContain('at least one technique');
     });
 
@@ -360,7 +360,7 @@ describe('MCP Protocol Integration - Simplified', () => {
         problem: 'Redesign workspace',
         techniques: ['scamper'],
       });
-      const plan = JSON.parse(planResult.content[0].text) as any;
+      const plan = JSON.parse(planResult.content[0].text);
 
       // Execute high-commitment action
       const result = await server.executeThinkingStep({
@@ -374,7 +374,7 @@ describe('MCP Protocol Integration - Simplified', () => {
         nextStepNeeded: true,
       });
 
-      const data = JSON.parse(result.content[0].text) as any;
+      const data = JSON.parse(result.content[0].text);
 
       // PDA-SCAMPER fields show in the visual output
       // The eliminate action has high impact on flexibility
@@ -390,7 +390,7 @@ describe('MCP Protocol Integration - Simplified', () => {
         problem: 'Test revisions',
         techniques: ['six_hats'],
       });
-      const plan = JSON.parse(planResult.content[0].text) as any;
+      const plan = JSON.parse(planResult.content[0].text);
 
       // Execute step 1
       const step1 = await server.executeThinkingStep({
@@ -403,7 +403,7 @@ describe('MCP Protocol Integration - Simplified', () => {
         output: 'Initial process setup',
         nextStepNeeded: true,
       });
-      const sessionId = (JSON.parse(step1.content[0].text) as any).sessionId;
+      const sessionId = JSON.parse(step1.content[0].text).sessionId;
 
       // Revise step 1
       const revision = await server.executeThinkingStep({
@@ -420,9 +420,8 @@ describe('MCP Protocol Integration - Simplified', () => {
         revisesStep: 1,
       });
 
-      const revisionData = JSON.parse(revision.content[0].text) as any;
+      const revisionData = JSON.parse(revision.content[0].text);
       expect(revisionData.sessionId).toBe(sessionId);
     });
   });
 });
-

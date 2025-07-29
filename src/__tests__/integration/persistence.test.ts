@@ -5,7 +5,7 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { LateralThinkingServer } from '../../index.js';
-import { FileSystemAdapter } from '../../persistence/FileSystemAdapter.js';
+import { FileSystemAdapter } from '../../persistence/filesystem-adapter.js';
 import type { ExecuteThinkingStepInput } from '../../index.js';
 import fs from 'fs';
 import path from 'path';

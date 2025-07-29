@@ -2,6 +2,7 @@
  * Helper utilities for integration tests
  */
 
+import { expect } from 'vitest';
 import type { LateralThinkingServer } from '../../index.js';
 import type {
   LateralTechnique,
@@ -51,7 +52,7 @@ export async function createSessionWithSteps(
     const result = await server.executeThinkingStep(input);
 
     if (i === 1) {
-      sessionId = JSON.parse(result.content[0].text).sessionId;
+      sessionId = JSON.parse(result.content[0].text).sessionId as string;
     }
   }
 
@@ -92,11 +93,12 @@ export function getTechniqueSpecificFields(
   step: number
 ): Partial<ExecuteThinkingStepInput> {
   switch (technique) {
-    case 'six_hats':
+    case 'six_hats': {
       const hatColors: SixHatsColor[] = ['blue', 'white', 'red', 'yellow', 'black', 'green'];
       return { hatColor: hatColors[step - 1] };
+    }
 
-    case 'scamper':
+    case 'scamper': {
       const actions: ScamperAction[] = [
         'substitute',
         'combine',
@@ -107,10 +109,12 @@ export function getTechniqueSpecificFields(
         'reverse',
       ];
       return { scamperAction: actions[step - 1] };
+    }
 
-    case 'design_thinking':
+    case 'design_thinking': {
       const stages: DesignThinkingStage[] = ['empathize', 'define', 'ideate', 'prototype', 'test'];
       return { designStage: stages[step - 1] };
+    }
 
     case 'po':
       if (step === 1) return { provocation: 'Po: Test provocation' };
@@ -297,7 +301,7 @@ export function createMCPRequest(method: string, params: any = {}, id: number = 
  * Verify session contains expected data
  */
 export function verifySessionData(
-  sessionData: any,
+  sessionData: any, // eslint-disable-line @typescript-eslint/no-explicit-any
   expectations: {
     technique?: LateralTechnique;
     problem?: string;
@@ -307,23 +311,29 @@ export function verifySessionData(
   }
 ): void {
   if (expectations.technique) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     expect(sessionData.technique).toBe(expectations.technique);
   }
 
   if (expectations.problem) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     expect(sessionData.problem).toBe(expectations.problem);
   }
 
   if (expectations.stepCount !== undefined) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     expect(sessionData.currentStep).toBe(expectations.stepCount);
   }
 
   if (expectations.hasInsights) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     expect(sessionData.insights).toBeDefined();
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     expect(sessionData.insights.length).toBeGreaterThan(0);
   }
 
   if (expectations.isComplete !== undefined) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     expect(sessionData.nextStepNeeded).toBe(!expectations.isComplete);
   }
 }
@@ -347,7 +357,7 @@ export async function measureTime<T>(
   const duration = Date.now() - startTime;
 
   if (label) {
-    console.log(`${label}: ${duration}ms`);
+    console.log(`${label}: ${duration}ms`); // eslint-disable-line no-console
   }
 
   return { result, duration };
