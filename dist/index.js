@@ -609,12 +609,12 @@ export class LateralThinkingServer {
                 enhancedFocus: 'Path dependencies, constraints, and ergodicity awareness',
             },
         };
-        return hatsInfo[color] || {
-            name: 'Unknown Hat',
+        return (hatsInfo[color] || {
+            name: `Unknown Hat ${color}`,
             focus: 'Unknown focus',
             emoji: '❓',
             enhancedFocus: 'Unknown enhanced focus',
-        };
+        });
     }
     /**
      * Get SCAMPER action information with pre-mortem risk questions
@@ -659,10 +659,10 @@ export class LateralThinkingServer {
                 riskQuestion: 'What assumptions break when reversed?',
             },
         };
-        return scamperInfo[action] || {
-            description: 'Unknown action',
+        return (scamperInfo[action] || {
+            description: `Unknown action ${action}`,
             riskQuestion: 'What are the risks of this unknown action?',
-        };
+        });
     }
     /**
      * Enhanced getScamperInfo for PDA-SCAMPER with path indicators and commitment levels
@@ -935,12 +935,12 @@ export class LateralThinkingServer {
                 ],
             },
         };
-        return stageInfo[stage] || {
-            description: 'Unknown stage',
+        return (stageInfo[stage] || {
+            description: `Unknown stage ${stage}`,
             emoji: '❓',
             criticalLens: 'Unknown critical lens',
             prompts: ['What are the implications of this unknown stage?'],
-        };
+        });
     }
     // Type guard to check if input is a session operation
     isSessionOperation(data) {
@@ -1003,10 +1003,10 @@ export class LateralThinkingServer {
         if (!data.problem || typeof data.problem !== 'string') {
             throw new ValidationError(ErrorCode.INVALID_FIELD_VALUE, 'Invalid problem: must be a string', 'problem');
         }
-        if (!data.currentStep || typeof data.currentStep !== 'number') {
+        if (data.currentStep === undefined || data.currentStep === null || typeof data.currentStep !== 'number') {
             throw new ValidationError(ErrorCode.INVALID_FIELD_VALUE, 'Invalid currentStep: must be a number', 'currentStep');
         }
-        if (!data.totalSteps || typeof data.totalSteps !== 'number') {
+        if (data.totalSteps === undefined || data.totalSteps === null || typeof data.totalSteps !== 'number') {
             throw new ValidationError(ErrorCode.INVALID_FIELD_VALUE, 'Invalid totalSteps: must be a number', 'totalSteps');
         }
         if (!data.output || typeof data.output !== 'string') {
@@ -1464,7 +1464,9 @@ export class LateralThinkingServer {
                     'Apply Inventive Principles',
                     'Minimal Solution',
                 ];
-                techniqueInfo = trizSteps[currentStep - 1] || `TRIZ Step ${currentStep}`;
+                techniqueInfo = (currentStep > 0 && currentStep <= trizSteps.length)
+                    ? trizSteps[currentStep - 1]
+                    : `Unknown TRIZ step ${currentStep}`;
                 if (data.contradiction && currentStep === 1) {
                     techniqueInfo += `: ${data.contradiction}`;
                 }
@@ -1478,7 +1480,9 @@ export class LateralThinkingServer {
                     'Develop Switching Rhythm',
                     'Integrate Insights',
                 ];
-                techniqueInfo = neuralSteps[currentStep - 1] || `Neural State Step ${currentStep}`;
+                techniqueInfo = (currentStep > 0 && currentStep <= neuralSteps.length)
+                    ? neuralSteps[currentStep - 1]
+                    : `Unknown Neural State step ${currentStep}`;
                 if (data.dominantNetwork && currentStep === 1) {
                     const networkName = data.dominantNetwork === 'dmn' ? 'Default Mode Network' : 'Executive Control Network';
                     techniqueInfo += ` - Currently: ${networkName}`;
@@ -1497,7 +1501,9 @@ export class LateralThinkingServer {
                     'Async-Sync Balance',
                     'Temporal Escape Routes',
                 ];
-                techniqueInfo = temporalSteps[currentStep - 1] || `Temporal Work Step ${currentStep}`;
+                techniqueInfo = (currentStep > 0 && currentStep <= temporalSteps.length)
+                    ? temporalSteps[currentStep - 1]
+                    : `Unknown Temporal Work step ${currentStep}`;
                 break;
             }
             case 'cross_cultural': {
@@ -1509,7 +1515,9 @@ export class LateralThinkingServer {
                     'Develop Parallel Solutions',
                     'Validate with Stakeholders',
                 ];
-                techniqueInfo = crossCulturalSteps[currentStep - 1] || `Cross-Cultural Step ${currentStep}`;
+                techniqueInfo = (currentStep > 0 && currentStep <= crossCulturalSteps.length)
+                    ? crossCulturalSteps[currentStep - 1]
+                    : `Unknown Cross-Cultural step ${currentStep}`;
                 break;
             }
             case 'collective_intel': {
@@ -1521,7 +1529,9 @@ export class LateralThinkingServer {
                     'Create Synergy Combinations',
                     'Synthesize Collective Insights',
                 ];
-                techniqueInfo = collectiveSteps[currentStep - 1] || `Collective Intelligence Step ${currentStep}`;
+                techniqueInfo = (currentStep > 0 && currentStep <= collectiveSteps.length)
+                    ? collectiveSteps[currentStep - 1]
+                    : `Unknown Collective Intelligence step ${currentStep}`;
                 break;
             }
         }
@@ -2097,6 +2107,106 @@ export class LateralThinkingServer {
                 const formattedOutput = this.formatOutput({ ...thinkingInput, sessionId });
                 console.error(formattedOutput);
             }
+            // Assess complexity based on execution progress
+            let complexityAssessment;
+            let sequentialThinking;
+            // Check for complexity indicators in current execution
+            const complexityFactors = [];
+            // Check session history for complexity indicators
+            if (session.history.length > 10) {
+                complexityFactors.push('Extended reasoning chain');
+            }
+            if (Object.keys(session.branches).length > 0) {
+                complexityFactors.push('Multiple exploration branches');
+            }
+            if (thinkingInput.isRevision) {
+                complexityFactors.push('Revision of previous thinking');
+            }
+            // Technique-specific complexity indicators
+            switch (thinkingInput.technique) {
+                case 'po':
+                    if (thinkingInput.principles && thinkingInput.principles.length > 5) {
+                        complexityFactors.push('Multiple interacting principles');
+                    }
+                    break;
+                case 'collective_intel':
+                    if (thinkingInput.wisdomSources && thinkingInput.wisdomSources.length > 3) {
+                        complexityFactors.push('Multiple diverse perspectives');
+                    }
+                    break;
+                case 'cross_cultural':
+                    if (thinkingInput.culturalFrameworks && thinkingInput.culturalFrameworks.length > 2) {
+                        complexityFactors.push('Multiple cultural frameworks');
+                    }
+                    break;
+                case 'triz':
+                    if (thinkingInput.inventivePrinciples && thinkingInput.inventivePrinciples.length > 3) {
+                        complexityFactors.push('Multiple contradictions to resolve');
+                    }
+                    break;
+                case 'design_thinking':
+                    if (thinkingInput.currentStep >= 3 && session.history.length > 5) {
+                        complexityFactors.push('Multi-stage iterative process');
+                    }
+                    break;
+            }
+            // Determine if we need sequential thinking suggestion
+            if (complexityFactors.length >= 3 && thinkingInput.currentStep > 2) {
+                const complexityLevel = complexityFactors.length >= 4 ? 'high' : 'medium';
+                complexityAssessment = {
+                    level: complexityLevel,
+                    factors: complexityFactors,
+                    suggestion: 'Consider using sequential thinking to track emerging patterns',
+                };
+                // Add technique-specific sequential thinking suggestions
+                if (complexityLevel === 'high') {
+                    const techniqueHooks = {
+                        po: {
+                            complexityNote: 'Your provocation exploration is revealing complex interactions.',
+                            suggestedApproach: {
+                                next1: "Map each principle's downstream effects",
+                                next2: 'Identify principle interactions',
+                                next3: 'Sequence implementation for maximum synergy',
+                            },
+                        },
+                        collective_intel: {
+                            complexityNote: 'Multiple perspectives are creating emergent patterns.',
+                            suggestedApproach: {
+                                next1: 'Map convergence points systematically',
+                                next2: 'Track perspective evolution',
+                                next3: 'Build integrated synthesis',
+                            },
+                        },
+                        cross_cultural: {
+                            complexityNote: 'Cultural tensions require careful navigation.',
+                            suggestedApproach: {
+                                next1: 'Map cultural conflict points',
+                                next2: 'Design bridge concepts',
+                                next3: 'Create parallel implementation paths',
+                            },
+                        },
+                        triz: {
+                            complexityNote: 'Multiple contradictions forming a system.',
+                            suggestedApproach: {
+                                next1: 'Map contradiction hierarchy',
+                                next2: 'Identify root contradictions',
+                                next3: 'Sequence resolution strategy',
+                            },
+                        },
+                        design_thinking: {
+                            complexityNote: 'Insights evolving across stages.',
+                            suggestedApproach: {
+                                next1: 'Track insight evolution',
+                                next2: 'Map feedback loops',
+                                next3: 'Maintain decision rationale',
+                            },
+                        },
+                    };
+                    if (thinkingInput.technique in techniqueHooks) {
+                        sequentialThinking = techniqueHooks[thinkingInput.technique];
+                    }
+                }
+            }
             // Generate response
             const response = {
                 sessionId: sessionId,
@@ -2106,6 +2216,8 @@ export class LateralThinkingServer {
                 nextStepNeeded: thinkingInput.nextStepNeeded,
                 historyLength: session.history.length,
                 branches: Object.keys(session.branches),
+                complexityAssessment,
+                sequentialThinking,
             };
             // Add PDA-SCAMPER specific fields if technique is SCAMPER
             if (thinkingInput.technique === 'scamper') {
@@ -2176,6 +2288,10 @@ export class LateralThinkingServer {
     }
     getNextStepGuidance(data) {
         const nextStep = data.currentStep + 1;
+        // Handle invalid current step
+        if (data.currentStep < 0) {
+            return `Complete the ${data.technique.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} process`;
+        }
         switch (data.technique) {
             case 'six_hats': {
                 const hatOrder = [
@@ -2274,7 +2390,10 @@ export class LateralThinkingServer {
                     'Apply TRIZ inventive principles (both additive and subtractive)',
                     'Synthesize a minimal solution that does more with less',
                 ];
-                return trizSteps[nextStep - 1] || 'Complete the process';
+                if (nextStep > 0 && nextStep <= trizSteps.length) {
+                    return trizSteps[nextStep - 1];
+                }
+                return 'Complete the TRIZ process';
             }
             case 'neural_state': {
                 const neuralSteps = [
@@ -2283,7 +2402,10 @@ export class LateralThinkingServer {
                     'Develop a personalized rhythm for switching between networks',
                     'Integrate insights to achieve optimal cognitive flexibility',
                 ];
-                return neuralSteps[nextStep - 1] || 'Complete the neural optimization process';
+                if (nextStep > 0 && nextStep <= neuralSteps.length) {
+                    return neuralSteps[nextStep - 1];
+                }
+                return 'Complete the Neural State Optimization process';
             }
             case 'temporal_work': {
                 // Get session context for contextual guidance
@@ -2330,7 +2452,7 @@ export class LateralThinkingServer {
                         return 'Design escape routes: create buffer zones, time loans, and graceful degradation plans';
                     }
                     default:
-                        return 'Complete the temporal design process';
+                        return 'Complete the Temporal Work Design process';
                 }
             }
             case 'cross_cultural': {
@@ -2341,7 +2463,10 @@ export class LateralThinkingServer {
                     'Develop parallel solutions: create context-specific variations that honor different cultural values',
                     'Validate with diverse stakeholders: gather feedback and refine for inclusive implementation',
                 ];
-                return (crossCulturalSteps[nextStep - 1] || 'Complete the cross-cultural integration process');
+                if (nextStep > 0 && nextStep <= crossCulturalSteps.length) {
+                    return crossCulturalSteps[nextStep - 1];
+                }
+                return 'Complete the Cross-Cultural Integration process';
             }
             case 'collective_intel': {
                 const collectiveSteps = [
@@ -2351,7 +2476,10 @@ export class LateralThinkingServer {
                     "Create synergy combinations: orchestrate knowledge elements that amplify each other's value",
                     'Synthesize collective insights: integrate all sources into actionable, holistic intelligence',
                 ];
-                return (collectiveSteps[nextStep - 1] || 'Complete the collective intelligence orchestration');
+                if (nextStep > 0 && nextStep <= collectiveSteps.length) {
+                    return collectiveSteps[nextStep - 1];
+                }
+                return 'Complete the Collective Intelligence Orchestration process';
             }
         }
         return 'Continue with the next step';
@@ -3029,10 +3157,176 @@ export class LateralThinkingServer {
                     }
                 }
             }
+            // Assess complexity
+            let complexityAssessment;
+            let sequentialThinking;
+            const complexityFactors = [];
+            // Check for complexity indicators
+            if (combined.includes('multiple') ||
+                combined.includes('many') ||
+                combined.includes('various')) {
+                complexityFactors.push('Multiple elements or stakeholders');
+            }
+            if (combined.includes('interact') ||
+                combined.includes('depend') ||
+                combined.includes('connect')) {
+                complexityFactors.push('Interacting dependencies');
+            }
+            if (combined.includes('conflict') ||
+                combined.includes('tension') ||
+                combined.includes('tradeoff')) {
+                complexityFactors.push('Conflicting objectives');
+            }
+            if (combined.includes('uncertain') ||
+                combined.includes('unpredictable') ||
+                combined.includes('dynamic')) {
+                complexityFactors.push('High uncertainty');
+            }
+            if (combined.includes('system') ||
+                combined.includes('ecosystem') ||
+                combined.includes('network')) {
+                complexityFactors.push('System-level thinking required');
+            }
+            if (args.constraints && args.constraints.length > 3) {
+                complexityFactors.push('Multiple constraints');
+            }
+            // Determine complexity level
+            const complexityLevel = complexityFactors.length >= 4 ? 'high' : complexityFactors.length >= 2 ? 'medium' : 'low';
+            if (complexityFactors.length > 0) {
+                complexityAssessment = {
+                    level: complexityLevel,
+                    factors: complexityFactors,
+                    suggestion: complexityLevel === 'high'
+                        ? 'This problem has high complexity. Consider using sequential thinking to break it down systematically.'
+                        : complexityLevel === 'medium'
+                            ? 'This problem has moderate complexity. Sequential analysis might help clarify interactions.'
+                            : undefined,
+                };
+            }
+            // Generate sequential thinking suggestions for high complexity
+            if (complexityLevel === 'high' && recommendations.length > 0) {
+                const topTechnique = recommendations[0].technique;
+                // Technique-specific sequential thinking suggestions
+                const sequentialApproaches = {
+                    po: {
+                        complexityNote: "This provocation web contains multiple interacting paths. Sequential analysis of each path's implications could reveal hidden connections and dependencies.",
+                        suggestedApproach: {
+                            step1: 'Map individual provocations',
+                            step2: 'Trace downstream implications of each',
+                            step3: 'Identify interaction effects between provocations',
+                            step4: 'Design integration sequence for highest impact',
+                        },
+                    },
+                    collective_intel: {
+                        complexityNote: 'Multiple perspectives create a complex decision space. Sequential synthesis can help integrate diverse viewpoints effectively.',
+                        suggestedApproach: {
+                            step1: 'Map individual perspectives systematically',
+                            step2: 'Identify convergence and divergence points',
+                            step3: 'Trace interaction effects between viewpoints',
+                            step4: 'Build consensus through sequential integration',
+                        },
+                    },
+                    cross_cultural: {
+                        complexityNote: 'Cross-cultural integration involves parallel paths that may conflict. Sequential analysis helps navigate cultural tensions.',
+                        suggestedApproach: {
+                            step1: 'Map each cultural framework independently',
+                            step2: 'Identify bridge concepts between cultures',
+                            step3: 'Sequence integration to minimize conflicts',
+                            step4: 'Design parallel implementation paths',
+                        },
+                    },
+                    triz: {
+                        complexityNote: 'Complex contradictions may have nested sub-contradictions. Sequential analysis helps untangle the contradiction hierarchy.',
+                        suggestedApproach: {
+                            step1: 'Identify primary contradiction',
+                            step2: 'Map secondary contradictions that emerge',
+                            step3: 'Sequence resolution from root to branches',
+                            step4: 'Verify no new contradictions introduced',
+                        },
+                    },
+                    design_thinking: {
+                        complexityNote: 'Multi-stage process with complex feedback loops. Sequential tracking helps maintain coherence across stages.',
+                        suggestedApproach: {
+                            step1: 'Document insights systematically at each stage',
+                            step2: 'Track how insights evolve through stages',
+                            step3: 'Identify feedback loops between stages',
+                            step4: 'Maintain decision rationale throughout',
+                        },
+                    },
+                    six_hats: {
+                        complexityNote: 'Multiple perspectives on a complex problem can create information overload. Sequential synthesis helps integrate viewpoints.',
+                        suggestedApproach: {
+                            step1: "Capture each hat's perspective fully",
+                            step2: 'Map interactions between perspectives',
+                            step3: 'Identify critical decision points',
+                            step4: 'Sequence integration for clarity',
+                        },
+                    },
+                    scamper: {
+                        complexityNote: 'Multiple modifications create path dependencies. Sequential tracking helps manage transformation complexity.',
+                        suggestedApproach: {
+                            step1: 'Map potential modifications systematically',
+                            step2: 'Trace path dependencies between changes',
+                            step3: 'Sequence modifications to preserve flexibility',
+                            step4: 'Design rollback strategies for each step',
+                        },
+                    },
+                    random_entry: {
+                        complexityNote: 'Complex problems may need multiple random stimuli. Sequential exploration helps build connections systematically.',
+                        suggestedApproach: {
+                            step1: 'Apply first stimulus and map connections',
+                            step2: 'Layer additional stimuli strategically',
+                            step3: 'Trace interaction patterns',
+                            step4: 'Synthesize into coherent solution',
+                        },
+                    },
+                    concept_extraction: {
+                        complexityNote: 'Complex patterns require multi-level abstraction. Sequential extraction helps build understanding progressively.',
+                        suggestedApproach: {
+                            step1: 'Extract surface-level concepts',
+                            step2: 'Abstract to higher-level patterns',
+                            step3: 'Map relationships between abstractions',
+                            step4: 'Apply patterns systematically',
+                        },
+                    },
+                    yes_and: {
+                        complexityNote: 'Complex collaborative building needs structure. Sequential building helps maintain coherence.',
+                        suggestedApproach: {
+                            step1: 'Establish foundation collaboratively',
+                            step2: 'Build layers systematically',
+                            step3: 'Track contribution interactions',
+                            step4: 'Integrate into unified solution',
+                        },
+                    },
+                    neural_state: {
+                        complexityNote: 'Complex neural state management requires careful sequencing. Track state transitions systematically.',
+                        suggestedApproach: {
+                            step1: 'Map current neural state landscape',
+                            step2: 'Design state transition sequence',
+                            step3: 'Monitor integration effects',
+                            step4: 'Stabilize optimal configuration',
+                        },
+                    },
+                    temporal_work: {
+                        complexityNote: 'Complex temporal landscapes need systematic mapping. Sequential analysis reveals hidden time dynamics.',
+                        suggestedApproach: {
+                            step1: 'Map temporal constraints comprehensively',
+                            step2: 'Identify critical path dependencies',
+                            step3: 'Design temporal escape routes',
+                            step4: 'Sequence implementation for flexibility',
+                        },
+                    },
+                };
+                if (topTechnique in sequentialApproaches) {
+                    sequentialThinking = sequentialApproaches[topTechnique];
+                }
+            }
             const output = {
                 recommendations: recommendations.slice(0, 5), // Top 5 recommendations
                 reasoning: `Based on your problem involving "${args.problem.substring(0, 100)}..."${args.preferredOutcome ? ` with ${args.preferredOutcome} outcomes` : ''}, I recommend these techniques.`,
                 suggestedWorkflow,
+                complexityAssessment,
+                sequentialThinking,
                 flexibilityWarning,
                 generatedOptions,
                 escapeVelocityAnalysis,

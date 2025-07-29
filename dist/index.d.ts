@@ -16,6 +16,17 @@ export interface RealityAssessment {
     confidenceLevel: number;
     mechanismExplanation?: string;
 }
+export interface ComplexityAssessment {
+    level: 'low' | 'medium' | 'high';
+    factors: string[];
+    suggestion?: string;
+}
+export interface SequentialThinkingSuggestion {
+    complexityNote: string;
+    suggestedApproach: {
+        [key: string]: string;
+    };
+}
 export interface ScamperPathImpact {
     reversible: boolean;
     dependenciesCreated: string[];

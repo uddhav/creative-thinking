@@ -137,7 +137,7 @@ describe('Array Bounds Checking Integration Tests', () => {
           };
 
           await server.executeThinkingStep(input);
-          
+
           console.error = originalConsoleError;
 
           // Should show "Unknown [technique] step -5"
@@ -170,7 +170,7 @@ describe('Array Bounds Checking Integration Tests', () => {
           };
 
           await server.executeThinkingStep(input);
-          
+
           console.error = originalConsoleError;
 
           // Should show "Unknown [technique] step 999"
@@ -253,7 +253,7 @@ describe('Array Bounds Checking Integration Tests', () => {
       };
 
       const result = await server.executeThinkingStep(input);
-      
+
       // Verify that validation catches invalid hat color
       expect(result.isError).toBe(true);
       const errorData = JSON.parse(result.content[0].text);
@@ -280,7 +280,7 @@ describe('Array Bounds Checking Integration Tests', () => {
       };
 
       const result = await server.executeThinkingStep(input);
-      
+
       // Verify that validation catches invalid SCAMPER action
       expect(result.isError).toBe(true);
       const errorData = JSON.parse(result.content[0].text);

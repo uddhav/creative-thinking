@@ -254,9 +254,7 @@ export class EscapeVelocityCalculator {
             ]);
         }
         return {
-            immediateActions: trajectory.phases && trajectory.phases.length > 0
-                ? trajectory.phases[0].actions
-                : [],
+            immediateActions: trajectory.phases && trajectory.phases.length > 0 ? trajectory.phases[0].actions : [],
             shortTermActions: trajectory.protocol.steps.slice(0, 3),
             mediumTermActions: trajectory.protocol.steps.slice(3),
             monitoringPlan: [
