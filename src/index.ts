@@ -2257,7 +2257,7 @@ export class LateralThinkingServer {
           'Abstract with Boundaries',
           'Apply with Risk Assessment',
         ];
-        techniqueInfo = stepNames[currentStep - 1];
+        techniqueInfo = stepNames[currentStep - 1] || `Concept Extraction Step ${currentStep}`;
         if (successExample && currentStep === 1) {
           techniqueInfo += `: ${successExample}`;
         }
@@ -2266,7 +2266,7 @@ export class LateralThinkingServer {
       case 'yes_and': {
         emoji = '🤝';
         const yesAndSteps = ['Accept (Yes)', 'Build (And)', 'Evaluate (But)', 'Integrate'];
-        techniqueInfo = yesAndSteps[currentStep - 1];
+        techniqueInfo = yesAndSteps[currentStep - 1] || `Yes And Step ${currentStep}`;
         if (initialIdea && currentStep === 1) {
           techniqueInfo += `: ${initialIdea}`;
         }
@@ -2295,7 +2295,7 @@ export class LateralThinkingServer {
           'Apply Inventive Principles',
           'Minimal Solution',
         ];
-        techniqueInfo = trizSteps[currentStep - 1];
+        techniqueInfo = trizSteps[currentStep - 1] || `TRIZ Step ${currentStep}`;
         if (data.contradiction && currentStep === 1) {
           techniqueInfo += `: ${data.contradiction}`;
         }
@@ -2309,7 +2309,7 @@ export class LateralThinkingServer {
           'Develop Switching Rhythm',
           'Integrate Insights',
         ];
-        techniqueInfo = neuralSteps[currentStep - 1];
+        techniqueInfo = neuralSteps[currentStep - 1] || `Neural State Step ${currentStep}`;
         if (data.dominantNetwork && currentStep === 1) {
           const networkName =
             data.dominantNetwork === 'dmn' ? 'Default Mode Network' : 'Executive Control Network';
@@ -2329,7 +2329,7 @@ export class LateralThinkingServer {
           'Async-Sync Balance',
           'Temporal Escape Routes',
         ];
-        techniqueInfo = temporalSteps[currentStep - 1];
+        techniqueInfo = temporalSteps[currentStep - 1] || `Temporal Work Step ${currentStep}`;
         break;
       }
       case 'cross_cultural': {
@@ -2341,7 +2341,7 @@ export class LateralThinkingServer {
           'Develop Parallel Solutions',
           'Validate with Stakeholders',
         ];
-        techniqueInfo = crossCulturalSteps[currentStep - 1];
+        techniqueInfo = crossCulturalSteps[currentStep - 1] || `Cross-Cultural Step ${currentStep}`;
         break;
       }
       case 'collective_intel': {
@@ -2353,7 +2353,8 @@ export class LateralThinkingServer {
           'Create Synergy Combinations',
           'Synthesize Collective Insights',
         ];
-        techniqueInfo = collectiveSteps[currentStep - 1];
+        techniqueInfo =
+          collectiveSteps[currentStep - 1] || `Collective Intelligence Step ${currentStep}`;
         break;
       }
     }
@@ -2368,7 +2369,8 @@ export class LateralThinkingServer {
       );
     }
 
-    const maxLength = Math.max(header.length, techniqueInfo.length, output.length) + 4;
+    const maxLength =
+      Math.max(header?.length || 0, techniqueInfo?.length || 0, output?.length || 0) + 4;
     const border = '─'.repeat(maxLength);
 
     parts.push(`\n┌${border}┐`);
