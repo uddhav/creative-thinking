@@ -280,6 +280,16 @@ export class LateralThinkingServer {
                     hatColor: h.input.hatColor,
                     scamperAction: h.input.scamperAction,
                     designStage: h.input.designStage,
+                    // Cast modificationHistory if present
+                    modificationHistory: h.input.modificationHistory?.map(mh => ({
+                        ...mh,
+                        action: mh.action,
+                    })),
+                    // Cast pathImpact if present
+                    pathImpact: h.input.pathImpact ? {
+                        ...h.input.pathImpact,
+                        commitmentLevel: h.input.pathImpact.commitmentLevel,
+                    } : undefined,
                 })),
                 branches: Object.entries(loadedState.branches).reduce((acc, [key, value]) => {
                     acc[key] = value;
@@ -631,6 +641,183 @@ export class LateralThinkingServer {
             },
         };
         return scamperInfo[action];
+    }
+    /**
+     * Enhanced getScamperInfo for PDA-SCAMPER with path indicators
+     */
+    getScamperInfoPDA(action) {
+        const info = this.getScamperInfo(action);
+        const pathData = {
+            substitute: { pathIndicator: '⚠️', commitmentLevel: 'medium' },
+            combine: { pathIndicator: '🔒', commitmentLevel: 'high' },
+            adapt: { pathIndicator: '⚠️', commitmentLevel: 'medium' },
+            modify: { pathIndicator: '🔄', commitmentLevel: 'low' },
+            put_to_other_use: { pathIndicator: '🌱', commitmentLevel: 'low' },
+            eliminate: { pathIndicator: '🔒', commitmentLevel: 'irreversible' },
+            reverse: { pathIndicator: '🔄', commitmentLevel: 'low' },
+        };
+        return {
+            ...info,
+            ...pathData[action],
+        };
+    }
+    /**
+     * Analyzes the path impact of a SCAMPER modification
+     */
+    analyzeScamperPathImpact(action, modification, history = []) {
+        // Base impact for each action type
+        const baseImpacts = {
+            substitute: {
+                reversible: true,
+                flexibilityRetention: 0.8,
+                commitmentLevel: 'medium',
+                recoveryPath: 'Substitute back to original',
+            },
+            combine: {
+                reversible: false,
+                flexibilityRetention: 0.4, // More aggressive reduction
+                commitmentLevel: 'high',
+                recoveryPath: 'May require complete redesign to separate',
+            },
+            adapt: {
+                reversible: true,
+                flexibilityRetention: 0.7,
+                commitmentLevel: 'medium',
+                recoveryPath: 'Remove adaptations to restore original',
+            },
+            modify: {
+                reversible: true,
+                flexibilityRetention: 0.85,
+                commitmentLevel: 'low',
+                recoveryPath: 'Restore original dimensions/attributes',
+            },
+            put_to_other_use: {
+                reversible: true,
+                flexibilityRetention: 0.9,
+                commitmentLevel: 'low',
+                recoveryPath: 'Return to original use',
+            },
+            eliminate: {
+                reversible: false,
+                flexibilityRetention: 0.3, // More aggressive reduction
+                commitmentLevel: 'irreversible',
+                recoveryPath: 'Requires complete reconstruction',
+            },
+            reverse: {
+                reversible: true,
+                flexibilityRetention: 0.95,
+                commitmentLevel: 'low',
+                recoveryPath: 'Reverse again to restore',
+            },
+        };
+        const impact = { ...baseImpacts[action] };
+        // Analyze dependencies based on modification history
+        impact.dependenciesCreated = this.identifyScamperDependencies(action, modification, history);
+        impact.optionsClosed = this.identifyClosedOptions(action, modification, history);
+        impact.optionsOpened = this.identifyOpenedOptions(action, modification);
+        // Adjust flexibility based on cumulative history
+        if (history.length > 0) {
+            const cumulativeFlexibility = history[history.length - 1].cumulativeFlexibility;
+            impact.flexibilityRetention *= (0.9 ** history.length); // Each modification reduces flexibility
+        }
+        return impact;
+    }
+    identifyScamperDependencies(action, modification, history) {
+        const dependencies = [];
+        switch (action) {
+            case 'substitute':
+                dependencies.push('New material/component compatibility');
+                dependencies.push('Supply chain for substitute');
+                break;
+            case 'combine':
+                dependencies.push('Interdependency between combined elements');
+                dependencies.push('Shared resources/interfaces');
+                break;
+            case 'adapt':
+                dependencies.push('Context-specific requirements');
+                dependencies.push('Adaptation maintenance needs');
+                break;
+            case 'eliminate':
+                dependencies.push('Functions that relied on eliminated element');
+                dependencies.push('Downstream processes affected');
+                break;
+        }
+        // Check for compound dependencies from history
+        if (history.some(h => h.action === 'combine')) {
+            dependencies.push('Previous combinations may conflict');
+        }
+        return dependencies;
+    }
+    identifyClosedOptions(action, modification, history) {
+        const closedOptions = [];
+        switch (action) {
+            case 'substitute':
+                closedOptions.push('Using original component');
+                closedOptions.push('Optimizations specific to original');
+                break;
+            case 'combine':
+                closedOptions.push('Independent operation of elements');
+                closedOptions.push('Separate optimization paths');
+                break;
+            case 'eliminate':
+                closedOptions.push('Features dependent on eliminated element');
+                closedOptions.push('Future enhancements requiring removed part');
+                break;
+            case 'adapt':
+                closedOptions.push('Generic one-size-fits-all approach');
+                closedOptions.push('Contradictory adaptations');
+                break;
+        }
+        return closedOptions;
+    }
+    identifyOpenedOptions(action, modification) {
+        const openedOptions = [];
+        switch (action) {
+            case 'substitute':
+                openedOptions.push('New material properties to exploit');
+                openedOptions.push('Different optimization strategies');
+                break;
+            case 'put_to_other_use':
+                openedOptions.push('New market segments');
+                openedOptions.push('Additional revenue streams');
+                break;
+            case 'modify':
+                openedOptions.push('New form factors possible');
+                openedOptions.push('Different use cases enabled');
+                break;
+            case 'reverse':
+                openedOptions.push('Opposite workflow benefits');
+                openedOptions.push('New perspective insights');
+                break;
+        }
+        return openedOptions;
+    }
+    /**
+     * Generate alternative SCAMPER actions when flexibility is low
+     */
+    generateScamperAlternatives(currentAction, flexibilityScore) {
+        const alternatives = [];
+        // Suggest option-generating actions
+        const optionGeneratingActions = ['put_to_other_use', 'modify', 'reverse'];
+        // Suggest reversible actions
+        const reversibleActions = ['substitute', 'adapt', 'modify', 'reverse'];
+        if (flexibilityScore < 0.3) {
+            alternatives.push('⚠️ Critical flexibility warning! Consider:');
+            // If current action is high-commitment, suggest lower commitment alternatives
+            if (['combine', 'eliminate'].includes(currentAction)) {
+                alternatives.push('Try "Modify" instead - it preserves more options');
+                alternatives.push('Use "Put to other use" to explore without commitment');
+            }
+            // Always suggest creating escape routes
+            alternatives.push('Design reversal mechanisms before proceeding');
+            alternatives.push('Create modular components that can be separated later');
+            // Suggest taking a break to reassess
+            if (flexibilityScore < 0.2) {
+                alternatives.push('🛑 Consider pausing to map remaining options');
+                alternatives.push('Use Option Generation Engine to create new paths');
+            }
+        }
+        return alternatives;
     }
     /**
      * Get Design Thinking stage information with embedded risk management
@@ -1009,20 +1196,34 @@ export class LateralThinkingServer {
                 }
                 break;
             case 'scamper':
-                // SCAMPER modifications can have varying impacts
-                if (data.scamperAction === 'eliminate') {
-                    impact.optionsClosed = ['Eliminated feature/component'];
-                    impact.reversibilityCost = 0.7;
-                    impact.commitmentLevel = 0.6;
-                }
-                else if (data.scamperAction === 'combine') {
-                    impact.optionsClosed = ['Independent operation of combined elements'];
-                    impact.reversibilityCost = 0.5;
-                    impact.commitmentLevel = 0.5;
+                // PDA-SCAMPER: Use path impact analysis if available
+                if (data.pathImpact) {
+                    impact.optionsClosed = data.pathImpact.optionsClosed;
+                    impact.optionsOpened = data.pathImpact.optionsOpened;
+                    impact.reversibilityCost = data.pathImpact.reversible ? 0.2 : 0.8;
+                    impact.commitmentLevel =
+                        data.pathImpact.commitmentLevel === 'irreversible' ? 1.0 :
+                            data.pathImpact.commitmentLevel === 'high' ? 0.7 :
+                                data.pathImpact.commitmentLevel === 'medium' ? 0.5 : 0.3;
+                    // Add flexibility impact (inverse of retention)
+                    impact.flexibilityImpact = 1 - data.pathImpact.flexibilityRetention;
                 }
                 else {
-                    impact.reversibilityCost = 0.3;
-                    impact.commitmentLevel = 0.4;
+                    // Fallback to basic SCAMPER analysis
+                    if (data.scamperAction === 'eliminate') {
+                        impact.optionsClosed = ['Eliminated feature/component'];
+                        impact.reversibilityCost = 0.7;
+                        impact.commitmentLevel = 0.6;
+                    }
+                    else if (data.scamperAction === 'combine') {
+                        impact.optionsClosed = ['Independent operation of combined elements'];
+                        impact.reversibilityCost = 0.5;
+                        impact.commitmentLevel = 0.5;
+                    }
+                    else {
+                        impact.reversibilityCost = 0.3;
+                        impact.commitmentLevel = 0.4;
+                    }
                 }
                 break;
             case 'design_thinking':
@@ -1138,11 +1339,15 @@ export class LateralThinkingServer {
                 break;
             case 'scamper':
                 if (scamperAction) {
-                    const actionInfo = this.getScamperInfo(scamperAction);
+                    const actionInfo = this.getScamperInfoPDA(scamperAction);
                     emoji = actionInfo.emoji;
                     techniqueInfo = `${scamperAction.toUpperCase()}: ${actionInfo.description}`;
                     if (actionInfo.riskQuestion) {
                         techniqueInfo += ` | ${actionInfo.riskQuestion}`;
+                    }
+                    // Add path indicator for PDA-SCAMPER
+                    if (data.pathImpact) {
+                        techniqueInfo = `${actionInfo.pathIndicator} ${techniqueInfo}`;
                     }
                 }
                 break;
@@ -1287,6 +1492,48 @@ export class LateralThinkingServer {
         }
         if (line) {
             parts.push(`│ ${line.padEnd(maxLength - 2)} │`);
+        }
+        // PDA-SCAMPER Path Impact section
+        if (data.technique === 'scamper' && data.pathImpact) {
+            parts.push(`├${border}┤`);
+            parts.push(`│ ${chalk.cyan('🛤️  Path Impact Analysis:'.padEnd(maxLength - 2))} │`);
+            // Commitment level
+            const commitmentColor = data.pathImpact.commitmentLevel === 'irreversible' ? chalk.red :
+                data.pathImpact.commitmentLevel === 'high' ? chalk.yellow :
+                    data.pathImpact.commitmentLevel === 'medium' ? chalk.blue : chalk.green;
+            parts.push(`│ ${commitmentColor(`Commitment: ${data.pathImpact.commitmentLevel.toUpperCase()}`).padEnd(maxLength - 2)} │`);
+            // Flexibility score
+            if (data.flexibilityScore !== undefined) {
+                const flexColor = data.flexibilityScore < 0.3 ? chalk.red :
+                    data.flexibilityScore < 0.6 ? chalk.yellow : chalk.green;
+                parts.push(`│ ${flexColor(`Flexibility: ${(data.flexibilityScore * 100).toFixed(0)}%`).padEnd(maxLength - 2)} │`);
+            }
+            // Options closed
+            if (data.pathImpact.optionsClosed.length > 0) {
+                parts.push(`│ ${chalk.red('Options Closed:'.padEnd(maxLength - 2))} │`);
+                for (const option of data.pathImpact.optionsClosed) {
+                    parts.push(`│   ${chalk.red(`- ${option}`).padEnd(maxLength - 2)} │`);
+                }
+            }
+            // Options opened
+            if (data.pathImpact.optionsOpened.length > 0) {
+                parts.push(`│ ${chalk.green('Options Opened:'.padEnd(maxLength - 2))} │`);
+                for (const option of data.pathImpact.optionsOpened) {
+                    parts.push(`│   ${chalk.green(`+ ${option}`).padEnd(maxLength - 2)} │`);
+                }
+            }
+            // Recovery path
+            if (data.pathImpact.recoveryPath) {
+                parts.push(`│ ${chalk.blue(`Recovery: ${data.pathImpact.recoveryPath}`).padEnd(maxLength - 2)} │`);
+            }
+            // Alternative suggestions
+            if (data.alternativeSuggestions && data.alternativeSuggestions.length > 0) {
+                parts.push(`├${border}┤`);
+                parts.push(`│ ${chalk.magenta('💡 Alternative Approaches:'.padEnd(maxLength - 2))} │`);
+                for (const alt of data.alternativeSuggestions) {
+                    parts.push(`│ ${chalk.magenta(alt).padEnd(maxLength - 2)} │`);
+                }
+            }
         }
         // Add risk/adversarial sections using extracted methods
         if (data.risks && data.risks.length > 0) {
@@ -1649,6 +1896,54 @@ export class LateralThinkingServer {
             if (!session) {
                 throw new SessionError(ErrorCode.INTERNAL_ERROR, 'Failed to get or create session.');
             }
+            // PDA-SCAMPER: Analyze path impact for SCAMPER actions
+            if (thinkingInput.technique === 'scamper' && thinkingInput.scamperAction) {
+                // Get modification history from previous SCAMPER steps
+                const modificationHistory = [];
+                for (const h of session.history) {
+                    if (h.technique === 'scamper' && h.scamperAction && h.pathImpact) {
+                        modificationHistory.push({
+                            action: h.scamperAction,
+                            modification: h.output,
+                            timestamp: h.timestamp || new Date().toISOString(),
+                            impact: h.pathImpact,
+                            cumulativeFlexibility: h.flexibilityScore || 0.8,
+                        });
+                    }
+                }
+                // Analyze path impact
+                const pathImpact = this.analyzeScamperPathImpact(thinkingInput.scamperAction, thinkingInput.output, modificationHistory);
+                // Calculate cumulative flexibility
+                // Use ergodicity manager's actual flexibility if available
+                let currentFlexibility;
+                if (session.ergodicityManager) {
+                    const flexMetrics = session.ergodicityManager.getCurrentFlexibility();
+                    currentFlexibility = flexMetrics.flexibilityScore;
+                }
+                else {
+                    // Fallback calculation
+                    const baseFlexibility = modificationHistory.length > 0
+                        ? modificationHistory[modificationHistory.length - 1].cumulativeFlexibility
+                        : 1.0;
+                    currentFlexibility = baseFlexibility * pathImpact.flexibilityRetention;
+                }
+                // Create modification history entry
+                const modEntry = {
+                    action: thinkingInput.scamperAction,
+                    modification: thinkingInput.output,
+                    timestamp: new Date().toISOString(),
+                    impact: pathImpact,
+                    cumulativeFlexibility: currentFlexibility,
+                };
+                // Add PDA data to input
+                thinkingInput.pathImpact = pathImpact;
+                thinkingInput.flexibilityScore = currentFlexibility;
+                thinkingInput.modificationHistory = modificationHistory;
+                // Generate alternative suggestions if flexibility is low
+                if (currentFlexibility < 0.3) {
+                    thinkingInput.alternativeSuggestions = this.generateScamperAlternatives(thinkingInput.scamperAction, currentFlexibility);
+                }
+            }
             // Add to history with proper timestamp
             const historyEntry = {
                 ...thinkingInput,
@@ -1721,6 +2016,13 @@ export class LateralThinkingServer {
                 historyLength: session.history.length,
                 branches: Object.keys(session.branches),
             };
+            // Add PDA-SCAMPER specific fields if technique is SCAMPER
+            if (thinkingInput.technique === 'scamper') {
+                response.modificationHistory = thinkingInput.modificationHistory;
+                response.pathImpact = thinkingInput.pathImpact;
+                response.flexibilityScore = thinkingInput.flexibilityScore;
+                response.alternativeSuggestions = thinkingInput.alternativeSuggestions;
+            }
             // Add completion summary if done
             if (!thinkingInput.nextStepNeeded) {
                 session.endTime = Date.now();
@@ -2731,12 +3033,28 @@ export class LateralThinkingServer {
                             'reverse',
                         ];
                         for (const action of actions) {
+                            const actionInfo = this.getScamperInfoPDA(action);
+                            const expectedOutputs = [
+                                `Ideas for ${action}`,
+                                'Path dependency analysis',
+                                `Flexibility impact (currently ${actionInfo.commitmentLevel})`,
+                            ];
+                            const riskConsiderations = [
+                                actionInfo.riskQuestion || `What could go wrong with ${action}?`,
+                            ];
+                            // Add specific warnings for high-commitment actions
+                            if (actionInfo.commitmentLevel === 'irreversible') {
+                                riskConsiderations.push('⚠️ IRREVERSIBLE ACTION - Cannot be undone');
+                            }
+                            else if (actionInfo.commitmentLevel === 'high') {
+                                riskConsiderations.push('High commitment - Difficult to reverse');
+                            }
                             workflow.push({
                                 technique,
                                 stepNumber: stepNumber++,
-                                description: `${action.charAt(0).toUpperCase() + action.slice(1).replace(/_/g, ' ')}: ${this.getScamperDescription(action)}`,
-                                expectedOutputs: [`Ideas for ${action}`, 'Risk assessment'],
-                                riskConsiderations: [`What could go wrong with ${action}?`],
+                                description: `${actionInfo.pathIndicator} ${action.charAt(0).toUpperCase() + action.slice(1).replace(/_/g, ' ')}: ${this.getScamperDescription(action)}`,
+                                expectedOutputs,
+                                riskConsiderations,
                             });
                         }
                         break;
@@ -3432,6 +3750,36 @@ The three-layer workflow ensures systematic creative thinking:
                     'eliminate',
                     'reverse',
                 ],
+            },
+            // PDA-SCAMPER fields
+            modificationHistory: {
+                type: 'array',
+                items: {
+                    type: 'object',
+                    properties: {
+                        action: { type: 'string' },
+                        modification: { type: 'string' },
+                        timestamp: { type: 'string' },
+                        impact: { type: 'object' },
+                        cumulativeFlexibility: { type: 'number' },
+                    },
+                },
+                description: 'History of SCAMPER modifications with path impacts',
+            },
+            pathImpact: {
+                type: 'object',
+                description: 'Path dependency impact of current SCAMPER action',
+            },
+            flexibilityScore: {
+                type: 'number',
+                minimum: 0,
+                maximum: 1,
+                description: 'Current flexibility score (0-1)',
+            },
+            alternativeSuggestions: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Alternative approaches when flexibility is low',
             },
             successExample: { type: 'string' },
             extractedConcepts: { type: 'array', items: { type: 'string' } },
