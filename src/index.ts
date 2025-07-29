@@ -50,6 +50,18 @@ export type ScamperAction =
   | 'reverse';
 export type DesignThinkingStage = 'empathize' | 'define' | 'ideate' | 'prototype' | 'test';
 
+// PDA-SCAMPER Configuration Constants
+const PDA_SCAMPER_CONFIG = {
+  // Flexibility decay rate per historical action
+  FLEXIBILITY_DECAY_RATE: 0.9,
+  // Threshold for critical flexibility warning
+  CRITICAL_FLEXIBILITY_THRESHOLD: 0.3,
+  // Threshold for low flexibility suggestions
+  LOW_FLEXIBILITY_THRESHOLD: 0.4,
+  // Performance optimization: max history length before caching
+  MAX_HISTORY_BEFORE_CACHE: 50,
+} as const;
+
 // PDA-SCAMPER specific types
 export interface ScamperPathImpact {
   reversible: boolean;
@@ -1243,7 +1255,16 @@ export class LateralThinkingServer {
   }
 
   /**
-   * Enhanced getScamperInfo for PDA-SCAMPER with path indicators
+   * Enhanced getScamperInfo for PDA-SCAMPER with path indicators and commitment levels
+   *
+   * Path indicators explain the level of commitment and reversibility:
+   * - 🔄 Low commitment: Easily reversible actions (modify, reverse, put_to_other_use)
+   * - ⚠️ Medium commitment: Reversible but with cost (substitute, adapt)
+   * - 🔒 High commitment: Difficult to reverse (combine)
+   * - 🔒 Irreversible: Cannot be undone (eliminate)
+   *
+   * @param action - The SCAMPER action to get information for
+   * @returns Enhanced info including path indicators and commitment levels
    */
   private getScamperInfoPDA(action: ScamperAction): {
     description: string;
@@ -1271,12 +1292,28 @@ export class LateralThinkingServer {
 
   /**
    * Analyzes the path impact of a SCAMPER modification
+   *
+   * @param action - The SCAMPER action being analyzed
+   * @param modification - The specific modification being made
+   * @param history - Previous modifications in this session
+   * @returns Path impact analysis including flexibility and commitment levels
+   * @throws Error if action is invalid
    */
   private analyzeScamperPathImpact(
     action: ScamperAction,
     modification: string,
     history: ScamperModificationHistory[] = []
   ): ScamperPathImpact {
+    // Validate inputs
+    if (!action || typeof action !== 'string') {
+      throw new Error('Invalid SCAMPER action provided');
+    }
+
+    if (!Array.isArray(history)) {
+      console.warn('Invalid history provided, using empty array');
+      history = [];
+    }
+
     // Base impact for each action type
     const baseImpacts: Record<ScamperAction, Partial<ScamperPathImpact>> = {
       substitute: {
@@ -1323,6 +1360,11 @@ export class LateralThinkingServer {
       },
     };
 
+    // Validate action exists in base impacts
+    if (!baseImpacts[action]) {
+      throw new Error(`Unknown SCAMPER action: ${action}`);
+    }
+
     const impact = { ...baseImpacts[action] } as ScamperPathImpact;
 
     // Analyze dependencies based on modification history
@@ -1330,9 +1372,20 @@ export class LateralThinkingServer {
     impact.optionsClosed = this.identifyClosedOptions(action, modification, history);
     impact.optionsOpened = this.identifyOpenedOptions(action, modification);
 
-    // Adjust flexibility based on cumulative history
+    // Adjust flexibility based on cumulative history with performance optimization
     if (history.length > 0) {
-      impact.flexibilityRetention *= 0.9 ** history.length; // Each modification reduces flexibility
+      // Use cached calculation for very long histories
+      if (history.length > PDA_SCAMPER_CONFIG.MAX_HISTORY_BEFORE_CACHE) {
+        // For very long histories, use approximation: flexibility = base * decay^50 * additional_decay
+        const cachedDecay =
+          PDA_SCAMPER_CONFIG.FLEXIBILITY_DECAY_RATE ** PDA_SCAMPER_CONFIG.MAX_HISTORY_BEFORE_CACHE;
+        const additionalDecay =
+          0.99 ** (history.length - PDA_SCAMPER_CONFIG.MAX_HISTORY_BEFORE_CACHE);
+        impact.flexibilityRetention *= cachedDecay * additionalDecay;
+      } else {
+        // Normal calculation for reasonable history lengths
+        impact.flexibilityRetention *= PDA_SCAMPER_CONFIG.FLEXIBILITY_DECAY_RATE ** history.length;
+      }
     }
 
     return impact;
@@ -1441,7 +1494,7 @@ export class LateralThinkingServer {
     // Suggest reversible actions
     const _reversibleActions: ScamperAction[] = ['substitute', 'adapt', 'modify', 'reverse'];
 
-    if (flexibilityScore < 0.3) {
+    if (flexibilityScore < PDA_SCAMPER_CONFIG.CRITICAL_FLEXIBILITY_THRESHOLD) {
       alternatives.push('⚠️ Critical flexibility warning! Consider:');
 
       // If current action is high-commitment, suggest lower commitment alternatives
@@ -2876,7 +2929,7 @@ export class LateralThinkingServer {
         thinkingInput.modificationHistory = modificationHistory;
 
         // Generate alternative suggestions if flexibility is low
-        if (currentFlexibility < 0.3) {
+        if (currentFlexibility < PDA_SCAMPER_CONFIG.CRITICAL_FLEXIBILITY_THRESHOLD) {
           thinkingInput.alternativeSuggestions = this.generateScamperAlternatives(
             thinkingInput.scamperAction,
             currentFlexibility

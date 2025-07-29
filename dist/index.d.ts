@@ -231,11 +231,26 @@ export declare class LateralThinkingServer {
      */
     private getScamperInfo;
     /**
-     * Enhanced getScamperInfo for PDA-SCAMPER with path indicators
+     * Enhanced getScamperInfo for PDA-SCAMPER with path indicators and commitment levels
+     *
+     * Path indicators explain the level of commitment and reversibility:
+     * - 🔄 Low commitment: Easily reversible actions (modify, reverse, put_to_other_use)
+     * - ⚠️ Medium commitment: Reversible but with cost (substitute, adapt)
+     * - 🔒 High commitment: Difficult to reverse (combine)
+     * - 🔒 Irreversible: Cannot be undone (eliminate)
+     *
+     * @param action - The SCAMPER action to get information for
+     * @returns Enhanced info including path indicators and commitment levels
      */
     private getScamperInfoPDA;
     /**
      * Analyzes the path impact of a SCAMPER modification
+     *
+     * @param action - The SCAMPER action being analyzed
+     * @param modification - The specific modification being made
+     * @param history - Previous modifications in this session
+     * @returns Path impact analysis including flexibility and commitment levels
+     * @throws Error if action is invalid
      */
     private analyzeScamperPathImpact;
     private identifyScamperDependencies;
