@@ -385,7 +385,7 @@ export class PathMemoryManager {
     let flexibilityScore = availableRatio;
     for (const event of this.pathMemory.pathHistory) {
       if (event.flexibilityImpact !== undefined) {
-        flexibilityScore *= (1 - event.flexibilityImpact);
+        flexibilityScore *= 1 - event.flexibilityImpact;
       }
     }
     this.pathMemory.currentFlexibility.flexibilityScore = flexibilityScore;

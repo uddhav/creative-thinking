@@ -8,6 +8,8 @@ import type {
   ExecuteThinkingStepInput,
   PlanThinkingSessionInput,
   LateralTechnique,
+  ScamperAction,
+  ScamperPathImpact,
 } from '../index.js';
 
 interface ServerResponse {
@@ -47,7 +49,7 @@ interface ExecutionResponse {
     action: string;
     modification: string;
     timestamp: string;
-    impact: any;
+    impact: ScamperPathImpact;
     cumulativeFlexibility: number;
   }>;
 }
@@ -89,7 +91,7 @@ describe('PDA-SCAMPER Enhancement', () => {
       totalSteps: 7,
       output,
       nextStepNeeded,
-      scamperAction: action as any,
+      scamperAction: action as ScamperAction,
       sessionId,
     };
 
@@ -100,8 +102,8 @@ describe('PDA-SCAMPER Enhancement', () => {
 
   describe('Planning Phase', () => {
     it('should include path indicators in SCAMPER workflow', async () => {
-      const planId = await createPlan('Improve a coffee mug design');
-      
+      await createPlan('Improve a coffee mug design');
+
       const input: PlanThinkingSessionInput = {
         problem: 'Improve a coffee mug design',
         techniques: ['scamper'] as LateralTechnique[],
@@ -112,11 +114,13 @@ describe('PDA-SCAMPER Enhancement', () => {
 
       // Check that each step has path indicators
       expect(planData.workflow).toHaveLength(7);
-      
+
       // Check specific high-commitment actions
       const eliminateStep = planData.workflow.find(w => w.description.includes('Eliminate'));
       expect(eliminateStep?.description).toContain('🔒'); // Lock indicator
-      expect(eliminateStep?.riskConsiderations).toContain('⚠️ IRREVERSIBLE ACTION - Cannot be undone');
+      expect(eliminateStep?.riskConsiderations).toContain(
+        '⚠️ IRREVERSIBLE ACTION - Cannot be undone'
+      );
 
       const combineStep = planData.workflow.find(w => w.description.includes('Combine'));
       expect(combineStep?.description).toContain('🔒'); // Lock indicator
@@ -184,13 +188,34 @@ describe('PDA-SCAMPER Enhancement', () => {
       const flexibilityScores: number[] = [];
 
       // Execute multiple high-commitment actions
-      const step1 = await executeStep(planId, undefined, 1, 'combine', 'Combine seat and back into single unit', true);
+      const step1 = await executeStep(
+        planId,
+        undefined,
+        1,
+        'combine',
+        'Combine seat and back into single unit',
+        true
+      );
       flexibilityScores.push(step1.flexibilityScore!);
 
-      const step2 = await executeStep(planId, step1.sessionId, 2, 'eliminate', 'Remove armrests', true);
+      const step2 = await executeStep(
+        planId,
+        step1.sessionId,
+        2,
+        'eliminate',
+        'Remove armrests',
+        true
+      );
       flexibilityScores.push(step2.flexibilityScore!);
 
-      const step3 = await executeStep(planId, step1.sessionId, 3, 'combine', 'Integrate wheels into base', true);
+      const step3 = await executeStep(
+        planId,
+        step1.sessionId,
+        3,
+        'combine',
+        'Integrate wheels into base',
+        true
+      );
       flexibilityScores.push(step3.flexibilityScore!);
 
       // Verify flexibility decreases with each high-commitment action
@@ -203,21 +228,38 @@ describe('PDA-SCAMPER Enhancement', () => {
       const planId = await createPlan('Package redesign');
 
       // Execute high-commitment actions to reduce flexibility
-      const step1 = await executeStep(planId, undefined, 1, 'eliminate', 'Remove outer packaging', true);
-      const step2 = await executeStep(planId, step1.sessionId, 2, 'combine', 'Fuse lid to container', true);
-      const step3 = await executeStep(planId, step1.sessionId, 3, 'eliminate', 'Remove all labels', true);
+      const step1 = await executeStep(
+        planId,
+        undefined,
+        1,
+        'eliminate',
+        'Remove outer packaging',
+        true
+      );
+      await executeStep(planId, step1.sessionId, 2, 'combine', 'Fuse lid to container', true);
+      const step3 = await executeStep(
+        planId,
+        step1.sessionId,
+        3,
+        'eliminate',
+        'Remove all labels',
+        true
+      );
 
       // Test needs more aggressive actions to get below 0.3
       // For now, test that flexibility is degrading
       expect(step3.flexibilityScore).toBeLessThan(0.7);
-      
+
       // Test alternative suggestions generation separately with manual low flexibility
-      const lowFlexAlternatives = (step3 as any).alternativeSuggestions || 
-        (step3.flexibilityScore! < 0.3 ? [
-          '⚠️ Critical flexibility warning! Consider:',
-          'Try "Modify" instead - it preserves more options'
-        ] : undefined);
-      
+      const lowFlexAlternatives =
+        step3.alternativeSuggestions ||
+        (step3.flexibilityScore! < 0.3
+          ? [
+              '⚠️ Critical flexibility warning! Consider:',
+              'Try "Modify" instead - it preserves more options',
+            ]
+          : undefined);
+
       if (step3.flexibilityScore! < 0.3 && lowFlexAlternatives) {
         expect(lowFlexAlternatives).toContain('⚠️ Critical flexibility warning! Consider:');
         expect(lowFlexAlternatives).toContain('Try "Modify" instead - it preserves more options');
@@ -227,9 +269,23 @@ describe('PDA-SCAMPER Enhancement', () => {
     it('should track modification history with path impacts', async () => {
       const planId = await createPlan('Improve bicycle design');
 
-      const step1 = await executeStep(planId, undefined, 1, 'substitute', 'Carbon fiber frame', true);
-      const step2 = await executeStep(planId, step1.sessionId, 2, 'modify', 'Enlarge wheels to 29 inches', true);
-      const step3 = await executeStep(planId, step1.sessionId, 3, 'put_to_other_use', 'Design for cargo hauling', true);
+      const step1 = await executeStep(
+        planId,
+        undefined,
+        1,
+        'substitute',
+        'Carbon fiber frame',
+        true
+      );
+      await executeStep(planId, step1.sessionId, 2, 'modify', 'Enlarge wheels to 29 inches', true);
+      const step3 = await executeStep(
+        planId,
+        step1.sessionId,
+        3,
+        'put_to_other_use',
+        'Design for cargo hauling',
+        true
+      );
 
       expect(step3.modificationHistory).toBeDefined();
       expect(step3.modificationHistory).toHaveLength(2); // Only includes previous steps
@@ -237,10 +293,10 @@ describe('PDA-SCAMPER Enhancement', () => {
       // Check history entries
       const history = step3.modificationHistory!;
       expect(history[0].action).toBe('substitute');
-      expect(history[0].impact.commitmentLevel).toBe('medium');
-      
+      expect(history[0].impact?.commitmentLevel).toBe('medium');
+
       expect(history[1].action).toBe('modify');
-      expect(history[1].impact.commitmentLevel).toBe('low');
+      expect(history[1].impact?.commitmentLevel).toBe('low');
 
       // Verify cumulative flexibility tracking
       expect(history[0].cumulativeFlexibility).toBeGreaterThan(history[1].cumulativeFlexibility);
@@ -249,13 +305,34 @@ describe('PDA-SCAMPER Enhancement', () => {
     it('should show different recovery paths for different actions', async () => {
       const planId = await createPlan('Software UI redesign');
 
-      const step1 = await executeStep(planId, undefined, 1, 'reverse', 'Flip navigation from top to bottom', true);
+      const step1 = await executeStep(
+        planId,
+        undefined,
+        1,
+        'reverse',
+        'Flip navigation from top to bottom',
+        true
+      );
       expect(step1.pathImpact?.recoveryPath).toContain('Reverse again to restore');
 
-      const step2 = await executeStep(planId, step1.sessionId, 2, 'adapt', 'Adapt for mobile-first design', true);
+      const step2 = await executeStep(
+        planId,
+        step1.sessionId,
+        2,
+        'adapt',
+        'Adapt for mobile-first design',
+        true
+      );
       expect(step2.pathImpact?.recoveryPath).toContain('Remove adaptations to restore original');
 
-      const step3 = await executeStep(planId, step1.sessionId, 3, 'eliminate', 'Remove all decorative elements', true);
+      const step3 = await executeStep(
+        planId,
+        step1.sessionId,
+        3,
+        'eliminate',
+        'Remove all decorative elements',
+        true
+      );
       expect(step3.pathImpact?.recoveryPath).toContain('Requires complete reconstruction');
     });
   });
@@ -265,12 +342,26 @@ describe('PDA-SCAMPER Enhancement', () => {
       const planId = await createPlan('Product innovation');
 
       // Option-generating action
-      const step1 = await executeStep(planId, undefined, 1, 'put_to_other_use', 'Market to different industry', true);
+      const step1 = await executeStep(
+        planId,
+        undefined,
+        1,
+        'put_to_other_use',
+        'Market to different industry',
+        true
+      );
       expect(step1.pathImpact?.optionsOpened.length).toBeGreaterThan(0);
       expect(step1.pathImpact?.optionsOpened).toContain('New market segments');
 
       // Option-closing action
-      const step2 = await executeStep(planId, step1.sessionId, 2, 'eliminate', 'Remove modular components', true);
+      const step2 = await executeStep(
+        planId,
+        step1.sessionId,
+        2,
+        'eliminate',
+        'Remove modular components',
+        true
+      );
       expect(step2.pathImpact?.optionsClosed.length).toBeGreaterThan(0);
       expect(step2.pathImpact?.optionsClosed).toContain('Features dependent on eliminated element');
     });
@@ -281,11 +372,18 @@ describe('PDA-SCAMPER Enhancement', () => {
       const planId = await createPlan('System architecture redesign');
 
       // Execute a high-commitment action
-      const step1 = await executeStep(planId, undefined, 1, 'combine', 'Merge databases into monolith', true);
+      const step1 = await executeStep(
+        planId,
+        undefined,
+        1,
+        'combine',
+        'Merge databases into monolith',
+        true
+      );
 
       // The ergodicity impact should reflect the path analysis
       expect(step1.sessionId).toBeDefined();
-      
+
       // High commitment actions should show in ergodicity tracking
       // (This would be visible in the visual output)
     });

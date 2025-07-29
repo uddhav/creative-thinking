@@ -286,10 +286,12 @@ export class LateralThinkingServer {
                         action: mh.action,
                     })),
                     // Cast pathImpact if present
-                    pathImpact: h.input.pathImpact ? {
-                        ...h.input.pathImpact,
-                        commitmentLevel: h.input.pathImpact.commitmentLevel,
-                    } : undefined,
+                    pathImpact: h.input.pathImpact
+                        ? {
+                            ...h.input.pathImpact,
+                            commitmentLevel: h.input.pathImpact.commitmentLevel,
+                        }
+                        : undefined,
                 })),
                 branches: Object.entries(loadedState.branches).reduce((acc, [key, value]) => {
                     acc[key] = value;
@@ -717,8 +719,7 @@ export class LateralThinkingServer {
         impact.optionsOpened = this.identifyOpenedOptions(action, modification);
         // Adjust flexibility based on cumulative history
         if (history.length > 0) {
-            const cumulativeFlexibility = history[history.length - 1].cumulativeFlexibility;
-            impact.flexibilityRetention *= (0.9 ** history.length); // Each modification reduces flexibility
+            impact.flexibilityRetention *= 0.9 ** history.length; // Each modification reduces flexibility
         }
         return impact;
     }
@@ -748,7 +749,7 @@ export class LateralThinkingServer {
         }
         return dependencies;
     }
-    identifyClosedOptions(action, modification, history) {
+    identifyClosedOptions(action, _modification, _history) {
         const closedOptions = [];
         switch (action) {
             case 'substitute':
@@ -770,7 +771,7 @@ export class LateralThinkingServer {
         }
         return closedOptions;
     }
-    identifyOpenedOptions(action, modification) {
+    identifyOpenedOptions(action, _modification) {
         const openedOptions = [];
         switch (action) {
             case 'substitute':
@@ -798,9 +799,9 @@ export class LateralThinkingServer {
     generateScamperAlternatives(currentAction, flexibilityScore) {
         const alternatives = [];
         // Suggest option-generating actions
-        const optionGeneratingActions = ['put_to_other_use', 'modify', 'reverse'];
+        const _optionGeneratingActions = ['put_to_other_use', 'modify', 'reverse'];
         // Suggest reversible actions
-        const reversibleActions = ['substitute', 'adapt', 'modify', 'reverse'];
+        const _reversibleActions = ['substitute', 'adapt', 'modify', 'reverse'];
         if (flexibilityScore < 0.3) {
             alternatives.push('⚠️ Critical flexibility warning! Consider:');
             // If current action is high-commitment, suggest lower commitment alternatives
@@ -1202,9 +1203,13 @@ export class LateralThinkingServer {
                     impact.optionsOpened = data.pathImpact.optionsOpened;
                     impact.reversibilityCost = data.pathImpact.reversible ? 0.2 : 0.8;
                     impact.commitmentLevel =
-                        data.pathImpact.commitmentLevel === 'irreversible' ? 1.0 :
-                            data.pathImpact.commitmentLevel === 'high' ? 0.7 :
-                                data.pathImpact.commitmentLevel === 'medium' ? 0.5 : 0.3;
+                        data.pathImpact.commitmentLevel === 'irreversible'
+                            ? 1.0
+                            : data.pathImpact.commitmentLevel === 'high'
+                                ? 0.7
+                                : data.pathImpact.commitmentLevel === 'medium'
+                                    ? 0.5
+                                    : 0.3;
                     // Add flexibility impact (inverse of retention)
                     impact.flexibilityImpact = 1 - data.pathImpact.flexibilityRetention;
                 }
@@ -1498,14 +1503,21 @@ export class LateralThinkingServer {
             parts.push(`├${border}┤`);
             parts.push(`│ ${chalk.cyan('🛤️  Path Impact Analysis:'.padEnd(maxLength - 2))} │`);
             // Commitment level
-            const commitmentColor = data.pathImpact.commitmentLevel === 'irreversible' ? chalk.red :
-                data.pathImpact.commitmentLevel === 'high' ? chalk.yellow :
-                    data.pathImpact.commitmentLevel === 'medium' ? chalk.blue : chalk.green;
+            const commitmentColor = data.pathImpact.commitmentLevel === 'irreversible'
+                ? chalk.red
+                : data.pathImpact.commitmentLevel === 'high'
+                    ? chalk.yellow
+                    : data.pathImpact.commitmentLevel === 'medium'
+                        ? chalk.blue
+                        : chalk.green;
             parts.push(`│ ${commitmentColor(`Commitment: ${data.pathImpact.commitmentLevel.toUpperCase()}`).padEnd(maxLength - 2)} │`);
             // Flexibility score
             if (data.flexibilityScore !== undefined) {
-                const flexColor = data.flexibilityScore < 0.3 ? chalk.red :
-                    data.flexibilityScore < 0.6 ? chalk.yellow : chalk.green;
+                const flexColor = data.flexibilityScore < 0.3
+                    ? chalk.red
+                    : data.flexibilityScore < 0.6
+                        ? chalk.yellow
+                        : chalk.green;
                 parts.push(`│ ${flexColor(`Flexibility: ${(data.flexibilityScore * 100).toFixed(0)}%`).padEnd(maxLength - 2)} │`);
             }
             // Options closed
@@ -1928,7 +1940,7 @@ export class LateralThinkingServer {
                     currentFlexibility = baseFlexibility * pathImpact.flexibilityRetention;
                 }
                 // Create modification history entry
-                const modEntry = {
+                const _modEntry = {
                     action: thinkingInput.scamperAction,
                     modification: thinkingInput.output,
                     timestamp: new Date().toISOString(),

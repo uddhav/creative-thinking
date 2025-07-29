@@ -6,7 +6,7 @@ export type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 
 export type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green' | 'purple';
 export type ScamperAction = 'substitute' | 'combine' | 'adapt' | 'modify' | 'put_to_other_use' | 'eliminate' | 'reverse';
 export type DesignThinkingStage = 'empathize' | 'define' | 'ideate' | 'prototype' | 'test';
-interface ScamperPathImpact {
+export interface ScamperPathImpact {
     reversible: boolean;
     dependenciesCreated: string[];
     optionsClosed: string[];

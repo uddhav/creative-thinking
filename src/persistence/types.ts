@@ -37,7 +37,7 @@ export interface LateralThinkingInput {
   randomStimulus?: string;
   connections?: string[];
   scamperAction?: string;
-  
+
   // PDA-SCAMPER fields
   modificationHistory?: Array<{
     action: string;
@@ -65,7 +65,7 @@ export interface LateralThinkingInput {
   };
   flexibilityScore?: number;
   alternativeSuggestions?: string[];
-  
+
   successExample?: string;
   extractedConcepts?: string[];
   abstractedPatterns?: string[];
