@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-explicit-any */
 /**
  * Integration tests for the three-layer architecture
  * Tests the complete flow: Discovery -> Planning -> Execution
@@ -62,7 +63,6 @@ describe('Three-Layer Architecture Integration', () => {
       expect(plan.successCriteria).toBeDefined();
 
       // Layer 3: Execution
-      let sessionId: string | undefined;
       const firstTechnique = plan.workflow[0];
 
       // Execute first step
@@ -92,7 +92,7 @@ describe('Three-Layer Architecture Integration', () => {
       expect(execution.currentStep).toBe(1);
       expect(execution.guidance).toBeDefined();
 
-      sessionId = execution.sessionId;
+      const sessionId = execution.sessionId;
 
       // Continue execution
       const exec2Input: ExecuteThinkingStepInput = {
@@ -182,9 +182,11 @@ describe('Three-Layer Architecture Integration', () => {
       });
 
       const discovery = JSON.parse(discoveryResult.content[0].text);
-
-      // Plan multi-technique session
-      const techniques: LateralTechnique[] = ['design_thinking', 'scamper', 'triz'];
+      
+      // Use the top 3 recommended techniques from discovery
+      const techniques: LateralTechnique[] = discovery.recommendations
+        .slice(0, 3)
+        .map((r: any) => r.technique);
       const planResult = await server.planThinkingSession({
         problem: 'Design innovative product for elderly care',
         techniques,

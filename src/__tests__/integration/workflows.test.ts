@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-explicit-any */
 /**
  * Integration tests for complete technique workflows
  * Tests end-to-end execution of various creative thinking techniques
@@ -236,6 +237,10 @@ describe('Complete Technique Workflows', () => {
         nextStepNeeded: true,
         sessionId,
       });
+      
+      // Verify step 2 completed successfully
+      expect(step2.isError).toBeFalsy();
+      expect(JSON.parse(step2.content[0].text).currentStep).toBe(2);
 
       // Step 3: Ideas
       const step3 = await server.executeThinkingStep({
@@ -253,6 +258,10 @@ describe('Complete Technique Workflows', () => {
         nextStepNeeded: true,
         sessionId,
       });
+      
+      // Verify step 3 completed successfully
+      expect(step3.isError).toBeFalsy();
+      expect(JSON.parse(step3.content[0].text).currentStep).toBe(3);
 
       // Step 4: Validation
       const step4 = await server.executeThinkingStep({
@@ -398,7 +407,7 @@ function getScamperOutput(action: ScamperAction): string {
 function getDesignThinkingInput(stage: string, problem: string): any {
   const inputs: Record<string, any> = {
     empathize: {
-      output: 'Interviewed 10 remote workers about pain points',
+      output: `Interviewed 10 remote workers about pain points related to: ${problem}`,
       fields: {
         empathyInsights: [
           'Isolation from colleagues',
@@ -408,7 +417,7 @@ function getDesignThinkingInput(stage: string, problem: string): any {
       },
     },
     define: {
-      output: 'Core problem: Lack of spontaneous collaboration',
+      output: `Core problem identified for ${problem}: Lack of spontaneous collaboration`,
       fields: {
         problemStatement: 'Remote workers need better ways to collaborate spontaneously',
       },

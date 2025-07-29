@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-explicit-any */
 /**
  * Simplified Three-Layer Architecture Integration Tests
  * Tests the Discovery → Planning → Execution flow
@@ -7,7 +8,6 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { LateralThinkingServer } from '../../index.js';
 import type {
   DiscoverTechniquesInput,
-  PlanThinkingSessionInput,
   ExecuteThinkingStepInput,
 } from '../../index.js';
 

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-explicit-any */
 /**
  * Simplified MCP Protocol Integration Tests
  * Tests the actual server behavior through direct method calls
@@ -196,8 +197,6 @@ describe('MCP Protocol Integration - Simplified', () => {
       const plan = JSON.parse(planResult.content[0].text);
 
       // Execute all steps
-      let sessionId: string | undefined;
-
       // Step 1: Random stimulus
       const step1 = await server.executeThinkingStep({
         planId: plan.planId,
@@ -209,10 +208,10 @@ describe('MCP Protocol Integration - Simplified', () => {
         output: 'Using clock as stimulus',
         nextStepNeeded: true,
       });
-      sessionId = JSON.parse(step1.content[0].text).sessionId;
+      const sessionId = JSON.parse(step1.content[0].text).sessionId;
 
       // Step 2: Connections
-      const step2 = await server.executeThinkingStep({
+      await server.executeThinkingStep({
         planId: plan.planId,
         technique: 'random_entry',
         problem: 'Quick decision test',

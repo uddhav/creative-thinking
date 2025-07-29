@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-explicit-any */
 /**
  * Integration tests for MCP (Model Context Protocol) compliance
  * Tests the server's ability to handle MCP requests/responses correctly
@@ -247,7 +248,7 @@ async function simulateMCPRequest(server: Server, request: any): Promise<any> {
 
 // Setup MCP handlers (mirrors main server setup)
 function setupMCPHandlers(mcpServer: Server, thinkingServer: LateralThinkingServer): void {
-  mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
+  mcpServer.setRequestHandler(ListToolsRequestSchema, () => {
     return {
       tools: [
         {
@@ -383,55 +384,51 @@ function setupMCPHandlers(mcpServer: Server, thinkingServer: LateralThinkingServ
   mcpServer.setRequestHandler(CallToolRequestSchema, async (request: any) => {
     const { name, arguments: args } = request.params;
 
-    try {
-      let result;
+    let result;
 
-      switch (name) {
-        case 'discover_techniques':
-          if (!args.problem) {
-            throw new Error('Missing required parameter: problem');
-          }
-          result = await thinkingServer.discoverTechniques(args);
-          break;
+    switch (name) {
+      case 'discover_techniques':
+        if (!args.problem) {
+          throw new Error('Missing required parameter: problem');
+        }
+        result = await thinkingServer.discoverTechniques(args);
+        break;
 
-        case 'plan_thinking_session':
-          if (!args.problem || !args.techniques) {
-            throw new Error('Missing required parameters: problem and/or techniques');
-          }
-          result = await thinkingServer.planThinkingSession(args);
-          break;
+      case 'plan_thinking_session':
+        if (!args.problem || !args.techniques) {
+          throw new Error('Missing required parameters: problem and/or techniques');
+        }
+        result = await thinkingServer.planThinkingSession(args);
+        break;
 
-        case 'execute_thinking_step':
-          if (
-            !args.planId ||
-            !args.technique ||
-            !args.problem ||
-            args.currentStep === undefined ||
-            args.totalSteps === undefined ||
-            !args.output ||
-            args.nextStepNeeded === undefined
-          ) {
-            throw new Error('Missing required parameters');
-          }
-          result = await thinkingServer.executeThinkingStep(args);
-          break;
+      case 'execute_thinking_step':
+        if (
+          !args.planId ||
+          !args.technique ||
+          !args.problem ||
+          args.currentStep === undefined ||
+          args.totalSteps === undefined ||
+          !args.output ||
+          args.nextStepNeeded === undefined
+        ) {
+          throw new Error('Missing required parameters');
+        }
+        result = await thinkingServer.executeThinkingStep(args);
+        break;
 
-        default:
-          throw new Error(`Unknown tool: ${name}`);
-      }
-
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify(
-              result.content?.[0]?.text ? JSON.parse(result.content[0].text) : result
-            ),
-          },
-        ],
-      };
-    } catch (error) {
-      throw error;
+      default:
+        throw new Error(`Unknown tool: ${name}`);
     }
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(
+            result.content?.[0]?.text ? JSON.parse(result.content[0].text) : result
+          ),
+        },
+      ],
+    };
   });
 }

@@ -380,7 +380,10 @@ describe('Layered Tools Architecture', () => {
 
       expect(result.isError).toBeTruthy();
       const errorText = result.content[0]?.text || '';
-      const errorData = JSON.parse(errorText) as { error: string; plannedTechniques: string[] };
+      const errorData = JSON.parse(errorText) as {
+        error: string;
+        plannedTechniques: string[];
+      };
       expect(errorData.error).toBe('Technique mismatch');
       expect(errorData.plannedTechniques).toContain('six_hats');
     });

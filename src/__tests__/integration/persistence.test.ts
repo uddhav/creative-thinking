@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-explicit-any */
 /**
  * Integration tests for session persistence
  * Tests saving, loading, and managing sessions across server instances
@@ -6,9 +7,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { LateralThinkingServer } from '../../index.js';
 import { FileSystemAdapter } from '../../persistence/filesystem-adapter.js';
-import type { ExecuteThinkingStepInput } from '../../index.js';
 import fs from 'fs';
-import path from 'path';
 
 describe('Session Persistence Integration', () => {
   let server: LateralThinkingServer;
@@ -67,6 +66,10 @@ describe('Session Persistence Integration', () => {
         nextStepNeeded: true,
         sessionId,
       });
+      
+      // Verify step 2 completed before saving
+      expect(step2.isError).toBeFalsy();
+      expect(JSON.parse(step2.content[0].text).currentStep).toBe(2);
 
       // Save session with metadata
       await server.saveSession(sessionId, {
