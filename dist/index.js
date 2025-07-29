@@ -1003,10 +1003,14 @@ export class LateralThinkingServer {
         if (!data.problem || typeof data.problem !== 'string') {
             throw new ValidationError(ErrorCode.INVALID_FIELD_VALUE, 'Invalid problem: must be a string', 'problem');
         }
-        if (data.currentStep === undefined || data.currentStep === null || typeof data.currentStep !== 'number') {
+        if (data.currentStep === undefined ||
+            data.currentStep === null ||
+            typeof data.currentStep !== 'number') {
             throw new ValidationError(ErrorCode.INVALID_FIELD_VALUE, 'Invalid currentStep: must be a number', 'currentStep');
         }
-        if (data.totalSteps === undefined || data.totalSteps === null || typeof data.totalSteps !== 'number') {
+        if (data.totalSteps === undefined ||
+            data.totalSteps === null ||
+            typeof data.totalSteps !== 'number') {
             throw new ValidationError(ErrorCode.INVALID_FIELD_VALUE, 'Invalid totalSteps: must be a number', 'totalSteps');
         }
         if (!data.output || typeof data.output !== 'string') {
@@ -1464,9 +1468,10 @@ export class LateralThinkingServer {
                     'Apply Inventive Principles',
                     'Minimal Solution',
                 ];
-                techniqueInfo = (currentStep > 0 && currentStep <= trizSteps.length)
-                    ? trizSteps[currentStep - 1]
-                    : `Unknown TRIZ step ${currentStep}`;
+                techniqueInfo =
+                    currentStep > 0 && currentStep <= trizSteps.length
+                        ? trizSteps[currentStep - 1]
+                        : `Unknown TRIZ step ${currentStep}`;
                 if (data.contradiction && currentStep === 1) {
                     techniqueInfo += `: ${data.contradiction}`;
                 }
@@ -1480,9 +1485,10 @@ export class LateralThinkingServer {
                     'Develop Switching Rhythm',
                     'Integrate Insights',
                 ];
-                techniqueInfo = (currentStep > 0 && currentStep <= neuralSteps.length)
-                    ? neuralSteps[currentStep - 1]
-                    : `Unknown Neural State step ${currentStep}`;
+                techniqueInfo =
+                    currentStep > 0 && currentStep <= neuralSteps.length
+                        ? neuralSteps[currentStep - 1]
+                        : `Unknown Neural State step ${currentStep}`;
                 if (data.dominantNetwork && currentStep === 1) {
                     const networkName = data.dominantNetwork === 'dmn' ? 'Default Mode Network' : 'Executive Control Network';
                     techniqueInfo += ` - Currently: ${networkName}`;
@@ -1501,9 +1507,10 @@ export class LateralThinkingServer {
                     'Async-Sync Balance',
                     'Temporal Escape Routes',
                 ];
-                techniqueInfo = (currentStep > 0 && currentStep <= temporalSteps.length)
-                    ? temporalSteps[currentStep - 1]
-                    : `Unknown Temporal Work step ${currentStep}`;
+                techniqueInfo =
+                    currentStep > 0 && currentStep <= temporalSteps.length
+                        ? temporalSteps[currentStep - 1]
+                        : `Unknown Temporal Work step ${currentStep}`;
                 break;
             }
             case 'cross_cultural': {
@@ -1515,9 +1522,10 @@ export class LateralThinkingServer {
                     'Develop Parallel Solutions',
                     'Validate with Stakeholders',
                 ];
-                techniqueInfo = (currentStep > 0 && currentStep <= crossCulturalSteps.length)
-                    ? crossCulturalSteps[currentStep - 1]
-                    : `Unknown Cross-Cultural step ${currentStep}`;
+                techniqueInfo =
+                    currentStep > 0 && currentStep <= crossCulturalSteps.length
+                        ? crossCulturalSteps[currentStep - 1]
+                        : `Unknown Cross-Cultural step ${currentStep}`;
                 break;
             }
             case 'collective_intel': {
@@ -1529,9 +1537,10 @@ export class LateralThinkingServer {
                     'Create Synergy Combinations',
                     'Synthesize Collective Insights',
                 ];
-                techniqueInfo = (currentStep > 0 && currentStep <= collectiveSteps.length)
-                    ? collectiveSteps[currentStep - 1]
-                    : `Unknown Collective Intelligence step ${currentStep}`;
+                techniqueInfo =
+                    currentStep > 0 && currentStep <= collectiveSteps.length
+                        ? collectiveSteps[currentStep - 1]
+                        : `Unknown Collective Intelligence step ${currentStep}`;
                 break;
             }
         }
