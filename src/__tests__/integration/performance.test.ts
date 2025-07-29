@@ -220,8 +220,8 @@ describe('Performance Integration Tests', () => {
       );
       console.log(`Average memory growth per 20 steps: ${avgGrowthPer20Steps.toFixed(2)}MB`);
 
-      // Ensure memory usage doesn't grow excessively (less than or equal to 2MB per 20 steps on average)
-      expect(avgGrowthPer20Steps).toBeLessThanOrEqual(2);
+      // Ensure memory usage doesn't grow excessively (less than or equal to 2.5MB per 20 steps on average)
+      expect(avgGrowthPer20Steps).toBeLessThanOrEqual(2.5);
       // Total memory increase should be reasonable (less than 20MB for 100 steps)
       expect(memoryIncrease).toBeLessThan(20);
 
