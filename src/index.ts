@@ -1228,7 +1228,14 @@ export class LateralThinkingServer {
         enhancedFocus: 'Path dependencies, constraints, and ergodicity awareness',
       },
     };
-    return hatsInfo[color];
+    return (
+      hatsInfo[color] || {
+        name: 'Unknown Hat',
+        focus: 'Unknown focus',
+        emoji: '❓',
+        enhancedFocus: 'Unknown enhanced focus',
+      }
+    );
   }
 
   /**
@@ -1278,7 +1285,12 @@ export class LateralThinkingServer {
         riskQuestion: 'What assumptions break when reversed?',
       },
     };
-    return scamperInfo[action];
+    return (
+      scamperInfo[action] || {
+        description: 'Unknown action',
+        riskQuestion: 'What are the risks of this unknown action?',
+      }
+    );
   }
 
   /**
@@ -1607,7 +1619,14 @@ export class LateralThinkingServer {
         ],
       },
     };
-    return stageInfo[stage];
+    return (
+      stageInfo[stage] || {
+        description: 'Unknown stage',
+        emoji: '❓',
+        criticalLens: 'Unknown critical lens',
+        prompts: ['What are the implications of this unknown stage?'],
+      }
+    );
   }
 
   // Type guard to check if input is a session operation
@@ -2284,7 +2303,7 @@ export class LateralThinkingServer {
           'Abstract with Boundaries',
           'Apply with Risk Assessment',
         ];
-        techniqueInfo = stepNames[currentStep - 1];
+        techniqueInfo = stepNames[currentStep - 1] || `Concept Extraction Step ${currentStep}`;
         if (successExample && currentStep === 1) {
           techniqueInfo += `: ${successExample}`;
         }
@@ -2293,7 +2312,7 @@ export class LateralThinkingServer {
       case 'yes_and': {
         emoji = '🤝';
         const yesAndSteps = ['Accept (Yes)', 'Build (And)', 'Evaluate (But)', 'Integrate'];
-        techniqueInfo = yesAndSteps[currentStep - 1];
+        techniqueInfo = yesAndSteps[currentStep - 1] || `Yes And Step ${currentStep}`;
         if (initialIdea && currentStep === 1) {
           techniqueInfo += `: ${initialIdea}`;
         }
@@ -2322,7 +2341,7 @@ export class LateralThinkingServer {
           'Apply Inventive Principles',
           'Minimal Solution',
         ];
-        techniqueInfo = trizSteps[currentStep - 1];
+        techniqueInfo = trizSteps[currentStep - 1] || `TRIZ Step ${currentStep}`;
         if (data.contradiction && currentStep === 1) {
           techniqueInfo += `: ${data.contradiction}`;
         }
@@ -2336,7 +2355,7 @@ export class LateralThinkingServer {
           'Develop Switching Rhythm',
           'Integrate Insights',
         ];
-        techniqueInfo = neuralSteps[currentStep - 1];
+        techniqueInfo = neuralSteps[currentStep - 1] || `Neural State Step ${currentStep}`;
         if (data.dominantNetwork && currentStep === 1) {
           const networkName =
             data.dominantNetwork === 'dmn' ? 'Default Mode Network' : 'Executive Control Network';
@@ -2356,7 +2375,7 @@ export class LateralThinkingServer {
           'Async-Sync Balance',
           'Temporal Escape Routes',
         ];
-        techniqueInfo = temporalSteps[currentStep - 1];
+        techniqueInfo = temporalSteps[currentStep - 1] || `Temporal Work Step ${currentStep}`;
         break;
       }
       case 'cross_cultural': {
@@ -2368,7 +2387,7 @@ export class LateralThinkingServer {
           'Develop Parallel Solutions',
           'Validate with Stakeholders',
         ];
-        techniqueInfo = crossCulturalSteps[currentStep - 1];
+        techniqueInfo = crossCulturalSteps[currentStep - 1] || `Cross-Cultural Step ${currentStep}`;
         break;
       }
       case 'collective_intel': {
@@ -2380,7 +2399,8 @@ export class LateralThinkingServer {
           'Create Synergy Combinations',
           'Synthesize Collective Insights',
         ];
-        techniqueInfo = collectiveSteps[currentStep - 1];
+        techniqueInfo =
+          collectiveSteps[currentStep - 1] || `Collective Intelligence Step ${currentStep}`;
         break;
       }
     }
@@ -2395,7 +2415,8 @@ export class LateralThinkingServer {
       );
     }
 
-    const maxLength = Math.max(header.length, techniqueInfo.length, output.length) + 4;
+    const maxLength =
+      Math.max(header?.length || 0, techniqueInfo?.length || 0, output?.length || 0) + 4;
     const border = '─'.repeat(maxLength);
 
     parts.push(`\n┌${border}┐`);
@@ -3158,10 +3179,12 @@ export class LateralThinkingServer {
           'green',
           'purple',
         ];
-        if (nextStep <= 7) {
+        if (nextStep <= 7 && nextStep > 0) {
           const nextHat = hatOrder[nextStep - 1];
-          const hatInfo = this.getSixHatsInfo(nextHat);
-          return `Next: ${hatInfo.name} - Focus on ${hatInfo.enhancedFocus || hatInfo.focus}`;
+          if (nextHat) {
+            const hatInfo = this.getSixHatsInfo(nextHat);
+            return `Next: ${hatInfo.name} - Focus on ${hatInfo.enhancedFocus || hatInfo.focus}`;
+          }
         }
         break;
       }
@@ -3195,10 +3218,12 @@ export class LateralThinkingServer {
           'eliminate',
           'reverse',
         ];
-        if (nextStep <= 7) {
+        if (nextStep <= 7 && nextStep > 0) {
           const nextAction = scamperOrder[nextStep - 1];
-          const actionInfo = this.getScamperInfo(nextAction);
-          return `Next: ${nextAction.toUpperCase()} - ${actionInfo.description}`;
+          if (nextAction) {
+            const actionInfo = this.getScamperInfo(nextAction);
+            return `Next: ${nextAction.toUpperCase()} - ${actionInfo.description}`;
+          }
         }
         break;
       }
@@ -3230,10 +3255,12 @@ export class LateralThinkingServer {
           'prototype',
           'test',
         ];
-        if (nextStep <= 5) {
+        if (nextStep <= 5 && nextStep > 0) {
           const nextStage = stages[nextStep - 1];
-          const stageInfo = this.getDesignThinkingInfo(nextStage);
-          return `Next: ${nextStage.charAt(0).toUpperCase() + nextStage.slice(1)} - ${stageInfo.description} + ${stageInfo.criticalLens}`;
+          if (nextStage) {
+            const stageInfo = this.getDesignThinkingInfo(nextStage);
+            return `Next: ${nextStage.charAt(0).toUpperCase() + nextStage.slice(1)} - ${stageInfo.description} + ${stageInfo.criticalLens}`;
+          }
         }
         break;
       }
