@@ -1,0 +1,76 @@
+name: Version Bump
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  version-bump:
+    if: "!contains(github.event.head_commit.message, 'chore(release)')"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      
+      - name: Analyze commits and determine version bump
+        id: analyze
+        run: |
+          # Get commits since last tag
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "Last tag: $LAST_TAG"
+          
+          # Initialize bump type
+          BUMP_TYPE="patch"
+          
+          # Check commit messages
+          if git log $LAST_TAG..HEAD --pretty=format:"%s" | grep -qE "^(feat|feature)(\(.+\))?:"; then
+            BUMP_TYPE="minor"
+          fi
+          
+          if git log $LAST_TAG..HEAD --pretty=format:"%B" | grep -q "BREAKING CHANGE"; then
+            BUMP_TYPE="major"
+          fi
+          
+          echo "bump_type=$BUMP_TYPE" >> $GITHUB_OUTPUT
+          echo "Determined bump type: $BUMP_TYPE"
+      
+      - name: Bump version and create changelog
+        run: |
+          npm run release:${{ steps.analyze.outputs.bump_type }}
+      
+      - name: Push changes
+        run: |
+          git push --follow-tags origin main
+      
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.package-version.outputs.version }}
+          release_name: Release v${{ steps.package-version.outputs.version }}
+          body_path: ./CHANGELOG.md
+          draft: false
+          prerelease: false

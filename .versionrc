@@ -1,0 +1,26 @@
+{
+  "types": [
+    {"type": "feat", "section": "Features"},
+    {"type": "fix", "section": "Bug Fixes"},
+    {"type": "chore", "hidden": false, "section": "Chores"},
+    {"type": "docs", "section": "Documentation"},
+    {"type": "style", "hidden": false, "section": "Styles"},
+    {"type": "refactor", "section": "Code Refactoring"},
+    {"type": "perf", "section": "Performance Improvements"},
+    {"type": "test", "section": "Tests"},
+    {"type": "build", "hidden": false, "section": "Build System"},
+    {"type": "ci", "hidden": false, "section": "Continuous Integration"}
+  ],
+  "skip": {
+    "bump": false,
+    "changelog": false,
+    "commit": false,
+    "tag": false
+  },
+  "commitUrlFormat": "https://github.com/uddhav/creative-thinking/commit/{{hash}}",
+  "compareUrlFormat": "https://github.com/uddhav/creative-thinking/compare/{{previousTag}}...{{currentTag}}",
+  "issueUrlFormat": "https://github.com/uddhav/creative-thinking/issues/{{id}}",
+  "scripts": {
+    "postbump": "echo 'Remember to push tags with: git push --follow-tags origin main'"
+  }
+}

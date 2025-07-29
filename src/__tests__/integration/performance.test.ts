@@ -19,12 +19,27 @@ describe('Performance Integration Tests', () => {
   const TIMEOUT_100_STEPS = 10000 * PERF_TIMEOUT_MULTIPLIER;
   const TIMEOUT_50_REVISIONS = 5000 * PERF_TIMEOUT_MULTIPLIER;
 
+  // Helper to get memory usage in MB
+  function getMemoryUsageMB(): { heapUsed: number; external: number; rss: number } {
+    const usage = process.memoryUsage();
+    return {
+      heapUsed: Math.round(usage.heapUsed / 1024 / 1024),
+      external: Math.round(usage.external / 1024 / 1024),
+      rss: Math.round(usage.rss / 1024 / 1024),
+    };
+  }
+
   beforeEach(() => {
     server = new LateralThinkingServer();
+    // Force garbage collection if available (run tests with --expose-gc flag)
+    if (global.gc) {
+      global.gc();
+    }
   });
 
   describe('Concurrent Operations', () => {
     it('should handle 50 concurrent discovery requests', async () => {
+      const memoryBefore = getMemoryUsageMB();
       const startTime = Date.now();
 
       const promises = Array.from({ length: 50 }, (_, i) =>
@@ -37,6 +52,7 @@ describe('Performance Integration Tests', () => {
 
       const results = await Promise.all(promises);
       const duration = Date.now() - startTime;
+      const memoryAfter = getMemoryUsageMB();
 
       // All should succeed
       expect(results.every(r => !r.isError)).toBe(true);
@@ -50,7 +66,13 @@ describe('Performance Integration Tests', () => {
       // Should complete reasonably quickly (adjust threshold as needed)
       expect(duration).toBeLessThan(TIMEOUT_50_CONCURRENT); // 3 seconds for 50 requests (configurable)
 
+      // Memory usage check
+      const memoryIncrease = memoryAfter.heapUsed - memoryBefore.heapUsed;
       console.log(`50 concurrent discoveries completed in ${duration}ms`);
+      console.log(`Memory usage - Before: ${memoryBefore.heapUsed}MB, After: ${memoryAfter.heapUsed}MB, Increase: ${memoryIncrease}MB`);
+      
+      // Ensure memory usage doesn't grow excessively (less than 50MB for 50 requests)
+      expect(memoryIncrease).toBeLessThan(50);
     });
 
     it('should handle 100 concurrent planning requests', async () => {
@@ -135,6 +157,9 @@ describe('Performance Integration Tests', () => {
 
       let sessionId: string | undefined;
       const hatColors: SixHatsColor[] = ['blue', 'white', 'red', 'yellow', 'black', 'green'];
+      
+      const memoryBefore = getMemoryUsageMB();
+      const memorySnapshots: number[] = [];
 
       // Execute 100 steps (cycling through hats with revisions)
       const startTime = Date.now();
@@ -164,12 +189,37 @@ describe('Performance Integration Tests', () => {
         if (i === 0) {
           sessionId = safeJsonParse(result.content[0].text).sessionId;
         }
+        
+        // Take memory snapshot every 20 steps
+        if ((i + 1) % 20 === 0) {
+          memorySnapshots.push(getMemoryUsageMB().heapUsed);
+        }
       }
 
       const executionTime = Date.now() - startTime;
+      const memoryAfter = getMemoryUsageMB();
 
       // Should handle 100 steps reasonably
       expect(executionTime).toBeLessThan(TIMEOUT_100_STEPS); // 10 seconds for 100 steps (configurable)
+
+      // Analyze memory growth
+      const memoryIncrease = memoryAfter.heapUsed - memoryBefore.heapUsed;
+      
+      // Calculate average memory growth rate
+      let totalGrowth = 0;
+      for (let i = 1; i < memorySnapshots.length; i++) {
+        totalGrowth += memorySnapshots[i] - memorySnapshots[i - 1];
+      }
+      const avgGrowthPer20Steps = totalGrowth / (memorySnapshots.length - 1);
+      
+      console.log(`100 steps completed in ${executionTime}ms`);
+      console.log(`Memory usage - Before: ${memoryBefore.heapUsed}MB, After: ${memoryAfter.heapUsed}MB, Increase: ${memoryIncrease}MB`);
+      console.log(`Average memory growth per 20 steps: ${avgGrowthPer20Steps.toFixed(2)}MB`);
+      
+      // Ensure memory usage doesn't grow excessively (less than or equal to 2MB per 20 steps on average)
+      expect(avgGrowthPer20Steps).toBeLessThanOrEqual(2);
+      // Total memory increase should be reasonable (less than 20MB for 100 steps)
+      expect(memoryIncrease).toBeLessThan(20);
 
       // Verify session state
       const finalStep = await server.executeThinkingStep({
@@ -186,8 +236,6 @@ describe('Performance Integration Tests', () => {
 
       const finalData = safeJsonParse(finalStep.content[0].text);
       expect(finalData.sessionId).toBe(sessionId);
-
-      console.log(`100 steps executed in ${executionTime}ms`);
     });
 
     it('should handle deep revision chains efficiently', async () => {
