@@ -8,6 +8,7 @@ import { ErrorCode, ValidationError, SessionError, ExecutionError, PersistenceEr
 import { createAdapter, getDefaultConfig } from './persistence/index.js';
 import { ErgodicityManager } from './ergodicity/index.js';
 import { BarrierWarningLevel } from './ergodicity/earlyWarning/types.js';
+import { RealityIntegration } from './reality/integration.js';
 // PDA-SCAMPER Configuration Constants
 const PDA_SCAMPER_CONFIG = {
     // Flexibility decay rate per historical action
@@ -2004,10 +2005,27 @@ export class LateralThinkingServer {
                     thinkingInput.alternativeSuggestions = this.generateScamperAlternatives(thinkingInput.scamperAction, currentFlexibility);
                 }
             }
+            // Do reality assessment early if needed
+            let realityAssessment;
+            if (!thinkingInput.realityAssessment && thinkingInput.output) {
+                // Create a minimal ExecuteThinkingStepInput for reality assessment
+                const assessmentInput = {
+                    planId: 'temp-plan', // Not used by reality assessment
+                    technique: thinkingInput.technique,
+                    problem: thinkingInput.problem,
+                    currentStep: thinkingInput.currentStep,
+                    totalSteps: thinkingInput.totalSteps,
+                    output: thinkingInput.output,
+                    nextStepNeeded: thinkingInput.nextStepNeeded,
+                };
+                const result = RealityIntegration.enhanceWithReality(assessmentInput, thinkingInput.output);
+                realityAssessment = result.realityAssessment;
+            }
             // Add to history with proper timestamp
             const historyEntry = {
                 ...thinkingInput,
                 timestamp: new Date().toISOString(),
+                realityAssessment,
             };
             session.history.push(historyEntry);
             // Track path dependencies if ergodicity manager exists
@@ -2106,6 +2124,10 @@ export class LateralThinkingServer {
             // Generate memory-suggestive outputs
             const memoryOutputs = this.generateMemorySuggestiveOutputs(thinkingInput, session);
             Object.assign(response, memoryOutputs);
+            // Add reality assessment to response if it was calculated
+            if (realityAssessment) {
+                response.realityAssessment = realityAssessment;
+            }
             // Auto-save if enabled
             if (thinkingInput.autoSave && this.persistenceAdapter && session) {
                 try {
@@ -2678,6 +2700,9 @@ export class LateralThinkingServer {
                 combined.includes('contradiction') ||
                 combined.includes('constraint') ||
                 combined.includes('optimize') ||
+                combined.includes('perpetual motion') ||
+                combined.includes('unlimited energy') ||
+                (combined.includes('must') && combined.includes('but')) ||
                 args.preferredOutcome === 'systematic') {
                 recommendations.push({
                     technique: 'triz',
