@@ -25,6 +25,7 @@ import type { PathMemory } from './ergodicity/index.js';
 import { ErgodicityManager } from './ergodicity/index.js';
 import { BarrierWarningLevel } from './ergodicity/earlyWarning/types.js';
 import type { EarlyWarningState, EscapeProtocol } from './ergodicity/earlyWarning/types.js';
+import { RealityIntegration } from './reality/integration.js';
 
 export type LateralTechnique =
   | 'six_hats'
@@ -49,6 +50,25 @@ export type ScamperAction =
   | 'eliminate'
   | 'reverse';
 export type DesignThinkingStage = 'empathize' | 'define' | 'ideate' | 'prototype' | 'test';
+
+// Reality Assessment Types
+export type PossibilityLevel = 'impossible' | 'breakthrough-required' | 'difficult' | 'feasible';
+export type ImpossibilityType =
+  | 'logical'
+  | 'physical'
+  | 'technical'
+  | 'regulatory'
+  | 'resource'
+  | 'social';
+
+export interface RealityAssessment {
+  possibilityLevel: PossibilityLevel;
+  impossibilityType?: ImpossibilityType;
+  breakthroughsRequired?: string[]; // What would need to change
+  historicalPrecedents?: string[]; // Similar "impossible" → possible transitions
+  confidenceLevel: number; // 0-1, how confident we are in this assessment
+  mechanismExplanation?: string; // How it actually works (or why it doesn't)
+}
 
 // PDA-SCAMPER Configuration Constants
 const PDA_SCAMPER_CONFIG = {
@@ -249,6 +269,9 @@ export interface ExecuteThinkingStepInput {
   emergentPatterns?: string[];
   synergyCombinations?: string[];
   collectiveInsights?: string[];
+
+  // Reality Assessment field
+  realityAssessment?: RealityAssessment;
 }
 
 // Base interface for thinking operations
@@ -348,6 +371,9 @@ export interface ThinkingOperationData {
   emergentPatterns?: string[];
   synergyCombinations?: string[];
   collectiveInsights?: string[];
+
+  // Reality Assessment field
+  realityAssessment?: RealityAssessment;
 }
 
 // Interface for session management operations
@@ -438,6 +464,7 @@ interface LateralThinkingResponse {
   };
   nextStepGuidance?: string;
   autoSaveError?: string;
+  realityAssessment?: RealityAssessment;
 
   // PDA-SCAMPER specific fields
   modificationHistory?: ScamperModificationHistory[];
@@ -2937,10 +2964,29 @@ export class LateralThinkingServer {
         }
       }
 
+      // Do reality assessment early if needed
+      let realityAssessment: RealityAssessment | undefined;
+      if (!thinkingInput.realityAssessment && thinkingInput.output) {
+        // Create a minimal ExecuteThinkingStepInput for reality assessment
+        const assessmentInput: ExecuteThinkingStepInput = {
+          planId: 'temp-plan', // Not used by reality assessment
+          technique: thinkingInput.technique,
+          problem: thinkingInput.problem,
+          currentStep: thinkingInput.currentStep,
+          totalSteps: thinkingInput.totalSteps,
+          output: thinkingInput.output,
+          nextStepNeeded: thinkingInput.nextStepNeeded,
+        };
+
+        const result = RealityIntegration.enhanceWithReality(assessmentInput, thinkingInput.output);
+        realityAssessment = result.realityAssessment;
+      }
+
       // Add to history with proper timestamp
       const historyEntry = {
         ...thinkingInput,
         timestamp: new Date().toISOString(),
+        realityAssessment,
       };
       session.history.push(historyEntry);
 
@@ -3059,6 +3105,11 @@ export class LateralThinkingServer {
       // Generate memory-suggestive outputs
       const memoryOutputs = this.generateMemorySuggestiveOutputs(thinkingInput, session);
       Object.assign(response, memoryOutputs);
+
+      // Add reality assessment to response if it was calculated
+      if (realityAssessment) {
+        response.realityAssessment = realityAssessment;
+      }
 
       // Auto-save if enabled
       if (thinkingInput.autoSave && this.persistenceAdapter && session) {
@@ -3748,6 +3799,9 @@ export class LateralThinkingServer {
         combined.includes('contradiction') ||
         combined.includes('constraint') ||
         combined.includes('optimize') ||
+        combined.includes('perpetual motion') ||
+        combined.includes('unlimited energy') ||
+        (combined.includes('must') && combined.includes('but')) ||
         args.preferredOutcome === 'systematic'
       ) {
         recommendations.push({

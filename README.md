@@ -242,6 +242,50 @@ Executes a single step in your creative thinking process.
 - `branchFromStep` (integer, optional): Step number to branch from
 - `branchId` (string, optional): Identifier for the branch
 
+## Reality Gradient System
+
+The Reality Gradient System enhances creative thinking by annotating ideas with their possibility levels and breakthrough requirements, rather than blocking "impossible" ideas. This system shows what would need to change for ideas to become possible, with historical precedents.
+
+### Key Features
+
+- **Possibility Levels**: Ideas are assessed as `feasible`, `difficult`, `breakthrough-required`, or `impossible`
+- **Impossibility Types**: When ideas face barriers, they're categorized as:
+  - `logical` - Contains self-contradictory requirements
+  - `physical` - Violates known physical laws
+  - `technical` - Requires technology that doesn't exist yet
+  - `regulatory` - Prohibited by current laws/regulations
+  - `resource` - Requires unavailable resources
+  - `social` - Faces cultural/social barriers
+- **Historical Precedents**: Shows examples of similar "impossible" ideas that became possible
+- **Breakthrough Requirements**: Identifies what needs to change for the idea to work
+
+### How It Works
+
+1. **Automatic Assessment**: During the execution phase, outputs are automatically assessed for feasibility
+2. **Non-Blocking**: Assessments appear as informational annotations, not barriers
+3. **Context-Aware**: Domain detection (finance, healthcare, technology, etc.) enables relevant checks
+4. **Progressive Tracking**: Multi-step sessions show feasibility trends over time
+
+### Example Reality Assessment
+
+```
+📊 Reality Navigator:
+Idea: "Wireless energy transmission with 100% efficiency"
+Reality Assessment:
+- Level: breakthrough-required (physical)
+- Type: physical impossibility
+- Breakthroughs required:
+  • Discover new physical principles
+  • Work within constraints creatively
+  • Find loopholes in current understanding
+- Historical precedents:
+  • Pre-1903: Human flight was deemed impossible
+  • 1903: Wright Brothers achieve powered flight
+  • Breakthrough: Understanding of aerodynamics + lightweight engines
+- Mechanism: Would require new physics or energy source
+- Confidence: 90%
+```
+
 ## Thinking Techniques
 
 ### Six Thinking Hats Plus with Purple Hat
