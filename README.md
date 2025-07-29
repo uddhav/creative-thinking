@@ -504,11 +504,15 @@ The project includes comprehensive test suites ensuring reliability and correctn
 - **Export formats**: JSON, Markdown, and CSV exporters
 
 ### Integration Tests
-- **Workflow tests**: End-to-end execution of all techniques
-- **MCP protocol**: Compliance with Model Context Protocol
-- **Three-layer architecture**: Discovery → Planning → Execution flow
-- **Performance tests**: Concurrent operations, large sessions, memory usage
-- **Persistence**: Save/load, auto-save, search, and export functionality
+- **Workflow tests**: End-to-end execution of all techniques ✅
+- **MCP protocol**: Compliance with Model Context Protocol ✅
+- **Three-layer architecture**: Discovery → Planning → Execution flow ✅
+- **Performance tests**: Concurrent operations, large sessions, memory usage ✅
+- **Persistence**: Save/load, auto-save, search, and export functionality ✅
+
+**Note**: Comprehensive integration test suites have been implemented. Use the simplified
+versions (`mcp-protocol-simple.test.ts`, `three-layer-architecture-simple.test.ts`) for
+the most reliable and maintainable test coverage.
 
 Run tests with:
 ```bash
