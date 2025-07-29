@@ -12,6 +12,7 @@ import type {
   ScamperAction,
   DesignThinkingStage,
 } from '../../index.js';
+import { safeJsonParse } from './types.js';
 
 /**
  * Create a session with a specified number of steps already executed
@@ -32,7 +33,7 @@ export async function createSessionWithSteps(
     problem,
     techniques: [technique],
   });
-  const plan = JSON.parse(planResult.content[0].text);
+  const plan = safeJsonParse(planResult.content[0].text, 'plan result');
 
   let sessionId: string | undefined;
   const totalSteps = getTotalSteps(technique);
@@ -53,7 +54,8 @@ export async function createSessionWithSteps(
     const result = await server.executeThinkingStep(input);
 
     if (i === 1) {
-      sessionId = JSON.parse(result.content[0].text).sessionId as string;
+      const stepData = safeJsonParse<{ sessionId: string }>(result.content[0].text, 'step result');
+      sessionId = stepData.sessionId;
     }
   }
 
@@ -356,7 +358,7 @@ export async function measureTime<T>(
   const result = await fn();
   const duration = Date.now() - startTime;
 
-  if (label) {
+  if (label && process.env.DEBUG_TESTS) {
     console.log(`${label}: ${duration}ms`); // eslint-disable-line no-console
   }
 

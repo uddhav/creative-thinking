@@ -510,9 +510,9 @@ The project includes comprehensive test suites ensuring reliability and correctn
 - **Performance tests**: Concurrent operations, large sessions, memory usage ✅
 - **Persistence**: Save/load, auto-save, search, and export functionality ✅
 
-**Note**: Comprehensive integration test suites have been implemented. Use the simplified
-versions (`mcp-protocol-simple.test.ts`, `three-layer-architecture-simple.test.ts`) for
-the most reliable and maintainable test coverage.
+**Note**: Comprehensive integration test suites have been implemented in the `src/__tests__/integration/` 
+directory, providing complete coverage of MCP protocol compliance, three-layer architecture, 
+persistence, and performance testing.
 
 Run tests with:
 ```bash
