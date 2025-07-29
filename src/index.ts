@@ -1201,7 +1201,16 @@ export class LateralThinkingServer {
         enhancedFocus: 'Path dependencies, constraints, and ergodicity awareness',
       },
     };
-    return hatsInfo[color];
+
+    // Return default if color is invalid
+    return (
+      hatsInfo[color] || {
+        name: 'Unknown Hat',
+        focus: 'Unknown focus',
+        emoji: '❓',
+        enhancedFocus: 'Unknown enhanced focus',
+      }
+    );
   }
 
   /**
@@ -1251,7 +1260,15 @@ export class LateralThinkingServer {
         riskQuestion: 'What assumptions break when reversed?',
       },
     };
-    return scamperInfo[action];
+
+    // Return default if action is invalid
+    return (
+      scamperInfo[action] || {
+        description: 'Unknown action',
+        emoji: '❓',
+        riskQuestion: 'What are the risks of this unknown action?',
+      }
+    );
   }
 
   /**
@@ -1580,7 +1597,20 @@ export class LateralThinkingServer {
         ],
       },
     };
-    return stageInfo[stage];
+
+    // Return default if stage is invalid
+    return (
+      stageInfo[stage] || {
+        description: 'Unknown stage',
+        emoji: '❓',
+        criticalLens: 'Risk Assessment',
+        prompts: [
+          'What are we trying to achieve?',
+          'What could go wrong?',
+          'How do we measure success?',
+        ],
+      }
+    );
   }
 
   // Type guard to check if input is a session operation
@@ -3109,12 +3139,14 @@ export class LateralThinkingServer {
           'green',
           'purple',
         ];
-        if (nextStep <= 7) {
+        if (nextStep <= 7 && nextStep > 0) {
           const nextHat = hatOrder[nextStep - 1];
-          const hatInfo = this.getSixHatsInfo(nextHat);
-          return `Next: ${hatInfo.name} - Focus on ${hatInfo.enhancedFocus || hatInfo.focus}`;
+          if (nextHat) {
+            const hatInfo = this.getSixHatsInfo(nextHat);
+            return `Next: ${hatInfo.name} - Focus on ${hatInfo.enhancedFocus || hatInfo.focus}`;
+          }
         }
-        break;
+        return 'Complete the Six Thinking Hats process';
       }
 
       case 'po': {
@@ -3146,12 +3178,14 @@ export class LateralThinkingServer {
           'eliminate',
           'reverse',
         ];
-        if (nextStep <= 7) {
+        if (nextStep <= 7 && nextStep > 0) {
           const nextAction = scamperOrder[nextStep - 1];
-          const actionInfo = this.getScamperInfo(nextAction);
-          return `Next: ${nextAction.toUpperCase()} - ${actionInfo.description}`;
+          if (nextAction) {
+            const actionInfo = this.getScamperInfo(nextAction);
+            return `Next: ${nextAction.toUpperCase()} - ${actionInfo.description}`;
+          }
         }
-        break;
+        return 'Complete the SCAMPER process';
       }
 
       case 'concept_extraction': {
@@ -3181,12 +3215,14 @@ export class LateralThinkingServer {
           'prototype',
           'test',
         ];
-        if (nextStep <= 5) {
+        if (nextStep <= 5 && nextStep > 0) {
           const nextStage = stages[nextStep - 1];
-          const stageInfo = this.getDesignThinkingInfo(nextStage);
-          return `Next: ${nextStage.charAt(0).toUpperCase() + nextStage.slice(1)} - ${stageInfo.description} + ${stageInfo.criticalLens}`;
+          if (nextStage) {
+            const stageInfo = this.getDesignThinkingInfo(nextStage);
+            return `Next: ${nextStage.charAt(0).toUpperCase() + nextStage.slice(1)} - ${stageInfo.description} + ${stageInfo.criticalLens}`;
+          }
         }
-        break;
+        return 'Complete the Design Thinking process';
       }
       case 'triz': {
         const trizSteps = [

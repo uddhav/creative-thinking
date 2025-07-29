@@ -123,6 +123,7 @@ export class ErgodicityManager {
       // Check if escape protocol is needed
       if (
         earlyWarningState.recommendedAction === 'escape' &&
+        earlyWarningState.activeWarnings &&
         earlyWarningState.activeWarnings.length > 0
       ) {
         const criticalWarning = earlyWarningState.activeWarnings[0];
