@@ -237,7 +237,7 @@ describe('Complete Technique Workflows', () => {
         nextStepNeeded: true,
         sessionId,
       });
-      
+
       // Verify step 2 completed successfully
       expect(step2.isError).toBeFalsy();
       expect(JSON.parse(step2.content[0].text).currentStep).toBe(2);
@@ -258,7 +258,7 @@ describe('Complete Technique Workflows', () => {
         nextStepNeeded: true,
         sessionId,
       });
-      
+
       // Verify step 3 completed successfully
       expect(step3.isError).toBeFalsy();
       expect(JSON.parse(step3.content[0].text).currentStep).toBe(3);
@@ -298,7 +298,7 @@ describe('Complete Technique Workflows', () => {
       let sessionId: string | undefined;
 
       for (let i = 0; i < 5; i++) {
-        const stageInput = getDesignThinkingInput(stages[i] as any, problem);
+        const stageInput = getDesignThinkingInput(stages[i], problem);
 
         const result = await server.executeThinkingStep({
           planId: plan.planId,

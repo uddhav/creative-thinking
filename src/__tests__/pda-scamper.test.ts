@@ -166,7 +166,11 @@ describe('PDA-SCAMPER Enhancement', () => {
       expect(step2.pathImpact?.commitmentLevel).toBe('high');
       expect(step2.pathImpact?.reversible).toBe(false);
       expect(step2.pathImpact?.optionsClosed).toContain('Independent operation of elements');
-      expect(step2.flexibilityScore).toBeLessThan(step1.flexibilityScore!);
+      expect(step2.flexibilityScore).toBeDefined();
+      expect(step1.flexibilityScore).toBeDefined();
+      if (step1.flexibilityScore !== undefined && step2.flexibilityScore !== undefined) {
+        expect(step2.flexibilityScore).toBeLessThan(step1.flexibilityScore);
+      }
 
       // Step 6: Eliminate (irreversible)
       const step6 = await executeStep(
@@ -196,7 +200,9 @@ describe('PDA-SCAMPER Enhancement', () => {
         'Combine seat and back into single unit',
         true
       );
-      flexibilityScores.push(step1.flexibilityScore!);
+      if (step1.flexibilityScore !== undefined) {
+        flexibilityScores.push(step1.flexibilityScore);
+      }
 
       const step2 = await executeStep(
         planId,
@@ -206,7 +212,9 @@ describe('PDA-SCAMPER Enhancement', () => {
         'Remove armrests',
         true
       );
-      flexibilityScores.push(step2.flexibilityScore!);
+      if (step2.flexibilityScore !== undefined) {
+        flexibilityScores.push(step2.flexibilityScore);
+      }
 
       const step3 = await executeStep(
         planId,
@@ -216,7 +224,9 @@ describe('PDA-SCAMPER Enhancement', () => {
         'Integrate wheels into base',
         true
       );
-      flexibilityScores.push(step3.flexibilityScore!);
+      if (step3.flexibilityScore !== undefined) {
+        flexibilityScores.push(step3.flexibilityScore);
+      }
 
       // Verify flexibility decreases with each high-commitment action
       expect(flexibilityScores[0]).toBeGreaterThan(flexibilityScores[1]);
@@ -253,14 +263,18 @@ describe('PDA-SCAMPER Enhancement', () => {
       // Test alternative suggestions generation separately with manual low flexibility
       const lowFlexAlternatives =
         step3.alternativeSuggestions ||
-        (step3.flexibilityScore! < 0.3
+        (step3.flexibilityScore !== undefined && step3.flexibilityScore < 0.3
           ? [
               '⚠️ Critical flexibility warning! Consider:',
               'Try "Modify" instead - it preserves more options',
             ]
           : undefined);
 
-      if (step3.flexibilityScore! < 0.3 && lowFlexAlternatives) {
+      if (
+        step3.flexibilityScore !== undefined &&
+        step3.flexibilityScore < 0.3 &&
+        lowFlexAlternatives
+      ) {
         expect(lowFlexAlternatives).toContain('⚠️ Critical flexibility warning! Consider:');
         expect(lowFlexAlternatives).toContain('Try "Modify" instead - it preserves more options');
       }
@@ -291,15 +305,17 @@ describe('PDA-SCAMPER Enhancement', () => {
       expect(step3.modificationHistory).toHaveLength(2); // Only includes previous steps
 
       // Check history entries
-      const history = step3.modificationHistory!;
-      expect(history[0].action).toBe('substitute');
-      expect(history[0].impact?.commitmentLevel).toBe('medium');
+      if (step3.modificationHistory) {
+        const history = step3.modificationHistory;
+        expect(history[0].action).toBe('substitute');
+        expect(history[0].impact?.commitmentLevel).toBe('medium');
 
-      expect(history[1].action).toBe('modify');
-      expect(history[1].impact?.commitmentLevel).toBe('low');
+        expect(history[1].action).toBe('modify');
+        expect(history[1].impact?.commitmentLevel).toBe('low');
 
-      // Verify cumulative flexibility tracking
-      expect(history[0].cumulativeFlexibility).toBeGreaterThan(history[1].cumulativeFlexibility);
+        // Verify cumulative flexibility tracking
+        expect(history[0].cumulativeFlexibility).toBeGreaterThan(history[1].cumulativeFlexibility);
+      }
     });
 
     it('should show different recovery paths for different actions', async () => {

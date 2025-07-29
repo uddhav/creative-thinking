@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any */
 /**
  * Helper utilities for integration tests
  */
@@ -56,8 +57,12 @@ export async function createSessionWithSteps(
     }
   }
 
+  if (!sessionId) {
+    throw new Error('Failed to create session - no sessionId returned');
+  }
+
   return {
-    sessionId: sessionId!,
+    sessionId,
     planId: plan.planId,
     problem,
     technique,
@@ -301,7 +306,7 @@ export function createMCPRequest(method: string, params: any = {}, id: number = 
  * Verify session contains expected data
  */
 export function verifySessionData(
-  sessionData: any, // eslint-disable-line @typescript-eslint/no-explicit-any
+  sessionData: any,
   expectations: {
     technique?: LateralTechnique;
     problem?: string;
@@ -311,29 +316,24 @@ export function verifySessionData(
   }
 ): void {
   if (expectations.technique) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     expect(sessionData.technique).toBe(expectations.technique);
   }
 
   if (expectations.problem) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     expect(sessionData.problem).toBe(expectations.problem);
   }
 
   if (expectations.stepCount !== undefined) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     expect(sessionData.currentStep).toBe(expectations.stepCount);
   }
 
   if (expectations.hasInsights) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     expect(sessionData.insights).toBeDefined();
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+
     expect(sessionData.insights.length).toBeGreaterThan(0);
   }
 
   if (expectations.isComplete !== undefined) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     expect(sessionData.nextStepNeeded).toBe(!expectations.isComplete);
   }
 }

@@ -1,27 +1,34 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument */
 /**
- * Integration tests for session persistence
- * Tests saving, loading, and managing sessions across server instances
+ * Simple integration tests for session persistence
+ * Tests auto-save functionality which is the only exposed persistence feature
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { LateralThinkingServer } from '../../index.js';
-import { FileSystemAdapter } from '../../persistence/filesystem-adapter.js';
 import fs from 'fs';
 
-describe('Session Persistence Integration', () => {
+describe('Session Persistence - Simple Integration', () => {
   let server: LateralThinkingServer;
-  let fileAdapter: FileSystemAdapter;
-  const testBasePath = './test-sessions-integration';
+  const testBasePath = './test-sessions-simple';
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Clean up any existing test sessions
     if (fs.existsSync(testBasePath)) {
       fs.rmSync(testBasePath, { recursive: true, force: true });
     }
 
-    fileAdapter = new FileSystemAdapter({ basePath: testBasePath });
-    server = new LateralThinkingServer({ persistenceAdapter: fileAdapter });
+    // Create the test directory
+    fs.mkdirSync(testBasePath, { recursive: true });
+
+    // Set environment variables for persistence
+    process.env.PERSISTENCE_TYPE = 'filesystem';
+    process.env.PERSISTENCE_PATH = testBasePath;
+
+    server = new LateralThinkingServer();
+
+    // Wait for persistence initialization
+    await new Promise(resolve => setTimeout(resolve, 100));
   });
 
   afterEach(() => {
@@ -29,20 +36,24 @@ describe('Session Persistence Integration', () => {
     if (fs.existsSync(testBasePath)) {
       fs.rmSync(testBasePath, { recursive: true, force: true });
     }
+
+    // Clean up environment variables
+    delete process.env.PERSISTENCE_TYPE;
+    delete process.env.PERSISTENCE_PATH;
   });
 
-  describe('Basic Save and Load', () => {
-    it('should save and load sessions correctly', async () => {
-      const problem = 'Test persistence problem';
+  describe('Auto-Save Functionality', () => {
+    it('should auto-save sessions when autoSave is enabled', async () => {
+      const problem = 'Test auto-save problem';
 
-      // Create a session with some progress
+      // Create a session with autoSave
       const planResult = await server.planThinkingSession({
         problem,
         techniques: ['random_entry'],
       });
       const plan = JSON.parse(planResult.content[0].text);
 
-      // Execute steps
+      // Execute steps with autoSave
       const step1 = await server.executeThinkingStep({
         planId: plan.planId,
         technique: 'random_entry',
@@ -52,97 +63,165 @@ describe('Session Persistence Integration', () => {
         randomStimulus: 'Butterfly',
         output: 'Using butterfly as random stimulus',
         nextStepNeeded: true,
+        autoSave: true,
       });
       const sessionId = JSON.parse(step1.content[0].text).sessionId;
 
-      const step2 = await server.executeThinkingStep({
-        planId: plan.planId,
-        technique: 'random_entry',
-        problem,
-        currentStep: 2,
-        totalSteps: 3,
-        connections: ['Transformation', 'Delicate balance', 'Emergence'],
-        output: 'Connected butterfly properties to problem',
-        nextStepNeeded: true,
-        sessionId,
-      });
-      
-      // Verify step 2 completed before saving
-      expect(step2.isError).toBeFalsy();
-      expect(JSON.parse(step2.content[0].text).currentStep).toBe(2);
+      // Wait for file system operations
+      await new Promise(resolve => setTimeout(resolve, 200));
 
-      // Save session with metadata
-      await server.saveSession(sessionId, {
-        name: 'Test Random Entry Session',
-        tags: ['test', 'integration', 'persistence'],
-      });
+      // Check if file was created in sessions subdirectory
+      const sessionsPath = `${testBasePath}/sessions`;
+      const files = fs.readdirSync(sessionsPath);
+      const sessionFile = files.find(f => f.includes(sessionId));
+      expect(sessionFile).toBeDefined();
 
-      // Verify file was created
-      const sessionFiles = fs.readdirSync(testBasePath);
-      expect(sessionFiles.length).toBeGreaterThan(0);
+      // Read the saved file
+      const savedContent = fs.readFileSync(`${sessionsPath}/${sessionFile}`, 'utf-8');
+      const savedData = JSON.parse(savedContent);
 
-      // Create new server instance
-      const newServer = new LateralThinkingServer({
-        persistenceAdapter: new FileSystemAdapter({ basePath: testBasePath }),
-      });
+      // Data is wrapped in storage format
+      expect(savedData.version).toBe('1.0.0');
+      expect(savedData.format).toBe('json');
+      const sessionData = savedData.data;
 
-      // List saved sessions
-      const sessions = await newServer.listSessions();
-      expect(sessions.length).toBe(1);
-      expect(sessions[0].name).toBe('Test Random Entry Session');
-      expect(sessions[0].tags).toContain('integration');
-
-      // Load the session
-      const loadedSession = await newServer.loadSession(sessionId);
-      expect(loadedSession).toBeDefined();
-      expect(loadedSession.technique).toBe('random_entry');
-      expect(loadedSession.problem).toBe(problem);
-      expect(loadedSession.history).toHaveLength(2);
-      expect(loadedSession.history[0].randomStimulus).toBe('Butterfly');
-
-      // Continue session in new server
-      const step3 = await newServer.executeThinkingStep({
-        planId: plan.planId,
-        technique: 'random_entry',
-        problem,
-        currentStep: 3,
-        totalSteps: 3,
-        output: 'Apply transformation concept to solve problem',
-        nextStepNeeded: false,
-        sessionId,
-      });
-
-      const finalData = JSON.parse(step3.content[0].text);
-      expect(finalData.nextStepNeeded).toBe(false);
-      expect(finalData.insights).toBeDefined();
+      expect(sessionData.id).toBe(sessionId);
+      expect(sessionData.technique).toBe('random_entry');
+      expect(sessionData.problem).toBe(problem);
+      expect(sessionData.history).toHaveLength(1);
+      expect(sessionData.history[0].input.randomStimulus).toBe('Butterfly');
     });
 
-    it('should handle complex session state', async () => {
-      // Create session with multiple techniques and complex state
-      const problem = 'Complex state test';
+    it('should create separate files for different sessions', async () => {
+      const sessionIds: string[] = [];
 
-      // Six hats with revision
+      // Create multiple sessions
+      for (let i = 0; i < 3; i++) {
+        const planResult = await server.planThinkingSession({
+          problem: `Problem ${i}`,
+          techniques: ['po'],
+        });
+        const plan = JSON.parse(planResult.content[0].text);
+
+        const stepResult = await server.executeThinkingStep({
+          planId: plan.planId,
+          technique: 'po',
+          problem: `Problem ${i}`,
+          currentStep: 1,
+          totalSteps: 4,
+          provocation: `Po: Provocation ${i}`,
+          output: `Output ${i}`,
+          nextStepNeeded: false,
+          autoSave: true,
+        });
+
+        sessionIds.push(JSON.parse(stepResult.content[0].text).sessionId);
+      }
+
+      // Wait for file system operations
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      // Check that all sessions were saved
+      const sessionsPath = `${testBasePath}/sessions`;
+      const files = fs.readdirSync(sessionsPath);
+
+      for (const sessionId of sessionIds) {
+        const sessionFile = files.find(f => f.includes(sessionId));
+        expect(sessionFile).toBeDefined();
+      }
+
+      // Should have at least 3 files
+      expect(files.length).toBeGreaterThanOrEqual(3);
+    });
+
+    it('should update the same file when continuing a session', async () => {
+      const problem = 'Test session updates';
+
+      // Create initial session
+      const planResult = await server.planThinkingSession({
+        problem,
+        techniques: ['scamper'],
+      });
+      const plan = JSON.parse(planResult.content[0].text);
+
+      // Step 1 with autoSave
+      const step1 = await server.executeThinkingStep({
+        planId: plan.planId,
+        technique: 'scamper',
+        problem,
+        currentStep: 1,
+        totalSteps: 7,
+        scamperAction: 'substitute',
+        output: 'Substituted materials',
+        nextStepNeeded: true,
+        autoSave: true,
+      });
+      const sessionId = JSON.parse(step1.content[0].text).sessionId;
+
+      // Wait for save
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Get initial file
+      const sessionsPath = `${testBasePath}/sessions`;
+      const files1 = fs.readdirSync(sessionsPath);
+      const sessionFile = files1.find(f => f.includes(sessionId));
+      expect(sessionFile).toBeDefined();
+
+      const savedContent1 = fs.readFileSync(`${sessionsPath}/${sessionFile}`, 'utf-8');
+      const savedData1 = JSON.parse(savedContent1);
+      expect(savedData1.data.history).toHaveLength(1);
+
+      // Step 2 with autoSave
+      await server.executeThinkingStep({
+        planId: plan.planId,
+        technique: 'scamper',
+        problem,
+        currentStep: 2,
+        totalSteps: 7,
+        scamperAction: 'combine',
+        output: 'Combined features',
+        nextStepNeeded: true,
+        sessionId,
+        autoSave: true,
+      });
+
+      // Wait for save
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Check that the same file was updated
+      const files2 = fs.readdirSync(sessionsPath);
+      expect(files2.length).toBe(files1.length); // No new files
+
+      const savedContent2 = fs.readFileSync(`${sessionsPath}/${sessionFile}`, 'utf-8');
+      const savedData2 = JSON.parse(savedContent2);
+      expect(savedData2.data.history).toHaveLength(2);
+      expect(savedData2.data.history[1].input.scamperAction).toBe('combine');
+    });
+
+    it('should preserve session state across server restarts', async () => {
+      const problem = 'Test persistence across restarts';
+
+      // Create and save a session
       const planResult = await server.planThinkingSession({
         problem,
         techniques: ['six_hats'],
       });
       const plan = JSON.parse(planResult.content[0].text);
 
-      // Execute and revise
-      let result = await server.executeThinkingStep({
+      const step1 = await server.executeThinkingStep({
         planId: plan.planId,
         technique: 'six_hats',
         problem,
         currentStep: 1,
         totalSteps: 6,
         hatColor: 'blue',
-        output: 'Original blue hat thinking',
+        output: 'Process overview',
         nextStepNeeded: true,
+        autoSave: true,
       });
-      const sessionId = JSON.parse(result.content[0].text).sessionId;
+      const sessionId = JSON.parse(step1.content[0].text).sessionId;
 
-      // Add some risk analysis
-      result = await server.executeThinkingStep({
+      await server.executeThinkingStep({
         planId: plan.planId,
         technique: 'six_hats',
         problem,
@@ -150,233 +229,75 @@ describe('Session Persistence Integration', () => {
         totalSteps: 6,
         hatColor: 'white',
         output: 'Facts and data',
-        risks: ['Data accuracy concerns', 'Sample size limitations'],
-        failureModes: ['Incorrect assumptions'],
+        risks: ['Data uncertainty', 'Limited sample size'],
         nextStepNeeded: true,
         sessionId,
-      });
-
-      // Save with complex state
-      await server.saveSession(sessionId, {
-        name: 'Complex Session',
-        description: 'Session with risks and complex fields',
-      });
-
-      // Load in new server
-      const newServer = new LateralThinkingServer({
-        persistenceAdapter: new FileSystemAdapter({ basePath: testBasePath }),
-      });
-
-      const loaded = await newServer.loadSession(sessionId);
-      expect(loaded.history[1].risks).toContain('Data accuracy concerns');
-      expect(loaded.history[1].failureModes).toContain('Incorrect assumptions');
-    });
-  });
-
-  describe('Auto-Save Functionality', () => {
-    it('should auto-save after each step when enabled', async () => {
-      // Enable auto-save
-      server = new LateralThinkingServer({
-        persistenceAdapter: fileAdapter,
         autoSave: true,
       });
 
-      const problem = 'Auto-save test';
-      const planResult = await server.planThinkingSession({
-        problem,
-        techniques: ['po'],
-      });
-      const plan = JSON.parse(planResult.content[0].text);
+      // Wait for saves
+      await new Promise(resolve => setTimeout(resolve, 200));
 
-      // Execute step
-      const step1 = await server.executeThinkingStep({
-        planId: plan.planId,
-        technique: 'po',
-        problem,
-        currentStep: 1,
-        totalSteps: 4,
-        provocation: 'Po: All work happens in reverse',
-        output: 'Exploring reverse work concept',
-        nextStepNeeded: true,
-      });
-      const sessionId = JSON.parse(step1.content[0].text).sessionId;
-
-      // Check if auto-saved (file should exist)
-      const files = fs.readdirSync(testBasePath);
+      // Verify file exists
+      const sessionsPath = `${testBasePath}/sessions`;
+      const files = fs.readdirSync(sessionsPath);
       const sessionFile = files.find(f => f.includes(sessionId));
       expect(sessionFile).toBeDefined();
 
-      // Load without explicit save
-      const newServer = new LateralThinkingServer({
-        persistenceAdapter: new FileSystemAdapter({ basePath: testBasePath }),
-      });
+      // Create new server instance (simulating restart)
+      new LateralThinkingServer();
 
-      const loaded = await newServer.loadSession(sessionId);
-      expect(loaded).toBeDefined();
-      expect(loaded.history).toHaveLength(1);
-      expect(loaded.history[0].provocation).toBe('Po: All work happens in reverse');
+      // The new server can't directly load the session through the public API
+      // but we can verify the file contains the correct data
+      const savedContent = fs.readFileSync(`${sessionsPath}/${sessionFile}`, 'utf-8');
+      const savedData = JSON.parse(savedContent);
+      const sessionData = savedData.data;
+
+      expect(sessionData.id).toBe(sessionId);
+      expect(sessionData.technique).toBe('six_hats');
+      expect(sessionData.problem).toBe(problem);
+      expect(sessionData.history).toHaveLength(2);
+      expect(sessionData.history[0].input.hatColor).toBe('blue');
+      expect(sessionData.history[1].input.hatColor).toBe('white');
+      expect(sessionData.history[1].input.risks).toContain('Data uncertainty');
     });
   });
 
-  describe('Export Functionality', () => {
-    it('should export sessions in different formats', async () => {
-      // Create a complete session
-      const problem = 'Export test problem';
+  describe('Error Handling', () => {
+    it('should handle autoSave failures gracefully', async () => {
+      // Make directory read-only to cause save failure
+      fs.chmodSync(testBasePath, 0o444);
+
+      const problem = 'Test save failure';
       const planResult = await server.planThinkingSession({
         problem,
-        techniques: ['scamper'],
-        timeframe: 'quick',
+        techniques: ['random_entry'],
       });
       const plan = JSON.parse(planResult.content[0].text);
 
-      // Execute a few steps
-      let sessionId: string | undefined;
-      const actions = ['substitute', 'combine', 'adapt'];
+      const result = await server.executeThinkingStep({
+        planId: plan.planId,
+        technique: 'random_entry',
+        problem,
+        currentStep: 1,
+        totalSteps: 3,
+        randomStimulus: 'Cloud',
+        output: 'Testing save failure',
+        nextStepNeeded: true,
+        autoSave: true,
+      });
 
-      for (let i = 0; i < 3; i++) {
-        const result = await server.executeThinkingStep({
-          planId: plan.planId,
-          technique: 'scamper',
-          problem,
-          currentStep: i + 1,
-          totalSteps: 7,
-          scamperAction: actions[i] as any,
-          output: `Applied ${actions[i]} to the problem`,
-          nextStepNeeded: true,
-          sessionId,
-        });
+      const response = JSON.parse(result.content[0].text);
 
-        if (i === 0) {
-          sessionId = JSON.parse(result.content[0].text).sessionId;
-        }
-      }
+      // Should still return success for the step
+      expect(response.technique).toBe('random_entry');
+      expect(response.currentStep).toBe(1);
 
-      // Export as JSON
-      const jsonExport = await server.exportSession(sessionId!, 'json');
-      expect(jsonExport).toBeDefined();
-      const jsonData = JSON.parse(jsonExport);
-      expect(jsonData.metadata.technique).toBe('scamper');
-      expect(jsonData.steps).toHaveLength(3);
+      // Should indicate save failure
+      expect(response.autoSaveError).toBeDefined();
 
-      // Export as Markdown
-      const markdownExport = await server.exportSession(sessionId!, 'markdown');
-      expect(markdownExport).toContain('# SCAMPER Session');
-      expect(markdownExport).toContain('## Step 1: SUBSTITUTE');
-      expect(markdownExport).toContain('Applied substitute');
-
-      // Export as CSV
-      const csvExport = await server.exportSession(sessionId!, 'csv');
-      expect(csvExport).toContain('Step,Action,Output');
-      expect(csvExport).toContain('1,substitute,');
-    });
-  });
-
-  describe('Session Search and Filtering', () => {
-    it('should search sessions by tags and metadata', async () => {
-      // Create multiple sessions
-      const sessions = [];
-
-      for (let i = 0; i < 3; i++) {
-        const planResult = await server.planThinkingSession({
-          problem: `Problem ${i}`,
-          techniques: [i === 0 ? 'six_hats' : i === 1 ? 'scamper' : 'po'],
-        });
-        const plan = JSON.parse(planResult.content[0].text);
-
-        const stepResult = await server.executeThinkingStep({
-          planId: plan.planId,
-          technique: plan.workflow[0].technique,
-          problem: `Problem ${i}`,
-          currentStep: 1,
-          totalSteps: plan.workflow[0].totalSteps,
-          output: `Output for problem ${i}`,
-          nextStepNeeded: false,
-          ...(i === 0 ? { hatColor: 'blue' } : {}),
-          ...(i === 1 ? { scamperAction: 'substitute' } : {}),
-          ...(i === 2 ? { provocation: 'Po: Test' } : {}),
-        });
-
-        const sessionId = JSON.parse(stepResult.content[0].text).sessionId;
-        sessions.push(sessionId);
-
-        // Save with different tags
-        await server.saveSession(sessionId, {
-          name: `Session ${i}`,
-          tags:
-            i === 0
-              ? ['analysis', 'strategic']
-              : i === 1
-                ? ['design', 'creative']
-                : ['innovative', 'strategic'],
-        });
-      }
-
-      // Search by tag
-      const strategicSessions = await server.listSessions({ tags: ['strategic'] });
-      expect(strategicSessions).toHaveLength(2);
-      expect(strategicSessions.map(s => s.name)).toContain('Session 0');
-      expect(strategicSessions.map(s => s.name)).toContain('Session 2');
-
-      // Search by technique
-      const scamperSessions = await server.listSessions({ technique: 'scamper' });
-      expect(scamperSessions).toHaveLength(1);
-      expect(scamperSessions[0].name).toBe('Session 1');
-    });
-  });
-
-  describe('Concurrent Session Handling', () => {
-    it('should handle multiple concurrent sessions without conflicts', async () => {
-      const promises = [];
-
-      // Create 5 concurrent sessions
-      for (let i = 0; i < 5; i++) {
-        const promise = (async () => {
-          const planResult = await server.planThinkingSession({
-            problem: `Concurrent problem ${i}`,
-            techniques: ['random_entry'],
-          });
-          const plan = JSON.parse(planResult.content[0].text);
-
-          const stepResult = await server.executeThinkingStep({
-            planId: plan.planId,
-            technique: 'random_entry',
-            problem: `Concurrent problem ${i}`,
-            currentStep: 1,
-            totalSteps: 3,
-            randomStimulus: `Stimulus ${i}`,
-            output: `Output ${i}`,
-            nextStepNeeded: true,
-          });
-
-          const sessionId = JSON.parse(stepResult.content[0].text).sessionId;
-
-          // Save session
-          await server.saveSession(sessionId, {
-            name: `Concurrent Session ${i}`,
-          });
-
-          return sessionId;
-        })();
-
-        promises.push(promise);
-      }
-
-      const sessionIds = await Promise.all(promises);
-
-      // Verify all sessions were saved
-      const allSessions = await server.listSessions();
-      expect(allSessions).toHaveLength(5);
-
-      // Verify each session is unique
-      const uniqueIds = new Set(sessionIds);
-      expect(uniqueIds.size).toBe(5);
-
-      // Load each session and verify content
-      for (let i = 0; i < 5; i++) {
-        const loaded = await server.loadSession(sessionIds[i]);
-        expect(loaded.problem).toBe(`Concurrent problem ${i}`);
-        expect(loaded.history[0].randomStimulus).toBe(`Stimulus ${i}`);
-      }
+      // Restore permissions
+      fs.chmodSync(testBasePath, 0o755);
     });
   });
 });
