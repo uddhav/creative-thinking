@@ -64,6 +64,10 @@ jobs:
         run: |
           git push --follow-tags origin main
       
+      - name: Get package version
+        id: package-version
+        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+      
       - name: Create GitHub Release
         uses: actions/create-release@v1
         env:

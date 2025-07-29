@@ -1,0 +1,177 @@
+name: PR Version Bump
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+
+jobs:
+  create-version-bump-pr:
+    if: github.event.pull_request.merged == true && !contains(github.event.pull_request.title, 'chore(release)')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      
+      - name: Analyze PR and determine version bump
+        id: analyze
+        run: |
+          # Get PR title and body
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          PR_BODY="${{ github.event.pull_request.body }}"
+          
+          # Initialize bump type
+          BUMP_TYPE="patch"
+          
+          # Check for conventional commit patterns
+          if echo "$PR_TITLE" | grep -qE "^(feat|feature)(\(.+\))?:"; then
+            BUMP_TYPE="minor"
+          fi
+          
+          # Check for breaking changes in PR body
+          if echo "$PR_BODY" | grep -qi "breaking change"; then
+            BUMP_TYPE="major"
+          fi
+          
+          # Check commit messages in PR
+          COMMITS=$(gh pr view ${{ github.event.pull_request.number }} --json commits -q '.commits[].commit.message')
+          
+          if echo "$COMMITS" | grep -qE "^(feat|feature)(\(.+\))?:"; then
+            BUMP_TYPE="minor"
+          fi
+          
+          if echo "$COMMITS" | grep -qi "BREAKING CHANGE"; then
+            BUMP_TYPE="major"
+          fi
+          
+          echo "bump_type=$BUMP_TYPE" >> $GITHUB_OUTPUT
+          echo "Determined bump type: $BUMP_TYPE"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Create version bump branch
+        run: |
+          BRANCH_NAME="chore/version-bump-$(date +%Y%m%d%H%M%S)"
+          git checkout -b $BRANCH_NAME
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_ENV
+      
+      - name: Bump version
+        id: bump
+        run: |
+          # Get current version
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          
+          # Bump version based on type
+          case "${{ steps.analyze.outputs.bump_type }}" in
+            major)
+              npm version major --no-git-tag-version
+              ;;
+            minor)
+              npm version minor --no-git-tag-version
+              ;;
+            patch)
+              npm version patch --no-git-tag-version
+              ;;
+          esac
+          
+          # Get new version
+          NEW_VERSION=$(node -p "require('./package.json').version")
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "Bumped version from $CURRENT_VERSION to $NEW_VERSION"
+      
+      - name: Generate changelog entry
+        run: |
+          # Create changelog entry for the PR
+          CHANGELOG_ENTRY="## [v${{ steps.bump.outputs.new_version }}] - $(date +%Y-%m-%d)\n\n"
+          CHANGELOG_ENTRY+="### Changes from PR #${{ github.event.pull_request.number }}\n\n"
+          CHANGELOG_ENTRY+="- ${{ github.event.pull_request.title }}\n"
+          
+          # Add PR commits summary
+          COMMITS=$(gh pr view ${{ github.event.pull_request.number }} --json commits -q '.commits[].commit.message' | head -5)
+          while IFS= read -r commit; do
+            if [[ ! -z "$commit" ]]; then
+              CHANGELOG_ENTRY+="  - $commit\n"
+            fi
+          done <<< "$COMMITS"
+          
+          # Update CHANGELOG.md if it exists
+          if [[ -f CHANGELOG.md ]]; then
+            echo -e "$CHANGELOG_ENTRY\n" > CHANGELOG.tmp
+            cat CHANGELOG.md >> CHANGELOG.tmp
+            mv CHANGELOG.tmp CHANGELOG.md
+          else
+            echo -e "# Changelog\n\n$CHANGELOG_ENTRY" > CHANGELOG.md
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Commit changes
+        run: |
+          git add package.json package-lock.json CHANGELOG.md
+          git commit -m "chore(release): bump version to ${{ steps.bump.outputs.new_version }}
+
+          Automated version bump after merging PR #${{ github.event.pull_request.number }}
+          - ${{ github.event.pull_request.title }}
+          - Bump type: ${{ steps.analyze.outputs.bump_type }}"
+      
+      - name: Push branch
+        run: |
+          git push origin ${{ env.branch_name }}
+      
+      - name: Create Pull Request
+        run: |
+          gh pr create \
+            --title "chore(release): bump version to ${{ steps.bump.outputs.new_version }}" \
+            --body "## Automated Version Bump
+
+          This PR was automatically created after merging PR #${{ github.event.pull_request.number }}.
+
+          ### Version Change
+          - **Bump Type**: ${{ steps.analyze.outputs.bump_type }}
+          - **New Version**: ${{ steps.bump.outputs.new_version }}
+
+          ### Merged PR Details
+          - **Title**: ${{ github.event.pull_request.title }}
+          - **Author**: @${{ github.event.pull_request.user.login }}
+          - **Merged by**: @${{ github.actor }}
+
+          ### What's included
+          - Updated \`package.json\` with new version
+          - Updated \`package-lock.json\`
+          - Updated \`CHANGELOG.md\` with PR details
+
+          ### Next Steps
+          1. Review the version bump
+          2. Merge this PR to trigger the release workflow
+          3. A GitHub release will be created automatically
+
+          ---
+          *This is an automated PR. Please review before merging.*" \
+            --base main \
+            --head ${{ env.branch_name }} \
+            --label "release" \
+            --label "automated"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
