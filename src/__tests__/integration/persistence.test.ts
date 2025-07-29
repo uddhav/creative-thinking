@@ -7,6 +7,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { LateralThinkingServer } from '../../index.js';
 import fs from 'fs';
+import { safeJsonParse } from '../helpers/types.js';
 
 describe('Session Persistence - Simple Integration', () => {
   let server: LateralThinkingServer;
@@ -14,12 +15,21 @@ describe('Session Persistence - Simple Integration', () => {
 
   beforeEach(async () => {
     // Clean up any existing test sessions
-    if (fs.existsSync(testBasePath)) {
-      fs.rmSync(testBasePath, { recursive: true, force: true });
+    try {
+      if (fs.existsSync(testBasePath)) {
+        fs.rmSync(testBasePath, { recursive: true, force: true });
+      }
+    } catch (error) {
+      console.warn('Failed to clean up test sessions:', error);
     }
 
     // Create the test directory
-    fs.mkdirSync(testBasePath, { recursive: true });
+    try {
+      fs.mkdirSync(testBasePath, { recursive: true });
+    } catch (error) {
+      console.error('Failed to create test directory:', error);
+      throw error; // This is critical for tests
+    }
 
     // Set environment variables for persistence
     process.env.PERSISTENCE_TYPE = 'filesystem';
@@ -33,8 +43,12 @@ describe('Session Persistence - Simple Integration', () => {
 
   afterEach(() => {
     // Clean up test sessions
-    if (fs.existsSync(testBasePath)) {
-      fs.rmSync(testBasePath, { recursive: true, force: true });
+    try {
+      if (fs.existsSync(testBasePath)) {
+        fs.rmSync(testBasePath, { recursive: true, force: true });
+      }
+    } catch (error) {
+      console.warn('Failed to clean up test sessions in afterEach:', error);
     }
 
     // Clean up environment variables
@@ -51,7 +65,7 @@ describe('Session Persistence - Simple Integration', () => {
         problem,
         techniques: ['random_entry'],
       });
-      const plan = JSON.parse(planResult.content[0].text);
+      const plan = safeJsonParse(planResult.content[0].text);
 
       // Execute steps with autoSave
       const step1 = await server.executeThinkingStep({
@@ -65,7 +79,7 @@ describe('Session Persistence - Simple Integration', () => {
         nextStepNeeded: true,
         autoSave: true,
       });
-      const sessionId = JSON.parse(step1.content[0].text).sessionId;
+      const sessionId = safeJsonParse(step1.content[0].text).sessionId;
 
       // Wait for file system operations
       await new Promise(resolve => setTimeout(resolve, 200));
@@ -78,7 +92,7 @@ describe('Session Persistence - Simple Integration', () => {
 
       // Read the saved file
       const savedContent = fs.readFileSync(`${sessionsPath}/${sessionFile}`, 'utf-8');
-      const savedData = JSON.parse(savedContent);
+      const savedData = safeJsonParse(savedContent);
 
       // Data is wrapped in storage format
       expect(savedData.version).toBe('1.0.0');
@@ -101,7 +115,7 @@ describe('Session Persistence - Simple Integration', () => {
           problem: `Problem ${i}`,
           techniques: ['po'],
         });
-        const plan = JSON.parse(planResult.content[0].text);
+        const plan = safeJsonParse(planResult.content[0].text);
 
         const stepResult = await server.executeThinkingStep({
           planId: plan.planId,
@@ -115,7 +129,7 @@ describe('Session Persistence - Simple Integration', () => {
           autoSave: true,
         });
 
-        sessionIds.push(JSON.parse(stepResult.content[0].text).sessionId);
+        sessionIds.push(safeJsonParse(stepResult.content[0].text).sessionId);
       }
 
       // Wait for file system operations
@@ -142,7 +156,7 @@ describe('Session Persistence - Simple Integration', () => {
         problem,
         techniques: ['scamper'],
       });
-      const plan = JSON.parse(planResult.content[0].text);
+      const plan = safeJsonParse(planResult.content[0].text);
 
       // Step 1 with autoSave
       const step1 = await server.executeThinkingStep({
@@ -156,7 +170,7 @@ describe('Session Persistence - Simple Integration', () => {
         nextStepNeeded: true,
         autoSave: true,
       });
-      const sessionId = JSON.parse(step1.content[0].text).sessionId;
+      const sessionId = safeJsonParse(step1.content[0].text).sessionId;
 
       // Wait for save
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -168,7 +182,7 @@ describe('Session Persistence - Simple Integration', () => {
       expect(sessionFile).toBeDefined();
 
       const savedContent1 = fs.readFileSync(`${sessionsPath}/${sessionFile}`, 'utf-8');
-      const savedData1 = JSON.parse(savedContent1);
+      const savedData1 = safeJsonParse(savedContent1);
       expect(savedData1.data.history).toHaveLength(1);
 
       // Step 2 with autoSave
@@ -193,7 +207,7 @@ describe('Session Persistence - Simple Integration', () => {
       expect(files2.length).toBe(files1.length); // No new files
 
       const savedContent2 = fs.readFileSync(`${sessionsPath}/${sessionFile}`, 'utf-8');
-      const savedData2 = JSON.parse(savedContent2);
+      const savedData2 = safeJsonParse(savedContent2);
       expect(savedData2.data.history).toHaveLength(2);
       expect(savedData2.data.history[1].input.scamperAction).toBe('combine');
     });
@@ -206,7 +220,7 @@ describe('Session Persistence - Simple Integration', () => {
         problem,
         techniques: ['six_hats'],
       });
-      const plan = JSON.parse(planResult.content[0].text);
+      const plan = safeJsonParse(planResult.content[0].text);
 
       const step1 = await server.executeThinkingStep({
         planId: plan.planId,
@@ -219,7 +233,7 @@ describe('Session Persistence - Simple Integration', () => {
         nextStepNeeded: true,
         autoSave: true,
       });
-      const sessionId = JSON.parse(step1.content[0].text).sessionId;
+      const sessionId = safeJsonParse(step1.content[0].text).sessionId;
 
       await server.executeThinkingStep({
         planId: plan.planId,
@@ -250,7 +264,7 @@ describe('Session Persistence - Simple Integration', () => {
       // The new server can't directly load the session through the public API
       // but we can verify the file contains the correct data
       const savedContent = fs.readFileSync(`${sessionsPath}/${sessionFile}`, 'utf-8');
-      const savedData = JSON.parse(savedContent);
+      const savedData = safeJsonParse(savedContent);
       const sessionData = savedData.data;
 
       expect(sessionData.id).toBe(sessionId);
@@ -273,7 +287,7 @@ describe('Session Persistence - Simple Integration', () => {
         problem,
         techniques: ['random_entry'],
       });
-      const plan = JSON.parse(planResult.content[0].text);
+      const plan = safeJsonParse(planResult.content[0].text);
 
       const result = await server.executeThinkingStep({
         planId: plan.planId,
@@ -287,7 +301,7 @@ describe('Session Persistence - Simple Integration', () => {
         autoSave: true,
       });
 
-      const response = JSON.parse(result.content[0].text);
+      const response = safeJsonParse(result.content[0].text);
 
       // Should still return success for the step
       expect(response.technique).toBe('random_entry');

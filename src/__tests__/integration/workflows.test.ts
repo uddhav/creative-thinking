@@ -12,6 +12,7 @@ import type {
   SixHatsColor,
   ScamperAction,
 } from '../../index.js';
+import { safeJsonParse } from '../helpers/types.js';
 
 describe('Complete Technique Workflows', () => {
   let server: LateralThinkingServer;
@@ -32,7 +33,7 @@ describe('Complete Technique Workflows', () => {
       };
 
       const planResult = await server.planThinkingSession(planInput);
-      const plan = JSON.parse(planResult.content[0].text);
+      const plan = safeJsonParse(planResult.content[0].text);
       expect(plan.planId).toBeDefined();
 
       let sessionId: string | undefined;
@@ -53,7 +54,7 @@ describe('Complete Technique Workflows', () => {
         };
 
         const result = await server.executeThinkingStep(stepInput);
-        const stepData = JSON.parse(result.content[0].text);
+        const stepData = safeJsonParse(result.content[0].text);
 
         expect(stepData.technique).toBe('six_hats');
         expect(stepData.currentStep).toBe(i + 1);
@@ -81,7 +82,7 @@ describe('Complete Technique Workflows', () => {
         problem,
         techniques: ['six_hats'],
       });
-      const plan = JSON.parse(planResult.content[0].text);
+      const plan = safeJsonParse(planResult.content[0].text);
 
       // Execute first 3 steps
       let sessionId: string | undefined;
@@ -101,7 +102,7 @@ describe('Complete Technique Workflows', () => {
         });
 
         if (i === 0) {
-          sessionId = JSON.parse(result.content[0].text).sessionId;
+          sessionId = safeJsonParse(result.content[0].text).sessionId;
         }
       }
 
@@ -120,7 +121,7 @@ describe('Complete Technique Workflows', () => {
         revisesStep: 2,
       });
 
-      const revisionData = JSON.parse(revisionResult.content[0].text);
+      const revisionData = safeJsonParse(revisionResult.content[0].text);
       expect(revisionData.technique).toBe('six_hats');
       expect(revisionData.currentStep).toBe(2);
 
@@ -137,7 +138,7 @@ describe('Complete Technique Workflows', () => {
         sessionId,
       });
 
-      expect(JSON.parse(continueResult.content[0].text).currentStep).toBe(4);
+      expect(safeJsonParse(continueResult.content[0].text).currentStep).toBe(4);
     });
   });
 
@@ -160,7 +161,7 @@ describe('Complete Technique Workflows', () => {
         techniques: ['scamper'],
         timeframe: 'thorough',
       });
-      const plan = JSON.parse(planResult.content[0].text);
+      const plan = safeJsonParse(planResult.content[0].text);
 
       let sessionId: string | undefined;
 
@@ -177,7 +178,7 @@ describe('Complete Technique Workflows', () => {
           sessionId,
         });
 
-        const stepData = JSON.parse(result.content[0].text);
+        const stepData = safeJsonParse(result.content[0].text);
 
         expect(stepData.technique).toBe('scamper');
         expect(stepData.currentStep).toBe(i + 1);
@@ -210,7 +211,7 @@ describe('Complete Technique Workflows', () => {
         problem,
         techniques: ['po'],
       });
-      const plan = JSON.parse(planResult.content[0].text);
+      const plan = safeJsonParse(planResult.content[0].text);
 
       // Step 1: Provocation
       const step1 = await server.executeThinkingStep({
@@ -223,7 +224,7 @@ describe('Complete Technique Workflows', () => {
         output: 'Forces immediate action and prevents email hoarding',
         nextStepNeeded: true,
       });
-      const sessionId = JSON.parse(step1.content[0].text).sessionId;
+      const sessionId = safeJsonParse(step1.content[0].text).sessionId;
 
       // Step 2: Principles
       const step2 = await server.executeThinkingStep({
@@ -240,7 +241,7 @@ describe('Complete Technique Workflows', () => {
 
       // Verify step 2 completed successfully
       expect(step2.isError).toBeFalsy();
-      expect(JSON.parse(step2.content[0].text).currentStep).toBe(2);
+      expect(safeJsonParse(step2.content[0].text).currentStep).toBe(2);
 
       // Step 3: Ideas
       const step3 = await server.executeThinkingStep({
@@ -261,7 +262,7 @@ describe('Complete Technique Workflows', () => {
 
       // Verify step 3 completed successfully
       expect(step3.isError).toBeFalsy();
-      expect(JSON.parse(step3.content[0].text).currentStep).toBe(3);
+      expect(safeJsonParse(step3.content[0].text).currentStep).toBe(3);
 
       // Step 4: Validation
       const step4 = await server.executeThinkingStep({
@@ -277,7 +278,7 @@ describe('Complete Technique Workflows', () => {
         sessionId,
       });
 
-      const finalData = JSON.parse(step4.content[0].text);
+      const finalData = safeJsonParse(step4.content[0].text);
       expect(finalData.nextStepNeeded).toBe(false);
       expect(finalData.insights).toBeDefined();
       expect(finalData.summary).toBeDefined();
@@ -293,7 +294,7 @@ describe('Complete Technique Workflows', () => {
         techniques: ['design_thinking'],
         objectives: ['User-centered approach', 'Rapid prototyping'],
       });
-      const plan = JSON.parse(planResult.content[0].text);
+      const plan = safeJsonParse(planResult.content[0].text);
 
       let sessionId: string | undefined;
 
@@ -313,7 +314,7 @@ describe('Complete Technique Workflows', () => {
           ...stageInput.fields,
         });
 
-        const stepData = JSON.parse(result.content[0].text);
+        const stepData = safeJsonParse(result.content[0].text);
 
         if (i === 0) {
           sessionId = stepData.sessionId;
@@ -342,7 +343,7 @@ describe('Complete Technique Workflows', () => {
         problem,
         techniques: ['concept_extraction'],
       });
-      const plan = JSON.parse(planResult.content[0].text);
+      const plan = safeJsonParse(planResult.content[0].text);
 
       // Execute with branch
       const step1 = await server.executeThinkingStep({
@@ -355,7 +356,7 @@ describe('Complete Technique Workflows', () => {
         output: 'Analyzing successful innovation policy',
         nextStepNeeded: true,
       });
-      const sessionId = JSON.parse(step1.content[0].text).sessionId;
+      const sessionId = safeJsonParse(step1.content[0].text).sessionId;
 
       // Branch to explore alternative
       const branch1 = await server.executeThinkingStep({
@@ -372,7 +373,7 @@ describe('Complete Technique Workflows', () => {
         branchId: 'alternative-analysis',
       });
 
-      const branchData = JSON.parse(branch1.content[0].text);
+      const branchData = safeJsonParse(branch1.content[0].text);
       expect(branchData.sessionId).toBeDefined();
     });
   });

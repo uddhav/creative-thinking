@@ -22,7 +22,7 @@ Key features tested:
 - Revision and branching
 - Technique-specific field validation
 
-### 2. MCP Protocol Tests (`mcp-protocol.test.ts`, `mcp-protocol-simple.test.ts`)
+### 2. MCP Protocol Tests (`mcp-protocol.test.ts`)
 
 Tests compliance with Model Context Protocol:
 
@@ -31,10 +31,10 @@ Tests compliance with Model Context Protocol:
 - **Error Handling**: Protocol-level error scenarios
 - **Request/Response Format**: JSON-RPC compliance
 
-**Note**: The simplified version (`mcp-protocol-simple.test.ts`) uses direct method calls instead of
-simulating MCP server handlers and is the recommended test suite.
+**Note**: These tests use direct method calls on the server instance for better maintainability and
+clearer test intentions.
 
-### 3. Three-Layer Architecture Tests (`three-layer-architecture.test.ts`, `three-layer-architecture-simple.test.ts`)
+### 3. Three-Layer Architecture Tests (`three-layer-architecture.test.ts`)
 
 Tests the core architectural flow:
 
@@ -44,8 +44,8 @@ Tests the core architectural flow:
 - **Error Recovery**: Graceful error handling
 - **Advanced Features**: Ergodicity tracking, contextual guidance
 
-**Note**: The simplified version (`three-layer-architecture-simple.test.ts`) uses direct server
-method calls and is the recommended test suite.
+**Note**: These tests validate the complete three-layer architecture using direct server method
+calls for clarity and maintainability.
 
 ### 4. Persistence Tests (`persistence.test.ts`)
 
@@ -99,20 +99,19 @@ The `helpers/integration.ts` file provides utilities for:
 ### ✅ Passing Tests
 
 - `workflows.test.ts` - All creative thinking technique workflows
-- `mcp-protocol-simple.test.ts` - Simplified MCP protocol compliance
-- `three-layer-architecture-simple.test.ts` - Simplified three-layer architecture
-- `persistence.test.ts` - Session persistence functionality
+- `mcp-protocol.test.ts` - MCP protocol compliance with direct method calls
+- `three-layer-architecture.test.ts` - Three-layer architecture validation
+- `persistence.test.ts` - Session persistence functionality with auto-save
+- `performance.test.ts` - System performance under various load conditions
 
 ### ⚠️ Known Issues
 
-1. **Original MCP Protocol Tests** (`mcp-protocol.test.ts`): Need adjustment for proper schema-based
-   handler setup
-2. **Original Three-Layer Tests** (`three-layer-architecture.test.ts`): Response format expectations
-   need updating
-3. **Performance Tests**: Some concurrent operation tests need timing adjustments
+1. **Performance Tests**: Hard-coded timeouts may cause failures on slower systems
+2. **JSON Parsing**: Direct parsing without error handling could fail on malformed responses
+3. **File System Operations**: Missing error handling in cleanup operations
 
-**Recommendation**: Use the simplified test versions (`*-simple.test.ts`) which provide the same
-coverage with more maintainable implementations.
+**Recommendation**: Consider environment-specific timeout configuration for performance tests to
+avoid CI/CD flakiness.
 
 ## Adding New Tests
 

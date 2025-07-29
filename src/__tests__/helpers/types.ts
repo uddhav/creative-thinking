@@ -88,5 +88,22 @@ export function parseServerResponse<T>(response: ServerResponse): T {
   if (response.isError) {
     throw new Error('Server returned error');
   }
-  return JSON.parse(response.content[0].text) as T;
+  return safeJsonParse<T>(response.content[0].text, 'server response');
+}
+
+/**
+ * Safely parse JSON with error handling
+ * @param text - JSON string to parse
+ * @param context - Optional context for error messages
+ * @returns Parsed object or throws descriptive error
+ */
+export function safeJsonParse<T = unknown>(text: string, context?: string): T {
+  try {
+    return JSON.parse(text) as T;
+  } catch (error) {
+    const errorMessage = context
+      ? `Failed to parse JSON in ${context}: ${error instanceof Error ? error.message : 'Unknown error'}`
+      : `Failed to parse JSON: ${error instanceof Error ? error.message : 'Unknown error'}`;
+    throw new Error(errorMessage);
+  }
 }
