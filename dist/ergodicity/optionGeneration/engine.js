@@ -9,6 +9,10 @@ import { StakeholderStrategy } from './strategies/stakeholder.js';
 import { ResourceStrategy } from './strategies/resource.js';
 import { CapabilityStrategy } from './strategies/capability.js';
 import { RecombinationStrategy } from './strategies/recombination.js';
+import { NeuralOptimizationStrategy } from './strategies/neuralOptimization.js';
+import { TemporalShiftingStrategy } from './strategies/temporalShifting.js';
+import { CulturalBridgingStrategy } from './strategies/culturalBridging.js';
+import { CollectiveDivergenceStrategy } from './strategies/collectiveDivergence.js';
 import { OptionEvaluator } from './evaluator.js';
 import { OPTION_GENERATION, FLEXIBILITY_THRESHOLDS, BARRIER_THRESHOLDS, RESOURCE_LIMITS, TEXT_LIMITS, CONSTRAINT_THRESHOLDS, } from './constants.js';
 import { ErrorCode, ValidationError } from '../../errors/index.js';
@@ -30,6 +34,10 @@ export class OptionGenerationEngine {
         this.strategies.set('resource', new ResourceStrategy());
         this.strategies.set('capability', new CapabilityStrategy());
         this.strategies.set('recombination', new RecombinationStrategy());
+        this.strategies.set('neural_optimization', new NeuralOptimizationStrategy());
+        this.strategies.set('temporal_shifting', new TemporalShiftingStrategy());
+        this.strategies.set('cultural_bridging', new CulturalBridgingStrategy());
+        this.strategies.set('collective_divergence', new CollectiveDivergenceStrategy());
         this.evaluator = new OptionEvaluator();
     }
     /**

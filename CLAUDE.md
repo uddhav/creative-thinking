@@ -238,6 +238,8 @@ When adding new thinking techniques:
 
 ## Code Submission Guidelines
 
+Run tasks with subagents in order to preserve main agent context.
+
 ## Pre-Commit Checklist (MANDATORY)
 1. **Run build**: `npm run build` to ensure TypeScript compiles
 2. **Run tests**: `npm run test:run` for affected areas

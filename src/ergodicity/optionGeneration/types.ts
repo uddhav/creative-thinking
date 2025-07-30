@@ -75,7 +75,11 @@ export type OptionGenerationStrategy =
   | 'temporal'
   | 'stakeholder'
   | 'resource'
-  | 'capability';
+  | 'capability'
+  | 'neural_optimization'
+  | 'temporal_shifting'
+  | 'cultural_bridging'
+  | 'collective_divergence';
 
 /**
  * Evaluation of an option's potential impact

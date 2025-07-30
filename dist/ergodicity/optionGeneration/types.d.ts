@@ -48,7 +48,7 @@ export type OptionCategory = 'structural' | 'temporal' | 'relational' | 'resourc
 /**
  * Generation strategies available
  */
-export type OptionGenerationStrategy = 'decomposition' | 'recombination' | 'abstraction' | 'inversion' | 'temporal' | 'stakeholder' | 'resource' | 'capability';
+export type OptionGenerationStrategy = 'decomposition' | 'recombination' | 'abstraction' | 'inversion' | 'temporal' | 'stakeholder' | 'resource' | 'capability' | 'neural_optimization' | 'temporal_shifting' | 'cultural_bridging' | 'collective_divergence';
 /**
  * Evaluation of an option's potential impact
  */
