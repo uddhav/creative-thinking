@@ -27,11 +27,6 @@ export interface SequentialThinkingSuggestion {
         [key: string]: string;
     };
 }
-export interface ComplexityAssessment {
-    level: 'low' | 'medium' | 'high';
-    factors: string[];
-    suggestion?: string;
-}
 export interface ScamperPathImpact {
     reversible: boolean;
     dependenciesCreated: string[];
