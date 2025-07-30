@@ -2,6 +2,27 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { LateralThinkingServer } from '../index.js';
 import type { ExecuteThinkingStepInput } from '../index.js';
 
+interface PlanResponse {
+  planId: string;
+  workflow: Array<{ technique: string; stepNumber: number }>;
+  estimatedSteps: number;
+  objectives: string[];
+  successCriteria: string[];
+  createdAt: number;
+}
+
+interface ExecutionResponse {
+  sessionId: string;
+  technique: string;
+  currentStep: number;
+  totalSteps: number;
+  nextStepNeeded: boolean;
+  historyLength: number;
+  branches: string[];
+  nextStepGuidance?: string;
+  error?: string;
+}
+
 describe('Array Bounds Checking Integration Tests', () => {
   let server: LateralThinkingServer;
 
@@ -27,7 +48,7 @@ describe('Array Bounds Checking Integration Tests', () => {
             problem: 'Test problem',
             techniques: [technique],
           });
-          const planResponse = JSON.parse(planResult.content[0].text);
+          const planResponse = JSON.parse(planResult.content[0].text) as PlanResponse;
 
           const input: ExecuteThinkingStepInput = {
             planId: planResponse.planId,
@@ -40,11 +61,11 @@ describe('Array Bounds Checking Integration Tests', () => {
           };
 
           const result = await server.executeThinkingStep(input);
-          const response = JSON.parse(result.content[0].text);
+          const response = JSON.parse(result.content[0].text) as ExecutionResponse;
 
           // Should contain "Complete the" and handle technique name transformation
           expect(response.nextStepGuidance).toContain('Complete the');
-          expect(response.nextStepGuidance.toLowerCase()).toContain(technique.replace(/_/g, ' '));
+          expect(response.nextStepGuidance?.toLowerCase()).toContain(technique.replace(/_/g, ' '));
         });
 
         it('should handle step numbers beyond array bounds', async () => {
@@ -52,7 +73,7 @@ describe('Array Bounds Checking Integration Tests', () => {
             problem: 'Test problem',
             techniques: [technique],
           });
-          const planResponse = JSON.parse(planResult.content[0].text);
+          const planResponse = JSON.parse(planResult.content[0].text) as PlanResponse;
 
           const input: ExecuteThinkingStepInput = {
             planId: planResponse.planId,
@@ -65,7 +86,7 @@ describe('Array Bounds Checking Integration Tests', () => {
           };
 
           const result = await server.executeThinkingStep(input);
-          const response = JSON.parse(result.content[0].text);
+          const response = JSON.parse(result.content[0].text) as ExecutionResponse;
 
           expect(response.nextStepGuidance).toContain('Complete the');
           expect(response.nextStepGuidance).not.toContain('undefined');
@@ -76,7 +97,7 @@ describe('Array Bounds Checking Integration Tests', () => {
             problem: 'Test problem',
             techniques: [technique],
           });
-          const planResponse = JSON.parse(planResult.content[0].text);
+          const planResponse = JSON.parse(planResult.content[0].text) as PlanResponse;
 
           const input: ExecuteThinkingStepInput = {
             planId: planResponse.planId,
@@ -89,7 +110,7 @@ describe('Array Bounds Checking Integration Tests', () => {
           };
 
           const result = await server.executeThinkingStep(input);
-          const response = JSON.parse(result.content[0].text);
+          const response = JSON.parse(result.content[0].text) as ExecutionResponse;
 
           // For step 0, next step is 1, which should be valid
           expect(response.nextStepGuidance).toBeDefined();
@@ -116,7 +137,7 @@ describe('Array Bounds Checking Integration Tests', () => {
             problem: 'Test problem',
             techniques: [technique],
           });
-          const planResponse = JSON.parse(planResult.content[0].text);
+          const planResponse = JSON.parse(planResult.content[0].text) as PlanResponse;
 
           // Test with invalid negative step
           const input: ExecuteThinkingStepInput = {
@@ -150,7 +171,7 @@ describe('Array Bounds Checking Integration Tests', () => {
             problem: 'Test problem',
             techniques: [technique],
           });
-          const planResponse = JSON.parse(planResult.content[0].text);
+          const planResponse = JSON.parse(planResult.content[0].text) as PlanResponse;
 
           const input: ExecuteThinkingStepInput = {
             planId: planResponse.planId,
@@ -187,7 +208,7 @@ describe('Array Bounds Checking Integration Tests', () => {
         problem: 'Test temporal problem',
         techniques: ['temporal_work'],
       });
-      const planResponse = JSON.parse(planResult.content[0].text);
+      const planResponse = JSON.parse(planResult.content[0].text) as PlanResponse;
 
       // Execute step 2 which tries to reference step 1
       const input: ExecuteThinkingStepInput = {
@@ -201,7 +222,7 @@ describe('Array Bounds Checking Integration Tests', () => {
       };
 
       const result = await server.executeThinkingStep(input);
-      const response = JSON.parse(result.content[0].text);
+      const response = JSON.parse(result.content[0].text) as ExecutionResponse;
 
       // Should fall back to generic guidance when history is missing
       expect(response.nextStepGuidance).toContain('Analyze circadian rhythms');
@@ -213,7 +234,7 @@ describe('Array Bounds Checking Integration Tests', () => {
         problem: 'Test temporal problem',
         techniques: ['temporal_work'],
       });
-      const planResponse = JSON.parse(planResult.content[0].text);
+      const planResponse = JSON.parse(planResult.content[0].text) as PlanResponse;
 
       const input: ExecuteThinkingStepInput = {
         planId: planResponse.planId,
@@ -226,7 +247,7 @@ describe('Array Bounds Checking Integration Tests', () => {
       };
 
       const result = await server.executeThinkingStep(input);
-      const response = JSON.parse(result.content[0].text);
+      const response = JSON.parse(result.content[0].text) as ExecutionResponse;
 
       // Should hit the default case
       expect(response.nextStepGuidance).toBe('Complete the Temporal Work Design process');
@@ -239,7 +260,7 @@ describe('Array Bounds Checking Integration Tests', () => {
         problem: 'Test problem',
         techniques: ['six_hats'],
       });
-      const planResponse = JSON.parse(planResult.content[0].text);
+      const planResponse = JSON.parse(planResult.content[0].text) as PlanResponse;
 
       const input: ExecuteThinkingStepInput = {
         planId: planResponse.planId,
@@ -249,14 +270,16 @@ describe('Array Bounds Checking Integration Tests', () => {
         totalSteps: 7,
         output: 'Test with invalid hat',
         nextStepNeeded: false,
-        hatColor: 'invalid_color' as any,
+        hatColor: 'invalid_color' as ExecuteThinkingStepInput['hatColor'],
       };
 
       const result = await server.executeThinkingStep(input);
 
       // Verify that validation catches invalid hat color
       expect(result.isError).toBe(true);
-      const errorData = JSON.parse(result.content[0].text);
+      const errorData = JSON.parse(result.content[0].text) as {
+        error: { code: string; message: string };
+      };
       expect(errorData.error.code).toBe('INVALID_FIELD_VALUE');
       expect(errorData.error.message).toBe('Invalid hatColor for six_hats technique');
     });
@@ -266,7 +289,7 @@ describe('Array Bounds Checking Integration Tests', () => {
         problem: 'Test problem',
         techniques: ['scamper'],
       });
-      const planResponse = JSON.parse(planResult.content[0].text);
+      const planResponse = JSON.parse(planResult.content[0].text) as PlanResponse;
 
       const input: ExecuteThinkingStepInput = {
         planId: planResponse.planId,
@@ -276,14 +299,16 @@ describe('Array Bounds Checking Integration Tests', () => {
         totalSteps: 7,
         output: 'Test with invalid action',
         nextStepNeeded: false,
-        scamperAction: 'invalid_action' as any,
+        scamperAction: 'invalid_action' as ExecuteThinkingStepInput['scamperAction'],
       };
 
       const result = await server.executeThinkingStep(input);
 
       // Verify that validation catches invalid SCAMPER action
       expect(result.isError).toBe(true);
-      const errorData = JSON.parse(result.content[0].text);
+      const errorData = JSON.parse(result.content[0].text) as {
+        error: { code: string; message: string };
+      };
       expect(errorData.error.code).toBe('INVALID_FIELD_VALUE');
       expect(errorData.error.message).toBe('Invalid scamperAction for scamper technique');
     });
