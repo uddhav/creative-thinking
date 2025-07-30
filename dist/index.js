@@ -9,6 +9,7 @@ import { createAdapter, getDefaultConfig } from './persistence/index.js';
 import { ErgodicityManager } from './ergodicity/index.js';
 import { BarrierWarningLevel } from './ergodicity/earlyWarning/types.js';
 import { RealityIntegration } from './reality/integration.js';
+import { HybridComplexityAnalyzer, COMPLEXITY_THRESHOLDS } from './complexity/index.js';
 // PDA-SCAMPER Configuration Constants
 const PDA_SCAMPER_CONFIG = {
     // Flexibility decay rate per historical action
@@ -21,6 +22,7 @@ const PDA_SCAMPER_CONFIG = {
     MAX_HISTORY_BEFORE_CACHE: 50,
 };
 export class LateralThinkingServer {
+    server;
     sessions = new Map();
     plans = new Map();
     currentSessionId = null;
@@ -28,6 +30,7 @@ export class LateralThinkingServer {
     cleanupInterval = null;
     persistenceAdapter = null;
     ergodicityManager;
+    complexityAnalyzer;
     // Session configuration with defaults
     config = {
         maxSessions: parseInt(process.env.MAX_SESSIONS || '100', 10),
@@ -37,10 +40,12 @@ export class LateralThinkingServer {
         enableMemoryMonitoring: process.env.ENABLE_MEMORY_MONITORING === 'true',
     };
     PLAN_TTL = 4 * 60 * 60 * 1000; // 4 hours for plans
-    constructor() {
+    constructor(server) {
+        this.server = server;
         this.disableThoughtLogging =
             (process.env.DISABLE_THOUGHT_LOGGING || '').toLowerCase() === 'true';
         this.ergodicityManager = new ErgodicityManager();
+        this.complexityAnalyzer = new HybridComplexityAnalyzer();
         this.startSessionCleanup();
         void this.initializePersistence();
     }
@@ -2211,7 +2216,7 @@ export class LateralThinkingServer {
                 }
             }
             // Assess execution complexity
-            const executionComplexity = this.assessExecutionComplexity(session, thinkingInput.technique);
+            const executionComplexity = await this.assessExecutionComplexity(session, thinkingInput.technique);
             // Get sequential thinking suggestions if complexity is high
             if (executionComplexity.level === 'high') {
                 // Get technique-specific sequential thinking suggestions
@@ -2844,77 +2849,25 @@ export class LateralThinkingServer {
         }
         return undefined;
     }
-    // Assess problem complexity
-    assessComplexity(input) {
-        const factors = [];
-        const problemLower = input.problem.toLowerCase();
-        const contextLower = (input.context || '').toLowerCase();
-        const combined = `${problemLower} ${contextLower}`;
-        // Check for multiple interacting elements
-        if (combined.includes('multiple') &&
-            (combined.includes('interact') || combined.includes('depend'))) {
-            factors.push('Multiple interacting elements');
-        }
-        // Check for conflicting requirements
-        if (combined.includes('conflict') ||
-            combined.includes('competing') ||
-            combined.includes('contradictory')) {
-            factors.push('Conflicting requirements');
-        }
-        // Check for uncertainty
-        if (combined.includes('uncertain') ||
-            combined.includes('dynamic') ||
-            combined.includes('changing')) {
-            factors.push('High uncertainty or dynamic environment');
-        }
-        // Check for stakeholder complexity
-        if (combined.includes('stakeholder') &&
-            (combined.includes('multiple') || combined.includes('diverse'))) {
-            factors.push('Multiple diverse stakeholders');
-        }
-        // Check for system-level complexity
-        if (combined.includes('system') ||
-            combined.includes('ecosystem') ||
-            combined.includes('complex')) {
-            factors.push('System-level complexity');
-        }
-        // Check for time pressure
-        if (combined.includes('time pressure') ||
-            combined.includes('deadline') ||
-            combined.includes('urgent')) {
-            factors.push('Time pressure constraints');
-        }
-        // Check constraints count
+    // Assess problem complexity using hybrid NLP/LLM analyzer
+    async assessComplexity(input) {
+        // Combine problem and context for analysis
+        const textToAnalyze = `${input.problem} ${input.context || ''}`;
+        // Use the hybrid analyzer
+        const assessment = await this.complexityAnalyzer.analyze(textToAnalyze);
+        // Add constraints-based factor if applicable
         if (input.constraints && input.constraints.length > 3) {
-            factors.push(`Multiple constraints (${input.constraints.length})`);
+            assessment.factors.push(`Multiple constraints (${input.constraints.length})`);
+            // Re-evaluate level if needed
+            if (assessment.factors.length >= COMPLEXITY_THRESHOLDS.DISCOVERY.HIGH && assessment.level !== 'high') {
+                assessment.level = 'high';
+                assessment.suggestion = 'This problem exhibits high complexity with multiple interacting factors. Consider using sequential thinking to break down the problem systematically and track dependencies between components.';
+            }
         }
-        // Check for nested or hierarchical problems
-        if (combined.includes('nested') ||
-            combined.includes('hierarchical') ||
-            combined.includes('multi-level')) {
-            factors.push('Nested or hierarchical structure');
-        }
-        // Determine complexity level
-        let level;
-        if (factors.length >= 4) {
-            level = 'high';
-        }
-        else if (factors.length >= 2) {
-            level = 'medium';
-        }
-        else {
-            level = 'low';
-        }
-        // Generate suggestion for high complexity
-        let suggestion;
-        if (level === 'high') {
-            suggestion =
-                'This problem exhibits high complexity with multiple interacting factors. Consider using sequential thinking to break down the problem systematically and track dependencies between components.';
-        }
-        return { level, factors, suggestion };
+        return assessment;
     }
     // Assess execution complexity dynamically
-    assessExecutionComplexity(session, technique) {
+    async assessExecutionComplexity(session, technique) {
         const factors = [];
         // Check for extended reasoning chains
         if (session.history.length >= 6) {
@@ -2945,22 +2898,20 @@ export class LateralThinkingServer {
         if (technique === 'triz' && session.history.some(h => h.contradiction)) {
             factors.push('Complex contradiction resolution');
         }
-        // Check for accumulated complexity indicators
-        const complexOutputs = session.history.filter(h => h.output.includes('complex') || h.output.includes('interact') || h.output.includes('depend'));
-        if (complexOutputs.length >= 3) {
-            factors.push('Accumulated complexity in outputs');
+        // Combine all outputs for NLP analysis
+        const combinedOutputs = session.history.map(h => h.output).join(' ');
+        // Use hybrid analyzer on accumulated outputs if there's enough content
+        if (combinedOutputs.length > 100) {
+            const outputComplexity = await this.complexityAnalyzer.analyze(combinedOutputs, false); // don't cache execution complexity
+            // Merge factors from NLP analysis
+            outputComplexity.factors.forEach(factor => {
+                if (!factors.includes(factor)) {
+                    factors.push(factor);
+                }
+            });
         }
-        // Determine complexity level
-        let level;
-        if (factors.length >= 3) {
-            level = 'high';
-        }
-        else if (factors.length >= 1) {
-            level = 'medium';
-        }
-        else {
-            level = 'low';
-        }
+        // Determine complexity level using shared thresholds
+        const level = this.calculateComplexityLevel(factors.length, 'execution');
         // Generate suggestion for high complexity
         let suggestion;
         if (level === 'high') {
@@ -2969,8 +2920,21 @@ export class LateralThinkingServer {
         }
         return { level, factors, suggestion };
     }
+    // Shared method to calculate complexity level
+    calculateComplexityLevel(factorCount, context) {
+        const thresholds = COMPLEXITY_THRESHOLDS[context.toUpperCase()];
+        if (factorCount >= thresholds.HIGH) {
+            return 'high';
+        }
+        else if (factorCount >= thresholds.MEDIUM) {
+            return 'medium';
+        }
+        else {
+            return 'low';
+        }
+    }
     // Discovery Layer: Analyze problem and recommend techniques
-    discoverTechniques(input) {
+    async discoverTechniques(input) {
         try {
             // Validate input
             const args = input;
@@ -2978,7 +2942,7 @@ export class LateralThinkingServer {
                 throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Problem description is required', 'problem');
             }
             // Assess complexity
-            const complexityAssessment = this.assessComplexity(args);
+            const complexityAssessment = await this.assessComplexity(args);
             // Analyze problem characteristics
             const problemLower = args.problem.toLowerCase();
             const contextLower = (args.context || '').toLowerCase();
@@ -4535,7 +4499,7 @@ const server = new Server({
         tools: {},
     },
 });
-const lateralServer = new LateralThinkingServer();
+const lateralServer = new LateralThinkingServer(server);
 server.setRequestHandler(ListToolsRequestSchema, () => ({
     tools: [DISCOVER_TECHNIQUES_TOOL, PLAN_THINKING_SESSION_TOOL, EXECUTE_THINKING_STEP_TOOL],
 }));

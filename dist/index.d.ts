@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import type { PathMemory } from './ergodicity/index.js';
 import { ErgodicityManager } from './ergodicity/index.js';
 import type { EarlyWarningState, EscapeProtocol } from './ergodicity/earlyWarning/types.js';
@@ -15,11 +16,6 @@ export interface RealityAssessment {
     historicalPrecedents?: string[];
     confidenceLevel: number;
     mechanismExplanation?: string;
-}
-export interface ComplexityAssessment {
-    level: 'low' | 'medium' | 'high';
-    factors: string[];
-    suggestion?: string;
 }
 export interface SequentialThinkingSuggestion {
     complexityNote: string;
@@ -244,6 +240,7 @@ export interface SessionData {
     escapeRecommendation?: EscapeProtocol;
 }
 export declare class LateralThinkingServer {
+    private server?;
     private sessions;
     private plans;
     private currentSessionId;
@@ -251,9 +248,10 @@ export declare class LateralThinkingServer {
     private cleanupInterval;
     private persistenceAdapter;
     private ergodicityManager;
+    private complexityAnalyzer;
     private config;
     private readonly PLAN_TTL;
-    constructor();
+    constructor(server?: Server | undefined);
     private initializePersistence;
     private startSessionCleanup;
     /**
@@ -433,6 +431,7 @@ export declare class LateralThinkingServer {
     private identifyNoteworthyPattern;
     private assessComplexity;
     private assessExecutionComplexity;
+    private calculateComplexityLevel;
     discoverTechniques(input: unknown): Promise<{
         content: Array<{
             type: string;

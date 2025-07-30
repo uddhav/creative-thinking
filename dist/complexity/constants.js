@@ -1,0 +1,76 @@
+/**
+ * Constants for complexity analysis
+ */
+// Complexity level thresholds based on factor count
+export const COMPLEXITY_THRESHOLDS = {
+    DISCOVERY: {
+        HIGH: 4, // 4+ complexity factors
+        MEDIUM: 2, // 2-3 complexity factors
+    },
+    EXECUTION: {
+        HIGH: 3, // 3+ complexity factors during execution
+        MEDIUM: 1, // 1-2 complexity factors
+    },
+};
+// Confidence thresholds for determining analysis method
+export const CONFIDENCE_THRESHOLDS = {
+    HIGH: 0.85, // Use local analysis only
+    MEDIUM: 0.7, // Consider using MCP sampling
+    LOW: 0.5, // Definitely use MCP sampling if available
+};
+// NLP analysis thresholds
+export const NLP_THRESHOLDS = {
+    SENTENCE_LENGTH: {
+        COMPLEX: 25, // Very long sentences
+        MODERATE: 15, // Moderately long sentences
+    },
+    ENTITY_COUNT: {
+        MANY: 5, // Many entities indicate complexity
+        SOME: 3, // Some entities
+    },
+    WORD_COUNT: {
+        MIN: 10, // Minimum words for meaningful analysis
+        MAX: 500, // Maximum before truncation
+    },
+};
+// Cache configuration
+export const CACHE_CONFIG = {
+    MAX_SIZE: 100, // Maximum cache entries
+    TTL_MS: 60 * 60 * 1000, // 1 hour TTL
+};
+// MCP Sampling configuration
+export const SAMPLING_CONFIG = {
+    MAX_TOKENS: 200,
+    MODEL_HINTS: [{ name: 'claude-3-haiku-20240307' }],
+    SPEED_PRIORITY: 0.8,
+    INTELLIGENCE_PRIORITY: 0.6,
+    TIMEOUT_MS: 5000, // 5 second timeout
+};
+// Complexity factor patterns for NLP detection
+export const COMPLEXITY_PATTERNS = {
+    INTERACTION: {
+        keywords: ['interact', 'depend', 'connect', 'influence', 'affect', 'relate'],
+        requiresContext: ['multiple'],
+    },
+    CONFLICT: {
+        keywords: ['conflict', 'compete', 'contradict', 'oppose', 'tension', 'versus'],
+        requiresContext: [],
+    },
+    UNCERTAINTY: {
+        keywords: ['uncertain', 'dynamic', 'chang', 'evolv', 'unclear', 'ambiguous'],
+        requiresContext: [],
+    },
+    STAKEHOLDER: {
+        keywords: ['stakeholder', 'user', 'customer', 'team', 'department'],
+        requiresContext: ['multiple', 'diverse', 'various'],
+    },
+    SYSTEM: {
+        keywords: ['system', 'ecosystem', 'complex', 'architecture', 'infrastructure'],
+        requiresContext: [],
+    },
+    TIME_PRESSURE: {
+        keywords: ['deadline', 'urgent', 'asap', 'immediate', 'time pressure'],
+        requiresContext: [],
+    },
+};
+//# sourceMappingURL=constants.js.map
