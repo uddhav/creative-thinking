@@ -27,6 +27,11 @@ export interface SequentialThinkingSuggestion {
         [key: string]: string;
     };
 }
+export interface ComplexityAssessment {
+    level: 'low' | 'medium' | 'high';
+    factors: string[];
+    suggestion?: string;
+}
 export interface ScamperPathImpact {
     reversible: boolean;
     dependenciesCreated: string[];
@@ -431,6 +436,8 @@ export declare class LateralThinkingServer {
     private assessBreakthroughLevel;
     private extractPathDependencies;
     private identifyNoteworthyPattern;
+    private assessComplexity;
+    private assessExecutionComplexity;
     discoverTechniques(input: unknown): Promise<{
         content: Array<{
             type: string;

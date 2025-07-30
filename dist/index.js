@@ -2216,6 +2216,120 @@ export class LateralThinkingServer {
                     }
                 }
             }
+            // Assess execution complexity
+            const executionComplexity = this.assessExecutionComplexity(session, thinkingInput.technique);
+            // Get sequential thinking suggestions if complexity is high
+            if (executionComplexity.level === 'high') {
+                // Get technique-specific sequential thinking suggestions
+                const sequentialSuggestions = {
+                    po: {
+                        complexityNote: 'Your provocation exploration is revealing complex interactions.',
+                        suggestedApproach: {
+                            next1: "Map each principle's downstream effects",
+                            next2: 'Identify principle interactions',
+                            next3: 'Sequence implementation for maximum synergy',
+                        },
+                    },
+                    collective_intel: {
+                        complexityNote: 'Multiple perspectives are creating emergent patterns.',
+                        suggestedApproach: {
+                            next1: 'Map convergence points systematically',
+                            next2: 'Track perspective evolution',
+                            next3: 'Build integrated synthesis',
+                        },
+                    },
+                    cross_cultural: {
+                        complexityNote: 'Cultural tensions require careful navigation.',
+                        suggestedApproach: {
+                            next1: 'Map cultural conflict points',
+                            next2: 'Design bridge concepts',
+                            next3: 'Create parallel implementation paths',
+                        },
+                    },
+                    triz: {
+                        complexityNote: 'Multiple contradictions forming a system.',
+                        suggestedApproach: {
+                            next1: 'Map contradiction hierarchy',
+                            next2: 'Identify root contradictions',
+                            next3: 'Sequence resolution strategy',
+                        },
+                    },
+                    design_thinking: {
+                        complexityNote: 'Insights evolving across stages.',
+                        suggestedApproach: {
+                            next1: 'Track insight evolution',
+                            next2: 'Map feedback loops',
+                            next3: 'Maintain decision rationale',
+                        },
+                    },
+                    six_hats: {
+                        complexityNote: 'Multiple perspectives on a complex problem.',
+                        suggestedApproach: {
+                            next1: 'Capture each perspective fully',
+                            next2: 'Map perspective interactions',
+                            next3: 'Identify critical decision points',
+                            next4: 'Sequence integration for clarity',
+                        },
+                    },
+                    scamper: {
+                        complexityNote: 'Multiple modifications creating path dependencies.',
+                        suggestedApproach: {
+                            next1: 'Map modifications systematically',
+                            next2: 'Trace path dependencies',
+                            next3: 'Sequence modifications for flexibility',
+                            next4: 'Design rollback strategies',
+                        },
+                    },
+                    random_entry: {
+                        complexityNote: 'Complex connections emerging from stimuli.',
+                        suggestedApproach: {
+                            next1: 'Map connections from stimulus',
+                            next2: 'Layer additional stimuli strategically',
+                            next3: 'Trace interaction patterns',
+                            next4: 'Synthesize coherent solution',
+                        },
+                    },
+                    concept_extraction: {
+                        complexityNote: 'Complex patterns requiring multi-level abstraction.',
+                        suggestedApproach: {
+                            next1: 'Extract surface-level concepts',
+                            next2: 'Abstract to higher patterns',
+                            next3: 'Map pattern relationships',
+                            next4: 'Apply patterns systematically',
+                        },
+                    },
+                    yes_and: {
+                        complexityNote: 'Complex collaborative building needs structure.',
+                        suggestedApproach: {
+                            next1: 'Establish foundation collaboratively',
+                            next2: 'Build layers systematically',
+                            next3: 'Track contribution interactions',
+                            next4: 'Integrate into unified solution',
+                        },
+                    },
+                    neural_state: {
+                        complexityNote: 'Complex neural state management requires careful sequencing.',
+                        suggestedApproach: {
+                            next1: 'Map current neural state landscape',
+                            next2: 'Design state transition sequence',
+                            next3: 'Monitor integration effects',
+                            next4: 'Stabilize optimal configuration',
+                        },
+                    },
+                    temporal_work: {
+                        complexityNote: 'Complex temporal landscapes need systematic mapping.',
+                        suggestedApproach: {
+                            next1: 'Map temporal constraints comprehensively',
+                            next2: 'Identify critical path dependencies',
+                            next3: 'Design temporal escape routes',
+                            next4: 'Sequence implementation for flexibility',
+                        },
+                    },
+                };
+                if (thinkingInput.technique in sequentialSuggestions) {
+                    sequentialThinking = sequentialSuggestions[thinkingInput.technique];
+                }
+            }
             // Generate response
             const response = {
                 sessionId: sessionId,
@@ -2225,7 +2339,7 @@ export class LateralThinkingServer {
                 nextStepNeeded: thinkingInput.nextStepNeeded,
                 historyLength: session.history.length,
                 branches: Object.keys(session.branches),
-                complexityAssessment,
+                complexityAssessment: executionComplexity,
                 sequentialThinking,
             };
             // Add PDA-SCAMPER specific fields if technique is SCAMPER
@@ -2736,6 +2850,117 @@ export class LateralThinkingServer {
         }
         return undefined;
     }
+    // Assess problem complexity
+    assessComplexity(input) {
+        const factors = [];
+        const problemLower = input.problem.toLowerCase();
+        const contextLower = (input.context || '').toLowerCase();
+        const combined = `${problemLower} ${contextLower}`;
+        // Check for multiple interacting elements
+        if (combined.includes('multiple') && (combined.includes('interact') || combined.includes('depend'))) {
+            factors.push('Multiple interacting elements');
+        }
+        // Check for conflicting requirements
+        if (combined.includes('conflict') || combined.includes('competing') || combined.includes('contradictory')) {
+            factors.push('Conflicting requirements');
+        }
+        // Check for uncertainty
+        if (combined.includes('uncertain') || combined.includes('dynamic') || combined.includes('changing')) {
+            factors.push('High uncertainty or dynamic environment');
+        }
+        // Check for stakeholder complexity
+        if (combined.includes('stakeholder') && (combined.includes('multiple') || combined.includes('diverse'))) {
+            factors.push('Multiple diverse stakeholders');
+        }
+        // Check for system-level complexity
+        if (combined.includes('system') || combined.includes('ecosystem') || combined.includes('complex')) {
+            factors.push('System-level complexity');
+        }
+        // Check for time pressure
+        if (combined.includes('time pressure') || combined.includes('deadline') || combined.includes('urgent')) {
+            factors.push('Time pressure constraints');
+        }
+        // Check constraints count
+        if (input.constraints && input.constraints.length > 3) {
+            factors.push(`Multiple constraints (${input.constraints.length})`);
+        }
+        // Check for nested or hierarchical problems
+        if (combined.includes('nested') || combined.includes('hierarchical') || combined.includes('multi-level')) {
+            factors.push('Nested or hierarchical structure');
+        }
+        // Determine complexity level
+        let level;
+        if (factors.length >= 4) {
+            level = 'high';
+        }
+        else if (factors.length >= 2) {
+            level = 'medium';
+        }
+        else {
+            level = 'low';
+        }
+        // Generate suggestion for high complexity
+        let suggestion;
+        if (level === 'high') {
+            suggestion = 'This problem exhibits high complexity with multiple interacting factors. Consider using sequential thinking to break down the problem systematically and track dependencies between components.';
+        }
+        return { level, factors, suggestion };
+    }
+    // Assess execution complexity dynamically
+    assessExecutionComplexity(session, technique) {
+        const factors = [];
+        // Check for extended reasoning chains
+        if (session.history.length >= 6) {
+            factors.push('Extended reasoning chain');
+        }
+        // Check for branching/revisions
+        const revisionCount = session.history.filter(h => h.isRevision).length;
+        if (revisionCount > 0) {
+            factors.push('Revision of previous thinking');
+        }
+        if (Object.keys(session.branches).length > 0) {
+            factors.push('Multiple exploration branches');
+        }
+        // Check for multi-step techniques
+        const multiStepTechniques = ['six_hats', 'design_thinking', 'scamper'];
+        if (multiStepTechniques.includes(technique) && session.history.length > 3) {
+            factors.push('Multi-stage process with complex interactions');
+        }
+        // Check for techniques with inherent complexity
+        if (technique === 'collective_intel' && session.history.some(h => h.wisdomSources && h.wisdomSources.length > 2)) {
+            factors.push('Multiple diverse wisdom sources');
+        }
+        if (technique === 'cross_cultural' && session.history.some(h => h.culturalFrameworks && h.culturalFrameworks.length > 2)) {
+            factors.push('Multiple cultural perspectives');
+        }
+        if (technique === 'triz' && session.history.some(h => h.contradiction)) {
+            factors.push('Complex contradiction resolution');
+        }
+        // Check for accumulated complexity indicators
+        const complexOutputs = session.history.filter(h => h.output.includes('complex') ||
+            h.output.includes('interact') ||
+            h.output.includes('depend'));
+        if (complexOutputs.length >= 3) {
+            factors.push('Accumulated complexity in outputs');
+        }
+        // Determine complexity level
+        let level;
+        if (factors.length >= 3) {
+            level = 'high';
+        }
+        else if (factors.length >= 1) {
+            level = 'medium';
+        }
+        else {
+            level = 'low';
+        }
+        // Generate suggestion for high complexity
+        let suggestion;
+        if (level === 'high') {
+            suggestion = 'Your thinking process has developed significant complexity. Sequential analysis can help maintain clarity and track dependencies.';
+        }
+        return { level, factors, suggestion };
+    }
     // Discovery Layer: Analyze problem and recommend techniques
     discoverTechniques(input) {
         try {
@@ -2744,6 +2969,8 @@ export class LateralThinkingServer {
             if (!args.problem) {
                 throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Problem description is required', 'problem');
             }
+            // Assess complexity
+            const complexityAssessment = this.assessComplexity(args);
             // Analyze problem characteristics
             const problemLower = args.problem.toLowerCase();
             const contextLower = (args.context || '').toLowerCase();
@@ -3166,54 +3393,10 @@ export class LateralThinkingServer {
                     }
                 }
             }
-            // Assess complexity
-            let complexityAssessment;
+            // Get sequential thinking suggestions
             let sequentialThinking;
-            const complexityFactors = [];
-            // Check for complexity indicators
-            if (combined.includes('multiple') ||
-                combined.includes('many') ||
-                combined.includes('various')) {
-                complexityFactors.push('Multiple elements or stakeholders');
-            }
-            if (combined.includes('interact') ||
-                combined.includes('depend') ||
-                combined.includes('connect')) {
-                complexityFactors.push('Interacting dependencies');
-            }
-            if (combined.includes('conflict') ||
-                combined.includes('tension') ||
-                combined.includes('tradeoff')) {
-                complexityFactors.push('Conflicting objectives');
-            }
-            if (combined.includes('uncertain') ||
-                combined.includes('unpredictable') ||
-                combined.includes('dynamic')) {
-                complexityFactors.push('High uncertainty');
-            }
-            if (combined.includes('system') ||
-                combined.includes('ecosystem') ||
-                combined.includes('network')) {
-                complexityFactors.push('System-level thinking required');
-            }
-            if (args.constraints && args.constraints.length > 3) {
-                complexityFactors.push('Multiple constraints');
-            }
-            // Determine complexity level
-            const complexityLevel = complexityFactors.length >= 4 ? 'high' : complexityFactors.length >= 2 ? 'medium' : 'low';
-            if (complexityFactors.length > 0) {
-                complexityAssessment = {
-                    level: complexityLevel,
-                    factors: complexityFactors,
-                    suggestion: complexityLevel === 'high'
-                        ? 'This problem has high complexity. Consider using sequential thinking to break it down systematically.'
-                        : complexityLevel === 'medium'
-                            ? 'This problem has moderate complexity. Sequential analysis might help clarify interactions.'
-                            : undefined,
-                };
-            }
             // Generate sequential thinking suggestions for high complexity
-            if (complexityLevel === 'high' && recommendations.length > 0) {
+            if (complexityAssessment.level === 'high' && recommendations.length > 0) {
                 const topTechnique = recommendations[0].technique;
                 // Technique-specific sequential thinking suggestions
                 const sequentialApproaches = {

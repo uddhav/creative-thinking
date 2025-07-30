@@ -130,7 +130,7 @@ When barriers are detected, the system recommends specific escape protocols rang
 
 ### 🌱 Option Generation Engine
 
-When flexibility drops below 0.4, the system automatically activates the Option Generation Engine to create new possibilities through eight strategic approaches:
+When flexibility drops below 0.4, the system automatically activates the Option Generation Engine to create new possibilities through twelve strategic approaches:
 
 - **Decomposition** - Break monolithic commitments into flexible modules
 - **Temporal** - Adjust time parameters (delay commitments, accelerate options)
@@ -140,6 +140,10 @@ When flexibility drops below 0.4, the system automatically activates the Option 
 - **Resource** - Reallocate or discover untapped resources
 - **Capability** - Leverage hidden skills or develop new competencies
 - **Recombination** - Mix existing elements in novel ways
+- **Neural Optimization** - Leverage brain state management for enhanced creativity
+- **Temporal Shifting** - Manipulate time perception and work rhythms for flexibility
+- **Cultural Bridging** - Cross cultural frameworks to unlock new solution spaces
+- **Collective Divergence** - Harness collective intelligence for option expansion
 
 The engine evaluates each generated option for flexibility gain, implementation cost, reversibility, and synergy with existing choices, ensuring practical and effective recommendations.
 
@@ -155,6 +159,8 @@ Analyzes your problem and recommends the most suitable creative thinking techniq
 - `preferredOutcome` (string, optional): The type of solution you prefer
   - Options: 'innovative', 'systematic', 'risk-aware', 'collaborative', 'analytical'
 - `constraints` (array, optional): Any constraints or limitations to consider
+- `sessionId` (string, optional): Current session ID to check flexibility and generate options
+- `currentFlexibility` (number, optional): Current flexibility score (0-1). If not provided, will be calculated from session
 
 **Example:**
 ```json
