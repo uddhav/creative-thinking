@@ -16,11 +16,6 @@ export interface RealityAssessment {
     confidenceLevel: number;
     mechanismExplanation?: string;
 }
-export interface ComplexityAssessment {
-    level: 'low' | 'medium' | 'high';
-    factors: string[];
-    suggestion?: string;
-}
 export interface SequentialThinkingSuggestion {
     complexityNote: string;
     suggestedApproach: {
@@ -251,6 +246,7 @@ export declare class LateralThinkingServer {
     private cleanupInterval;
     private persistenceAdapter;
     private ergodicityManager;
+    private complexityAnalyzer;
     private config;
     private readonly PLAN_TTL;
     constructor();
@@ -431,6 +427,9 @@ export declare class LateralThinkingServer {
     private assessBreakthroughLevel;
     private extractPathDependencies;
     private identifyNoteworthyPattern;
+    private assessComplexity;
+    private assessExecutionComplexity;
+    private calculateComplexityLevel;
     discoverTechniques(input: unknown): Promise<{
         content: Array<{
             type: string;

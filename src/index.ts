@@ -26,6 +26,8 @@ import { ErgodicityManager } from './ergodicity/index.js';
 import { BarrierWarningLevel } from './ergodicity/earlyWarning/types.js';
 import type { EarlyWarningState, EscapeProtocol } from './ergodicity/earlyWarning/types.js';
 import { RealityIntegration } from './reality/integration.js';
+import { HybridComplexityAnalyzer, COMPLEXITY_THRESHOLDS } from './complexity/index.js';
+import type { ComplexityAssessment } from './complexity/index.js';
 
 export type LateralTechnique =
   | 'six_hats'
@@ -71,12 +73,6 @@ export interface RealityAssessment {
 }
 
 // Sequential Thinking Integration Types
-export interface ComplexityAssessment {
-  level: 'low' | 'medium' | 'high';
-  factors: string[];
-  suggestion?: string;
-}
-
 export interface SequentialThinkingSuggestion {
   complexityNote: string;
   suggestedApproach: {
@@ -524,6 +520,7 @@ export class LateralThinkingServer {
   private cleanupInterval: NodeJS.Timeout | null = null;
   private persistenceAdapter: PersistenceAdapter | null = null;
   private ergodicityManager: ErgodicityManager;
+  private complexityAnalyzer: HybridComplexityAnalyzer;
 
   // Session configuration with defaults
   private config: SessionConfig = {
@@ -539,6 +536,7 @@ export class LateralThinkingServer {
     this.disableThoughtLogging =
       (process.env.DISABLE_THOUGHT_LOGGING || '').toLowerCase() === 'true';
     this.ergodicityManager = new ErgodicityManager();
+    this.complexityAnalyzer = new HybridComplexityAnalyzer();
     this.startSessionCleanup();
     void this.initializePersistence();
   }
@@ -3122,7 +3120,6 @@ export class LateralThinkingServer {
       }
 
       // Assess complexity based on execution progress
-      let complexityAssessment: ComplexityAssessment | undefined;
       let sequentialThinking: SequentialThinkingSuggestion | undefined;
 
       // Check for complexity indicators in current execution
@@ -3172,12 +3169,6 @@ export class LateralThinkingServer {
       if (complexityFactors.length >= 3 && thinkingInput.currentStep > 2) {
         const complexityLevel: 'low' | 'medium' | 'high' =
           complexityFactors.length >= 4 ? 'high' : 'medium';
-
-        complexityAssessment = {
-          level: complexityLevel,
-          factors: complexityFactors,
-          suggestion: 'Consider using sequential thinking to track emerging patterns',
-        };
 
         // Add technique-specific sequential thinking suggestions
         if (complexityLevel === 'high') {
@@ -3230,6 +3221,123 @@ export class LateralThinkingServer {
         }
       }
 
+      // Assess execution complexity
+      const executionComplexity = this.assessExecutionComplexity(session, thinkingInput.technique);
+
+      // Get sequential thinking suggestions if complexity is high
+      if (executionComplexity.level === 'high') {
+        // Get technique-specific sequential thinking suggestions
+        const sequentialSuggestions: Record<LateralTechnique, SequentialThinkingSuggestion> = {
+          po: {
+            complexityNote: 'Your provocation exploration is revealing complex interactions.',
+            suggestedApproach: {
+              next1: "Map each principle's downstream effects",
+              next2: 'Identify principle interactions',
+              next3: 'Sequence implementation for maximum synergy',
+            },
+          },
+          collective_intel: {
+            complexityNote: 'Multiple perspectives are creating emergent patterns.',
+            suggestedApproach: {
+              next1: 'Map convergence points systematically',
+              next2: 'Track perspective evolution',
+              next3: 'Build integrated synthesis',
+            },
+          },
+          cross_cultural: {
+            complexityNote: 'Cultural tensions require careful navigation.',
+            suggestedApproach: {
+              next1: 'Map cultural conflict points',
+              next2: 'Design bridge concepts',
+              next3: 'Create parallel implementation paths',
+            },
+          },
+          triz: {
+            complexityNote: 'Multiple contradictions forming a system.',
+            suggestedApproach: {
+              next1: 'Map contradiction hierarchy',
+              next2: 'Identify root contradictions',
+              next3: 'Sequence resolution strategy',
+            },
+          },
+          design_thinking: {
+            complexityNote: 'Insights evolving across stages.',
+            suggestedApproach: {
+              next1: 'Track insight evolution',
+              next2: 'Map feedback loops',
+              next3: 'Maintain decision rationale',
+            },
+          },
+          six_hats: {
+            complexityNote: 'Multiple perspectives on a complex problem.',
+            suggestedApproach: {
+              next1: 'Capture each perspective fully',
+              next2: 'Map perspective interactions',
+              next3: 'Identify critical decision points',
+              next4: 'Sequence integration for clarity',
+            },
+          },
+          scamper: {
+            complexityNote: 'Multiple modifications creating path dependencies.',
+            suggestedApproach: {
+              next1: 'Map modifications systematically',
+              next2: 'Trace path dependencies',
+              next3: 'Sequence modifications for flexibility',
+              next4: 'Design rollback strategies',
+            },
+          },
+          random_entry: {
+            complexityNote: 'Complex connections emerging from stimuli.',
+            suggestedApproach: {
+              next1: 'Map connections from stimulus',
+              next2: 'Layer additional stimuli strategically',
+              next3: 'Trace interaction patterns',
+              next4: 'Synthesize coherent solution',
+            },
+          },
+          concept_extraction: {
+            complexityNote: 'Complex patterns requiring multi-level abstraction.',
+            suggestedApproach: {
+              next1: 'Extract surface-level concepts',
+              next2: 'Abstract to higher patterns',
+              next3: 'Map pattern relationships',
+              next4: 'Apply patterns systematically',
+            },
+          },
+          yes_and: {
+            complexityNote: 'Complex collaborative building needs structure.',
+            suggestedApproach: {
+              next1: 'Establish foundation collaboratively',
+              next2: 'Build layers systematically',
+              next3: 'Track contribution interactions',
+              next4: 'Integrate into unified solution',
+            },
+          },
+          neural_state: {
+            complexityNote: 'Complex neural state management requires careful sequencing.',
+            suggestedApproach: {
+              next1: 'Map current neural state landscape',
+              next2: 'Design state transition sequence',
+              next3: 'Monitor integration effects',
+              next4: 'Stabilize optimal configuration',
+            },
+          },
+          temporal_work: {
+            complexityNote: 'Complex temporal landscapes need systematic mapping.',
+            suggestedApproach: {
+              next1: 'Map temporal constraints comprehensively',
+              next2: 'Identify critical path dependencies',
+              next3: 'Design temporal escape routes',
+              next4: 'Sequence implementation for flexibility',
+            },
+          },
+        };
+
+        if (thinkingInput.technique in sequentialSuggestions) {
+          sequentialThinking = sequentialSuggestions[thinkingInput.technique];
+        }
+      }
+
       // Generate response
       const response: LateralThinkingResponse = {
         sessionId: sessionId,
@@ -3239,7 +3347,7 @@ export class LateralThinkingServer {
         nextStepNeeded: thinkingInput.nextStepNeeded,
         historyLength: session.history.length,
         branches: Object.keys(session.branches),
-        complexityAssessment,
+        complexityAssessment: executionComplexity,
         sequentialThinking,
       };
 
@@ -3837,8 +3945,125 @@ export class LateralThinkingServer {
     return undefined;
   }
 
+  // Assess problem complexity using hybrid NLP/LLM analyzer
+  private assessComplexity(input: DiscoverTechniquesInput): ComplexityAssessment {
+    // Combine problem and context for analysis
+    const textToAnalyze = `${input.problem} ${input.context || ''}`;
+
+    // Use the hybrid analyzer
+    const assessment = this.complexityAnalyzer.analyze(textToAnalyze);
+
+    // Add constraints-based factor if applicable
+    if (input.constraints && input.constraints.length > 3) {
+      assessment.factors.push(`Multiple constraints (${input.constraints.length})`);
+
+      // Re-evaluate level if needed
+      if (
+        assessment.factors.length >= COMPLEXITY_THRESHOLDS.DISCOVERY.HIGH &&
+        assessment.level !== 'high'
+      ) {
+        assessment.level = 'high';
+        assessment.suggestion =
+          'This problem exhibits high complexity with multiple interacting factors. Consider using sequential thinking to break down the problem systematically and track dependencies between components.';
+      }
+    }
+
+    return assessment;
+  }
+
+  // Assess execution complexity dynamically
+  private assessExecutionComplexity(
+    session: SessionData,
+    technique: LateralTechnique
+  ): ComplexityAssessment {
+    const factors: string[] = [];
+
+    // Check for extended reasoning chains
+    if (session.history.length >= 6) {
+      factors.push('Extended reasoning chain');
+    }
+
+    // Check for branching/revisions
+    const revisionCount = session.history.filter(h => h.isRevision).length;
+    if (revisionCount > 0) {
+      factors.push('Revision of previous thinking');
+    }
+
+    if (Object.keys(session.branches).length > 0) {
+      factors.push('Multiple exploration branches');
+    }
+
+    // Check for multi-step techniques
+    const multiStepTechniques = ['six_hats', 'design_thinking', 'scamper'];
+    if (multiStepTechniques.includes(technique) && session.history.length > 3) {
+      factors.push('Multi-stage process with complex interactions');
+    }
+
+    // Check for techniques with inherent complexity
+    if (
+      technique === 'collective_intel' &&
+      session.history.some(h => h.wisdomSources && h.wisdomSources.length > 2)
+    ) {
+      factors.push('Multiple diverse wisdom sources');
+    }
+
+    if (
+      technique === 'cross_cultural' &&
+      session.history.some(h => h.culturalFrameworks && h.culturalFrameworks.length > 2)
+    ) {
+      factors.push('Multiple cultural perspectives');
+    }
+
+    if (technique === 'triz' && session.history.some(h => h.contradiction)) {
+      factors.push('Complex contradiction resolution');
+    }
+
+    // Combine all outputs for NLP analysis
+    const combinedOutputs = session.history.map(h => h.output).join(' ');
+
+    // Use hybrid analyzer on accumulated outputs if there's enough content
+    if (combinedOutputs.length > 100) {
+      const outputComplexity = this.complexityAnalyzer.analyze(combinedOutputs, false); // don't cache execution complexity
+
+      // Merge factors from NLP analysis
+      outputComplexity.factors.forEach(factor => {
+        if (!factors.includes(factor)) {
+          factors.push(factor);
+        }
+      });
+    }
+
+    // Determine complexity level using shared thresholds
+    const level = this.calculateComplexityLevel(factors.length, 'execution');
+
+    // Generate suggestion for high complexity
+    let suggestion: string | undefined;
+    if (level === 'high') {
+      suggestion =
+        'Your thinking process has developed significant complexity. Sequential analysis can help maintain clarity and track dependencies.';
+    }
+
+    return { level, factors, suggestion };
+  }
+
+  // Shared method to calculate complexity level
+  private calculateComplexityLevel(
+    factorCount: number,
+    context: 'discovery' | 'execution'
+  ): 'low' | 'medium' | 'high' {
+    const thresholds = COMPLEXITY_THRESHOLDS[context.toUpperCase() as 'DISCOVERY' | 'EXECUTION'];
+
+    if (factorCount >= thresholds.HIGH) {
+      return 'high';
+    } else if (factorCount >= thresholds.MEDIUM) {
+      return 'medium';
+    } else {
+      return 'low';
+    }
+  }
+
   // Discovery Layer: Analyze problem and recommend techniques
-  public discoverTechniques(
+  public async discoverTechniques(
     input: unknown
   ): Promise<{ content: Array<{ type: string; text: string }>; isError?: boolean }> {
     try {
@@ -3851,6 +4076,9 @@ export class LateralThinkingServer {
           'problem'
         );
       }
+
+      // Assess complexity
+      const complexityAssessment = this.assessComplexity(args);
 
       // Analyze problem characteristics
       const problemLower = args.problem.toLowerCase();
@@ -4340,71 +4568,11 @@ export class LateralThinkingServer {
         }
       }
 
-      // Assess complexity
-      let complexityAssessment: ComplexityAssessment | undefined;
+      // Get sequential thinking suggestions
       let sequentialThinking: SequentialThinkingSuggestion | undefined;
 
-      const complexityFactors: string[] = [];
-
-      // Check for complexity indicators
-      if (
-        combined.includes('multiple') ||
-        combined.includes('many') ||
-        combined.includes('various')
-      ) {
-        complexityFactors.push('Multiple elements or stakeholders');
-      }
-      if (
-        combined.includes('interact') ||
-        combined.includes('depend') ||
-        combined.includes('connect')
-      ) {
-        complexityFactors.push('Interacting dependencies');
-      }
-      if (
-        combined.includes('conflict') ||
-        combined.includes('tension') ||
-        combined.includes('tradeoff')
-      ) {
-        complexityFactors.push('Conflicting objectives');
-      }
-      if (
-        combined.includes('uncertain') ||
-        combined.includes('unpredictable') ||
-        combined.includes('dynamic')
-      ) {
-        complexityFactors.push('High uncertainty');
-      }
-      if (
-        combined.includes('system') ||
-        combined.includes('ecosystem') ||
-        combined.includes('network')
-      ) {
-        complexityFactors.push('System-level thinking required');
-      }
-      if (args.constraints && args.constraints.length > 3) {
-        complexityFactors.push('Multiple constraints');
-      }
-
-      // Determine complexity level
-      const complexityLevel: 'low' | 'medium' | 'high' =
-        complexityFactors.length >= 4 ? 'high' : complexityFactors.length >= 2 ? 'medium' : 'low';
-
-      if (complexityFactors.length > 0) {
-        complexityAssessment = {
-          level: complexityLevel,
-          factors: complexityFactors,
-          suggestion:
-            complexityLevel === 'high'
-              ? 'This problem has high complexity. Consider using sequential thinking to break it down systematically.'
-              : complexityLevel === 'medium'
-                ? 'This problem has moderate complexity. Sequential analysis might help clarify interactions.'
-                : undefined,
-        };
-      }
-
       // Generate sequential thinking suggestions for high complexity
-      if (complexityLevel === 'high' && recommendations.length > 0) {
+      if (complexityAssessment.level === 'high' && recommendations.length > 0) {
         const topTechnique = recommendations[0].technique;
 
         // Technique-specific sequential thinking suggestions
