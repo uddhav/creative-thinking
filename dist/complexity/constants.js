@@ -49,27 +49,27 @@ export const SAMPLING_CONFIG = {
 // Complexity factor patterns for NLP detection
 export const COMPLEXITY_PATTERNS = {
     INTERACTION: {
-        keywords: ['interact', 'depend', 'connect', 'influence', 'affect', 'relate'],
+        keywords: ['interact', 'interconnect', 'depend', 'connect', 'influence', 'affect', 'relate'],
         requiresContext: ['multiple'],
     },
     CONFLICT: {
-        keywords: ['conflict', 'compete', 'contradict', 'oppose', 'tension', 'versus'],
+        keywords: ['conflict', 'compete', 'contradict', 'oppose', 'tension', 'versus', 'conflicting'],
         requiresContext: [],
     },
     UNCERTAINTY: {
-        keywords: ['uncertain', 'dynamic', 'chang', 'evolv', 'unclear', 'ambiguous'],
+        keywords: ['uncertain', 'uncertainty', 'dynamic', 'chang', 'evolv', 'unclear', 'ambiguous'],
         requiresContext: [],
     },
     STAKEHOLDER: {
-        keywords: ['stakeholder', 'user', 'customer', 'team', 'department'],
+        keywords: ['stakeholder', 'stakeholders', 'user', 'customer', 'team', 'department'],
         requiresContext: ['multiple', 'diverse', 'various'],
     },
     SYSTEM: {
-        keywords: ['system', 'ecosystem', 'complex', 'architecture', 'infrastructure'],
+        keywords: ['system', 'systems', 'ecosystem', 'complex', 'architecture', 'infrastructure'],
         requiresContext: [],
     },
     TIME_PRESSURE: {
-        keywords: ['deadline', 'urgent', 'asap', 'immediate', 'time pressure'],
+        keywords: ['deadline', 'urgent', 'asap', 'immediate', 'time pressure', 'tight'],
         requiresContext: [],
     },
 };

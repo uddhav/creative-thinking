@@ -4,19 +4,11 @@
 
 import nlp from 'compromise';
 import { ComplexityCache } from './cache.js';
-import {
-  COMPLEXITY_PATTERNS,
-  COMPLEXITY_THRESHOLDS,
-  CONFIDENCE_THRESHOLDS,
-  NLP_THRESHOLDS,
-  SAMPLING_CONFIG,
-} from './constants.js';
-import type {
-  ComplexityAssessment,
-  ComplexityAssessmentWithConfidence,
-  LLMComplexityResponse,
-  NLPAnalysisResult,
-} from './types.js';
+import { COMPLEXITY_PATTERNS, COMPLEXITY_THRESHOLDS, NLP_THRESHOLDS } from './constants.js';
+import type { ComplexityAssessment, NLPAnalysisResult } from './types.js';
+
+// Type for compromise doc
+type NlpDoc = ReturnType<typeof nlp>;
 
 export class HybridComplexityAnalyzer {
   private cache = new ComplexityCache();
@@ -26,7 +18,7 @@ export class HybridComplexityAnalyzer {
   /**
    * Analyze text complexity using hybrid approach
    */
-  async analyze(text: string, useCache = true): Promise<ComplexityAssessment> {
+  analyze(text: string, useCache = true): ComplexityAssessment {
     // Input validation
     if (!text || text.trim().length === 0) {
       return { level: 'low', factors: [] };
@@ -44,29 +36,29 @@ export class HybridComplexityAnalyzer {
     const truncatedText = text.slice(0, NLP_THRESHOLDS.WORD_COUNT.MAX * 6); // ~6 chars per word
 
     // Try local NLP analysis first
-    const localResult = await this.localNLPAnalysis(truncatedText);
+    const localResult = this.localNLPAnalysis(truncatedText);
 
     // Use local NLP result
     const assessment = this.nlpResultToAssessment(localResult);
-    
+
     // Only cache if caching is enabled
     if (useCache) {
       this.cache.set(text, assessment, 'local-nlp');
     }
-    
+
     return assessment;
   }
 
   /**
    * Perform local NLP analysis using Compromise
    */
-  private async localNLPAnalysis(text: string): Promise<NLPAnalysisResult> {
+  private localNLPAnalysis(text: string): NLPAnalysisResult {
     const doc = nlp(text);
 
     // Extract entities and basic metrics
-    const entities = doc.topics().out('array');
+    const entities = (doc.topics().out('array') || []) as string[];
     const sentences = doc.sentences();
-    const sentenceArray = sentences.out('array');
+    const sentenceArray = (sentences.out('array') || []) as string[];
     const wordCount = doc.wordCount();
     const sentenceCount = sentenceArray.length || 1;
     const avgSentenceLength = wordCount / sentenceCount;
@@ -118,44 +110,42 @@ export class HybridComplexityAnalyzer {
   /**
    * Detect interacting elements pattern
    */
-  private detectInteractingElements(doc: any, entities: string[]): boolean {
+  private detectInteractingElements(doc: NlpDoc, entities: string[]): boolean {
     const hasMultipleEntities = entities.length >= 2;
-    
+
     // Check for interaction keywords
-    const hasInteractionVerbs = COMPLEXITY_PATTERNS.INTERACTION.keywords.some(k => 
-      doc.has(k)
-    );
-    
+    const hasInteractionVerbs = COMPLEXITY_PATTERNS.INTERACTION.keywords.some(k => doc.has(k));
+
     // Check for 'multiple' as a whole word
     const hasMultipleContext = doc.has('multiple');
-    
+
     // More flexible: require either entities + interactions OR multiple + interactions
-    return (hasMultipleEntities && hasInteractionVerbs) || (hasMultipleContext && hasInteractionVerbs);
+    return (
+      (hasMultipleEntities && hasInteractionVerbs) || (hasMultipleContext && hasInteractionVerbs)
+    );
   }
 
   /**
    * Detect conflicts pattern
    */
-  private detectConflicts(doc: any): boolean {
+  private detectConflicts(doc: NlpDoc): boolean {
     return COMPLEXITY_PATTERNS.CONFLICT.keywords.some(k => doc.has(k));
   }
 
   /**
    * Detect uncertainty pattern
    */
-  private detectUncertainty(doc: any): boolean {
+  private detectUncertainty(doc: NlpDoc): boolean {
     return COMPLEXITY_PATTERNS.UNCERTAINTY.keywords.some(k => doc.has(k));
   }
 
   /**
    * Detect multiple stakeholders
    */
-  private detectMultipleStakeholders(doc: any): boolean {
-    const hasStakeholderTerms = COMPLEXITY_PATTERNS.STAKEHOLDER.keywords.some(k => 
-      doc.has(k)
-    );
-    
-    const hasMultipleContext = COMPLEXITY_PATTERNS.STAKEHOLDER.requiresContext.some(k => 
+  private detectMultipleStakeholders(doc: NlpDoc): boolean {
+    const hasStakeholderTerms = COMPLEXITY_PATTERNS.STAKEHOLDER.keywords.some(k => doc.has(k));
+
+    const hasMultipleContext = COMPLEXITY_PATTERNS.STAKEHOLDER.requiresContext.some(k =>
       doc.has(k)
     );
 
@@ -165,14 +155,14 @@ export class HybridComplexityAnalyzer {
   /**
    * Detect system complexity
    */
-  private detectSystemComplexity(doc: any): boolean {
+  private detectSystemComplexity(doc: NlpDoc): boolean {
     return COMPLEXITY_PATTERNS.SYSTEM.keywords.some(k => doc.has(k));
   }
 
   /**
    * Detect time pressure
    */
-  private detectTimePressure(doc: any): boolean {
+  private detectTimePressure(doc: NlpDoc): boolean {
     return COMPLEXITY_PATTERNS.TIME_PRESSURE.keywords.some(k => doc.has(k));
   }
 
@@ -222,7 +212,6 @@ export class HybridComplexityAnalyzer {
     return { level, factors, suggestion };
   }
 
-
   /**
    * Calculate complexity level based on factor count
    */
@@ -240,7 +229,6 @@ export class HybridComplexityAnalyzer {
       return 'low';
     }
   }
-
 
   /**
    * Get cache statistics

@@ -5,41 +5,41 @@
 // Complexity level thresholds based on factor count
 export const COMPLEXITY_THRESHOLDS = {
   DISCOVERY: {
-    HIGH: 4,    // 4+ complexity factors
-    MEDIUM: 2,  // 2-3 complexity factors
+    HIGH: 4, // 4+ complexity factors
+    MEDIUM: 2, // 2-3 complexity factors
   },
   EXECUTION: {
-    HIGH: 3,    // 3+ complexity factors during execution
-    MEDIUM: 1,  // 1-2 complexity factors
+    HIGH: 3, // 3+ complexity factors during execution
+    MEDIUM: 1, // 1-2 complexity factors
   },
 } as const;
 
 // Confidence thresholds for determining analysis method
 export const CONFIDENCE_THRESHOLDS = {
-  HIGH: 0.85,   // Use local analysis only
-  MEDIUM: 0.7,  // Consider using MCP sampling
-  LOW: 0.5,     // Definitely use MCP sampling if available
+  HIGH: 0.85, // Use local analysis only
+  MEDIUM: 0.7, // Consider using MCP sampling
+  LOW: 0.5, // Definitely use MCP sampling if available
 } as const;
 
 // NLP analysis thresholds
 export const NLP_THRESHOLDS = {
   SENTENCE_LENGTH: {
-    COMPLEX: 25,   // Very long sentences
-    MODERATE: 15,  // Moderately long sentences
+    COMPLEX: 25, // Very long sentences
+    MODERATE: 15, // Moderately long sentences
   },
   ENTITY_COUNT: {
-    MANY: 5,      // Many entities indicate complexity
-    SOME: 3,      // Some entities
+    MANY: 5, // Many entities indicate complexity
+    SOME: 3, // Some entities
   },
   WORD_COUNT: {
-    MIN: 10,      // Minimum words for meaningful analysis
-    MAX: 500,     // Maximum before truncation
+    MIN: 10, // Minimum words for meaningful analysis
+    MAX: 500, // Maximum before truncation
   },
 } as const;
 
 // Cache configuration
 export const CACHE_CONFIG = {
-  MAX_SIZE: 100,           // Maximum cache entries
+  MAX_SIZE: 100, // Maximum cache entries
   TTL_MS: 60 * 60 * 1000, // 1 hour TTL
 } as const;
 

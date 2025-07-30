@@ -59,12 +59,12 @@ export class ComplexityCache {
      * Get cache statistics
      */
     getStats() {
-        let hits = 0;
-        let total = 0;
+        const hits = 0;
+        const total = 0;
         const methods = {
             'local-nlp': 0,
             'mcp-sampling': 0,
-            'fallback': 0,
+            fallback: 0,
         };
         for (const entry of this.cache.values()) {
             methods[entry.analysisMethod]++;

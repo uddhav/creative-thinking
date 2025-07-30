@@ -45,27 +45,27 @@ export declare const SAMPLING_CONFIG: {
 };
 export declare const COMPLEXITY_PATTERNS: {
     readonly INTERACTION: {
-        readonly keywords: readonly ["interact", "depend", "connect", "influence", "affect", "relate"];
+        readonly keywords: readonly ["interact", "interconnect", "depend", "connect", "influence", "affect", "relate"];
         readonly requiresContext: readonly ["multiple"];
     };
     readonly CONFLICT: {
-        readonly keywords: readonly ["conflict", "compete", "contradict", "oppose", "tension", "versus"];
+        readonly keywords: readonly ["conflict", "compete", "contradict", "oppose", "tension", "versus", "conflicting"];
         readonly requiresContext: readonly [];
     };
     readonly UNCERTAINTY: {
-        readonly keywords: readonly ["uncertain", "dynamic", "chang", "evolv", "unclear", "ambiguous"];
+        readonly keywords: readonly ["uncertain", "uncertainty", "dynamic", "chang", "evolv", "unclear", "ambiguous"];
         readonly requiresContext: readonly [];
     };
     readonly STAKEHOLDER: {
-        readonly keywords: readonly ["stakeholder", "user", "customer", "team", "department"];
+        readonly keywords: readonly ["stakeholder", "stakeholders", "user", "customer", "team", "department"];
         readonly requiresContext: readonly ["multiple", "diverse", "various"];
     };
     readonly SYSTEM: {
-        readonly keywords: readonly ["system", "ecosystem", "complex", "architecture", "infrastructure"];
+        readonly keywords: readonly ["system", "systems", "ecosystem", "complex", "architecture", "infrastructure"];
         readonly requiresContext: readonly [];
     };
     readonly TIME_PRESSURE: {
-        readonly keywords: readonly ["deadline", "urgent", "asap", "immediate", "time pressure"];
+        readonly keywords: readonly ["deadline", "urgent", "asap", "immediate", "time pressure", "tight"];
         readonly requiresContext: readonly [];
     };
 };

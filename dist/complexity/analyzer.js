@@ -3,14 +3,14 @@
  */
 import nlp from 'compromise';
 import { ComplexityCache } from './cache.js';
-import { COMPLEXITY_PATTERNS, COMPLEXITY_THRESHOLDS, NLP_THRESHOLDS, } from './constants.js';
+import { COMPLEXITY_PATTERNS, COMPLEXITY_THRESHOLDS, NLP_THRESHOLDS } from './constants.js';
 export class HybridComplexityAnalyzer {
     cache = new ComplexityCache();
     constructor() { }
     /**
      * Analyze text complexity using hybrid approach
      */
-    async analyze(text, useCache = true) {
+    analyze(text, useCache = true) {
         // Input validation
         if (!text || text.trim().length === 0) {
             return { level: 'low', factors: [] };
@@ -25,21 +25,24 @@ export class HybridComplexityAnalyzer {
         // Truncate if too long
         const truncatedText = text.slice(0, NLP_THRESHOLDS.WORD_COUNT.MAX * 6); // ~6 chars per word
         // Try local NLP analysis first
-        const localResult = await this.localNLPAnalysis(truncatedText);
+        const localResult = this.localNLPAnalysis(truncatedText);
         // Use local NLP result
         const assessment = this.nlpResultToAssessment(localResult);
-        this.cache.set(text, assessment, 'local-nlp');
+        // Only cache if caching is enabled
+        if (useCache) {
+            this.cache.set(text, assessment, 'local-nlp');
+        }
         return assessment;
     }
     /**
      * Perform local NLP analysis using Compromise
      */
-    async localNLPAnalysis(text) {
+    localNLPAnalysis(text) {
         const doc = nlp(text);
         // Extract entities and basic metrics
-        const entities = doc.topics().out('array');
+        const entities = (doc.topics().out('array') || []);
         const sentences = doc.sentences();
-        const sentenceArray = sentences.out('array');
+        const sentenceArray = (sentences.out('array') || []);
         const wordCount = doc.wordCount();
         const sentenceCount = sentenceArray.length || 1;
         const avgSentenceLength = wordCount / sentenceCount;
@@ -85,47 +88,44 @@ export class HybridComplexityAnalyzer {
      */
     detectInteractingElements(doc, entities) {
         const hasMultipleEntities = entities.length >= 2;
-        const hasInteractionVerbs = doc
-            .match(COMPLEXITY_PATTERNS.INTERACTION.keywords.join('|'))
-            .found;
-        const hasMultipleContext = doc.has('#Value? multiple');
-        return hasMultipleEntities && hasInteractionVerbs && hasMultipleContext;
+        // Check for interaction keywords
+        const hasInteractionVerbs = COMPLEXITY_PATTERNS.INTERACTION.keywords.some(k => doc.has(k));
+        // Check for 'multiple' as a whole word
+        const hasMultipleContext = doc.has('multiple');
+        // More flexible: require either entities + interactions OR multiple + interactions
+        return ((hasMultipleEntities && hasInteractionVerbs) || (hasMultipleContext && hasInteractionVerbs));
     }
     /**
      * Detect conflicts pattern
      */
     detectConflicts(doc) {
-        return doc.match(COMPLEXITY_PATTERNS.CONFLICT.keywords.join('|')).found;
+        return COMPLEXITY_PATTERNS.CONFLICT.keywords.some(k => doc.has(k));
     }
     /**
      * Detect uncertainty pattern
      */
     detectUncertainty(doc) {
-        return doc.match(COMPLEXITY_PATTERNS.UNCERTAINTY.keywords.join('|')).found;
+        return COMPLEXITY_PATTERNS.UNCERTAINTY.keywords.some(k => doc.has(k));
     }
     /**
      * Detect multiple stakeholders
      */
     detectMultipleStakeholders(doc) {
-        const hasStakeholderTerms = doc
-            .match(COMPLEXITY_PATTERNS.STAKEHOLDER.keywords.join('|'))
-            .found;
-        const hasMultipleContext = doc
-            .match(COMPLEXITY_PATTERNS.STAKEHOLDER.requiresContext.join('|'))
-            .found;
+        const hasStakeholderTerms = COMPLEXITY_PATTERNS.STAKEHOLDER.keywords.some(k => doc.has(k));
+        const hasMultipleContext = COMPLEXITY_PATTERNS.STAKEHOLDER.requiresContext.some(k => doc.has(k));
         return hasStakeholderTerms && hasMultipleContext;
     }
     /**
      * Detect system complexity
      */
     detectSystemComplexity(doc) {
-        return doc.match(COMPLEXITY_PATTERNS.SYSTEM.keywords.join('|')).found;
+        return COMPLEXITY_PATTERNS.SYSTEM.keywords.some(k => doc.has(k));
     }
     /**
      * Detect time pressure
      */
     detectTimePressure(doc) {
-        return doc.match(COMPLEXITY_PATTERNS.TIME_PRESSURE.keywords.join('|')).found;
+        return COMPLEXITY_PATTERNS.TIME_PRESSURE.keywords.some(k => doc.has(k));
     }
     /**
      * Convert NLP result to complexity assessment

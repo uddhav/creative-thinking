@@ -3222,7 +3222,7 @@ export class LateralThinkingServer {
       }
 
       // Assess execution complexity
-      const executionComplexity = await this.assessExecutionComplexity(session, thinkingInput.technique);
+      const executionComplexity = this.assessExecutionComplexity(session, thinkingInput.technique);
 
       // Get sequential thinking suggestions if complexity is high
       if (executionComplexity.level === 'high') {
@@ -3946,32 +3946,36 @@ export class LateralThinkingServer {
   }
 
   // Assess problem complexity using hybrid NLP/LLM analyzer
-  private async assessComplexity(input: DiscoverTechniquesInput): Promise<ComplexityAssessment> {
+  private assessComplexity(input: DiscoverTechniquesInput): ComplexityAssessment {
     // Combine problem and context for analysis
     const textToAnalyze = `${input.problem} ${input.context || ''}`;
-    
+
     // Use the hybrid analyzer
-    const assessment = await this.complexityAnalyzer.analyze(textToAnalyze);
-    
+    const assessment = this.complexityAnalyzer.analyze(textToAnalyze);
+
     // Add constraints-based factor if applicable
     if (input.constraints && input.constraints.length > 3) {
       assessment.factors.push(`Multiple constraints (${input.constraints.length})`);
-      
+
       // Re-evaluate level if needed
-      if (assessment.factors.length >= COMPLEXITY_THRESHOLDS.DISCOVERY.HIGH && assessment.level !== 'high') {
+      if (
+        assessment.factors.length >= COMPLEXITY_THRESHOLDS.DISCOVERY.HIGH &&
+        assessment.level !== 'high'
+      ) {
         assessment.level = 'high';
-        assessment.suggestion = 'This problem exhibits high complexity with multiple interacting factors. Consider using sequential thinking to break down the problem systematically and track dependencies between components.';
+        assessment.suggestion =
+          'This problem exhibits high complexity with multiple interacting factors. Consider using sequential thinking to break down the problem systematically and track dependencies between components.';
       }
     }
-    
+
     return assessment;
   }
 
   // Assess execution complexity dynamically
-  private async assessExecutionComplexity(
+  private assessExecutionComplexity(
     session: SessionData,
     technique: LateralTechnique
-  ): Promise<ComplexityAssessment> {
+  ): ComplexityAssessment {
     const factors: string[] = [];
 
     // Check for extended reasoning chains
@@ -4016,11 +4020,11 @@ export class LateralThinkingServer {
 
     // Combine all outputs for NLP analysis
     const combinedOutputs = session.history.map(h => h.output).join(' ');
-    
+
     // Use hybrid analyzer on accumulated outputs if there's enough content
     if (combinedOutputs.length > 100) {
-      const outputComplexity = await this.complexityAnalyzer.analyze(combinedOutputs, false); // don't cache execution complexity
-      
+      const outputComplexity = this.complexityAnalyzer.analyze(combinedOutputs, false); // don't cache execution complexity
+
       // Merge factors from NLP analysis
       outputComplexity.factors.forEach(factor => {
         if (!factors.includes(factor)) {
@@ -4041,7 +4045,7 @@ export class LateralThinkingServer {
 
     return { level, factors, suggestion };
   }
-  
+
   // Shared method to calculate complexity level
   private calculateComplexityLevel(
     factorCount: number,
@@ -4074,7 +4078,7 @@ export class LateralThinkingServer {
       }
 
       // Assess complexity
-      const complexityAssessment = await this.assessComplexity(args);
+      const complexityAssessment = this.assessComplexity(args);
 
       // Analyze problem characteristics
       const problemLower = args.problem.toLowerCase();

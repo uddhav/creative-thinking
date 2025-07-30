@@ -22,7 +22,6 @@ const PDA_SCAMPER_CONFIG = {
     MAX_HISTORY_BEFORE_CACHE: 50,
 };
 export class LateralThinkingServer {
-    server;
     sessions = new Map();
     plans = new Map();
     currentSessionId = null;
@@ -40,8 +39,7 @@ export class LateralThinkingServer {
         enableMemoryMonitoring: process.env.ENABLE_MEMORY_MONITORING === 'true',
     };
     PLAN_TTL = 4 * 60 * 60 * 1000; // 4 hours for plans
-    constructor(server) {
-        this.server = server;
+    constructor() {
         this.disableThoughtLogging =
             (process.env.DISABLE_THOUGHT_LOGGING || '').toLowerCase() === 'true';
         this.ergodicityManager = new ErgodicityManager();
@@ -2216,7 +2214,7 @@ export class LateralThinkingServer {
                 }
             }
             // Assess execution complexity
-            const executionComplexity = await this.assessExecutionComplexity(session, thinkingInput.technique);
+            const executionComplexity = this.assessExecutionComplexity(session, thinkingInput.technique);
             // Get sequential thinking suggestions if complexity is high
             if (executionComplexity.level === 'high') {
                 // Get technique-specific sequential thinking suggestions
@@ -2850,24 +2848,26 @@ export class LateralThinkingServer {
         return undefined;
     }
     // Assess problem complexity using hybrid NLP/LLM analyzer
-    async assessComplexity(input) {
+    assessComplexity(input) {
         // Combine problem and context for analysis
         const textToAnalyze = `${input.problem} ${input.context || ''}`;
         // Use the hybrid analyzer
-        const assessment = await this.complexityAnalyzer.analyze(textToAnalyze);
+        const assessment = this.complexityAnalyzer.analyze(textToAnalyze);
         // Add constraints-based factor if applicable
         if (input.constraints && input.constraints.length > 3) {
             assessment.factors.push(`Multiple constraints (${input.constraints.length})`);
             // Re-evaluate level if needed
-            if (assessment.factors.length >= COMPLEXITY_THRESHOLDS.DISCOVERY.HIGH && assessment.level !== 'high') {
+            if (assessment.factors.length >= COMPLEXITY_THRESHOLDS.DISCOVERY.HIGH &&
+                assessment.level !== 'high') {
                 assessment.level = 'high';
-                assessment.suggestion = 'This problem exhibits high complexity with multiple interacting factors. Consider using sequential thinking to break down the problem systematically and track dependencies between components.';
+                assessment.suggestion =
+                    'This problem exhibits high complexity with multiple interacting factors. Consider using sequential thinking to break down the problem systematically and track dependencies between components.';
             }
         }
         return assessment;
     }
     // Assess execution complexity dynamically
-    async assessExecutionComplexity(session, technique) {
+    assessExecutionComplexity(session, technique) {
         const factors = [];
         // Check for extended reasoning chains
         if (session.history.length >= 6) {
@@ -2902,7 +2902,7 @@ export class LateralThinkingServer {
         const combinedOutputs = session.history.map(h => h.output).join(' ');
         // Use hybrid analyzer on accumulated outputs if there's enough content
         if (combinedOutputs.length > 100) {
-            const outputComplexity = await this.complexityAnalyzer.analyze(combinedOutputs, false); // don't cache execution complexity
+            const outputComplexity = this.complexityAnalyzer.analyze(combinedOutputs, false); // don't cache execution complexity
             // Merge factors from NLP analysis
             outputComplexity.factors.forEach(factor => {
                 if (!factors.includes(factor)) {
@@ -2942,7 +2942,7 @@ export class LateralThinkingServer {
                 throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Problem description is required', 'problem');
             }
             // Assess complexity
-            const complexityAssessment = await this.assessComplexity(args);
+            const complexityAssessment = this.assessComplexity(args);
             // Analyze problem characteristics
             const problemLower = args.problem.toLowerCase();
             const contextLower = (args.context || '').toLowerCase();
@@ -4499,7 +4499,7 @@ const server = new Server({
         tools: {},
     },
 });
-const lateralServer = new LateralThinkingServer(server);
+const lateralServer = new LateralThinkingServer();
 server.setRequestHandler(ListToolsRequestSchema, () => ({
     tools: [DISCOVER_TECHNIQUES_TOOL, PLAN_THINKING_SESSION_TOOL, EXECUTE_THINKING_STEP_TOOL],
 }));

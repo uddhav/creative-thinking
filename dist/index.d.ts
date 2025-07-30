@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import type { PathMemory } from './ergodicity/index.js';
 import { ErgodicityManager } from './ergodicity/index.js';
 import type { EarlyWarningState, EscapeProtocol } from './ergodicity/earlyWarning/types.js';
@@ -240,7 +239,6 @@ export interface SessionData {
     escapeRecommendation?: EscapeProtocol;
 }
 export declare class LateralThinkingServer {
-    private server?;
     private sessions;
     private plans;
     private currentSessionId;
@@ -251,7 +249,7 @@ export declare class LateralThinkingServer {
     private complexityAnalyzer;
     private config;
     private readonly PLAN_TTL;
-    constructor(server?: Server | undefined);
+    constructor();
     private initializePersistence;
     private startSessionCleanup;
     /**

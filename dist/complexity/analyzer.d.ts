@@ -8,7 +8,7 @@ export declare class HybridComplexityAnalyzer {
     /**
      * Analyze text complexity using hybrid approach
      */
-    analyze(text: string, useCache?: boolean): Promise<ComplexityAssessment>;
+    analyze(text: string, useCache?: boolean): ComplexityAssessment;
     /**
      * Perform local NLP analysis using Compromise
      */
