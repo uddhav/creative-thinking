@@ -2,10 +2,11 @@
  * Planning Layer
  * Creates structured workflows for thinking sessions
  */
+import { randomUUID } from 'crypto';
 export function planThinkingSession(input, sessionManager, techniqueRegistry) {
     const { problem, techniques, objectives, constraints, timeframe = 'thorough' } = input;
     // Generate unique plan ID
-    const planId = `plan_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const planId = `plan_${randomUUID()}`;
     // Build workflow for each technique
     const workflow = techniques.map(technique => {
         const handler = techniqueRegistry.getHandler(technique);

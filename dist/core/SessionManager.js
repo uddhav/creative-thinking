@@ -144,7 +144,9 @@ export class SessionManager {
             },
         });
         // Force garbage collection if available and memory usage is high
-        if (typeof global !== 'undefined' && global.gc && heapUsedMB > heapTotalMB * MEMORY_THRESHOLD_FOR_GC) {
+        if (typeof global !== 'undefined' &&
+            global.gc &&
+            heapUsedMB > heapTotalMB * MEMORY_THRESHOLD_FOR_GC) {
             // eslint-disable-next-line no-console
             console.log('[Memory Usage] Triggering garbage collection...');
             global.gc();

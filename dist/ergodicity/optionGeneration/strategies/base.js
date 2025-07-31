@@ -1,6 +1,7 @@
 /**
  * Base class for option generation strategies
  */
+import { randomUUID } from 'crypto';
 /**
  * Abstract base class for all option generation strategies
  */
@@ -30,7 +31,7 @@ export class BaseOptionStrategy {
      * Create a unique ID for an option
      */
     createOptionId() {
-        return `opt_${this.strategyName}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        return `opt_${this.strategyName}_${randomUUID()}`;
     }
     /**
      * Helper to create base option structure

@@ -2,6 +2,7 @@
  * Base class for option generation strategies
  */
 
+import { randomUUID } from 'crypto';
 import type {
   Option,
   OptionGenerationContext,
@@ -59,7 +60,7 @@ export abstract class BaseOptionStrategy {
    * Create a unique ID for an option
    */
   protected createOptionId(): string {
-    return `opt_${this.strategyName}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `opt_${this.strategyName}_${randomUUID()}`;
   }
 
   /**
