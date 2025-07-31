@@ -276,6 +276,7 @@ describe('Technique Implementations', () => {
         { action: 'put_to_other_use', step: 5 },
         { action: 'eliminate', step: 6 },
         { action: 'reverse', step: 7 },
+        { action: 'parameterize', step: 8 },
       ];
 
       let sessionId: string | undefined;
@@ -285,10 +286,10 @@ describe('Technique Implementations', () => {
           technique: 'scamper',
           problem: 'Improve product packaging',
           currentStep: step,
-          totalSteps: 7,
+          totalSteps: 8,
           output: `Applying ${action} to packaging`,
           scamperAction: action,
-          nextStepNeeded: step < 7,
+          nextStepNeeded: step < 8,
           sessionId,
         });
 

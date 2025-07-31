@@ -140,9 +140,9 @@ describe('Layered Tools Architecture', () => {
 
       expect(result.isError).toBeFalsy();
       const text = result.content[0]?.text || '';
-      // Design Thinking (5 steps) + SCAMPER (7 steps) = 12 total
+      // Design Thinking (5 steps) + SCAMPER (8 steps) = 13 total
       const stepMatches = text.match(/"stepNumber":\s*\d+/g) || [];
-      expect(stepMatches.length).toBe(12);
+      expect(stepMatches.length).toBe(13);
     });
 
     it('should include risk considerations for appropriate steps', async () => {

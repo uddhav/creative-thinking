@@ -1,458 +1,59 @@
 #!/usr/bin/env node
-import type { PathMemory } from './ergodicity/index.js';
-import { ErgodicityManager } from './ergodicity/index.js';
-import type { EarlyWarningState, EscapeProtocol } from './ergodicity/earlyWarning/types.js';
-export type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 'concept_extraction' | 'yes_and' | 'design_thinking' | 'triz' | 'neural_state' | 'temporal_work' | 'cross_cultural' | 'collective_intel';
-export type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green' | 'purple';
-export type ScamperAction = 'substitute' | 'combine' | 'adapt' | 'modify' | 'put_to_other_use' | 'eliminate' | 'reverse';
-export type DesignThinkingStage = 'empathize' | 'define' | 'ideate' | 'prototype' | 'test';
-export type PossibilityLevel = 'impossible' | 'breakthrough-required' | 'difficult' | 'feasible';
-export type ImpossibilityType = 'logical' | 'physical' | 'technical' | 'regulatory' | 'resource' | 'social';
-export interface RealityAssessment {
-    possibilityLevel: PossibilityLevel;
-    impossibilityType?: ImpossibilityType;
-    breakthroughsRequired?: string[];
-    historicalPrecedents?: string[];
-    confidenceLevel: number;
-    mechanismExplanation?: string;
-}
-export interface SequentialThinkingSuggestion {
-    complexityNote: string;
-    suggestedApproach: {
-        [key: string]: string;
-    };
-}
-export interface ScamperPathImpact {
-    reversible: boolean;
-    dependenciesCreated: string[];
-    optionsClosed: string[];
-    optionsOpened: string[];
-    flexibilityRetention: number;
-    commitmentLevel: 'low' | 'medium' | 'high' | 'irreversible';
-    recoveryPath?: string;
-}
-interface ScamperModificationHistory {
-    action: ScamperAction;
-    modification: string;
-    timestamp: string;
-    impact: ScamperPathImpact;
-    cumulativeFlexibility: number;
-}
-export interface ExecuteThinkingStepInput {
-    planId: string;
-    sessionId?: string;
-    technique: LateralTechnique;
-    problem: string;
-    currentStep: number;
-    totalSteps: number;
-    output: string;
-    nextStepNeeded: boolean;
-    hatColor?: SixHatsColor;
-    provocation?: string;
-    principles?: string[];
-    randomStimulus?: string;
-    connections?: string[];
-    scamperAction?: ScamperAction;
-    modificationHistory?: ScamperModificationHistory[];
-    pathImpact?: ScamperPathImpact;
-    flexibilityScore?: number;
-    alternativeSuggestions?: string[];
-    successExample?: string;
-    extractedConcepts?: string[];
-    abstractedPatterns?: string[];
-    applications?: string[];
-    initialIdea?: string;
-    additions?: string[];
-    evaluations?: string[];
-    synthesis?: string;
-    designStage?: DesignThinkingStage;
-    empathyInsights?: string[];
-    problemStatement?: string;
-    failureModesPredicted?: string[];
-    ideaList?: string[];
-    prototypeDescription?: string;
-    stressTestResults?: string[];
-    userFeedback?: string[];
-    failureInsights?: string[];
-    contradiction?: string;
-    inventivePrinciples?: string[];
-    viaNegativaRemovals?: string[];
-    minimalSolution?: string;
-    risks?: string[];
-    failureModes?: string[];
-    mitigations?: string[];
-    antifragileProperties?: string[];
-    blackSwans?: string[];
-    isRevision?: boolean;
-    revisesStep?: number;
-    branchFromStep?: number;
-    branchId?: string;
-    dominantNetwork?: 'dmn' | 'ecn';
-    suppressionDepth?: number;
-    switchingRhythm?: string[];
-    integrationInsights?: string[];
-    temporalLandscape?: {
-        fixedDeadlines?: string[];
-        flexibleWindows?: string[];
-        pressurePoints?: string[];
-        deadZones?: string[];
-        kairosOpportunities?: string[];
-    };
-    circadianAlignment?: string[];
-    pressureTransformation?: string[];
-    asyncSyncBalance?: string[];
-    temporalEscapeRoutes?: string[];
-    culturalFrameworks?: string[];
-    bridgeBuilding?: string[];
-    respectfulSynthesis?: string[];
-    parallelPaths?: string[];
-    wisdomSources?: string[];
-    emergentPatterns?: string[];
-    synergyCombinations?: string[];
-    collectiveInsights?: string[];
-    realityAssessment?: RealityAssessment;
-}
-export interface ThinkingOperationData {
-    sessionId?: string;
-    technique: LateralTechnique;
-    problem: string;
-    currentStep: number;
-    totalSteps: number;
-    output: string;
-    nextStepNeeded: boolean;
-    hatColor?: SixHatsColor;
-    provocation?: string;
-    principles?: string[];
-    randomStimulus?: string;
-    connections?: string[];
-    scamperAction?: ScamperAction;
-    modificationHistory?: ScamperModificationHistory[];
-    pathImpact?: ScamperPathImpact;
-    flexibilityScore?: number;
-    alternativeSuggestions?: string[];
-    successExample?: string;
-    extractedConcepts?: string[];
-    abstractedPatterns?: string[];
-    applications?: string[];
-    initialIdea?: string;
-    additions?: string[];
-    evaluations?: string[];
-    synthesis?: string;
-    designStage?: DesignThinkingStage;
-    empathyInsights?: string[];
-    problemStatement?: string;
-    failureModesPredicted?: string[];
-    ideaList?: string[];
-    prototypeDescription?: string;
-    stressTestResults?: string[];
-    userFeedback?: string[];
-    failureInsights?: string[];
-    contradiction?: string;
-    inventivePrinciples?: string[];
-    viaNegativaRemovals?: string[];
-    minimalSolution?: string;
-    risks?: string[];
-    failureModes?: string[];
-    mitigations?: string[];
-    antifragileProperties?: string[];
-    blackSwans?: string[];
-    isRevision?: boolean;
-    revisesStep?: number;
-    branchFromStep?: number;
-    branchId?: string;
-    autoSave?: boolean;
-    dominantNetwork?: 'dmn' | 'ecn';
-    suppressionDepth?: number;
-    switchingRhythm?: string[];
-    integrationInsights?: string[];
-    temporalLandscape?: {
-        fixedDeadlines?: string[];
-        flexibleWindows?: string[];
-        pressurePoints?: string[];
-        deadZones?: string[];
-        kairosOpportunities?: string[];
-    };
-    circadianAlignment?: string[];
-    pressureTransformation?: string[];
-    asyncSyncBalance?: string[];
-    temporalEscapeRoutes?: string[];
-    culturalFrameworks?: string[];
-    bridgeBuilding?: string[];
-    respectfulSynthesis?: string[];
-    parallelPaths?: string[];
-    wisdomSources?: string[];
-    emergentPatterns?: string[];
-    synergyCombinations?: string[];
-    collectiveInsights?: string[];
-    realityAssessment?: RealityAssessment;
-}
-export interface SessionOperationData {
-    sessionOperation: 'save' | 'load' | 'list' | 'delete' | 'export';
-    saveOptions?: {
-        sessionName?: string;
-        tags?: string[];
-        asTemplate?: boolean;
-    };
-    loadOptions?: {
-        sessionId: string;
-        continueFrom?: number;
-    };
-    listOptions?: {
-        limit?: number;
-        technique?: LateralTechnique;
-        status?: 'active' | 'completed' | 'all';
-        tags?: string[];
-        searchTerm?: string;
-    };
-    deleteOptions?: {
-        sessionId: string;
-        confirm?: boolean;
-    };
-    exportOptions?: {
-        sessionId: string;
-        format: 'json' | 'markdown' | 'csv';
-        outputPath?: string;
-    };
-}
-export type LateralThinkingData = ThinkingOperationData | SessionOperationData;
-export interface SessionData {
-    technique: LateralTechnique;
-    problem: string;
-    history: Array<ThinkingOperationData & {
-        timestamp: string;
-    }>;
-    branches: Record<string, ThinkingOperationData[]>;
-    insights: string[];
-    startTime?: number;
-    endTime?: number;
-    lastActivityTime: number;
-    metrics?: {
-        creativityScore?: number;
-        risksCaught?: number;
-        antifragileFeatures?: number;
-    };
-    tags?: string[];
-    name?: string;
-    pathMemory?: PathMemory;
-    ergodicityManager?: ErgodicityManager;
-    earlyWarningState?: EarlyWarningState;
-    escapeRecommendation?: EscapeProtocol;
-}
+/**
+ * Creative Thinking MCP Server
+ * A modular implementation of lateral thinking techniques
+ */
+import type { SessionData } from './types/index.js';
+export * from './types/index.js';
+export * from './types/planning.js';
+/**
+ * Main server class that orchestrates all components
+ */
 export declare class LateralThinkingServer {
-    private sessions;
-    private plans;
-    private currentSessionId;
-    private disableThoughtLogging;
-    private cleanupInterval;
-    private persistenceAdapter;
-    private ergodicityManager;
+    private sessionManager;
+    private responseBuilder;
+    private metricsCollector;
+    private techniqueRegistry;
+    private visualFormatter;
     private complexityAnalyzer;
-    private config;
-    private readonly PLAN_TTL;
+    private ergodicityManager;
+    get sessions(): Map<string, SessionData>;
+    get config(): import("./core/SessionManager.js").SessionConfig;
+    initializeSession(technique: string, problem: string): string;
+    touchSession(sessionId: string): void;
+    cleanupOldSessions(): void;
+    evictOldestSessions(): void;
+    logMemoryMetrics(): void;
     constructor();
-    private initializePersistence;
-    private startSessionCleanup;
     /**
-     * Update session activity time
+     * Process lateral thinking requests
      */
-    private touchSession;
-    private cleanupOldSessions;
+    processLateralThinking(input: unknown): Promise<import("./types/index.js").LateralThinkingResponse>;
     /**
-     * Evict oldest sessions using LRU (Least Recently Used) strategy
+     * Discover techniques handler
      */
-    private evictOldestSessions;
+    discoverTechniques(input: unknown): Promise<import("./types/index.js").LateralThinkingResponse>;
     /**
-     * Log memory usage metrics
+     * Plan thinking session handler
      */
-    private logMemoryMetrics;
-    destroy(): void;
+    planThinkingSession(input: unknown): Promise<import("./types/index.js").LateralThinkingResponse>;
     /**
-     * Handle session management operations
+     * Execute thinking step handler
+     */
+    executeThinkingStep(input: unknown): Promise<import("./types/index.js").LateralThinkingResponse>;
+    /**
+     * Handle session operations
      */
     private handleSessionOperation;
-    /**
-     * Save current session
-     */
     private handleSaveOperation;
-    /**
-     * Load a saved session
-     */
     private handleLoadOperation;
-    /**
-     * List saved sessions
-     */
     private handleListOperation;
-    /**
-     * Delete a saved session
-     */
     private handleDeleteOperation;
-    /**
-     * Export a session
-     */
     private handleExportOperation;
-    /**
-     * Save session to persistence adapter
-     */
-    private saveSessionToPersistence;
-    /**
-     * Format session list for visual output
-     */
-    private formatSessionList;
-    /**
-     * Get emoji for technique
-     */
-    private getTechniqueEmoji;
-    /**
-     * Format progress bar
-     */
-    private formatProgress;
-    /**
-     * Format time ago
-     */
-    private formatTimeAgo;
-    /**
-     * Get enhanced Six Thinking Hats information including Black Swan awareness
-     * @param color - The hat color to get information for
-     * @returns Hat information with name, focus, emoji, and enhanced focus
-     */
-    private getSixHatsInfo;
-    /**
-     * Get SCAMPER action information with pre-mortem risk questions
-     * @param action - The SCAMPER action to get information for
-     * @returns Action information with description, emoji, and risk question
-     */
-    private getScamperInfo;
-    /**
-     * Enhanced getScamperInfo for PDA-SCAMPER with path indicators and commitment levels
-     *
-     * Path indicators explain the level of commitment and reversibility:
-     * - 🔄 Low commitment: Easily reversible actions (modify, reverse, put_to_other_use)
-     * - ⚠️ Medium commitment: Reversible but with cost (substitute, adapt)
-     * - 🔒 High commitment: Difficult to reverse (combine)
-     * - 🔒 Irreversible: Cannot be undone (eliminate)
-     *
-     * @param action - The SCAMPER action to get information for
-     * @returns Enhanced info including path indicators and commitment levels
-     */
-    private getScamperInfoPDA;
-    /**
-     * Analyzes the path impact of a SCAMPER modification
-     *
-     * @param action - The SCAMPER action being analyzed
-     * @param modification - The specific modification being made
-     * @param history - Previous modifications in this session
-     * @returns Path impact analysis including flexibility and commitment levels
-     * @throws Error if action is invalid
-     */
-    private analyzeScamperPathImpact;
-    private identifyScamperDependencies;
-    private identifyClosedOptions;
-    private identifyOpenedOptions;
-    /**
-     * Generate alternative SCAMPER actions when flexibility is low
-     */
-    private generateScamperAlternatives;
-    /**
-     * Get Design Thinking stage information with embedded risk management
-     * @param stage - The Design Thinking stage to get information for
-     * @returns Stage information with description, emoji, and critical lens
-     */
-    private getDesignThinkingInfo;
     private isSessionOperation;
-    private validateInput;
-    private validateSessionOperation;
-    private validateThinkingOperation;
     /**
-     * Get critical thinking steps for a technique where adversarial mode is emphasized
-     * @param technique - The lateral thinking technique
-     * @returns Array of step numbers that are critical/adversarial
+     * Clean up resources
      */
-    private getCriticalSteps;
-    /**
-     * Determine whether current step is in creative or critical mode
-     * @param data - The lateral thinking data with current step info
-     * @returns Color and symbol for visual mode indication
-     */
-    private getModeIndicator;
-    /**
-     * Truncate a word if it exceeds maximum length to prevent layout breaking
-     * @param word - The word to potentially truncate
-     * @param maxLength - Maximum allowed length
-     * @returns Truncated word with ellipsis if needed
-     */
-    private truncateWord;
-    /**
-     * Validate cultural framework names to prevent offensive or inappropriate content
-     * @param framework - The cultural framework name to validate
-     * @returns true if the framework name is appropriate
-     */
-    private isValidCulturalFramework;
-    /**
-     * Format the risk identification section for visual output
-     * @param risks - Array of identified risks
-     * @param maxLength - Maximum line length for formatting
-     * @returns Formatted lines for the risk section
-     */
-    private formatRiskSection;
-    /**
-     * Format the mitigation strategies section for visual output
-     * @param mitigations - Array of mitigation strategies
-     * @param maxLength - Maximum line length for formatting
-     * @param hasRisks - Whether risks section was displayed (affects border)
-     * @returns Formatted lines for the mitigation section
-     */
-    private formatMitigationSection;
-    /**
-     * Calculate path impact based on the thinking step
-     */
-    private calculatePathImpact;
-    private formatOutput;
-    private initializeSession;
-    private getTechniqueSteps;
-    private extractInsights;
-    processLateralThinking(input: unknown): Promise<{
-        content: Array<{
-            type: string;
-            text: string;
-        }>;
-        isError?: boolean;
-    }>;
-    private getNextStepGuidance;
-    private generateMemorySuggestiveOutputs;
-    private generateContextualInsight;
-    private generateHistoricalNote;
-    private identifyPattern;
-    private categorizeProblem;
-    private identifySolutionPattern;
-    private assessBreakthroughLevel;
-    private extractPathDependencies;
-    private identifyNoteworthyPattern;
-    private assessComplexity;
-    private assessExecutionComplexity;
-    private calculateComplexityLevel;
-    discoverTechniques(input: unknown): Promise<{
-        content: Array<{
-            type: string;
-            text: string;
-        }>;
-        isError?: boolean;
-    }>;
-    planThinkingSession(input: unknown): Promise<{
-        content: Array<{
-            type: string;
-            text: string;
-        }>;
-        isError?: boolean;
-    }>;
-    executeThinkingStep(input: unknown): Promise<{
-        content: Array<{
-            type: string;
-            text: string;
-        }>;
-        isError?: boolean;
-    }>;
-    private getScamperDescription;
-    private getDesignThinkingOutputs;
+    destroy(): void;
 }
-export {};
 //# sourceMappingURL=index.d.ts.map

@@ -34,7 +34,7 @@ describe('Ergodicity and Path Dependency Tracking', () => {
 
       // Check that Purple Hat is included in workflow
       expect(planText).toContain('Purple Hat');
-      expect(planText).toContain('Path dependencies');
+      expect(planText).toContain('path dependencies');
     });
 
     it('should track path dependencies with Purple Hat', async () => {

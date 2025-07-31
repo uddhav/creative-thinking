@@ -1,0 +1,655 @@
+/**
+ * Tests for ResponseBuilder
+ * Ensures proper formatting of responses for all MCP tools
+ */
+
+import { describe, it, expect, beforeEach } from 'vitest';
+import { ResponseBuilder } from '../../core/ResponseBuilder.js';
+import { CreativeThinkingError, ErrorCode } from '../../errors/types.js';
+import type { SessionData, ThinkingOperationData } from '../../types/index.js';
+import type { DiscoverTechniquesOutput, PlanThinkingSessionOutput } from '../../types/planning.js';
+
+describe('ResponseBuilder', () => {
+  let builder: ResponseBuilder;
+
+  beforeEach(() => {
+    builder = new ResponseBuilder();
+  });
+
+  describe('buildSuccessResponse', () => {
+    it('should build a success response with formatted content', () => {
+      const content = { message: 'Success', data: [1, 2, 3] };
+      const response = builder.buildSuccessResponse(content);
+
+      expect(response).toEqual({
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(content, null, 2),
+          },
+        ],
+      });
+    });
+
+    it('should handle null content', () => {
+      const response = builder.buildSuccessResponse(null);
+
+      expect(response.content[0].text).toBe('null');
+    });
+
+    it('should handle undefined content', () => {
+      const response = builder.buildSuccessResponse(undefined);
+
+      expect(response.content[0].text).toBe(undefined);
+    });
+
+    it('should handle complex nested objects', () => {
+      const complexObject = {
+        level1: {
+          level2: {
+            array: [1, 2, { nested: true }],
+            value: 'test',
+          },
+        },
+      };
+      const response = builder.buildSuccessResponse(complexObject);
+
+      expect(JSON.parse(response.content[0].text)).toEqual(complexObject);
+    });
+  });
+
+  describe('buildErrorResponse', () => {
+    it('should build error response for CreativeThinkingError', () => {
+      const error = new CreativeThinkingError(ErrorCode.INVALID_INPUT, 'Test error', 'discovery', {
+        detail: 'test',
+      });
+      const response = builder.buildErrorResponse(error, 'discovery');
+
+      expect(response.isError).toBe(true);
+      expect(response.content).toHaveLength(1);
+      expect(response.content[0].type).toBe('text');
+
+      const errorData = JSON.parse(response.content[0].text);
+      expect(errorData.error).toEqual({
+        code: ErrorCode.INVALID_INPUT,
+        message: 'Test error',
+        details: { detail: 'test' },
+        layer: 'discovery',
+        timestamp: expect.any(String),
+      });
+    });
+
+    it('should build error response for standard Error', () => {
+      const error = new Error('Standard error');
+      const response = builder.buildErrorResponse(error, 'execution');
+
+      expect(response).toEqual({
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(
+              {
+                error: {
+                  message: 'Standard error',
+                  layer: 'execution',
+                },
+              },
+              null,
+              2
+            ),
+          },
+        ],
+        isError: true,
+      });
+    });
+
+    it('should handle errors with no message', () => {
+      const error = new Error();
+      const response = builder.buildErrorResponse(error, 'planning');
+
+      const parsed = JSON.parse(response.content[0].text);
+      expect(parsed.error.message).toBe('');
+      expect(parsed.error.layer).toBe('planning');
+    });
+  });
+
+  describe('buildDiscoveryResponse', () => {
+    it('should build discovery response with all fields', () => {
+      const discoveryOutput: DiscoverTechniquesOutput = {
+        problem: 'How to improve team creativity',
+        recommendations: [
+          { technique: 'six_hats', score: 0.9, rationale: 'Good for team discussions' },
+          { technique: 'po', score: 0.8, rationale: 'Helps challenge assumptions' },
+        ],
+        problemCategory: 'team_collaboration',
+        warnings: ['Consider time constraints'],
+        contextAnalysis: {
+          keywords: ['team', 'creativity'],
+          domain: 'organizational',
+          complexity: 'medium',
+        },
+        complexityAssessment: {
+          score: 0.6,
+          factors: ['Multiple stakeholders', 'Abstract problem'],
+          suggestedApproach: 'iterative',
+        },
+        workflow: {
+          phases: [
+            { name: 'Divergent', techniques: ['six_hats', 'random_entry'] },
+            { name: 'Convergent', techniques: ['po'] },
+          ],
+          estimatedTime: '2 hours',
+        },
+      };
+
+      const response = builder.buildDiscoveryResponse(discoveryOutput);
+      const parsed = JSON.parse(response.content[0].text);
+
+      expect(parsed.recommendations).toEqual(discoveryOutput.recommendations);
+      expect(parsed.problemCategory).toBe('team_collaboration');
+      expect(parsed.warnings).toEqual(['Consider time constraints']);
+      expect(parsed.reasoning).toContain('How to improve team creativity');
+      expect(parsed.suggestedWorkflow).toContain('Divergent');
+      expect(parsed.complexityAssessment).toEqual(discoveryOutput.complexityAssessment);
+    });
+
+    it('should handle minimal discovery output', () => {
+      const minimalOutput: DiscoverTechniquesOutput = {
+        problem: 'Test problem',
+        recommendations: [],
+      };
+
+      const response = builder.buildDiscoveryResponse(minimalOutput);
+      const parsed = JSON.parse(response.content[0].text);
+
+      expect(parsed.recommendations).toEqual([]);
+      expect(parsed.reasoning).toBe('No specific techniques recommended for this problem.');
+      expect(parsed.suggestedWorkflow).toBeUndefined();
+    });
+  });
+
+  describe('buildPlanningResponse', () => {
+    it('should build planning response with flattened workflow', () => {
+      const planOutput: PlanThinkingSessionOutput = {
+        planId: 'test-plan-123',
+        workflow: [
+          {
+            technique: 'six_hats',
+            steps: [
+              {
+                stepNumber: 1,
+                description: 'Blue hat thinking',
+                expectedOutput: 'Process overview',
+                risks: ['May be too abstract'],
+              },
+              {
+                stepNumber: 2,
+                description: 'White hat thinking',
+                expectedOutput: 'Facts and data',
+                risks: [],
+              },
+            ],
+          },
+          {
+            technique: 'po',
+            steps: [
+              {
+                stepNumber: 1,
+                description: 'Create provocation',
+                expectedOutput: 'Provocative statement',
+                risks: ['May seem unrealistic'],
+              },
+            ],
+          },
+        ],
+        estimatedSteps: 3,
+        totalSteps: 3,
+        estimatedTotalTime: '15 minutes',
+        objectives: ['Explore problem space', 'Generate ideas'],
+        constraints: ['Limited time'],
+        successMetrics: ['Number of ideas', 'Feasibility score'],
+        createdAt: Date.now(),
+      };
+
+      const response = builder.buildPlanningResponse(planOutput);
+      const parsed = JSON.parse(response.content[0].text);
+
+      expect(parsed.planId).toBe('test-plan-123');
+      expect(parsed.workflow).toHaveLength(3);
+      expect(parsed.workflow[0]).toEqual({
+        stepNumber: 1,
+        technique: 'six_hats',
+        description: 'Blue hat thinking',
+        expectedDuration: '5 minutes',
+        riskConsiderations: ['May be too abstract'],
+        totalSteps: 2,
+        expectedOutputs: ['Process overview'],
+      });
+      expect(parsed.estimatedSteps).toBe(3);
+      expect(parsed.estimatedDuration).toBe('15 minutes');
+      expect(parsed.objectives).toEqual(['Explore problem space', 'Generate ideas']);
+    });
+
+    it('should handle empty workflow', () => {
+      const emptyPlan: PlanThinkingSessionOutput = {
+        planId: 'empty-plan',
+        workflow: [],
+        estimatedSteps: 0,
+        totalSteps: 0,
+      };
+
+      const response = builder.buildPlanningResponse(emptyPlan);
+      const parsed = JSON.parse(response.content[0].text);
+
+      expect(parsed.workflow).toEqual([]);
+      expect(parsed.estimatedSteps).toBe(0);
+    });
+  });
+
+  describe('buildExecutionResponse', () => {
+    it('should build execution response with technique-specific fields', () => {
+      const input: ThinkingOperationData = {
+        technique: 'six_hats',
+        problem: 'Test problem',
+        currentStep: 1,
+        totalSteps: 6,
+        output: 'Blue hat output',
+        nextStepNeeded: true,
+        hatColor: 'blue',
+        risks: ['Risk 1'],
+        mitigations: ['Mitigation 1'],
+      };
+
+      const response = builder.buildExecutionResponse(
+        'session-123',
+        input,
+        ['Insight 1', 'Insight 2'],
+        'Next, try white hat thinking',
+        5
+      );
+
+      const parsed = JSON.parse(response.content[0].text);
+
+      expect(parsed.sessionId).toBe('session-123');
+      expect(parsed.technique).toBe('six_hats');
+      expect(parsed.currentStep).toBe(1);
+      expect(parsed.insights).toEqual(['Insight 1', 'Insight 2']);
+      expect(parsed.hatColor).toBe('blue');
+      expect(parsed.risks).toEqual(['Risk 1']);
+      expect(parsed.nextStepGuidance).toBe('Next, try white hat thinking');
+      expect(parsed.historyLength).toBe(5);
+    });
+
+    it('should handle SCAMPER with path impact', () => {
+      const scamperInput: ThinkingOperationData = {
+        technique: 'scamper',
+        problem: 'Improve product',
+        currentStep: 1,
+        totalSteps: 7,
+        output: 'Substitute materials',
+        nextStepNeeded: true,
+        scamperAction: 'substitute',
+        pathImpact: {
+          reversibilityCost: 0.3,
+          dependencyChains: ['material_choice'],
+          flexibilityChange: -0.1,
+        },
+        flexibilityScore: 0.7,
+        alternativeSuggestions: ['Use recycled materials'],
+      };
+
+      const response = builder.buildExecutionResponse('session-456', scamperInput, []);
+      const parsed = JSON.parse(response.content[0].text);
+
+      expect(parsed.scamperAction).toBe('substitute');
+      expect(parsed.pathImpact).toEqual(scamperInput.pathImpact);
+      expect(parsed.flexibilityScore).toBe(0.7);
+      expect(parsed.alternativeSuggestions).toEqual(['Use recycled materials']);
+    });
+
+    it('should handle revision fields', () => {
+      const revisionInput: ThinkingOperationData = {
+        technique: 'po',
+        problem: 'Test problem',
+        currentStep: 2,
+        totalSteps: 4,
+        output: 'Revised output',
+        nextStepNeeded: true,
+        isRevision: true,
+        revisesStep: 1,
+        branchFromStep: 1,
+        branchId: 'branch-123',
+      };
+
+      const response = builder.buildExecutionResponse('session-789', revisionInput, []);
+      const parsed = JSON.parse(response.content[0].text);
+
+      expect(parsed.isRevision).toBe(true);
+      expect(parsed.revisesStep).toBe(1);
+      expect(parsed.branchFromStep).toBe(1);
+      expect(parsed.branchId).toBe('branch-123');
+    });
+  });
+
+  describe('buildSessionOperationResponse', () => {
+    it('should build session operation response', () => {
+      const response = builder.buildSessionOperationResponse('save', {
+        sessionId: 'session-123',
+        timestamp: Date.now(),
+      });
+
+      const parsed = JSON.parse(response.content[0].text);
+
+      expect(parsed.operation).toBe('save');
+      expect(parsed.success).toBe(true);
+      expect(parsed.result).toHaveProperty('sessionId');
+    });
+  });
+
+  describe('addCompletionData', () => {
+    it('should add completion data with all metrics', () => {
+      const session: SessionData = {
+        technique: 'six_hats',
+        problem: 'Test problem',
+        history: Array(6).fill({
+          output: 'Step output',
+          currentStep: 1,
+          totalSteps: 6,
+          technique: 'six_hats',
+          problem: 'Test',
+          nextStepNeeded: false,
+        }),
+        branches: {},
+        insights: ['Insight 1', 'Insight 2', 'Insight 3'],
+        lastActivityTime: Date.now(),
+        startTime: Date.now() - 3600000,
+        endTime: Date.now(),
+        metrics: {
+          creativityScore: 8.5,
+          risksCaught: 5,
+          antifragileFeatures: 3,
+        },
+        pathMemory: {
+          pathHistory: [
+            { reversibilityCost: 0.8, description: 'Critical decision' },
+            { reversibilityCost: 0.2, description: 'Minor choice' },
+          ],
+          constraints: [
+            {
+              id: '1',
+              description: 'Time limit',
+              strength: 0.5,
+              source: 'user',
+              timestamp: Date.now(),
+              flexibility_impact: -0.2,
+            },
+          ],
+          currentFlexibility: { flexibilityScore: 0.6 },
+        } as any,
+        earlyWarningState: {
+          activeWarnings: [{ severity: 'MEDIUM', message: 'Approaching decision lock-in' }],
+        } as any,
+        escapeRecommendation: {
+          name: 'Temporal Unbinding',
+          steps: ['Step 1', 'Step 2', 'Step 3', 'Step 4'],
+          priority: 'high',
+          prerequisites: [],
+          timeToImplement: '1 hour',
+          risks: [],
+        },
+      };
+
+      const originalResponse = { sessionId: 'test-123' };
+      const enhanced = builder.addCompletionData(originalResponse, session);
+
+      expect(enhanced.sessionComplete).toBe(true);
+      expect(enhanced.completed).toBe(true);
+      expect(enhanced.techniqueUsed).toBe('six_hats');
+      expect(enhanced.insights).toEqual(session.insights);
+      expect(enhanced.metrics).toEqual(session.metrics);
+      expect(enhanced.summary).toEqual({
+        technique: 'six_hats',
+        problem: 'Test problem',
+        stepsCompleted: 6,
+        insightsGenerated: 3,
+        creativityScore: 8.5,
+        risksCaught: 5,
+      });
+      expect(enhanced.pathAnalysis).toEqual({
+        decisionsLocked: 1,
+        flexibilityScore: 0.6,
+        constraints: ['Time limit'],
+      });
+      expect(enhanced.warnings).toEqual(['MEDIUM: Approaching decision lock-in']);
+      expect(enhanced.escapeOptions).toEqual({
+        protocol: 'Temporal Unbinding',
+        steps: ['Step 1', 'Step 2', 'Step 3'],
+      });
+    });
+
+    it('should handle session without optional data', () => {
+      const minimalSession: SessionData = {
+        technique: 'po',
+        problem: 'Test',
+        history: [],
+        branches: {},
+        insights: [],
+        lastActivityTime: Date.now(),
+      };
+
+      const response = { sessionId: 'test' };
+      const enhanced = builder.addCompletionData(response, minimalSession);
+
+      expect(enhanced.sessionComplete).toBe(true);
+      expect(enhanced.metrics).toBeUndefined();
+      expect(enhanced.pathAnalysis).toBeUndefined();
+      expect(enhanced.warnings).toBeUndefined();
+      expect(enhanced.escapeOptions).toBeUndefined();
+    });
+  });
+
+  describe('formatSessionList', () => {
+    it('should format session list for display', () => {
+      const sessions = [
+        {
+          id: 'session-1',
+          data: {
+            technique: 'six_hats' as const,
+            problem:
+              'How to improve team communication in remote work environments with multiple time zones',
+            history: Array(5).fill({}),
+            branches: {},
+            insights: ['Insight 1', 'Insight 2'],
+            lastActivityTime: Date.now(),
+            startTime: Date.now() - 3600000,
+            endTime: Date.now(),
+            name: 'Team Communication Session',
+            tags: ['team', 'remote'],
+          } as SessionData,
+        },
+        {
+          id: 'session-2',
+          data: {
+            technique: 'po' as const,
+            problem: 'Short problem',
+            history: Array(3).fill({}),
+            branches: {},
+            insights: [],
+            lastActivityTime: Date.now() - 1800000,
+            startTime: Date.now() - 7200000,
+          } as SessionData,
+        },
+      ];
+
+      const formatted = builder.formatSessionList(sessions);
+
+      expect(formatted.count).toBe(2);
+      expect(formatted.sessions).toHaveLength(2);
+      expect(formatted.sessions[0]).toEqual({
+        id: 'session-1',
+        name: 'Team Communication Session',
+        technique: 'six_hats',
+        problem:
+          'How to improve team communication in remote work environments with multiple time zones',
+        created: expect.any(String),
+        lastActivity: expect.any(String),
+        steps: 5,
+        complete: true,
+        insights: 2,
+        tags: ['team', 'remote'],
+      });
+      expect(formatted.sessions[1].name).toBe('po - Short problem...');
+      expect(formatted.sessions[1].complete).toBe(false);
+    });
+
+    it('should handle empty session list', () => {
+      const formatted = builder.formatSessionList([]);
+
+      expect(formatted.count).toBe(0);
+      expect(formatted.sessions).toEqual([]);
+    });
+  });
+
+  describe('formatExportData', () => {
+    const mockSession: SessionData = {
+      technique: 'six_hats',
+      problem: 'Test problem',
+      history: [
+        {
+          technique: 'six_hats',
+          problem: 'Test problem',
+          currentStep: 1,
+          totalSteps: 6,
+          output: 'Blue hat output',
+          nextStepNeeded: true,
+          risks: ['Risk 1'],
+          mitigations: ['Mitigation 1'],
+          timestamp: new Date().toISOString(),
+        },
+      ],
+      branches: {},
+      insights: ['Key insight'],
+      lastActivityTime: Date.now(),
+      startTime: Date.now() - 3600000,
+    };
+
+    it('should format as JSON', () => {
+      const json = builder.formatExportData(mockSession, 'json');
+      const parsed = JSON.parse(json);
+
+      expect(parsed).toEqual(mockSession);
+    });
+
+    it('should format as Markdown', () => {
+      const markdown = builder.formatExportData(mockSession, 'markdown');
+
+      expect(markdown).toContain('# Creative Thinking Session');
+      expect(markdown).toContain('**Technique:** six_hats');
+      expect(markdown).toContain('**Problem:** Test problem');
+      expect(markdown).toContain('## Steps');
+      expect(markdown).toContain('### Step 1');
+      expect(markdown).toContain('**Output:** Blue hat output');
+      expect(markdown).toContain('**Risks:** Risk 1');
+      expect(markdown).toContain('**Mitigations:** Mitigation 1');
+      expect(markdown).toContain('## Insights');
+      expect(markdown).toContain('- Key insight');
+    });
+
+    it('should format as CSV', () => {
+      const csv = builder.formatExportData(mockSession, 'csv');
+      const lines = csv.split('\n');
+
+      expect(lines[0]).toBe('Step,Technique,Output,Risks,Mitigations');
+      expect(lines[1]).toContain('1,six_hats,"Blue hat output","Risk 1","Mitigation 1"');
+    });
+
+    it('should handle CSV with quotes in content', () => {
+      const sessionWithQuotes: SessionData = {
+        ...mockSession,
+        history: [
+          {
+            ...mockSession.history[0],
+            output: 'Output with "quotes" inside',
+            risks: ['Risk with "danger"'],
+          },
+        ],
+      };
+
+      const csv = builder.formatExportData(sessionWithQuotes, 'csv');
+      expect(csv).toContain('"Output with ""quotes"" inside"');
+      expect(csv).toContain('"Risk with ""danger"""');
+    });
+
+    it('should throw error for unsupported format', () => {
+      expect(() => {
+        builder.formatExportData(mockSession, 'pdf' as any);
+      }).toThrow('Unsupported export format: pdf');
+    });
+  });
+
+  describe('extractTechniqueSpecificFields', () => {
+    it('should extract all technique-specific fields', () => {
+      // Test each technique type
+      const techniques: Array<[string, ThinkingOperationData, Record<string, any>]> = [
+        ['six_hats', { technique: 'six_hats', hatColor: 'blue' } as any, { hatColor: 'blue' }],
+        [
+          'po',
+          {
+            technique: 'po',
+            provocation: 'PO: Cars have square wheels',
+            principles: ['P1'],
+          } as any,
+          { provocation: 'PO: Cars have square wheels', principles: ['P1'] },
+        ],
+        [
+          'random_entry',
+          {
+            technique: 'random_entry',
+            randomStimulus: 'Apple',
+            connections: ['Red', 'Round'],
+          } as any,
+          { randomStimulus: 'Apple', connections: ['Red', 'Round'] },
+        ],
+        [
+          'neural_state',
+          { technique: 'neural_state', dominantNetwork: 'dmn', suppressionDepth: 5 } as any,
+          { dominantNetwork: 'dmn', suppressionDepth: 5 },
+        ],
+      ];
+
+      techniques.forEach(([technique, input, expected]) => {
+        const response = builder.buildExecutionResponse('test', input, []);
+        const parsed = JSON.parse(response.content[0].text);
+
+        Object.entries(expected).forEach(([key, value]) => {
+          expect(parsed[key]).toEqual(value);
+        });
+      });
+    });
+
+    it('should include risk/adversarial fields', () => {
+      const input: ThinkingOperationData = {
+        technique: 'triz',
+        problem: 'Test',
+        currentStep: 1,
+        totalSteps: 4,
+        output: 'Output',
+        nextStepNeeded: true,
+        risks: ['Risk 1'],
+        failureModes: ['Failure 1'],
+        mitigations: ['Mitigation 1'],
+        antifragileProperties: ['Redundancy'],
+        blackSwans: ['Unexpected event'],
+      };
+
+      const response = builder.buildExecutionResponse('test', input, []);
+      const parsed = JSON.parse(response.content[0].text);
+
+      expect(parsed.risks).toEqual(['Risk 1']);
+      expect(parsed.failureModes).toEqual(['Failure 1']);
+      expect(parsed.mitigations).toEqual(['Mitigation 1']);
+      expect(parsed.antifragileProperties).toEqual(['Redundancy']);
+      expect(parsed.blackSwans).toEqual(['Unexpected event']);
+    });
+  });
+});

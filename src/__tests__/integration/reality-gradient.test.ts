@@ -91,7 +91,7 @@ describe('Reality Gradient Integration', () => {
         technique: 'scamper',
         problem: 'Create unlimited energy source',
         currentStep: 1,
-        totalSteps: 7,
+        totalSteps: 8,
         scamperAction: 'substitute',
         output: 'Substitute traditional energy with perpetual motion machines',
         nextStepNeeded: true,
@@ -271,7 +271,8 @@ describe('Reality Gradient Integration', () => {
 
       const stepData = parseServerResponse<StepDataWithReality>(stepResult);
 
-      // Should keep the provided assessment
+      // Should not perform a new assessment when one is provided
+      // The response won't include realityAssessment since it was already in the input
       expect(stepData.realityAssessment).toBeUndefined();
     });
   });

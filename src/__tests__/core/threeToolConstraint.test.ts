@@ -103,13 +103,15 @@ describe('Three Tool Constraint', () => {
   });
 
   it('should reject operations outside the three tools', async () => {
-    // Test that undefined operations are rejected
-    const result = await server.processLateralThinking({
+    // Test that operations missing required fields are rejected
+    const result = await server.executeThinkingStep({
+      // Missing required fields like technique, problem, etc.
       invalidOperation: 'test',
     });
 
     expect(result.isError).toBeTruthy();
-    expect(result.content[0].text).toContain('Invalid');
+    // The validation should reject this as invalid
+    expect(result.content[0].text).toContain('Invalid operation');
   });
 
   it('should integrate all features within three-layer architecture', async () => {

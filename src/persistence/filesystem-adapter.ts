@@ -188,7 +188,12 @@ export class FilesystemAdapter implements PersistenceAdapter {
         .filter(file => file.endsWith('.json'))
         .map(async file => {
           const content = await fs.readFile(path.join(metadataDir, file), 'utf8');
-          return JSON.parse(content) as SessionMetadata;
+          const metadata = JSON.parse(content);
+          // Convert date strings back to Date objects
+          if (metadata.createdAt) metadata.createdAt = new Date(metadata.createdAt);
+          if (metadata.updatedAt) metadata.updatedAt = new Date(metadata.updatedAt);
+          if (metadata.completedAt) metadata.completedAt = new Date(metadata.completedAt);
+          return metadata as SessionMetadata;
         });
 
       let metadata = await Promise.all(metadataPromises);

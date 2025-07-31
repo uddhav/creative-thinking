@@ -55,7 +55,17 @@ export const SAMPLING_CONFIG = {
 // Complexity factor patterns for NLP detection
 export const COMPLEXITY_PATTERNS = {
   INTERACTION: {
-    keywords: ['interact', 'interconnect', 'depend', 'connect', 'influence', 'affect', 'relate'],
+    keywords: [
+      'interact',
+      'interconnect',
+      'depend',
+      'connect',
+      'influence',
+      'affect',
+      'relate',
+      'dependencies',
+      'integration',
+    ],
     requiresContext: ['multiple'],
   },
   CONFLICT: {
@@ -63,7 +73,16 @@ export const COMPLEXITY_PATTERNS = {
     requiresContext: [],
   },
   UNCERTAINTY: {
-    keywords: ['uncertain', 'uncertainty', 'dynamic', 'chang', 'evolv', 'unclear', 'ambiguous'],
+    keywords: [
+      'uncertain',
+      'uncertainty',
+      'dynamic',
+      'dynamics',
+      'chang',
+      'evolv',
+      'unclear',
+      'ambiguous',
+    ],
     requiresContext: [],
   },
   STAKEHOLDER: {
@@ -71,7 +90,16 @@ export const COMPLEXITY_PATTERNS = {
     requiresContext: ['multiple', 'diverse', 'various'],
   },
   SYSTEM: {
-    keywords: ['system', 'systems', 'ecosystem', 'complex', 'architecture', 'infrastructure'],
+    keywords: [
+      'system',
+      'systems',
+      'ecosystem',
+      'complex',
+      'architecture',
+      'infrastructure',
+      'transformation',
+      'large-scale',
+    ],
     requiresContext: [],
   },
   TIME_PRESSURE: {

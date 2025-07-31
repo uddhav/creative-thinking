@@ -64,17 +64,21 @@ interface ExecutionResponse {
 }
 
 interface DiscoveryResponse {
-  problem: string;
   recommendations: Array<{
     technique: string;
-    score: number;
+    effectiveness: number;
     reasoning: string;
-    bestFor: string[];
-    limitations: string[];
   }>;
+  reasoning: string;
   suggestedWorkflow?: string;
-  flexibilityScore?: number;
-  optionGenerationRecommended?: boolean;
+  problemCategory: string;
+  warnings?: string[];
+  contextAnalysis?: {
+    complexity: 'low' | 'medium' | 'high';
+    timeConstraint: boolean;
+    collaborationNeeded: boolean;
+    flexibilityScore?: number;
+  };
 }
 
 describe('Temporal Work Design', () => {
@@ -124,9 +128,8 @@ describe('Temporal Work Design', () => {
 
       const temporalRec = response.recommendations.find(r => r.technique === 'temporal_work');
       expect(temporalRec).toBeDefined();
-      expect(temporalRec?.score).toBeGreaterThan(0.8);
+      expect(temporalRec?.effectiveness).toBeGreaterThan(0.8);
       expect(temporalRec?.reasoning).toContain('kairos-chronos integration');
-      expect(temporalRec?.bestFor).toContain('deadline management');
     });
 
     it('should recommend Temporal Work for schedule optimization', async () => {
@@ -141,7 +144,7 @@ describe('Temporal Work Design', () => {
 
       const temporalRec = response.recommendations.find(r => r.technique === 'temporal_work');
       expect(temporalRec).toBeDefined();
-      expect(temporalRec?.bestFor).toContain('creative scheduling');
+      expect(temporalRec?.effectiveness).toBeGreaterThan(0.7);
     });
   });
 
@@ -157,10 +160,10 @@ describe('Temporal Work Design', () => {
       const planData = JSON.parse(result.content[0]?.text || '{}') as PlanResponse;
 
       expect(planData.workflow).toHaveLength(5);
-      expect(planData.workflow[0].description).toContain('Map temporal landscape');
+      expect(planData.workflow[0].description).toContain('Map the temporal landscape');
       expect(planData.workflow[1].description).toContain('circadian rhythms');
-      expect(planData.workflow[2].description).toContain('Transform deadline pressure');
-      expect(planData.workflow[3].description).toContain('Balance asynchronous and synchronous');
+      expect(planData.workflow[2].description).toContain('Transform time pressure');
+      expect(planData.workflow[3].description).toContain('async and sync');
       expect(planData.workflow[4].description).toContain('temporal escape routes');
 
       // Check risk considerations

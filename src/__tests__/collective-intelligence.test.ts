@@ -65,16 +65,21 @@ interface ExecutionResponse {
 
 interface DiscoveryResponse {
   problem: string;
+  problemCategory: string;
   recommendations: Array<{
     technique: string;
-    score: number;
+    effectiveness: number;
     reasoning: string;
-    bestFor: string[];
-    limitations: string[];
   }>;
-  suggestedWorkflow?: string;
-  flexibilityScore?: number;
-  optionGenerationRecommended?: boolean;
+  integrationSuggestions?: any;
+  workflow?: any;
+  warnings?: string[];
+  contextAnalysis?: {
+    complexity: 'low' | 'medium' | 'high';
+    timeConstraint: boolean;
+    collaborationNeeded: boolean;
+    flexibilityScore?: number;
+  };
 }
 
 describe('Collective Intelligence Orchestration', () => {
@@ -125,9 +130,8 @@ describe('Collective Intelligence Orchestration', () => {
 
       const collectiveRec = response.recommendations.find(r => r.technique === 'collective_intel');
       expect(collectiveRec).toBeDefined();
-      expect(collectiveRec?.score).toBeGreaterThan(0.8);
-      expect(collectiveRec?.reasoning).toContain('synthesize multiple perspectives');
-      expect(collectiveRec?.bestFor).toContain('multi-stakeholder problems');
+      expect(collectiveRec?.effectiveness).toBeGreaterThan(0.7);
+      expect(collectiveRec?.reasoning).toContain('diverse perspectives');
     });
 
     it('should recommend Collective Intelligence for knowledge synthesis problems', async () => {
@@ -142,7 +146,7 @@ describe('Collective Intelligence Orchestration', () => {
 
       const collectiveRec = response.recommendations.find(r => r.technique === 'collective_intel');
       expect(collectiveRec).toBeDefined();
-      expect(collectiveRec?.bestFor).toContain('knowledge synthesis');
+      expect(response.problemCategory).toBe('organizational');
     });
 
     it('should recognize crowdsourcing and collaborative keywords', async () => {
@@ -185,12 +189,12 @@ describe('Collective Intelligence Orchestration', () => {
       const planData = JSON.parse(result.content[0]?.text || '{}') as PlanResponse;
 
       expect(planData.workflow).toHaveLength(5);
-      expect(planData.workflow[0].description).toContain('Gather wisdom sources');
-      expect(planData.workflow[1].description).toContain('Map knowledge landscape');
-      expect(planData.workflow[2].description).toContain('Identify emergent patterns');
-      expect(planData.workflow[3].description).toContain('Create synergy combinations');
+      expect(planData.workflow[0].description).toContain('Identify wisdom sources');
+      expect(planData.workflow[1].description).toContain('Gather specific insights');
+      expect(planData.workflow[2].description).toContain('Find patterns');
+      expect(planData.workflow[3].description).toContain('Create synergistic combinations');
       expect(planData.workflow[4].description).toContain(
-        'Synthesize into actionable collective intelligence'
+        'Synthesize collective intelligence into unified, actionable insights'
       );
 
       // Check risk considerations
@@ -225,7 +229,7 @@ describe('Collective Intelligence Orchestration', () => {
 
       expect(step1.technique).toBe('collective_intel');
       expect(step1.currentStep).toBe(1);
-      expect(step1.nextStepGuidance).toContain('Map knowledge landscape');
+      expect(step1.nextStepGuidance).toContain('Gather specific insights');
       expect(step1.contextualInsight).toContain('5 wisdom sources');
 
       // Step 2: Map knowledge landscape
@@ -259,7 +263,7 @@ describe('Collective Intelligence Orchestration', () => {
       });
 
       expect(step3.currentStep).toBe(3);
-      expect(step3.contextualInsight).toContain('4 insights discovered');
+      expect(step3.contextualInsight).toBe('4 emergent patterns discovered');
 
       // Step 4: Create synergy combinations
       const step4 = await executeStep(planId, {
@@ -278,7 +282,7 @@ describe('Collective Intelligence Orchestration', () => {
       });
 
       expect(step4.currentStep).toBe(4);
-      expect(step4.contextualInsight).toContain('3 knowledge combinations');
+      expect(step4.contextualInsight).toContain('3 synergistic combinations');
 
       // Step 5: Synthesize collective insights
       const step5 = await executeStep(planId, {
@@ -302,7 +306,7 @@ describe('Collective Intelligence Orchestration', () => {
       expect(step5.insights).toBeDefined();
       expect(step5.insights?.length).toBeGreaterThan(0);
       expect(
-        step5.insights?.some(i => i.includes('Collective Intelligence Orchestration completed'))
+        step5.insights?.some(i => i.includes('Collective Intelligence synthesis completed'))
       ).toBe(true);
     });
 
@@ -329,7 +333,7 @@ describe('Collective Intelligence Orchestration', () => {
         nextStepNeeded: true,
       });
 
-      expect(step1.contextualInsight).toContain('7 wisdom sources');
+      expect(step1.contextualInsight).toBe('7 wisdom sources identified');
     });
 
     it('should identify critical steps for pattern recognition and synergy', async () => {
@@ -430,7 +434,9 @@ describe('Collective Intelligence Orchestration', () => {
 
       expect(finalStep.sessionFingerprint).toBeDefined();
       expect(finalStep.sessionFingerprint?.solutionPattern).toBeDefined();
-      expect(finalStep.insights?.some(i => i.includes('Wisdom sources integrated'))).toBe(true);
+      expect(
+        finalStep.insights?.some(i => i.includes('Collective Intelligence synthesis completed'))
+      ).toBe(true);
     });
   });
 

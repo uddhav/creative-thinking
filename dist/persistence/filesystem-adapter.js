@@ -125,7 +125,15 @@ export class FilesystemAdapter {
                 .filter(file => file.endsWith('.json'))
                 .map(async (file) => {
                 const content = await fs.readFile(path.join(metadataDir, file), 'utf8');
-                return JSON.parse(content);
+                const metadata = JSON.parse(content);
+                // Convert date strings back to Date objects
+                if (metadata.createdAt)
+                    metadata.createdAt = new Date(metadata.createdAt);
+                if (metadata.updatedAt)
+                    metadata.updatedAt = new Date(metadata.updatedAt);
+                if (metadata.completedAt)
+                    metadata.completedAt = new Date(metadata.completedAt);
+                return metadata;
             });
             let metadata = await Promise.all(metadataPromises);
             // Apply filters

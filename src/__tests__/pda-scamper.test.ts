@@ -88,7 +88,7 @@ describe('PDA-SCAMPER Enhancement', () => {
       technique: 'scamper',
       problem: 'Improve a coffee mug design',
       currentStep: step,
-      totalSteps: 7,
+      totalSteps: 8,
       output,
       nextStepNeeded,
       scamperAction: action as ScamperAction,
@@ -96,6 +96,9 @@ describe('PDA-SCAMPER Enhancement', () => {
     };
 
     const result = (await server.executeThinkingStep(input)) as ServerResponse;
+    if (result.isError) {
+      console.error('ExecuteStep error:', result.content[0]?.text);
+    }
     expect(result.isError).toBeFalsy();
     return JSON.parse(result.content[0]?.text || '{}') as ExecutionResponse;
   }
@@ -113,21 +116,21 @@ describe('PDA-SCAMPER Enhancement', () => {
       const planData = JSON.parse(result.content[0]?.text || '{}') as PlanResponse;
 
       // Check that each step has path indicators
-      expect(planData.workflow).toHaveLength(7);
+      expect(planData.workflow).toHaveLength(8);
 
       // Check specific high-commitment actions
-      const eliminateStep = planData.workflow.find(w => w.description.includes('Eliminate'));
+      const eliminateStep = planData.workflow.find(w => w.description.includes('ELIMINATE'));
       expect(eliminateStep?.description).toContain('🔒'); // Lock indicator
       expect(eliminateStep?.riskConsiderations).toContain(
         '⚠️ IRREVERSIBLE ACTION - Cannot be undone'
       );
 
-      const combineStep = planData.workflow.find(w => w.description.includes('Combine'));
+      const combineStep = planData.workflow.find(w => w.description.includes('COMBINE'));
       expect(combineStep?.description).toContain('🔒'); // Lock indicator
       expect(combineStep?.riskConsiderations).toContain('High commitment - Difficult to reverse');
 
       // Check low-commitment actions
-      const modifyStep = planData.workflow.find(w => w.description.includes('Modify'));
+      const modifyStep = planData.workflow.find(w => w.description.includes('MODIFY'));
       expect(modifyStep?.description).toContain('🔄'); // Reversible indicator
     });
   });
@@ -379,7 +382,9 @@ describe('PDA-SCAMPER Enhancement', () => {
         true
       );
       expect(step2.pathImpact?.optionsClosed.length).toBeGreaterThan(0);
-      expect(step2.pathImpact?.optionsClosed).toContain('Features dependent on eliminated element');
+      expect(step2.pathImpact?.optionsClosed).toContain(
+        'Features dependent on eliminated elements'
+      );
     });
   });
 

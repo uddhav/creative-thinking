@@ -1,0 +1,152 @@
+/**
+ * Six Thinking Hats technique handler
+ */
+import { BaseTechniqueHandler } from './types.js';
+export class SixHatsHandler extends BaseTechniqueHandler {
+    hats = {
+        blue: {
+            name: 'Blue Hat',
+            focus: 'Process control and thinking about thinking',
+            emoji: '🔵',
+            enhancedFocus: 'Meta-cognition: Define objectives, set agenda, monitor progress, identify decision points',
+        },
+        white: {
+            name: 'White Hat',
+            focus: 'Facts, information, and data',
+            emoji: '⚪',
+            enhancedFocus: 'Data gathering: What do we know? What do we need to know? How do we get the information?',
+        },
+        red: {
+            name: 'Red Hat',
+            focus: 'Emotions, feelings, and intuition',
+            emoji: '🔴',
+            enhancedFocus: 'Emotional intelligence: Gut feelings, fears, excitement, resistance patterns',
+        },
+        yellow: {
+            name: 'Yellow Hat',
+            focus: 'Optimism and positive thinking',
+            emoji: '🟡',
+            enhancedFocus: 'Value sensitivity: Benefits, advantages, why it might work, best-case scenarios',
+        },
+        black: {
+            name: 'Black Hat',
+            focus: 'Critical thinking and caution',
+            emoji: '⚫',
+            enhancedFocus: 'Risk awareness: Problems, dangers, difficulties, worst-case scenarios, Black Swans',
+        },
+        green: {
+            name: 'Green Hat',
+            focus: 'Creativity and new ideas',
+            emoji: '🟢',
+            enhancedFocus: 'Creative exploration: Alternatives, possibilities, innovations, lateral moves',
+        },
+        purple: {
+            name: 'Purple Hat',
+            focus: 'Path dependency and ergodicity analysis',
+            emoji: '🟣',
+            enhancedFocus: 'Path analysis: Irreversible decisions, option creation/destruction, flexibility preservation',
+        },
+    };
+    hatOrder = [
+        'blue',
+        'white',
+        'red',
+        'yellow',
+        'black',
+        'green',
+        'purple',
+    ];
+    getTechniqueInfo() {
+        return {
+            name: 'Six Thinking Hats',
+            emoji: '🎩',
+            totalSteps: 7,
+            description: 'Systematic exploration through different thinking modes',
+            focus: 'Parallel thinking to explore all aspects',
+            enhancedFocus: 'Now includes Purple Hat for path dependency analysis',
+        };
+    }
+    getStepInfo(step) {
+        const hatColor = this.hatOrder[step - 1];
+        if (!hatColor) {
+            throw new Error(`Invalid step ${step} for Six Hats`);
+        }
+        return this.hats[hatColor];
+    }
+    getStepGuidance(step, problem) {
+        const hat = this.getStepInfo(step);
+        const hatColor = this.hatOrder[step - 1];
+        switch (hatColor) {
+            case 'blue':
+                return `${hat.emoji} Blue Hat: Define the thinking process for "${problem}". What are we trying to achieve? What's our approach?`;
+            case 'white':
+                return `⚪ White Hat: What facts and data do we have about "${problem}"? What information is missing?`;
+            case 'red':
+                return `🔴 Red Hat: What are your gut feelings about "${problem}"? Don't justify - just express emotions and intuitions.`;
+            case 'yellow':
+                return `🟡 Yellow Hat: What are the benefits and positive aspects of addressing "${problem}"? What's the best that could happen?`;
+            case 'black':
+                return `⚫ Black Hat: What could go wrong with "${problem}"? What are the risks, obstacles, and potential Black Swan events?`;
+            case 'green':
+                return `🟢 Green Hat: Generate creative solutions for "${problem}". Think laterally - what are unconventional approaches?`;
+            case 'purple':
+                return `🟣 Purple Hat: Analyze path dependencies in "${problem}". Which decisions would be irreversible? How can we preserve optionality?`;
+            default:
+                return `Apply ${hat.name} thinking to "${problem}"`;
+        }
+    }
+    validateStep(step, data) {
+        if (!super.validateStep(step, data)) {
+            return false;
+        }
+        // Validate hat color if provided
+        if (data.hatColor) {
+            const expectedColor = this.hatOrder[step - 1];
+            return data.hatColor === expectedColor;
+        }
+        return true;
+    }
+    extractInsights(history) {
+        const insights = [];
+        // Extract insights based on hat colors
+        history.forEach(entry => {
+            if (!entry.hatColor || !entry.output)
+                return;
+            switch (entry.hatColor) {
+                case 'white':
+                    if (entry.output.includes('missing') || entry.output.includes('need to know')) {
+                        insights.push(`Information gap identified: ${entry.output.slice(0, 100)}...`);
+                    }
+                    break;
+                case 'red':
+                    if (entry.output.includes('concern') || entry.output.includes('worry')) {
+                        insights.push(`Emotional concern: ${entry.output.slice(0, 100)}...`);
+                    }
+                    break;
+                case 'black':
+                    if (entry.risks && entry.risks.length > 0) {
+                        insights.push(`Critical risks identified: ${entry.risks.join(', ')}`);
+                    }
+                    break;
+                case 'green':
+                    if (entry.output.includes('could') || entry.output.includes('might')) {
+                        insights.push(`Creative possibility: ${entry.output.slice(0, 100)}...`);
+                    }
+                    break;
+                case 'purple':
+                    if (entry.output.includes('irreversible') || entry.output.includes('lock')) {
+                        insights.push(`Path dependency warning: ${entry.output.slice(0, 100)}...`);
+                    }
+                    break;
+            }
+        });
+        return insights;
+    }
+    getHatColor(step) {
+        return this.hatOrder[step - 1];
+    }
+    getAllHats() {
+        return { ...this.hats };
+    }
+}
+//# sourceMappingURL=SixHatsHandler.js.map

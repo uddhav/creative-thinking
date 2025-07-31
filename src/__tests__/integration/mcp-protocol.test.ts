@@ -388,7 +388,7 @@ describe('MCP Protocol Integration', () => {
         technique: 'scamper',
         problem: 'Redesign workspace',
         currentStep: 6,
-        totalSteps: 7,
+        totalSteps: 8,
         scamperAction: 'eliminate',
         output: 'Remove all private offices',
         nextStepNeeded: true,

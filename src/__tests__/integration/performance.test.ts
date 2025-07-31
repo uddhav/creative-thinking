@@ -383,7 +383,7 @@ describe('Performance Integration Tests', () => {
 
       // Execute steps for each technique
       for (const technique of techniques) {
-        const techSteps = technique === 'six_hats' ? 6 : technique === 'scamper' ? 7 : 5; // design_thinking
+        const techSteps = technique === 'six_hats' ? 6 : technique === 'scamper' ? 8 : 5; // design_thinking
 
         for (let step = 1; step <= techSteps; step++) {
           stepCount++;

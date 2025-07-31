@@ -109,7 +109,7 @@ describe('Three-Layer Architecture', () => {
       const plan = parseServerResponse<PlanThinkingSessionResponse>(planResult);
 
       // Should have steps for all techniques
-      expect(plan.workflow.length).toBe(7 + 7 + 5); // Six hats (7) + SCAMPER (7) + Design thinking (5)
+      expect(plan.workflow.length).toBe(7 + 8 + 5); // Six hats (7) + SCAMPER (8) + Design thinking (5)
 
       // Should maintain proper sequencing
       let stepNumber = 1;
@@ -351,7 +351,7 @@ describe('Three-Layer Architecture', () => {
         technique: 'scamper',
         problem,
         currentStep: 5, // After concept extraction
-        totalSteps: 7,
+        totalSteps: 8,
         scamperAction: 'substitute',
         output: 'Applying iPhone insights to our product',
         nextStepNeeded: true,

@@ -143,7 +143,7 @@ describe('Complete Technique Workflows', () => {
   });
 
   describe('SCAMPER Complete Flow', () => {
-    it('should complete all 7 SCAMPER actions', async () => {
+    it('should complete all 8 SCAMPER actions', async () => {
       const problem = 'Improve coffee mug design';
       const actions: ScamperAction[] = [
         'substitute',
@@ -153,6 +153,7 @@ describe('Complete Technique Workflows', () => {
         'put_to_other_use',
         'eliminate',
         'reverse',
+        'parameterize',
       ];
 
       // Plan session
@@ -171,10 +172,10 @@ describe('Complete Technique Workflows', () => {
           technique: 'scamper',
           problem,
           currentStep: i + 1,
-          totalSteps: 7,
+          totalSteps: 8,
           scamperAction: actions[i],
           output: getScamperOutput(actions[i]),
-          nextStepNeeded: i < 6,
+          nextStepNeeded: i < actions.length - 1,
           sessionId,
         });
 
@@ -193,7 +194,7 @@ describe('Complete Technique Workflows', () => {
           expect(stepData.flexibilityScore).toBeDefined();
         }
 
-        if (i === 6) {
+        if (i === actions.length - 1) {
           expect(stepData.nextStepNeeded).toBe(false);
           expect(stepData.summary).toBeDefined();
           expect(stepData.insights).toBeDefined();
@@ -234,7 +235,7 @@ describe('Complete Technique Workflows', () => {
         currentStep: 2,
         totalSteps: 4,
         principles: ['Urgency creation', 'Forced prioritization', 'Clean inbox'],
-        output: 'Extracted key principles from the provocation',
+        output: 'This could lead to better email management and reduced clutter',
         nextStepNeeded: true,
         sessionId,
       });
@@ -273,7 +274,8 @@ describe('Complete Technique Workflows', () => {
         totalSteps: 4,
         viaNegativaRemovals: ['Complex rules', 'Manual sorting'],
         minimalSolution: 'Simple time-based priority system',
-        output: 'Validated and simplified to minimal viable solution',
+        output:
+          'Time-based priority system. Auto-archive after 7 days. Visual indicators for urgency.',
         nextStepNeeded: false,
         sessionId,
       });
@@ -282,7 +284,7 @@ describe('Complete Technique Workflows', () => {
       expect(finalData.nextStepNeeded).toBe(false);
       expect(finalData.insights).toBeDefined();
       expect(finalData.summary).toBeDefined();
-      expect(finalData.summary).toContain('po');
+      expect(finalData.summary.technique).toBe('po');
     });
 
     it('should complete Design Thinking workflow', async () => {
@@ -383,8 +385,8 @@ describe('Complete Technique Workflows', () => {
 function getHatOutput(color: SixHatsColor): string {
   const outputs: Record<SixHatsColor, string> = {
     blue: 'Setting process: analyze retention systematically through each perspective',
-    white: 'Facts: Current retention 65%, average customer lifetime 18 months',
-    red: 'Feelings: Customers frustrated with slow support response times',
+    white: 'Facts: Current retention 65%, need to know why customers leave after 18 months',
+    red: 'Feelings: Customers are concerned about slow support response times',
     yellow: 'Benefits: Strong product-market fit, high satisfaction when engaged',
     black: 'Risks: Competitor offering better onboarding experience',
     green: 'Ideas: AI chatbot for instant support, gamified onboarding process',
@@ -401,6 +403,7 @@ function getScamperOutput(action: ScamperAction): string {
     put_to_other_use: 'Design doubles as desk organizer when empty',
     eliminate: 'Remove handle for minimalist aesthetic',
     reverse: 'Flip design - wider base, narrower top for stability',
+    parameterize: 'Identify key variables: material density, thermal conductivity, grip diameter',
   };
   return outputs[action];
 }

@@ -180,7 +180,7 @@ describe('Stress Tests - Extreme Loads', () => {
         for (let i = 0; i < 1000; i++) {
           const techniqueIndex = Math.floor(i / 100) % techniques.length;
           const technique = techniques[techniqueIndex];
-          const techSteps = technique === 'six_hats' ? 6 : technique === 'scamper' ? 7 : 5;
+          const techSteps = technique === 'six_hats' ? 6 : technique === 'scamper' ? 8 : 5;
           const currentStep = (i % techSteps) + 1;
 
           const input: ExecuteThinkingStepInput = {

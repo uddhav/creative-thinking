@@ -83,7 +83,7 @@ describe('Barrier Detection', () => {
             technique: 'scamper' as const,
             problem: 'Test problem',
             currentStep: 1,
-            totalSteps: 7,
+            totalSteps: 8,
             output: `Apply same substitution pattern ${i}`,
             nextStepNeeded: true,
             timestamp: new Date().toISOString(),

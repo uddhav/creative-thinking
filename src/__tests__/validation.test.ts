@@ -8,9 +8,23 @@ describe('Input Validation', () => {
     server = new LateralThinkingServer();
   });
 
+  // Helper function to create a plan for testing
+  async function createTestPlan(problem: string, technique: string): Promise<string> {
+    const planResult = await server.planThinkingSession({
+      problem,
+      techniques: [technique as any],
+    });
+    const planData = JSON.parse(planResult.content[0].text) as { planId: string };
+    return planData.planId;
+  }
+
   describe('Thinking Operation Validation', () => {
     it('should validate required fields for thinking operations', async () => {
+      // First create a plan
+      const planId = await createTestPlan('Test problem', 'six_hats');
+
       const input = {
+        planId,
         technique: 'six_hats',
         problem: 'Test problem',
         currentStep: 1,
@@ -24,7 +38,11 @@ describe('Input Validation', () => {
     });
 
     it('should reject thinking operation with missing technique', async () => {
+      const planId = await createTestPlan('Test problem', 'six_hats');
+
       const input = {
+        planId,
+        // Missing technique
         problem: 'Test problem',
         currentStep: 1,
         totalSteps: 6,
@@ -38,8 +56,12 @@ describe('Input Validation', () => {
     });
 
     it('should reject thinking operation with missing problem', async () => {
+      const planId = await createTestPlan('Test problem', 'six_hats');
+
       const input = {
+        planId,
         technique: 'six_hats',
+        // Missing problem
         currentStep: 1,
         totalSteps: 6,
         output: 'Test output',
@@ -52,7 +74,10 @@ describe('Input Validation', () => {
     });
 
     it('should not use dummy values for thinking operations', async () => {
+      const planId = await createTestPlan('Test problem', 'six_hats');
+
       const input = {
+        planId,
         technique: 'six_hats',
         // Missing problem, currentStep, totalSteps, output, nextStepNeeded
       };
@@ -150,8 +175,12 @@ describe('Input Validation', () => {
 
   describe('Type Separation', () => {
     it('should handle thinking operations and session operations separately', async () => {
+      // First create a plan
+      const planId = await createTestPlan('Test problem', 'six_hats');
+
       // First create a thinking operation session
       const thinkingInput = {
+        planId,
         technique: 'six_hats',
         problem: 'Test problem',
         currentStep: 1,

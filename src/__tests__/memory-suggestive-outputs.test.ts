@@ -197,6 +197,7 @@ describe('Memory-Suggestive Outputs', () => {
         totalSteps: 6,
         output: 'Benefits analysis',
         hatColor: 'yellow',
+        risks: ['Overconfidence in benefits'],
         nextStepNeeded: true,
       });
 
@@ -247,6 +248,7 @@ describe('Memory-Suggestive Outputs', () => {
         totalSteps: 4,
         output: 'Refined solution through iteration',
         isRevision: true,
+        revisesStep: 3,
         nextStepNeeded: false,
       });
 
@@ -322,7 +324,7 @@ describe('Memory-Suggestive Outputs', () => {
         technique: 'scamper',
         problem: 'Design with constraints',
         currentStep: 6,
-        totalSteps: 7,
+        totalSteps: 8,
         output: 'Eliminating unnecessary features',
         scamperAction: 'eliminate',
         nextStepNeeded: false,
@@ -549,7 +551,7 @@ describe('Memory-Suggestive Outputs', () => {
         technique: 'scamper',
         problem: 'Simple task',
         currentStep: 1,
-        totalSteps: 7,
+        totalSteps: 8,
         output: 'Substitution ideas',
         scamperAction: 'substitute',
         nextStepNeeded: true,

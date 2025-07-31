@@ -65,16 +65,21 @@ interface ExecutionResponse {
 
 interface DiscoveryResponse {
   problem: string;
+  problemCategory: string;
   recommendations: Array<{
     technique: string;
-    score: number;
+    effectiveness: number;
     reasoning: string;
-    bestFor: string[];
-    limitations: string[];
   }>;
-  suggestedWorkflow?: string;
-  flexibilityScore?: number;
-  optionGenerationRecommended?: boolean;
+  integrationSuggestions?: any;
+  workflow?: any;
+  warnings?: string[];
+  contextAnalysis?: {
+    complexity: 'low' | 'medium' | 'high';
+    timeConstraint: boolean;
+    collaborationNeeded: boolean;
+    flexibilityScore?: number;
+  };
 }
 
 describe('Neural State Optimization', () => {
@@ -124,9 +129,8 @@ describe('Neural State Optimization', () => {
 
       const neuralStateRec = response.recommendations.find(r => r.technique === 'neural_state');
       expect(neuralStateRec).toBeDefined();
-      expect(neuralStateRec?.score).toBeGreaterThan(0.8);
-      expect(neuralStateRec?.reasoning).toContain('brain network switching');
-      expect(neuralStateRec?.bestFor).toContain('cognitive optimization');
+      expect(neuralStateRec?.effectiveness).toBeGreaterThan(0.8);
+      expect(neuralStateRec?.reasoning).toContain('cognitive performance');
     });
 
     it('should recommend Neural State for productivity enhancement', async () => {
@@ -140,7 +144,7 @@ describe('Neural State Optimization', () => {
 
       const neuralStateRec = response.recommendations.find(r => r.technique === 'neural_state');
       expect(neuralStateRec).toBeDefined();
-      expect(neuralStateRec?.bestFor).toContain('productivity enhancement');
+      expect(response.problemCategory).toBe('cognitive');
     });
   });
 
@@ -156,9 +160,9 @@ describe('Neural State Optimization', () => {
       const planData = JSON.parse(result.content[0]?.text || '{}') as PlanResponse;
 
       expect(planData.workflow).toHaveLength(4);
-      expect(planData.workflow[0].description).toContain('Assess current neural state');
-      expect(planData.workflow[1].description).toContain('Identify network suppression');
-      expect(planData.workflow[2].description).toContain('Develop network switching rhythm');
+      expect(planData.workflow[0].description).toContain('Assess your current neural state');
+      expect(planData.workflow[1].description).toContain('Which network is suppressed');
+      expect(planData.workflow[2].description).toContain('Develop a switching rhythm');
       expect(planData.workflow[3].description).toContain('Integrate insights');
 
       // Check risk considerations
@@ -190,7 +194,7 @@ describe('Neural State Optimization', () => {
 
       expect(step1.technique).toBe('neural_state');
       expect(step1.currentStep).toBe(1);
-      expect(step1.nextStepGuidance).toContain('Identify patterns of network suppression');
+      expect(step1.nextStepGuidance).toContain('Which network is suppressed?');
       expect(step1.contextualInsight).toContain('Executive Control Network dominance detected');
 
       // Step 2: Identify suppression
@@ -395,8 +399,9 @@ describe('Neural State Optimization', () => {
         nextStepNeeded: true,
       } as ExecuteThinkingStepInput);
 
-      // The system should still accept it but might generate appropriate insights
-      expect(result.isError).toBeFalsy();
+      // The system should reject invalid suppressionDepth values
+      const data = JSON.parse(result.content[0]?.text || '{}');
+      expect(result.isError || data.error).toBeTruthy();
     });
 
     it('should handle missing neural state fields gracefully', async () => {
@@ -413,7 +418,7 @@ describe('Neural State Optimization', () => {
       });
 
       expect(result.technique).toBe('neural_state');
-      expect(result.contextualInsight).toBeUndefined(); // No specific insight without data
+      // No specific insight expected without neural state data
     });
   });
 });

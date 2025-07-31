@@ -85,6 +85,26 @@ Each technique integrates creative generation with systematic verification:
 - **Cross-Cultural Integration** - Multi-perspective synthesis across cultural frameworks
 - **Collective Intelligence** - Wisdom aggregation from diverse knowledge sources
 
+### Memory-Aware Outputs (NEW)
+
+All three layers now provide memory-suggestive outputs to enhance contextual understanding:
+
+**Discovery Layer**:
+- **Problem Analysis**: Observations about the problem's nature and context
+- **Historical Relevance**: Past approaches and their outcomes  
+- **Searchable Factors**: Key elements to explore further
+
+**Planning Layer**:
+- **Technique Rationale**: Why specific techniques were chosen
+- **Sequence Logic**: How techniques build upon each other
+- **Historical Notes**: Relevant precedents and patterns
+
+**Execution Layer**:
+- **Technique Effectiveness**: Real-time performance metrics
+- **Path Dependencies**: How current choices affect future options
+- **Noteworthy Moments**: Significant insights or turning points
+- **Future Relevance**: Patterns that may apply to future challenges
+
 ### Unified Framework Features
 
 - Dual thinking modes with visual indicators for creative and critical phases
@@ -130,7 +150,7 @@ When barriers are detected, the system recommends specific escape protocols rang
 
 ### 🌱 Option Generation Engine
 
-When flexibility drops below 0.4, the system automatically activates the Option Generation Engine to create new possibilities through twelve strategic approaches:
+When flexibility drops below 0.4, the system automatically activates the Option Generation Engine to create new possibilities through eight core strategies plus four advanced techniques:
 
 - **Decomposition** - Break monolithic commitments into flexible modules
 - **Temporal** - Adjust time parameters (delay commitments, accelerate options)
@@ -140,10 +160,11 @@ When flexibility drops below 0.4, the system automatically activates the Option 
 - **Resource** - Reallocate or discover untapped resources
 - **Capability** - Leverage hidden skills or develop new competencies
 - **Recombination** - Mix existing elements in novel ways
-- **Neural Optimization** - Leverage brain state management for enhanced creativity
-- **Temporal Shifting** - Manipulate time perception and work rhythms for flexibility
-- **Cultural Bridging** - Cross cultural frameworks to unlock new solution spaces
-- **Collective Divergence** - Harness collective intelligence for option expansion
+**Advanced Option Generation Techniques** (NEW):
+- **Constraint Relaxation** - Temporarily loosen non-critical constraints
+- **Parallel Universes** - Explore "what if" scenarios in parallel
+- **Antifragile Design** - Create options that benefit from volatility
+- **Time Arbitrage** - Exploit temporal differences in constraints
 
 The engine evaluates each generated option for flexibility gain, implementation cost, reversibility, and synergy with existing choices, ensuring practical and effective recommendations.
 
@@ -317,8 +338,8 @@ Three-step process for unexpected connections:
 2. Generate connections while questioning assumptions
 3. Validate insights before solution development
 
-### SCAMPER
-Seven transformations with integrated risk assessment:
+### SCAMPER+P
+Eight transformations with integrated risk assessment:
 - **Substitute** - Replace elements while identifying dependencies
 - **Combine** - Merge concepts while managing conflicts
 - **Adapt** - Adjust for new contexts and vulnerabilities
@@ -326,6 +347,7 @@ Seven transformations with integrated risk assessment:
 - **Put to other use** - Find new applications and contexts
 - **Eliminate** - Remove elements while preserving core function
 - **Reverse** - Invert or rearrange while testing assumptions
+- **Parameterize** - Identify and vary key parameters systematically
 
 ### Concept Extraction
 Four-step cross-domain pattern transfer:
@@ -359,32 +381,54 @@ Four-step innovation through contradiction resolution:
 ### Neural State Management
 Four-step cognitive optimization process:
 1. **Assess** - Identify dominant neural network (Default Mode vs Executive Control)
-2. **Suppress** - Strategically suppress overactive networks
+2. **Suppress** - Strategically suppress overactive networks (depth 0-10)
 3. **Rhythm** - Develop switching patterns between cognitive modes
 4. **Integrate** - Synthesize insights from both network states
 
-### Temporal Work Design
+**Features**:
+- Deep suppression detection (≥8) triggers noteworthy moment alerts
+- Network balance optimization for enhanced creativity
+- Cognitive flexibility tracking across states
+
+### Temporal Work Design  
 Five-step time-based problem solving:
-1. **Map** - Create temporal landscape (pressure points, dead zones, opportunities)
+1. **Map** - Create temporal landscape with Kairos opportunity detection
 2. **Align** - Match work with circadian rhythms and energy patterns
 3. **Transform** - Convert time pressure into creative fuel
 4. **Balance** - Optimize synchronous vs asynchronous work
 5. **Escape** - Build temporal buffers and flexibility
 
+**Temporal Landscape Elements**:
+- Fixed deadlines and flexible windows
+- Pressure points and dead zones
+- Kairos opportunities (optimal timing moments)
+- Temporal escape routes for flexibility preservation
+
 ### Cross-Cultural Integration
 Four-step multi-perspective synthesis:
-1. **Explore** - Examine problem through multiple cultural lenses
-2. **Parallel** - Develop culture-specific implementation paths
-3. **Bridge** - Build conceptual connections between approaches
-4. **Synthesize** - Create respectful integration of diverse solutions
+1. **Explore** - Examine problem through multiple cultural frameworks
+2. **Bridge** - Build connections between diverse perspectives
+3. **Synthesize** - Create respectful integration of approaches
+4. **Parallel** - Develop culture-specific implementation paths
+
+**Cultural Awareness Features**:
+- Multiple framework support (individualist, collectivist, hierarchical, etc.)
+- Parallel implementation patterns for different contexts
+- Respectful synthesis approaches
+- Future relevance tracking for global solutions
 
 ### Collective Intelligence Orchestration
-Five-step wisdom aggregation:
-1. **Assess** - Evaluate collective knowledge landscape
-2. **Orchestrate** - Coordinate diverse wisdom sources
-3. **Facilitate** - Enable emergence of collective insights
-4. **Harvest** - Extract synthesized intelligence
-5. **Evolve** - Continuously improve collective understanding
+Four-step wisdom aggregation:
+1. **Source** - Identify diverse wisdom sources (experts, crowds, AI, data)
+2. **Synthesize** - Aggregate collective insights and patterns
+3. **Emerge** - Detect emergent patterns invisible to individuals
+4. **Synergize** - Create combinations that amplify value
+
+**Intelligence Sources**:
+- Domain experts and practitioners
+- Crowd wisdom and collective experience
+- AI systems and data analytics
+- Historical patterns and cultural knowledge
 
 ## Example Workflow
 
@@ -428,6 +472,16 @@ Five-step wisdom aggregation:
 }
 ```
 
+## Environment Variables
+
+The server supports environment variables for advanced features:
+
+- `NEURAL_OPTIMIZATION=true` - Enable neural state optimization features
+- `CULTURAL_FRAMEWORKS=framework1,framework2` - Specify available cultural frameworks
+- `DISABLE_THOUGHT_LOGGING=true` - Disable visual output logging
+- `PERSISTENCE_TYPE=filesystem|memory` - Choose storage type
+- `PERSISTENCE_PATH=/path/to/sessions` - Custom session storage location
+
 ## Configuration
 
 ### For Desktop Applications
@@ -468,7 +522,9 @@ Add to your editor's MCP settings:
 }
 ```
 
-To disable visual output logging, set the environment variable: `DISABLE_THOUGHT_LOGGING=true`
+### Auto-Save Feature
+
+Sessions can be automatically saved during execution by setting `autoSave: true` in the execute_thinking_step input. This ensures progress is preserved even if the session is interrupted.
 
 ## Session Management
 
@@ -564,12 +620,25 @@ The project includes comprehensive test suites ensuring reliability and correctn
 directory, providing complete coverage of MCP protocol compliance, three-layer architecture, 
 persistence, and performance testing.
 
+### Test Statistics
+- **Total Tests**: 721 tests across 54 test files
+- **Coverage**: Comprehensive unit and integration test coverage
+- **Performance**: All tests complete in under 10 seconds
+
 Run tests with:
 ```bash
 npm test                    # Run tests in watch mode
-npm run test:run            # Run tests once
+npm run test:run            # Run tests once  
 npm run test:coverage       # Generate coverage report
 ```
+
+## Version 0.3.0 Features
+
+### Complete Specification Alignment
+- **SCAMPER+P**: Added 8th transformation step "Parameterize" for systematic parameter variation
+- **Memory-Aware Outputs**: All three layers now provide contextual memory outputs
+- **Environment Variables**: Support for NEURAL_OPTIMIZATION and CULTURAL_FRAMEWORKS flags
+- **Enhanced Integration Tests**: 13 comprehensive end-to-end workflow tests
 
 ## Recent Enhancements
 
