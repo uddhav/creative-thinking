@@ -8,6 +8,16 @@ import { ResponseBuilder } from '../../core/ResponseBuilder.js';
 import { CreativeThinkingError, ErrorCode } from '../../errors/types.js';
 import type { SessionData, ThinkingOperationData } from '../../types/index.js';
 import type { DiscoverTechniquesOutput, PlanThinkingSessionOutput } from '../../types/planning.js';
+import {
+  parseErrorResponse,
+  parseDiscoveryResponse,
+  parseComplexObject,
+  parseGenericResponse,
+  parsePlanningTestResponse,
+  parseExecutionTestResponse,
+  parseSessionOperationResponse,
+  type TestErrorData,
+} from '../helpers/json-types.js';
 
 describe('ResponseBuilder', () => {
   let builder: ResponseBuilder;
@@ -54,7 +64,7 @@ describe('ResponseBuilder', () => {
       };
       const response = builder.buildSuccessResponse(complexObject);
 
-      expect(JSON.parse(response.content[0].text)).toEqual(complexObject);
+      expect(parseComplexObject(response.content[0].text)).toEqual(complexObject);
     });
   });
 
@@ -69,14 +79,12 @@ describe('ResponseBuilder', () => {
       expect(response.content).toHaveLength(1);
       expect(response.content[0].type).toBe('text');
 
-      const errorData = JSON.parse(response.content[0].text);
-      expect(errorData.error).toEqual({
-        code: ErrorCode.INVALID_INPUT,
-        message: 'Test error',
-        details: { detail: 'test' },
-        layer: 'discovery',
-        timestamp: expect.any(String),
-      });
+      const errorData = parseGenericResponse<TestErrorData>(response.content[0].text);
+      expect(errorData.error.code).toBe(ErrorCode.INVALID_INPUT);
+      expect(errorData.error.message).toBe('Test error');
+      expect(errorData.error.details).toEqual({ detail: 'test' });
+      expect(errorData.error.layer).toBe('discovery');
+      expect(typeof errorData.error.timestamp).toBe('string');
     });
 
     it('should build error response for standard Error', () => {
@@ -107,7 +115,7 @@ describe('ResponseBuilder', () => {
       const error = new Error();
       const response = builder.buildErrorResponse(error, 'planning');
 
-      const parsed = JSON.parse(response.content[0].text);
+      const parsed = parseErrorResponse(response.content[0].text);
       expect(parsed.error.message).toBe('');
       expect(parsed.error.layer).toBe('planning');
     });
@@ -143,7 +151,7 @@ describe('ResponseBuilder', () => {
       };
 
       const response = builder.buildDiscoveryResponse(discoveryOutput);
-      const parsed = JSON.parse(response.content[0].text);
+      const parsed = parseDiscoveryResponse(response.content[0].text);
 
       expect(parsed.recommendations).toEqual(discoveryOutput.recommendations);
       expect(parsed.problemCategory).toBe('team_collaboration');
@@ -160,7 +168,7 @@ describe('ResponseBuilder', () => {
       };
 
       const response = builder.buildDiscoveryResponse(minimalOutput);
-      const parsed = JSON.parse(response.content[0].text);
+      const parsed = parseDiscoveryResponse(response.content[0].text);
 
       expect(parsed.recommendations).toEqual([]);
       expect(parsed.reasoning).toBe('No specific techniques recommended for this problem.');
@@ -212,7 +220,7 @@ describe('ResponseBuilder', () => {
       };
 
       const response = builder.buildPlanningResponse(planOutput);
-      const parsed = JSON.parse(response.content[0].text);
+      const parsed = parsePlanningTestResponse(response.content[0].text);
 
       expect(parsed.planId).toBe('test-plan-123');
       expect(parsed.workflow).toHaveLength(3);
@@ -239,7 +247,7 @@ describe('ResponseBuilder', () => {
       };
 
       const response = builder.buildPlanningResponse(emptyPlan);
-      const parsed = JSON.parse(response.content[0].text);
+      const parsed = parsePlanningTestResponse(response.content[0].text);
 
       expect(parsed.workflow).toEqual([]);
       expect(parsed.estimatedSteps).toBe(0);
@@ -268,7 +276,7 @@ describe('ResponseBuilder', () => {
         5
       );
 
-      const parsed = JSON.parse(response.content[0].text);
+      const parsed = parseExecutionTestResponse(response.content[0].text);
 
       expect(parsed.sessionId).toBe('session-123');
       expect(parsed.technique).toBe('six_hats');
@@ -299,7 +307,7 @@ describe('ResponseBuilder', () => {
       };
 
       const response = builder.buildExecutionResponse('session-456', scamperInput, []);
-      const parsed = JSON.parse(response.content[0].text);
+      const parsed = parseExecutionTestResponse(response.content[0].text);
 
       expect(parsed.scamperAction).toBe('substitute');
       expect(parsed.pathImpact).toEqual(scamperInput.pathImpact);
@@ -322,7 +330,7 @@ describe('ResponseBuilder', () => {
       };
 
       const response = builder.buildExecutionResponse('session-789', revisionInput, []);
-      const parsed = JSON.parse(response.content[0].text);
+      const parsed = parseExecutionTestResponse(response.content[0].text);
 
       expect(parsed.isRevision).toBe(true);
       expect(parsed.revisesStep).toBe(1);
@@ -338,7 +346,7 @@ describe('ResponseBuilder', () => {
         timestamp: Date.now(),
       });
 
-      const parsed = JSON.parse(response.content[0].text);
+      const parsed = parseSessionOperationResponse(response.content[0].text);
 
       expect(parsed.operation).toBe('save');
       expect(parsed.success).toBe(true);
@@ -351,14 +359,15 @@ describe('ResponseBuilder', () => {
       const session: SessionData = {
         technique: 'six_hats',
         problem: 'Test problem',
-        history: Array(6).fill({
+        history: Array.from({ length: 6 }, (_, i) => ({
           output: 'Step output',
-          currentStep: 1,
+          currentStep: i + 1,
           totalSteps: 6,
-          technique: 'six_hats',
+          technique: 'six_hats' as const,
           problem: 'Test',
-          nextStepNeeded: false,
-        }),
+          nextStepNeeded: i < 5,
+          timestamp: new Date().toISOString(),
+        })),
         branches: {},
         insights: ['Insight 1', 'Insight 2', 'Insight 3'],
         lastActivityTime: Date.now(),
@@ -371,24 +380,83 @@ describe('ResponseBuilder', () => {
         },
         pathMemory: {
           pathHistory: [
-            { reversibilityCost: 0.8, description: 'Critical decision' },
-            { reversibilityCost: 0.2, description: 'Minor choice' },
+            {
+              timestamp: new Date().toISOString(),
+              technique: 'six_hats' as const,
+              step: 1,
+              decision: 'Critical decision',
+              optionsOpened: [],
+              optionsClosed: ['option1'],
+              reversibilityCost: 0.8,
+              commitmentLevel: 0.8,
+              constraintsCreated: ['1'],
+            },
+            {
+              timestamp: new Date().toISOString(),
+              technique: 'six_hats' as const,
+              step: 2,
+              decision: 'Minor choice',
+              optionsOpened: ['option2'],
+              optionsClosed: [],
+              reversibilityCost: 0.2,
+              commitmentLevel: 0.2,
+              constraintsCreated: [],
+            },
           ],
           constraints: [
             {
               id: '1',
+              type: 'resource' as const,
               description: 'Time limit',
+              createdAt: new Date().toISOString(),
+              createdBy: {
+                timestamp: new Date().toISOString(),
+                technique: 'six_hats' as const,
+                step: 1,
+                decision: 'Set time constraint',
+                optionsOpened: [],
+                optionsClosed: [],
+                reversibilityCost: 0.5,
+                commitmentLevel: 0.5,
+                constraintsCreated: [],
+              },
               strength: 0.5,
-              source: 'user',
-              timestamp: Date.now(),
-              flexibility_impact: -0.2,
+              affectedOptions: [],
+              reversibilityCost: 0.5,
             },
           ],
-          currentFlexibility: { flexibilityScore: 0.6 },
-        } as any,
+          foreclosedOptions: [],
+          availableOptions: [],
+          currentFlexibility: {
+            flexibilityScore: 0.6,
+            reversibilityIndex: 0.5,
+            pathDivergence: 0.3,
+            barrierProximity: [],
+            optionVelocity: 0,
+            commitmentDepth: 0.5,
+          },
+          absorbingBarriers: [],
+          criticalDecisions: [],
+          escapeRoutes: [],
+        },
         earlyWarningState: {
-          activeWarnings: [{ severity: 'MEDIUM', message: 'Approaching decision lock-in' }],
-        } as any,
+          overallRisk: 'MEDIUM' as const,
+          activeWarnings: [
+            {
+              severity: 'MEDIUM' as const,
+              message: 'Approaching decision lock-in',
+              barrierId: 'barrier-1',
+              barrierName: 'Decision Lock-in',
+              proximity: 0.6,
+              recommendedActions: ['Consider alternatives'],
+            },
+          ],
+          sensorReadings: new Map(),
+          compoundRisk: false,
+          criticalBarriers: [],
+          recommendedAction: 'caution' as const,
+          escapeRoutesAvailable: [],
+        },
         escapeRecommendation: {
           name: 'Temporal Unbinding',
           steps: ['Step 1', 'Step 2', 'Step 3', 'Step 4'],
@@ -457,7 +525,15 @@ describe('ResponseBuilder', () => {
             technique: 'six_hats' as const,
             problem:
               'How to improve team communication in remote work environments with multiple time zones',
-            history: Array(5).fill({}),
+            history: Array.from({ length: 5 }, (_, i) => ({
+              technique: 'six_hats' as const,
+              problem: 'Test problem',
+              currentStep: i + 1,
+              totalSteps: 6,
+              output: `Step ${i + 1} output`,
+              nextStepNeeded: i < 4,
+              timestamp: new Date().toISOString(),
+            })),
             branches: {},
             insights: ['Insight 1', 'Insight 2'],
             lastActivityTime: Date.now(),
@@ -472,7 +548,15 @@ describe('ResponseBuilder', () => {
           data: {
             technique: 'po' as const,
             problem: 'Short problem',
-            history: Array(3).fill({}),
+            history: Array.from({ length: 3 }, (_, i) => ({
+              technique: 'po' as const,
+              problem: 'Short problem',
+              currentStep: i + 1,
+              totalSteps: 4,
+              output: `Step ${i + 1} output`,
+              nextStepNeeded: true,
+              timestamp: new Date().toISOString(),
+            })),
             branches: {},
             insights: [],
             lastActivityTime: Date.now() - 1800000,
@@ -491,8 +575,8 @@ describe('ResponseBuilder', () => {
         technique: 'six_hats',
         problem:
           'How to improve team communication in remote work environments with multiple time zones',
-        created: expect.any(String),
-        lastActivity: expect.any(String),
+        created: expect.stringMatching(/\d{4}-\d{2}-\d{2}/),
+        lastActivity: expect.stringMatching(/\d{4}-\d{2}-\d{2}/),
         steps: 5,
         complete: true,
         insights: 2,
@@ -535,7 +619,7 @@ describe('ResponseBuilder', () => {
 
     it('should format as JSON', () => {
       const json = builder.formatExportData(mockSession, 'json');
-      const parsed = JSON.parse(json);
+      const parsed = parseGenericResponse<SessionData>(json);
 
       expect(parsed).toEqual(mockSession);
     });
@@ -582,7 +666,7 @@ describe('ResponseBuilder', () => {
 
     it('should throw error for unsupported format', () => {
       expect(() => {
-        builder.formatExportData(mockSession, 'pdf' as any);
+        builder.formatExportData(mockSession, 'pdf' as never);
       }).toThrow('Unsupported export format: pdf');
     });
   });
@@ -590,36 +674,67 @@ describe('ResponseBuilder', () => {
   describe('extractTechniqueSpecificFields', () => {
     it('should extract all technique-specific fields', () => {
       // Test each technique type
-      const techniques: Array<[string, ThinkingOperationData, Record<string, any>]> = [
-        ['six_hats', { technique: 'six_hats', hatColor: 'blue' } as any, { hatColor: 'blue' }],
+      const techniques: Array<[string, ThinkingOperationData, Record<string, unknown>]> = [
+        [
+          'six_hats',
+          {
+            technique: 'six_hats' as const,
+            hatColor: 'blue' as const,
+            problem: 'test',
+            currentStep: 1,
+            totalSteps: 6,
+            output: 'test',
+            nextStepNeeded: true,
+          } satisfies ThinkingOperationData,
+          { hatColor: 'blue' },
+        ],
         [
           'po',
           {
-            technique: 'po',
+            technique: 'po' as const,
             provocation: 'PO: Cars have square wheels',
             principles: ['P1'],
-          } as any,
+            problem: 'test',
+            currentStep: 1,
+            totalSteps: 4,
+            output: 'test',
+            nextStepNeeded: true,
+          } satisfies ThinkingOperationData,
           { provocation: 'PO: Cars have square wheels', principles: ['P1'] },
         ],
         [
           'random_entry',
           {
-            technique: 'random_entry',
+            technique: 'random_entry' as const,
             randomStimulus: 'Apple',
             connections: ['Red', 'Round'],
-          } as any,
+            problem: 'test',
+            currentStep: 1,
+            totalSteps: 3,
+            output: 'test',
+            nextStepNeeded: true,
+          } satisfies ThinkingOperationData,
           { randomStimulus: 'Apple', connections: ['Red', 'Round'] },
         ],
         [
           'neural_state',
-          { technique: 'neural_state', dominantNetwork: 'dmn', suppressionDepth: 5 } as any,
+          {
+            technique: 'neural_state' as const,
+            dominantNetwork: 'dmn' as const,
+            suppressionDepth: 5,
+            problem: 'test',
+            currentStep: 1,
+            totalSteps: 4,
+            output: 'test',
+            nextStepNeeded: true,
+          } satisfies ThinkingOperationData,
           { dominantNetwork: 'dmn', suppressionDepth: 5 },
         ],
       ];
 
-      techniques.forEach(([technique, input, expected]) => {
+      techniques.forEach(([_technique, input, expected]) => {
         const response = builder.buildExecutionResponse('test', input, []);
-        const parsed = JSON.parse(response.content[0].text);
+        const parsed = parseExecutionTestResponse(response.content[0].text);
 
         Object.entries(expected).forEach(([key, value]) => {
           expect(parsed[key]).toEqual(value);
@@ -643,7 +758,7 @@ describe('ResponseBuilder', () => {
       };
 
       const response = builder.buildExecutionResponse('test', input, []);
-      const parsed = JSON.parse(response.content[0].text);
+      const parsed = parseExecutionTestResponse(response.content[0].text);
 
       expect(parsed.risks).toEqual(['Risk 1']);
       expect(parsed.failureModes).toEqual(['Failure 1']);

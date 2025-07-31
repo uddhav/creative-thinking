@@ -102,7 +102,20 @@ export class DesignThinkingHandler extends BaseTechniqueHandler {
     }
   }
 
-  extractInsights(history: any[]): string[] {
+  extractInsights(
+    history: Array<{
+      designStage?: string;
+      empathyInsights?: string[];
+      problemStatement?: string;
+      ideaList?: string[];
+      failureModesPredicted?: string[];
+      prototypeDescription?: string;
+      stressTestResults?: string[];
+      userFeedback?: string[];
+      failureInsights?: string[];
+      output?: string;
+    }>
+  ): string[] {
     const insights: string[] = [];
 
     history.forEach(entry => {

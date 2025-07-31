@@ -33,13 +33,13 @@ export class GenericHandler implements TechniqueHandler {
     return `Apply ${this.techniqueName} step ${step} to "${problem}"`;
   }
 
-  validateStep(step: number): boolean {
+  validateStep(step: number, _data: unknown): boolean {
     return step >= 1 && step <= 5;
   }
 
-  extractInsights(history: any[]): string[] {
+  extractInsights(history: Array<{ output?: string }>): string[] {
     return history
       .filter(entry => entry.output && entry.output.length > 50)
-      .map(entry => `Insight from ${this.techniqueName}: ${entry.output.substring(0, 100)}...`);
+      .map(entry => `Insight from ${this.techniqueName}: ${entry.output!.substring(0, 100)}...`);
   }
 }

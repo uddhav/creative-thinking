@@ -37,11 +37,9 @@ describe('MetricsCollector', () => {
 
       const metrics = collector.updateMetrics(mockSession, input);
 
-      expect(metrics).toEqual({
-        creativityScore: expect.any(Number),
-        risksCaught: 0,
-        antifragileFeatures: 0,
-      });
+      expect(metrics.risksCaught).toBe(0);
+      expect(metrics.antifragileFeatures).toBe(0);
+      expect(typeof metrics.creativityScore).toBe('number');
       expect(metrics.creativityScore).toBeGreaterThan(0);
     });
 
@@ -293,16 +291,16 @@ describe('MetricsCollector', () => {
 
   describe('calculateTechniqueEffectiveness', () => {
     it('should give high score to effective sessions', () => {
-      mockSession.history = Array(10).fill({
-        technique: 'six_hats',
+      mockSession.history = Array.from({ length: 10 }, (_, i) => ({
+        technique: 'six_hats' as const,
         problem: 'Test',
-        currentStep: 1,
+        currentStep: (i % 6) + 1,
         totalSteps: 6,
         output: 'Step',
         nextStepNeeded: true,
         timestamp: new Date().toISOString(),
-      });
-      mockSession.insights = Array(8).fill('Insight');
+      }));
+      mockSession.insights = Array.from({ length: 8 }, (_, i) => `Insight ${i + 1}`);
       mockSession.metrics = {
         creativityScore: 8,
         risksCaught: 5,
@@ -316,16 +314,16 @@ describe('MetricsCollector', () => {
     });
 
     it('should give low score to ineffective sessions', () => {
-      mockSession.history = Array(10).fill({
-        technique: 'six_hats',
+      mockSession.history = Array.from({ length: 10 }, (_, i) => ({
+        technique: 'six_hats' as const,
         problem: 'Test',
-        currentStep: 1,
+        currentStep: (i % 6) + 1,
         totalSteps: 6,
         output: 'Step',
         nextStepNeeded: true,
         timestamp: new Date().toISOString(),
         isRevision: true, // All revisions
-      });
+      }));
       mockSession.insights = []; // No insights
       mockSession.metrics = {
         creativityScore: 2,
@@ -469,15 +467,15 @@ describe('MetricsCollector', () => {
         {
           technique: 'six_hats',
           problem: 'Problem 1',
-          history: Array(5).fill({
-            technique: 'six_hats',
+          history: Array.from({ length: 5 }, (_, i) => ({
+            technique: 'six_hats' as const,
             problem: 'Test',
-            currentStep: 1,
+            currentStep: (i % 6) + 1,
             totalSteps: 6,
             output: 'Step',
             nextStepNeeded: true,
             timestamp: new Date().toISOString(),
-          }),
+          })),
           branches: {},
           insights: ['Insight 1', 'Insight 2'],
           lastActivityTime: Date.now(),
@@ -491,15 +489,15 @@ describe('MetricsCollector', () => {
         {
           technique: 'po',
           problem: 'Problem 2',
-          history: Array(8).fill({
-            technique: 'po',
+          history: Array.from({ length: 8 }, (_, i) => ({
+            technique: 'po' as const,
             problem: 'Test',
-            currentStep: 1,
+            currentStep: (i % 4) + 1,
             totalSteps: 4,
             output: 'Step',
             nextStepNeeded: true,
             timestamp: new Date().toISOString(),
-          }),
+          })),
           branches: { branch1: [] },
           insights: ['Insight 3', 'Insight 4', 'Insight 5'],
           lastActivityTime: Date.now(),
@@ -538,8 +536,20 @@ describe('MetricsCollector', () => {
           pathMemory: {
             pathHistory: [],
             constraints: [],
-            currentFlexibility: { flexibilityScore: 0.7 },
-          } as any,
+            foreclosedOptions: [],
+            availableOptions: [],
+            currentFlexibility: {
+              flexibilityScore: 0.7,
+              reversibilityIndex: 0.7,
+              pathDivergence: 0.3,
+              barrierProximity: [],
+              optionVelocity: 0,
+              commitmentDepth: 0.3,
+            },
+            absorbingBarriers: [],
+            criticalDecisions: [],
+            escapeRoutes: [],
+          },
         },
         {
           technique: 'scamper',
@@ -551,8 +561,20 @@ describe('MetricsCollector', () => {
           pathMemory: {
             pathHistory: [],
             constraints: [],
-            currentFlexibility: { flexibilityScore: 0.5 },
-          } as any,
+            foreclosedOptions: [],
+            availableOptions: [],
+            currentFlexibility: {
+              flexibilityScore: 0.5,
+              reversibilityIndex: 0.5,
+              pathDivergence: 0.5,
+              barrierProximity: [],
+              optionVelocity: 0,
+              commitmentDepth: 0.5,
+            },
+            absorbingBarriers: [],
+            criticalDecisions: [],
+            escapeRoutes: [],
+          },
         },
       ];
 

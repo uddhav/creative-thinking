@@ -54,7 +54,14 @@ export class RandomEntryHandler extends BaseTechniqueHandler {
     }
   }
 
-  extractInsights(history: any[]): string[] {
+  extractInsights(
+    history: Array<{
+      currentStep?: number;
+      randomStimulus?: string;
+      connections?: string[];
+      output?: string;
+    }>
+  ): string[] {
     const insights: string[] = [];
 
     history.forEach(entry => {

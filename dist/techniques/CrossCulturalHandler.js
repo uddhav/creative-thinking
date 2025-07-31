@@ -86,7 +86,7 @@ export class CrossCulturalHandler extends BaseTechniqueHandler {
             }
         });
         // Check if cross-cultural integration is complete
-        const hasCompleteSession = history.some(entry => entry.currentStep === 5 && !entry.nextStepNeeded);
+        const hasCompleteSession = history.some(entry => entry.currentStep === 5 && 'nextStepNeeded' in entry && !entry.nextStepNeeded);
         if (hasCompleteSession) {
             insights.push('Cross-Cultural Integration completed - inclusive innovation achieved');
         }

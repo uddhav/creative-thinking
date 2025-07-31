@@ -10,6 +10,13 @@ export declare class YesAndHandler extends BaseTechniqueHandler {
         emoji: string;
     };
     getStepGuidance(step: number, problem: string): string;
-    extractInsights(history: any[]): string[];
+    extractInsights(history: Array<{
+        currentStep?: number;
+        initialIdea?: string;
+        additions?: string[];
+        evaluations?: string[];
+        synthesis?: string;
+        output?: string;
+    }>): string[];
 }
 //# sourceMappingURL=YesAndHandler.d.ts.map

@@ -10,6 +10,13 @@ export declare class CollectiveIntelHandler extends BaseTechniqueHandler {
         emoji: string;
     };
     getStepGuidance(step: number, problem: string): string;
-    extractInsights(history: any[]): string[];
+    extractInsights(history: Array<{
+        currentStep?: number;
+        wisdomSources?: string[];
+        emergentPatterns?: string[];
+        synergyCombinations?: string[];
+        collectiveInsights?: string[];
+        output?: string;
+    }>): string[];
 }
 //# sourceMappingURL=CollectiveIntelHandler.d.ts.map

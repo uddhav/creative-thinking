@@ -15,8 +15,12 @@ export declare class SixHatsHandler extends BaseTechniqueHandler {
     getTechniqueInfo(): TechniqueInfo;
     getStepInfo(step: number): HatInfo;
     getStepGuidance(step: number, problem: string): string;
-    validateStep(step: number, data: any): boolean;
-    extractInsights(history: any[]): string[];
+    validateStep(step: number, data: unknown): boolean;
+    extractInsights(history: Array<{
+        hatColor?: string;
+        risks?: string[];
+        output?: string;
+    }>): string[];
     getHatColor(step: number): SixHatsColor;
     getAllHats(): Record<SixHatsColor, HatInfo>;
 }

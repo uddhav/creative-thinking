@@ -73,7 +73,16 @@ export class CollectiveIntelHandler extends BaseTechniqueHandler {
     }
   }
 
-  extractInsights(history: any[]): string[] {
+  extractInsights(
+    history: Array<{
+      currentStep?: number;
+      wisdomSources?: string[];
+      emergentPatterns?: string[];
+      synergyCombinations?: string[];
+      collectiveInsights?: string[];
+      output?: string;
+    }>
+  ): string[] {
     const insights: string[] = [];
 
     history.forEach(entry => {
@@ -101,7 +110,7 @@ export class CollectiveIntelHandler extends BaseTechniqueHandler {
 
     // Check if collective intelligence synthesis is complete
     const hasCompleteSession = history.some(
-      entry => entry.currentStep === 5 && !entry.nextStepNeeded
+      entry => entry.currentStep === 5 && 'nextStepNeeded' in entry && !entry.nextStepNeeded
     );
     if (hasCompleteSession) {
       insights.push('Collective Intelligence synthesis completed - wisdom of many integrated');

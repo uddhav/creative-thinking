@@ -10,6 +10,11 @@ export declare class RandomEntryHandler extends BaseTechniqueHandler {
         emoji: string;
     };
     getStepGuidance(step: number, problem: string): string;
-    extractInsights(history: any[]): string[];
+    extractInsights(history: Array<{
+        currentStep?: number;
+        randomStimulus?: string;
+        connections?: string[];
+        output?: string;
+    }>): string[];
 }
 //# sourceMappingURL=RandomEntryHandler.d.ts.map

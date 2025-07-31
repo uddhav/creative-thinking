@@ -10,6 +10,13 @@ export declare class ConceptExtractionHandler extends BaseTechniqueHandler {
         emoji: string;
     };
     getStepGuidance(step: number, problem: string): string;
-    extractInsights(history: any[]): string[];
+    extractInsights(history: Array<{
+        currentStep?: number;
+        successExample?: string;
+        extractedConcepts?: string[];
+        abstractedPatterns?: string[];
+        applications?: string[];
+        output?: string;
+    }>): string[];
 }
 //# sourceMappingURL=ConceptExtractionHandler.d.ts.map

@@ -127,7 +127,7 @@ export class ScamperHandler extends BaseTechniqueHandler {
   analyzePathImpact(
     action: ScamperAction,
     modification: string,
-    history: any[]
+    history: Array<{ scamperAction?: string }>
   ): ScamperPathImpact {
     const actionInfo = this.actions[action];
     if (!actionInfo) {
@@ -172,7 +172,7 @@ export class ScamperHandler extends BaseTechniqueHandler {
     return baseImpact;
   }
 
-  private identifyDependencies(action: ScamperAction, modification: string): string[] {
+  private identifyDependencies(action: ScamperAction, _modification: string): string[] {
     const dependencies: string[] = [];
 
     switch (action) {
@@ -202,7 +202,7 @@ export class ScamperHandler extends BaseTechniqueHandler {
     return dependencies;
   }
 
-  private identifyClosedOptions(action: ScamperAction, modification: string): string[] {
+  private identifyClosedOptions(action: ScamperAction, _modification: string): string[] {
     const closed: string[] = [];
 
     switch (action) {
@@ -227,7 +227,7 @@ export class ScamperHandler extends BaseTechniqueHandler {
     return closed;
   }
 
-  private identifyOpenedOptions(action: ScamperAction, modification: string): string[] {
+  private identifyOpenedOptions(action: ScamperAction, _modification: string): string[] {
     const opened: string[] = [];
 
     switch (action) {
@@ -257,7 +257,7 @@ export class ScamperHandler extends BaseTechniqueHandler {
     return opened;
   }
 
-  private calculateCumulativeCommitment(history: any[]): number {
+  private calculateCumulativeCommitment(history: Array<{ scamperAction?: string }>): number {
     let commitment = 0;
     history.forEach(entry => {
       if (entry.scamperAction) {

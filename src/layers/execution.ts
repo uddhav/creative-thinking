@@ -169,8 +169,13 @@ export async function executeThinkingStep(
 
       // Include previous SCAMPER modifications from history
       session.history.forEach(entry => {
-        if (entry.technique === 'scamper' && entry.scamperAction && entry.pathImpact) {
-          input.modificationHistory!.push({
+        if (
+          entry.technique === 'scamper' &&
+          entry.scamperAction &&
+          entry.pathImpact &&
+          input.modificationHistory
+        ) {
+          input.modificationHistory.push({
             action: entry.scamperAction,
             modification: entry.output,
             timestamp: entry.timestamp || new Date().toISOString(),
@@ -235,8 +240,15 @@ export async function executeThinkingStep(
       }
     }
 
-    // Record step in history (exclude realityAssessment from operationData)
+    // Record step in history (exclude realityAssessment from operationData to avoid duplication)
     const { realityAssessment: inputRealityAssessment, ...inputWithoutReality } = input;
+
+    // If there's a reality assessment from input, we should handle it separately
+    if (inputRealityAssessment) {
+      // Reality assessment is handled through realityResult and added to response separately
+      // This prevents duplication in the operation data
+    }
+
     const operationData: ThinkingOperationData = {
       ...inputWithoutReality,
       sessionId,
@@ -325,12 +337,22 @@ export async function executeThinkingStep(
     Object.assign(parsedResponse, memoryOutputs);
 
     // Add reality assessment if present
-    if (realityResult.realityAssessment) {
+    if (
+      realityResult &&
+      typeof realityResult === 'object' &&
+      'realityAssessment' in realityResult &&
+      realityResult.realityAssessment
+    ) {
       parsedResponse.realityAssessment = realityResult.realityAssessment;
     }
 
     // Add complexity suggestion if needed
-    if (complexityCheck.suggestion) {
+    if (
+      complexityCheck &&
+      typeof complexityCheck === 'object' &&
+      'suggestion' in complexityCheck &&
+      complexityCheck.suggestion
+    ) {
       parsedResponse.sequentialThinkingSuggestion = complexityCheck.suggestion;
     }
 
@@ -499,7 +521,7 @@ function assessTechniqueEffectiveness(
 /**
  * Extract path dependencies created in this step
  */
-function extractPathDependencies(input: ExecuteThinkingStepInput, pathMemory?: any): string[] {
+function extractPathDependencies(input: ExecuteThinkingStepInput, pathMemory?: Record<string, unknown>): string[] {
   const dependencies: string[] = [];
 
   // SCAMPER path dependencies
@@ -513,10 +535,22 @@ function extractPathDependencies(input: ExecuteThinkingStepInput, pathMemory?: a
   }
 
   // Constraint creation
-  if (pathMemory?.pathHistory && pathMemory.pathHistory.length > 0) {
-    const latestEvent = pathMemory.pathHistory[pathMemory.pathHistory.length - 1];
-    if (latestEvent.constraintsCreated && latestEvent.constraintsCreated.length > 0) {
-      dependencies.push(...latestEvent.constraintsCreated);
+  if (
+    pathMemory &&
+    'pathHistory' in pathMemory &&
+    Array.isArray(pathMemory.pathHistory) &&
+    pathMemory.pathHistory.length > 0
+  ) {
+    const latestEvent = pathMemory.pathHistory[pathMemory.pathHistory.length - 1] as Record<
+      string,
+      unknown
+    >;
+    if (
+      'constraintsCreated' in latestEvent &&
+      Array.isArray(latestEvent.constraintsCreated) &&
+      latestEvent.constraintsCreated.length > 0
+    ) {
+      dependencies.push(...(latestEvent.constraintsCreated as string[]));
     }
   }
 
@@ -535,6 +569,12 @@ function calculateFlexibilityImpact(input: ExecuteThinkingStepInput, session: Se
   // Path impact based flexibility
   if (input.pathImpact) {
     return -(1 - input.pathImpact.flexibilityRetention);
+  }
+
+  // Check session's path memory for current flexibility
+  if (session.pathMemory && session.pathMemory.currentFlexibility) {
+    const currentFlex = session.pathMemory.currentFlexibility.flexibilityScore || 1;
+    return -(1 - currentFlex) * 0.1; // Small impact based on current flexibility
   }
 
   // Default small negative impact
@@ -583,6 +623,22 @@ function identifyNoteworthyMoment(
     return 'Kairos opportunities identified';
   }
 
+  // Check if session history shows pattern of increasing insights
+  if (insights.length > 3 && session.history.length > 5) {
+    const recentInsightGrowth = insights.length / session.history.length;
+    if (recentInsightGrowth > 0.5) {
+      return 'High insight generation rate detected';
+    }
+  }
+
+  // Check for flexibility recovery in session
+  if (session.pathMemory && session.pathMemory.currentFlexibility) {
+    const currentFlex = session.pathMemory.currentFlexibility.flexibilityScore || 0;
+    if (currentFlex > 0.8 && session.history.length > 10) {
+      return 'Maintained high flexibility despite complex exploration';
+    }
+  }
+
   return undefined;
 }
 
@@ -611,6 +667,25 @@ function assessFutureRelevance(
   // Cross-cultural patterns
   if (input.technique === 'cross_cultural' && input.parallelPaths) {
     return 'Parallel implementation patterns useful for diverse contexts';
+  }
+
+  // Check if session has generated reusable patterns
+  if (session.insights && session.insights.length > 5) {
+    const hasPatternWords = session.insights.some(
+      insight =>
+        insight.toLowerCase().includes('pattern') ||
+        insight.toLowerCase().includes('principle') ||
+        insight.toLowerCase().includes('framework')
+    );
+    if (hasPatternWords) {
+      return 'Session has identified reusable patterns and principles';
+    }
+  }
+
+  // Check for high-value technique combinations in session history
+  const techniqueSequence = session.history.map(h => h.technique).slice(-3);
+  if (techniqueSequence.length >= 3 && new Set(techniqueSequence).size >= 2) {
+    return 'Multi-technique exploration pattern can be reused for similar problems';
   }
 
   return undefined;

@@ -253,7 +253,17 @@ export interface Tool {
     description: string;
     inputSchema: {
         type: string;
-        properties: Record<string, any>;
+        properties: Record<string, {
+            type?: string;
+            description?: string;
+            enum?: string[];
+            items?: Record<string, unknown>;
+            properties?: Record<string, unknown>;
+            required?: string[];
+            minimum?: number;
+            maximum?: number;
+            default?: unknown;
+        }>;
         required?: string[];
         additionalProperties?: boolean;
     };

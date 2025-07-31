@@ -73,7 +73,16 @@ export class CrossCulturalHandler extends BaseTechniqueHandler {
     }
   }
 
-  extractInsights(history: any[]): string[] {
+  extractInsights(
+    history: Array<{
+      currentStep?: number;
+      culturalFrameworks?: string[];
+      bridgeBuilding?: string[];
+      respectfulSynthesis?: string[];
+      parallelPaths?: string[];
+      output?: string;
+    }>
+  ): string[] {
     const insights: string[] = [];
 
     history.forEach(entry => {
@@ -101,7 +110,7 @@ export class CrossCulturalHandler extends BaseTechniqueHandler {
 
     // Check if cross-cultural integration is complete
     const hasCompleteSession = history.some(
-      entry => entry.currentStep === 5 && !entry.nextStepNeeded
+      entry => entry.currentStep === 5 && 'nextStepNeeded' in entry && !entry.nextStepNeeded
     );
     if (hasCompleteSession) {
       insights.push('Cross-Cultural Integration completed - inclusive innovation achieved');

@@ -64,7 +64,7 @@ export class YesAndHandler extends BaseTechniqueHandler {
                 insights.push(`Key addition: ${entry.additions[0]}`);
             }
             if (entry.currentStep === 3 && entry.evaluations && entry.evaluations.length > 0) {
-                const positive = entry.evaluations.filter((e) => e.toLowerCase().includes('good') || e.toLowerCase().includes('strong'));
+                const positive = entry.evaluations.filter(e => e.toLowerCase().includes('good') || e.toLowerCase().includes('strong'));
                 if (positive.length > 0) {
                     insights.push(`Positive aspect: ${positive[0]}`);
                 }

@@ -42,7 +42,7 @@ export class TechniqueRegistry {
     this.handlers.set('collective_intel', new CollectiveIntelHandler());
   }
 
-  getHandler(technique: LateralTechnique | string): TechniqueHandler {
+  getHandler(technique: string): TechniqueHandler {
     const handler = this.handlers.get(technique as LateralTechnique);
     if (!handler) {
       // Return a generic handler for unknown techniques

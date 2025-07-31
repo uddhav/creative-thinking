@@ -25,7 +25,7 @@ export class GenericHandler {
     getStepGuidance(step, problem) {
         return `Apply ${this.techniqueName} step ${step} to "${problem}"`;
     }
-    validateStep(step) {
+    validateStep(step, _data) {
         return step >= 1 && step <= 5;
     }
     extractInsights(history) {

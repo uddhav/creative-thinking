@@ -10,6 +10,13 @@ export declare class CrossCulturalHandler extends BaseTechniqueHandler {
         emoji: string;
     };
     getStepGuidance(step: number, problem: string): string;
-    extractInsights(history: any[]): string[];
+    extractInsights(history: Array<{
+        currentStep?: number;
+        culturalFrameworks?: string[];
+        bridgeBuilding?: string[];
+        respectfulSynthesis?: string[];
+        parallelPaths?: string[];
+        output?: string;
+    }>): string[];
 }
 //# sourceMappingURL=CrossCulturalHandler.d.ts.map

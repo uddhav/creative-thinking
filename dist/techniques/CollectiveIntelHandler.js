@@ -86,7 +86,7 @@ export class CollectiveIntelHandler extends BaseTechniqueHandler {
             }
         });
         // Check if collective intelligence synthesis is complete
-        const hasCompleteSession = history.some(entry => entry.currentStep === 5 && !entry.nextStepNeeded);
+        const hasCompleteSession = history.some(entry => entry.currentStep === 5 && 'nextStepNeeded' in entry && !entry.nextStepNeeded);
         if (hasCompleteSession) {
             insights.push('Collective Intelligence synthesis completed - wisdom of many integrated');
         }

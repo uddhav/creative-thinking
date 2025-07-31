@@ -61,18 +61,24 @@ export class POHandler extends BaseTechniqueHandler {
     }
   }
 
-  extractInsights(history: any[]): string[] {
+  extractInsights(
+    history: Array<{
+      currentStep?: number;
+      provocation?: string;
+      output?: string;
+    }>
+  ): string[] {
     const insights: string[] = [];
 
     history.forEach(entry => {
       if (entry.currentStep === 1 && entry.provocation) {
         insights.push(`Provocation explored: ${entry.provocation}`);
       }
-      if (entry.currentStep === 2 && entry.output.includes('could')) {
+      if (entry.currentStep === 2 && entry.output && entry.output.includes('could')) {
         insights.push(`Movement insight: ${entry.output.slice(0, 100)}...`);
       }
       if (entry.currentStep === 4 && entry.output) {
-        const solutions = entry.output.split(/[.!?]+/).filter((s: string) => s.trim());
+        const solutions = entry.output.split(/[.!?]+/).filter(s => s.trim());
         if (solutions.length > 0) {
           insights.push(`Practical solution: ${solutions[0].trim()}`);
         }

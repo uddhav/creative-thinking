@@ -10,6 +10,10 @@ export declare class POHandler extends BaseTechniqueHandler {
         emoji: string;
     };
     getStepGuidance(step: number, problem: string): string;
-    extractInsights(history: any[]): string[];
+    extractInsights(history: Array<{
+        currentStep?: number;
+        provocation?: string;
+        output?: string;
+    }>): string[];
 }
 //# sourceMappingURL=POHandler.d.ts.map

@@ -61,7 +61,16 @@ export class ConceptExtractionHandler extends BaseTechniqueHandler {
     }
   }
 
-  extractInsights(history: any[]): string[] {
+  extractInsights(
+    history: Array<{
+      currentStep?: number;
+      successExample?: string;
+      extractedConcepts?: string[];
+      abstractedPatterns?: string[];
+      applications?: string[];
+      output?: string;
+    }>
+  ): string[] {
     const insights: string[] = [];
 
     history.forEach(entry => {

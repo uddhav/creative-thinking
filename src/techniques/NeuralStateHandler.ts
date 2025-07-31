@@ -66,7 +66,17 @@ export class NeuralStateHandler extends BaseTechniqueHandler {
     }
   }
 
-  extractInsights(history: any[]): string[] {
+  extractInsights(
+    history: Array<{
+      currentStep?: number;
+      dominantNetwork?: string;
+      suppressionDepth?: number;
+      switchingRhythm?: string[];
+      integrationInsights?: string[];
+      nextStepNeeded?: boolean;
+      output?: string;
+    }>
+  ): string[] {
     const insights: string[] = [];
 
     history.forEach(entry => {

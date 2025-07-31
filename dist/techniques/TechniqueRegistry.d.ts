@@ -8,7 +8,7 @@ export declare class TechniqueRegistry {
     private handlers;
     constructor();
     private registerHandlers;
-    getHandler(technique: LateralTechnique | string): TechniqueHandler;
+    getHandler(technique: string): TechniqueHandler;
     getAllTechniques(): LateralTechnique[];
     getTechniqueInfo(technique: LateralTechnique): import("./types.js").TechniqueInfo;
     getTechniqueSteps(technique: LateralTechnique): number;

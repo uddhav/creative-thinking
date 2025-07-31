@@ -73,7 +73,18 @@ export class TemporalWorkHandler extends BaseTechniqueHandler {
     }
   }
 
-  extractInsights(history: any[]): string[] {
+  extractInsights(
+    history: Array<{
+      currentStep?: number;
+      temporalLandscape?: {
+        fixedDeadlines?: string[];
+        kairosOpportunities?: string[];
+      };
+      temporalEscapeRoutes?: string[];
+      nextStepNeeded?: boolean;
+      output?: string;
+    }>
+  ): string[] {
     const insights: string[] = [];
 
     history.forEach(entry => {

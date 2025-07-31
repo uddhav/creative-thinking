@@ -9,9 +9,9 @@ import type { SessionData } from '../../types/index.js';
 import type { PlanThinkingSessionOutput } from '../../types/planning.js';
 
 // Mock console methods to prevent noise during tests
-const originalLog = console.log;
-const originalWarn = console.warn;
-const originalError = console.error;
+const _originalLog = console.log;
+const _originalWarn = console.warn;
+const _originalError = console.error;
 
 describe('SessionManager', () => {
   let manager: SessionManager;
@@ -60,9 +60,9 @@ describe('SessionManager', () => {
     vi.clearAllTimers();
 
     // Restore console
-    console.log = originalLog;
-    console.warn = originalWarn;
-    console.error = originalError;
+    console.log = _originalLog;
+    console.warn = _originalWarn;
+    console.error = _originalError;
   });
 
   describe('Configuration', () => {
@@ -155,7 +155,7 @@ describe('SessionManager', () => {
       expect(manager.getCurrentSessionId()).toBe(sessionId);
 
       // Can also set explicitly
-      const sessionId2 = manager.createSession(mockSession);
+      const _sessionId2 = manager.createSession(mockSession);
       manager.setCurrentSession(sessionId);
       expect(manager.getCurrentSessionId()).toBe(sessionId);
     });
@@ -286,7 +286,7 @@ describe('SessionManager', () => {
       process.env.CLEANUP_INTERVAL = '1000'; // 1 second
       const manager = new SessionManager();
 
-      const cleanupSpy = vi.spyOn(manager as any, 'cleanupOldSessions');
+      const cleanupSpy = vi.spyOn(manager, 'cleanupOldSessions' as keyof SessionManager);
 
       // Advance time
       vi.advanceTimersByTime(3000);
@@ -331,7 +331,7 @@ describe('SessionManager', () => {
 
       // Create sessions
       const id1 = manager.createSession({ ...mockSession, lastActivityTime: Date.now() - 3000 });
-      const id2 = manager.createSession({ ...mockSession, lastActivityTime: Date.now() - 2000 });
+      const _id2 = manager.createSession({ ...mockSession, lastActivityTime: Date.now() - 2000 });
 
       // Set first session as current
       manager.setCurrentSession(id1);
@@ -466,10 +466,15 @@ describe('SessionManager', () => {
       // Create a session with known content
       const bigSession: SessionData = {
         ...mockSession,
-        history: Array(100).fill({
+        history: Array.from({ length: 100 }, () => ({
+          technique: 'six_hats' as const,
+          problem: 'Test',
+          currentStep: 1,
+          totalSteps: 6,
           output: 'a'.repeat(1000), // ~1KB per history item
+          nextStepNeeded: true,
           timestamp: new Date().toISOString(),
-        }),
+        })),
         branches: {
           branch1: [],
           branch2: [],
@@ -582,7 +587,7 @@ describe('SessionManager', () => {
     it('should respect PERSISTENCE_PATH environment variable', async () => {
       process.env.PERSISTENCE_PATH = '/custom/path';
 
-      const manager = new SessionManager();
+      const _manager = new SessionManager();
 
       // Wait for async initialization
       await new Promise(resolve => setTimeout(resolve, 10));
@@ -665,8 +670,8 @@ describe('SessionManager', () => {
       manager.createSession(mockSession);
       manager.savePlan('plan1', mockPlan);
 
-      const initialCount = manager.getSessionCount();
-      const initialPlanCount = manager.getPlanCount();
+      const _initialCount = manager.getSessionCount();
+      const _initialPlanCount = manager.getPlanCount();
 
       manager.destroy();
 

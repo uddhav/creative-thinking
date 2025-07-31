@@ -100,9 +100,10 @@ export class SixHatsHandler extends BaseTechniqueHandler {
             return false;
         }
         // Validate hat color if provided
-        if (data.hatColor) {
+        const hatData = data;
+        if (hatData.hatColor) {
             const expectedColor = this.hatOrder[step - 1];
-            return data.hatColor === expectedColor;
+            return hatData.hatColor === expectedColor;
         }
         return true;
     }

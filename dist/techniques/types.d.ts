@@ -17,8 +17,10 @@ export interface TechniqueHandler {
         emoji: string;
     };
     getStepGuidance(step: number, problem: string): string;
-    validateStep(step: number, data: any): boolean;
-    extractInsights(history: any[]): string[];
+    validateStep(step: number, data: unknown): boolean;
+    extractInsights(history: Array<{
+        output?: string;
+    }>): string[];
 }
 export declare abstract class BaseTechniqueHandler implements TechniqueHandler {
     abstract getTechniqueInfo(): TechniqueInfo;
@@ -28,7 +30,9 @@ export declare abstract class BaseTechniqueHandler implements TechniqueHandler {
         emoji: string;
     };
     abstract getStepGuidance(step: number, problem: string): string;
-    validateStep(step: number, data: any): boolean;
-    extractInsights(history: any[]): string[];
+    validateStep(step: number, _data: unknown): boolean;
+    extractInsights(history: Array<{
+        output?: string;
+    }>): string[];
 }
 //# sourceMappingURL=types.d.ts.map

@@ -66,7 +66,15 @@ export class TRIZHandler extends BaseTechniqueHandler {
     }
   }
 
-  extractInsights(history: any[]): string[] {
+  extractInsights(
+    history: Array<{
+      currentStep?: number;
+      contradiction?: string;
+      inventivePrinciples?: string[];
+      minimalSolution?: string;
+      output?: string;
+    }>
+  ): string[] {
     const insights: string[] = [];
 
     history.forEach(entry => {

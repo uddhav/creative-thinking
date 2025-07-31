@@ -143,7 +143,7 @@ export class ScamperHandler extends BaseTechniqueHandler {
         baseImpact.recoveryPath = this.generateRecoveryPath(action);
         return baseImpact;
     }
-    identifyDependencies(action, modification) {
+    identifyDependencies(action, _modification) {
         const dependencies = [];
         switch (action) {
             case 'substitute':
@@ -170,7 +170,7 @@ export class ScamperHandler extends BaseTechniqueHandler {
         }
         return dependencies;
     }
-    identifyClosedOptions(action, modification) {
+    identifyClosedOptions(action, _modification) {
         const closed = [];
         switch (action) {
             case 'eliminate':
@@ -192,7 +192,7 @@ export class ScamperHandler extends BaseTechniqueHandler {
         }
         return closed;
     }
-    identifyOpenedOptions(action, modification) {
+    identifyOpenedOptions(action, _modification) {
         const opened = [];
         switch (action) {
             case 'substitute':

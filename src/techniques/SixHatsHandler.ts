@@ -124,21 +124,28 @@ export class SixHatsHandler extends BaseTechniqueHandler {
     }
   }
 
-  validateStep(step: number, data: any): boolean {
+  validateStep(step: number, data: unknown): boolean {
     if (!super.validateStep(step, data)) {
       return false;
     }
 
     // Validate hat color if provided
-    if (data.hatColor) {
+    const hatData = data as { hatColor?: string };
+    if (hatData.hatColor) {
       const expectedColor = this.hatOrder[step - 1];
-      return data.hatColor === expectedColor;
+      return hatData.hatColor === expectedColor;
     }
 
     return true;
   }
 
-  extractInsights(history: any[]): string[] {
+  extractInsights(
+    history: Array<{
+      hatColor?: string;
+      risks?: string[];
+      output?: string;
+    }>
+  ): string[] {
     const insights: string[] = [];
 
     // Extract insights based on hat colors

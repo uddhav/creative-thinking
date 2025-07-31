@@ -61,7 +61,16 @@ export class YesAndHandler extends BaseTechniqueHandler {
     }
   }
 
-  extractInsights(history: any[]): string[] {
+  extractInsights(
+    history: Array<{
+      currentStep?: number;
+      initialIdea?: string;
+      additions?: string[];
+      evaluations?: string[];
+      synthesis?: string;
+      output?: string;
+    }>
+  ): string[] {
     const insights: string[] = [];
 
     history.forEach(entry => {
@@ -73,7 +82,7 @@ export class YesAndHandler extends BaseTechniqueHandler {
       }
       if (entry.currentStep === 3 && entry.evaluations && entry.evaluations.length > 0) {
         const positive = entry.evaluations.filter(
-          (e: string) => e.toLowerCase().includes('good') || e.toLowerCase().includes('strong')
+          e => e.toLowerCase().includes('good') || e.toLowerCase().includes('strong')
         );
         if (positive.length > 0) {
           insights.push(`Positive aspect: ${positive[0]}`);

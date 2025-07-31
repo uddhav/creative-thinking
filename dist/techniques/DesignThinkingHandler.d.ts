@@ -13,7 +13,18 @@ export declare class DesignThinkingHandler extends BaseTechniqueHandler {
         emoji: string;
     };
     getStepGuidance(step: number, problem: string): string;
-    extractInsights(history: any[]): string[];
+    extractInsights(history: Array<{
+        designStage?: string;
+        empathyInsights?: string[];
+        problemStatement?: string;
+        ideaList?: string[];
+        failureModesPredicted?: string[];
+        prototypeDescription?: string;
+        stressTestResults?: string[];
+        userFeedback?: string[];
+        failureInsights?: string[];
+        output?: string;
+    }>): string[];
     getStage(step: number): DesignThinkingStage;
 }
 //# sourceMappingURL=DesignThinkingHandler.d.ts.map

@@ -21,7 +21,9 @@ export declare class ScamperHandler extends BaseTechniqueHandler {
         emoji: string;
     };
     getStepGuidance(step: number, problem: string): string;
-    analyzePathImpact(action: ScamperAction, modification: string, history: any[]): ScamperPathImpact;
+    analyzePathImpact(action: ScamperAction, modification: string, history: Array<{
+        scamperAction?: string;
+    }>): ScamperPathImpact;
     private identifyDependencies;
     private identifyClosedOptions;
     private identifyOpenedOptions;
