@@ -285,14 +285,14 @@ describe('AbsorbingBarrierEarlyWarning', () => {
 
       // Clear existing barriers and add our test barriers
       mockPathMemory.absorbingBarriers = [fastApproachingBarrier, slowApproachingBarrier];
-      
+
       const result = await warningSystem.continuousMonitoring(mockPathMemory, mockSession);
 
       // The test should verify that the system handles multiple barriers
       // Even if sensors return SAFE, the system should acknowledge barriers exist
       expect(result).toBeDefined();
       expect(result.overallRisk).toBeDefined();
-      
+
       // Verify the system processed our barriers
       expect(mockPathMemory.absorbingBarriers).toHaveLength(2);
       expect(mockPathMemory.absorbingBarriers[0].proximity).toBe(0.9);

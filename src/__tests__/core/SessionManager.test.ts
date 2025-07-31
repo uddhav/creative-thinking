@@ -119,7 +119,9 @@ describe('SessionManager', () => {
       const retrieved = manager.getSession(sessionId);
 
       expect(retrieved).toEqual(mockSession);
-      expect(sessionId).toMatch(/^session_[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/);
+      expect(sessionId).toMatch(
+        /^session_[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/
+      );
     });
 
     it('should update session activity time on touch', () => {

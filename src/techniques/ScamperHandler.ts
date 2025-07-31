@@ -163,12 +163,18 @@ export class ScamperHandler extends BaseTechniqueHandler {
         );
       }).length;
       if (highCommitmentCount > 0) {
-        baseImpact.flexibilityRetention *= Math.pow(HIGH_COMMITMENT_DEGRADATION_FACTOR, highCommitmentCount);
+        baseImpact.flexibilityRetention *= Math.pow(
+          HIGH_COMMITMENT_DEGRADATION_FACTOR,
+          highCommitmentCount
+        );
       }
       // Additional degradation based on step count to ensure monotonic decrease
       baseImpact.flexibilityRetention *= Math.pow(STEP_DEGRADATION_FACTOR, history.length);
       // Ensure minimum flexibility for tracking purposes
-      baseImpact.flexibilityRetention = Math.max(MINIMUM_FLEXIBILITY_THRESHOLD, baseImpact.flexibilityRetention);
+      baseImpact.flexibilityRetention = Math.max(
+        MINIMUM_FLEXIBILITY_THRESHOLD,
+        baseImpact.flexibilityRetention
+      );
     }
 
     // Add recovery path for all actions

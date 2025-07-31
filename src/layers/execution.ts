@@ -588,10 +588,9 @@ function extractPathDependencies(
     Array.isArray(pathMemory.pathHistory) &&
     pathMemory.pathHistory.length > 0
   ) {
-    const latestEvent = pathMemory.pathHistory[pathMemory.pathHistory.length - 1] as unknown as Record<
-      string,
-      unknown
-    >;
+    const latestEvent = pathMemory.pathHistory[
+      pathMemory.pathHistory.length - 1
+    ] as unknown as Record<string, unknown>;
     if (
       'constraintsCreated' in latestEvent &&
       Array.isArray(latestEvent.constraintsCreated) &&
