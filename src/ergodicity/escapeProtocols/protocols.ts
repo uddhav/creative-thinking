@@ -4,6 +4,7 @@
 
 import { EscapeLevel } from './types.js';
 import type { EscapeProtocol, EscapeContext, EscapeAttemptResult } from './types.js';
+import { getSecureRandomIndex, getSecureRandomFloat } from '../../utils/secureRandom.js';
 
 /**
  * Level 1: Pattern Interruption
@@ -50,7 +51,7 @@ export class PatternInterruptionProtocol implements EscapeProtocol {
       'How would nature solve this problem?',
     ];
 
-    const selectedInterruption = interruptions[Math.floor(Math.random() * interruptions.length)];
+    const selectedInterruption = interruptions[getSecureRandomIndex(interruptions.length)];
     executionNotes.push(`Applied interruption: ${selectedInterruption}`);
 
     // Generate new options based on interruption
@@ -62,7 +63,7 @@ export class PatternInterruptionProtocol implements EscapeProtocol {
     );
 
     // Calculate flexibility gain
-    const flexibilityGain = 0.2 + Math.random() * 0.2; // 0.2-0.4 gain
+    const flexibilityGain = getSecureRandomFloat(0.2, 0.4); // 0.2-0.4 gain
 
     return {
       protocol: this,
@@ -131,7 +132,7 @@ export class ResourceReallocationProtocol implements EscapeProtocol {
       'Cross-functional collaboration',
     ];
 
-    const flexibilityGain = 0.15 + Math.random() * 0.15; // 0.15-0.3 gain
+    const flexibilityGain = getSecureRandomFloat(0.15, 0.3); // 0.15-0.3 gain
 
     return {
       protocol: this,
@@ -203,7 +204,7 @@ export class StakeholderResetProtocol implements EscapeProtocol {
       'Iterative stakeholder engagement',
     ];
 
-    const flexibilityGain = 0.25 + Math.random() * 0.2; // 0.25-0.45 gain
+    const flexibilityGain = getSecureRandomFloat(0.25, 0.45); // 0.25-0.45 gain
 
     return {
       protocol: this,
@@ -277,7 +278,7 @@ export class TechnicalRefactoringProtocol implements EscapeProtocol {
       'Technical flexibility reserve',
     ];
 
-    const flexibilityGain = 0.3 + Math.random() * 0.2; // 0.3-0.5 gain
+    const flexibilityGain = getSecureRandomFloat(0.3, 0.5); // 0.3-0.5 gain
 
     return {
       protocol: this,
@@ -353,7 +354,7 @@ export class StrategicPivotProtocol implements EscapeProtocol {
       'Reimagined product vision',
     ];
 
-    const flexibilityGain = 0.4 + Math.random() * 0.3; // 0.4-0.7 gain
+    const flexibilityGain = getSecureRandomFloat(0.4, 0.7); // 0.4-0.7 gain
 
     return {
       protocol: this,

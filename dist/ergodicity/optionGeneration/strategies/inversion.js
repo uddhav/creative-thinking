@@ -2,6 +2,7 @@
  * Inversion Strategy - Create options by flipping assumptions
  */
 import { BaseOptionStrategy } from './base.js';
+import { getSecureRandomIndex } from '../../../utils/secureRandom.js';
 export class InversionStrategy extends BaseOptionStrategy {
     strategyName = 'inversion';
     description = 'Create options by inverting current assumptions and constraints';
@@ -202,7 +203,7 @@ export class InversionStrategy extends BaseOptionStrategy {
         if (inversion.includes('sometimes not'))
             return benefits[5];
         // Random selection for variety
-        return benefits[Math.floor(Math.random() * benefits.length)];
+        return benefits[getSecureRandomIndex(benefits.length)];
     }
     generateExample(inversion, domain) {
         const examples = {
@@ -228,7 +229,7 @@ export class InversionStrategy extends BaseOptionStrategy {
             ],
         };
         const domainExamples = examples[domain] || examples.default;
-        return domainExamples[Math.floor(Math.random() * domainExamples.length)];
+        return domainExamples[getSecureRandomIndex(domainExamples.length)];
     }
     shortenAssumption(assumption) {
         const words = assumption.split(/\s+/);
