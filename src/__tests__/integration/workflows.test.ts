@@ -32,7 +32,7 @@ describe('Complete Technique Workflows', () => {
         objectives: ['Analyze retention holistically', 'Generate actionable solutions'],
       };
 
-      const planResult = await server.planThinkingSession(planInput);
+      const planResult = server.planThinkingSession(planInput);
       const plan = safeJsonParse(planResult.content[0].text);
       expect(plan.planId).toBeDefined();
 
@@ -78,7 +78,7 @@ describe('Complete Technique Workflows', () => {
       const problem = 'Improve team productivity';
 
       // Create plan
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem,
         techniques: ['six_hats'],
       });
@@ -157,7 +157,7 @@ describe('Complete Technique Workflows', () => {
       ];
 
       // Plan session
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem,
         techniques: ['scamper'],
         timeframe: 'thorough',
@@ -208,7 +208,7 @@ describe('Complete Technique Workflows', () => {
       const problem = 'Reduce email overload';
 
       // Plan and execute PO technique
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem,
         techniques: ['po'],
       });
@@ -291,7 +291,7 @@ describe('Complete Technique Workflows', () => {
       const problem = 'Design better remote work experience';
       const stages = ['empathize', 'define', 'ideate', 'prototype', 'test'];
 
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem,
         techniques: ['design_thinking'],
         objectives: ['User-centered approach', 'Rapid prototyping'],
@@ -341,7 +341,7 @@ describe('Complete Technique Workflows', () => {
       const problem = 'Increase innovation in organization';
 
       // Plan session
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem,
         techniques: ['concept_extraction'],
       });

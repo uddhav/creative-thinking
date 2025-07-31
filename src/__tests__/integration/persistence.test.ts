@@ -61,7 +61,7 @@ describe('Session Persistence - Simple Integration', () => {
       const problem = 'Test auto-save problem';
 
       // Create a session with autoSave
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem,
         techniques: ['random_entry'],
       });
@@ -111,7 +111,7 @@ describe('Session Persistence - Simple Integration', () => {
 
       // Create multiple sessions
       for (let i = 0; i < 3; i++) {
-        const planResult = await server.planThinkingSession({
+        const planResult = server.planThinkingSession({
           problem: `Problem ${i}`,
           techniques: ['po'],
         });
@@ -152,7 +152,7 @@ describe('Session Persistence - Simple Integration', () => {
       const problem = 'Test session updates';
 
       // Create initial session
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem,
         techniques: ['scamper'],
       });
@@ -216,7 +216,7 @@ describe('Session Persistence - Simple Integration', () => {
       const problem = 'Test persistence across restarts';
 
       // Create and save a session
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem,
         techniques: ['six_hats'],
       });
@@ -280,7 +280,7 @@ describe('Session Persistence - Simple Integration', () => {
   describe('Error Handling', () => {
     it('should handle autoSave failures gracefully', async () => {
       const problem = 'Test save failure';
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem,
         techniques: ['random_entry'],
       });

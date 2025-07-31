@@ -565,7 +565,21 @@ describe('ResponseBuilder', () => {
         },
       ];
 
-      const formatted = builder.formatSessionList(sessions);
+      const formatted = builder.formatSessionList(sessions) as {
+        count: number;
+        sessions: Array<{
+          id: string;
+          name: string;
+          technique: string;
+          problem: string;
+          created: string;
+          lastActivity: string;
+          steps: number;
+          complete: boolean;
+          insights: number;
+          tags: string[];
+        }>;
+      };
 
       expect(formatted.count).toBe(2);
       expect(formatted.sessions).toHaveLength(2);
@@ -575,15 +589,16 @@ describe('ResponseBuilder', () => {
         technique: 'six_hats',
         problem:
           'How to improve team communication in remote work environments with multiple time zones',
-        created: expect.stringMatching(/\d{4}-\d{2}-\d{2}/),
-        lastActivity: expect.stringMatching(/\d{4}-\d{2}-\d{2}/),
+        created: expect.stringMatching(/\d{4}-\d{2}-\d{2}/) as string,
+        lastActivity: expect.stringMatching(/\d{4}-\d{2}-\d{2}/) as string,
         steps: 5,
         complete: true,
         insights: 2,
         tags: ['team', 'remote'],
       });
-      expect(formatted.sessions[1].name).toBe('po - Short problem...');
-      expect(formatted.sessions[1].complete).toBe(false);
+      const secondSession = formatted.sessions[1];
+      expect(secondSession?.name).toBe('po - Short problem...');
+      expect(secondSession?.complete).toBe(false);
     });
 
     it('should handle empty session list', () => {

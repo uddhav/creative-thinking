@@ -36,6 +36,8 @@ export class LateralThinkingServer {
     visualFormatter;
     complexityAnalyzer;
     ergodicityManager;
+    neuralOptimizationEnabled;
+    culturalFrameworksEnabled;
     // Expose for testing
     get sessions() {
         return this.sessionManager['sessions'];
@@ -78,16 +80,10 @@ export class LateralThinkingServer {
         this.ergodicityManager = new ErgodicityManager();
         const disableThoughtLogging = (process.env.DISABLE_THOUGHT_LOGGING || '').toLowerCase() === 'true';
         this.visualFormatter = new VisualFormatter(disableThoughtLogging);
-        // Check for neural optimization feature flag
-        const neuralOptimizationEnabled = (process.env.NEURAL_OPTIMIZATION || '').toLowerCase() === 'true';
-        if (neuralOptimizationEnabled) {
-            console.log('Neural optimization features enabled');
-        }
-        // Check for cultural frameworks configuration
-        const culturalFrameworks = process.env.CULTURAL_FRAMEWORKS;
-        if (culturalFrameworks) {
-            console.log(`Cultural frameworks available: ${culturalFrameworks}`);
-        }
+        // Store feature flags for use by techniques
+        this.neuralOptimizationEnabled =
+            (process.env.NEURAL_OPTIMIZATION || '').toLowerCase() === 'true';
+        this.culturalFrameworksEnabled = !!process.env.CULTURAL_FRAMEWORKS;
     }
     /**
      * Process lateral thinking requests
@@ -103,14 +99,15 @@ export class LateralThinkingServer {
             const validation = validator.validate(input);
             if (!validation.valid) {
                 // Check if validation includes workflow guidance
-                if (validation.workflow) {
+                const validationWithWorkflow = validation;
+                if (validationWithWorkflow.workflow) {
                     return {
                         content: [
                             {
                                 type: 'text',
                                 text: JSON.stringify({
                                     error: validation.errors[0],
-                                    workflow: validation.workflow,
+                                    workflow: validationWithWorkflow.workflow,
                                 }, null, 2),
                             },
                         ],
@@ -131,7 +128,7 @@ export class LateralThinkingServer {
     /**
      * Discover techniques handler
      */
-    async discoverTechniques(input) {
+    discoverTechniques(input) {
         try {
             const validator = ValidationStrategyFactory.createValidator('discover');
             const validation = validator.validate(input);
@@ -139,7 +136,7 @@ export class LateralThinkingServer {
                 return this.responseBuilder.buildErrorResponse(new Error(validation.errors.join('; ')), 'discovery');
             }
             const data = input;
-            const output = await discoverTechniques(data, this.techniqueRegistry, this.complexityAnalyzer);
+            const output = discoverTechniques(data, this.techniqueRegistry, this.complexityAnalyzer);
             return this.responseBuilder.buildDiscoveryResponse(output);
         }
         catch (error) {
@@ -149,7 +146,7 @@ export class LateralThinkingServer {
     /**
      * Plan thinking session handler
      */
-    async planThinkingSession(input) {
+    planThinkingSession(input) {
         try {
             const validator = ValidationStrategyFactory.createValidator('plan');
             const validation = validator.validate(input);
@@ -157,7 +154,7 @@ export class LateralThinkingServer {
                 return this.responseBuilder.buildErrorResponse(new Error(validation.errors.join('; ')), 'planning');
             }
             const data = input;
-            const output = await planThinkingSession(data, this.sessionManager, this.techniqueRegistry);
+            const output = planThinkingSession(data, this.sessionManager, this.techniqueRegistry);
             return this.responseBuilder.buildPlanningResponse(output);
         }
         catch (error) {
@@ -395,7 +392,7 @@ const server = new Server({
 // Create server instance
 const lateralServer = new LateralThinkingServer();
 // Handle tool listing
-server.setRequestHandler(ListToolsRequestSchema, async () => ({
+server.setRequestHandler(ListToolsRequestSchema, () => ({
     tools: [DISCOVER_TECHNIQUES_TOOL, PLAN_THINKING_SESSION_TOOL, EXECUTE_THINKING_STEP_TOOL],
 }));
 // Handle tool calls
@@ -405,10 +402,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         let result;
         switch (name) {
             case 'discover_techniques':
-                result = await lateralServer.discoverTechniques(args);
+                result = lateralServer.discoverTechniques(args);
                 break;
             case 'plan_thinking_session':
-                result = await lateralServer.planThinkingSession(args);
+                result = lateralServer.planThinkingSession(args);
                 break;
             case 'execute_thinking_step':
                 result = await lateralServer.executeThinkingStep(args);

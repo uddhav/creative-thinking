@@ -3,10 +3,15 @@
  * Handles session lifecycle, persistence, and cleanup
  */
 
+import { randomUUID } from 'crypto';
 import type { SessionData, ThinkingOperationData } from '../types/index.js';
 import type { PlanThinkingSessionOutput } from '../types/planning.js';
 import type { PersistenceAdapter } from '../persistence/adapter.js';
+import type { SessionState } from '../persistence/types.js';
 import { createAdapter, getDefaultConfig } from '../persistence/factory.js';
+
+// Constants for memory management
+const MEMORY_THRESHOLD_FOR_GC = 0.8; // Trigger garbage collection when heap usage exceeds 80%
 
 export interface SessionConfig {
   maxSessions: number;
@@ -131,11 +136,13 @@ export class SessionManager {
       }
 
       if (this.config.enableMemoryMonitoring) {
+        // eslint-disable-next-line no-console
         console.log(`[Session Eviction] Evicted session ${sessionId} (LRU)`);
       }
     }
 
     if (this.config.enableMemoryMonitoring) {
+      // eslint-disable-next-line no-console
       console.log(
         `[Memory Management] Sessions after eviction: ${this.sessions.size}/${this.config.maxSessions}`
       );
@@ -162,6 +169,7 @@ export class SessionManager {
       this.sessions.size > 0 ? Math.round(sessionSizeKB / this.sessions.size) : 0;
 
     // Log in the format expected by tests
+    // eslint-disable-next-line no-console
     console.log('[Memory Metrics]', {
       timestamp: new Date().toISOString(),
       process: {
@@ -180,7 +188,8 @@ export class SessionManager {
     });
 
     // Force garbage collection if available and memory usage is high
-    if (typeof global !== 'undefined' && global.gc && heapUsedMB > heapTotalMB * 0.8) {
+    if (typeof global !== 'undefined' && global.gc && heapUsedMB > heapTotalMB * MEMORY_THRESHOLD_FOR_GC) {
+      // eslint-disable-next-line no-console
       console.log('[Memory Usage] Triggering garbage collection...');
       global.gc();
     }
@@ -202,7 +211,7 @@ export class SessionManager {
 
   // Session CRUD operations
   public createSession(sessionData: SessionData): string {
-    const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const sessionId = `session_${randomUUID()}`;
     this.sessions.set(sessionId, sessionData);
     this.currentSessionId = sessionId;
 
@@ -315,7 +324,7 @@ export class SessionManager {
     }
 
     // The adapter returns metadata, we need to load full sessions
-    const metadata = await this.persistenceAdapter.list(options as any);
+    const metadata = await this.persistenceAdapter.list(options);
     const sessions: Array<{ id: string; data: SessionData }> = [];
 
     for (const meta of metadata) {
@@ -392,7 +401,7 @@ export class SessionManager {
   }
 
   // Conversion helpers
-  private convertToSessionState(sessionId: string, session: SessionData): any {
+  private convertToSessionState(sessionId: string, session: SessionData): SessionState {
     // Convert SessionData to SessionState format for persistence
     return {
       id: sessionId,
@@ -401,7 +410,7 @@ export class SessionManager {
       currentStep:
         session.history.length > 0 ? session.history[session.history.length - 1].currentStep : 0,
       totalSteps: session.history.length > 0 ? session.history[0].totalSteps : 0,
-      history: session.history.map((entry, index) => ({
+      history: session.history.map(entry => ({
         step: entry.currentStep,
         timestamp: entry.timestamp,
         input: entry,
@@ -417,16 +426,16 @@ export class SessionManager {
     };
   }
 
-  private convertFromSessionState(sessionState: any): SessionData {
+  private convertFromSessionState(sessionState: SessionState): SessionData {
     // Convert SessionState format back to SessionData
     return {
       technique: sessionState.technique,
       problem: sessionState.problem,
-      history: sessionState.history.map((h: any) => ({
+      history: sessionState.history.map(h => ({
         ...h.output,
         timestamp: h.timestamp,
-      })),
-      branches: sessionState.branches || {},
+      })) as (ThinkingOperationData & { timestamp: string })[],
+      branches: sessionState.branches as Record<string, ThinkingOperationData[]> || {},
       insights: sessionState.insights || [],
       startTime: sessionState.startTime,
       endTime: sessionState.endTime,

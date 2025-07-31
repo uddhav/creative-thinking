@@ -162,7 +162,7 @@ describe('Stress Tests - Extreme Loads', () => {
         const memorySnapshots: number[] = [];
 
         // Create plan
-        const planResult = await server.planThinkingSession({
+        const planResult = server.planThinkingSession({
           problem,
           techniques: ['six_hats', 'scamper', 'design_thinking'],
           timeframe: 'comprehensive',
@@ -296,7 +296,7 @@ describe('Stress Tests - Extreme Loads', () => {
             const technique = techniques[index % 3];
 
             // Create plan
-            const planResult = await server.planThinkingSession({
+            const planResult = server.planThinkingSession({
               problem: `Session ${index} problem`,
               techniques: [technique],
               objectives: [`Objective 1 for session ${index}`, `Objective 2 for session ${index}`],
@@ -407,7 +407,7 @@ describe('Stress Tests - Extreme Loads', () => {
       const problem = 'Extreme branching test';
 
       // Create plan
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem,
         techniques: ['triz'],
       });
@@ -465,7 +465,7 @@ describe('Stress Tests - Extreme Loads', () => {
       const problem = 'Complex system with multiple risk factors';
 
       // Create plan
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem,
         techniques: ['design_thinking', 'triz'],
         constraints: Array.from({ length: 20 }, (_, i) => `Constraint ${i + 1}`),

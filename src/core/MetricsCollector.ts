@@ -303,9 +303,16 @@ export class MetricsCollector {
       averageMetrics.revisionsCount += m.revisionsCount;
       averageMetrics.branchesCount += m.branchesCount;
       averageMetrics.insightsGenerated += m.insightsGenerated;
-      averageMetrics.creativityScore! += m.creativityScore || 0;
-      averageMetrics.risksCaught! += m.risksCaught || 0;
-      averageMetrics.antifragileFeatures! += m.antifragileFeatures || 0;
+      // These are initialized to 0 above, so they're always defined
+      if (averageMetrics.creativityScore !== undefined) {
+        averageMetrics.creativityScore += m.creativityScore || 0;
+      }
+      if (averageMetrics.risksCaught !== undefined) {
+        averageMetrics.risksCaught += m.risksCaught || 0;
+      }
+      if (averageMetrics.antifragileFeatures !== undefined) {
+        averageMetrics.antifragileFeatures += m.antifragileFeatures || 0;
+      }
 
       if (m.flexibilityScore !== undefined) {
         flexibilityTotal += m.flexibilityScore;
@@ -324,9 +331,16 @@ export class MetricsCollector {
     averageMetrics.revisionsCount /= count;
     averageMetrics.branchesCount /= count;
     averageMetrics.insightsGenerated /= count;
-    averageMetrics.creativityScore! /= count;
-    averageMetrics.risksCaught! /= count;
-    averageMetrics.antifragileFeatures! /= count;
+    // These are initialized to 0 above, so they're always defined
+    if (averageMetrics.creativityScore !== undefined) {
+      averageMetrics.creativityScore /= count;
+    }
+    if (averageMetrics.risksCaught !== undefined) {
+      averageMetrics.risksCaught /= count;
+    }
+    if (averageMetrics.antifragileFeatures !== undefined) {
+      averageMetrics.antifragileFeatures /= count;
+    }
 
     if (flexibilityCount > 0) {
       averageMetrics.flexibilityScore = flexibilityTotal / flexibilityCount;

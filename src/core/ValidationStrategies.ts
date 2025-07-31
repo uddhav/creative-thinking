@@ -3,15 +3,7 @@
  * Handles input validation for different operation types
  */
 
-import type {
-  LateralTechnique,
-  SixHatsColor,
-  ScamperAction,
-  DesignThinkingStage,
-  ThinkingOperationData,
-  SessionOperationData,
-  LateralThinkingData,
-} from '../types/index.js';
+import type { LateralTechnique, ExecuteThinkingStepInput } from '../types/index.js';
 import type { DiscoverTechniquesInput, PlanThinkingSessionInput } from '../types/planning.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 
@@ -120,7 +112,7 @@ export class DiscoveryValidator extends BaseValidator {
       return { valid: false, errors: ['Input must be an object'] };
     }
 
-    const data = input as any;
+    const data = input as DiscoverTechniquesInput;
 
     // Required fields
     if (!data.problem) {
@@ -170,7 +162,7 @@ export class PlanningValidator extends BaseValidator {
       return { valid: false, errors: ['Input must be an object'] };
     }
 
-    const data = input as any;
+    const data = input as PlanThinkingSessionInput;
 
     // Required fields
     if (!this.validateString(data.problem, 'problem', errors)) {
@@ -251,7 +243,7 @@ export class ExecutionValidator extends BaseValidator {
       return { valid: false, errors: ['Input must be an object'] };
     }
 
-    const data = input as any;
+    const data = input as ExecuteThinkingStepInput;
 
     // Check if this looks like a completely invalid operation
     if (!data.planId && !data.technique && !data.problem && !data.currentStep) {
@@ -346,9 +338,16 @@ export class ExecutionValidator extends BaseValidator {
     return { valid: errors.length === 0, errors, warnings };
   }
 
-  private validateTechniqueSpecificFields(data: any, errors: string[], warnings: string[]): void {
+  private validateTechniqueSpecificFields(
+    data: ExecuteThinkingStepInput,
+    errors: string[],
+    warnings: string[]
+  ): void {
     switch (data.technique) {
       case 'six_hats':
+        if (data.hatColor === undefined && data.currentStep >= 1 && data.currentStep <= 6) {
+          warnings.push('hatColor is recommended for six_hats technique to track thinking mode');
+        }
         if (data.hatColor !== undefined) {
           if (
             !this.validateEnum(
@@ -375,6 +374,9 @@ export class ExecutionValidator extends BaseValidator {
         break;
 
       case 'po':
+        if (data.provocation === undefined && data.currentStep === 1) {
+          warnings.push('provocation is recommended for the first step of PO technique');
+        }
         if (data.provocation !== undefined) {
           this.validateString(data.provocation, 'provocation', errors);
         }
@@ -403,6 +405,9 @@ export class ExecutionValidator extends BaseValidator {
         break;
 
       case 'scamper':
+        if (data.scamperAction === undefined) {
+          warnings.push('scamperAction should be specified for SCAMPER technique');
+        }
         if (data.scamperAction !== undefined) {
           if (
             !this.validateEnum(
@@ -448,6 +453,9 @@ export class ExecutionValidator extends BaseValidator {
         break;
 
       case 'design_thinking':
+        if (data.designStage === undefined) {
+          warnings.push('designStage is recommended to track Design Thinking progress');
+        }
         if (data.designStage !== undefined) {
           this.validateEnum(
             data.designStage,
@@ -474,6 +482,13 @@ export class ExecutionValidator extends BaseValidator {
     }
 
     // Validate risk/adversarial fields
+    if (
+      data.risks !== undefined &&
+      data.risks.length > 0 &&
+      (!data.mitigations || data.mitigations.length === 0)
+    ) {
+      warnings.push('Consider providing mitigations when risks are identified');
+    }
     if (data.risks !== undefined) {
       this.validateArray<string>(data.risks, 'risks', errors, item => typeof item === 'string');
     }
@@ -518,7 +533,25 @@ export class SessionOperationValidator extends BaseValidator {
       return { valid: false, errors: ['Input must be an object'] };
     }
 
-    const data = input as any;
+    const data = input as {
+      sessionOperation?: string;
+      saveOptions?: {
+        sessionName?: string;
+        tags?: string[];
+        asTemplate?: boolean;
+      };
+      loadOptions?: { sessionId?: string };
+      listOptions?: {
+        limit?: number;
+        technique?: string;
+        status?: string;
+      };
+      deleteOptions?: { sessionId?: string };
+      exportOptions?: {
+        sessionId?: string;
+        format?: string;
+      };
+    };
 
     if (
       !this.validateEnum(
@@ -578,7 +611,14 @@ export class SessionOperationValidator extends BaseValidator {
     return { valid: errors.length === 0, errors, warnings };
   }
 
-  private validateSaveOptions(options: any, errors: string[]): void {
+  private validateSaveOptions(
+    options: {
+      sessionName?: string;
+      tags?: string[];
+      asTemplate?: boolean;
+    },
+    errors: string[]
+  ): void {
     if (options.sessionName !== undefined) {
       this.validateString(options.sessionName, 'saveOptions.sessionName', errors);
     }
@@ -595,7 +635,14 @@ export class SessionOperationValidator extends BaseValidator {
     }
   }
 
-  private validateListOptions(options: any, errors: string[]): void {
+  private validateListOptions(
+    options: {
+      limit?: number;
+      technique?: string;
+      status?: string;
+    },
+    errors: string[]
+  ): void {
     if (options.limit !== undefined) {
       this.validateNumber(options.limit, 'listOptions.limit', errors, 1, 1000);
     }

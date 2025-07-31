@@ -2,7 +2,10 @@
  * Session Manager
  * Handles session lifecycle, persistence, and cleanup
  */
+import { randomUUID } from 'crypto';
 import { createAdapter, getDefaultConfig } from '../persistence/factory.js';
+// Constants for memory management
+const MEMORY_THRESHOLD_FOR_GC = 0.8; // Trigger garbage collection when heap usage exceeds 80%
 export class SessionManager {
     sessions = new Map();
     plans = new Map();
@@ -97,10 +100,12 @@ export class SessionManager {
                 this.currentSessionId = null;
             }
             if (this.config.enableMemoryMonitoring) {
+                // eslint-disable-next-line no-console
                 console.log(`[Session Eviction] Evicted session ${sessionId} (LRU)`);
             }
         }
         if (this.config.enableMemoryMonitoring) {
+            // eslint-disable-next-line no-console
             console.log(`[Memory Management] Sessions after eviction: ${this.sessions.size}/${this.config.maxSessions}`);
         }
     }
@@ -121,6 +126,7 @@ export class SessionManager {
         const sessionSizeKB = Math.round(totalSessionSize / 1024);
         const averageSizeKB = this.sessions.size > 0 ? Math.round(sessionSizeKB / this.sessions.size) : 0;
         // Log in the format expected by tests
+        // eslint-disable-next-line no-console
         console.log('[Memory Metrics]', {
             timestamp: new Date().toISOString(),
             process: {
@@ -138,7 +144,8 @@ export class SessionManager {
             },
         });
         // Force garbage collection if available and memory usage is high
-        if (typeof global !== 'undefined' && global.gc && heapUsedMB > heapTotalMB * 0.8) {
+        if (typeof global !== 'undefined' && global.gc && heapUsedMB > heapTotalMB * MEMORY_THRESHOLD_FOR_GC) {
+            // eslint-disable-next-line no-console
             console.log('[Memory Usage] Triggering garbage collection...');
             global.gc();
         }
@@ -157,7 +164,7 @@ export class SessionManager {
     }
     // Session CRUD operations
     createSession(sessionData) {
-        const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const sessionId = `session_${randomUUID()}`;
         this.sessions.set(sessionId, sessionData);
         this.currentSessionId = sessionId;
         // Check if eviction is needed after adding the new session
@@ -312,7 +319,7 @@ export class SessionManager {
             technique: session.technique,
             currentStep: session.history.length > 0 ? session.history[session.history.length - 1].currentStep : 0,
             totalSteps: session.history.length > 0 ? session.history[0].totalSteps : 0,
-            history: session.history.map((entry, index) => ({
+            history: session.history.map(entry => ({
                 step: entry.currentStep,
                 timestamp: entry.timestamp,
                 input: entry,
@@ -332,7 +339,7 @@ export class SessionManager {
         return {
             technique: sessionState.technique,
             problem: sessionState.problem,
-            history: sessionState.history.map((h) => ({
+            history: sessionState.history.map(h => ({
                 ...h.output,
                 timestamp: h.timestamp,
             })),

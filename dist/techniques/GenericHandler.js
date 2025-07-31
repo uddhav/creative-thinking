@@ -31,7 +31,7 @@ export class GenericHandler {
     extractInsights(history) {
         return history
             .filter(entry => entry.output && entry.output.length > 50)
-            .map(entry => `Insight from ${this.techniqueName}: ${entry.output.substring(0, 100)}...`);
+            .map(entry => `Insight from ${this.techniqueName}: ${entry.output?.substring(0, 100) || ''}...`);
     }
 }
 //# sourceMappingURL=GenericHandler.js.map

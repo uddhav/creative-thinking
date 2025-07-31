@@ -17,6 +17,8 @@ export declare class LateralThinkingServer {
     private visualFormatter;
     private complexityAnalyzer;
     private ergodicityManager;
+    private neuralOptimizationEnabled;
+    private culturalFrameworksEnabled;
     get sessions(): Map<string, SessionData>;
     get config(): import("./core/SessionManager.js").SessionConfig;
     initializeSession(technique: string, problem: string): string;
@@ -32,11 +34,11 @@ export declare class LateralThinkingServer {
     /**
      * Discover techniques handler
      */
-    discoverTechniques(input: unknown): Promise<import("./types/index.js").LateralThinkingResponse>;
+    discoverTechniques(input: unknown): import("./types/index.js").LateralThinkingResponse;
     /**
      * Plan thinking session handler
      */
-    planThinkingSession(input: unknown): Promise<import("./types/index.js").LateralThinkingResponse>;
+    planThinkingSession(input: unknown): import("./types/index.js").LateralThinkingResponse;
     /**
      * Execute thinking step handler
      */

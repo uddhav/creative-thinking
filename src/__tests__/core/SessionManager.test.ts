@@ -8,21 +8,16 @@ import { SessionManager } from '../../core/SessionManager.js';
 import type { SessionData } from '../../types/index.js';
 import type { PlanThinkingSessionOutput } from '../../types/planning.js';
 
-// Mock console methods to prevent noise during tests
-const _originalLog = console.log;
-const _originalWarn = console.warn;
-const _originalError = console.error;
-
 describe('SessionManager', () => {
   let manager: SessionManager;
   let mockSession: SessionData;
   let mockPlan: PlanThinkingSessionOutput;
 
   beforeEach(() => {
-    // Silence console during tests
-    console.log = vi.fn();
-    console.warn = vi.fn();
-    console.error = vi.fn();
+    // Mock console methods to prevent noise during tests
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
 
     // Clear environment variables
     delete process.env.MAX_SESSIONS;
@@ -58,11 +53,8 @@ describe('SessionManager', () => {
     // Clean up
     manager.destroy();
     vi.clearAllTimers();
-
-    // Restore console
-    console.log = _originalLog;
-    console.warn = _originalWarn;
-    console.error = _originalError;
+    // Restore all mocks
+    vi.restoreAllMocks();
   });
 
   describe('Configuration', () => {
@@ -116,6 +108,7 @@ describe('SessionManager', () => {
       // The cleanup method is private, but we can trigger it via the interval
       manager['cleanupOldSessions']();
 
+      // eslint-disable-next-line no-console
       expect(console.log).toHaveBeenCalledWith('[Memory Metrics]', expect.any(Object));
     });
   });
@@ -126,7 +119,7 @@ describe('SessionManager', () => {
       const retrieved = manager.getSession(sessionId);
 
       expect(retrieved).toEqual(mockSession);
-      expect(sessionId).toMatch(/^session_\d+_[a-z0-9]+$/);
+      expect(sessionId).toMatch(/^session_[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/);
     });
 
     it('should update session activity time on touch', () => {
@@ -356,6 +349,7 @@ describe('SessionManager', () => {
       manager.createSession(mockSession);
       manager.createSession(mockSession); // Triggers eviction
 
+      // eslint-disable-next-line no-console
       expect(console.log).toHaveBeenCalledWith(
         expect.stringContaining(`[Session Eviction] Evicted session ${id1} (LRU)`)
       );
@@ -398,23 +392,24 @@ describe('SessionManager', () => {
       // Trigger memory logging
       manager['logMemoryMetrics']();
 
+      // eslint-disable-next-line no-console
       expect(console.log).toHaveBeenCalledWith(
         '[Memory Metrics]',
         expect.objectContaining({
-          timestamp: expect.any(String),
+          timestamp: expect.any(String) as string,
           process: expect.objectContaining({
-            heapUsed: expect.stringMatching(/\d+MB/),
-            heapTotal: expect.stringMatching(/\d+MB/),
-            rss: expect.stringMatching(/\d+MB/),
-          }),
+            heapUsed: expect.stringMatching(/\d+MB/) as string,
+            heapTotal: expect.stringMatching(/\d+MB/) as string,
+            rss: expect.stringMatching(/\d+MB/) as string,
+          }) as Record<string, string>,
           sessions: expect.objectContaining({
             count: 5,
-            estimatedSize: expect.stringMatching(/\d+KB/),
-            averageSize: expect.stringMatching(/\d+KB/),
-          }),
+            estimatedSize: expect.stringMatching(/\d+KB/) as string,
+            averageSize: expect.stringMatching(/\d+KB/) as string,
+          }) as Record<string, string | number>,
           plans: expect.objectContaining({
             count: 0,
-          }),
+          }) as Record<string, number>,
         })
       );
     });
@@ -447,6 +442,7 @@ describe('SessionManager', () => {
 
       manager['logMemoryMetrics']();
 
+      // eslint-disable-next-line no-console
       expect(console.log).toHaveBeenCalledWith(
         '[Memory Metrics]',
         expect.objectContaining({
@@ -454,8 +450,8 @@ describe('SessionManager', () => {
             count: 0,
             estimatedSize: '0KB',
             averageSize: '0KB',
-          }),
-        })
+          }) as Record<string, unknown>,
+        }) as Record<string, unknown>
       );
     });
 
@@ -486,14 +482,15 @@ describe('SessionManager', () => {
       manager['logMemoryMetrics']();
 
       // Should estimate size based on JSON stringification
+      // eslint-disable-next-line no-console
       expect(console.log).toHaveBeenCalledWith(
         '[Memory Metrics]',
         expect.objectContaining({
           sessions: expect.objectContaining({
             count: 1,
-            estimatedSize: expect.stringMatching(/\d+KB/),
-          }),
-        })
+            estimatedSize: expect.stringMatching(/\d+KB/) as string,
+          }) as Record<string, unknown>,
+        }) as Record<string, unknown>
       );
     });
 
@@ -517,6 +514,7 @@ describe('SessionManager', () => {
 
       manager['logMemoryMetrics']();
 
+      // eslint-disable-next-line no-console
       expect(console.log).toHaveBeenCalledWith('[Memory Usage] Triggering garbage collection...');
       expect(global.gc).toHaveBeenCalled();
 
@@ -556,7 +554,7 @@ describe('SessionManager', () => {
   describe('Persistence Initialization', () => {
     it('should handle persistence initialization failure gracefully', async () => {
       // Force an error during initialization
-      process.env.PERSISTENCE_TYPE = 'invalid-type' as any;
+      process.env.PERSISTENCE_TYPE = 'invalid-type';
 
       const manager = new SessionManager();
 
@@ -621,10 +619,18 @@ describe('SessionManager', () => {
     });
 
     it('should get memory stats', () => {
-      const id1 = manager.createSession(mockSession);
-      const id2 = manager.createSession({
+      manager.createSession(mockSession);
+      manager.createSession({
         ...mockSession,
-        history: Array(10).fill({ output: 'test' }),
+        history: Array.from({ length: 10 }, (_, i) => ({
+          technique: 'six_hats' as const,
+          problem: 'test',
+          currentStep: i + 1,
+          totalSteps: 10,
+          output: 'test',
+          nextStepNeeded: true,
+          timestamp: new Date().toISOString(),
+        })),
       });
       manager.savePlan('plan1', mockPlan);
 
@@ -647,7 +653,18 @@ describe('SessionManager', () => {
 
     it('should get total memory usage', () => {
       manager.createSession(mockSession);
-      manager.createSession({ ...mockSession, history: Array(5).fill({ output: 'test' }) });
+      manager.createSession({
+        ...mockSession,
+        history: Array.from({ length: 5 }, (_, i) => ({
+          technique: 'six_hats' as const,
+          problem: 'test',
+          currentStep: i + 1,
+          totalSteps: 5,
+          output: 'test',
+          nextStepNeeded: true,
+          timestamp: new Date().toISOString(),
+        })),
+      });
 
       const totalMemory = manager.getTotalMemoryUsage();
       expect(totalMemory).toBeGreaterThan(0);

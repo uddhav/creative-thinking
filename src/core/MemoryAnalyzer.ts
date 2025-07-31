@@ -69,7 +69,7 @@ export class MemoryAnalyzer {
 
   private generateContextualInsight(
     input: ThinkingOperationData,
-    session: SessionData
+    _session: SessionData
   ): string | undefined {
     const { technique, currentStep } = input;
 
@@ -404,17 +404,20 @@ export class MemoryAnalyzer {
     session.history
       .filter(h => h.pathImpact)
       .forEach(h => {
-        if (h.pathImpact!.dependenciesCreated.length > 0) {
-          dependencies.push(...h.pathImpact!.dependenciesCreated);
+        // TypeScript doesn't narrow the type after filter, so we need to check again
+        if (h.pathImpact && h.pathImpact.dependenciesCreated.length > 0) {
+          dependencies.push(...h.pathImpact.dependenciesCreated);
         }
       });
 
     // Extract commitment points
     const highCommitments = session.history
       .filter(h => h.pathImpact && h.pathImpact.commitmentLevel === 'high')
-      .map(
-        h => `${h.technique} step ${h.currentStep}: ${h.pathImpact!.commitmentLevel} commitment`
-      );
+      .map(h => {
+        // TypeScript doesn't narrow the type after filter, so we need to check again
+        const commitmentLevel = h.pathImpact?.commitmentLevel || 'unknown';
+        return `${h.technique} step ${h.currentStep}: ${commitmentLevel} commitment`;
+      });
 
     dependencies.push(...highCommitments);
 

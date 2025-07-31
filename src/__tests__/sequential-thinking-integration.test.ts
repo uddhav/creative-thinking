@@ -47,13 +47,13 @@ describe('Sequential Thinking Integration', () => {
   });
 
   describe('Complexity Assessment in Discovery Layer', () => {
-    it('should assess low complexity for simple problems', async () => {
+    it('should assess low complexity for simple problems', () => {
       const input: DiscoverTechniquesInput = {
         problem: 'How to improve team communication',
         context: 'Small team of 5 people working remotely',
       };
 
-      const result = await server.discoverTechniques(input);
+      const result = server.discoverTechniques(input);
       const response = JSON.parse(result.content[0].text) as DiscoverResponse;
 
       if (response.complexityAssessment) {
@@ -62,7 +62,7 @@ describe('Sequential Thinking Integration', () => {
       }
     });
 
-    it('should assess high complexity for multi-faceted problems', async () => {
+    it('should assess high complexity for multi-faceted problems', () => {
       const input: DiscoverTechniquesInput = {
         problem:
           'How to manage multiple interacting systems with various stakeholders and uncertain dynamics',
@@ -75,7 +75,7 @@ describe('Sequential Thinking Integration', () => {
         ],
       };
 
-      const result = await server.discoverTechniques(input);
+      const result = server.discoverTechniques(input);
       const response = JSON.parse(result.content[0].text) as DiscoverResponse;
 
       expect(response.complexityAssessment).toBeDefined();
@@ -84,14 +84,14 @@ describe('Sequential Thinking Integration', () => {
       expect(response.complexityAssessment.suggestion).toContain('sequential thinking');
     });
 
-    it('should provide sequential thinking suggestions for high complexity', async () => {
+    it('should provide sequential thinking suggestions for high complexity', () => {
       const input: DiscoverTechniquesInput = {
         problem: 'Design a system with multiple interacting components and uncertain requirements',
         context: 'Complex network of dependencies with dynamic constraints',
         preferredOutcome: 'systematic',
       };
 
-      const result = await server.discoverTechniques(input);
+      const result = server.discoverTechniques(input);
       const response = JSON.parse(result.content[0].text) as DiscoverResponse;
 
       if (response.complexityAssessment?.level === 'high' && response.sequentialThinking) {
@@ -103,7 +103,7 @@ describe('Sequential Thinking Integration', () => {
       }
     });
 
-    it('should provide technique-specific sequential suggestions', async () => {
+    it('should provide technique-specific sequential suggestions', () => {
       const techniques = ['po', 'collective_intel', 'cross_cultural', 'triz', 'design_thinking'];
 
       for (const technique of techniques) {
@@ -112,7 +112,7 @@ describe('Sequential Thinking Integration', () => {
           context: 'Multiple stakeholders with conflicting views and uncertain dynamics',
         };
 
-        const result = await server.discoverTechniques(input);
+        const result = server.discoverTechniques(input);
         const response = JSON.parse(result.content[0].text) as DiscoverResponse;
 
         // If the technique is recommended and complexity is high
@@ -140,7 +140,7 @@ describe('Sequential Thinking Integration', () => {
   describe('Complexity Tracking in Execution Layer', () => {
     it('should track complexity during execution', async () => {
       // First create a plan
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem: 'Complex problem with multiple dependencies',
         techniques: ['po'],
       });
@@ -191,7 +191,7 @@ describe('Sequential Thinking Integration', () => {
 
     it('should detect complexity from branching', async () => {
       // Create plan
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem: 'Problem requiring exploration of alternatives',
         techniques: ['design_thinking'],
       });
@@ -239,7 +239,7 @@ describe('Sequential Thinking Integration', () => {
 
     it('should provide technique-specific hooks during execution', async () => {
       // Test with collective intelligence technique
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem: 'Complex group decision with multiple perspectives',
         techniques: ['collective_intel'],
       });
@@ -271,7 +271,7 @@ describe('Sequential Thinking Integration', () => {
     });
 
     it('should track complexity from extended reasoning chains', async () => {
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem: 'Long-term strategic planning',
         techniques: ['six_hats'],
       });
@@ -314,7 +314,7 @@ describe('Sequential Thinking Integration', () => {
   describe('Integration Between Layers', () => {
     it('should maintain complexity context across discovery-planning-execution', async () => {
       // Discovery with high complexity
-      const discoveryResult = await server.discoverTechniques({
+      const discoveryResult = server.discoverTechniques({
         problem: 'System integration with multiple conflicting requirements and uncertain dynamics',
         context: 'Large-scale transformation with many dependencies',
         constraints: ['Technical', 'Cultural', 'Financial', 'Temporal', 'Regulatory'],
@@ -325,7 +325,7 @@ describe('Sequential Thinking Integration', () => {
 
       // Plan based on recommendations
       const recommendedTechnique = discoveryResponse.recommendations[0].technique;
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem: 'System integration with multiple conflicting requirements',
         techniques: [recommendedTechnique],
       });

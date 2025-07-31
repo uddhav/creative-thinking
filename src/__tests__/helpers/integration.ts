@@ -29,7 +29,7 @@ export async function createSessionWithSteps(
   technique: LateralTechnique;
 }> {
   // Plan session
-  const planResult = await server.planThinkingSession({
+  const planResult = server.planThinkingSession({
     problem,
     techniques: [technique],
   });

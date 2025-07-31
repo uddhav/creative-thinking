@@ -106,14 +106,14 @@ describe('FilesystemAdapter', () => {
         filename: 'test-session.json',
         mimeType: 'application/json',
       };
-      vi.mocked(ExportFactory.export).mockResolvedValue(mockExportResult);
+      vi.mocked(ExportFactory).export.mockResolvedValue(mockExportResult);
 
       await adapter.initialize({ adapter: 'filesystem', options: { path: tempDir } });
       await adapter.save(mockSession.id, mockSession);
 
       const result = await adapter.export(mockSession.id, 'json');
 
-      expect(ExportFactory.export).toHaveBeenCalledWith(mockSession, 'json');
+      expect(vi.mocked(ExportFactory).export).toHaveBeenCalledWith(mockSession, 'json');
       expect(result).toBeInstanceOf(Buffer);
       expect(result.toString()).toBe(mockExportResult.content);
     });
@@ -126,14 +126,14 @@ describe('FilesystemAdapter', () => {
         filename: 'test-session.csv',
         mimeType: 'text/csv',
       };
-      vi.mocked(ExportFactory.export).mockResolvedValue(mockExportResult);
+      vi.mocked(ExportFactory).export.mockResolvedValue(mockExportResult);
 
       await adapter.initialize({ adapter: 'filesystem', options: { path: tempDir } });
       await adapter.save(mockSession.id, mockSession);
 
       const result = await adapter.export(mockSession.id, 'csv');
 
-      expect(ExportFactory.export).toHaveBeenCalledWith(mockSession, 'csv');
+      expect(vi.mocked(ExportFactory).export).toHaveBeenCalledWith(mockSession, 'csv');
       expect(result).toBeInstanceOf(Buffer);
       expect(result.toString()).toBe(mockCSVContent);
     });
@@ -146,14 +146,14 @@ describe('FilesystemAdapter', () => {
         filename: 'test-session.md',
         mimeType: 'text/markdown',
       };
-      vi.mocked(ExportFactory.export).mockResolvedValue(mockExportResult);
+      vi.mocked(ExportFactory).export.mockResolvedValue(mockExportResult);
 
       await adapter.initialize({ adapter: 'filesystem', options: { path: tempDir } });
       await adapter.save(mockSession.id, mockSession);
 
       const result = await adapter.export(mockSession.id, 'markdown');
 
-      expect(ExportFactory.export).toHaveBeenCalledWith(mockSession, 'markdown');
+      expect(vi.mocked(ExportFactory).export).toHaveBeenCalledWith(mockSession, 'markdown');
       expect(result).toBeInstanceOf(Buffer);
       expect(result.toString()).toBe(mockMarkdownContent);
     });
@@ -166,7 +166,7 @@ describe('FilesystemAdapter', () => {
         filename: 'test-session.bin',
         mimeType: 'application/octet-stream',
       };
-      vi.mocked(ExportFactory.export).mockResolvedValue(mockExportResult);
+      vi.mocked(ExportFactory).export.mockResolvedValue(mockExportResult);
 
       await adapter.initialize({ adapter: 'filesystem', options: { path: tempDir } });
       await adapter.save(mockSession.id, mockSession);
@@ -189,7 +189,7 @@ describe('FilesystemAdapter', () => {
 
     it('should throw error if export fails', async () => {
       const { ExportFactory } = await import('../../export/export-factory.js');
-      vi.mocked(ExportFactory.export).mockRejectedValue(new Error('Export failed'));
+      vi.mocked(ExportFactory).export.mockRejectedValue(new Error('Export failed'));
 
       await adapter.initialize({ adapter: 'filesystem', options: { path: tempDir } });
       await adapter.save(mockSession.id, mockSession);

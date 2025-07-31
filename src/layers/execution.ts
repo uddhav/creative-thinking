@@ -9,6 +9,7 @@ import type {
   ThinkingOperationData,
   LateralThinkingResponse,
 } from '../types/index.js';
+import type { PathMemory } from '../ergodicity/types.js';
 import type { SessionManager } from '../core/SessionManager.js';
 import type { TechniqueRegistry } from '../techniques/TechniqueRegistry.js';
 import type { VisualFormatter } from '../utils/VisualFormatter.js';
@@ -19,6 +20,35 @@ import { ResponseBuilder } from '../core/ResponseBuilder.js';
 import type { ScamperHandler } from '../techniques/ScamperHandler.js';
 import { MemoryAnalyzer } from '../core/MemoryAnalyzer.js';
 import { RealityIntegration } from '../reality/integration.js';
+
+// Type for the result from ErgodicityManager.recordThinkingStep
+interface ErgodicityResult {
+  event: unknown;
+  metrics: unknown;
+  warnings: unknown[];
+  earlyWarningState?: unknown;
+  escapeRecommendation?: unknown;
+  escapeVelocityNeeded?: boolean;
+  pathMemory?: PathMemory;
+}
+
+// Type guard for ErgodicityResult
+function isErgodicityResult(value: unknown): value is ErgodicityResult {
+  return (
+    value !== null &&
+    typeof value === 'object' &&
+    'event' in value &&
+    'metrics' in value &&
+    'warnings' in value &&
+    Array.isArray((value as ErgodicityResult).warnings)
+  );
+}
+
+// Type for complexity analysis suggestions
+interface ComplexitySuggestion {
+  complexityNote: string;
+  suggestedApproach: Record<string, string>;
+}
 
 export async function executeThinkingStep(
   input: ExecuteThinkingStepInput,
@@ -131,9 +161,23 @@ export async function executeThinkingStep(
     let stepInfo;
     try {
       stepInfo = handler.getStepInfo(input.currentStep);
-    } catch {
-      // For invalid steps, create a default step info
-      stepInfo = null;
+    } catch (error) {
+      // Handle different error scenarios
+      if (error instanceof RangeError) {
+        // Step number is out of bounds
+        console.warn(
+          `Step ${input.currentStep} is out of range for ${input.technique}. Using default guidance.`
+        );
+        stepInfo = null;
+      } else if (error instanceof TypeError) {
+        // Handler method issues
+        console.error(`Handler method error for ${input.technique}:`, error.message);
+        stepInfo = null;
+      } else {
+        // Unknown error - log and continue
+        console.error(`Unexpected error getting step info:`, error);
+        stepInfo = null;
+      }
     }
 
     // Get mode indicator
@@ -319,7 +363,7 @@ export async function executeThinkingStep(
       input,
       session,
       currentInsights,
-      (ergodicityResult as any)?.pathMemory
+      isErgodicityResult(ergodicityResult) ? ergodicityResult.pathMemory : undefined
     );
 
     // Build response
@@ -333,7 +377,7 @@ export async function executeThinkingStep(
     );
 
     // Add memory outputs to response
-    const parsedResponse = JSON.parse(response.content[0].text);
+    const parsedResponse = JSON.parse(response.content[0].text) as Record<string, unknown>;
     Object.assign(parsedResponse, memoryOutputs);
 
     // Add reality assessment if present
@@ -363,19 +407,18 @@ export async function executeThinkingStep(
       session.endTime = Date.now();
 
       // Final summary
-      const summaryOutput = visualFormatter.formatSessionSummary(
+      visualFormatter.formatSessionSummary(
         input.technique,
         input.problem,
         session.insights,
         session.metrics
       );
 
-      if (summaryOutput) {
-        console.log(summaryOutput);
-      }
-
       // Add completion data
-      const completedParsedResponse = JSON.parse(response.content[0].text);
+      const completedParsedResponse = JSON.parse(response.content[0].text) as Record<
+        string,
+        unknown
+      >;
       const completedResponse = responseBuilder.addCompletionData(completedParsedResponse, session);
       response.content[0].text = JSON.stringify(completedResponse, null, 2);
     }
@@ -385,9 +428,10 @@ export async function executeThinkingStep(
       try {
         await sessionManager.saveSessionToPersistence(sessionId);
       } catch (error) {
-        console.error('Auto-save failed:', error);
+        // Auto-save error is added to response instead of console logging
+        // console.error('Auto-save failed:', error);
         // Add auto-save failure to response
-        const parsedResponse = JSON.parse(response.content[0].text);
+        const parsedResponse = JSON.parse(response.content[0].text) as Record<string, unknown>;
         parsedResponse.autoSaveError = error instanceof Error ? error.message : 'Auto-save failed';
         response.content[0].text = JSON.stringify(parsedResponse, null, 2);
       }
@@ -425,7 +469,7 @@ function checkExecutionComplexity(
   input: ExecuteThinkingStepInput,
   session: SessionData,
   complexityAnalyzer: HybridComplexityAnalyzer
-): { level: 'low' | 'medium' | 'high'; suggestion?: any } {
+): { level: 'low' | 'medium' | 'high'; suggestion?: ComplexitySuggestion } {
   // Analyze current output complexity
   const assessment = complexityAnalyzer.analyze(input.output);
 
@@ -462,9 +506,9 @@ function generateExecutionMetadata(
   input: ExecuteThinkingStepInput,
   session: SessionData,
   insights: string[],
-  pathMemory?: any
-): any {
-  const metadata: any = {
+  pathMemory?: PathMemory
+): Record<string, unknown> {
+  const metadata: Record<string, unknown> = {
     techniqueEffectiveness: assessTechniqueEffectiveness(input, session, insights),
     pathDependenciesCreated: extractPathDependencies(input, pathMemory),
     flexibilityImpact: calculateFlexibilityImpact(input, session),
@@ -521,7 +565,10 @@ function assessTechniqueEffectiveness(
 /**
  * Extract path dependencies created in this step
  */
-function extractPathDependencies(input: ExecuteThinkingStepInput, pathMemory?: Record<string, unknown>): string[] {
+function extractPathDependencies(
+  input: ExecuteThinkingStepInput,
+  pathMemory?: PathMemory
+): string[] {
   const dependencies: string[] = [];
 
   // SCAMPER path dependencies
@@ -541,7 +588,7 @@ function extractPathDependencies(input: ExecuteThinkingStepInput, pathMemory?: R
     Array.isArray(pathMemory.pathHistory) &&
     pathMemory.pathHistory.length > 0
   ) {
-    const latestEvent = pathMemory.pathHistory[pathMemory.pathHistory.length - 1] as Record<
+    const latestEvent = pathMemory.pathHistory[pathMemory.pathHistory.length - 1] as unknown as Record<
       string,
       unknown
     >;

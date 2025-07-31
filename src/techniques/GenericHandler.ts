@@ -40,6 +40,8 @@ export class GenericHandler implements TechniqueHandler {
   extractInsights(history: Array<{ output?: string }>): string[] {
     return history
       .filter(entry => entry.output && entry.output.length > 50)
-      .map(entry => `Insight from ${this.techniqueName}: ${entry.output!.substring(0, 100)}...`);
+      .map(
+        entry => `Insight from ${this.techniqueName}: ${entry.output?.substring(0, 100) || ''}...`
+      );
   }
 }

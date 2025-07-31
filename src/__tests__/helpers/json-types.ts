@@ -19,7 +19,7 @@ export interface ErrorResponse {
 }
 
 // Success response types
-export interface SuccessResponse<T = unknown> {
+export interface SuccessResponse {
   content: Array<{
     type: string;
     text: string;

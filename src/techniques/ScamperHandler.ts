@@ -5,6 +5,11 @@
 import type { ScamperAction, ScamperPathImpact } from '../types/index.js';
 import { BaseTechniqueHandler, type TechniqueInfo } from './types.js';
 
+// Constants for path degradation factors
+const HIGH_COMMITMENT_DEGRADATION_FACTOR = 0.7; // Flexibility loss per high commitment action
+const STEP_DEGRADATION_FACTOR = 0.95; // Gradual flexibility loss per step
+const MINIMUM_FLEXIBILITY_THRESHOLD = 0.01; // Minimum flexibility to maintain tracking
+
 interface ScamperActionInfo {
   description: string;
   emoji: string;
@@ -158,12 +163,12 @@ export class ScamperHandler extends BaseTechniqueHandler {
         );
       }).length;
       if (highCommitmentCount > 0) {
-        baseImpact.flexibilityRetention *= Math.pow(0.7, highCommitmentCount);
+        baseImpact.flexibilityRetention *= Math.pow(HIGH_COMMITMENT_DEGRADATION_FACTOR, highCommitmentCount);
       }
       // Additional degradation based on step count to ensure monotonic decrease
-      baseImpact.flexibilityRetention *= Math.pow(0.95, history.length);
+      baseImpact.flexibilityRetention *= Math.pow(STEP_DEGRADATION_FACTOR, history.length);
       // Ensure minimum flexibility for tracking purposes
-      baseImpact.flexibilityRetention = Math.max(0.01, baseImpact.flexibilityRetention);
+      baseImpact.flexibilityRetention = Math.max(MINIMUM_FLEXIBILITY_THRESHOLD, baseImpact.flexibilityRetention);
     }
 
     // Add recovery path for all actions

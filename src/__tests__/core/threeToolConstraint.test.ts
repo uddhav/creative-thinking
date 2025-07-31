@@ -46,9 +46,9 @@ describe('Three Tool Constraint', () => {
     expect(hasExecutionHandler).toBe(true);
   });
 
-  it('should process discovery operations correctly', async () => {
+  it('should process discovery operations correctly', () => {
     // Test discovery functionality
-    const result = await server.discoverTechniques({
+    const result = server.discoverTechniques({
       problem: 'Test problem',
       context: 'Test context',
     });
@@ -60,9 +60,9 @@ describe('Three Tool Constraint', () => {
     expect(result.content[0].text).toContain('recommend');
   });
 
-  it('should process planning operations correctly', async () => {
+  it('should process planning operations correctly', () => {
     // Test planning functionality
-    const result = await server.planThinkingSession({
+    const result = server.planThinkingSession({
       problem: 'Test problem',
       techniques: ['six_hats', 'po'],
     });
@@ -74,7 +74,7 @@ describe('Three Tool Constraint', () => {
 
   it('should process execution operations correctly', async () => {
     // First create a plan
-    const planResult = await server.planThinkingSession({
+    const planResult = server.planThinkingSession({
       problem: 'Test problem',
       techniques: ['six_hats'],
     });
@@ -118,7 +118,7 @@ describe('Three Tool Constraint', () => {
     // Test that advanced features are accessible through the three tools
 
     // 1. Discovery should consider flexibility
-    const discoveryResult = await server.discoverTechniques({
+    const discoveryResult = server.discoverTechniques({
       problem: 'Test problem',
       currentFlexibility: 0.3, // Low flexibility
     });
@@ -128,7 +128,7 @@ describe('Three Tool Constraint', () => {
     expect(discoveryResult.content[0].text).toMatch(/flexibility|option/i);
 
     // 2. Planning should include escape protocols when needed
-    const planResult = await server.planThinkingSession({
+    const planResult = server.planThinkingSession({
       problem: 'Test problem',
       techniques: ['six_hats'],
       sessionId: 'test-session',
@@ -142,7 +142,7 @@ describe('Three Tool Constraint', () => {
 
     // 3. Execution should track ergodicity
     // First need a plan for execution
-    const execPlanResult = await server.planThinkingSession({
+    const execPlanResult = server.planThinkingSession({
       problem: 'Test problem',
       techniques: ['po'],
     });
@@ -166,9 +166,9 @@ describe('Three Tool Constraint', () => {
     expect(execResultData.technique).toBe('po');
   });
 
-  it('should enforce separation of concerns between tools', async () => {
+  it('should enforce separation of concerns between tools', () => {
     // Discovery should not execute steps
-    const discoveryResult = await server.discoverTechniques({
+    const discoveryResult = server.discoverTechniques({
       problem: 'Test problem',
     });
 
@@ -176,7 +176,7 @@ describe('Three Tool Constraint', () => {
     expect(discoveryResult.content[0].text).not.toContain('Next step');
 
     // Planning should not execute steps
-    const planResult = await server.planThinkingSession({
+    const planResult = server.planThinkingSession({
       problem: 'Test problem',
       techniques: ['scamper'],
     });
@@ -187,7 +187,7 @@ describe('Three Tool Constraint', () => {
 
   it('should handle the complete workflow through three tools', async () => {
     // 1. Discover techniques
-    const discoveryResult = await server.discoverTechniques({
+    const discoveryResult = server.discoverTechniques({
       problem: 'How to improve team communication?',
       context: 'Remote team, different time zones',
     });
@@ -196,7 +196,7 @@ describe('Three Tool Constraint', () => {
     expect(discoveryResult.content[0].text).toContain('recommend');
 
     // 2. Plan the session
-    const planResult = await server.planThinkingSession({
+    const planResult = server.planThinkingSession({
       problem: 'How to improve team communication?',
       techniques: ['six_hats', 'po'],
       objectives: ['Find creative solutions', 'Consider all perspectives'],

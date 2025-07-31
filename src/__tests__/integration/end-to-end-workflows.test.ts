@@ -8,7 +8,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { LateralThinkingServer } from '../../index.js';
 import { parseServerResponse } from '../helpers/types.js';
-import type { ExecuteThinkingStepInput, LateralTechnique, SessionData } from '../../index.js';
+import type {
+  ExecuteThinkingStepInput,
+  LateralTechnique,
+  SixHatsColor,
+  ScamperAction,
+} from '../../index.js';
 
 interface DiscoveryResponse {
   recommendations: Array<{
@@ -68,13 +73,35 @@ interface ExecutionResponse {
     futureRelevance?: string;
   };
   // Ergodicity fields
-  pathMemory?: any;
-  earlyWarningState?: any;
-  escapeRecommendation?: any;
+  pathMemory?: {
+    technique: string;
+    events: Array<{ type: string; description: string }>;
+    metrics?: { flexibilityScore: number };
+  };
+  earlyWarningState?: {
+    activeWarnings: Array<{ level: string; message: string }>;
+  };
+  escapeRecommendation?: {
+    routes: Array<{ name: string; description: string }>;
+  };
+  flexibilityScore?: number;
+  alternativeSuggestions?: string[];
+  pathAnalysis?: {
+    flexibilityScore: number;
+    reversibilityIndex: number;
+  };
   // Completion fields
   sessionComplete?: boolean;
-  summary?: any;
-  metrics?: any;
+  summary?: {
+    problem: string;
+    techniques: string[];
+    keyInsights: string[];
+  };
+  metrics?: {
+    duration: number;
+    creativityScore: number;
+    risksCaught?: number;
+  };
 }
 
 describe('Comprehensive End-to-End Workflows', () => {
@@ -87,7 +114,7 @@ describe('Comprehensive End-to-End Workflows', () => {
   describe('New Technique Complete Workflows', () => {
     it('should complete full Neural State Optimization workflow', async () => {
       // Discovery
-      const discoveryResult = await server.discoverTechniques({
+      const discoveryResult = server.discoverTechniques({
         problem: 'Overcome mental blocks in creative problem solving',
         context: 'Team feels stuck in conventional thinking patterns',
         preferredOutcome: 'innovative',
@@ -102,7 +129,7 @@ describe('Comprehensive End-to-End Workflows', () => {
       );
 
       // Planning
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem: 'Overcome mental blocks in creative problem solving',
         techniques: ['neural_state'] as LateralTechnique[],
         objectives: ['Break cognitive patterns', 'Enable fresh perspectives'],
@@ -162,7 +189,7 @@ describe('Comprehensive End-to-End Workflows', () => {
     });
 
     it('should complete full Temporal Work Design workflow', async () => {
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem: 'Design project timeline with multiple deadlines',
         techniques: ['temporal_work'] as LateralTechnique[],
         constraints: ['Fixed launch date', 'Limited resources'],
@@ -212,7 +239,7 @@ describe('Comprehensive End-to-End Workflows', () => {
     });
 
     it('should complete full Cross-Cultural Integration workflow', async () => {
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem: 'Design global product respecting diverse cultural values',
         techniques: ['cross_cultural'] as LateralTechnique[],
       });
@@ -220,7 +247,7 @@ describe('Comprehensive End-to-End Workflows', () => {
 
       let sessionId: string | undefined;
       for (let i = 0; i < 4; i++) {
-        const stepData: any = {};
+        const stepData: Partial<ExecuteThinkingStepInput> = {};
         if (i === 0)
           stepData.culturalFrameworks = ['Individualist', 'Collectivist', 'Hierarchical'];
         if (i === 1) stepData.bridgeBuilding = ['Shared human values', 'Universal needs'];
@@ -254,7 +281,7 @@ describe('Comprehensive End-to-End Workflows', () => {
     });
 
     it('should complete full Collective Intelligence workflow', async () => {
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem: 'Synthesize insights from multiple expert domains',
         techniques: ['collective_intel'] as LateralTechnique[],
       });
@@ -299,7 +326,7 @@ describe('Comprehensive End-to-End Workflows', () => {
   describe('Memory-Aware Output Verification', () => {
     it('should generate complete memory-aware outputs across all layers', async () => {
       // Discovery with memory outputs
-      const discoveryResult = await server.discoverTechniques({
+      const discoveryResult = server.discoverTechniques({
         problem: 'Reduce customer churn by 50% in 6 months',
         context: 'SaaS product with monthly subscriptions',
         preferredOutcome: 'systematic',
@@ -315,7 +342,7 @@ describe('Comprehensive End-to-End Workflows', () => {
       expect(discovery.problemAnalysis?.searchableFactors.length).toBeGreaterThan(0);
 
       // Planning with memory outputs
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem: 'Reduce customer churn by 50% in 6 months',
         techniques: ['design_thinking', 'triz'] as LateralTechnique[],
         objectives: ['Understand user pain points', 'Remove friction'],
@@ -354,7 +381,7 @@ describe('Comprehensive End-to-End Workflows', () => {
 
   describe('Advanced Ergodicity Scenarios', () => {
     it('should handle complete ergodicity lifecycle: low flexibility → warning → escape', async () => {
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem: 'Pivot startup with locked-in technical decisions',
         techniques: ['scamper'] as LateralTechnique[],
       });
@@ -384,7 +411,7 @@ describe('Comprehensive End-to-End Workflows', () => {
               'parameterize',
             ].indexOf(action) + 1,
           totalSteps: 8,
-          scamperAction: action as any,
+          scamperAction: action as ScamperAction,
           output,
           nextStepNeeded: true,
           sessionId,
@@ -401,7 +428,7 @@ describe('Comprehensive End-to-End Workflows', () => {
         }
 
         // Check for early warning activation
-        if (execution.earlyWarningState?.activeWarnings) {
+        if (execution.earlyWarningState && execution.earlyWarningState.activeWarnings) {
           expect(execution.earlyWarningState.activeWarnings.length).toBeGreaterThan(0);
         }
 
@@ -413,13 +440,12 @@ describe('Comprehensive End-to-End Workflows', () => {
     });
 
     it('should track path dependencies across multiple techniques', async () => {
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem: 'Design system with multiple integration points',
         techniques: ['scamper', 'triz', 'design_thinking'] as LateralTechnique[],
       });
       const plan = parseServerResponse<PlanResponse>(planResult);
 
-      let sessionId: string | undefined;
       const cumulativeDependencies: string[] = [];
 
       // SCAMPER - Create dependencies
@@ -434,7 +460,7 @@ describe('Comprehensive End-to-End Workflows', () => {
         nextStepNeeded: true,
       });
       const scamperExec = parseServerResponse<ExecutionResponse>(scamperResult);
-      sessionId = scamperExec.sessionId;
+      const sessionId = scamperExec.sessionId;
 
       if (scamperExec.executionMetadata?.pathDependenciesCreated) {
         cumulativeDependencies.push(...scamperExec.executionMetadata.pathDependenciesCreated);
@@ -469,7 +495,7 @@ describe('Comprehensive End-to-End Workflows', () => {
       const problem = 'Transform traditional education for digital age';
 
       // Discovery recommends multiple techniques
-      const discoveryResult = await server.discoverTechniques({
+      const discoveryResult = server.discoverTechniques({
         problem,
         context: 'Current system failing to engage students',
         preferredOutcome: 'innovative',
@@ -479,7 +505,7 @@ describe('Comprehensive End-to-End Workflows', () => {
       expect(discovery.recommendations.length).toBeGreaterThanOrEqual(2);
 
       // Plan with 3 techniques
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem,
         techniques: ['six_hats', 'scamper', 'design_thinking'] as LateralTechnique[],
         objectives: ['Understand stakeholders', 'Generate innovations', 'Test solutions'],
@@ -505,7 +531,7 @@ describe('Comprehensive End-to-End Workflows', () => {
           currentStep: i,
           totalSteps: 7,
           output: `${hatColors[i - 1]} hat perspective`,
-          hatColor: hatColors[i - 1] as any,
+          hatColor: hatColors[i - 1] as SixHatsColor,
           nextStepNeeded: true,
           sessionId,
         });
@@ -554,7 +580,7 @@ describe('Comprehensive End-to-End Workflows', () => {
     it('should preserve state across technique transitions', async () => {
       const problem = 'Optimize supply chain resilience';
 
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem,
         techniques: ['triz', 'scamper'] as LateralTechnique[],
       });
@@ -575,7 +601,7 @@ describe('Comprehensive End-to-End Workflows', () => {
       const sessionId = trizExec.sessionId;
 
       // Add risks to test unified framework
-      const trizStep2 = await server.executeThinkingStep({
+      await server.executeThinkingStep({
         planId: plan.planId,
         technique: 'triz',
         problem,
@@ -613,7 +639,7 @@ describe('Comprehensive End-to-End Workflows', () => {
   describe('Edge Case Scenarios', () => {
     it('should handle session with 50+ insights accumulation', async () => {
       const problem = 'Complex system redesign';
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem,
         techniques: ['concept_extraction'] as LateralTechnique[],
       });
@@ -657,7 +683,7 @@ describe('Comprehensive End-to-End Workflows', () => {
 
     it('should handle maximum path dependencies gracefully', async () => {
       const problem = 'Refactor legacy system with deep dependencies';
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem,
         techniques: ['scamper'] as LateralTechnique[],
       });
@@ -666,7 +692,12 @@ describe('Comprehensive End-to-End Workflows', () => {
       let sessionId: string | undefined;
 
       // Execute high-commitment actions to create many dependencies
-      const actions = ['combine', 'eliminate', 'combine', 'eliminate'];
+      const actions: Array<'combine' | 'eliminate'> = [
+        'combine',
+        'eliminate',
+        'combine',
+        'eliminate',
+      ];
       for (let i = 0; i < actions.length; i++) {
         const action = actions[i];
         const stepNum =
@@ -687,7 +718,7 @@ describe('Comprehensive End-to-End Workflows', () => {
           problem,
           currentStep: stepNum,
           totalSteps: 8,
-          scamperAction: action as any,
+          scamperAction: action,
           output: `${action} operation ${i}`,
           nextStepNeeded: true,
           sessionId,
@@ -698,7 +729,9 @@ describe('Comprehensive End-to-End Workflows', () => {
         // Check for flexibility warnings
         if (exec.flexibilityScore && exec.flexibilityScore < 0.3) {
           expect(exec.alternativeSuggestions).toBeDefined();
-          expect(exec.alternativeSuggestions?.length).toBeGreaterThan(0);
+          expect(
+            exec.alternativeSuggestions ? exec.alternativeSuggestions.length : 0
+          ).toBeGreaterThan(0);
         }
       }
     });
@@ -709,13 +742,11 @@ describe('Comprehensive End-to-End Workflows', () => {
       const problem = 'Create perpetual motion machine for energy';
 
       // Plan with multiple techniques
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem,
         techniques: ['po', 'scamper', 'triz'] as LateralTechnique[],
       });
       const plan = parseServerResponse<PlanResponse>(planResult);
-
-      let sessionId: string | undefined;
 
       // PO - Provocation
       const poResult = await server.executeThinkingStep({
@@ -729,7 +760,7 @@ describe('Comprehensive End-to-End Workflows', () => {
         nextStepNeeded: true,
       });
       const poExec = parseServerResponse<ExecutionResponse>(poResult);
-      sessionId = poExec.sessionId;
+      const sessionId = poExec.sessionId;
 
       // Transition to SCAMPER - reality check should activate
       const scamperResult = await server.executeThinkingStep({
@@ -760,7 +791,7 @@ describe('Comprehensive End-to-End Workflows', () => {
       const problem = 'Pivot product with limited flexibility';
 
       // Create plan with constraints to trigger low flexibility
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem,
         techniques: ['scamper'] as LateralTechnique[],
         constraints: ['Must maintain compatibility', 'Cannot change core', 'Fixed timeline'],
@@ -789,7 +820,9 @@ describe('Comprehensive End-to-End Workflows', () => {
       // Verify option generation triggered
       expect(exec.flexibilityScore).toBeLessThan(0.4);
       expect(exec.alternativeSuggestions).toBeDefined();
-      expect(exec.alternativeSuggestions?.length).toBeGreaterThan(0);
+      expect(exec.alternativeSuggestions ? exec.alternativeSuggestions.length : 0).toBeGreaterThan(
+        0
+      );
 
       // Continue with suggested alternative
       const paramResult = await server.executeThinkingStep({

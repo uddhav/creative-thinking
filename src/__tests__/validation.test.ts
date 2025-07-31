@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { LateralThinkingServer } from '../index.js';
+import type { LateralTechnique } from '../index.js';
 
 describe('Input Validation', () => {
   let server: LateralThinkingServer;
@@ -9,10 +10,10 @@ describe('Input Validation', () => {
   });
 
   // Helper function to create a plan for testing
-  async function createTestPlan(problem: string, technique: string): Promise<string> {
-    const planResult = await server.planThinkingSession({
+  function createTestPlan(problem: string, technique: string): string {
+    const planResult = server.planThinkingSession({
       problem,
-      techniques: [technique as any],
+      techniques: [technique as LateralTechnique],
     });
     const planData = JSON.parse(planResult.content[0].text) as { planId: string };
     return planData.planId;
@@ -21,7 +22,7 @@ describe('Input Validation', () => {
   describe('Thinking Operation Validation', () => {
     it('should validate required fields for thinking operations', async () => {
       // First create a plan
-      const planId = await createTestPlan('Test problem', 'six_hats');
+      const planId = createTestPlan('Test problem', 'six_hats');
 
       const input = {
         planId,
@@ -38,7 +39,7 @@ describe('Input Validation', () => {
     });
 
     it('should reject thinking operation with missing technique', async () => {
-      const planId = await createTestPlan('Test problem', 'six_hats');
+      const planId = createTestPlan('Test problem', 'six_hats');
 
       const input = {
         planId,
@@ -56,7 +57,7 @@ describe('Input Validation', () => {
     });
 
     it('should reject thinking operation with missing problem', async () => {
-      const planId = await createTestPlan('Test problem', 'six_hats');
+      const planId = createTestPlan('Test problem', 'six_hats');
 
       const input = {
         planId,
@@ -74,7 +75,7 @@ describe('Input Validation', () => {
     });
 
     it('should not use dummy values for thinking operations', async () => {
-      const planId = await createTestPlan('Test problem', 'six_hats');
+      const planId = createTestPlan('Test problem', 'six_hats');
 
       const input = {
         planId,
@@ -176,7 +177,7 @@ describe('Input Validation', () => {
   describe('Type Separation', () => {
     it('should handle thinking operations and session operations separately', async () => {
       // First create a plan
-      const planId = await createTestPlan('Test problem', 'six_hats');
+      const planId = createTestPlan('Test problem', 'six_hats');
 
       // First create a thinking operation session
       const thinkingInput = {

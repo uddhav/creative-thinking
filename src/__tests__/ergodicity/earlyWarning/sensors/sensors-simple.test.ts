@@ -228,11 +228,11 @@ describe('Early Warning Sensors - Basic Tests', () => {
 
       for (const sensor of sensors) {
         // All sensors should have required methods
-        expect(sensor.measure).toBeDefined();
-        expect(sensor.calibrate).toBeDefined();
-        expect(sensor.reset).toBeDefined();
-        expect(sensor.getStatus).toBeDefined();
-        expect(sensor.getCalibration).toBeDefined();
+        expect(typeof sensor.measure).toBe('function');
+        expect(typeof sensor.calibrate).toBe('function');
+        expect(typeof sensor.reset).toBe('function');
+        expect(typeof sensor.getStatus).toBe('function');
+        expect(typeof sensor.getCalibration).toBe('function');
         expect(sensor.type).toBeDefined();
 
         // All sensors should produce valid readings

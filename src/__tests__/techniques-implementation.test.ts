@@ -56,13 +56,13 @@ describe('Technique Implementations', () => {
   });
 
   // Helper function to create a plan
-  async function createPlan(problem: string, techniques: LateralTechnique[]): Promise<string> {
+  function createPlan(problem: string, techniques: LateralTechnique[]): string {
     const input: PlanThinkingSessionInput = {
       problem,
       techniques,
     };
 
-    const result = (await server.planThinkingSession(input)) as ServerResponse;
+    const result = server.planThinkingSession(input) as ServerResponse;
     expect(result.isError).toBeFalsy();
     const planData = JSON.parse(result.content[0]?.text || '{}') as PlanResponse;
     return planData.planId;
@@ -84,7 +84,7 @@ describe('Technique Implementations', () => {
 
   describe('Six Thinking Hats', () => {
     it('should execute all six hats in sequence', async () => {
-      const planId = await createPlan('How to improve team productivity', ['six_hats']);
+      const planId = createPlan('How to improve team productivity', ['six_hats']);
 
       const hats: Array<{ color: SixHatsColor; step: number; focus: string }> = [
         { color: 'blue', step: 1, focus: 'process' },
@@ -121,7 +121,7 @@ describe('Technique Implementations', () => {
     });
 
     it('should handle purple hat (ergodicity perspective)', async () => {
-      const planId = await createPlan('Complex strategic decision', ['six_hats']);
+      const planId = createPlan('Complex strategic decision', ['six_hats']);
 
       // Execute first few steps to create session
       const step1 = await executeStep(planId, {
@@ -155,7 +155,7 @@ describe('Technique Implementations', () => {
 
   describe('PO (Provocative Operation)', () => {
     it('should execute all PO steps', async () => {
-      const planId = await createPlan('How to reduce meeting time', ['po']);
+      const planId = createPlan('How to reduce meeting time', ['po']);
 
       const steps = [
         {
@@ -218,7 +218,7 @@ describe('Technique Implementations', () => {
 
   describe('Random Entry', () => {
     it('should execute random entry technique', async () => {
-      const planId = await createPlan('How to improve customer service', ['random_entry']);
+      const planId = createPlan('How to improve customer service', ['random_entry']);
 
       // Step 1: Random stimulus
       const step1 = await executeStep(planId, {
@@ -266,7 +266,7 @@ describe('Technique Implementations', () => {
 
   describe('SCAMPER', () => {
     it('should execute all SCAMPER actions', async () => {
-      const planId = await createPlan('Improve product packaging', ['scamper']);
+      const planId = createPlan('Improve product packaging', ['scamper']);
 
       const actions: Array<{ action: ScamperAction; step: number }> = [
         { action: 'substitute', step: 1 },
@@ -305,7 +305,7 @@ describe('Technique Implementations', () => {
 
   describe('Concept Extraction', () => {
     it('should extract and apply concepts', async () => {
-      const planId = await createPlan('Learn from successful startups', ['concept_extraction']);
+      const planId = createPlan('Learn from successful startups', ['concept_extraction']);
 
       // Step 1: Identify success example
       const step1 = await executeStep(planId, {
@@ -361,7 +361,7 @@ describe('Technique Implementations', () => {
 
   describe('Yes, And...', () => {
     it('should build on ideas collaboratively', async () => {
-      const planId = await createPlan('Create innovative workshop format', ['yes_and']);
+      const planId = createPlan('Create innovative workshop format', ['yes_and']);
 
       // Step 1: Initial idea
       const step1 = await executeStep(planId, {
@@ -417,7 +417,7 @@ describe('Technique Implementations', () => {
 
   describe('Design Thinking', () => {
     it('should execute all design thinking stages', async () => {
-      const planId = await createPlan('Redesign onboarding experience', ['design_thinking']);
+      const planId = createPlan('Redesign onboarding experience', ['design_thinking']);
 
       const stages: Array<{ stage: DesignThinkingStage; step: number; focus: string }> = [
         { stage: 'empathize', step: 1, focus: 'User research and pain points' },
@@ -451,7 +451,7 @@ describe('Technique Implementations', () => {
     });
 
     it('should include risk considerations in design thinking', async () => {
-      const planId = await createPlan('Design secure payment system', ['design_thinking']);
+      const planId = createPlan('Design secure payment system', ['design_thinking']);
 
       const result = await executeStep(planId, {
         technique: 'design_thinking',
@@ -472,7 +472,7 @@ describe('Technique Implementations', () => {
 
   describe('TRIZ', () => {
     it('should execute TRIZ methodology', async () => {
-      const planId = await createPlan('Reduce manufacturing defects', ['triz']);
+      const planId = createPlan('Reduce manufacturing defects', ['triz']);
 
       // Step 1: Identify contradiction
       const step1 = await executeStep(planId, {
@@ -528,7 +528,7 @@ describe('Technique Implementations', () => {
 
   describe('Cross-Technique Features', () => {
     it('should track flexibility across techniques', async () => {
-      const planId = await createPlan('Complex problem solving', ['po', 'scamper']);
+      const planId = createPlan('Complex problem solving', ['po', 'scamper']);
 
       // Execute PO technique
       const poResult = await executeStep(planId, {
@@ -549,7 +549,7 @@ describe('Technique Implementations', () => {
     });
 
     it('should maintain session state across steps', async () => {
-      const planId = await createPlan('Test session persistence', ['six_hats']);
+      const planId = createPlan('Test session persistence', ['six_hats']);
 
       // Execute multiple steps
       const step1 = await executeStep(planId, {
@@ -578,7 +578,7 @@ describe('Technique Implementations', () => {
     });
 
     it('should complete session and extract insights', async () => {
-      const planId = await createPlan('Quick ideation session', ['random_entry']);
+      const planId = createPlan('Quick ideation session', ['random_entry']);
 
       // Execute all steps quickly
       const step1 = await executeStep(planId, {
@@ -620,7 +620,7 @@ describe('Technique Implementations', () => {
 
   describe('Error Handling', () => {
     it('should validate technique-specific fields', async () => {
-      const planId = await createPlan('Test validation', ['six_hats']);
+      const planId = createPlan('Test validation', ['six_hats']);
 
       // Try to execute without required fields
       const result = await server.executeThinkingStep({
@@ -647,7 +647,7 @@ describe('Technique Implementations', () => {
     });
 
     it('should require matching technique with plan', async () => {
-      const planId = await createPlan('Test mismatch', ['po']);
+      const planId = createPlan('Test mismatch', ['po']);
 
       // Try to execute with different technique
       const result = await server.executeThinkingStep({

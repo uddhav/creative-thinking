@@ -4,7 +4,6 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { ResourceMonitor } from '../../../../ergodicity/earlyWarning/sensors/resourceMonitor.js';
-import { BarrierWarningLevel } from '../../../../ergodicity/earlyWarning/types.js';
 import type { PathMemory } from '../../../../ergodicity/types.js';
 import type { SessionData, LateralTechnique } from '../../../../types/index.js';
 
@@ -225,7 +224,7 @@ describe('ResourceMonitor', () => {
 
       monitor.calibrate(calibration);
 
-      const reading = await monitor.measure(mockPathMemory, mockSession);
+      await monitor.measure(mockPathMemory, mockSession);
 
       expect(monitor.getCalibration()).toMatchObject(calibration);
     });

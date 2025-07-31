@@ -4,7 +4,6 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { CognitiveAssessor } from '../../../../ergodicity/earlyWarning/sensors/cognitiveAssessor.js';
-import { BarrierWarningLevel } from '../../../../ergodicity/earlyWarning/types.js';
 import type { PathMemory } from '../../../../ergodicity/types.js';
 import type { SessionData, LateralTechnique } from '../../../../types/index.js';
 

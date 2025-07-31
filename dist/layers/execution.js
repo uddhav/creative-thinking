@@ -5,6 +5,15 @@
 import { ResponseBuilder } from '../core/ResponseBuilder.js';
 import { MemoryAnalyzer } from '../core/MemoryAnalyzer.js';
 import { RealityIntegration } from '../reality/integration.js';
+// Type guard for ErgodicityResult
+function isErgodicityResult(value) {
+    return (value !== null &&
+        typeof value === 'object' &&
+        'event' in value &&
+        'metrics' in value &&
+        'warnings' in value &&
+        Array.isArray(value.warnings));
+}
 export async function executeThinkingStep(input, sessionManager, techniqueRegistry, visualFormatter, metricsCollector, complexityAnalyzer, ergodicityManager) {
     const responseBuilder = new ResponseBuilder();
     const memoryAnalyzer = new MemoryAnalyzer();
@@ -85,9 +94,23 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
         try {
             stepInfo = handler.getStepInfo(input.currentStep);
         }
-        catch {
-            // For invalid steps, create a default step info
-            stepInfo = null;
+        catch (error) {
+            // Handle different error scenarios
+            if (error instanceof RangeError) {
+                // Step number is out of bounds
+                console.warn(`Step ${input.currentStep} is out of range for ${input.technique}. Using default guidance.`);
+                stepInfo = null;
+            }
+            else if (error instanceof TypeError) {
+                // Handler method issues
+                console.error(`Handler method error for ${input.technique}:`, error.message);
+                stepInfo = null;
+            }
+            else {
+                // Unknown error - log and continue
+                console.error(`Unexpected error getting step info:`, error);
+                stepInfo = null;
+            }
         }
         // Get mode indicator
         const modeIndicator = visualFormatter.getModeIndicator(input.technique, input.currentStep);
@@ -218,7 +241,7 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
             }
         }
         // Generate execution metadata for memory context
-        const executionMetadata = generateExecutionMetadata(input, session, currentInsights, ergodicityResult?.pathMemory);
+        const executionMetadata = generateExecutionMetadata(input, session, currentInsights, isErgodicityResult(ergodicityResult) ? ergodicityResult.pathMemory : undefined);
         // Build response
         const response = responseBuilder.buildExecutionResponse(sessionId, operationData, currentInsights, nextStepGuidance, session.history.length, executionMetadata);
         // Add memory outputs to response
@@ -243,10 +266,7 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
         if (!input.nextStepNeeded) {
             session.endTime = Date.now();
             // Final summary
-            const summaryOutput = visualFormatter.formatSessionSummary(input.technique, input.problem, session.insights, session.metrics);
-            if (summaryOutput) {
-                console.log(summaryOutput);
-            }
+            visualFormatter.formatSessionSummary(input.technique, input.problem, session.insights, session.metrics);
             // Add completion data
             const completedParsedResponse = JSON.parse(response.content[0].text);
             const completedResponse = responseBuilder.addCompletionData(completedParsedResponse, session);
@@ -258,7 +278,8 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
                 await sessionManager.saveSessionToPersistence(sessionId);
             }
             catch (error) {
-                console.error('Auto-save failed:', error);
+                // Auto-save error is added to response instead of console logging
+                // console.error('Auto-save failed:', error);
                 // Add auto-save failure to response
                 const parsedResponse = JSON.parse(response.content[0].text);
                 parsedResponse.autoSaveError = error instanceof Error ? error.message : 'Auto-save failed';

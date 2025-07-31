@@ -25,7 +25,7 @@ describe('Three-Layer Architecture', () => {
   });
 
   describe('Layer 1: Discovery', () => {
-    it('should analyze problems and recommend techniques', async () => {
+    it('should analyze problems and recommend techniques', () => {
       const input: DiscoverTechniquesInput = {
         problem: 'How to foster innovation in a risk-averse culture',
         context: 'Large corporation with established processes',
@@ -33,7 +33,7 @@ describe('Three-Layer Architecture', () => {
         constraints: ['Must maintain compliance', 'Limited budget'],
       };
 
-      const result = await server.discoverTechniques(input);
+      const result = server.discoverTechniques(input);
       expect(result.isError).toBeFalsy();
 
       const data = parseServerResponse<DiscoverTechniquesResponse>(result);
@@ -50,7 +50,7 @@ describe('Three-Layer Architecture', () => {
       expect(data.suggestedWorkflow).toBeDefined();
     });
 
-    it('should handle different problem types', async () => {
+    it('should handle different problem types', () => {
       const problemTypes = [
         { problem: 'Analytical problem requiring data', preferredOutcome: 'analytical' },
         { problem: 'Team collaboration issues', preferredOutcome: 'collaborative' },
@@ -58,7 +58,7 @@ describe('Three-Layer Architecture', () => {
       ];
 
       for (const { problem, preferredOutcome } of problemTypes) {
-        const result = await server.discoverTechniques({ problem, preferredOutcome });
+        const result = server.discoverTechniques({ problem, preferredOutcome });
         const data = parseServerResponse<DiscoverTechniquesResponse>(result);
 
         expect(data.recommendations).toBeDefined();
@@ -68,9 +68,9 @@ describe('Three-Layer Architecture', () => {
   });
 
   describe('Layer 2: Planning', () => {
-    it('should create workflow from discovered techniques', async () => {
+    it('should create workflow from discovered techniques', () => {
       // First discover
-      const discoveryResult = await server.discoverTechniques({
+      const discoveryResult = server.discoverTechniques({
         problem: 'Improve customer experience',
         preferredOutcome: 'systematic',
       });
@@ -79,7 +79,7 @@ describe('Three-Layer Architecture', () => {
       const techniques = discovery.recommendations.slice(0, 2).map(r => r.technique);
 
       // Then plan
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem: 'Improve customer experience',
         techniques,
         objectives: ['Identify pain points', 'Design solutions'],
@@ -99,8 +99,8 @@ describe('Three-Layer Architecture', () => {
       expect(workflowTechniques).toEqual(expect.arrayContaining(techniques));
     });
 
-    it('should handle multi-technique workflows', async () => {
-      const planResult = await server.planThinkingSession({
+    it('should handle multi-technique workflows', () => {
+      const planResult = server.planThinkingSession({
         problem: 'Complex innovation challenge',
         techniques: ['six_hats', 'scamper', 'design_thinking'],
         objectives: ['Explore all angles', 'Generate ideas', 'Build prototypes'],
@@ -122,7 +122,7 @@ describe('Three-Layer Architecture', () => {
   describe('Layer 3: Execution', () => {
     it('should execute planned workflow steps', async () => {
       // Setup: Discovery → Planning
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem: 'Test execution layer',
         techniques: ['random_entry'],
       });
@@ -154,7 +154,7 @@ describe('Three-Layer Architecture', () => {
     });
 
     it('should maintain state across execution steps', async () => {
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem: 'State tracking test',
         techniques: ['yes_and'],
       });
@@ -209,7 +209,7 @@ describe('Three-Layer Architecture', () => {
       const problem = 'How to increase team creativity while maintaining focus';
 
       // Layer 1: Discovery
-      const discoveryResult = await server.discoverTechniques({
+      const discoveryResult = server.discoverTechniques({
         problem,
         context: 'Software development team of 8 people',
         preferredOutcome: 'innovative',
@@ -224,7 +224,7 @@ describe('Three-Layer Architecture', () => {
       const recommendedTechniques = discovery.recommendations.slice(0, 2).map(r => r.technique);
 
       // Layer 2: Planning
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem,
         techniques: recommendedTechniques,
         objectives: ['Balance creativity with delivery', 'Engage remote team'],
@@ -280,9 +280,9 @@ describe('Three-Layer Architecture', () => {
       expect(execution.currentStep).toBe(1);
     });
 
-    it('should handle low flexibility with option generation', async () => {
+    it('should handle low flexibility with option generation', () => {
       // Discovery with many constraints
-      const discoveryResult = await server.discoverTechniques({
+      const discoveryResult = server.discoverTechniques({
         problem: 'Cut costs by 50% in 2 weeks',
         constraints: [
           'Cannot fire anyone',
@@ -302,7 +302,7 @@ describe('Three-Layer Architecture', () => {
       }
 
       // Plan with option generation
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem: 'Cut costs by 50% in 2 weeks',
         techniques: ['triz'], // Good for constraints
         includeOptions: true,
@@ -324,7 +324,7 @@ describe('Three-Layer Architecture', () => {
       const problem = 'Create breakthrough product innovation';
 
       // Plan multi-technique session
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem,
         techniques: ['concept_extraction', 'scamper', 'po'],
       });
@@ -362,8 +362,8 @@ describe('Three-Layer Architecture', () => {
       expect(scamperData.sessionId).toBe(sessionId);
     });
 
-    it('should handle technique-specific risk considerations', async () => {
-      const planResult = await server.planThinkingSession({
+    it('should handle technique-specific risk considerations', () => {
+      const planResult = server.planThinkingSession({
         problem: 'High-stakes decision making',
         techniques: ['six_hats', 'triz'],
         objectives: ['Thorough analysis', 'Risk mitigation'],
@@ -404,16 +404,16 @@ describe('Three-Layer Architecture', () => {
       expect(error.message).toContain('create a plan first');
     });
 
-    it('should validate layer requirements', async () => {
+    it('should validate layer requirements', () => {
       // Discovery without problem
-      const discoveryResult = await server.discoverTechniques({
+      const discoveryResult = server.discoverTechniques({
         context: 'Some context',
       } as unknown as DiscoverTechniquesInput);
 
       expect(discoveryResult.isError).toBe(true);
 
       // Planning without techniques
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem: 'Test',
         techniques: [],
       });

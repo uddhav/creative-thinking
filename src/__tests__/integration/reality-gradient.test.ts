@@ -29,7 +29,7 @@ describe('Reality Gradient Integration', () => {
   describe('Reality Assessment in Thinking Steps', () => {
     it('should assess reality for potentially impossible ideas', async () => {
       // Create a plan for a problem with regulatory constraints
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem: 'Implement tax loss harvesting for individual stocks',
         techniques: ['triz'],
       });
@@ -56,7 +56,7 @@ describe('Reality Gradient Integration', () => {
     });
 
     it('should not assess obviously feasible solutions', async () => {
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem: 'Improve team communication',
         techniques: ['six_hats'],
       });
@@ -80,7 +80,7 @@ describe('Reality Gradient Integration', () => {
     });
 
     it('should identify physical law violations', async () => {
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem: 'Create unlimited energy source',
         techniques: ['scamper'],
       });
@@ -108,7 +108,7 @@ describe('Reality Gradient Integration', () => {
     });
 
     it('should provide historical precedents for breakthroughs', async () => {
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem: 'Enable instant global communication',
         techniques: ['concept_extraction'],
       });
@@ -136,7 +136,7 @@ describe('Reality Gradient Integration', () => {
 
   describe('Domain Detection and Assessment', () => {
     it('should detect finance domain and apply appropriate checks', async () => {
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem: 'Create new investment strategies for tax optimization',
         techniques: ['po'],
       });
@@ -161,7 +161,7 @@ describe('Reality Gradient Integration', () => {
     });
 
     it('should detect healthcare domain constraints', async () => {
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem: 'Develop new medical treatments',
         techniques: ['design_thinking'],
       });
@@ -189,7 +189,7 @@ describe('Reality Gradient Integration', () => {
 
   describe('Multi-Step Reality Tracking', () => {
     it('should track reality assessments across multiple steps', async () => {
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem: 'Solve energy crisis',
         techniques: ['triz'],
       });
@@ -246,7 +246,7 @@ describe('Reality Gradient Integration', () => {
 
   describe('Reality Assessment with Existing Assessment', () => {
     it('should respect pre-existing reality assessment', async () => {
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem: 'Test problem',
         techniques: ['random_entry'],
       });
@@ -278,8 +278,8 @@ describe('Reality Gradient Integration', () => {
   });
 
   describe('Reality Assessment in Discovery Phase', () => {
-    it('should consider reality constraints in technique recommendations', async () => {
-      const discoveryResult = await server.discoverTechniques({
+    it('should consider reality constraints in technique recommendations', () => {
+      const discoveryResult = server.discoverTechniques({
         problem: 'Create a perpetual motion machine for unlimited energy',
         context: 'Need to solve energy crisis with zero emissions',
         preferredOutcome: 'innovative',

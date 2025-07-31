@@ -241,6 +241,9 @@ export class ExecutionValidator extends BaseValidator {
     validateTechniqueSpecificFields(data, errors, warnings) {
         switch (data.technique) {
             case 'six_hats':
+                if (data.hatColor === undefined && data.currentStep >= 1 && data.currentStep <= 6) {
+                    warnings.push('hatColor is recommended for six_hats technique to track thinking mode');
+                }
                 if (data.hatColor !== undefined) {
                     if (!this.validateEnum(data.hatColor, ['blue', 'white', 'red', 'yellow', 'black', 'green', 'purple'], 'hatColor', errors)) {
                         // Add specific error for invalid hat color
@@ -251,6 +254,9 @@ export class ExecutionValidator extends BaseValidator {
                 }
                 break;
             case 'po':
+                if (data.provocation === undefined && data.currentStep === 1) {
+                    warnings.push('provocation is recommended for the first step of PO technique');
+                }
                 if (data.provocation !== undefined) {
                     this.validateString(data.provocation, 'provocation', errors);
                 }
@@ -267,6 +273,9 @@ export class ExecutionValidator extends BaseValidator {
                 }
                 break;
             case 'scamper':
+                if (data.scamperAction === undefined) {
+                    warnings.push('scamperAction should be specified for SCAMPER technique');
+                }
                 if (data.scamperAction !== undefined) {
                     if (!this.validateEnum(data.scamperAction, [
                         'substitute',
@@ -298,6 +307,9 @@ export class ExecutionValidator extends BaseValidator {
                 }
                 break;
             case 'design_thinking':
+                if (data.designStage === undefined) {
+                    warnings.push('designStage is recommended to track Design Thinking progress');
+                }
                 if (data.designStage !== undefined) {
                     this.validateEnum(data.designStage, ['empathize', 'define', 'ideate', 'prototype', 'test'], 'designStage', errors);
                 }
@@ -312,6 +324,11 @@ export class ExecutionValidator extends BaseValidator {
                 break;
         }
         // Validate risk/adversarial fields
+        if (data.risks !== undefined &&
+            data.risks.length > 0 &&
+            (!data.mitigations || data.mitigations.length === 0)) {
+            warnings.push('Consider providing mitigations when risks are identified');
+        }
         if (data.risks !== undefined) {
             this.validateArray(data.risks, 'risks', errors, item => typeof item === 'string');
         }
