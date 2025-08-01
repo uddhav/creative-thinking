@@ -120,7 +120,8 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
         const visualOutput = visualFormatter.formatOutput(input.technique, input.problem, input.currentStep, input.totalSteps, stepInfo, modeIndicator, input);
         if (visualOutput && process.env.DISABLE_THOUGHT_LOGGING !== 'true') {
             // Only log if thought logging is enabled
-            process.stdout.write(visualOutput);
+            // IMPORTANT: Use stderr for visual output - stdout is reserved for JSON-RPC
+            process.stderr.write(visualOutput);
         }
         // Handle SCAMPER path impact
         if (input.technique === 'scamper' && input.scamperAction) {

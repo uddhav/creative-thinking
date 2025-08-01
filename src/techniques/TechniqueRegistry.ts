@@ -17,6 +17,8 @@ import { NeuralStateHandler } from './NeuralStateHandler.js';
 import { TemporalWorkHandler } from './TemporalWorkHandler.js';
 import { CrossCulturalHandler } from './CrossCulturalHandler.js';
 import { CollectiveIntelHandler } from './CollectiveIntelHandler.js';
+import { DisneyMethodHandler } from './DisneyMethodHandler.js';
+import { NineWindowsHandler } from './NineWindowsHandler.js';
 import { GenericHandler } from './GenericHandler.js';
 
 export class TechniqueRegistry {
@@ -40,6 +42,8 @@ export class TechniqueRegistry {
     this.handlers.set('temporal_work', new TemporalWorkHandler());
     this.handlers.set('cross_cultural', new CrossCulturalHandler());
     this.handlers.set('collective_intel', new CollectiveIntelHandler());
+    this.handlers.set('disney_method', new DisneyMethodHandler());
+    this.handlers.set('nine_windows', new NineWindowsHandler());
   }
 
   getHandler(technique: string): TechniqueHandler {

@@ -15,7 +15,9 @@ export type LateralTechnique =
   | 'neural_state'
   | 'temporal_work'
   | 'cross_cultural'
-  | 'collective_intel';
+  | 'collective_intel'
+  | 'disney_method'
+  | 'nine_windows';
 
 /**
  * Represents input data for a lateral thinking step

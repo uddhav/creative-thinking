@@ -124,7 +124,7 @@ describe('Session Management', () => {
 
   describe('Memory monitoring', () => {
     it('should log memory metrics when enabled', () => {
-      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       // Enable memory monitoring
       server.config.enableMemoryMonitoring = true;
@@ -161,7 +161,7 @@ describe('Session Management', () => {
     });
 
     it('should log eviction when monitoring is enabled', () => {
-      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       // Enable memory monitoring and set low limit
       server.config.enableMemoryMonitoring = true;

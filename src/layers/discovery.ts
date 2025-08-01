@@ -126,6 +126,32 @@ function categorizeProblem(problem: string, context?: string): string {
   ) {
     return 'cognitive';
   }
+  // Check for implementation/execution problems
+  if (
+    fullText.includes('implement') ||
+    fullText.includes('execute') ||
+    fullText.includes('deploy') ||
+    fullText.includes('launch') ||
+    fullText.includes('realize') ||
+    fullText.includes('make it happen') ||
+    fullText.includes('put into practice')
+  ) {
+    return 'implementation';
+  }
+
+  // Check for system-level analysis problems
+  if (
+    fullText.includes('system') ||
+    fullText.includes('ecosystem') ||
+    fullText.includes('holistic') ||
+    fullText.includes('comprehensive') ||
+    fullText.includes('multi-level') ||
+    fullText.includes('scale') ||
+    fullText.includes('component')
+  ) {
+    return 'systems';
+  }
+
   // Check for organizational/cultural keywords before user-centered (to prioritize cross-cultural work)
   if (
     fullText.includes('team') ||
@@ -319,6 +345,32 @@ function recommendTechniques(
       });
       break;
 
+    case 'implementation':
+      recommendations.push({
+        technique: 'disney_method',
+        reasoning: 'Sequential approach from vision to practical implementation',
+        effectiveness: 0.95,
+      });
+      recommendations.push({
+        technique: 'design_thinking',
+        reasoning: 'Prototype and test implementation approaches',
+        effectiveness: 0.8,
+      });
+      break;
+
+    case 'systems':
+      recommendations.push({
+        technique: 'nine_windows',
+        reasoning: 'Systematic analysis across time and system levels',
+        effectiveness: 0.9,
+      });
+      recommendations.push({
+        technique: 'triz',
+        reasoning: 'System contradictions and evolution patterns',
+        effectiveness: 0.85,
+      });
+      break;
+
     default:
       recommendations.push({
         technique: 'six_hats',
@@ -378,10 +430,22 @@ function adjustForPreferredOutcome(
     case 'systematic':
       // Boost structured techniques
       recommendations.forEach(r => {
-        if (['scamper', 'triz', 'design_thinking'].includes(r.technique)) {
+        if (
+          ['scamper', 'triz', 'design_thinking', 'nine_windows', 'disney_method'].includes(
+            r.technique
+          )
+        ) {
           r.effectiveness *= 1.2;
         }
       });
+      // Add Nine Windows if not present for systematic analysis
+      if (!recommendations.find(r => r.technique === 'nine_windows')) {
+        recommendations.push({
+          technique: 'nine_windows',
+          reasoning: 'Systematic multi-dimensional analysis',
+          effectiveness: 0.8,
+        });
+      }
       break;
 
     case 'risk-aware':

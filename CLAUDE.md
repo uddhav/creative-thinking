@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a **Creative Thinking MCP Server** implementing a three-layer tool architecture for structured problem-solving. The server provides ten enhanced thinking techniques through a unified framework that combines generative creativity with systematic risk assessment.
+This is a **Creative Thinking MCP Server** implementing a three-layer tool architecture for structured problem-solving. The server provides fourteen enhanced thinking techniques through a unified framework that combines generative creativity with systematic risk assessment.
 
 ## Development Commands
 
@@ -57,7 +57,7 @@ docker run -it creative-thinking
 ### Core Structure
 - **Three-layer architecture**: Discovery, Planning, and Execution layers
 - **Three primary tools**: `discover_techniques`, `plan_thinking_session`, `execute_thinking_step`
-- **Nine thinking techniques**: Six Hats, PO, Random Entry, SCAMPER, Concept Extraction, Yes And, Design Thinking, TRIZ, Neural State
+- **Fourteen thinking techniques**: Six Hats, PO, Random Entry, SCAMPER, Concept Extraction, Yes And, Design Thinking, TRIZ, Neural State, Temporal Work, Cross-Cultural, Collective Intelligence, Disney Method, Nine Windows
 - **Session management**: Full state persistence with branching and revision support
 - **Visual output**: Structured console output with progress tracking
 - **Option Generation Engine**: Automatic activation when flexibility < 0.4 with 8 generation strategies
@@ -66,9 +66,10 @@ docker run -it creative-thinking
 
 ### Key Types and Interfaces
 ```typescript
-type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 'concept_extraction' | 'yes_and' | 'design_thinking' | 'triz' | 'neural_state' | 'temporal_work';
+type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 'concept_extraction' | 'yes_and' | 'design_thinking' | 'triz' | 'neural_state' | 'temporal_work' | 'cross_cultural' | 'collective_intel' | 'disney_method' | 'nine_windows';
 type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green';
-type ScamperAction = 'substitute' | 'combine' | 'adapt' | 'modify' | 'put_to_other_use' | 'eliminate' | 'reverse';
+type ScamperAction = 'substitute' | 'combine' | 'adapt' | 'modify' | 'put_to_other_use' | 'eliminate' | 'reverse' | 'parameterize';
+type DisneyRole = 'dreamer' | 'realist' | 'critic';
 type DesignThinkingStage = 'empathize' | 'define' | 'ideate' | 'prototype' | 'test';
 
 // Layer-specific interfaces
@@ -161,6 +162,24 @@ The server follows the standard MCP server pattern:
 - Structured display with box-drawing characters
 - Environment variable `DISABLE_THOUGHT_LOGGING` for output control
 
+### MCP Protocol Compliance
+**CRITICAL**: This server implements the Model Context Protocol (MCP) which requires strict separation of concerns:
+
+1. **stdout is reserved for JSON-RPC only** - No visual output, debug messages, or console.log() calls should write to stdout
+2. **stderr is for visual output and debugging** - All visual formatting, progress indicators, and debug messages must use process.stderr.write()
+3. **ESLint enforcement** - The project includes ESLint rules that prevent stdout pollution:
+   - No `process.stdout.write()` calls
+   - No `console.log()` calls (use `console.error()` instead)
+4. **Testing** - The MCP protocol compliance test (`src/__tests__/integration/mcp-protocol-compliance.test.ts`) verifies:
+   - All stdout output is valid JSON-RPC
+   - Visual output goes to stderr
+   - All 14 techniques comply with protocol requirements
+
+When developing new features or modifying existing code:
+- Always use `process.stderr.write()` for visual output
+- Use `console.error()` instead of `console.log()` for debugging
+- Run the MCP compliance test to verify protocol adherence
+
 ## Unified Framework Integration
 
 The implementation now supports the unified generative/adversarial framework from SPECIFICATIONS.md:
@@ -187,13 +206,17 @@ The implementation now supports the unified generative/adversarial framework fro
    - Six Hats: 6 steps (one per thinking hat)
    - PO: 4 steps (provocation → exploration → verification → solution)
    - Random Entry: 3 steps (stimulus → connections → validation)
-   - SCAMPER: 7 steps (one per transformation action)
+   - SCAMPER: 8 steps (one per transformation action including parameterize)
    - Concept Extraction: 4 steps (identify → extract → abstract → apply)
    - Yes, And: 4 steps (accept → build → evaluate → integrate)
    - Design Thinking: 5 steps (empathize → define → ideate → prototype → test)
    - TRIZ: 4 steps (identify → remove → apply → minimize)
    - Neural State: 4 steps (assess → identify suppression → develop rhythm → integrate)
    - Temporal Work: 5 steps (map landscape → circadian alignment → pressure transformation → async-sync balance → escape routes)
+   - Cross-Cultural: 5 steps (map landscape → identify touchpoints → build bridges → synthesize respectfully → implement adaptively)
+   - Collective Intelligence: 5 steps (identify sources → gather wisdom → find patterns → create synergy → synthesize insight)
+   - Disney Method: 3 steps (dreamer → realist → critic)
+   - Nine Windows: 9 steps (3×3 matrix: past/present/future × sub-system/system/super-system)
 
 ## Architecture Principles
 

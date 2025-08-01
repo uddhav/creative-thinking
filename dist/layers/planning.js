@@ -105,6 +105,8 @@ function estimateTime(technique, timeframe) {
         temporal_work: 30,
         cross_cultural: 25,
         collective_intel: 30,
+        disney_method: 25,
+        nine_windows: 45,
     };
     const multiplier = timeframe === 'quick' ? 0.5 : timeframe === 'comprehensive' ? 1.5 : 1;
     const minutes = Math.round((baseTime[technique] || 30) * multiplier);
@@ -141,6 +143,12 @@ function getExpectedOutputs(technique) {
         temporal_work: ['Time-aware design', 'Flexible implementation'],
         cross_cultural: ['Culturally adaptive solution', 'Respectful integration'],
         collective_intel: ['Synthesized wisdom', 'Emergent insights'],
+        disney_method: ['Implementable vision', 'Practical plan', 'Risk-aware solution'],
+        nine_windows: [
+            'Multi-dimensional understanding',
+            'System evolution insights',
+            'Path dependencies mapped',
+        ],
     };
     return outputs[technique] || ['Solution options'];
 }
@@ -296,6 +304,22 @@ function getExpectedOutputForStep(technique, step) {
             5: 'Alternative uses',
             6: 'Elements to eliminate',
             7: 'Reversal concepts',
+        },
+        disney_method: {
+            1: 'Bold vision without constraints',
+            2: 'Concrete implementation plan',
+            3: 'Risk mitigation strategies',
+        },
+        nine_windows: {
+            1: 'Past sub-system analysis',
+            2: 'Past system evolution',
+            3: 'Past environmental factors',
+            4: 'Current component state',
+            5: 'Current system analysis',
+            6: 'Current environment mapping',
+            7: 'Future component possibilities',
+            8: 'Future system scenarios',
+            9: 'Future environmental changes',
         },
     };
     return outputs[technique]?.[step] || 'Insights and ideas related to the step focus';

@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /**
  * Helper utilities for integration tests
  */
@@ -359,7 +359,7 @@ export async function measureTime<T>(
   const duration = Date.now() - startTime;
 
   if (label && process.env.DEBUG_TESTS) {
-    console.log(`${label}: ${duration}ms`); // eslint-disable-line no-console
+    console.error(`${label}: ${duration}ms`);
   }
 
   return { result, duration };

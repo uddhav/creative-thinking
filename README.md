@@ -68,7 +68,7 @@ node dist/index.js
 
 ## Core Features
 
-### Twelve Enhanced Thinking Techniques
+### Fourteen Enhanced Thinking Techniques
 
 Each technique integrates creative generation with systematic verification:
 
@@ -84,6 +84,8 @@ Each technique integrates creative generation with systematic verification:
 - **Temporal Work Design** - Time-based problem solving and pressure transformation
 - **Cross-Cultural Integration** - Multi-perspective synthesis across cultural frameworks
 - **Collective Intelligence** - Wisdom aggregation from diverse knowledge sources
+- **Disney Method** - Three-role approach (Dreamer, Realist, Critic) for idea development
+- **Nine Windows** - Systematic analysis across time and system levels in a 3×3 matrix
 
 ### Memory-Aware Outputs (NEW)
 

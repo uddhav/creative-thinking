@@ -226,6 +226,8 @@ export class PlanningValidator extends BaseValidator {
       'temporal_work',
       'cross_cultural',
       'collective_intel',
+      'disney_method',
+      'nine_windows',
     ];
     return validTechniques.includes(value as LateralTechnique);
   }
@@ -516,6 +518,8 @@ export class ExecutionValidator extends BaseValidator {
       'temporal_work',
       'cross_cultural',
       'collective_intel',
+      'disney_method',
+      'nine_windows',
     ];
     return validTechniques.includes(value as LateralTechnique);
   }
@@ -673,6 +677,8 @@ export class SessionOperationValidator extends BaseValidator {
       'temporal_work',
       'cross_cultural',
       'collective_intel',
+      'disney_method',
+      'nine_windows',
     ];
     return validTechniques.includes(value as LateralTechnique);
   }

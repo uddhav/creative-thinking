@@ -5,6 +5,28 @@ All notable changes to the Creative Thinking MCP Server will be documented in th
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2025-08-01
+
+### Added
+- **Disney Method**: Three-role creative technique for idea development
+  - Dreamer role: Vision without constraints
+  - Realist role: Practical implementation planning
+  - Critic role: Risk and feasibility analysis
+- **Nine Windows**: Systematic analysis across time and system levels
+  - 3×3 matrix: Past/Present/Future × Sub-system/System/Super-system
+  - Path dependency tracking for temporal analysis
+  - Interdependency identification
+- **Comprehensive Tests**: Unit and integration tests for both new techniques
+- **MCP Schema Fields**: Added ALL missing technique-specific fields (critical bug fix)
+
+### Fixed
+- **Critical Bug**: MCP schema was missing technique-specific fields for ALL techniques
+- **Validation**: Added Disney Method and Nine Windows to validation arrays
+
+### Changed
+- **Total Techniques**: Increased from 12 to 14 enhanced thinking techniques
+- **README**: Updated to reflect new technique count and descriptions
+
 ## [0.3.0] - 2025-01-31
 
 ### Added

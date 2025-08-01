@@ -4,10 +4,11 @@
 import type { PathMemory } from '../ergodicity/index.js';
 import type { ErgodicityManager } from '../ergodicity/index.js';
 import type { EarlyWarningState, EscapeProtocol } from '../ergodicity/earlyWarning/types.js';
-export type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 'concept_extraction' | 'yes_and' | 'design_thinking' | 'triz' | 'neural_state' | 'temporal_work' | 'cross_cultural' | 'collective_intel';
+export type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 'concept_extraction' | 'yes_and' | 'design_thinking' | 'triz' | 'neural_state' | 'temporal_work' | 'cross_cultural' | 'collective_intel' | 'disney_method' | 'nine_windows';
 export type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green' | 'purple';
 export type ScamperAction = 'substitute' | 'combine' | 'adapt' | 'modify' | 'put_to_other_use' | 'eliminate' | 'reverse' | 'parameterize';
 export type DesignThinkingStage = 'empathize' | 'define' | 'ideate' | 'prototype' | 'test';
+export type DisneyRole = 'dreamer' | 'realist' | 'critic';
 export type PossibilityLevel = 'impossible' | 'breakthrough-required' | 'difficult' | 'feasible';
 export type ImpossibilityType = 'logical' | 'physical' | 'technical' | 'regulatory' | 'resource' | 'social';
 export interface RealityAssessment {
@@ -23,6 +24,13 @@ export interface SequentialThinkingSuggestion {
     suggestedApproach: {
         [key: string]: string;
     };
+}
+export interface NineWindowsCell {
+    timeFrame: 'past' | 'present' | 'future';
+    systemLevel: 'sub-system' | 'system' | 'super-system';
+    content: string;
+    pathDependencies?: string[];
+    irreversible?: boolean;
 }
 export interface ScamperPathImpact {
     reversible: boolean;
@@ -136,6 +144,16 @@ export interface ExecuteThinkingStepInput {
     emergentPatterns?: string[];
     synergyCombinations?: string[];
     collectiveInsights?: string[];
+    disneyRole?: DisneyRole;
+    dreamerVision?: string[];
+    realistPlan?: string[];
+    criticRisks?: string[];
+    nineWindowsMatrix?: NineWindowsCell[];
+    currentCell?: {
+        timeFrame: 'past' | 'present' | 'future';
+        systemLevel: 'sub-system' | 'system' | 'super-system';
+    };
+    interdependencies?: string[];
     realityAssessment?: RealityAssessment;
 }
 export interface ThinkingOperationData {
@@ -210,6 +228,16 @@ export interface ThinkingOperationData {
     emergentPatterns?: string[];
     synergyCombinations?: string[];
     collectiveInsights?: string[];
+    disneyRole?: DisneyRole;
+    dreamerVision?: string[];
+    realistPlan?: string[];
+    criticRisks?: string[];
+    nineWindowsMatrix?: NineWindowsCell[];
+    currentCell?: {
+        timeFrame: 'past' | 'present' | 'future';
+        systemLevel: 'sub-system' | 'system' | 'super-system';
+    };
+    interdependencies?: string[];
     realityAssessment?: RealityAssessment;
 }
 export interface SessionOperationData {
