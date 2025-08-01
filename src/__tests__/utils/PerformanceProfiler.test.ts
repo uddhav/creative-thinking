@@ -178,27 +178,27 @@ describe('PerformanceProfiler', () => {
       });
 
       const aggregated = profiler.getAggregatedMetrics();
-      
+
       // Should be sorted by total duration (descending)
       expect(aggregated).toHaveLength(3);
-      
+
       // Verify that the array is sorted by totalDuration in descending order
       expect(aggregated[0].totalDuration).toBeGreaterThanOrEqual(aggregated[1].totalDuration);
       expect(aggregated[1].totalDuration).toBeGreaterThanOrEqual(aggregated[2].totalDuration);
-      
+
       // Verify all operations are present
       const operationNames = aggregated.map(m => m.operationName);
       expect(operationNames).toContain('op1');
       expect(operationNames).toContain('op2');
       expect(operationNames).toContain('op3');
-      
+
       // Op2 should generally have the highest total duration due to more iterations
       // but we don't assume the exact order since timing can vary
       const op2Metrics = aggregated.find(m => m.operationName === 'op2');
       const op3Metrics = aggregated.find(m => m.operationName === 'op3');
       expect(op2Metrics).toBeDefined();
       expect(op3Metrics).toBeDefined();
-      
+
       // Just verify that metrics exist and have valid values
       aggregated.forEach(metrics => {
         expect(metrics.totalDuration).toBeGreaterThan(0);
