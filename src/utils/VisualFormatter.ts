@@ -215,6 +215,8 @@ export class VisualFormatter {
       temporal_work: '⏰',
       cross_cultural: '🌍',
       collective_intel: '🧬',
+      disney_method: '🎬',
+      nine_windows: '🪟',
     };
     return emojis[technique] || '❓';
   }
@@ -236,6 +238,8 @@ export class VisualFormatter {
       temporal_work: 'Temporal Work Design',
       cross_cultural: 'Cross-Cultural Integration',
       collective_intel: 'Collective Intelligence',
+      disney_method: 'Disney Method',
+      nine_windows: 'Nine Windows',
     };
     return names[technique] || technique;
   }

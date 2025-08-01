@@ -505,6 +505,8 @@ const PLAN_THINKING_SESSION_TOOL: Tool = {
             'temporal_work',
             'cross_cultural',
             'collective_intel',
+            'disney_method',
+            'nine_windows',
           ],
         },
         description: 'The techniques to include in the workflow',
@@ -548,8 +550,125 @@ const EXECUTE_THINKING_STEP_TOOL: Tool = {
         type: 'boolean',
         description: 'Whether to automatically save the session after this step',
       },
-      // Technique-specific fields would be added here
-      // ... (abbreviated for brevity)
+      // Six Hats specific
+      hatColor: {
+        type: 'string',
+        enum: ['blue', 'white', 'red', 'yellow', 'black', 'green'],
+      },
+      // PO specific
+      provocation: { type: 'string' },
+      principles: { type: 'array', items: { type: 'string' } },
+      // Random Entry specific
+      randomStimulus: { type: 'string' },
+      connections: { type: 'array', items: { type: 'string' } },
+      // SCAMPER specific
+      scamperAction: {
+        type: 'string',
+        enum: [
+          'substitute',
+          'combine',
+          'adapt',
+          'modify',
+          'put_to_other_use',
+          'eliminate',
+          'reverse',
+          'parameterize',
+        ],
+      },
+      modifications: { type: 'array', items: { type: 'string' } },
+      pathImpact: { type: 'object' },
+      // Concept Extraction specific
+      successExample: { type: 'string' },
+      extractedConcepts: { type: 'array', items: { type: 'string' } },
+      abstractedPatterns: { type: 'array', items: { type: 'string' } },
+      applications: { type: 'array', items: { type: 'string' } },
+      // Yes, And... specific
+      initialIdea: { type: 'string' },
+      additions: { type: 'array', items: { type: 'string' } },
+      evaluations: { type: 'array', items: { type: 'string' } },
+      synthesis: { type: 'string' },
+      // Design Thinking specific
+      designStage: {
+        type: 'string',
+        enum: ['empathize', 'define', 'ideate', 'prototype', 'test'],
+      },
+      empathyInsights: { type: 'array', items: { type: 'string' } },
+      problemStatement: { type: 'string' },
+      ideaList: { type: 'array', items: { type: 'string' } },
+      prototypeDescription: { type: 'string' },
+      userFeedback: { type: 'array', items: { type: 'string' } },
+      // TRIZ specific
+      contradiction: { type: 'string' },
+      inventivePrinciples: { type: 'array', items: { type: 'string' } },
+      minimalSolution: { type: 'string' },
+      // Neural State specific
+      dominantNetwork: { type: 'string', enum: ['dmn', 'ecn'] },
+      suppressionDepth: { type: 'number', minimum: 0, maximum: 10 },
+      switchingRhythm: { type: 'array', items: { type: 'string' } },
+      integrationInsights: { type: 'array', items: { type: 'string' } },
+      // Temporal Work specific
+      temporalLandscape: { type: 'object' },
+      circadianAlignment: { type: 'array', items: { type: 'string' } },
+      pressureTransformation: { type: 'array', items: { type: 'string' } },
+      asyncSyncBalance: { type: 'array', items: { type: 'string' } },
+      temporalEscapeRoutes: { type: 'array', items: { type: 'string' } },
+      // Cross-Cultural specific
+      culturalFrameworks: { type: 'array', items: { type: 'string' } },
+      bridgeBuilding: { type: 'array', items: { type: 'string' } },
+      respectfulSynthesis: { type: 'array', items: { type: 'string' } },
+      parallelPaths: { type: 'array', items: { type: 'string' } },
+      // Collective Intelligence specific
+      wisdomSources: { type: 'array', items: { type: 'string' } },
+      emergentPatterns: { type: 'array', items: { type: 'string' } },
+      synergyCombinations: { type: 'array', items: { type: 'string' } },
+      collectiveInsights: { type: 'array', items: { type: 'string' } },
+      // Disney Method specific
+      disneyRole: {
+        type: 'string',
+        enum: ['dreamer', 'realist', 'critic'],
+      },
+      dreamerVision: { type: 'array', items: { type: 'string' } },
+      realistPlan: { type: 'array', items: { type: 'string' } },
+      criticRisks: { type: 'array', items: { type: 'string' } },
+      // Nine Windows specific
+      nineWindowsMatrix: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            timeFrame: { type: 'string', enum: ['past', 'present', 'future'] },
+            systemLevel: { type: 'string', enum: ['sub-system', 'system', 'super-system'] },
+            content: { type: 'string' },
+            pathDependencies: { type: 'array', items: { type: 'string' } },
+            irreversible: { type: 'boolean' },
+          },
+        },
+      },
+      currentCell: {
+        type: 'object',
+        properties: {
+          timeFrame: { type: 'string', enum: ['past', 'present', 'future'] },
+          systemLevel: { type: 'string', enum: ['sub-system', 'system', 'super-system'] },
+        },
+      },
+      interdependencies: { type: 'array', items: { type: 'string' } },
+      // Risk/Adversarial fields (unified framework)
+      risks: { type: 'array', items: { type: 'string' } },
+      failureModes: { type: 'array', items: { type: 'string' } },
+      mitigations: { type: 'array', items: { type: 'string' } },
+      antifragileProperties: { type: 'array', items: { type: 'string' } },
+      blackSwans: { type: 'array', items: { type: 'string' } },
+      failureInsights: { type: 'array', items: { type: 'string' } },
+      stressTestResults: { type: 'array', items: { type: 'string' } },
+      failureModesPredicted: { type: 'array', items: { type: 'string' } },
+      viaNegativaRemovals: { type: 'array', items: { type: 'string' } },
+      // Revision support
+      isRevision: { type: 'boolean' },
+      revisesStep: { type: 'number' },
+      branchFromStep: { type: 'number' },
+      branchId: { type: 'string' },
+      flexibilityScore: { type: 'number', minimum: 0, maximum: 1 },
+      alternativeSuggestions: { type: 'array', items: { type: 'string' } },
     },
     required: [
       'planId',

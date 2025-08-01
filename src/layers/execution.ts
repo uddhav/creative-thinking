@@ -206,7 +206,8 @@ export async function executeThinkingStep(
 
     if (visualOutput && process.env.DISABLE_THOUGHT_LOGGING !== 'true') {
       // Only log if thought logging is enabled
-      process.stdout.write(visualOutput);
+      // IMPORTANT: Use stderr for visual output - stdout is reserved for JSON-RPC
+      process.stderr.write(visualOutput);
     }
 
     // Handle SCAMPER path impact

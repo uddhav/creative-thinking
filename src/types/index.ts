@@ -19,7 +19,9 @@ export type LateralTechnique =
   | 'neural_state'
   | 'temporal_work'
   | 'cross_cultural'
-  | 'collective_intel';
+  | 'collective_intel'
+  | 'disney_method'
+  | 'nine_windows';
 
 export type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green' | 'purple';
 export type ScamperAction =
@@ -32,6 +34,7 @@ export type ScamperAction =
   | 'reverse'
   | 'parameterize';
 export type DesignThinkingStage = 'empathize' | 'define' | 'ideate' | 'prototype' | 'test';
+export type DisneyRole = 'dreamer' | 'realist' | 'critic';
 
 // Reality Assessment types
 export type PossibilityLevel = 'impossible' | 'breakthrough-required' | 'difficult' | 'feasible';
@@ -57,6 +60,15 @@ export interface SequentialThinkingSuggestion {
   suggestedApproach: {
     [key: string]: string;
   };
+}
+
+// Nine Windows types
+export interface NineWindowsCell {
+  timeFrame: 'past' | 'present' | 'future';
+  systemLevel: 'sub-system' | 'system' | 'super-system';
+  content: string;
+  pathDependencies?: string[];
+  irreversible?: boolean;
 }
 
 // SCAMPER Path Impact types
@@ -198,6 +210,20 @@ export interface ExecuteThinkingStepInput {
   synergyCombinations?: string[];
   collectiveInsights?: string[];
 
+  // Disney Method specific
+  disneyRole?: DisneyRole;
+  dreamerVision?: string[];
+  realistPlan?: string[];
+  criticRisks?: string[];
+
+  // Nine Windows specific
+  nineWindowsMatrix?: NineWindowsCell[];
+  currentCell?: {
+    timeFrame: 'past' | 'present' | 'future';
+    systemLevel: 'sub-system' | 'system' | 'super-system';
+  };
+  interdependencies?: string[];
+
   // Reality assessment
   realityAssessment?: RealityAssessment;
 }
@@ -299,6 +325,20 @@ export interface ThinkingOperationData {
   emergentPatterns?: string[];
   synergyCombinations?: string[];
   collectiveInsights?: string[];
+
+  // Disney Method specific
+  disneyRole?: DisneyRole;
+  dreamerVision?: string[];
+  realistPlan?: string[];
+  criticRisks?: string[];
+
+  // Nine Windows specific
+  nineWindowsMatrix?: NineWindowsCell[];
+  currentCell?: {
+    timeFrame: 'past' | 'present' | 'future';
+    systemLevel: 'sub-system' | 'system' | 'super-system';
+  };
+  interdependencies?: string[];
 
   // Reality assessment
   realityAssessment?: RealityAssessment;

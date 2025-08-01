@@ -73,6 +73,19 @@ export default [
       'eqeqeq': ['error', 'always'],
       'curly': ['error', 'all'],
       
+      // MCP Protocol Compliance Rules
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "CallExpression[callee.object.object.name='process'][callee.object.property.name='stdout'][callee.property.name='write']",
+          message: 'Do not use process.stdout.write() - MCP servers must only send JSON-RPC to stdout. Use process.stderr.write() for debug output.'
+        },
+        {
+          selector: "CallExpression[callee.object.name='console'][callee.property.name='log']",
+          message: 'Do not use console.log() - MCP servers must only send JSON-RPC to stdout. Use console.error() for debug output.'
+        }
+      ],
+      
       // Prettier integration
       'prettier/prettier': ['error', {
         endOfLine: 'auto'

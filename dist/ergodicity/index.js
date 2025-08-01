@@ -354,6 +354,16 @@ export class ErgodicityManager {
                 typicalCommitment: 0.4,
                 riskProfile: 'Low-Medium - Synthesis requires some commitment',
             },
+            disney_method: {
+                typicalReversibility: 0.5,
+                typicalCommitment: 0.7,
+                riskProfile: 'Medium-High - Sequential implementation commitment',
+            },
+            nine_windows: {
+                typicalReversibility: 0.8,
+                typicalCommitment: 0.3,
+                riskProfile: 'Low - Analysis without action commitment',
+            },
         };
         return profiles[technique];
     }
