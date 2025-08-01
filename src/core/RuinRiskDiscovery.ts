@@ -775,27 +775,8 @@ export class RuinRiskDiscovery {
       /field:?\s*(\w+)/i,
     ];
 
-    // First try to find explicit domain keywords
-    const domainKeywords = [
-      'financial',
-      'medical',
-      'health',
-      'career',
-      'legal',
-      'technical',
-      'investment',
-      'relationship',
-      'educational',
-      'business',
-      'personal',
-    ];
-
+    // Domain always emerges from context - we don't force categorization
     const lowerResponse = response.toLowerCase();
-    for (const keyword of domainKeywords) {
-      if (lowerResponse.includes(keyword)) {
-        return keyword;
-      }
-    }
 
     // Then try pattern matching
     for (const pattern of domainPatterns) {
@@ -805,29 +786,28 @@ export class RuinRiskDiscovery {
       }
     }
 
-    // If no explicit domain mentioned, try to infer from content
-    // This is intentionally generic to allow any domain
+    // Extract descriptive domain label from response
     const lines = response.split('\n');
     const firstLine = lines[0] || '';
 
-    // Extract first significant noun as domain
+    // Look for descriptive phrases that indicate the problem space
     const words = firstLine.split(/\s+/);
+    const skipWords = [
+      'this',
+      'that',
+      'problem',
+      'issue',
+      'matter',
+      'clearly',
+      'topic',
+      'about',
+      'quite',
+      'abstract',
+      'standard',
+      'category',
+    ];
+    
     for (const word of words) {
-      // Skip common words and look for domain-like terms
-      const skipWords = [
-        'this',
-        'that',
-        'problem',
-        'issue',
-        'matter',
-        'clearly',
-        'topic',
-        'about',
-        'quite',
-        'abstract',
-        'standard',
-        'category',
-      ];
       if (word.length > 4 && !skipWords.includes(word.toLowerCase())) {
         return word.toLowerCase();
       }

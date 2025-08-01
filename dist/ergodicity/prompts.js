@@ -198,17 +198,28 @@ export function assessRuinRisk(problem, technique, userResponse) {
     else if (hasEnsemble) {
         ensembleVsTimeAverage = 'ensemble';
     }
-    // Determine domain
-    let domain = 'general';
-    if (lowerResponse.includes('financ') || lowerResponse.includes('money'))
-        domain = 'financial';
-    else if (lowerResponse.includes('health') || lowerResponse.includes('medic'))
-        domain = 'health';
-    else if (lowerResponse.includes('career') || lowerResponse.includes('job'))
-        domain = 'career';
-    else if (lowerResponse.includes('relation') || lowerResponse.includes('family'))
-        domain = 'relationship';
-    // Generate recommendation
+    // Domain emerges from the response content - we don't pigeonhole into predefined categories
+    // The domain is just a label that describes what the user is talking about
+    const domain = 'general'; // Always use general, let specific risks emerge from analysis
+    // Extract risk features for more nuanced assessment
+    const hasUndoableActions = irreversibleKeywords.some(keyword => lowerResponse.includes(keyword));
+    let timePressure = 'none';
+    if (lowerResponse.includes('urgent') || lowerResponse.includes('deadline'))
+        timePressure = 'high';
+    else if (lowerResponse.includes('soon') || lowerResponse.includes('quickly'))
+        timePressure = 'medium';
+    else if (lowerResponse.includes('eventually') || lowerResponse.includes('long term'))
+        timePressure = 'low';
+    const expertiseGap = lowerResponse.includes('expert') || lowerResponse.includes('professional') ? 0.7 : 0.3;
+    let impactRadius = 'self';
+    if (lowerResponse.includes('systemic') || lowerResponse.includes('society'))
+        impactRadius = 'systemic';
+    else if (lowerResponse.includes('community') || lowerResponse.includes('organization'))
+        impactRadius = 'broad';
+    else if (lowerResponse.includes('family') || lowerResponse.includes('team'))
+        impactRadius = 'limited';
+    const uncertaintyLevel = lowerResponse.includes('uncertain') || lowerResponse.includes('unknown') ? 'high' : 'medium';
+    // Generate recommendation based on risk features
     let recommendation = 'Proceed with standard creative thinking process.';
     if (survivabilityThreatened) {
         recommendation =
@@ -229,50 +240,68 @@ export function assessRuinRisk(problem, technique, userResponse) {
         recommendation =
             '📊 Consider what happens to many attempts over time, not just your single path.';
     }
+    // Calculate confidence based on clarity of risk indicators
+    const confidence = (isIrreversible ? 0.3 : 0) +
+        (survivabilityThreatened ? 0.3 : 0) +
+        (timePressure !== 'none' ? 0.2 : 0) +
+        (impactRadius !== 'self' ? 0.2 : 0);
     return {
         domain,
         isIrreversible,
         survivabilityThreatened,
         ensembleVsTimeAverage,
         recommendation,
+        confidence: Math.min(confidence, 1.0),
+        riskFeatures: {
+            hasUndoableActions,
+            timePressure,
+            expertiseGap,
+            impactRadius,
+            uncertaintyLevel,
+        },
     };
 }
 /**
- * Generate survival constraints based on domain
+ * Generate survival constraints based on risk features
  */
-export function generateSurvivalConstraints(domain) {
-    const constraints = {
-        financial: [
-            'Maintain minimum 6 months emergency fund',
-            'Never risk more than 10% on a single decision',
-            'Ensure ability to meet fixed obligations',
-            'Preserve core income streams',
-        ],
-        health: [
-            'No irreversible procedures without second opinion',
-            'Maintain baseline health metrics',
-            'Ensure access to emergency care',
-            'Preserve ability to recover',
-        ],
-        career: [
-            'Maintain marketable skills',
-            'Preserve professional network',
-            'Keep reputation intact',
-            'Ensure transitional income',
-        ],
-        relationship: [
-            'Preserve trust and communication',
-            'Maintain personal boundaries',
-            'Ensure emotional safety',
-            'Keep support systems intact',
-        ],
-        general: [
-            'Identify what cannot be lost',
-            'Set maximum acceptable loss',
-            'Build in recovery mechanisms',
-            'Maintain optionality',
-        ],
-    };
-    return constraints[domain] || constraints.general;
+export function generateSurvivalConstraints(assessment) {
+    const constraints = [];
+    // Always include fundamental constraints
+    constraints.push('Identify what cannot be lost');
+    constraints.push('Set maximum acceptable loss');
+    // Add constraints based on risk features
+    if (assessment.riskFeatures) {
+        const { hasUndoableActions, timePressure, expertiseGap, impactRadius, uncertaintyLevel } = assessment.riskFeatures;
+        if (hasUndoableActions) {
+            constraints.push('Build in recovery mechanisms');
+            constraints.push('Test with reversible experiments first');
+        }
+        if (timePressure === 'high' || timePressure === 'critical') {
+            constraints.push('Preserve decision-making time');
+            constraints.push('Avoid rushed irreversible choices');
+        }
+        if (expertiseGap > 0.5) {
+            constraints.push('Seek expert validation before commitment');
+            constraints.push('Build learning buffers into timeline');
+        }
+        if (impactRadius === 'broad' || impactRadius === 'systemic') {
+            constraints.push('Consider second-order effects');
+            constraints.push('Maintain stakeholder communication');
+        }
+        if (uncertaintyLevel === 'high') {
+            constraints.push('Maintain optionality');
+            constraints.push('Create multiple contingency plans');
+        }
+    }
+    // Add specific constraints for high-risk situations
+    if (assessment.survivabilityThreatened) {
+        constraints.push('Ensure survival before optimization');
+        constraints.push('Apply barbell strategy (90% safe, 10% speculative)');
+    }
+    if (assessment.isIrreversible) {
+        constraints.push('Document decision rationale thoroughly');
+        constraints.push('Create explicit escape routes');
+    }
+    return [...new Set(constraints)]; // Remove duplicates
 }
 //# sourceMappingURL=prompts.js.map

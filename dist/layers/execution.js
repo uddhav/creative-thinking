@@ -201,14 +201,12 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
         if (requiresRuinCheck(input.technique, allWords)) {
             const ruinPrompt = generateRuinAssessmentPrompt(input.problem, input.technique, input.output);
             ruinRiskAssessment = assessRuinRisk(input.problem, input.technique, input.output);
-            // Detect domain from assessment
-            const domain = ruinRiskAssessment.domain || 'general';
             const inputWithRuin = input;
             inputWithRuin.ruinAssessment = {
                 required: true,
                 prompt: ruinPrompt,
                 assessment: ruinRiskAssessment,
-                survivalConstraints: generateSurvivalConstraints(domain),
+                survivalConstraints: generateSurvivalConstraints(ruinRiskAssessment),
             };
         }
         // Dynamic Risk Discovery Framework

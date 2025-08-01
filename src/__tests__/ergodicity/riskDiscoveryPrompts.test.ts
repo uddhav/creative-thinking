@@ -19,9 +19,9 @@ describe('Risk Discovery Prompts', () => {
         problem: 'Invest retirement savings in crypto',
       });
 
-      expect(prompt).toContain('DOMAIN IDENTIFICATION');
+      expect(prompt).toContain('RISK CHARACTERISTIC ANALYSIS');
       expect(prompt).toContain('Invest retirement savings in crypto');
-      expect(prompt).toContain('Primary Domain');
+      expect(prompt).toContain('Problem Context');
       expect(prompt).toContain('Non-Ergodic Characteristics');
     });
 

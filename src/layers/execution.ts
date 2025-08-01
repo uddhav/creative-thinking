@@ -351,9 +351,6 @@ export async function executeThinkingStep(
       const ruinPrompt = generateRuinAssessmentPrompt(input.problem, input.technique, input.output);
       ruinRiskAssessment = assessRuinRisk(input.problem, input.technique, input.output);
 
-      // Detect domain from assessment
-      const domain = ruinRiskAssessment.domain || 'general';
-
       const inputWithRuin = input as ExecuteThinkingStepInput & {
         ruinAssessment: {
           required: boolean;
@@ -366,7 +363,7 @@ export async function executeThinkingStep(
         required: true,
         prompt: ruinPrompt,
         assessment: ruinRiskAssessment,
-        survivalConstraints: generateSurvivalConstraints(domain),
+        survivalConstraints: generateSurvivalConstraints(ruinRiskAssessment),
       };
     }
 
@@ -415,8 +412,9 @@ export async function executeThinkingStep(
       discoveredRisks = riskDiscovery.getCachedDiscovery(domain);
 
       // Phase 4: Get forced calculations for validation
-      const currentDomainAssessment = session.riskDiscoveryData.domainAssessment || domainAssessment;
-      const forcedCalculations = currentDomainAssessment 
+      const currentDomainAssessment =
+        session.riskDiscoveryData.domainAssessment || domainAssessment;
+      const forcedCalculations = currentDomainAssessment
         ? riskDiscovery.getForcedCalculations(currentDomainAssessment, input.output)
         : {};
 

@@ -189,35 +189,68 @@ describe('Ergodicity Prompts', () => {
       expect(assessment.recommendation).toContain('many attempts');
     });
 
-    it('should identify domain correctly', () => {
-      const financialAssessment = assessRuinRisk('Investment', 'po', 'financial decision');
-      expect(financialAssessment.domain).toBe('financial');
+    it('should extract risk features from context', () => {
+      const financialAssessment = assessRuinRisk(
+        'Investment',
+        'po',
+        'This is an irreversible financial decision that could lead to bankruptcy'
+      );
+      expect(financialAssessment.domain).toBe('general'); // We no longer pigeonhole into domains
+      expect(financialAssessment.isIrreversible).toBe(true);
+      expect(financialAssessment.survivabilityThreatened).toBe(true);
+      expect(financialAssessment.riskFeatures?.hasUndoableActions).toBe(true);
 
-      const healthAssessment = assessRuinRisk('Treatment', 'six_hats', 'medical procedure');
-      expect(healthAssessment.domain).toBe('health');
+      const timeAssessment = assessRuinRisk(
+        'Project',
+        'six_hats',
+        'Need to decide quickly on this urgent deadline'
+      );
+      expect(timeAssessment.domain).toBe('general');
+      expect(timeAssessment.riskFeatures?.timePressure).toBe('high');
 
-      const careerAssessment = assessRuinRisk('Job change', 'scamper', 'career move');
-      expect(careerAssessment.domain).toBe('career');
+      const expertAssessment = assessRuinRisk(
+        'Procedure',
+        'scamper',
+        'Requires expert knowledge and professional guidance'
+      );
+      expect(expertAssessment.domain).toBe('general');
+      expect(expertAssessment.riskFeatures?.expertiseGap).toBeGreaterThan(0.5);
     });
   });
 
   describe('Survival constraints generation', () => {
-    it('should generate financial survival constraints', () => {
-      const constraints = generateSurvivalConstraints('financial');
-      expect(constraints).toContain('Maintain minimum 6 months emergency fund');
-      expect(constraints).toContain('Never risk more than 10% on a single decision');
-    });
-
-    it('should generate health survival constraints', () => {
-      const constraints = generateSurvivalConstraints('health');
-      expect(constraints).toContain('No irreversible procedures without second opinion');
-      expect(constraints).toContain('Preserve ability to recover');
-    });
-
-    it('should provide general constraints for unknown domains', () => {
-      const constraints = generateSurvivalConstraints('unknown');
+    it('should generate constraints based on risk features', () => {
+      const assessment = assessRuinRisk(
+        'Should I invest all my savings?',
+        'scamper',
+        'This is irreversible and could lead to bankruptcy'
+      );
+      const constraints = generateSurvivalConstraints(assessment);
       expect(constraints).toContain('Identify what cannot be lost');
-      expect(constraints).toContain('Maintain optionality');
+      expect(constraints).toContain('Build in recovery mechanisms');
+      expect(constraints).toContain('Ensure survival before optimization');
+    });
+
+    it('should generate constraints for high time pressure', () => {
+      const assessment = assessRuinRisk(
+        'Urgent career decision',
+        'disney_method',
+        'I need to decide quickly about this job offer with a deadline'
+      );
+      const constraints = generateSurvivalConstraints(assessment);
+      expect(constraints).toContain('Preserve decision-making time');
+      expect(constraints).toContain('Avoid rushed irreversible choices');
+    });
+
+    it('should provide base constraints for low-risk situations', () => {
+      const assessment = assessRuinRisk(
+        'What color to paint my room?',
+        'six_hats',
+        'Just considering different paint colors'
+      );
+      const constraints = generateSurvivalConstraints(assessment);
+      expect(constraints).toContain('Identify what cannot be lost');
+      expect(constraints).toContain('Set maximum acceptable loss');
     });
   });
 

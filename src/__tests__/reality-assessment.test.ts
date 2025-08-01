@@ -103,12 +103,12 @@ describe('Reality Assessment', () => {
   });
 
   describe('RealityIntegration', () => {
-    it('should detect domain from problem context', () => {
-      expect(RealityIntegration.detectDomain('tax loss harvesting strategies')).toBe('finance');
-      expect(RealityIntegration.detectDomain('medical treatment options')).toBe('healthcare');
-      expect(RealityIntegration.detectDomain('software architecture design')).toBe('technology');
-      expect(RealityIntegration.detectDomain('SEC compliance requirements')).toBe('regulatory');
-      expect(RealityIntegration.detectDomain('creative writing techniques')).toBeUndefined();
+    it('should detect risk indicators from problem context', () => {
+      expect(RealityIntegration.detectRiskIndicators('SEC compliance requirements')).toContain('regulatory');
+      expect(RealityIntegration.detectRiskIndicators('irreversible decision')).toContain('irreversible');
+      expect(RealityIntegration.detectRiskIndicators('requires professional expertise')).toContain('expertise');
+      expect(RealityIntegration.detectRiskIndicators('systemic infrastructure change')).toContain('systemic');
+      expect(RealityIntegration.detectRiskIndicators('creative writing techniques')).toEqual([]);
     });
 
     it('should enhance output with reality assessment', () => {

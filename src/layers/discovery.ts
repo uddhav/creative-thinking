@@ -686,14 +686,7 @@ function generateSearchableFactors(
 }
 
 function inferDomain(problem: string, context?: string): string {
-  const fullText = `${problem} ${context || ''}`.toLowerCase();
-
-  if (fullText.match(/money|invest|financial|stock|crypto|trade|budget|cost/)) return 'financial';
-  if (fullText.match(/health|medical|surgery|treatment|doctor|wellness|fitness/)) return 'health';
-  if (fullText.match(/career|job|work|employment|profession|promotion/)) return 'career';
-  if (fullText.match(/relationship|marriage|family|friend|partner|social/)) return 'relationship';
-  if (fullText.match(/legal|lawsuit|contract|agreement|court|lawyer/)) return 'legal';
-  if (fullText.match(/business|startup|company|market|customer|product/)) return 'business';
-
+  // Domain is always general - we don't pigeonhole into categories
+  // The specific risk characteristics will emerge from the analysis
   return 'general';
 }
