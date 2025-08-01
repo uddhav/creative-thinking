@@ -135,6 +135,30 @@ export declare class RuinRiskDiscovery {
      */
     getForcedCalculations(domainAssessment: DomainAssessment, action: string): Record<string, string>;
     /**
+     * Extract entities (people, places, organizations) from NLP document
+     */
+    private extractEntities;
+    /**
+     * Extract topics and important nouns from NLP document
+     */
+    private extractTopics;
+    /**
+     * Extract action verbs from NLP document
+     */
+    private extractActionVerbs;
+    /**
+     * Extract temporal expressions from NLP document
+     */
+    private extractTemporalExpressions;
+    /**
+     * Extract constraints and requirements from NLP document
+     */
+    private extractConstraints;
+    /**
+     * Extract relationships between entities from NLP document
+     */
+    private extractRelationships;
+    /**
      * Analyze text using Compromise NLP for generic risk features
      */
     private analyzeWithNLP;

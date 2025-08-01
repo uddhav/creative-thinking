@@ -10,6 +10,10 @@
  */
 
 import nlp from 'compromise';
+import type { CompromiseDoc, CompromiseLibrary } from './nlp-types.js';
+
+// Type assertion for the nlp library
+const nlpTyped = nlp as CompromiseLibrary;
 
 /**
  * Risk severity levels based on generic characteristics
@@ -190,6 +194,14 @@ export class RuinRiskDiscovery {
    * Process LLM's domain assessment response
    */
   processDomainAssessment(response: string): DomainAssessment {
+    // Cache the NLP doc to avoid reprocessing
+    let nlpDoc: CompromiseDoc | undefined;
+    try {
+      nlpDoc = nlpTyped(response) as CompromiseDoc;
+    } catch (error) {
+      console.error('Failed to parse response with NLP:', error);
+    }
+
     // Use NLP to analyze the response
     const nlpAnalysis = this.analyzeWithNLP(response);
 
@@ -201,7 +213,7 @@ export class RuinRiskDiscovery {
 
     return {
       primaryDomain,
-      domainCharacteristics: this.extractCharacteristics(response),
+      domainCharacteristics: this.extractCharacteristics(response, nlpDoc),
       confidence: this.assessConfidence(response, riskFeatures),
       discoveredPatterns: this.extractPatterns(response),
       nlpAnalysis,
@@ -324,40 +336,40 @@ export class RuinRiskDiscovery {
   // Private helper methods
 
   /**
-   * Analyze text using Compromise NLP for generic risk features
+   * Extract entities (people, places, organizations) from NLP document
    */
-  private analyzeWithNLP(text: string): NonNullable<DomainAssessment['nlpAnalysis']> {
-    const doc = nlp(text);
-    // Type-safe compromise methods with explicit returns
-    const docAny = doc as {
-      organizations?: () => { out: (format: string) => string[] };
-      people?: () => { out: (format: string) => string[] };
-      places?: () => { out: (format: string) => string[] };
-      topics?: () => { out: (format: string) => string[] };
-      dates?: () => { out: (format: string) => string[] };
-      adjectives?: () => { out: (format: string) => string[] };
-    };
-
-    // Extract entities (people, places, organizations)
+  private extractEntities(doc: CompromiseDoc): string[] {
     const entities: string[] = [];
 
     // Organizations
-    const orgs = docAny.organizations ? docAny.organizations().out('array') : [];
-    entities.push(...orgs);
+    if (doc.organizations) {
+      const orgs = doc.organizations().out('array');
+      entities.push(...orgs);
+    }
 
     // People
-    const people = docAny.people ? docAny.people().out('array') : [];
-    entities.push(...people);
+    if (doc.people) {
+      const people = doc.people().out('array');
+      entities.push(...people);
+    }
 
     // Places
-    const places = docAny.places ? docAny.places().out('array') : [];
-    entities.push(...places);
+    if (doc.places) {
+      const places = doc.places().out('array');
+      entities.push(...places);
+    }
 
-    // Topics (main subjects)
-    const topics = docAny.topics ? docAny.topics().out('array') : [];
+    return [...new Set(entities)];
+  }
+
+  /**
+   * Extract topics and important nouns from NLP document
+   */
+  private extractTopics(doc: CompromiseDoc): string[] {
+    const topics = doc.topics ? doc.topics().out('array') : [];
 
     // Important nouns
-    const nouns = (doc.nouns().out('array') || []) as string[];
+    const nouns = doc.nouns ? doc.nouns().out('array') : [];
     const importantNouns = nouns.filter(
       n =>
         n.length > 3 &&
@@ -365,64 +377,73 @@ export class RuinRiskDiscovery {
     );
     topics.push(...importantNouns.slice(0, 10)); // Top 10 important nouns
 
-    // Verbs (actions)
-    const verbs = (doc.verbs().out('array') || []) as string[];
+    return [...new Set(topics)];
+  }
+
+  /**
+   * Extract action verbs from NLP document
+   */
+  private extractActionVerbs(doc: CompromiseDoc): string[] {
+    const verbs = doc.verbs ? doc.verbs().out('array') : [];
     const actionVerbs = verbs
       .map(v => {
-        const verbDoc = nlp(v).verbs() as {
-          toInfinitive?: () => { out: (format: string) => string };
-        };
-        return verbDoc.toInfinitive ? verbDoc.toInfinitive().out('text') : v;
+        const verbDoc = nlpTyped(v) as CompromiseDoc;
+        if (verbDoc.verbs) {
+          const vDoc = verbDoc.verbs();
+          return vDoc.out('text');
+        }
+        return v;
       })
       .filter(v => v && v.length > 0);
 
-    // Temporal expressions
+    return [...new Set(actionVerbs)];
+  }
+
+  /**
+   * Extract temporal expressions from NLP document
+   */
+  private extractTemporalExpressions(doc: CompromiseDoc): string[] {
     const temporalExpressions: string[] = [];
-    const dates = docAny.dates ? docAny.dates().out('array') : [];
-    const durations = (doc.match('#Duration').out('array') || []) as string[];
+    const dates = doc.dates ? doc.dates().out('array') : [];
+    const durations = doc.match('#Duration').out('array');
     temporalExpressions.push(...dates, ...durations);
 
-    // Constraints (must, cannot, should not, etc.)
+    return [...new Set(temporalExpressions)];
+  }
+
+  /**
+   * Extract constraints and requirements from NLP document
+   */
+  private extractConstraints(doc: CompromiseDoc): string[] {
     const constraints: string[] = [];
-    const mustStatements = doc
-      .match('(must|cannot|should not|never) #Verb')
-      .out('array') as string[];
-    const requirements = doc.match('(require|need|necessary) #Noun').out('array') as string[];
+    const mustStatements = doc.match('(must|cannot|should not|never) #Verb').out('array');
+    const requirements = doc.match('(require|need|necessary) #Noun').out('array');
     constraints.push(...mustStatements, ...requirements);
 
-    // Relationships (X affects Y, A depends on B, etc.)
+    return [...new Set(constraints)];
+  }
+
+  /**
+   * Extract relationships between entities from NLP document
+   */
+  private extractRelationships(doc: CompromiseDoc): Array<{ subject: string; relation: string; object: string }> {
     const relationships: Array<{ subject: string; relation: string; object: string }> = [];
 
     // Extract subject-verb-object patterns with multiple verb patterns
     const relationVerbs = [
-      'affect',
-      'affects',
-      'impact',
-      'impacts',
-      'influence',
-      'influences',
-      'depend on',
-      'depends on',
-      'rely on',
-      'relies on',
-      'cause',
-      'causes',
-      'lead to',
-      'leads to',
-      'result in',
-      'results in',
-      'trigger',
-      'triggers',
+      'affect', 'affects', 'impact', 'impacts', 'influence', 'influences',
+      'depend on', 'depends on', 'rely on', 'relies on', 'cause', 'causes',
+      'lead to', 'leads to', 'result in', 'results in', 'trigger', 'triggers',
     ];
 
     // Build match patterns for each verb - handle multi-word nouns
     relationVerbs.forEach(verb => {
       // Try different noun patterns to catch compound nouns like "marketing team"
       const patterns = [
-        ...(doc
+        ...doc
           .match(`#Determiner? #Adjective? #Noun+ ${verb} #Determiner? #Adjective? #Noun+`)
-          .out('array') as string[]),
-        ...(doc.match(`#Noun ${verb} #Noun`).out('array') as string[]),
+          .out('array'),
+        ...doc.match(`#Noun ${verb} #Noun`).out('array'),
       ];
 
       patterns.forEach(pattern => {
@@ -455,7 +476,7 @@ export class RuinRiskDiscovery {
     });
 
     // Also check for "X which Y" or "X that Y" patterns
-    const whichPatterns = doc.match('#Noun which #Verb #Noun').out('array') as string[];
+    const whichPatterns = doc.match('#Noun which #Verb #Noun').out('array');
     whichPatterns.forEach(pattern => {
       const words = pattern.split(/\s+/);
       if (words.length >= 4) {
@@ -467,14 +488,49 @@ export class RuinRiskDiscovery {
       }
     });
 
-    return {
-      entities: [...new Set(entities)],
-      topics: [...new Set(topics)],
-      verbs: [...new Set(actionVerbs)],
-      temporalExpressions: [...new Set(temporalExpressions)],
-      constraints: [...new Set(constraints)],
-      relationships,
-    };
+    return relationships;
+  }
+
+  /**
+   * Analyze text using Compromise NLP for generic risk features
+   */
+  private analyzeWithNLP(text: string): NonNullable<DomainAssessment['nlpAnalysis']> {
+    try {
+      // Validate input
+      if (!text || text.length > 10000) {
+        throw new Error('Text input is empty or too large (max 10,000 characters)');
+      }
+
+      const doc = nlpTyped(text) as CompromiseDoc;
+
+      // Use helper methods to extract different types of information
+      const entities = this.extractEntities(doc);
+      const topics = this.extractTopics(doc);
+      const verbs = this.extractActionVerbs(doc);
+      const temporalExpressions = this.extractTemporalExpressions(doc);
+      const constraints = this.extractConstraints(doc);
+      const relationships = this.extractRelationships(doc);
+
+      return {
+        entities,
+        topics,
+        verbs,
+        temporalExpressions,
+        constraints,
+        relationships,
+      };
+    } catch (error) {
+      // Return empty analysis on error rather than crashing
+      console.error('NLP analysis failed:', error);
+      return {
+        entities: [],
+        topics: [],
+        verbs: [],
+        temporalExpressions: [],
+        constraints: [],
+        relationships: [],
+      };
+    }
   }
 
   /**
@@ -512,6 +568,7 @@ export class RuinRiskDiscovery {
    * Extract domain from LLM's description without categorization
    */
   private extractDomainFromDescription(response: string): string {
+    try {
     // Look for explicit domain mentions
     const domainPatterns = [
       /this (?:is|involves?|relates to|concerns?)(?: a| an| the)? ([^.!?]+) (?:domain|area|field|decision|problem)/i,
@@ -537,18 +594,15 @@ export class RuinRiskDiscovery {
 
     // If no explicit domain, extract the main topic from the response
     const firstSentence = response.split(/[.!?]/)[0] || '';
-    const doc = nlp(firstSentence);
-    const docTyped = doc as {
-      topics?: () => { out: (format: string) => string[] };
-    };
-    const topics = docTyped.topics ? docTyped.topics().out('array') : [];
+    const doc = nlpTyped(firstSentence) as CompromiseDoc;
+    const topics = doc.topics ? doc.topics().out('array') : [];
 
     if (topics.length > 0) {
       return topics[0].toLowerCase();
     }
 
     // Ultimate fallback - extract the main noun phrase
-    const nouns = doc.nouns().out('array') as string[];
+    const nouns = doc.nouns ? doc.nouns().out('array') : [];
     const significantNoun = nouns.find(
       n =>
         n.length > 4 &&
@@ -558,6 +612,10 @@ export class RuinRiskDiscovery {
     );
 
     return significantNoun ? significantNoun.toLowerCase() : 'unspecified';
+    } catch (error) {
+      console.error('Failed to extract domain from response:', error);
+      return 'unspecified';
+    }
   }
 
   /**
@@ -786,7 +844,7 @@ export class RuinRiskDiscovery {
     }
 
     // Use NLP to extract meaningful domain label
-    const doc = nlp(response);
+    const doc = nlpTyped(response) as CompromiseDoc;
 
     // Extract nouns that could represent the domain
     const nouns = (doc.nouns ? doc.nouns().out('array') : []) as string[];
@@ -799,7 +857,7 @@ export class RuinRiskDiscovery {
       .filter(word => word.length > 3)
       .filter(word => {
         // Use NLP to filter out generic terms
-        const wordDoc = nlp(word);
+        const wordDoc = nlpTyped(word) as CompromiseDoc;
         const isGeneric =
           wordDoc.has('#Determiner') || wordDoc.has('#Preposition') || wordDoc.has('#Conjunction');
         return !isGeneric;
@@ -809,9 +867,9 @@ export class RuinRiskDiscovery {
     return meaningfulWords[0]?.toLowerCase() || 'general';
   }
 
-  private extractCharacteristics(response: string): DomainAssessment['domainCharacteristics'] {
+  private extractCharacteristics(response: string, nlpDoc?: CompromiseDoc): DomainAssessment['domainCharacteristics'] {
     const lower = response.toLowerCase();
-    const doc = nlp(response);
+    const doc = nlpDoc || (nlpTyped(response) as CompromiseDoc);
 
     // Extract temporal expressions for better time horizon detection
     const docTyped = doc as {
