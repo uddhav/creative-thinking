@@ -5,6 +5,12 @@
 import type { PathMemory } from '../ergodicity/index.js';
 import type { ErgodicityManager } from '../ergodicity/index.js';
 import type { EarlyWarningState, EscapeProtocol } from '../ergodicity/earlyWarning/types.js';
+import type {
+  DomainAssessment,
+  RiskDiscovery,
+  RuinScenario,
+  ValidationResult,
+} from '../core/RuinRiskDiscovery.js';
 
 // Technique types
 export type LateralTechnique =
@@ -111,6 +117,13 @@ export interface SessionData {
   ergodicityManager?: ErgodicityManager;
   earlyWarningState?: EarlyWarningState;
   escapeRecommendation?: EscapeProtocol;
+  riskDiscoveryData?: {
+    domainAssessment?: DomainAssessment;
+    risks?: RiskDiscovery;
+    ruinScenarios?: RuinScenario[];
+    constraints?: string[];
+    validations?: ValidationResult[];
+  };
 }
 
 // Execution input type

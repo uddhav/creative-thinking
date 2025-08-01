@@ -42,6 +42,17 @@ import type {
   OptionGenerationResult,
   SessionData as OptionSessionData,
 } from '../ergodicity/optionGeneration/types.js';
+import { RuinRiskDiscovery } from '../core/RuinRiskDiscovery.js';
+import type {
+  DomainAssessment,
+  RiskDiscovery,
+  RuinScenario,
+  ValidationResult,
+} from '../core/RuinRiskDiscovery.js';
+import { generateConstraintViolationFeedback } from '../ergodicity/riskDiscoveryPrompts.js';
+
+// Import the correct type from prompts
+import type { RuinRiskAssessment } from '../ergodicity/prompts.js';
 
 // Type for the result from ErgodicityManager.recordThinkingStep
 interface ErgodicityResult {
@@ -124,8 +135,16 @@ export async function executeThinkingStep(
               type: 'text',
               text: JSON.stringify(
                 {
-                  error: 'Invalid planId',
-                  message: `Plan ${input.planId} not found. Please create a plan first using plan_thinking_session.`,
+                  error: 'Plan not found',
+                  message: `Plan '${input.planId}' does not exist.`,
+                  guidance: 'Please follow the correct workflow:',
+                  workflow: [
+                    '1. Call discover_techniques to analyze your problem',
+                    '2. Call plan_thinking_session to create a plan',
+                    '3. Call execute_thinking_step with the planId from step 2',
+                  ],
+                  nextStep:
+                    'Start with discover_techniques to find suitable techniques for your problem.',
                 },
                 null,
                 2
@@ -326,9 +345,11 @@ export async function executeThinkingStep(
     const problemWords = input.problem.toLowerCase().split(/\s+/);
     const allWords = [...outputWords, ...problemWords];
 
+    let ruinRiskAssessment: RuinRiskAssessment | undefined = undefined;
+
     if (requiresRuinCheck(input.technique, allWords)) {
       const ruinPrompt = generateRuinAssessmentPrompt(input.problem, input.technique, input.output);
-      const ruinRiskAssessment = assessRuinRisk(input.problem, input.technique, input.output);
+      ruinRiskAssessment = assessRuinRisk(input.problem, input.technique, input.output);
 
       // Detect domain from assessment
       const domain = ruinRiskAssessment.domain || 'general';
@@ -346,6 +367,132 @@ export async function executeThinkingStep(
         prompt: ruinPrompt,
         assessment: ruinRiskAssessment,
         survivalConstraints: generateSurvivalConstraints(domain),
+      };
+    }
+
+    // Dynamic Risk Discovery Framework
+    // Check if this action requires discovery-based validation
+    const riskDiscovery = new RuinRiskDiscovery();
+    let domainAssessment: DomainAssessment | undefined;
+    let discoveredRisks: RiskDiscovery | undefined;
+    const _ruinScenarios: RuinScenario[] = [];
+    let validation: ValidationResult | undefined;
+
+    // Trigger discovery for high-risk indicators
+    const needsDiscovery =
+      requiresRuinCheck(input.technique, allWords) ||
+      input.output.toLowerCase().includes('invest') ||
+      input.output.toLowerCase().includes('all') ||
+      input.output.toLowerCase().includes('commit') ||
+      input.output.toLowerCase().includes('permanent');
+
+    if (needsDiscovery) {
+      // Store discovery phases in session for tracking
+      if (!session.riskDiscoveryData) {
+        session.riskDiscoveryData = {
+          domainAssessment: undefined,
+          risks: undefined,
+          ruinScenarios: [],
+          constraints: [],
+          validations: [],
+        };
+      }
+
+      // Phase 1: Get discovery prompts (for future use)
+      // const discoveryPrompts = riskDiscovery.getDiscoveryPrompts(input.problem, input.output);
+
+      // Phase 2: Force domain identification if not cached
+      const cachedDomain = session.riskDiscoveryData.domainAssessment?.primaryDomain;
+      if (!cachedDomain) {
+        // In a real implementation, this would prompt the LLM
+        // For now, we'll use the existing domain detection
+        const detectedDomain = ruinRiskAssessment?.domain || 'general';
+        domainAssessment = {
+          primaryDomain: detectedDomain,
+          domainCharacteristics: {
+            hasIrreversibleActions: detectedDomain === 'financial' || detectedDomain === 'health',
+            hasAbsorbingBarriers: detectedDomain === 'financial' || detectedDomain === 'career',
+            allowsRecovery: detectedDomain !== 'health' && detectedDomain !== 'financial',
+            timeHorizon: detectedDomain === 'financial' ? 'long' : 'medium',
+          },
+          confidence: 0.8,
+        };
+        session.riskDiscoveryData.domainAssessment = domainAssessment;
+      }
+
+      // Phase 3: Check if we have cached discovery for this domain
+      const domain = session.riskDiscoveryData.domainAssessment?.primaryDomain || 'general';
+      discoveredRisks = riskDiscovery.getCachedDiscovery(domain);
+
+      // Phase 4: Get forced calculations for validation
+      const forcedCalculations = riskDiscovery.getForcedCalculations(domain, input.output);
+
+      // Phase 5: Validate against discovered risks if we have them
+      if (discoveredRisks && session.riskDiscoveryData.ruinScenarios) {
+        validation = riskDiscovery.validateAgainstDiscoveredRisks(
+          input.output,
+          discoveredRisks,
+          session.riskDiscoveryData.ruinScenarios
+        );
+
+        // If validation fails, we need to block or warn
+        if (!validation.isValid && validation.riskLevel === 'unacceptable') {
+          // Log the violation
+          if (process.env.DISABLE_THOUGHT_LOGGING !== 'true') {
+            process.stderr.write(
+              '\n' +
+                generateConstraintViolationFeedback(input.output, validation.violatedConstraints, {
+                  domain,
+                  risks: discoveredRisks.identifiedRisks.map(r => r.risk),
+                  ruinScenarios: session.riskDiscoveryData.ruinScenarios.length,
+                  worstCase: discoveredRisks.identifiedRisks.find(
+                    r => r.impactMagnitude === 'catastrophic'
+                  )?.risk,
+                }) +
+                '\n'
+            );
+          }
+
+          // Return early with error response
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(
+                  {
+                    error: 'Risk validation failed',
+                    message: 'Your recommendation violates discovered safety constraints',
+                    validation: validation,
+                    discoveredConstraints: validation.violatedConstraints,
+                    recommendation:
+                      'Please revise your recommendation to respect the safety limits you discovered',
+                    educationalFeedback: validation.educationalFeedback,
+                  },
+                  null,
+                  2
+                ),
+              },
+            ],
+            isError: true,
+          };
+        }
+      }
+
+      // Add discovery data to input for visibility
+      const inputWithDiscovery = input as ExecuteThinkingStepInput & {
+        riskDiscoveryData?: {
+          domainAssessment?: DomainAssessment;
+          discoveredRisks?: RiskDiscovery;
+          validation?: ValidationResult;
+          forcedCalculations?: Record<string, string>;
+        };
+      };
+
+      inputWithDiscovery.riskDiscoveryData = {
+        domainAssessment,
+        discoveredRisks,
+        validation,
+        forcedCalculations,
       };
     }
 

@@ -102,6 +102,32 @@ export class ResponseBuilder {
       reasoning: this.buildReasoningString(output),
       suggestedWorkflow: this.buildSuggestedWorkflow(output),
       nextStepGuidance: this.buildNextStepGuidance(output),
+      // Include all available techniques for LLM reference
+      availableTechniques: [
+        'six_hats',
+        'po',
+        'random_entry',
+        'scamper',
+        'concept_extraction',
+        'yes_and',
+        'design_thinking',
+        'triz',
+        'neural_state',
+        'temporal_work',
+        'cross_cultural',
+        'collective_intel',
+        'disney_method',
+        'nine_windows',
+      ],
+      workflowReminder: {
+        currentStep: 1,
+        totalSteps: 3,
+        steps: [
+          '1. discover_techniques (current) - Analyze problem and find suitable techniques',
+          '2. plan_thinking_session (next) - Create a structured plan',
+          '3. execute_thinking_step - Work through the plan step by step',
+        ],
+      },
       // Include other fields that might be expected
       problemCategory: output.problemCategory,
       warnings: output.warnings,
@@ -178,8 +204,19 @@ export class ResponseBuilder {
               },
               guidance:
                 'Continue calling execute_thinking_step for each step, incrementing currentStep until nextStepNeeded is false. Note: currentStep uses cumulative numbering across all techniques (e.g., if six_hats has 7 steps, temporal_work starts at step 8).',
+              important:
+                'Always use the planId returned from this response. Do not skip this step or create your own planId.',
             }
           : undefined,
+      workflowReminder: {
+        currentStep: 2,
+        totalSteps: 3,
+        steps: [
+          '1. discover_techniques (completed) - Found suitable techniques',
+          '2. plan_thinking_session (current) - Created structured plan',
+          '3. execute_thinking_step (next) - Execute the plan step by step',
+        ],
+      },
     };
 
     return this.buildSuccessResponse(transformedOutput);

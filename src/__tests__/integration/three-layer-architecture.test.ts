@@ -397,11 +397,19 @@ describe('Three-Layer Architecture', () => {
       });
 
       expect(execResult.isError).toBe(true);
-      const error = JSON.parse(execResult.content[0].text) as { error: string; message: string };
-      expect(error.error).toBe('Invalid planId');
+      const error = JSON.parse(execResult.content[0].text) as {
+        error: string;
+        message: string;
+        guidance: string;
+        workflow: string[];
+      };
+      expect(error.error).toBe('Plan not found');
 
       // Should provide helpful guidance
-      expect(error.message).toContain('create a plan first');
+      expect(error.message).toContain('does not exist');
+      expect(error.guidance).toBe('Please follow the correct workflow:');
+      expect(error.workflow).toBeDefined();
+      expect(error.workflow.length).toBe(3);
     });
 
     it('should validate layer requirements', () => {

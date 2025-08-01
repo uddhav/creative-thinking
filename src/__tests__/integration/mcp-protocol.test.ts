@@ -111,7 +111,7 @@ describe('MCP Protocol Integration', () => {
       expect(data.createdAt).toBeDefined();
     });
 
-    it('should handle unknown techniques with generic steps', () => {
+    it('should reject unknown techniques', () => {
       const input: PlanThinkingSessionInput = {
         problem: 'Test problem',
         techniques: ['invalid_technique' as LateralTechnique],
@@ -119,12 +119,13 @@ describe('MCP Protocol Integration', () => {
 
       const result = server.planThinkingSession(input);
 
-      // The server creates generic steps for unknown techniques
-      expect(result.isError).toBeFalsy();
-      const data = parseServerResponse<PlanThinkingSessionResponse>(result);
-      expect(data.workflow).toBeDefined();
-      expect(data.workflow.length).toBe(5); // Default is 5 steps
-      expect(data.workflow[0].description).toContain('invalid_technique step 1');
+      // The server should reject invalid techniques
+      expect(result.isError).toBeTruthy();
+      const errorData = JSON.parse(result.content[0]?.text || '{}') as {
+        error: { message: string };
+      };
+      expect(errorData.error.message).toContain("Invalid technique: 'invalid_technique'");
+      expect(errorData.error.message).toContain('Valid techniques are:');
     });
 
     it('should handle option generation request', () => {
@@ -191,7 +192,7 @@ describe('MCP Protocol Integration', () => {
 
       expect(result.isError).toBe(true);
       const errorData = JSON.parse(result.content[0].text) as { error: string };
-      expect(errorData.error).toBe('Invalid planId');
+      expect(errorData.error).toBe('Plan not found');
     });
 
     it('should complete workflow and generate insights', async () => {
