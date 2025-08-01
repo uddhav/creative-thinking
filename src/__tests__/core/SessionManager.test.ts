@@ -108,7 +108,6 @@ describe('SessionManager', () => {
       // The cleanup method is private, but we can trigger it via the interval
       manager['cleanupOldSessions']();
 
-      // eslint-disable-next-line no-console
       expect(console.error).toHaveBeenCalledWith('[Memory Metrics]', expect.any(Object));
     });
   });
@@ -351,7 +350,6 @@ describe('SessionManager', () => {
       manager.createSession(mockSession);
       manager.createSession(mockSession); // Triggers eviction
 
-      // eslint-disable-next-line no-console
       expect(console.error).toHaveBeenCalledWith(
         expect.stringContaining(`[Session Eviction] Evicted session ${id1} (LRU)`)
       );
@@ -394,7 +392,6 @@ describe('SessionManager', () => {
       // Trigger memory logging
       manager['logMemoryMetrics']();
 
-      // eslint-disable-next-line no-console
       expect(console.error).toHaveBeenCalledWith(
         '[Memory Metrics]',
         expect.objectContaining({
@@ -444,7 +441,6 @@ describe('SessionManager', () => {
 
       manager['logMemoryMetrics']();
 
-      // eslint-disable-next-line no-console
       expect(console.error).toHaveBeenCalledWith(
         '[Memory Metrics]',
         expect.objectContaining({
@@ -484,7 +480,7 @@ describe('SessionManager', () => {
       manager['logMemoryMetrics']();
 
       // Should estimate size based on JSON stringification
-      // eslint-disable-next-line no-console
+
       expect(console.error).toHaveBeenCalledWith(
         '[Memory Metrics]',
         expect.objectContaining({
@@ -516,7 +512,6 @@ describe('SessionManager', () => {
 
       manager['logMemoryMetrics']();
 
-      // eslint-disable-next-line no-console
       expect(console.error).toHaveBeenCalledWith('[Memory Usage] Triggering garbage collection...');
       expect(global.gc).toHaveBeenCalled();
 

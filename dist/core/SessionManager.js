@@ -28,8 +28,7 @@ export class SessionManager {
             gcThreshold: MEMORY_THRESHOLD_FOR_GC,
             enableGC: true,
             onGCTriggered: () => {
-                // eslint-disable-next-line no-console
-                console.log('[Memory Usage] Triggering garbage collection...');
+                console.error('[Memory Usage] Triggering garbage collection...');
             },
         });
         this.startSessionCleanup();
@@ -111,13 +110,11 @@ export class SessionManager {
                 this.currentSessionId = null;
             }
             if (this.config.enableMemoryMonitoring) {
-                // eslint-disable-next-line no-console
-                console.log(`[Session Eviction] Evicted session ${sessionId} (LRU)`);
+                console.error(`[Session Eviction] Evicted session ${sessionId} (LRU)`);
             }
         }
         if (this.config.enableMemoryMonitoring) {
-            // eslint-disable-next-line no-console
-            console.log(`[Memory Management] Sessions after eviction: ${this.sessions.size}/${this.config.maxSessions}`);
+            console.error(`[Memory Management] Sessions after eviction: ${this.sessions.size}/${this.config.maxSessions}`);
         }
     }
     /**
@@ -134,8 +131,7 @@ export class SessionManager {
         const sessionSizeKB = Math.round(totalSessionSize / 1024);
         const averageSizeKB = this.sessions.size > 0 ? Math.round(sessionSizeKB / this.sessions.size) : 0;
         // Log in the format expected by tests
-        // eslint-disable-next-line no-console
-        console.log('[Memory Metrics]', {
+        console.error('[Memory Metrics]', {
             timestamp: new Date().toISOString(),
             process: {
                 heapUsed: `${heapUsedMB}MB`,
