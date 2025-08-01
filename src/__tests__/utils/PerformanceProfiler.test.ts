@@ -160,7 +160,7 @@ describe('PerformanceProfiler', () => {
         }
         return sum;
       });
-      
+
       profiler.measureSync('op2', () => {
         let sum = 0;
         for (let i = 0; i < 50000; i++) {
@@ -168,7 +168,7 @@ describe('PerformanceProfiler', () => {
         }
         return sum;
       });
-      
+
       profiler.measureSync('op3', () => {
         let sum = 0;
         for (let i = 0; i < 500; i++) {
