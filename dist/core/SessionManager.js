@@ -5,6 +5,7 @@
 import { randomUUID } from 'crypto';
 import { createAdapter, getDefaultConfig } from '../persistence/factory.js';
 import { MemoryManager } from './MemoryManager.js';
+import { SessionError, PersistenceError, ErrorCode } from '../errors/types.js';
 // Constants for memory management
 const MEMORY_THRESHOLD_FOR_GC = 0.8; // Trigger garbage collection when heap usage exceeds 80%
 export class SessionManager {
@@ -226,11 +227,11 @@ export class SessionManager {
     // Persistence operations
     async saveSessionToPersistence(sessionId) {
         if (!this.persistenceAdapter) {
-            throw new Error('Persistence not available');
+            throw new PersistenceError(ErrorCode.PERSISTENCE_NOT_AVAILABLE, 'Persistence adapter is not available', 'saveSession');
         }
         const session = this.sessions.get(sessionId);
         if (!session) {
-            throw new Error('Session not found');
+            throw new SessionError(ErrorCode.SESSION_NOT_FOUND, `Session ${sessionId} not found`, sessionId);
         }
         // Convert SessionData to SessionState for persistence
         const sessionState = this.convertToSessionState(sessionId, session);
@@ -238,11 +239,11 @@ export class SessionManager {
     }
     async loadSessionFromPersistence(sessionId) {
         if (!this.persistenceAdapter) {
-            throw new Error('Persistence not available');
+            throw new PersistenceError(ErrorCode.PERSISTENCE_NOT_AVAILABLE, 'Persistence adapter is not available', 'loadSession');
         }
         const sessionState = await this.persistenceAdapter.load(sessionId);
         if (!sessionState) {
-            throw new Error('Session not found');
+            throw new SessionError(ErrorCode.SESSION_NOT_FOUND, `Session ${sessionId} not found in persistence`, sessionId);
         }
         const session = this.convertFromSessionState(sessionState);
         this.sessions.set(sessionId, session);
@@ -251,7 +252,7 @@ export class SessionManager {
     }
     async listPersistedSessions(options) {
         if (!this.persistenceAdapter) {
-            throw new Error('Persistence not available');
+            throw new PersistenceError(ErrorCode.PERSISTENCE_NOT_AVAILABLE, 'Persistence adapter is not available', 'listPersistedSessions');
         }
         // The adapter returns metadata, we need to load full sessions
         const metadata = await this.persistenceAdapter.list(options);
@@ -274,7 +275,7 @@ export class SessionManager {
     }
     async deletePersistedSession(sessionId) {
         if (!this.persistenceAdapter) {
-            throw new Error('Persistence not available');
+            throw new PersistenceError(ErrorCode.PERSISTENCE_NOT_AVAILABLE, 'Persistence adapter is not available', 'deleteSession');
         }
         await this.persistenceAdapter.delete(sessionId);
     }

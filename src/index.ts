@@ -34,12 +34,7 @@ import type {
   Tool,
 } from './types/index.js';
 import type { DiscoverTechniquesInput, PlanThinkingSessionInput } from './types/planning.js';
-import { 
-  CreativeThinkingError, 
-  ErrorCode, 
-  SessionError, 
-  ValidationError 
-} from './errors/types.js';
+import { CreativeThinkingError, ErrorCode, SessionError, ValidationError } from './errors/types.js';
 
 // Discovery and planning logic
 import { discoverTechniques } from './layers/discovery.js';
@@ -310,12 +305,9 @@ export class LateralThinkingServer {
   private async handleSaveOperation() {
     const currentSessionId = this.sessionManager.getCurrentSessionId();
     if (!currentSessionId) {
-      throw new SessionError(
-        ErrorCode.SESSION_NOT_FOUND,
-        'No active session to save',
-        undefined,
-        { operation: 'save' }
-      );
+      throw new SessionError(ErrorCode.SESSION_NOT_FOUND, 'No active session to save', undefined, {
+        operation: 'save',
+      });
     }
 
     await this.sessionManager.saveSessionToPersistence(currentSessionId);
@@ -599,12 +591,9 @@ server.setRequestHandler(CallToolRequestSchema, async request => {
         break;
 
       default:
-        throw new ValidationError(
-          ErrorCode.INVALID_INPUT,
-          `Unknown tool: ${name}`,
-          'toolName',
-          { providedTool: name }
-        );
+        throw new ValidationError(ErrorCode.INVALID_INPUT, `Unknown tool: ${name}`, 'toolName', {
+          providedTool: name,
+        });
     }
 
     // MCP expects the content array directly

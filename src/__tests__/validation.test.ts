@@ -102,7 +102,7 @@ describe('Input Validation', () => {
       const result = await server.processLateralThinking(input);
       // Session operations require persistence, so they should fail gracefully
       expect(result.isError).toBe(true);
-      const errorResponse = JSON.parse(result.content[0].text);
+      const errorResponse = JSON.parse(result.content[0].text) as { error: { code: string } };
       expect(errorResponse.error.code).toBe('PERSISTENCE_NOT_AVAILABLE');
     });
 
@@ -168,7 +168,7 @@ describe('Input Validation', () => {
       // Session operations require persistence, but validation should pass
       // The error should be about persistence, not validation
       expect(result.isError).toBe(true);
-      const errorResponse = JSON.parse(result.content[0].text);
+      const errorResponse = JSON.parse(result.content[0].text) as { error: { code: string } };
       expect(errorResponse.error.code).toBe('PERSISTENCE_NOT_AVAILABLE');
       // Importantly, it should NOT complain about missing technique/problem fields
       expect(result.content[0].text).not.toContain('Invalid technique');
@@ -204,7 +204,9 @@ describe('Input Validation', () => {
       const sessionResult = await server.processLateralThinking(sessionInput);
       // Session operations require persistence
       expect(sessionResult.isError).toBe(true);
-      const errorResponse = JSON.parse(sessionResult.content[0].text);
+      const errorResponse = JSON.parse(sessionResult.content[0].text) as {
+        error: { code: string };
+      };
       expect(errorResponse.error.code).toBe('PERSISTENCE_NOT_AVAILABLE');
     });
   });

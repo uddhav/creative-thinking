@@ -2,7 +2,7 @@
  * Response Builder
  * Constructs formatted responses for MCP tools
  */
-import { CreativeThinkingError } from '../errors/types.js';
+import { CreativeThinkingError, ValidationError, ErrorCode } from '../errors/types.js';
 export class ResponseBuilder {
     /**
      * Build a success response with formatted content
@@ -214,7 +214,7 @@ export class ResponseBuilder {
             case 'csv':
                 return this.formatAsCSV(session);
             default:
-                throw new Error(`Unsupported export format: ${format}`);
+                throw new ValidationError(ErrorCode.INVALID_FIELD_VALUE, `Unsupported export format: ${format}`, 'format', { providedFormat: format });
         }
     }
     /**

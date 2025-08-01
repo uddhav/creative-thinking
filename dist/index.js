@@ -18,6 +18,7 @@ import { VisualFormatter } from './utils/VisualFormatter.js';
 import { HybridComplexityAnalyzer } from './complexity/analyzer.js';
 // Ergodicity
 import { ErgodicityManager } from './ergodicity/index.js';
+import { CreativeThinkingError, ErrorCode, SessionError, ValidationError } from './errors/types.js';
 // Discovery and planning logic
 import { discoverTechniques } from './layers/discovery.js';
 import { planThinkingSession } from './layers/planning.js';
@@ -122,7 +123,10 @@ export class LateralThinkingServer {
             return result;
         }
         catch (error) {
-            return this.responseBuilder.buildErrorResponse(error instanceof Error ? error : new Error('Unknown error'), 'execution');
+            if (error instanceof Error) {
+                return this.responseBuilder.buildErrorResponse(error, 'execution');
+            }
+            return this.responseBuilder.buildErrorResponse(new CreativeThinkingError(ErrorCode.INTERNAL_ERROR, 'An unexpected error occurred during step execution', 'execution', { error: String(error) }), 'execution');
         }
     }
     /**
@@ -140,7 +144,10 @@ export class LateralThinkingServer {
             return this.responseBuilder.buildDiscoveryResponse(output);
         }
         catch (error) {
-            return this.responseBuilder.buildErrorResponse(error instanceof Error ? error : new Error('Unknown error'), 'discovery');
+            if (error instanceof Error) {
+                return this.responseBuilder.buildErrorResponse(error, 'discovery');
+            }
+            return this.responseBuilder.buildErrorResponse(new CreativeThinkingError(ErrorCode.INTERNAL_ERROR, 'An unexpected error occurred during discovery', 'discovery', { error: String(error) }), 'discovery');
         }
     }
     /**
@@ -158,7 +165,10 @@ export class LateralThinkingServer {
             return this.responseBuilder.buildPlanningResponse(output);
         }
         catch (error) {
-            return this.responseBuilder.buildErrorResponse(error instanceof Error ? error : new Error('Unknown error'), 'planning');
+            if (error instanceof Error) {
+                return this.responseBuilder.buildErrorResponse(error, 'planning');
+            }
+            return this.responseBuilder.buildErrorResponse(new CreativeThinkingError(ErrorCode.INTERNAL_ERROR, 'An unexpected error occurred during planning', 'planning', { error: String(error) }), 'planning');
         }
     }
     /**
@@ -184,17 +194,20 @@ export class LateralThinkingServer {
                 case 'export':
                     return await this.handleExportOperation(input);
                 default:
-                    throw new Error(`Unknown session operation: ${input.sessionOperation}`);
+                    throw new ValidationError(ErrorCode.INVALID_INPUT, `Unknown session operation: ${input.sessionOperation}`, 'sessionOperation', { providedOperation: input.sessionOperation });
             }
         }
         catch (error) {
-            return this.responseBuilder.buildErrorResponse(error instanceof Error ? error : new Error('Unknown error'), 'session');
+            if (error instanceof Error) {
+                return this.responseBuilder.buildErrorResponse(error, 'session');
+            }
+            return this.responseBuilder.buildErrorResponse(new CreativeThinkingError(ErrorCode.INTERNAL_ERROR, 'An unexpected error occurred during session operation', 'session', { error: String(error) }), 'session');
         }
     }
     async handleSaveOperation() {
         const currentSessionId = this.sessionManager.getCurrentSessionId();
         if (!currentSessionId) {
-            throw new Error('No active session to save');
+            throw new SessionError(ErrorCode.SESSION_NOT_FOUND, 'No active session to save', undefined, { operation: 'save' });
         }
         await this.sessionManager.saveSessionToPersistence(currentSessionId);
         return this.responseBuilder.buildSessionOperationResponse('save', {
@@ -204,7 +217,7 @@ export class LateralThinkingServer {
     }
     async handleLoadOperation(input) {
         if (!input.loadOptions?.sessionId) {
-            throw new Error('sessionId is required');
+            throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'sessionId is required for load operation', 'loadOptions.sessionId');
         }
         const session = await this.sessionManager.loadSessionFromPersistence(input.loadOptions.sessionId);
         return this.responseBuilder.buildSessionOperationResponse('load', {
@@ -224,7 +237,7 @@ export class LateralThinkingServer {
     }
     async handleDeleteOperation(input) {
         if (!input.deleteOptions?.sessionId) {
-            throw new Error('sessionId is required');
+            throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'sessionId is required for delete operation', 'deleteOptions.sessionId');
         }
         await this.sessionManager.deletePersistedSession(input.deleteOptions.sessionId);
         return this.responseBuilder.buildSessionOperationResponse('delete', {
@@ -234,21 +247,21 @@ export class LateralThinkingServer {
     }
     async handleExportOperation(input) {
         if (!input.exportOptions?.sessionId) {
-            throw new Error('sessionId is required');
+            throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'sessionId is required for export operation', 'exportOptions.sessionId');
         }
         if (!input.exportOptions?.format) {
-            throw new Error('format is required');
+            throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'format is required for export operation', 'exportOptions.format');
         }
         const validFormats = ['json', 'markdown', 'csv'];
         if (!validFormats.includes(input.exportOptions.format)) {
-            throw new Error('Invalid export format');
+            throw new ValidationError(ErrorCode.INVALID_FIELD_VALUE, `Invalid export format: ${input.exportOptions.format}. Must be one of: ${validFormats.join(', ')}`, 'exportOptions.format', { providedFormat: input.exportOptions.format, validFormats });
         }
         const session = this.sessionManager.getSession(input.exportOptions.sessionId);
         if (!session) {
             // Try loading from persistence
             const loadedSession = await this.sessionManager.loadSessionFromPersistence(input.exportOptions.sessionId);
             if (!loadedSession) {
-                throw new Error('Session not found');
+                throw new SessionError(ErrorCode.SESSION_NOT_FOUND, `Session ${input.exportOptions.sessionId} not found`, input.exportOptions.sessionId);
             }
         }
         const sessionData = session ||
@@ -411,7 +424,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 result = await lateralServer.executeThinkingStep(args);
                 break;
             default:
-                throw new Error(`Unknown tool: ${name}`);
+                throw new ValidationError(ErrorCode.INVALID_INPUT, `Unknown tool: ${name}`, 'toolName', { providedTool: name });
         }
         // MCP expects the content array directly
         return {
