@@ -786,34 +786,29 @@ export class RuinRiskDiscovery {
       }
     }
 
-    // Extract descriptive domain label from response
-    const lines = response.split('\n');
-    const firstLine = lines[0] || '';
-
-    // Look for descriptive phrases that indicate the problem space
-    const words = firstLine.split(/\s+/);
-    const skipWords = [
-      'this',
-      'that',
-      'problem',
-      'issue',
-      'matter',
-      'clearly',
-      'topic',
-      'about',
-      'quite',
-      'abstract',
-      'standard',
-      'category',
-    ];
+    // Use NLP to extract meaningful domain label
+    const doc = nlp(response);
     
-    for (const word of words) {
-      if (word.length > 4 && !skipWords.includes(word.toLowerCase())) {
-        return word.toLowerCase();
-      }
-    }
-
-    return 'general';
+    // Extract nouns that could represent the domain
+    const nouns = (doc.nouns ? doc.nouns().out('array') : []) as string[];
+    
+    // Extract topics using NLP
+    const topics = (doc.topics ? doc.topics().out('array') : []) as string[];
+    
+    // Look for meaningful domain descriptors
+    const meaningfulWords = [...nouns, ...topics]
+      .filter(word => word.length > 3)
+      .filter(word => {
+        // Use NLP to filter out generic terms
+        const wordDoc = nlp(word);
+        const isGeneric = wordDoc.has('#Determiner') || 
+                         wordDoc.has('#Preposition') ||
+                         wordDoc.has('#Conjunction');
+        return !isGeneric;
+      });
+    
+    // Return the first meaningful word as domain, or 'general'
+    return meaningfulWords[0]?.toLowerCase() || 'general';
   }
 
   private extractCharacteristics(response: string): DomainAssessment['domainCharacteristics'] {
