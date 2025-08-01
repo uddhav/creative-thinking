@@ -94,5 +94,18 @@ export default [
       // Disable conflicting rules from prettier config
       ...prettierConfig.rules
     }
+  },
+  // Test file specific configuration
+  {
+    files: ['src/**/*.test.ts', 'src/**/*.spec.ts', 'test/**/*.ts', 'src/__tests__/**/*.ts'],
+    rules: {
+      // Allow console.log and process.stdout.write in test files
+      'no-restricted-syntax': 'off',
+      // Allow any types in test files for mocking
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off'
+    }
   }
 ];

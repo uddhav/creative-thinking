@@ -31,36 +31,37 @@ describe('MCP Protocol Compliance', () => {
 
   it('should only output valid JSON-RPC to stdout (no console.log pollution)', async () => {
     const serverPath = path.join(__dirname, '../../../dist/index.js');
-    
+
     // Start the server
     serverProcess = spawn('node', [serverPath], {
       stdio: ['pipe', 'pipe', 'pipe'],
     });
 
     // Collect stdout data
-    serverProcess.stdout?.on('data', (data) => {
+    serverProcess.stdout?.on('data', data => {
       stdoutData.push(data.toString());
     });
 
     // Collect stderr data
-    serverProcess.stderr?.on('data', (data) => {
+    serverProcess.stderr?.on('data', data => {
       stderrData.push(data.toString());
     });
 
     // Send a valid JSON-RPC request
-    const initializeRequest = JSON.stringify({
-      jsonrpc: '2.0',
-      id: 1,
-      method: 'initialize',
-      params: {
-        protocolVersion: '1.0.0',
-        capabilities: {},
-        clientInfo: {
-          name: 'test-client',
-          version: '1.0.0',
+    const initializeRequest =
+      JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'initialize',
+        params: {
+          protocolVersion: '1.0.0',
+          capabilities: {},
+          clientInfo: {
+            name: 'test-client',
+            version: '1.0.0',
+          },
         },
-      },
-    }) + '\n';
+      }) + '\n';
 
     serverProcess.stdin?.write(initializeRequest);
 
@@ -68,12 +69,13 @@ describe('MCP Protocol Compliance', () => {
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     // Send a tools/list request
-    const toolsListRequest = JSON.stringify({
-      jsonrpc: '2.0',
-      id: 2,
-      method: 'tools/list',
-      params: {},
-    }) + '\n';
+    const toolsListRequest =
+      JSON.stringify({
+        jsonrpc: '2.0',
+        id: 2,
+        method: 'tools/list',
+        params: {},
+      }) + '\n';
 
     serverProcess.stdin?.write(toolsListRequest);
 
@@ -84,20 +86,20 @@ describe('MCP Protocol Compliance', () => {
     const allStdout = stdoutData.join('');
     const stdoutLines = allStdout.split('\n').filter(line => line.trim());
 
-    stdoutLines.forEach((line) => {
+    stdoutLines.forEach(line => {
       if (line) {
         // Should be valid JSON
         let parsed;
         try {
-          parsed = JSON.parse(line);
-        } catch (error) {
+          parsed = JSON.parse(line) as { jsonrpc?: string; id?: number };
+        } catch {
           throw new Error(`Invalid JSON on stdout: ${line}`);
         }
 
         // Should be JSON-RPC format
         expect(parsed).toHaveProperty('jsonrpc', '2.0');
         expect(parsed).toHaveProperty('id');
-        
+
         // Stdout should only contain JSON-RPC, no debug output
       }
     });
@@ -109,8 +111,8 @@ describe('MCP Protocol Compliance', () => {
 
   it('should handle all 14 techniques without console.log pollution', async () => {
     const serverPath = path.join(__dirname, '../../../dist/index.js');
-    
-    const techniques: Array<{ name: string; specificParams: Record<string, any> }> = [
+
+    const techniques: Array<{ name: string; specificParams: Record<string, unknown> }> = [
       { name: 'six_hats', specificParams: { hatColor: 'blue' } },
       { name: 'po', specificParams: { provocation: 'What if gravity worked upwards?' } },
       { name: 'random_entry', specificParams: { randomStimulus: 'bicycle' } },
@@ -124,7 +126,10 @@ describe('MCP Protocol Compliance', () => {
       { name: 'cross_cultural', specificParams: { culturalFrameworks: ['Eastern', 'Western'] } },
       { name: 'collective_intel', specificParams: { wisdomSources: ['experts', 'crowds'] } },
       { name: 'disney_method', specificParams: { disneyRole: 'dreamer' } },
-      { name: 'nine_windows', specificParams: { currentCell: { timeFrame: 'present', systemLevel: 'system' } } },
+      {
+        name: 'nine_windows',
+        specificParams: { currentCell: { timeFrame: 'present', systemLevel: 'system' } },
+      },
     ];
 
     for (const { name, specificParams } of techniques) {
@@ -142,46 +147,48 @@ describe('MCP Protocol Compliance', () => {
       });
 
       // Collect stdout data
-      serverProcess.stdout?.on('data', (data) => {
+      serverProcess.stdout?.on('data', data => {
         stdoutData.push(data.toString());
       });
 
       // Collect stderr data
-      serverProcess.stderr?.on('data', (data) => {
+      serverProcess.stderr?.on('data', data => {
         stderrData.push(data.toString());
       });
 
       // Initialize
-      const initializeRequest = JSON.stringify({
-        jsonrpc: '2.0',
-        id: 1,
-        method: 'initialize',
-        params: {
-          protocolVersion: '1.0.0',
-          capabilities: {},
-          clientInfo: {
-            name: 'test-client',
-            version: '1.0.0',
+      const initializeRequest =
+        JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'initialize',
+          params: {
+            protocolVersion: '1.0.0',
+            capabilities: {},
+            clientInfo: {
+              name: 'test-client',
+              version: '1.0.0',
+            },
           },
-        },
-      }) + '\n';
+        }) + '\n';
 
       serverProcess.stdin?.write(initializeRequest);
       await new Promise(resolve => setTimeout(resolve, 500));
 
       // Create a plan
-      const planRequest = JSON.stringify({
-        jsonrpc: '2.0',
-        id: 2,
-        method: 'tools/call',
-        params: {
-          name: 'plan_thinking_session',
-          arguments: {
-            problem: `Testing ${name} technique`,
-            techniques: [name],
+      const planRequest =
+        JSON.stringify({
+          jsonrpc: '2.0',
+          id: 2,
+          method: 'tools/call',
+          params: {
+            name: 'plan_thinking_session',
+            arguments: {
+              problem: `Testing ${name} technique`,
+              techniques: [name],
+            },
           },
-        },
-      }) + '\n';
+        }) + '\n';
 
       serverProcess.stdin?.write(planRequest);
       await new Promise(resolve => setTimeout(resolve, 300));
@@ -191,30 +198,34 @@ describe('MCP Protocol Compliance', () => {
         .join('')
         .split('\n')
         .filter(line => line.trim())
-        .map(line => JSON.parse(line))
+        .map(line => JSON.parse(line) as { id?: number; result?: unknown })
         .find(msg => msg.id === 2);
 
-      const planId = JSON.parse(planResponse?.result?.content?.[0]?.text || '{}').planId;
+      const planResult = planResponse?.result as { content?: Array<{ text?: string }> };
+      const planText = planResult?.content?.[0]?.text || '{}';
+      const planData = JSON.parse(planText) as { planId?: string };
+      const planId = planData.planId;
 
       // Execute step
-      const executeRequest = JSON.stringify({
-        jsonrpc: '2.0',
-        id: 3,
-        method: 'tools/call',
-        params: {
-          name: 'execute_thinking_step',
-          arguments: {
-            planId,
-            technique: name,
-            problem: `Testing ${name} technique`,
-            currentStep: 1,
-            totalSteps: 3,
-            output: `Testing output for ${name}`,
-            nextStepNeeded: true,
-            ...specificParams,
+      const executeRequest =
+        JSON.stringify({
+          jsonrpc: '2.0',
+          id: 3,
+          method: 'tools/call',
+          params: {
+            name: 'execute_thinking_step',
+            arguments: {
+              planId,
+              technique: name,
+              problem: `Testing ${name} technique`,
+              currentStep: 1,
+              totalSteps: 3,
+              output: `Testing output for ${name}`,
+              nextStepNeeded: true,
+              ...specificParams,
+            },
           },
-        },
-      }) + '\n';
+        }) + '\n';
 
       serverProcess.stdin?.write(executeRequest);
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -224,14 +235,14 @@ describe('MCP Protocol Compliance', () => {
         // All stdout output should be valid JSON-RPC
         const allStdout = stdoutData.join('');
         const lines = allStdout.split('\n').filter(line => line.trim());
-        
-        lines.forEach((line) => {
+
+        lines.forEach(line => {
           if (line) {
             // Must parse as JSON (no console.log pollution)
             let parsed;
             try {
-              parsed = JSON.parse(line);
-            } catch (error) {
+              parsed = JSON.parse(line) as { jsonrpc?: string };
+            } catch {
               throw new Error(`Technique ${name}: Non-JSON output on stdout: ${line}`);
             }
             expect(parsed).toHaveProperty('jsonrpc', '2.0');
