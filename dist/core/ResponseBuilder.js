@@ -4,6 +4,8 @@
  */
 import { CreativeThinkingError, ValidationError, ErrorCode } from '../errors/types.js';
 export class ResponseBuilder {
+    // Performance optimization: Cache for expensive session metric calculations
+    metricsCache = new Map();
     /**
      * Build a success response with formatted content
      */
@@ -166,6 +168,12 @@ export class ResponseBuilder {
      * Add completion data to a response
      */
     addCompletionData(response, session) {
+        // Performance optimization: Check cache first
+        const cacheKey = `completion-${session.technique}-${session.history.length}`;
+        const cached = this.metricsCache.get(cacheKey);
+        if (cached && cached.historyLength === session.history.length) {
+            return { ...response, ...cached.value };
+        }
         const completionData = {
             sessionComplete: true,
             completed: true, // Add for backward compatibility
@@ -200,6 +208,11 @@ export class ResponseBuilder {
                 steps: session.escapeRecommendation.steps.slice(0, 3),
             };
         }
+        // Cache the computed result
+        this.metricsCache.set(cacheKey, {
+            value: completionData,
+            historyLength: session.history.length,
+        });
         return { ...response, ...completionData };
     }
     /**

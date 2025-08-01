@@ -12,7 +12,33 @@ import type {
 import type { DiscoverTechniquesOutput, PlanThinkingSessionOutput } from '../types/planning.js';
 import { CreativeThinkingError, ValidationError, ErrorCode } from '../errors/types.js';
 
+// Type for execution metadata
+export interface ExecutionMetadata {
+  techniqueEffectiveness: number;
+  pathDependenciesCreated: string[];
+  flexibilityImpact: number;
+  noteworthyMoment?: string;
+  futureRelevance?: string;
+  errorContext?: {
+    providedStep: number;
+    validRange: string;
+    technique: string;
+    techniqueLocalStep: number;
+    globalStep: number;
+    message: string;
+  };
+}
+
 export class ResponseBuilder {
+  // Performance optimization: Cache for expensive session metric calculations
+  private metricsCache: Map<
+    string,
+    {
+      value: Record<string, unknown>;
+      historyLength: number;
+    }
+  > = new Map();
+
   /**
    * Build a success response with formatted content
    */
@@ -168,7 +194,7 @@ export class ResponseBuilder {
     insights: string[],
     nextStepGuidance?: string,
     historyLength?: number,
-    executionMetadata?: Record<string, unknown>
+    executionMetadata?: ExecutionMetadata
   ): LateralThinkingResponse {
     const response: Record<string, unknown> = {
       sessionId,
@@ -220,6 +246,14 @@ export class ResponseBuilder {
     response: Record<string, unknown>,
     session: SessionData
   ): Record<string, unknown> {
+    // Performance optimization: Check cache first
+    const cacheKey = `completion-${session.technique}-${session.history.length}`;
+    const cached = this.metricsCache.get(cacheKey);
+
+    if (cached && cached.historyLength === session.history.length) {
+      return { ...response, ...cached.value };
+    }
+
     const completionData: Record<string, unknown> = {
       sessionComplete: true,
       completed: true, // Add for backward compatibility
@@ -259,6 +293,12 @@ export class ResponseBuilder {
         steps: session.escapeRecommendation.steps.slice(0, 3),
       };
     }
+
+    // Cache the computed result
+    this.metricsCache.set(cacheKey, {
+      value: completionData,
+      historyLength: session.history.length,
+    });
 
     return { ...response, ...completionData };
   }
