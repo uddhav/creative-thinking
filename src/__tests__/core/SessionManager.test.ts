@@ -109,7 +109,7 @@ describe('SessionManager', () => {
       manager['cleanupOldSessions']();
 
       // eslint-disable-next-line no-console
-      expect(console.log).toHaveBeenCalledWith('[Memory Metrics]', expect.any(Object));
+      expect(console.error).toHaveBeenCalledWith('[Memory Metrics]', expect.any(Object));
     });
   });
 
@@ -352,7 +352,7 @@ describe('SessionManager', () => {
       manager.createSession(mockSession); // Triggers eviction
 
       // eslint-disable-next-line no-console
-      expect(console.log).toHaveBeenCalledWith(
+      expect(console.error).toHaveBeenCalledWith(
         expect.stringContaining(`[Session Eviction] Evicted session ${id1} (LRU)`)
       );
     });
@@ -395,7 +395,7 @@ describe('SessionManager', () => {
       manager['logMemoryMetrics']();
 
       // eslint-disable-next-line no-console
-      expect(console.log).toHaveBeenCalledWith(
+      expect(console.error).toHaveBeenCalledWith(
         '[Memory Metrics]',
         expect.objectContaining({
           timestamp: expect.any(String) as string,
@@ -445,7 +445,7 @@ describe('SessionManager', () => {
       manager['logMemoryMetrics']();
 
       // eslint-disable-next-line no-console
-      expect(console.log).toHaveBeenCalledWith(
+      expect(console.error).toHaveBeenCalledWith(
         '[Memory Metrics]',
         expect.objectContaining({
           sessions: expect.objectContaining({
@@ -485,7 +485,7 @@ describe('SessionManager', () => {
 
       // Should estimate size based on JSON stringification
       // eslint-disable-next-line no-console
-      expect(console.log).toHaveBeenCalledWith(
+      expect(console.error).toHaveBeenCalledWith(
         '[Memory Metrics]',
         expect.objectContaining({
           sessions: expect.objectContaining({
@@ -517,7 +517,7 @@ describe('SessionManager', () => {
       manager['logMemoryMetrics']();
 
       // eslint-disable-next-line no-console
-      expect(console.log).toHaveBeenCalledWith('[Memory Usage] Triggering garbage collection...');
+      expect(console.error).toHaveBeenCalledWith('[Memory Usage] Triggering garbage collection...');
       expect(global.gc).toHaveBeenCalled();
 
       // Restore
