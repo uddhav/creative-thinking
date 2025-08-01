@@ -42,6 +42,10 @@ export class ConceptExtractionHandler extends BaseTechniqueHandler {
         return steps[step - 1];
     }
     getStepGuidance(step, problem) {
+        // Handle out of bounds gracefully
+        if (step < 1 || step > 4) {
+            return `Complete the Concept Extraction process for "${problem}"`;
+        }
         switch (step) {
             case 1:
                 return `🏆 Identify a successful example from any domain - what works brilliantly? (doesn't need to relate to "${problem}" yet)`;

@@ -180,6 +180,8 @@ describe('ResponseBuilder', () => {
     it('should build planning response with flattened workflow', () => {
       const planOutput: PlanThinkingSessionOutput = {
         planId: 'test-plan-123',
+        problem: 'How to improve team productivity?',
+        techniques: ['six_hats', 'po'],
         workflow: [
           {
             technique: 'six_hats',
@@ -241,6 +243,8 @@ describe('ResponseBuilder', () => {
     it('should handle empty workflow', () => {
       const emptyPlan: PlanThinkingSessionOutput = {
         planId: 'empty-plan',
+        problem: 'Empty problem',
+        techniques: [],
         workflow: [],
         estimatedSteps: 0,
         totalSteps: 0,
@@ -251,6 +255,119 @@ describe('ResponseBuilder', () => {
 
       expect(parsed.workflow).toEqual([]);
       expect(parsed.estimatedSteps).toBe(0);
+    });
+
+    it('should include execution guidance in planning response', () => {
+      const planOutput: PlanThinkingSessionOutput = {
+        planId: 'test-plan-456',
+        problem: 'How to improve team communication?',
+        techniques: ['six_hats'],
+        workflow: [
+          {
+            technique: 'six_hats',
+            steps: [
+              {
+                stepNumber: 1,
+                description: 'Blue hat: Define the process',
+                expectedOutput: 'Process definition',
+              },
+            ],
+            estimatedTime: '30 minutes',
+            requiredInputs: ['Problem statement'],
+            expectedOutputs: ['Solution'],
+          },
+        ],
+        estimatedSteps: 1,
+        totalSteps: 1,
+        estimatedTotalTime: '30 minutes',
+        createdAt: Date.now(),
+      };
+
+      const response = builder.buildPlanningResponse(planOutput);
+      const parsed = JSON.parse(response.content[0].text) as Record<string, unknown>;
+
+      // Check that nextSteps guidance is included
+      expect(parsed.nextSteps).toBeDefined();
+      expect(parsed.nextSteps.instructions).toContain('execute_thinking_step');
+      expect(parsed.nextSteps.firstCall).toBeDefined();
+      expect(parsed.nextSteps.firstCall.tool).toBe('execute_thinking_step');
+      expect(parsed.nextSteps.firstCall.parameters).toBeDefined();
+      expect(parsed.nextSteps.firstCall.parameters.planId).toBe('test-plan-456');
+      expect(parsed.nextSteps.firstCall.parameters.technique).toBe('six_hats');
+      expect(parsed.nextSteps.firstCall.parameters.problem).toBe(
+        'How to improve team communication?'
+      );
+      expect(parsed.nextSteps.firstCall.parameters.currentStep).toBe(1);
+      expect(parsed.nextSteps.guidance).toContain('Continue calling execute_thinking_step');
+    });
+
+    it('should not include nextSteps for empty techniques array', () => {
+      const planOutput: PlanThinkingSessionOutput = {
+        planId: 'test-plan-789',
+        problem: 'Some problem',
+        techniques: [], // Empty techniques
+        workflow: [],
+        estimatedSteps: 0,
+        totalSteps: 0,
+        estimatedTotalTime: '0 minutes',
+        createdAt: Date.now(),
+      };
+
+      const response = builder.buildPlanningResponse(planOutput);
+      const parsed = JSON.parse(response.content[0].text) as Record<string, unknown>;
+
+      // Should not include nextSteps when no techniques
+      expect(parsed.nextSteps).toBeUndefined();
+    });
+
+    it('should properly format nextSteps for multi-technique plans', () => {
+      const planOutput: PlanThinkingSessionOutput = {
+        planId: 'multi-tech-plan',
+        problem: 'Complex problem requiring multiple perspectives',
+        techniques: ['six_hats', 'scamper', 'po'],
+        workflow: [
+          {
+            technique: 'six_hats',
+            steps: Array(7)
+              .fill(null)
+              .map((_, i) => ({
+                stepNumber: i + 1,
+                description: `Step ${i + 1}`,
+                expectedOutput: `Output ${i + 1}`,
+              })),
+            estimatedTime: '30 minutes',
+            requiredInputs: ['Problem'],
+            expectedOutputs: ['Analysis'],
+          },
+          {
+            technique: 'scamper',
+            steps: Array(8)
+              .fill(null)
+              .map((_, i) => ({
+                stepNumber: i + 1,
+                description: `SCAMPER step ${i + 1}`,
+                expectedOutput: `SCAMPER output ${i + 1}`,
+              })),
+            estimatedTime: '40 minutes',
+            requiredInputs: ['Current solution'],
+            expectedOutputs: ['Modifications'],
+          },
+        ],
+        estimatedSteps: 15,
+        totalSteps: 15,
+        estimatedTotalTime: '70 minutes',
+        createdAt: Date.now(),
+      };
+
+      const response = builder.buildPlanningResponse(planOutput);
+      const parsed = JSON.parse(response.content[0].text) as Record<string, unknown>;
+
+      // First technique should be six_hats with 7 steps
+      expect(parsed.nextSteps.firstCall.parameters.technique).toBe('six_hats');
+      expect(parsed.nextSteps.firstCall.parameters.totalSteps).toBe(7);
+      expect(parsed.nextSteps.firstCall.parameters.problem).toBe(
+        'Complex problem requiring multiple perspectives'
+      );
     });
   });
 

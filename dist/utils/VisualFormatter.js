@@ -103,6 +103,29 @@ export class VisualFormatter {
         return word.slice(0, maxLength - 3) + '...';
     }
     /**
+     * Wrap text to fit within specified width
+     */
+    wrapText(text, maxWidth) {
+        const words = text.split(' ');
+        const lines = [];
+        let currentLine = '';
+        for (const word of words) {
+            if (currentLine.length + word.length + 1 <= maxWidth) {
+                currentLine = currentLine ? currentLine + ' ' + word : word;
+            }
+            else {
+                if (currentLine) {
+                    lines.push(currentLine);
+                }
+                currentLine = word;
+            }
+        }
+        if (currentLine) {
+            lines.push(currentLine);
+        }
+        return lines;
+    }
+    /**
      * Format risk section
      */
     formatRiskSection(risks, maxLength) {
@@ -257,6 +280,136 @@ export class VisualFormatter {
             triz: [1, 4], // Identify contradiction and minimize
         };
         return criticalStepMap[technique] || [];
+    }
+    /**
+     * Format flexibility warning for display
+     */
+    formatFlexibilityWarning(flexibility, alternatives) {
+        if (this.disableThoughtLogging || flexibility > 0.4) {
+            return '';
+        }
+        const lines = [];
+        const borderLength = this.maxLineLength;
+        // Determine severity
+        const severity = flexibility < 0.2 ? 'critical' : flexibility < 0.3 ? 'warning' : 'caution';
+        const color = severity === 'critical' ? chalk.red : severity === 'warning' ? chalk.yellow : chalk.blue;
+        // Header
+        lines.push(color('┌' + '─'.repeat(borderLength - 2) + '┐'));
+        // Title
+        const title = ` ⚠️  Flexibility Alert: ${(flexibility * 100).toFixed(0)}% remaining `;
+        const titlePadding = Math.max(0, borderLength - title.length - 2);
+        lines.push(color('│') +
+            ' '.repeat(Math.floor(titlePadding / 2)) +
+            color.bold(title) +
+            ' '.repeat(Math.ceil(titlePadding / 2)) +
+            color('│'));
+        lines.push(color('├' + '─'.repeat(borderLength - 2) + '┤'));
+        // Message
+        const message = severity === 'critical'
+            ? 'Critical: Very few options remain. Consider escape protocols.'
+            : severity === 'warning'
+                ? 'Warning: Options are becoming limited. Generate alternatives now.'
+                : 'Caution: Flexibility decreasing. Monitor path dependencies.';
+        this.wrapText(message, borderLength - 4).forEach(line => {
+            lines.push(color('│') + ' ' + line.padEnd(borderLength - 4) + ' ' + color('│'));
+        });
+        // Show alternatives if available
+        if (alternatives && alternatives.length > 0) {
+            lines.push(color('├' + '─'.repeat(borderLength - 2) + '┤'));
+            lines.push(color('│') +
+                ' ' +
+                chalk.bold('Alternative Approaches:').padEnd(borderLength - 4) +
+                ' ' +
+                color('│'));
+            alternatives.slice(0, 3).forEach((alt, i) => {
+                const altText = `${i + 1}. ${alt}`;
+                this.wrapText(altText, borderLength - 6).forEach(line => {
+                    lines.push(color('│') + '  ' + line.padEnd(borderLength - 5) + ' ' + color('│'));
+                });
+            });
+        }
+        lines.push(color('└' + '─'.repeat(borderLength - 2) + '┘'));
+        return lines.join('\n');
+    }
+    /**
+     * Format escape recommendations for display
+     */
+    formatEscapeRecommendations(routes) {
+        if (this.disableThoughtLogging || routes.length === 0) {
+            return '';
+        }
+        const lines = [];
+        const borderLength = this.maxLineLength;
+        // Header
+        lines.push(chalk.cyan('┌' + '─'.repeat(borderLength - 2) + '┐'));
+        // Title
+        const title = ` 🚪 Escape Routes Available `;
+        const titlePadding = Math.max(0, borderLength - title.length - 2);
+        lines.push(chalk.cyan('│') +
+            ' '.repeat(Math.floor(titlePadding / 2)) +
+            chalk.bold.cyan(title) +
+            ' '.repeat(Math.ceil(titlePadding / 2)) +
+            chalk.cyan('│'));
+        lines.push(chalk.cyan('├' + '─'.repeat(borderLength - 2) + '┤'));
+        // Routes
+        routes.forEach((route, i) => {
+            if (i > 0) {
+                lines.push(chalk.cyan('├' + '─'.repeat(borderLength - 2) + '┤'));
+            }
+            const routeTitle = `Option ${i + 1}: ${route.name}`;
+            lines.push(chalk.cyan('│') +
+                ' ' +
+                chalk.bold(routeTitle).padEnd(borderLength - 4) +
+                ' ' +
+                chalk.cyan('│'));
+            this.wrapText(route.description, borderLength - 6).forEach(line => {
+                lines.push(chalk.cyan('│') + '  ' + line.padEnd(borderLength - 5) + ' ' + chalk.cyan('│'));
+            });
+        });
+        lines.push(chalk.cyan('└' + '─'.repeat(borderLength - 2) + '┘'));
+        return lines.join('\n');
+    }
+    /**
+     * Format ergodicity prompt for display
+     */
+    formatErgodicityPrompt(prompt) {
+        if (this.disableThoughtLogging) {
+            return '';
+        }
+        const lines = [];
+        const borderLength = this.maxLineLength;
+        // Header with warning colors
+        lines.push(chalk.yellow('┌' + '─'.repeat(borderLength - 2) + '┐'));
+        // Title
+        const title = ' 🎲 ERGODICITY CHECK ';
+        const titlePadding = Math.max(0, borderLength - title.length - 2);
+        const paddingLeft = Math.floor(titlePadding / 2);
+        const paddingRight = titlePadding - paddingLeft;
+        lines.push(chalk.yellow('│') +
+            ' '.repeat(paddingLeft) +
+            chalk.bold.yellow(title) +
+            ' '.repeat(paddingRight) +
+            chalk.yellow('│'));
+        lines.push(chalk.yellow('├' + '─'.repeat(borderLength - 2) + '┤'));
+        // Prompt text
+        const promptLines = this.wrapText(prompt.promptText, borderLength - 4);
+        promptLines.forEach(line => {
+            lines.push(chalk.yellow('│') + ' ' + chalk.white(line.padEnd(borderLength - 3)) + chalk.yellow('│'));
+        });
+        // Follow-up if present
+        if (prompt.followUp) {
+            lines.push(chalk.yellow('│') + ' '.repeat(borderLength - 2) + chalk.yellow('│'));
+            const followUpLines = this.wrapText(prompt.followUp, borderLength - 4);
+            followUpLines.forEach(line => {
+                lines.push(chalk.yellow('│') +
+                    ' ' +
+                    chalk.bold.red(line.padEnd(borderLength - 3)) +
+                    chalk.yellow('│'));
+            });
+        }
+        // Footer
+        lines.push(chalk.yellow('└' + '─'.repeat(borderLength - 2) + '┘'));
+        return lines.join('\n');
     }
 }
 //# sourceMappingURL=VisualFormatter.js.map

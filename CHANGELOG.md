@@ -18,14 +18,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Interdependency identification
 - **Comprehensive Tests**: Unit and integration tests for both new techniques
 - **MCP Schema Fields**: Added ALL missing technique-specific fields (critical bug fix)
+- **Sequential Thinking Integration**: Complex problems now trigger sequential thinking suggestions
+- **Option Generation Integration**: Properly integrated existing engine to activate when flexibility < 0.4
+- **Ruin Risk Assessment**: Added actual risk assessment beyond just prompt generation
+- **Technique Progress Info**: Multi-technique workflows now show both local and global progress
+- **Enhanced Ergodicity Visibility**: 
+  - Visual flexibility warnings with color-coded alerts
+  - User-friendly messages explaining flexibility status
+  - Escape route recommendations displayed visually
+  - Flexibility data now included in all execution responses
+  - Alternative suggestions shown automatically when flexibility < 40%
 
 ### Fixed
 - **Critical Bug**: MCP schema was missing technique-specific fields for ALL techniques
 - **Validation**: Added Disney Method and Nine Windows to validation arrays
+- **Step Numbering Issue (#115)**: Fixed cumulative step numbering confusion in multi-technique workflows
+- **Option Generation Bug (#95)**: Fixed priority issue preventing option generation from triggering
+- **Test Parameter Order**: Fixed reversed parameters in SessionManager tests
+- **ESLint Configuration**: Added missing rule for test files, achieving 0 errors/warnings
+- **Array Bounds Validation**: Improved validation for out-of-range step numbers
 
 ### Changed
 - **Total Techniques**: Increased from 12 to 14 enhanced thinking techniques
 - **README**: Updated to reflect new technique count and descriptions
+- **Execution Response**: Now includes `techniqueProgress` object for better UX in multi-technique workflows
 
 ## [0.3.0] - 2025-01-31
 

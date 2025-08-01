@@ -382,11 +382,23 @@ describe('SessionManager', () => {
 
       // Add some sessions
       for (let i = 0; i < 5; i++) {
-        manager.createSession(`session_${i}`, {
-          ...mockSession,
-          history: Array(10).fill({ output: 'test' }),
-          branches: { branch1: [], branch2: [] },
-        });
+        manager.createSession(
+          {
+            ...mockSession,
+            history: Array.from({ length: 10 }, () => ({
+              technique: 'six_hats' as const,
+              problem: 'test',
+              currentStep: 1,
+              totalSteps: 6,
+              output: 'test',
+              nextStepNeeded: true,
+              timestamp: new Date().toISOString(),
+              sessionId: `session_${i}`,
+            })),
+            branches: { branch1: [], branch2: [] },
+          },
+          `session_${i}`
+        );
       }
 
       // Trigger memory logging
@@ -476,7 +488,7 @@ describe('SessionManager', () => {
         },
       };
 
-      manager.createSession('big_session', bigSession);
+      manager.createSession(bigSession, 'big_session');
       manager['logMemoryMetrics']();
 
       // Should estimate size based on JSON stringification
@@ -565,7 +577,7 @@ describe('SessionManager', () => {
 
       // Manager should still work without persistence
       expect(() => {
-        manager.createSession('test', mockSession);
+        manager.createSession(mockSession, 'test');
       }).not.toThrow();
     });
 

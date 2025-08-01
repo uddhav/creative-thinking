@@ -60,7 +60,7 @@ export class TemporalWorkHandler extends BaseTechniqueHandler {
   getStepGuidance(step: number, problem: string): string {
     // Handle out of bounds gracefully
     if (step < 1 || step > 5) {
-      return `Complete the Temporal Work Design process`;
+      return `Complete the Temporal Work Design process for "${problem}"`;
     }
 
     switch (step) {
@@ -75,7 +75,7 @@ export class TemporalWorkHandler extends BaseTechniqueHandler {
       case 5:
         return `🚪 Design temporal escape routes. How can we build in flexibility and recovery time?`;
       default:
-        return `Complete the Temporal Work Design process`;
+        return `Complete the Temporal Work Design process for "${problem}"`;
     }
   }
 

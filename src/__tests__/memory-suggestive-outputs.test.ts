@@ -386,10 +386,10 @@ describe('Memory-Suggestive Outputs', () => {
       const step1 = await executeStep(planId, {
         technique: 'six_hats',
         problem: 'Complex problem solving',
-        currentStep: 1,
-        totalSteps: 1,
+        currentStep: 7,
+        totalSteps: 7,
         output: 'Six hats analysis complete',
-        hatColor: 'blue',
+        hatColor: 'purple',
         nextStepNeeded: false,
       });
 
@@ -398,10 +398,10 @@ describe('Memory-Suggestive Outputs', () => {
         sessionId: step1.sessionId,
         technique: 'scamper',
         problem: 'Complex problem solving',
-        currentStep: 1,
-        totalSteps: 1,
+        currentStep: 8,
+        totalSteps: 8,
         output: 'SCAMPER modifications complete',
-        scamperAction: 'substitute',
+        scamperAction: 'parameterize',
         nextStepNeeded: false,
       });
 
@@ -456,14 +456,15 @@ describe('Memory-Suggestive Outputs', () => {
     });
 
     it('should detect effective multi-technique combination', async () => {
+      // Create a plan with all three techniques to avoid validation errors
       const planId = createPlan('Strategic innovation', ['po', 'six_hats', 'triz']);
 
-      // Build up a longer session with multiple techniques
+      // Execute PO technique (steps 1-4 in cumulative numbering)
       const step1 = await executeStep(planId, {
         technique: 'po',
         problem: 'Strategic innovation',
         currentStep: 1,
-        totalSteps: 2,
+        totalSteps: 15, // Total for all three techniques: po(4) + six_hats(7) + triz(4) = 15
         output: 'Provocation phase',
         provocation: 'PO: Innovation is unnecessary',
         nextStepNeeded: true,
@@ -474,20 +475,21 @@ describe('Memory-Suggestive Outputs', () => {
         technique: 'po',
         problem: 'Strategic innovation',
         currentStep: 2,
-        totalSteps: 2,
+        totalSteps: 15,
         output: 'Principles extracted',
         principles: ['Focus on essentials'],
-        nextStepNeeded: false,
+        nextStepNeeded: true,
       });
 
+      // Skip to six_hats (steps 5-11 in cumulative numbering)
       await executeStep(planId, {
         sessionId: step1.sessionId,
         technique: 'six_hats',
         problem: 'Strategic innovation',
-        currentStep: 1,
-        totalSteps: 2,
-        output: 'Analytical phase',
-        hatColor: 'white',
+        currentStep: 5, // First step of six_hats in cumulative numbering
+        totalSteps: 15,
+        output: 'Blue hat - process overview',
+        hatColor: 'blue',
         nextStepNeeded: true,
       });
 
@@ -495,24 +497,26 @@ describe('Memory-Suggestive Outputs', () => {
         sessionId: step1.sessionId,
         technique: 'six_hats',
         problem: 'Strategic innovation',
-        currentStep: 2,
-        totalSteps: 2,
-        output: 'Creative solutions',
-        hatColor: 'green',
-        nextStepNeeded: false,
+        currentStep: 6, // Second step of six_hats
+        totalSteps: 15,
+        output: 'White hat - facts and data',
+        hatColor: 'white',
+        nextStepNeeded: true,
       });
 
+      // Final step with TRIZ (steps 12-15 in cumulative numbering)
       const result = await executeStep(planId, {
         sessionId: step1.sessionId,
         technique: 'triz',
         problem: 'Strategic innovation',
-        currentStep: 1,
-        totalSteps: 1,
+        currentStep: 15, // Last step of triz, completing the session
+        totalSteps: 15,
         output: 'TRIZ synthesis',
         contradiction: 'Innovation vs stability',
         nextStepNeeded: false,
       });
 
+      // Now we have 3+ history items and 3 unique techniques (po, six_hats, triz)
       expect(result.noteworthyPatterns?.observed).toBe('Effective multi-technique combination');
       expect(result.noteworthyPatterns?.applicability).toContain('complex problems');
     });

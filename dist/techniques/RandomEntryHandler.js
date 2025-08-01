@@ -37,6 +37,10 @@ export class RandomEntryHandler extends BaseTechniqueHandler {
         return steps[step - 1];
     }
     getStepGuidance(step, problem) {
+        // Handle out of bounds gracefully
+        if (step < 1 || step > 3) {
+            return `Complete the Random Entry process for "${problem}"`;
+        }
         switch (step) {
             case 1:
                 return `🎲 Choose a random word/concept (from a book, dictionary, or random generator). Don't think about "${problem}" yet`;

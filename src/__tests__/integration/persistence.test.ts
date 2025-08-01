@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /**
  * Simple integration tests for session persistence
  * Tests auto-save functionality which is the only exposed persistence feature

@@ -49,7 +49,7 @@ export class CrossCulturalHandler extends BaseTechniqueHandler {
     getStepGuidance(step, problem) {
         // Handle out of bounds gracefully
         if (step < 1 || step > 5) {
-            return `Complete the Cross Cultural Integration process for "${problem}"`;
+            return `Complete the Cross-Cultural Integration process for "${problem}"`;
         }
         switch (step) {
             case 1:

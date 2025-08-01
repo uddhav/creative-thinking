@@ -42,6 +42,10 @@ export class POHandler extends BaseTechniqueHandler {
         return steps[step - 1];
     }
     getStepGuidance(step, problem) {
+        // Handle out of bounds gracefully
+        if (step < 1 || step > 4) {
+            return `Complete the PO - Provocative Operation process for "${problem}"`;
+        }
         switch (step) {
             case 1:
                 return `💥 Create a provocative statement about "${problem}" - start with "Po:" followed by something deliberately unreasonable or impossible`;

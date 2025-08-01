@@ -30,6 +30,11 @@ export class GenericHandler implements TechniqueHandler {
   }
 
   getStepGuidance(step: number, problem: string): string {
+    // Handle out of bounds gracefully
+    if (step < 1 || step > 5) {
+      return `Complete the ${this.techniqueName} process for "${problem}"`;
+    }
+
     return `Apply ${this.techniqueName} step ${step} to "${problem}"`;
   }
 

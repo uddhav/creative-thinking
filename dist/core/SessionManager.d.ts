@@ -38,7 +38,8 @@ export declare class SessionManager {
      */
     private logMemoryMetrics;
     destroy(): void;
-    createSession(sessionData: SessionData): string;
+    createSession(sessionData: SessionData, providedSessionId?: string): string;
+    private isValidSessionId;
     getSession(sessionId: string): SessionData | undefined;
     updateSession(sessionId: string, data: Partial<SessionData>): void;
     deleteSession(sessionId: string): boolean;

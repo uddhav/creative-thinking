@@ -65,6 +65,10 @@ export class DesignThinkingHandler extends BaseTechniqueHandler {
         };
     }
     getStepGuidance(step, problem) {
+        // Handle out of bounds gracefully
+        if (step < 1 || step > this.stageOrder.length) {
+            return `Complete the Design Thinking process for "${problem}"`;
+        }
         const stage = this.stageOrder[step - 1];
         const info = this.stages[stage];
         switch (stage) {
