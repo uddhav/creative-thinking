@@ -152,26 +152,36 @@ describe('PerformanceProfiler', () => {
     });
 
     it('should sort by total duration', () => {
-      profiler.measureSync('op1', () =>
-        Array(1000)
-          .fill(0)
-          .forEach((_, i) => i * i)
-      );
-      profiler.measureSync('op2', () =>
-        Array(10000)
-          .fill(0)
-          .forEach((_, i) => i * i)
-      );
-      profiler.measureSync('op3', () =>
-        Array(100)
-          .fill(0)
-          .forEach((_, i) => i * i)
-      );
+      // Use different workload sizes to ensure consistent ordering
+      profiler.measureSync('op1', () => {
+        let sum = 0;
+        for (let i = 0; i < 5000; i++) {
+          sum += Math.sqrt(i);
+        }
+        return sum;
+      });
+      
+      profiler.measureSync('op2', () => {
+        let sum = 0;
+        for (let i = 0; i < 50000; i++) {
+          sum += Math.sqrt(i);
+        }
+        return sum;
+      });
+      
+      profiler.measureSync('op3', () => {
+        let sum = 0;
+        for (let i = 0; i < 500; i++) {
+          sum += Math.sqrt(i);
+        }
+        return sum;
+      });
 
       const aggregated = profiler.getAggregatedMetrics();
-      expect(aggregated[0].operationName).toBe('op2');
-      expect(aggregated[1].operationName).toBe('op1');
-      expect(aggregated[2].operationName).toBe('op3');
+      // Should be sorted by total duration (descending)
+      expect(aggregated[0].operationName).toBe('op2'); // Longest (50000 iterations)
+      expect(aggregated[1].operationName).toBe('op1'); // Middle (5000 iterations)
+      expect(aggregated[2].operationName).toBe('op3'); // Shortest (500 iterations)
     });
   });
 
