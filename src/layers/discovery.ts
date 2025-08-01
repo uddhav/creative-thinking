@@ -79,6 +79,14 @@ export function discoverTechniques(
         : undefined,
   };
 
+  // Add domain-based warning if applicable
+  const identifiedDomain = inferDomain(problem, context);
+  if (identifiedDomain !== 'general') {
+    warnings.push(
+      `⚠️ This problem involves ${identifiedDomain} domain considerations that require careful analysis.`
+    );
+  }
+
   return {
     problem,
     problemCategory,
@@ -675,4 +683,17 @@ function generateSearchableFactors(
   factors.push(`${category} complexity`);
 
   return [...new Set(factors)]; // Remove duplicates
+}
+
+function inferDomain(problem: string, context?: string): string {
+  const fullText = `${problem} ${context || ''}`.toLowerCase();
+
+  if (fullText.match(/money|invest|financial|stock|crypto|trade|budget|cost/)) return 'financial';
+  if (fullText.match(/health|medical|surgery|treatment|doctor|wellness|fitness/)) return 'health';
+  if (fullText.match(/career|job|work|employment|profession|promotion/)) return 'career';
+  if (fullText.match(/relationship|marriage|family|friend|partner|social/)) return 'relationship';
+  if (fullText.match(/legal|lawsuit|contract|agreement|court|lawyer/)) return 'legal';
+  if (fullText.match(/business|startup|company|market|customer|product/)) return 'business';
+
+  return 'general';
 }

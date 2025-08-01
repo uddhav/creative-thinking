@@ -20,12 +20,14 @@ describe('RuinRiskDiscovery', () => {
         'Buy 50% position in NVDA'
       );
 
-      expect(prompts.domainIdentification).toContain('What domain(s) does this belong to?');
-      expect(prompts.riskDiscovery).toContain('discover the specific risks');
-      expect(prompts.ruinScenarios).toContain('Detail the potential ruin scenarios');
-      expect(prompts.safetyPractices).toContain('Identify domain-specific safety practices');
-      expect(prompts.maxAcceptableLoss).toContain('Calculate maximum acceptable exposure');
-      expect(prompts.validation).toContain('Validate "Buy 50% position in NVDA"');
+      expect(prompts.domainIdentification).toContain(
+        'What domain or area of life does this problem belong to?'
+      );
+      expect(prompts.riskDiscovery).toContain('What could go catastrophically wrong?');
+      expect(prompts.ruinScenarios).toContain('complete failure looks like');
+      expect(prompts.safetyPractices).toContain('What wisdom exists for avoiding disaster');
+      expect(prompts.maxAcceptableLoss).toContain('Help calculate safe limits');
+      expect(prompts.validation).toContain('Evaluate "Buy 50% position in NVDA"');
     });
 
     it('should include problem context in prompts', () => {
@@ -47,7 +49,8 @@ describe('RuinRiskDiscovery', () => {
 
       const assessment = discovery.processDomainAssessment(response);
 
-      expect(assessment.primaryDomain).toBe('financial');
+      // Now expects the actual extracted domain, not a predefined category
+      expect(assessment.primaryDomain).toBe('clearly a financial investment');
       expect(assessment.domainCharacteristics.hasIrreversibleActions).toBe(true);
       expect(assessment.domainCharacteristics.allowsRecovery).toBe(true); // Changed - the implementation checks for "cannot recover"
       expect(assessment.confidence).toBeGreaterThan(0.1); // Lower threshold as the test response is short
@@ -158,7 +161,22 @@ describe('RuinRiskDiscovery', () => {
 
   describe('getForcedCalculations', () => {
     it('should provide base calculations for any domain', () => {
-      const calculations = discovery.getForcedCalculations('general', 'take action');
+      const domainAssessment = {
+        primaryDomain: 'general',
+        domainCharacteristics: {
+          hasIrreversibleActions: false,
+          hasAbsorbingBarriers: false,
+          allowsRecovery: true,
+          timeHorizon: 'medium' as const,
+          hasNetworkEffects: false,
+          hasTimeDecay: false,
+          requiresExpertise: false,
+          hasRegulation: false,
+          hasSocialConsequences: false,
+        },
+        confidence: 0.8,
+      };
+      const calculations = discovery.getForcedCalculations(domainAssessment, 'take action');
 
       expect(calculations.worstCaseImpact).toBeDefined();
       expect(calculations.recoveryTime).toBeDefined();
@@ -166,25 +184,81 @@ describe('RuinRiskDiscovery', () => {
       expect(calculations.reversibilityCost).toBeDefined();
     });
 
-    it('should add domain-specific calculations for financial', () => {
-      const calculations = discovery.getForcedCalculations('financial', 'invest money');
+    it('should add characteristic-based calculations for irreversible actions', () => {
+      const domainAssessment = {
+        primaryDomain: 'financial',
+        domainCharacteristics: {
+          hasIrreversibleActions: true,
+          hasAbsorbingBarriers: true,
+          allowsRecovery: false,
+          timeHorizon: 'long' as const,
+          hasNetworkEffects: true,
+          hasTimeDecay: false,
+          requiresExpertise: true,
+          hasRegulation: true,
+          hasSocialConsequences: false,
+        },
+        confidence: 0.9,
+      };
+      const calculations = discovery.getForcedCalculations(domainAssessment, 'invest money');
 
-      expect(calculations.portfolioPercentage).toBeDefined();
-      expect(calculations.correlationRisk).toBeDefined();
+      expect(calculations.permanentDamage).toBeDefined();
+      expect(calculations.pointOfNoReturn).toBeDefined();
+      expect(calculations.affectedParties).toBeDefined();
+      expect(calculations.expertiseGap).toBeDefined();
+      expect(calculations.legalExposure).toBeDefined();
     });
 
-    it('should add domain-specific calculations for health', () => {
-      const calculations = discovery.getForcedCalculations('health', 'medical procedure');
+    it('should add calculations for time-sensitive domains', () => {
+      const domainAssessment = {
+        primaryDomain: 'health',
+        domainCharacteristics: {
+          hasIrreversibleActions: true,
+          hasAbsorbingBarriers: false,
+          allowsRecovery: true,
+          timeHorizon: 'immediate' as const,
+          hasNetworkEffects: false,
+          hasTimeDecay: true,
+          requiresExpertise: true,
+          hasRegulation: true,
+          hasSocialConsequences: true,
+        },
+        confidence: 0.85,
+      };
+      const calculations = discovery.getForcedCalculations(domainAssessment, 'medical procedure');
 
-      expect(calculations.recoveryProbability).toBeDefined();
-      expect(calculations.qualityOfLifeImpact).toBeDefined();
+      expect(calculations.optionExpiry).toBeDefined();
+      expect(calculations.decayRate).toBeDefined();
+      expect(calculations.expertiseGap).toBeDefined();
+      expect(calculations.reputationDamage).toBeDefined();
     });
 
-    it('should add domain-specific calculations for career', () => {
-      const calculations = discovery.getForcedCalculations('career', 'change jobs');
+    it('should add pattern-based calculations when patterns are discovered', () => {
+      const domainAssessment = {
+        primaryDomain: 'career',
+        domainCharacteristics: {
+          hasIrreversibleActions: false,
+          hasAbsorbingBarriers: false,
+          allowsRecovery: true,
+          timeHorizon: 'medium' as const,
+          hasNetworkEffects: true,
+          hasTimeDecay: false,
+          requiresExpertise: false,
+          hasRegulation: false,
+          hasSocialConsequences: true,
+        },
+        confidence: 0.75,
+        discoveredPatterns: [
+          'Career changes often impact personal relationships',
+          'Networking effects compound over time',
+        ],
+      };
+      const calculations = discovery.getForcedCalculations(domainAssessment, 'change jobs');
 
-      expect(calculations.reputationImpact).toBeDefined();
-      expect(calculations.networkEffect).toBeDefined();
+      expect(calculations.reputationDamage).toBeDefined();
+      expect(calculations.trustRecovery).toBeDefined();
+      expect(calculations.pattern_0_impact).toBeDefined();
+      expect(calculations.pattern_1_impact).toBeDefined();
     });
   });
 
@@ -193,15 +267,16 @@ describe('RuinRiskDiscovery', () => {
       const response = 'This involves both financial investment and career change';
       const assessment = discovery.processDomainAssessment(response);
 
-      // Should pick the first matching domain
-      expect(['financial', 'career']).toContain(assessment.primaryDomain);
+      // Now extracts the actual domain description, not a predefined category
+      expect(assessment.primaryDomain).toBe('both financial investment and career change');
     });
 
     it('should default to general domain when no specific match', () => {
       const response = 'This is about personal hobbies and interests';
       const assessment = discovery.processDomainAssessment(response);
 
-      expect(assessment.primaryDomain).toBe('general');
+      // Now extracts the actual domain description
+      expect(assessment.primaryDomain).toBe('personal hobbies and interests');
     });
   });
 

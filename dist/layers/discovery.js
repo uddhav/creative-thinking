@@ -43,6 +43,11 @@ export function discoverTechniques(input, techniqueRegistry, complexityAnalyzer)
             ? 'Consider using sequential thinking to break down this complex problem'
             : undefined,
     };
+    // Add domain-based warning if applicable
+    const identifiedDomain = inferDomain(problem, context);
+    if (identifiedDomain !== 'general') {
+        warnings.push(`⚠️ This problem involves ${identifiedDomain} domain considerations that require careful analysis.`);
+    }
     return {
         problem,
         problemCategory,
@@ -523,5 +528,21 @@ function generateSearchableFactors(problem, context, category, constraints) {
     // Add complexity level
     factors.push(`${category} complexity`);
     return [...new Set(factors)]; // Remove duplicates
+}
+function inferDomain(problem, context) {
+    const fullText = `${problem} ${context || ''}`.toLowerCase();
+    if (fullText.match(/money|invest|financial|stock|crypto|trade|budget|cost/))
+        return 'financial';
+    if (fullText.match(/health|medical|surgery|treatment|doctor|wellness|fitness/))
+        return 'health';
+    if (fullText.match(/career|job|work|employment|profession|promotion/))
+        return 'career';
+    if (fullText.match(/relationship|marriage|family|friend|partner|social/))
+        return 'relationship';
+    if (fullText.match(/legal|lawsuit|contract|agreement|court|lawyer/))
+        return 'legal';
+    if (fullText.match(/business|startup|company|market|customer|product/))
+        return 'business';
+    return 'general';
 }
 //# sourceMappingURL=discovery.js.map
