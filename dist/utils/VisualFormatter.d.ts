@@ -32,6 +32,10 @@ export declare class VisualFormatter {
      */
     private truncateWord;
     /**
+     * Wrap text to fit within specified width
+     */
+    private wrapText;
+    /**
      * Format risk section
      */
     private formatRiskSection;
@@ -66,5 +70,23 @@ export declare class VisualFormatter {
      * Get critical thinking steps for a technique
      */
     private getCriticalSteps;
+    /**
+     * Format flexibility warning for display
+     */
+    formatFlexibilityWarning(flexibility: number, alternatives?: string[]): string;
+    /**
+     * Format escape recommendations for display
+     */
+    formatEscapeRecommendations(routes: Array<{
+        name: string;
+        description: string;
+    }>): string;
+    /**
+     * Format ergodicity prompt for display
+     */
+    formatErgodicityPrompt(prompt: {
+        promptText: string;
+        followUp?: string;
+    }): string;
 }
 //# sourceMappingURL=VisualFormatter.d.ts.map

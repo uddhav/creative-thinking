@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /**
  * Integration tests for complete technique workflows
  * Tests end-to-end execution of various creative thinking techniques

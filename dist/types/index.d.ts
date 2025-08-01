@@ -155,6 +155,17 @@ export interface ExecuteThinkingStepInput {
     };
     interdependencies?: string[];
     realityAssessment?: RealityAssessment;
+    ergodicityCheck?: {
+        prompt: string;
+        followUp?: string;
+        guidance: string;
+        ruinCheckRequired?: boolean;
+    };
+    ruinAssessment?: {
+        required: boolean;
+        prompt: string;
+        survivalConstraints: string[];
+    };
 }
 export interface ThinkingOperationData {
     sessionId?: string;
@@ -239,6 +250,17 @@ export interface ThinkingOperationData {
     };
     interdependencies?: string[];
     realityAssessment?: RealityAssessment;
+    ergodicityCheck?: {
+        prompt: string;
+        followUp?: string;
+        guidance: string;
+        ruinCheckRequired?: boolean;
+    };
+    ruinAssessment?: {
+        required: boolean;
+        prompt: string;
+        survivalConstraints: string[];
+    };
 }
 export interface SessionOperationData {
     sessionOperation: 'save' | 'load' | 'list' | 'delete' | 'export';

@@ -52,7 +52,7 @@ export class MemoryAnalyzer {
     if (!input.nextStepNeeded) {
       outputs.sessionFingerprint = {
         problemType: this.categorizeProblem(session.problem),
-        solutionPattern: this.identifySolutionPattern(session),
+        solutionPattern: this.identifySolutionPattern(session, input),
         breakthroughLevel: this.assessBreakthroughLevel(session),
         pathDependencies: this.extractPathDependencies(session),
       };
@@ -337,17 +337,23 @@ export class MemoryAnalyzer {
     return 'exploration';
   }
 
-  private identifySolutionPattern(session: SessionData): string {
-    const techniques = session.history.map(h => h.technique);
+  private identifySolutionPattern(session: SessionData, input: ThinkingOperationData): string {
+    // Include current technique in the analysis
+    const techniques = [...session.history.map(h => h.technique), input.technique];
     const uniqueTechniques = [...new Set(techniques)];
 
     // Multi-technique synthesis
     if (uniqueTechniques.length > 1) {
-      // Check if all techniques are six_hats
-      if (uniqueTechniques.length === 1 && uniqueTechniques[0] === 'six_hats') {
-        return 'multi-perspective synthesis';
-      }
       return 'multi-technique synthesis';
+    }
+
+    // Check if all techniques are six_hats with multiple perspectives
+    if (
+      uniqueTechniques.length === 1 &&
+      uniqueTechniques[0] === 'six_hats' &&
+      techniques.length > 1
+    ) {
+      return 'multi-perspective synthesis';
     }
 
     // Single technique patterns

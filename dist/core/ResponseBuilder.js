@@ -101,6 +101,25 @@ export class ResponseBuilder {
             constraints: output.constraints,
             planningInsights: output.planningInsights,
             complexityAssessment: output.complexityAssessment,
+            // Add execution guidance to help LLMs proceed
+            nextSteps: output.techniques && output.techniques.length > 0 && output.problem
+                ? {
+                    instructions: 'To execute this plan, use the execute_thinking_step tool with the planId and follow the workflow steps.',
+                    firstCall: {
+                        tool: 'execute_thinking_step',
+                        parameters: {
+                            planId: output.planId,
+                            technique: output.techniques[0],
+                            problem: output.problem,
+                            currentStep: 1,
+                            totalSteps: output.workflow[0]?.steps.length || 0,
+                            output: '[Your thinking output for step 1]',
+                            nextStepNeeded: true,
+                        },
+                    },
+                    guidance: 'Continue calling execute_thinking_step for each step, incrementing currentStep until nextStepNeeded is false. Note: currentStep uses cumulative numbering across all techniques (e.g., if six_hats has 7 steps, temporal_work starts at step 8).',
+                }
+                : undefined,
         };
         return this.buildSuccessResponse(transformedOutput);
     }

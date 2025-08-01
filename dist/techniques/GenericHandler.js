@@ -23,6 +23,10 @@ export class GenericHandler {
         };
     }
     getStepGuidance(step, problem) {
+        // Handle out of bounds gracefully
+        if (step < 1 || step > 5) {
+            return `Complete the ${this.techniqueName} process for "${problem}"`;
+        }
         return `Apply ${this.techniqueName} step ${step} to "${problem}"`;
     }
     validateStep(step, _data) {

@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, no-console, @typescript-eslint/no-unsafe-return */
+/* eslint-disable no-console, @typescript-eslint/no-unsafe-return */
 /**
  * Performance integration tests
  * Tests system performance under various load conditions

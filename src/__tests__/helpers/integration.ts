@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /**
  * Helper utilities for integration tests
  */
@@ -76,10 +75,10 @@ export async function createSessionWithSteps(
  */
 export function getTotalSteps(technique: LateralTechnique): number {
   const stepCounts: Record<LateralTechnique, number> = {
-    six_hats: 6,
+    six_hats: 7,
     po: 4,
     random_entry: 3,
-    scamper: 7,
+    scamper: 8,
     concept_extraction: 4,
     yes_and: 4,
     design_thinking: 5,
@@ -87,7 +86,9 @@ export function getTotalSteps(technique: LateralTechnique): number {
     neural_state: 4,
     temporal_work: 5,
     cross_cultural: 4,
-    collective_intel: 5,
+    collective_intel: 4,
+    disney_method: 3,
+    nine_windows: 9,
   };
   return stepCounts[technique] || 4;
 }

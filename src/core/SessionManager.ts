@@ -214,8 +214,19 @@ export class SessionManager {
   }
 
   // Session CRUD operations
-  public createSession(sessionData: SessionData): string {
-    const sessionId = `session_${randomUUID()}`;
+  public createSession(sessionData: SessionData, providedSessionId?: string): string {
+    // Use provided ID if given, otherwise generate a new one
+    const sessionId = providedSessionId || `session_${randomUUID()}`;
+
+    // Validate provided session ID format if given
+    if (providedSessionId && !this.isValidSessionId(providedSessionId)) {
+      throw new SessionError(
+        ErrorCode.INVALID_INPUT,
+        `Invalid session ID format: ${providedSessionId}. Session IDs must be alphanumeric with hyphens, underscores, or dots.`,
+        providedSessionId
+      );
+    }
+
     this.sessions.set(sessionId, sessionData);
     this.currentSessionId = sessionId;
 
@@ -225,6 +236,13 @@ export class SessionManager {
     }
 
     return sessionId;
+  }
+
+  private isValidSessionId(sessionId: string): boolean {
+    // Allow alphanumeric characters, hyphens, underscores, and dots
+    // Must be 1-100 characters long
+    const sessionIdPattern = /^[a-zA-Z0-9\-_.]{1,100}$/;
+    return sessionIdPattern.test(sessionId);
   }
 
   public getSession(sessionId: string): SessionData | undefined {

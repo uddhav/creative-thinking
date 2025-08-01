@@ -226,6 +226,19 @@ export interface ExecuteThinkingStepInput {
 
   // Reality assessment
   realityAssessment?: RealityAssessment;
+
+  // Ergodicity awareness fields
+  ergodicityCheck?: {
+    prompt: string;
+    followUp?: string;
+    guidance: string;
+    ruinCheckRequired?: boolean;
+  };
+  ruinAssessment?: {
+    required: boolean;
+    prompt: string;
+    survivalConstraints: string[];
+  };
 }
 
 // Operation data types
@@ -342,6 +355,19 @@ export interface ThinkingOperationData {
 
   // Reality assessment
   realityAssessment?: RealityAssessment;
+
+  // Ergodicity awareness fields
+  ergodicityCheck?: {
+    prompt: string;
+    followUp?: string;
+    guidance: string;
+    ruinCheckRequired?: boolean;
+  };
+  ruinAssessment?: {
+    required: boolean;
+    prompt: string;
+    survivalConstraints: string[];
+  };
 }
 
 export interface SessionOperationData {

@@ -163,8 +163,13 @@ export class SessionManager {
         this.plans.clear();
     }
     // Session CRUD operations
-    createSession(sessionData) {
-        const sessionId = `session_${randomUUID()}`;
+    createSession(sessionData, providedSessionId) {
+        // Use provided ID if given, otherwise generate a new one
+        const sessionId = providedSessionId || `session_${randomUUID()}`;
+        // Validate provided session ID format if given
+        if (providedSessionId && !this.isValidSessionId(providedSessionId)) {
+            throw new SessionError(ErrorCode.INVALID_INPUT, `Invalid session ID format: ${providedSessionId}. Session IDs must be alphanumeric with hyphens, underscores, or dots.`, providedSessionId);
+        }
         this.sessions.set(sessionId, sessionData);
         this.currentSessionId = sessionId;
         // Check if eviction is needed after adding the new session
@@ -172,6 +177,12 @@ export class SessionManager {
             this.evictOldestSessions();
         }
         return sessionId;
+    }
+    isValidSessionId(sessionId) {
+        // Allow alphanumeric characters, hyphens, underscores, and dots
+        // Must be 1-100 characters long
+        const sessionIdPattern = /^[a-zA-Z0-9\-_.]{1,100}$/;
+        return sessionIdPattern.test(sessionId);
     }
     getSession(sessionId) {
         return this.sessions.get(sessionId);

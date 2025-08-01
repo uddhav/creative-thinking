@@ -100,6 +100,11 @@ export class SixHatsHandler extends BaseTechniqueHandler {
   }
 
   getStepGuidance(step: number, problem: string): string {
+    // Handle out of bounds gracefully
+    if (step < 1 || step > this.hatOrder.length) {
+      return `Complete the Six Thinking Hats process for "${problem}"`;
+    }
+
     const hat = this.getStepInfo(step);
     const hatColor = this.hatOrder[step - 1];
 

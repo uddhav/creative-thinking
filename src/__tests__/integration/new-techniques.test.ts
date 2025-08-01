@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-
 /**
  * Integration tests for Disney Method and Nine Windows techniques
  */

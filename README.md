@@ -170,6 +170,123 @@ When flexibility drops below 0.4, the system automatically activates the Option 
 
 The engine evaluates each generated option for flexibility gain, implementation cost, reversibility, and synergy with existing choices, ensuring practical and effective recommendations.
 
+## 🎯 Enhancement Features
+
+The Creative Thinking Server includes several advanced features that enhance the quality and safety of your creative process:
+
+### 📊 Reality Gradient System
+
+The Reality Gradient System enhances creative thinking by annotating ideas with their possibility levels and breakthrough requirements, rather than blocking "impossible" ideas.
+
+**Key Features:**
+- **Automatic Assessment**: Ideas are evaluated during execution for feasibility
+- **Non-Blocking Design**: Assessments appear as informational annotations, not barriers
+- **Possibility Levels**: `feasible`, `difficult`, `breakthrough-required`, or `impossible`
+- **Domain Awareness**: Detects finance, healthcare, technology, and regulatory contexts
+- **Historical Precedents**: Shows examples of "impossible" becoming possible
+- **Breakthrough Guidance**: Identifies what needs to change for ideas to work
+
+**When It Activates:**
+- Automatically during execution when ideas contain impossibility markers
+- Only adds assessment for non-trivial feasibility issues
+- Respects pre-existing reality assessments
+
+### 🧠 Complexity Analysis
+
+The Complexity Analysis system monitors the cognitive load of your thinking process and suggests strategies when complexity becomes overwhelming.
+
+**Key Features:**
+- **NLP-Based Analysis**: Uses natural language processing to assess complexity
+- **Pattern Detection**: Identifies multiple interacting elements, conflicts, and uncertainty
+- **Automatic Suggestions**: Provides decomposition strategies for high complexity
+- **Real-Time Monitoring**: Analyzes both current output and recent history
+
+**When It Activates:**
+- During execution when output complexity exceeds thresholds
+- When recent outputs show increasing complexity over time
+- Suggests sequential thinking for systematic decomposition
+
+**Example Suggestions:**
+- Break down into smaller sub-problems
+- Analyze each component separately before integration
+- Create visual representations of relationships
+- Systematic review of each element
+
+### 🔄 Ergodicity Awareness (Enhanced)
+
+The Ergodicity system tracks path dependencies and non-reversible effects in creative thinking, helping you avoid getting trapped in absorbing states. Now with improved visibility and user-friendly warnings.
+
+**Key Features:**
+- **Path Memory**: Records all decisions and their irreversible effects
+- **Flexibility Metrics**: Real-time monitoring of remaining creative options (0-1 scale)
+- **Absorbing Barrier Detection**: Warns about approaching irreversible states
+- **Visual Indicators**: Shows path metrics in every thinking step output
+- **Escape Routes**: Suggests ways to regain flexibility when options are limited
+
+**Enhanced Visibility (v0.3.1):**
+- **Visual Warnings**: Color-coded flexibility alerts (🔴 critical < 20%, 🟡 warning < 30%, 🔵 caution < 40%)
+- **User-Friendly Messages**: Plain language explanations of flexibility status
+- **Alternative Suggestions**: Automatic display when flexibility drops below 40%
+- **Escape Route Display**: Visual presentation of available options to regain flexibility
+- **Response Integration**: Flexibility data now included in all execution responses
+
+**Example Visual Warning:**
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                    ⚠️  Flexibility Alert: 25% remaining                       │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ Warning: Options are becoming limited. Generate alternatives now.             │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ Alternative Approaches:                                                       │
+│  1. Step back and reconsider the core problem                               │
+│  2. Remove constraints rather than adding features                           │
+│  3. Explore parallel implementation paths                                    │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Common Absorbing States Detected:**
+- Cognitive lock-in (stuck in one way of thinking)
+- Analysis paralysis (overthinking preventing action)
+- Perfectionism trap (standards preventing completion)
+- Technical debt accumulation
+- Resource depletion
+
+### 🌟 Memory-Aware Outputs
+
+All three layers provide rich contextual information to help you understand and remember your creative journey:
+
+**Discovery Layer:**
+- Problem observation and analysis
+- Historical relevance to similar problems
+- Searchable factors for future reference
+
+**Planning Layer:**
+- Technique rationale explaining choices
+- Sequence logic for workflow design
+- Historical notes on technique combinations
+
+**Execution Layer:**
+- Technique effectiveness scoring (0-1)
+- Path dependencies created
+- Flexibility impact measurements
+- Noteworthy moments flagged
+- Future relevance assessments
+
+### 🚀 Integrated Early Warning System
+
+Continuously monitors for approaching "points of no return" in your creative process:
+
+**Warning Levels:**
+- 🟢 **SAFE**: Full flexibility maintained
+- 🟡 **CAUTION**: Some constraints emerging
+- 🟠 **WARNING**: Significant flexibility loss
+- 🔴 **CRITICAL**: Approaching absorbing barrier
+
+**Escape Protocols:**
+- Pattern interruption for mild warnings
+- Strategic pivots for severe warnings
+- Complete reframing for critical states
+
 ## Tools
 
 ### 🔍 discover_techniques
@@ -271,32 +388,7 @@ Executes a single step in your creative thinking process.
 - `branchFromStep` (integer, optional): Step number to branch from
 - `branchId` (string, optional): Identifier for the branch
 
-## Reality Gradient System
-
-The Reality Gradient System enhances creative thinking by annotating ideas with their possibility levels and breakthrough requirements, rather than blocking "impossible" ideas. This system shows what would need to change for ideas to become possible, with historical precedents.
-
-### Key Features
-
-- **Possibility Levels**: Ideas are assessed as `feasible`, `difficult`, `breakthrough-required`, or `impossible`
-- **Impossibility Types**: When ideas face barriers, they're categorized as:
-  - `logical` - Contains self-contradictory requirements
-  - `physical` - Violates known physical laws
-  - `technical` - Requires technology that doesn't exist yet
-  - `regulatory` - Prohibited by current laws/regulations
-  - `resource` - Requires unavailable resources
-  - `social` - Faces cultural/social barriers
-- **Historical Precedents**: Shows examples of similar "impossible" ideas that became possible
-- **Breakthrough Requirements**: Identifies what needs to change for the idea to work
-
-### How It Works
-
-1. **Automatic Assessment**: During the execution phase, outputs are automatically assessed for feasibility
-2. **Non-Blocking**: Assessments appear as informational annotations, not barriers
-3. **Context-Aware**: Domain detection (finance, healthcare, technology, etc.) enables relevant checks
-4. **Progressive Tracking**: Multi-step sessions show feasibility trends over time
-
-### Example Reality Assessment
-
+**Example Reality Assessment:**
 ```
 📊 Reality Navigator:
 Idea: "Wireless energy transmission with 100% efficiency"

@@ -2,11 +2,13 @@
  * Execution Layer
  * Handles the execution of thinking steps
  */
+import { getErgodicityPrompt, requiresRuinCheck, generateRuinAssessmentPrompt, getErgodicityGuidance, assessRuinRisk, generateSurvivalConstraints, } from '../ergodicity/prompts.js';
 import { ResponseBuilder } from '../core/ResponseBuilder.js';
 import { MemoryAnalyzer } from '../core/MemoryAnalyzer.js';
 import { RealityIntegration } from '../reality/integration.js';
-import { SessionError, ExecutionError, ErrorCode } from '../errors/types.js';
+import { ExecutionError, ErrorCode } from '../errors/types.js';
 import { monitorCriticalSection, monitorCriticalSectionAsync, addPerformanceSummary, } from '../utils/PerformanceIntegration.js';
+import { OptionGenerationEngine } from '../ergodicity/optionGeneration/engine.js';
 // Type guard for ErgodicityResult
 function isErgodicityResult(value) {
     return (value !== null &&
@@ -20,9 +22,10 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
     const responseBuilder = new ResponseBuilder();
     const memoryAnalyzer = new MemoryAnalyzer();
     try {
-        // Validate planId if provided
+        // Get plan if provided
+        let plan;
         if (input.planId) {
-            const plan = sessionManager.getPlan(input.planId);
+            plan = sessionManager.getPlan(input.planId);
             if (!plan) {
                 return {
                     content: [
@@ -60,12 +63,17 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
         if (sessionId) {
             const existingSession = sessionManager.getSession(sessionId);
             if (!existingSession) {
-                throw new SessionError(ErrorCode.SESSION_NOT_FOUND, `Session ${sessionId} not found`, sessionId);
+                // Create new session with the user-provided ID
+                session = initializeSession(input, ergodicityManager);
+                sessionId = sessionManager.createSession(session, sessionId);
+                console.error(`Created new session with user-provided ID: ${sessionId}`);
             }
-            session = existingSession;
+            else {
+                session = existingSession;
+            }
         }
         else {
-            // Create new session
+            // Create new session with auto-generated ID
             session = initializeSession(input, ergodicityManager);
             sessionId = sessionManager.createSession(session);
         }
@@ -73,8 +81,24 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
         sessionManager.touchSession(sessionId);
         // Get technique handler
         const handler = techniqueRegistry.getHandler(input.technique);
-        // Validate step
-        if (!handler.validateStep(input.currentStep, input)) {
+        // Convert cumulative step to technique-local step if we have a plan
+        let techniqueLocalStep = input.currentStep;
+        let techniqueIndex = 0;
+        let stepsBeforeThisTechnique = 0;
+        if (input.planId && plan) {
+            // Find which technique we're on and calculate local step
+            for (let i = 0; i < plan.workflow.length; i++) {
+                if (plan.workflow[i].technique === input.technique) {
+                    techniqueIndex = i;
+                    break;
+                }
+                stepsBeforeThisTechnique += plan.workflow[i].steps.length;
+            }
+            // Convert cumulative step to local step
+            techniqueLocalStep = input.currentStep - stepsBeforeThisTechnique;
+        }
+        // Validate step using local step number
+        if (!handler.validateStep(techniqueLocalStep, input)) {
             // Handle invalid step gracefully
             console.error(`Unknown ${input.technique} step ${input.currentStep}`);
             // Still need to record something for the test
@@ -86,21 +110,28 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
             // For invalid steps, we need to get the guidance for what would be the next step
             let nextStepGuidance;
             if (input.nextStepNeeded) {
-                // Always return the "Complete the..." message for invalid steps
-                nextStepGuidance = handler.getStepGuidance(input.currentStep + 1, input.problem);
+                // For invalid steps, provide completion guidance without problem text
+                const techniqueInfo = handler.getTechniqueInfo();
+                nextStepGuidance = `Complete the ${techniqueInfo.name} process`;
             }
-            return responseBuilder.buildExecutionResponse(sessionId, operationData, [], nextStepGuidance, session.history.length);
+            // Generate minimal execution metadata even for invalid steps
+            const minimalMetadata = {
+                techniqueEffectiveness: 0.5, // Some minimal effectiveness
+                pathDependenciesCreated: [],
+                flexibilityImpact: -0.05, // Small negative impact as any step reduces flexibility
+            };
+            return responseBuilder.buildExecutionResponse(sessionId, operationData, [], nextStepGuidance, session.history.length, minimalMetadata);
         }
         // Try to get step info, handle invalid steps gracefully
         let stepInfo;
         try {
-            stepInfo = handler.getStepInfo(input.currentStep);
+            stepInfo = handler.getStepInfo(techniqueLocalStep);
         }
         catch (error) {
             // Handle different error scenarios
             if (error instanceof RangeError) {
                 // Step number is out of bounds
-                console.warn(`Step ${input.currentStep} is out of range for ${input.technique}. Using default guidance.`);
+                console.warn(`Step ${techniqueLocalStep} is out of range for ${input.technique}. Using default guidance.`);
                 stepInfo = null;
             }
             else if (error instanceof TypeError) {
@@ -114,10 +145,39 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
                 stepInfo = null;
             }
         }
+        // Check for ergodicity prompts
+        const ergodicityPrompt = getErgodicityPrompt(input.technique, techniqueLocalStep, input.problem);
+        if (ergodicityPrompt) {
+            // Add ergodicity check to the operation data
+            const inputWithErgodicity = input;
+            inputWithErgodicity.ergodicityCheck = {
+                prompt: ergodicityPrompt.promptText,
+                followUp: ergodicityPrompt.followUp,
+                guidance: getErgodicityGuidance(input.technique),
+                ruinCheckRequired: ergodicityPrompt.ruinCheckRequired,
+            };
+            // Log ergodicity prompt to stderr for user awareness
+            if (process.env.DISABLE_THOUGHT_LOGGING !== 'true') {
+                process.stderr.write('\n' + visualFormatter.formatErgodicityPrompt(ergodicityPrompt) + '\n');
+            }
+        }
+        // Check if output requires ruin assessment
+        const outputWords = input.output.toLowerCase().split(/\s+/);
+        if (requiresRuinCheck(input.technique, outputWords)) {
+            const ruinPrompt = generateRuinAssessmentPrompt(input.problem, input.technique, input.output);
+            const ruinRiskAssessment = assessRuinRisk(input.problem, input.technique, input.output);
+            const inputWithRuin = input;
+            inputWithRuin.ruinAssessment = {
+                required: true,
+                prompt: ruinPrompt,
+                assessment: ruinRiskAssessment,
+                survivalConstraints: generateSurvivalConstraints('general'),
+            };
+        }
         // Get mode indicator
-        const modeIndicator = visualFormatter.getModeIndicator(input.technique, input.currentStep);
+        const modeIndicator = visualFormatter.getModeIndicator(input.technique, techniqueLocalStep);
         // Display visual output
-        const visualOutput = visualFormatter.formatOutput(input.technique, input.problem, input.currentStep, input.totalSteps, stepInfo, modeIndicator, input);
+        const visualOutput = visualFormatter.formatOutput(input.technique, input.problem, techniqueLocalStep, input.totalSteps, stepInfo, modeIndicator, input);
         if (visualOutput && process.env.DISABLE_THOUGHT_LOGGING !== 'true') {
             // Only log if thought logging is enabled
             // IMPORTANT: Use stderr for visual output - stdout is reserved for JSON-RPC
@@ -151,11 +211,12 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
                 input.alternativeSuggestions = scamperHandler.generateAlternatives(input.scamperAction, input.pathImpact.flexibilityRetention);
             }
         }
-        // Update ergodicity tracking
-        let ergodicityResult;
+        // Calculate impact based on technique profile or specific path impact
+        let impact;
         if (input.pathImpact) {
+            // Use specific path impact from SCAMPER
             const pathImpact = input.pathImpact;
-            ergodicityResult = await monitorCriticalSectionAsync('ergodicity_tracking', () => ergodicityManager.recordThinkingStep(input.technique, input.currentStep, input.output, {
+            impact = {
                 optionsClosed: pathImpact.optionsClosed,
                 optionsOpened: pathImpact.optionsOpened,
                 reversibilityCost: 1 - pathImpact.flexibilityRetention,
@@ -166,17 +227,35 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
                         : pathImpact.commitmentLevel === 'high'
                             ? 0.8
                             : 1.0,
-            }, session), { technique: input.technique, step: input.currentStep });
-            // Update session with ergodicity data
-            session.pathMemory = ergodicityManager.getPathMemory();
-            if (ergodicityResult &&
-                'earlyWarningState' in ergodicityResult &&
-                ergodicityResult.earlyWarningState) {
+            };
+        }
+        else {
+            // Use technique profile for ergodicity tracking
+            const techniqueProfile = ergodicityManager.analyzeTechniqueImpact(input.technique);
+            // Check if output suggests high commitment
+            const outputLower = input.output.toLowerCase();
+            const highCommitmentWords = [
+                'eliminate',
+                'remove',
+                'delete',
+                'commit',
+                'invest',
+                'permanent',
+            ];
+            const hasHighCommitment = highCommitmentWords.some(word => outputLower.includes(word));
+            impact = {
+                reversibilityCost: hasHighCommitment ? 0.8 : 1 - techniqueProfile.typicalReversibility,
+                commitmentLevel: hasHighCommitment ? 0.8 : techniqueProfile.typicalCommitment,
+            };
+        }
+        const ergodicityResult = await monitorCriticalSectionAsync('ergodicity_tracking', () => ergodicityManager.recordThinkingStep(input.technique, techniqueLocalStep, input.output, impact, session), { technique: input.technique, step: techniqueLocalStep });
+        // Update session with ergodicity data
+        session.pathMemory = ergodicityManager.getPathMemory();
+        if (isErgodicityResult(ergodicityResult)) {
+            if (ergodicityResult.earlyWarningState) {
                 session.earlyWarningState = ergodicityResult.earlyWarningState;
             }
-            if (ergodicityResult &&
-                'escapeRecommendation' in ergodicityResult &&
-                ergodicityResult.escapeRecommendation) {
+            if (ergodicityResult.escapeRecommendation) {
                 session.escapeRecommendation = ergodicityResult.escapeRecommendation;
             }
         }
@@ -207,6 +286,104 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
         }
         // Update metrics
         metricsCollector.updateMetrics(session, operationData);
+        // Check if option generation is needed based on flexibility
+        let optionGenerationResult;
+        // Prioritize technique-specific flexibility (like SCAMPER's) over generic path memory
+        const currentFlexibility = input.flexibilityScore ?? session.pathMemory?.currentFlexibility?.flexibilityScore ?? 1.0;
+        // Display flexibility warning if needed
+        if (currentFlexibility < 0.4 && process.env.DISABLE_THOUGHT_LOGGING !== 'true') {
+            const flexibilityWarning = visualFormatter.formatFlexibilityWarning(currentFlexibility, input.alternativeSuggestions);
+            if (flexibilityWarning) {
+                process.stderr.write('\n' + flexibilityWarning + '\n');
+            }
+        }
+        // Display escape recommendations if available
+        if (session.escapeRecommendation && process.env.DISABLE_THOUGHT_LOGGING !== 'true') {
+            const escapeRoutes = session.escapeRecommendation.steps.slice(0, 3).map((step, i) => ({
+                name: `Step ${i + 1}`,
+                description: step,
+            }));
+            const escapeDisplay = visualFormatter.formatEscapeRecommendations(escapeRoutes);
+            if (escapeDisplay) {
+                process.stderr.write('\n' + escapeDisplay + '\n');
+            }
+        }
+        if (currentFlexibility < 0.4) {
+            try {
+                const optionEngine = new OptionGenerationEngine();
+                const optionSessionData = {
+                    sessionId,
+                    startTime: session.startTime || Date.now(),
+                    problemStatement: input.problem,
+                    techniquesUsed: [input.technique],
+                    totalSteps: input.totalSteps,
+                    insights: session.insights,
+                    pathDependencyMetrics: {
+                        optionSpaceSize: 100 * currentFlexibility,
+                        pathDivergence: 1 - currentFlexibility,
+                        commitmentDepth: session.pathMemory?.pathHistory?.length || session.history.length,
+                        reversibilityIndex: currentFlexibility,
+                    },
+                };
+                const optionContext = {
+                    sessionState: {
+                        id: sessionId,
+                        problem: input.problem,
+                        technique: input.technique,
+                        currentStep: input.currentStep,
+                        totalSteps: input.totalSteps,
+                        history: session.history.map(h => ({
+                            step: h.currentStep,
+                            timestamp: h.timestamp || new Date().toISOString(),
+                            input: h,
+                            output: h,
+                        })),
+                        branches: session.branches,
+                        insights: session.insights,
+                        startTime: session.startTime,
+                        endTime: session.endTime,
+                        metrics: session.metrics,
+                    },
+                    currentFlexibility: session.pathMemory?.currentFlexibility || {
+                        flexibilityScore: currentFlexibility,
+                        pathDivergence: 1 - currentFlexibility,
+                        constraints: [],
+                    },
+                    pathMemory: {
+                        pathHistory: session.history.map(h => ({
+                            timestamp: h.timestamp || new Date().toISOString(),
+                            technique: h.technique,
+                            step: h.currentStep,
+                            decision: h.output,
+                            optionsOpened: [],
+                            optionsClosed: [],
+                            reversibilityCost: 0.5,
+                            commitmentLevel: 0.5,
+                            constraintsCreated: [],
+                        })),
+                        constraints: session.pathMemory?.constraints || [],
+                        flexibilityOverTime: session.history.map((h, i) => ({
+                            step: h.currentStep,
+                            score: h.flexibilityScore || 1.0 - i * 0.1,
+                            timestamp: Date.now() - (session.history.length - i) * 1000,
+                        })),
+                        absorbingBarriers: session.pathMemory?.absorbingBarriers || [],
+                    },
+                    sessionData: optionSessionData,
+                };
+                optionGenerationResult = optionEngine.generateOptions(optionContext);
+                // Log to stderr for visibility
+                if (optionGenerationResult.options.length > 0 &&
+                    process.env.DISABLE_THOUGHT_LOGGING !== 'true') {
+                    process.stderr.write(`\n🔄 Option Generation activated (flexibility: ${currentFlexibility.toFixed(2)})\n`);
+                    process.stderr.write(`   Generated ${optionGenerationResult.options.length} options to increase flexibility\n\n`);
+                }
+            }
+            catch (error) {
+                console.error('Option generation failed:', error);
+                // Continue without options rather than failing the whole step
+            }
+        }
         // Extract insights
         const currentInsights = monitorCriticalSection('extract_insights', () => handler.extractInsights(session.history), { technique: input.technique, historyLength: session.history.length });
         currentInsights.forEach(insight => {
@@ -226,7 +403,23 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
             const nextStep = input.currentStep + 1;
             // Ensure next step is valid
             if (nextStep >= 1 && nextStep <= input.totalSteps) {
-                nextStepGuidance = handler.getStepGuidance(nextStep, input.problem);
+                // Check if we're transitioning to a new technique
+                const currentTechniqueSteps = plan?.workflow[techniqueIndex]?.steps.length || handler.getTechniqueInfo().totalSteps;
+                if (techniqueLocalStep >= currentTechniqueSteps) {
+                    // We're at the last step of current technique, next step is first step of next technique
+                    if (techniqueIndex + 1 < (plan?.techniques.length || 1)) {
+                        const nextTechnique = plan?.techniques[techniqueIndex + 1];
+                        if (nextTechnique) {
+                            const nextHandler = techniqueRegistry.getHandler(nextTechnique);
+                            nextStepGuidance = `Transitioning to ${nextTechnique}. ${nextHandler.getStepGuidance(1, input.problem)}`;
+                        }
+                    }
+                }
+                else {
+                    // Still in the same technique
+                    const nextLocalStep = techniqueLocalStep + 1;
+                    nextStepGuidance = handler.getStepGuidance(nextLocalStep, input.problem);
+                }
                 // Add contextual guidance for temporal_work
                 if (input.technique === 'temporal_work' && nextStep === 3) {
                     // Look for pressure points from step 1 in session history
@@ -240,17 +433,80 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
                 }
             }
             else {
-                // For invalid next steps, provide generic guidance
-                nextStepGuidance = handler.getStepGuidance(9999, input.problem); // This will trigger the "Complete the" message
+                // We've exceeded total steps, provide completion guidance
+                const techniqueInfo = handler.getTechniqueInfo();
+                nextStepGuidance = `Complete the ${techniqueInfo.name} process`;
             }
         }
         // Generate execution metadata for memory context
-        const executionMetadata = generateExecutionMetadata(input, session, currentInsights, isErgodicityResult(ergodicityResult) ? ergodicityResult.pathMemory : undefined);
-        // Build response
+        const pathMemory = ergodicityManager.getPathMemory();
+        const executionMetadata = generateExecutionMetadata(input, session, currentInsights, pathMemory);
+        // Build response with technique progress info
+        const techniqueProgress = {
+            techniqueStep: techniqueLocalStep,
+            techniqueTotalSteps: plan?.workflow[techniqueIndex]?.steps.length || handler.getTechniqueInfo().totalSteps,
+            globalStep: input.currentStep,
+            globalTotalSteps: input.totalSteps,
+            currentTechnique: input.technique,
+            techniqueIndex: techniqueIndex + 1,
+            totalTechniques: plan?.techniques.length || 1,
+        };
         const response = responseBuilder.buildExecutionResponse(sessionId, operationData, currentInsights, nextStepGuidance, session.history.length, executionMetadata);
         // Add memory outputs to response
         const parsedResponse = JSON.parse(response.content[0].text);
         Object.assign(parsedResponse, memoryOutputs);
+        // Add technique progress info for better UX
+        parsedResponse.techniqueProgress = techniqueProgress;
+        // Add ergodicity data for visibility
+        // Add flexibility score if it's concerning
+        if (currentFlexibility < 0.7) {
+            parsedResponse.flexibilityScore = currentFlexibility;
+            // Add user-friendly message based on flexibility level
+            if (currentFlexibility < 0.2) {
+                parsedResponse.flexibilityMessage =
+                    '⚠️ Critical: Very limited options remain. Consider immediate alternatives.';
+            }
+            else if (currentFlexibility < 0.4) {
+                parsedResponse.flexibilityMessage =
+                    '⚠️ Warning: Flexibility is low. Generate options to avoid lock-in.';
+            }
+            else {
+                parsedResponse.flexibilityMessage =
+                    '📊 Note: Flexibility decreasing. Monitor commitments carefully.';
+            }
+        }
+        // Add alternative suggestions for low flexibility
+        if (input.alternativeSuggestions && input.alternativeSuggestions.length > 0) {
+            parsedResponse.alternativeSuggestions = input.alternativeSuggestions;
+        }
+        // Add path analysis if available
+        if (session.pathMemory && session.pathMemory.currentFlexibility && currentFlexibility < 0.5) {
+            parsedResponse.pathAnalysis = {
+                flexibilityScore: session.pathMemory.currentFlexibility.flexibilityScore,
+                reversibilityIndex: session.pathMemory.currentFlexibility.reversibilityIndex || currentFlexibility,
+                interpretation: currentFlexibility < 0.3
+                    ? 'Most decisions are now irreversible. Proceed with extreme caution.'
+                    : 'Some decisions are becoming harder to reverse. Consider preserving options.',
+            };
+        }
+        // Add early warning state if present
+        if (session.earlyWarningState && session.earlyWarningState.activeWarnings.length > 0) {
+            parsedResponse.earlyWarningState = {
+                activeWarnings: session.earlyWarningState.activeWarnings.map(w => ({
+                    level: w.severity,
+                    message: w.message,
+                })),
+                summary: `${session.earlyWarningState.activeWarnings.length} warning(s) active. Review before continuing.`,
+            };
+        }
+        // Add escape recommendations if needed
+        if (session.escapeRecommendation) {
+            parsedResponse.escapeRecommendation = {
+                protocol: session.escapeRecommendation.name,
+                steps: session.escapeRecommendation.steps.slice(0, 3),
+                recommendation: 'Consider these alternative approaches to regain flexibility.',
+            };
+        }
         // Add reality assessment if present
         if (realityResult &&
             typeof realityResult === 'object' &&
@@ -264,6 +520,32 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
             'suggestion' in complexityCheck &&
             complexityCheck.suggestion) {
             parsedResponse.sequentialThinkingSuggestion = complexityCheck.suggestion;
+        }
+        // Add ergodicity check if present
+        const inputWithChecks = input;
+        if (inputWithChecks.ergodicityCheck) {
+            parsedResponse.ergodicityCheck = inputWithChecks.ergodicityCheck;
+        }
+        // Add ruin assessment if required
+        if (inputWithChecks.ruinAssessment) {
+            parsedResponse.ruinAssessment = inputWithChecks.ruinAssessment;
+        }
+        // Add option generation results if available
+        if (optionGenerationResult && optionGenerationResult.options.length > 0) {
+            parsedResponse.optionGeneration = {
+                triggered: true,
+                flexibility: currentFlexibility,
+                optionsGenerated: optionGenerationResult.options.length,
+                strategies: optionGenerationResult.strategiesUsed,
+                topOptions: optionGenerationResult.options.slice(0, 3).map(opt => ({
+                    name: opt.name,
+                    description: opt.description,
+                    flexibilityGain: opt.flexibilityGain,
+                    recommendation: optionGenerationResult.evaluations.find(e => e.optionId === opt.id)
+                        ?.recommendation,
+                })),
+                recommendation: optionGenerationResult.topRecommendation?.name || 'Consider implementing top options',
+            };
         }
         response.content[0].text = JSON.stringify(parsedResponse, null, 2);
         // Handle session completion
@@ -325,20 +607,92 @@ function checkExecutionComplexity(input, session, complexityAnalyzer) {
     const recentAssessment = complexityAnalyzer.analyze(recentOutputs);
     // Generate suggestion if complexity is high
     if (assessment.level === 'high' || recentAssessment.level === 'high') {
+        // Provide technique-specific suggestions
+        const techniqueSpecificSuggestions = getComplexitySuggestions(input.technique, assessment.factors);
         return {
             level: 'high',
             suggestion: {
-                complexityNote: 'High complexity detected in current thinking',
-                suggestedApproach: {
-                    'Break down': 'Consider breaking this into smaller sub-problems',
-                    'Sequential analysis': 'Analyze each component separately before integration',
-                    'Visual mapping': 'Create a visual representation of the relationships',
-                    'Systematic review': 'Review each element systematically',
-                },
+                complexityNote: generateComplexityNote(assessment.factors, input.technique),
+                suggestedApproach: techniqueSpecificSuggestions,
             },
         };
     }
     return { level: assessment.level };
+}
+/**
+ * Generate technique-aware complexity suggestions
+ */
+function getComplexitySuggestions(technique, factors) {
+    // Base suggestions that apply to all techniques
+    const baseSuggestions = {
+        Decompose: 'Break this complex problem into 3-5 manageable sub-problems',
+        Prioritize: 'Focus on the most critical aspect first, defer others',
+    };
+    // Technique-specific suggestions
+    const techniqueSpecific = {
+        six_hats: {
+            'Use White Hat': 'List only facts and data to clarify the situation',
+            'Apply Black Hat': 'Focus on one specific risk at a time',
+            'Switch to Blue': 'Step back and reorganize your thinking process',
+        },
+        scamper: {
+            'Simplify first': 'Apply "Eliminate" to remove non-essential elements',
+            'One action at a time': 'Focus on a single SCAMPER action before combining',
+            Parameterize: 'Identify the key parameters driving complexity',
+        },
+        triz: {
+            'Identify core contradiction': 'Strip away details to find the fundamental conflict',
+            'Use separation principles': 'Separate in time, space, or condition',
+            'Apply inventive principles': 'Try segmentation or asymmetry principles',
+        },
+        design_thinking: {
+            'Return to empathy': 'Refocus on a single user need',
+            'Rapid prototype': 'Build the simplest possible version first',
+            'Test one variable': 'Isolate and test one aspect at a time',
+        },
+        temporal_work: {
+            'Map time constraints': 'List all deadlines and time dependencies',
+            'Find temporal buffer': 'Identify which deadlines are flexible',
+            'Sequence activities': 'Order tasks by dependency, not urgency',
+        },
+        nine_windows: {
+            'Focus on one cell': 'Analyze one time-system combination deeply',
+            'Find patterns': 'Look for repeating patterns across the matrix',
+            'Trace dependencies': 'Follow one dependency chain at a time',
+        },
+    };
+    // Add technique-specific suggestions if available
+    const specific = techniqueSpecific[technique] || {};
+    // If multiple interacting elements detected, add systems thinking
+    if (factors.includes('multipleInteractingElements')) {
+        baseSuggestions['Systems diagram'] = 'Create a simple diagram showing key interactions';
+    }
+    // If conflicting requirements detected
+    if (factors.includes('conflictingRequirements')) {
+        baseSuggestions['Prioritize conflicts'] = 'Rank conflicts by impact and address the top one';
+    }
+    return { ...baseSuggestions, ...specific };
+}
+/**
+ * Generate a contextual complexity note
+ */
+function generateComplexityNote(factors, technique) {
+    const factorDescriptions = {
+        multipleInteractingElements: 'multiple interacting elements',
+        conflictingRequirements: 'conflicting requirements',
+        highUncertainty: 'high uncertainty',
+        multipleStakeholders: 'multiple stakeholders',
+        systemComplexity: 'system-level complexity',
+        timePressure: 'time pressure',
+    };
+    const detectedFactors = factors
+        .map(f => factorDescriptions[f] || f)
+        .filter(Boolean)
+        .slice(0, 3); // Limit to top 3 factors
+    if (detectedFactors.length === 0) {
+        return 'High complexity detected in current thinking';
+    }
+    return `High complexity detected due to ${detectedFactors.join(', ')}. The ${technique.replace(/_/g, ' ')} technique can help by focusing on specific aspects.`;
 }
 /**
  * Generate execution metadata for memory context
@@ -479,6 +833,11 @@ function identifyNoteworthyMoment(input, session, insights) {
             return 'Maintained high flexibility despite complex exploration';
         }
     }
+    // Check for multi-technique synthesis pattern
+    const techniqueCount = new Set(session.history.map(h => h.technique)).size;
+    if (techniqueCount >= 3 && insights.length >= techniqueCount) {
+        return 'multi-technique synthesis';
+    }
     return undefined;
 }
 /**
@@ -514,6 +873,11 @@ function assessFutureRelevance(input, session) {
     const techniqueSequence = session.history.map(h => h.technique).slice(-3);
     if (techniqueSequence.length >= 3 && new Set(techniqueSequence).size >= 2) {
         return 'Multi-technique exploration pattern can be reused for similar problems';
+    }
+    // Check for multi-technique synthesis
+    const allTechniques = new Set(session.history.map(h => h.technique));
+    if (allTechniques.size >= 2 && session.insights.length > 0) {
+        return 'Effective multi-technique combination';
     }
     return undefined;
 }
