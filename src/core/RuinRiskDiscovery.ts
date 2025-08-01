@@ -776,7 +776,6 @@ export class RuinRiskDiscovery {
     ];
 
     // Domain always emerges from context - we don't force categorization
-    const lowerResponse = response.toLowerCase();
 
     // Then try pattern matching
     for (const pattern of domainPatterns) {
@@ -788,25 +787,24 @@ export class RuinRiskDiscovery {
 
     // Use NLP to extract meaningful domain label
     const doc = nlp(response);
-    
+
     // Extract nouns that could represent the domain
     const nouns = (doc.nouns ? doc.nouns().out('array') : []) as string[];
-    
+
     // Extract topics using NLP
     const topics = (doc.topics ? doc.topics().out('array') : []) as string[];
-    
+
     // Look for meaningful domain descriptors
     const meaningfulWords = [...nouns, ...topics]
       .filter(word => word.length > 3)
       .filter(word => {
         // Use NLP to filter out generic terms
         const wordDoc = nlp(word);
-        const isGeneric = wordDoc.has('#Determiner') || 
-                         wordDoc.has('#Preposition') ||
-                         wordDoc.has('#Conjunction');
+        const isGeneric =
+          wordDoc.has('#Determiner') || wordDoc.has('#Preposition') || wordDoc.has('#Conjunction');
         return !isGeneric;
       });
-    
+
     // Return the first meaningful word as domain, or 'general'
     return meaningfulWords[0]?.toLowerCase() || 'general';
   }

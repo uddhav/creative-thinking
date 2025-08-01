@@ -79,13 +79,8 @@ export function discoverTechniques(
         : undefined,
   };
 
-  // Add domain-based warning if applicable
-  const identifiedDomain = inferDomain(problem, context);
-  if (identifiedDomain !== 'general') {
-    warnings.push(
-      `⚠️ This problem involves ${identifiedDomain} domain considerations that require careful analysis.`
-    );
-  }
+  // Domain is always general - we don't pigeonhole into categories
+  // No domain-specific warnings as we treat all problems generically
 
   return {
     problem,
@@ -683,10 +678,4 @@ function generateSearchableFactors(
   factors.push(`${category} complexity`);
 
   return [...new Set(factors)]; // Remove duplicates
-}
-
-function inferDomain(problem: string, context?: string): string {
-  // Domain is always general - we don't pigeonhole into categories
-  // The specific risk characteristics will emerge from the analysis
-  return 'general';
 }

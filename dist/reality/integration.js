@@ -15,18 +15,9 @@ const RISK_INDICATOR_PATTERNS = {
         /privacy|gdpr|ccpa/i,
         /sec|fda|regulatory/i,
     ],
-    irreversible: [
-        /permanent|irreversible|cannot undo/i,
-        /one-way|final|no going back/i,
-    ],
-    expertise: [
-        /professional|expert|specialist/i,
-        /licensed|certified|qualified/i,
-    ],
-    systemic: [
-        /systemic|widespread|global/i,
-        /infrastructure|ecosystem|platform/i,
-    ],
+    irreversible: [/permanent|irreversible|cannot undo/i, /one-way|final|no going back/i],
+    expertise: [/professional|expert|specialist/i, /licensed|certified|qualified/i],
+    systemic: [/systemic|widespread|global/i, /infrastructure|ecosystem|platform/i],
 };
 /**
  * Technique-specific reality check patterns
@@ -74,6 +65,26 @@ export class RealityIntegration {
         const riskIndicators = this.detectRiskIndicators(input.problem, output);
         // Perform reality assessment (domain is always general now)
         const assessment = RealityAssessor.assess(output, input.problem, 'general');
+        // Enhance assessment with risk indicators if any were detected
+        if (riskIndicators.length > 0 && assessment.confidenceLevel < 0.9) {
+            // Adjust confidence based on risk indicators
+            if (riskIndicators.includes('regulatory')) {
+                assessment.confidenceLevel = Math.max(assessment.confidenceLevel, 0.7);
+                if (!assessment.mechanismExplanation?.includes('regulation')) {
+                    assessment.mechanismExplanation =
+                        (assessment.mechanismExplanation || '') + ' May face regulatory constraints.';
+                }
+            }
+            if (riskIndicators.includes('irreversible')) {
+                assessment.confidenceLevel = Math.max(assessment.confidenceLevel, 0.8);
+                if (!assessment.breakthroughsRequired?.includes('Risk mitigation strategy')) {
+                    assessment.breakthroughsRequired = [
+                        ...(assessment.breakthroughsRequired || []),
+                        'Risk mitigation strategy for irreversible actions',
+                    ];
+                }
+            }
+        }
         // Only add assessment if it's not trivially feasible
         if (assessment.possibilityLevel === 'feasible' && assessment.confidenceLevel >= 0.7) {
             return { enhancedOutput: output };

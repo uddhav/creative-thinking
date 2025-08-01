@@ -104,10 +104,18 @@ describe('Reality Assessment', () => {
 
   describe('RealityIntegration', () => {
     it('should detect risk indicators from problem context', () => {
-      expect(RealityIntegration.detectRiskIndicators('SEC compliance requirements')).toContain('regulatory');
-      expect(RealityIntegration.detectRiskIndicators('irreversible decision')).toContain('irreversible');
-      expect(RealityIntegration.detectRiskIndicators('requires professional expertise')).toContain('expertise');
-      expect(RealityIntegration.detectRiskIndicators('systemic infrastructure change')).toContain('systemic');
+      expect(RealityIntegration.detectRiskIndicators('SEC compliance requirements')).toContain(
+        'regulatory'
+      );
+      expect(RealityIntegration.detectRiskIndicators('irreversible decision')).toContain(
+        'irreversible'
+      );
+      expect(RealityIntegration.detectRiskIndicators('requires professional expertise')).toContain(
+        'expertise'
+      );
+      expect(RealityIntegration.detectRiskIndicators('systemic infrastructure change')).toContain(
+        'systemic'
+      );
       expect(RealityIntegration.detectRiskIndicators('creative writing techniques')).toEqual([]);
     });
 

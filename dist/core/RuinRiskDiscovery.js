@@ -530,7 +530,6 @@ export class RuinRiskDiscovery {
             /field:?\s*(\w+)/i,
         ];
         // Domain always emerges from context - we don't force categorization
-        const lowerResponse = response.toLowerCase();
         // Then try pattern matching
         for (const pattern of domainPatterns) {
             const match = response.match(pattern);
@@ -550,9 +549,7 @@ export class RuinRiskDiscovery {
             .filter(word => {
             // Use NLP to filter out generic terms
             const wordDoc = nlp(word);
-            const isGeneric = wordDoc.has('#Determiner') ||
-                wordDoc.has('#Preposition') ||
-                wordDoc.has('#Conjunction');
+            const isGeneric = wordDoc.has('#Determiner') || wordDoc.has('#Preposition') || wordDoc.has('#Conjunction');
             return !isGeneric;
         });
         // Return the first meaningful word as domain, or 'general'

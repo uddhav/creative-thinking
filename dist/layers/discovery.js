@@ -43,11 +43,8 @@ export function discoverTechniques(input, techniqueRegistry, complexityAnalyzer)
             ? 'Consider using sequential thinking to break down this complex problem'
             : undefined,
     };
-    // Add domain-based warning if applicable
-    const identifiedDomain = inferDomain(problem, context);
-    if (identifiedDomain !== 'general') {
-        warnings.push(`⚠️ This problem involves ${identifiedDomain} domain considerations that require careful analysis.`);
-    }
+    // Domain is always general - we don't pigeonhole into categories
+    // No domain-specific warnings as we treat all problems generically
     return {
         problem,
         problemCategory,
@@ -528,10 +525,5 @@ function generateSearchableFactors(problem, context, category, constraints) {
     // Add complexity level
     factors.push(`${category} complexity`);
     return [...new Set(factors)]; // Remove duplicates
-}
-function inferDomain(problem, context) {
-    // Domain is always general - we don't pigeonhole into categories
-    // The specific risk characteristics will emerge from the analysis
-    return 'general';
 }
 //# sourceMappingURL=discovery.js.map
