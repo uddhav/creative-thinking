@@ -359,8 +359,8 @@ describe('Layered Tools Architecture', () => {
       expect(result.isError).toBeTruthy();
       const errorText = result.content[0]?.text || '';
       const errorData = JSON.parse(errorText) as { error: string; message: string };
-      expect(errorData.error).toBe('Invalid planId');
-      expect(errorData.message).toContain('not found');
+      expect(errorData.error).toBe('Plan not found');
+      expect(errorData.message).toContain('does not exist');
     });
 
     it('should validate technique matches plan', async () => {

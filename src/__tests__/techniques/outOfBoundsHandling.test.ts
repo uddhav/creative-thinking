@@ -66,11 +66,16 @@ describe('Out-of-bounds step handling', () => {
     });
   });
 
-  it('should handle generic technique gracefully', () => {
-    const handler = registry.getHandler('unknown_technique');
-    const guidance = handler.getStepGuidance(9999, 'test problem');
-    expect(guidance).toContain('Complete');
-    expect(guidance).toContain('unknown_technique');
-    expect(guidance).toContain('test problem');
+  it('should throw helpful error for unknown technique', () => {
+    expect(() => registry.getHandler('unknown_technique')).toThrow();
+
+    try {
+      registry.getHandler('unknown_technique');
+    } catch (error: any) {
+      expect(error.message).toContain("Invalid technique: 'unknown_technique'");
+      expect(error.message).toContain('Valid techniques are:');
+      expect(error.message).toContain('six_hats');
+      expect(error.message).toContain('discover_techniques');
+    }
   });
 });

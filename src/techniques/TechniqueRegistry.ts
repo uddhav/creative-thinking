@@ -19,7 +19,7 @@ import { CrossCulturalHandler } from './CrossCulturalHandler.js';
 import { CollectiveIntelHandler } from './CollectiveIntelHandler.js';
 import { DisneyMethodHandler } from './DisneyMethodHandler.js';
 import { NineWindowsHandler } from './NineWindowsHandler.js';
-import { GenericHandler } from './GenericHandler.js';
+// Removed unused import - GenericHandler
 
 export class TechniqueRegistry {
   private handlers: Map<LateralTechnique, TechniqueHandler>;
@@ -49,8 +49,12 @@ export class TechniqueRegistry {
   getHandler(technique: string): TechniqueHandler {
     const handler = this.handlers.get(technique as LateralTechnique);
     if (!handler) {
-      // Return a generic handler for unknown techniques
-      return new GenericHandler(technique);
+      const validTechniques = Array.from(this.handlers.keys());
+      throw new Error(
+        `Invalid technique: '${technique}'. ` +
+          `Valid techniques are: ${validTechniques.join(', ')}. ` +
+          `Did you mean to call discover_techniques first to find suitable techniques?`
+      );
     }
     return handler;
   }
