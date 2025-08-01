@@ -8,6 +8,7 @@ import { BarrierWarningLevel } from './types.js';
 import type { EscapeProtocol, EscapeResponse, BarrierWarning } from './types.js';
 import type { PathMemory } from '../types.js';
 import type { SessionData } from '../../index.js';
+import { getSecureRandomFloat, getSecureRandomBoolean } from '../../utils/secureRandom.js';
 
 export class ResponseProtocolSystem {
   private protocolHistory: EscapeResponse[] = [];
@@ -204,9 +205,9 @@ export class ResponseProtocolSystem {
     }
 
     // Simulate protocol execution
-    const success = Math.random() < protocol.successProbability;
+    const success = getSecureRandomBoolean(protocol.successProbability);
     const flexibilityGained = success
-      ? protocol.estimatedFlexibilityGain * (0.8 + Math.random() * 0.4)
+      ? protocol.estimatedFlexibilityGain * getSecureRandomFloat(0.8, 1.2)
       : 0;
     const flexibilityAfter = Math.min(1, flexibilityBefore + flexibilityGained);
 

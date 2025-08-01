@@ -108,7 +108,7 @@ describe('Performance Integration Tests', () => {
 
     it('should handle 100 concurrent step executions', async () => {
       // First create a plan
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem: 'Performance test problem',
         techniques: ['six_hats'],
       });
@@ -151,7 +151,7 @@ describe('Performance Integration Tests', () => {
       const problem = 'Large session test';
 
       // Create plan
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem,
         techniques: ['six_hats'],
       });
@@ -246,7 +246,7 @@ describe('Performance Integration Tests', () => {
       const problem = 'Deep revision test';
 
       // Create plan
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem,
         techniques: ['po'],
       });
@@ -299,7 +299,7 @@ describe('Performance Integration Tests', () => {
 
       // Create 50 sessions
       for (let i = 0; i < 50; i++) {
-        const planResult = await server.planThinkingSession({
+        const planResult = server.planThinkingSession({
           problem: `Memory test problem ${i}`,
           techniques: ['random_entry'],
         });
@@ -324,7 +324,7 @@ describe('Performance Integration Tests', () => {
       expect(sessionIds.length).toBe(50);
 
       // Server should still be responsive
-      const testResult = await server.discoverTechniques({
+      const testResult = server.discoverTechniques({
         problem: 'Final test after many sessions',
       });
       expect(testResult.isError).toBeFalsy();
@@ -332,14 +332,14 @@ describe('Performance Integration Tests', () => {
   });
 
   describe('Response Time Consistency', () => {
-    it('should maintain consistent response times under load', async () => {
+    it('should maintain consistent response times under load', () => {
       const responseTimes: number[] = [];
 
       // Measure response times for 20 sequential operations
       for (let i = 0; i < 20; i++) {
         const startTime = Date.now();
 
-        await server.discoverTechniques({
+        server.discoverTechniques({
           problem: `Response time test ${i}`,
           context: 'Testing response time consistency',
         });
@@ -371,7 +371,7 @@ describe('Performance Integration Tests', () => {
       const startTime = Date.now();
 
       // Plan multi-technique session
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem,
         techniques,
         timeframe: 'comprehensive',
@@ -383,7 +383,7 @@ describe('Performance Integration Tests', () => {
 
       // Execute steps for each technique
       for (const technique of techniques) {
-        const techSteps = technique === 'six_hats' ? 6 : technique === 'scamper' ? 7 : 5; // design_thinking
+        const techSteps = technique === 'six_hats' ? 6 : technique === 'scamper' ? 8 : 5; // design_thinking
 
         for (let step = 1; step <= techSteps; step++) {
           stepCount++;

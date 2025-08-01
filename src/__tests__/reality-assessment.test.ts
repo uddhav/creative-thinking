@@ -117,7 +117,7 @@ describe('Reality Assessment', () => {
         technique: 'scamper',
         problem: 'Reduce costs by 50% without firing anyone',
         currentStep: 1,
-        totalSteps: 7,
+        totalSteps: 8,
         scamperAction: 'eliminate',
         output: 'Eliminate all operational expenses while maintaining full operations',
         nextStepNeeded: true,

@@ -68,13 +68,13 @@ describe('Memory-Suggestive Outputs', () => {
   });
 
   // Helper function to create a plan
-  async function createPlan(problem: string, techniques: LateralTechnique[]): Promise<string> {
+  function createPlan(problem: string, techniques: LateralTechnique[]): string {
     const input: PlanThinkingSessionInput = {
       problem,
       techniques,
     };
 
-    const result = (await server.planThinkingSession(input)) as ServerResponse;
+    const result = server.planThinkingSession(input) as ServerResponse;
     expect(result.isError).toBeFalsy();
     const planData = JSON.parse(result.content[0]?.text || '{}') as PlanResponse;
     return planData.planId;
@@ -96,7 +96,7 @@ describe('Memory-Suggestive Outputs', () => {
 
   describe('Contextual Insights', () => {
     it('should generate contextual insight for risk identification', async () => {
-      const planId = await createPlan('Improve system security', ['six_hats']);
+      const planId = createPlan('Improve system security', ['six_hats']);
 
       const result = await executeStep(planId, {
         technique: 'six_hats',
@@ -115,7 +115,7 @@ describe('Memory-Suggestive Outputs', () => {
     });
 
     it('should generate insight for antifragile properties', async () => {
-      const planId = await createPlan('Build resilient system', ['triz']);
+      const planId = createPlan('Build resilient system', ['triz']);
 
       const result = await executeStep(planId, {
         technique: 'triz',
@@ -133,7 +133,7 @@ describe('Memory-Suggestive Outputs', () => {
     });
 
     it('should generate technique-specific insights', async () => {
-      const planId = await createPlan('Design new product', ['design_thinking']);
+      const planId = createPlan('Design new product', ['design_thinking']);
 
       const result = await executeStep(planId, {
         technique: 'design_thinking',
@@ -152,7 +152,7 @@ describe('Memory-Suggestive Outputs', () => {
 
   describe('Historical Notes', () => {
     it('should identify consistent risk awareness pattern', async () => {
-      const planId = await createPlan('Complex system design', ['six_hats']);
+      const planId = createPlan('Complex system design', ['six_hats']);
 
       // Build up history with risk awareness
       const step1 = await executeStep(planId, {
@@ -197,6 +197,7 @@ describe('Memory-Suggestive Outputs', () => {
         totalSteps: 6,
         output: 'Benefits analysis',
         hatColor: 'yellow',
+        risks: ['Overconfidence in benefits'],
         nextStepNeeded: true,
       });
 
@@ -206,7 +207,7 @@ describe('Memory-Suggestive Outputs', () => {
     });
 
     it('should detect iterative refinement through revisions', async () => {
-      const planId = await createPlan('Optimize workflow', ['po']);
+      const planId = createPlan('Optimize workflow', ['po']);
 
       const step1 = await executeStep(planId, {
         technique: 'po',
@@ -247,6 +248,7 @@ describe('Memory-Suggestive Outputs', () => {
         totalSteps: 4,
         output: 'Refined solution through iteration',
         isRevision: true,
+        revisesStep: 3,
         nextStepNeeded: false,
       });
 
@@ -258,7 +260,7 @@ describe('Memory-Suggestive Outputs', () => {
 
   describe('Pattern Observation', () => {
     it('should identify cross-domain pattern transfer', async () => {
-      const planId = await createPlan('Apply successful patterns', ['concept_extraction']);
+      const planId = createPlan('Apply successful patterns', ['concept_extraction']);
 
       const result = await executeStep(planId, {
         technique: 'concept_extraction',
@@ -276,7 +278,7 @@ describe('Memory-Suggestive Outputs', () => {
     });
 
     it('should detect collaborative building pattern', async () => {
-      const planId = await createPlan('Workshop facilitation', ['yes_and']);
+      const planId = createPlan('Workshop facilitation', ['yes_and']);
 
       const step1 = await executeStep(planId, {
         technique: 'yes_and',
@@ -316,13 +318,13 @@ describe('Memory-Suggestive Outputs', () => {
     });
 
     it('should identify constraint-driven innovation', async () => {
-      const planId = await createPlan('Design with constraints', ['scamper']);
+      const planId = createPlan('Design with constraints', ['scamper']);
 
       const result = await executeStep(planId, {
         technique: 'scamper',
         problem: 'Design with constraints',
         currentStep: 6,
-        totalSteps: 7,
+        totalSteps: 8,
         output: 'Eliminating unnecessary features',
         scamperAction: 'eliminate',
         nextStepNeeded: false,
@@ -336,7 +338,7 @@ describe('Memory-Suggestive Outputs', () => {
 
   describe('Session Fingerprint', () => {
     it('should generate complete session fingerprint on completion', async () => {
-      const planId = await createPlan('Create innovative solution', ['random_entry']);
+      const planId = createPlan('Create innovative solution', ['random_entry']);
 
       const step1 = await executeStep(planId, {
         technique: 'random_entry',
@@ -378,7 +380,7 @@ describe('Memory-Suggestive Outputs', () => {
     });
 
     it('should identify multi-technique synthesis pattern', async () => {
-      const planId = await createPlan('Complex problem solving', ['six_hats', 'scamper']);
+      const planId = createPlan('Complex problem solving', ['six_hats', 'scamper']);
 
       // Execute Six Hats first
       const step1 = await executeStep(planId, {
@@ -409,7 +411,7 @@ describe('Memory-Suggestive Outputs', () => {
 
   describe('Noteworthy Patterns', () => {
     it('should identify Via Negativa success', async () => {
-      const planId = await createPlan('Simplify complex system', ['triz']);
+      const planId = createPlan('Simplify complex system', ['triz']);
 
       const result = await executeStep(planId, {
         technique: 'triz',
@@ -432,7 +434,7 @@ describe('Memory-Suggestive Outputs', () => {
     });
 
     it('should recognize multiple antifragile properties', async () => {
-      const planId = await createPlan('Build resilient architecture', ['design_thinking']);
+      const planId = createPlan('Build resilient architecture', ['design_thinking']);
 
       const result = await executeStep(planId, {
         technique: 'design_thinking',
@@ -454,7 +456,7 @@ describe('Memory-Suggestive Outputs', () => {
     });
 
     it('should detect effective multi-technique combination', async () => {
-      const planId = await createPlan('Strategic innovation', ['po', 'six_hats', 'triz']);
+      const planId = createPlan('Strategic innovation', ['po', 'six_hats', 'triz']);
 
       // Build up a longer session with multiple techniques
       const step1 = await executeStep(planId, {
@@ -518,7 +520,7 @@ describe('Memory-Suggestive Outputs', () => {
 
   describe('Memory Output Integration', () => {
     it('should include memory outputs without disrupting normal response', async () => {
-      const planId = await createPlan('Test memory integration', ['six_hats']);
+      const planId = createPlan('Test memory integration', ['six_hats']);
 
       const result = await executeStep(planId, {
         technique: 'six_hats',
@@ -543,13 +545,13 @@ describe('Memory-Suggestive Outputs', () => {
     });
 
     it('should only generate relevant memory outputs', async () => {
-      const planId = await createPlan('Simple task', ['scamper']);
+      const planId = createPlan('Simple task', ['scamper']);
 
       const result = await executeStep(planId, {
         technique: 'scamper',
         problem: 'Simple task',
         currentStep: 1,
-        totalSteps: 7,
+        totalSteps: 8,
         output: 'Substitution ideas',
         scamperAction: 'substitute',
         nextStepNeeded: true,

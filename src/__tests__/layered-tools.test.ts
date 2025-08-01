@@ -15,13 +15,13 @@ describe('Layered Tools Architecture', () => {
   });
 
   describe('Discovery Layer - discover_techniques', () => {
-    it('should recommend techniques based on problem keywords', async () => {
+    it('should recommend techniques based on problem keywords', () => {
       const input = {
         problem: 'How can we improve our product design to be more user-friendly?',
         preferredOutcome: 'systematic' as const,
       };
 
-      const result = (await server.discoverTechniques(input)) as ServerResponse;
+      const result = server.discoverTechniques(input) as ServerResponse;
 
       expect(result.isError).toBeFalsy();
       expect(result.content).toBeDefined();
@@ -33,14 +33,14 @@ describe('Layered Tools Architecture', () => {
       expect(text.toLowerCase()).toMatch(/scamper|design[_\s]thinking/);
     });
 
-    it('should handle technical contradiction problems', async () => {
+    it('should handle technical contradiction problems', () => {
       const input = {
         problem:
           'Need to make the system faster but also more secure, which typically slows it down',
         context: 'Engineering challenge with conflicting requirements',
       };
 
-      const result = (await server.discoverTechniques(input)) as ServerResponse;
+      const result = server.discoverTechniques(input) as ServerResponse;
 
       expect(result.isError).toBeFalsy();
       const text = result.content[0]?.text || '';
@@ -48,12 +48,12 @@ describe('Layered Tools Architecture', () => {
       expect(text.toLowerCase()).toContain('triz');
     });
 
-    it('should provide default recommendations when no specific match', async () => {
+    it('should provide default recommendations when no specific match', () => {
       const input = {
         problem: 'General problem that needs solving',
       };
 
-      const result = (await server.discoverTechniques(input)) as ServerResponse;
+      const result = server.discoverTechniques(input) as ServerResponse;
 
       expect(result.isError).toBeFalsy();
       expect(result.content.length).toBeGreaterThan(0);
@@ -62,21 +62,21 @@ describe('Layered Tools Architecture', () => {
       expect(text).toContain('recommendations');
     });
 
-    it('should consider preferred outcomes', async () => {
-      const riskAwareResult = (await server.discoverTechniques({
+    it('should consider preferred outcomes', () => {
+      const riskAwareResult = server.discoverTechniques({
         problem: 'How to launch a new product',
         preferredOutcome: 'risk-aware' as const,
-      })) as ServerResponse;
+      }) as ServerResponse;
 
       expect(riskAwareResult.isError).toBeFalsy();
       const riskText = riskAwareResult.content[0]?.text || '';
       // Should recommend Six Hats for risk awareness (Black Hat)
       expect(riskText.toLowerCase()).toContain('six_hats');
 
-      const collaborativeResult = (await server.discoverTechniques({
+      const collaborativeResult = server.discoverTechniques({
         problem: 'Team brainstorming session needed',
         preferredOutcome: 'collaborative' as const,
-      })) as ServerResponse;
+      }) as ServerResponse;
 
       expect(collaborativeResult.isError).toBeFalsy();
       const collabText = collaborativeResult.content[0]?.text || '';
@@ -84,13 +84,13 @@ describe('Layered Tools Architecture', () => {
       expect(collabText.toLowerCase()).toContain('yes_and');
     });
 
-    it('should limit recommendations to top 3', async () => {
+    it('should limit recommendations to top 3', () => {
       const input = {
         problem:
           'Complex problem that could match many techniques: improve user experience, reduce technical debt, innovate product features, optimize performance',
       };
 
-      const result = (await server.discoverTechniques(input)) as ServerResponse;
+      const result = server.discoverTechniques(input) as ServerResponse;
 
       expect(result.isError).toBeFalsy();
       const text = result.content[0]?.text || '';
@@ -99,11 +99,11 @@ describe('Layered Tools Architecture', () => {
       expect(techniqueMatches.length).toBeLessThanOrEqual(3);
     });
 
-    it('should handle invalid input', async () => {
-      const result = (await server.discoverTechniques({
+    it('should handle invalid input', () => {
+      const result = server.discoverTechniques({
         // Missing required 'problem' field
         preferredOutcome: 'systematic' as const,
-      })) as ServerResponse;
+      }) as ServerResponse;
 
       expect(result.isError).toBeTruthy();
       const errorText = result.content[0]?.text || '';
@@ -112,14 +112,14 @@ describe('Layered Tools Architecture', () => {
   });
 
   describe('Planning Layer - plan_thinking_session', () => {
-    it('should create workflow for single technique', async () => {
+    it('should create workflow for single technique', () => {
       const input = {
         problem: 'How to improve team dynamics',
         techniques: ['six_hats'] as const,
         objectives: ['Better team communication'],
       };
 
-      const result = (await server.planThinkingSession(input)) as ServerResponse;
+      const result = server.planThinkingSession(input) as ServerResponse;
 
       expect(result.isError).toBeFalsy();
       const text = result.content[0]?.text || '';
@@ -129,30 +129,30 @@ describe('Layered Tools Architecture', () => {
       expect(stepMatches.length).toBe(7);
     });
 
-    it('should combine multiple techniques in workflow', async () => {
+    it('should combine multiple techniques in workflow', () => {
       const input = {
         problem: 'Redesign product for better user experience',
         techniques: ['design_thinking', 'scamper'] as const,
         objectives: ['Improve UX', 'Reduce complexity'],
       };
 
-      const result = (await server.planThinkingSession(input)) as ServerResponse;
+      const result = server.planThinkingSession(input) as ServerResponse;
 
       expect(result.isError).toBeFalsy();
       const text = result.content[0]?.text || '';
-      // Design Thinking (5 steps) + SCAMPER (7 steps) = 12 total
+      // Design Thinking (5 steps) + SCAMPER (8 steps) = 13 total
       const stepMatches = text.match(/"stepNumber":\s*\d+/g) || [];
-      expect(stepMatches.length).toBe(12);
+      expect(stepMatches.length).toBe(13);
     });
 
-    it('should include risk considerations for appropriate steps', async () => {
+    it('should include risk considerations for appropriate steps', () => {
       const input = {
         problem: 'Technical optimization requiring careful analysis',
         techniques: ['design_thinking'] as const,
         objectives: ['Optimize performance'],
       };
 
-      const result = (await server.planThinkingSession(input)) as ServerResponse;
+      const result = server.planThinkingSession(input) as ServerResponse;
 
       expect(result.isError).toBeFalsy();
       const text = result.content[0]?.text || '';
@@ -160,7 +160,7 @@ describe('Layered Tools Architecture', () => {
       expect(text).toContain('riskConsiderations');
     });
 
-    it('should handle thorough timeframe', async () => {
+    it('should handle thorough timeframe', () => {
       const input = {
         problem: 'Complex strategic planning',
         techniques: ['six_hats', 'triz'] as const,
@@ -168,7 +168,7 @@ describe('Layered Tools Architecture', () => {
         timeframe: 'thorough' as const,
       };
 
-      const result = (await server.planThinkingSession(input)) as ServerResponse;
+      const result = server.planThinkingSession(input) as ServerResponse;
 
       expect(result.isError).toBeFalsy();
       const text = result.content[0]?.text || '';
@@ -176,12 +176,12 @@ describe('Layered Tools Architecture', () => {
       expect(text).toContain('Thorough analysis from all angles');
     });
 
-    it('should handle invalid techniques', async () => {
-      const result = (await server.planThinkingSession({
+    it('should handle invalid techniques', () => {
+      const result = server.planThinkingSession({
         problem: 'Test problem',
         techniques: [], // Empty techniques array
         objectives: ['Test objective'],
-      })) as ServerResponse;
+      }) as ServerResponse;
 
       expect(result.isError).toBeTruthy();
       const errorText = result.content[0]?.text || '';
@@ -191,7 +191,7 @@ describe('Layered Tools Architecture', () => {
 
   describe('Execution Layer - execute_thinking_step', () => {
     // Helper function to create a plan for testing
-    async function createTestPlan(
+    function createTestPlan(
       problem: string,
       techniques: (
         | 'six_hats'
@@ -203,11 +203,11 @@ describe('Layered Tools Architecture', () => {
         | 'design_thinking'
         | 'triz'
       )[]
-    ): Promise<string> {
-      const planResult = (await server.planThinkingSession({
+    ): string {
+      const planResult = server.planThinkingSession({
         problem,
         techniques,
-      })) as ServerResponse;
+      }) as ServerResponse;
 
       const planData = JSON.parse(planResult.content[0]?.text || '{}') as { planId: string };
       return planData.planId;
@@ -215,7 +215,7 @@ describe('Layered Tools Architecture', () => {
 
     it('should execute first step of a technique', async () => {
       // First create a plan
-      const planId = await createTestPlan('How to reduce operational costs', ['six_hats']);
+      const planId = createTestPlan('How to reduce operational costs', ['six_hats']);
 
       const input = {
         planId,
@@ -238,7 +238,7 @@ describe('Layered Tools Architecture', () => {
 
     it('should maintain session state across steps', async () => {
       // Create a plan first
-      const planId = await createTestPlan('How to make meetings more productive', ['po']);
+      const planId = createTestPlan('How to make meetings more productive', ['po']);
 
       // First step
       const step1Result = (await server.executeThinkingStep({
@@ -278,7 +278,7 @@ describe('Layered Tools Architecture', () => {
     });
 
     it('should complete a session when nextStepNeeded is false', async () => {
-      const planId = await createTestPlan('How to improve office productivity', ['random_entry']);
+      const planId = createTestPlan('How to improve office productivity', ['random_entry']);
 
       const result = (await server.executeThinkingStep({
         planId,
@@ -299,7 +299,7 @@ describe('Layered Tools Architecture', () => {
     });
 
     it('should handle technique-specific fields correctly', async () => {
-      const planId = await createTestPlan('Improve customer onboarding', ['design_thinking']);
+      const planId = createTestPlan('Improve customer onboarding', ['design_thinking']);
 
       const result = (await server.executeThinkingStep({
         planId,
@@ -365,7 +365,7 @@ describe('Layered Tools Architecture', () => {
 
     it('should validate technique matches plan', async () => {
       // Create a plan for six_hats
-      const planId = await createTestPlan('Test problem', ['six_hats']);
+      const planId = createTestPlan('Test problem', ['six_hats']);
 
       // Try to execute with different technique
       const result = (await server.executeThinkingStep({
@@ -392,19 +392,19 @@ describe('Layered Tools Architecture', () => {
   describe('Integration - Full Workflow', () => {
     it('should complete a full discovery-planning-execution workflow', async () => {
       // Step 1: Discovery
-      const discoveryResult = (await server.discoverTechniques({
+      const discoveryResult = server.discoverTechniques({
         problem: 'How to reduce software bugs in production',
         preferredOutcome: 'systematic' as const,
-      })) as ServerResponse;
+      }) as ServerResponse;
 
       expect(discoveryResult.isError).toBeFalsy();
 
       // Step 2: Planning
-      const planResult = (await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem: 'How to reduce software bugs in production',
         techniques: ['triz'] as const, // Based on discovery
         objectives: ['Identify root causes', 'Find systematic solutions'],
-      })) as ServerResponse;
+      }) as ServerResponse;
 
       expect(planResult.isError).toBeFalsy();
 

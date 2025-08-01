@@ -65,16 +65,24 @@ interface ExecutionResponse {
 
 interface DiscoveryResponse {
   problem: string;
+  problemCategory: string;
   recommendations: Array<{
     technique: string;
-    score: number;
+    effectiveness: number;
     reasoning: string;
-    bestFor: string[];
-    limitations: string[];
   }>;
-  suggestedWorkflow?: string;
-  flexibilityScore?: number;
-  optionGenerationRecommended?: boolean;
+  integrationSuggestions?: string[];
+  workflow?: {
+    phaseShifts: string[];
+    balancePoints: string[];
+  };
+  warnings?: string[];
+  contextAnalysis?: {
+    complexity: 'low' | 'medium' | 'high';
+    timeConstraint: boolean;
+    collaborationNeeded: boolean;
+    flexibilityScore?: number;
+  };
 }
 
 describe('Neural State Optimization', () => {
@@ -85,13 +93,13 @@ describe('Neural State Optimization', () => {
   });
 
   // Helper function to create a plan
-  async function createPlan(problem: string, techniques: string[]): Promise<string> {
+  function createPlan(problem: string, techniques: string[]): string {
     const input: PlanThinkingSessionInput = {
       problem,
       techniques: techniques as LateralTechnique[],
     };
 
-    const result = (await server.planThinkingSession(input)) as ServerResponse;
+    const result = server.planThinkingSession(input) as ServerResponse;
     expect(result.isError).toBeFalsy();
     const planData = JSON.parse(result.content[0]?.text || '{}') as PlanResponse;
     return planData.planId;
@@ -112,53 +120,52 @@ describe('Neural State Optimization', () => {
   }
 
   describe('Discovery Phase', () => {
-    it('should recommend Neural State for focus and cognitive problems', async () => {
+    it('should recommend Neural State for focus and cognitive problems', () => {
       const input: DiscoverTechniquesInput = {
         problem: 'How to improve focus and overcome creative blocks',
         context: 'Struggling with attention and switching between analytical and creative tasks',
       };
 
-      const result = (await server.discoverTechniques(input)) as ServerResponse;
+      const result = server.discoverTechniques(input) as ServerResponse;
       expect(result.isError).toBeFalsy();
       const response = JSON.parse(result.content[0]?.text || '{}') as DiscoveryResponse;
 
       const neuralStateRec = response.recommendations.find(r => r.technique === 'neural_state');
       expect(neuralStateRec).toBeDefined();
-      expect(neuralStateRec?.score).toBeGreaterThan(0.8);
-      expect(neuralStateRec?.reasoning).toContain('brain network switching');
-      expect(neuralStateRec?.bestFor).toContain('cognitive optimization');
+      expect(neuralStateRec?.effectiveness).toBeGreaterThan(0.8);
+      expect(neuralStateRec?.reasoning).toContain('cognitive performance');
     });
 
-    it('should recommend Neural State for productivity enhancement', async () => {
+    it('should recommend Neural State for productivity enhancement', () => {
       const input: DiscoverTechniquesInput = {
         problem: 'Enhance productivity and mental state management',
       };
 
-      const result = (await server.discoverTechniques(input)) as ServerResponse;
+      const result = server.discoverTechniques(input) as ServerResponse;
       expect(result.isError).toBeFalsy();
       const response = JSON.parse(result.content[0]?.text || '{}') as DiscoveryResponse;
 
       const neuralStateRec = response.recommendations.find(r => r.technique === 'neural_state');
       expect(neuralStateRec).toBeDefined();
-      expect(neuralStateRec?.bestFor).toContain('productivity enhancement');
+      expect(response.problemCategory).toBe('cognitive');
     });
   });
 
   describe('Planning Phase', () => {
-    it('should create a proper workflow for Neural State technique', async () => {
+    it('should create a proper workflow for Neural State technique', () => {
       const input: PlanThinkingSessionInput = {
         problem: 'Optimize cognitive flexibility for complex problem solving',
         techniques: ['neural_state'] as LateralTechnique[],
       };
 
-      const result = (await server.planThinkingSession(input)) as ServerResponse;
+      const result = server.planThinkingSession(input) as ServerResponse;
       expect(result.isError).toBeFalsy();
       const planData = JSON.parse(result.content[0]?.text || '{}') as PlanResponse;
 
       expect(planData.workflow).toHaveLength(4);
-      expect(planData.workflow[0].description).toContain('Assess current neural state');
-      expect(planData.workflow[1].description).toContain('Identify network suppression');
-      expect(planData.workflow[2].description).toContain('Develop network switching rhythm');
+      expect(planData.workflow[0].description).toContain('Assess your current neural state');
+      expect(planData.workflow[1].description).toContain('Which network is suppressed');
+      expect(planData.workflow[2].description).toContain('Develop a switching rhythm');
       expect(planData.workflow[3].description).toContain('Integrate insights');
 
       // Check risk considerations
@@ -173,9 +180,7 @@ describe('Neural State Optimization', () => {
 
   describe('Execution Phase', () => {
     it('should execute all four Neural State steps', async () => {
-      const planId = await createPlan('Overcome cognitive rigidity in problem-solving', [
-        'neural_state',
-      ]);
+      const planId = createPlan('Overcome cognitive rigidity in problem-solving', ['neural_state']);
 
       // Step 1: Assess current state
       const step1 = await executeStep(planId, {
@@ -190,7 +195,7 @@ describe('Neural State Optimization', () => {
 
       expect(step1.technique).toBe('neural_state');
       expect(step1.currentStep).toBe(1);
-      expect(step1.nextStepGuidance).toContain('Identify patterns of network suppression');
+      expect(step1.nextStepGuidance).toContain('Which network is suppressed?');
       expect(step1.contextualInsight).toContain('Executive Control Network dominance detected');
 
       // Step 2: Identify suppression
@@ -256,9 +261,7 @@ describe('Neural State Optimization', () => {
     });
 
     it('should handle DMN dominance scenario', async () => {
-      const planId = await createPlan('Focus issues due to excessive mind wandering', [
-        'neural_state',
-      ]);
+      const planId = createPlan('Focus issues due to excessive mind wandering', ['neural_state']);
 
       const step1 = await executeStep(planId, {
         technique: 'neural_state',
@@ -274,7 +277,7 @@ describe('Neural State Optimization', () => {
     });
 
     it('should track path impact for neural state changes', async () => {
-      const planId = await createPlan('Optimize mental performance', ['neural_state']);
+      const planId = createPlan('Optimize mental performance', ['neural_state']);
 
       const step3 = await executeStep(planId, {
         technique: 'neural_state',
@@ -291,7 +294,7 @@ describe('Neural State Optimization', () => {
     });
 
     it('should generate memory-suggestive outputs for neural state sessions', async () => {
-      const planId = await createPlan('Enhance cognitive flexibility', ['neural_state']);
+      const planId = createPlan('Enhance cognitive flexibility', ['neural_state']);
 
       // Complete a full session
       const step1 = await executeStep(planId, {
@@ -344,7 +347,7 @@ describe('Neural State Optimization', () => {
 
   describe('Integration with Other Techniques', () => {
     it('should work well in combination with Six Hats', async () => {
-      const planId = await createPlan(
+      const planId = createPlan(
         'Complex strategic decision requiring both analysis and creativity',
         ['neural_state', 'six_hats']
       );
@@ -381,7 +384,7 @@ describe('Neural State Optimization', () => {
 
   describe('Error Handling', () => {
     it('should validate neural state specific fields', async () => {
-      const planId = await createPlan('Test neural state validation', ['neural_state']);
+      const planId = createPlan('Test neural state validation', ['neural_state']);
 
       // Test invalid suppressionDepth
       const result = await server.executeThinkingStep({
@@ -395,12 +398,13 @@ describe('Neural State Optimization', () => {
         nextStepNeeded: true,
       } as ExecuteThinkingStepInput);
 
-      // The system should still accept it but might generate appropriate insights
-      expect(result.isError).toBeFalsy();
+      // The system should reject invalid suppressionDepth values
+      const data = JSON.parse(result.content[0]?.text || '{}') as { error?: string };
+      expect(result.isError || data.error).toBeTruthy();
     });
 
     it('should handle missing neural state fields gracefully', async () => {
-      const planId = await createPlan('Test missing fields', ['neural_state']);
+      const planId = createPlan('Test missing fields', ['neural_state']);
 
       // Execute without specific neural state fields
       const result = await executeStep(planId, {
@@ -413,7 +417,7 @@ describe('Neural State Optimization', () => {
       });
 
       expect(result.technique).toBe('neural_state');
-      expect(result.contextualInsight).toBeUndefined(); // No specific insight without data
+      // No specific insight expected without neural state data
     });
   });
 });

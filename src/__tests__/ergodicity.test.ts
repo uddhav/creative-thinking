@@ -17,13 +17,13 @@ describe('Ergodicity and Path Dependency Tracking', () => {
   });
 
   describe('Purple Hat in Six Thinking Hats', () => {
-    it('should include Purple Hat as the 7th hat', async () => {
+    it('should include Purple Hat as the 7th hat', () => {
       const input = {
         problem: 'Test path dependencies',
         techniques: ['six_hats'] as const,
       };
 
-      const planResult = (await server.planThinkingSession(input)) as ServerResponse;
+      const planResult = server.planThinkingSession(input) as ServerResponse;
       expect(planResult.isError).toBeFalsy();
 
       const planText = planResult.content[0]?.text || '';
@@ -34,15 +34,15 @@ describe('Ergodicity and Path Dependency Tracking', () => {
 
       // Check that Purple Hat is included in workflow
       expect(planText).toContain('Purple Hat');
-      expect(planText).toContain('Path dependencies');
+      expect(planText).toContain('path dependencies');
     });
 
     it('should track path dependencies with Purple Hat', async () => {
       // Create plan
-      const planResult = (await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem: 'How to improve team collaboration',
         techniques: ['six_hats'] as const,
-      })) as ServerResponse;
+      }) as ServerResponse;
 
       const planData = JSON.parse(planResult.content[0]?.text || '{}') as { planId: string };
 
@@ -181,10 +181,10 @@ describe('Ergodicity and Path Dependency Tracking', () => {
   describe('Integration with Session Management', () => {
     it('should include ergodicity status in visual output', async () => {
       // Create plan
-      const planResult = (await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem: 'Complex decision with many constraints',
         techniques: ['scamper'] as const,
-      })) as ServerResponse;
+      }) as ServerResponse;
 
       const planData = JSON.parse(planResult.content[0]?.text || '{}') as { planId: string };
 

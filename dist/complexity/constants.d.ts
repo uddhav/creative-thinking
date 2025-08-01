@@ -45,7 +45,7 @@ export declare const SAMPLING_CONFIG: {
 };
 export declare const COMPLEXITY_PATTERNS: {
     readonly INTERACTION: {
-        readonly keywords: readonly ["interact", "interconnect", "depend", "connect", "influence", "affect", "relate"];
+        readonly keywords: readonly ["interact", "interconnect", "depend", "connect", "influence", "affect", "relate", "dependencies", "integration"];
         readonly requiresContext: readonly ["multiple"];
     };
     readonly CONFLICT: {
@@ -53,7 +53,7 @@ export declare const COMPLEXITY_PATTERNS: {
         readonly requiresContext: readonly [];
     };
     readonly UNCERTAINTY: {
-        readonly keywords: readonly ["uncertain", "uncertainty", "dynamic", "chang", "evolv", "unclear", "ambiguous"];
+        readonly keywords: readonly ["uncertain", "uncertainty", "dynamic", "dynamics", "chang", "evolv", "unclear", "ambiguous"];
         readonly requiresContext: readonly [];
     };
     readonly STAKEHOLDER: {
@@ -61,7 +61,7 @@ export declare const COMPLEXITY_PATTERNS: {
         readonly requiresContext: readonly ["multiple", "diverse", "various"];
     };
     readonly SYSTEM: {
-        readonly keywords: readonly ["system", "systems", "ecosystem", "complex", "architecture", "infrastructure"];
+        readonly keywords: readonly ["system", "systems", "ecosystem", "complex", "architecture", "infrastructure", "transformation", "large-scale"];
         readonly requiresContext: readonly [];
     };
     readonly TIME_PRESSURE: {

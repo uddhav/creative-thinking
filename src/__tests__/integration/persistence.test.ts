@@ -11,7 +11,7 @@ import { safeJsonParse } from '../helpers/types.js';
 
 describe('Session Persistence - Simple Integration', () => {
   let server: LateralThinkingServer;
-  const testBasePath = './test-sessions-simple';
+  const testBasePath = `/tmp/test-sessions-${Date.now()}`;
 
   beforeEach(async () => {
     // Clean up any existing test sessions
@@ -37,8 +37,8 @@ describe('Session Persistence - Simple Integration', () => {
 
     server = new LateralThinkingServer();
 
-    // Wait for persistence initialization
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Wait for persistence initialization (needs more time)
+    await new Promise(resolve => setTimeout(resolve, 500));
   });
 
   afterEach(() => {
@@ -61,7 +61,7 @@ describe('Session Persistence - Simple Integration', () => {
       const problem = 'Test auto-save problem';
 
       // Create a session with autoSave
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem,
         techniques: ['random_entry'],
       });
@@ -111,7 +111,7 @@ describe('Session Persistence - Simple Integration', () => {
 
       // Create multiple sessions
       for (let i = 0; i < 3; i++) {
-        const planResult = await server.planThinkingSession({
+        const planResult = server.planThinkingSession({
           problem: `Problem ${i}`,
           techniques: ['po'],
         });
@@ -152,7 +152,7 @@ describe('Session Persistence - Simple Integration', () => {
       const problem = 'Test session updates';
 
       // Create initial session
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem,
         techniques: ['scamper'],
       });
@@ -164,7 +164,7 @@ describe('Session Persistence - Simple Integration', () => {
         technique: 'scamper',
         problem,
         currentStep: 1,
-        totalSteps: 7,
+        totalSteps: 8,
         scamperAction: 'substitute',
         output: 'Substituted materials',
         nextStepNeeded: true,
@@ -191,7 +191,7 @@ describe('Session Persistence - Simple Integration', () => {
         technique: 'scamper',
         problem,
         currentStep: 2,
-        totalSteps: 7,
+        totalSteps: 8,
         scamperAction: 'combine',
         output: 'Combined features',
         nextStepNeeded: true,
@@ -216,7 +216,7 @@ describe('Session Persistence - Simple Integration', () => {
       const problem = 'Test persistence across restarts';
 
       // Create and save a session
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem,
         techniques: ['six_hats'],
       });
@@ -279,15 +279,19 @@ describe('Session Persistence - Simple Integration', () => {
 
   describe('Error Handling', () => {
     it('should handle autoSave failures gracefully', async () => {
-      // Make directory read-only to cause save failure
-      fs.chmodSync(testBasePath, 0o444);
-
       const problem = 'Test save failure';
-      const planResult = await server.planThinkingSession({
+      const planResult = server.planThinkingSession({
         problem,
         techniques: ['random_entry'],
       });
       const plan = safeJsonParse(planResult.content[0].text);
+
+      // Make directory read-only to cause save failure
+      try {
+        fs.chmodSync(`${testBasePath}/sessions`, 0o444);
+      } catch (error) {
+        console.warn('Could not change permissions:', error);
+      }
 
       const result = await server.executeThinkingStep({
         planId: plan.planId,
@@ -311,7 +315,11 @@ describe('Session Persistence - Simple Integration', () => {
       expect(response.autoSaveError).toBeDefined();
 
       // Restore permissions
-      fs.chmodSync(testBasePath, 0o755);
+      try {
+        fs.chmodSync(`${testBasePath}/sessions`, 0o755);
+      } catch (error) {
+        console.warn('Could not restore permissions:', error);
+      }
     });
   });
 });

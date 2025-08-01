@@ -3,6 +3,7 @@
  */
 
 import { BaseOptionStrategy } from './base.js';
+import { getSecureRandomIndex } from '../../../utils/secureRandom.js';
 import type {
   Option,
   OptionGenerationContext,
@@ -270,7 +271,7 @@ export class InversionStrategy extends BaseOptionStrategy {
     if (inversion.includes('sometimes not')) return benefits[5];
 
     // Random selection for variety
-    return benefits[Math.floor(Math.random() * benefits.length)];
+    return benefits[getSecureRandomIndex(benefits.length)];
   }
 
   private generateExample(inversion: string, domain: string): string {
@@ -298,7 +299,7 @@ export class InversionStrategy extends BaseOptionStrategy {
     };
 
     const domainExamples = examples[domain] || examples.default;
-    return domainExamples[Math.floor(Math.random() * domainExamples.length)];
+    return domainExamples[getSecureRandomIndex(domainExamples.length)];
   }
 
   private shortenAssumption(assumption: string): string {

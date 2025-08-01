@@ -507,7 +507,7 @@ export class PathMemoryManager {
     recordEvent(event) {
         // Generate ID if not provided
         if (!event.id) {
-            event.id = `event_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+            event.id = `event_${randomUUID()}`;
         }
         // Add to path history
         this.pathMemory.pathHistory.push(event);

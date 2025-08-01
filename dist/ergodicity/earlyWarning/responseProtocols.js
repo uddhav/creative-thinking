@@ -4,6 +4,7 @@
  */
 // Removed unused import
 import { BarrierWarningLevel } from './types.js';
+import { getSecureRandomFloat, getSecureRandomBoolean } from '../../utils/secureRandom.js';
 export class ResponseProtocolSystem {
     protocolHistory = [];
     /**
@@ -185,9 +186,9 @@ export class ResponseProtocolSystem {
             });
         }
         // Simulate protocol execution
-        const success = Math.random() < protocol.successProbability;
+        const success = getSecureRandomBoolean(protocol.successProbability);
         const flexibilityGained = success
-            ? protocol.estimatedFlexibilityGain * (0.8 + Math.random() * 0.4)
+            ? protocol.estimatedFlexibilityGain * getSecureRandomFloat(0.8, 1.2)
             : 0;
         const flexibilityAfter = Math.min(1, flexibilityBefore + flexibilityGained);
         // Generate side effects

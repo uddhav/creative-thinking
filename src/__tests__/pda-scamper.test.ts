@@ -62,13 +62,13 @@ describe('PDA-SCAMPER Enhancement', () => {
   });
 
   // Helper function to create a plan
-  async function createPlan(problem: string): Promise<string> {
+  function createPlan(problem: string): string {
     const input: PlanThinkingSessionInput = {
       problem,
       techniques: ['scamper'] as LateralTechnique[],
     };
 
-    const result = (await server.planThinkingSession(input)) as ServerResponse;
+    const result = server.planThinkingSession(input) as ServerResponse;
     expect(result.isError).toBeFalsy();
     const planData = JSON.parse(result.content[0]?.text || '{}') as PlanResponse;
     return planData.planId;
@@ -88,7 +88,7 @@ describe('PDA-SCAMPER Enhancement', () => {
       technique: 'scamper',
       problem: 'Improve a coffee mug design',
       currentStep: step,
-      totalSteps: 7,
+      totalSteps: 8,
       output,
       nextStepNeeded,
       scamperAction: action as ScamperAction,
@@ -96,45 +96,48 @@ describe('PDA-SCAMPER Enhancement', () => {
     };
 
     const result = (await server.executeThinkingStep(input)) as ServerResponse;
+    if (result.isError) {
+      console.error('ExecuteStep error:', result.content[0]?.text);
+    }
     expect(result.isError).toBeFalsy();
     return JSON.parse(result.content[0]?.text || '{}') as ExecutionResponse;
   }
 
   describe('Planning Phase', () => {
-    it('should include path indicators in SCAMPER workflow', async () => {
-      await createPlan('Improve a coffee mug design');
+    it('should include path indicators in SCAMPER workflow', () => {
+      createPlan('Improve a coffee mug design');
 
       const input: PlanThinkingSessionInput = {
         problem: 'Improve a coffee mug design',
         techniques: ['scamper'] as LateralTechnique[],
       };
 
-      const result = (await server.planThinkingSession(input)) as ServerResponse;
+      const result = server.planThinkingSession(input) as ServerResponse;
       const planData = JSON.parse(result.content[0]?.text || '{}') as PlanResponse;
 
       // Check that each step has path indicators
-      expect(planData.workflow).toHaveLength(7);
+      expect(planData.workflow).toHaveLength(8);
 
       // Check specific high-commitment actions
-      const eliminateStep = planData.workflow.find(w => w.description.includes('Eliminate'));
+      const eliminateStep = planData.workflow.find(w => w.description.includes('ELIMINATE'));
       expect(eliminateStep?.description).toContain('🔒'); // Lock indicator
       expect(eliminateStep?.riskConsiderations).toContain(
         '⚠️ IRREVERSIBLE ACTION - Cannot be undone'
       );
 
-      const combineStep = planData.workflow.find(w => w.description.includes('Combine'));
+      const combineStep = planData.workflow.find(w => w.description.includes('COMBINE'));
       expect(combineStep?.description).toContain('🔒'); // Lock indicator
       expect(combineStep?.riskConsiderations).toContain('High commitment - Difficult to reverse');
 
       // Check low-commitment actions
-      const modifyStep = planData.workflow.find(w => w.description.includes('Modify'));
+      const modifyStep = planData.workflow.find(w => w.description.includes('MODIFY'));
       expect(modifyStep?.description).toContain('🔄'); // Reversible indicator
     });
   });
 
   describe('Execution Phase - Path Impact Analysis', () => {
     it('should analyze path impact for each SCAMPER action', async () => {
-      const planId = await createPlan('Improve a coffee mug design');
+      const planId = createPlan('Improve a coffee mug design');
 
       // Step 1: Substitute (medium commitment)
       const step1 = await executeStep(
@@ -188,7 +191,7 @@ describe('PDA-SCAMPER Enhancement', () => {
     });
 
     it('should track cumulative flexibility degradation', async () => {
-      const planId = await createPlan('Redesign office chair');
+      const planId = createPlan('Redesign office chair');
       const flexibilityScores: number[] = [];
 
       // Execute multiple high-commitment actions
@@ -235,7 +238,7 @@ describe('PDA-SCAMPER Enhancement', () => {
     });
 
     it('should generate alternative suggestions when flexibility is low', async () => {
-      const planId = await createPlan('Package redesign');
+      const planId = createPlan('Package redesign');
 
       // Execute high-commitment actions to reduce flexibility
       const step1 = await executeStep(
@@ -281,7 +284,7 @@ describe('PDA-SCAMPER Enhancement', () => {
     });
 
     it('should track modification history with path impacts', async () => {
-      const planId = await createPlan('Improve bicycle design');
+      const planId = createPlan('Improve bicycle design');
 
       const step1 = await executeStep(
         planId,
@@ -319,7 +322,7 @@ describe('PDA-SCAMPER Enhancement', () => {
     });
 
     it('should show different recovery paths for different actions', async () => {
-      const planId = await createPlan('Software UI redesign');
+      const planId = createPlan('Software UI redesign');
 
       const step1 = await executeStep(
         planId,
@@ -355,7 +358,7 @@ describe('PDA-SCAMPER Enhancement', () => {
 
   describe('Option Generation Actions', () => {
     it('should identify option-generating vs option-closing actions', async () => {
-      const planId = await createPlan('Product innovation');
+      const planId = createPlan('Product innovation');
 
       // Option-generating action
       const step1 = await executeStep(
@@ -379,13 +382,15 @@ describe('PDA-SCAMPER Enhancement', () => {
         true
       );
       expect(step2.pathImpact?.optionsClosed.length).toBeGreaterThan(0);
-      expect(step2.pathImpact?.optionsClosed).toContain('Features dependent on eliminated element');
+      expect(step2.pathImpact?.optionsClosed).toContain(
+        'Features dependent on eliminated elements'
+      );
     });
   });
 
   describe('Integration with Ergodicity Tracking', () => {
     it('should properly integrate with ergodicity manager', async () => {
-      const planId = await createPlan('System architecture redesign');
+      const planId = createPlan('System architecture redesign');
 
       // Execute a high-commitment action
       const step1 = await executeStep(
