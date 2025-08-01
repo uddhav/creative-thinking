@@ -1,3 +1,10 @@
+## [v0.3.2] - 2025-08-01
+
+### Changes from PR #121
+
+- fix: resolve all ESLint errors and warnings
+
+
 # Changelog
 
 All notable changes to the Creative Thinking MCP Server will be documented in this file.
