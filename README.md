@@ -84,8 +84,8 @@ Each technique integrates creative generation with systematic verification:
 - **Temporal Work Design** - Time-based problem solving and pressure transformation
 - **Cross-Cultural Integration** - Multi-perspective synthesis across cultural frameworks
 - **Collective Intelligence** - Wisdom aggregation from diverse knowledge sources
-- **Disney Method** - Three-role approach (Dreamer, Realist, Critic) for idea development
-- **Nine Windows** - Systematic analysis across time and system levels in a 3×3 matrix
+- **Disney Method** - Three-role creative process (Dreamer → Realist → Critic)
+- **Nine Windows** - Systematic 3×3 analysis across time and system levels
 
 ### Memory-Aware Outputs (NEW)
 
@@ -319,7 +319,7 @@ Creates a structured workflow for applying one or more creative thinking techniq
 **Inputs:**
 - `problem` (string, required): The problem to solve
 - `techniques` (array, required): The techniques to include in the workflow
-  - Options: 'six_hats', 'po', 'random_entry', 'scamper', 'concept_extraction', 'yes_and', 'design_thinking', 'triz', 'neural_state', 'temporal_work', 'cross_cultural', 'collective_intel'
+  - Options: 'six_hats', 'po', 'random_entry', 'scamper', 'concept_extraction', 'yes_and', 'design_thinking', 'triz', 'neural_state', 'temporal_work', 'cross_cultural', 'collective_intel', 'disney_method', 'nine_windows'
 - `objectives` (array, optional): Specific objectives for this session
 - `constraints` (array, optional): Constraints to work within
 - `timeframe` (string, optional): How much time/depth to invest
@@ -522,6 +522,38 @@ Four-step wisdom aggregation:
 - Domain experts and practitioners
 - Crowd wisdom and collective experience
 - AI systems and data analytics
+
+### Disney Method
+Three-role sequential creative process:
+1. **Dreamer** - Envision ideal solutions without constraints
+2. **Realist** - Develop practical implementation plans
+3. **Critic** - Identify risks, gaps, and improvement opportunities
+
+**Integration Features**:
+- Path dependency tracking between roles
+- Flexibility preservation through iterative cycles
+- Risk mitigation built into critic phase
+
+### Nine Windows
+Systematic 3×3 matrix analysis:
+- **Time Dimension**: Past → Present → Future
+- **System Levels**: Sub-system → System → Super-system
+
+**Analysis Grid**:
+1. Past sub-system: Component history and evolution
+2. Past system: Historical context and patterns
+3. Past super-system: Environmental influences
+4. Present sub-system: Current components
+5. Present system: Current state analysis
+6. Present super-system: Current environment
+7. Future sub-system: Component trends
+8. Future system: Projected outcomes
+9. Future super-system: Environmental evolution
+
+**Path Dependency Features**:
+- Tracks decisions across time dimensions
+- Identifies system-level constraints
+- Maps flexibility across scales
 - Historical patterns and cultural knowledge
 
 ## Example Workflow
@@ -562,6 +594,45 @@ Four-step wisdom aggregation:
     "hatColor": "blue",
     "output": "Establishing systematic approach to analyze collaboration challenges",
     "nextStepNeeded": true
+  }
+}
+```
+
+### Disney Method Example
+```json
+{
+  "tool": "execute_thinking_step",
+  "arguments": {
+    "planId": "plan_disney_example",
+    "technique": "disney_method",
+    "problem": "Design a new product feature",
+    "currentStep": 1,
+    "totalSteps": 3,
+    "output": "Imagine a feature that reads users' minds and automatically completes their tasks before they even think of them",
+    "nextStepNeeded": true,
+    "risks": ["Technical feasibility", "Privacy concerns"],
+    "antifragileProperties": ["Gets better with more user data"]
+  }
+}
+```
+
+### Nine Windows Example
+```json
+{
+  "tool": "execute_thinking_step",
+  "arguments": {
+    "planId": "plan_nine_windows",
+    "technique": "nine_windows",
+    "problem": "Improve urban transportation",
+    "currentStep": 5,
+    "totalSteps": 9,
+    "output": "Current system: Mix of cars, public transit, bikes. Key issues: congestion, emissions, accessibility",
+    "nextStepNeeded": true,
+    "pathImpact": {
+      "systemLevel": "current",
+      "constraints": ["Infrastructure limits", "Budget restrictions"],
+      "flexibilityScore": 0.6
+    }
   }
 }
 ```
@@ -726,6 +797,18 @@ npm run test:run            # Run tests once
 npm run test:coverage       # Generate coverage report
 ```
 
+## Version 0.3.1 Features
+
+### New Techniques
+- **Disney Method**: Three-role creative process with integrated path dependency tracking
+- **Nine Windows**: Systematic 3×3 analysis across time and system levels with ergodicity awareness
+
+### Enhanced User Experience
+- **Workflow Guidance**: Discovery responses now include explicit next-step guidance
+- **Technique Progress**: Clear visibility of both local technique progress and global workflow progress
+- **User-Provided Session IDs**: Support for custom session identifiers
+- **Ruin Risk Analysis**: Enhanced Purple Hat with comprehensive ruin risk detection
+
 ## Version 0.3.0 Features
 
 ### Complete Specification Alignment
@@ -733,6 +816,29 @@ npm run test:coverage       # Generate coverage report
 - **Memory-Aware Outputs**: All three layers now provide contextual memory outputs
 - **Environment Variables**: Support for NEURAL_OPTIMIZATION and CULTURAL_FRAMEWORKS flags
 - **Enhanced Integration Tests**: 13 comprehensive end-to-end workflow tests
+
+## Integration Examples
+
+### Disney Method + Path Dependency Tracking
+When using Disney Method, the system tracks how decisions in each role affect flexibility:
+- **Dreamer decisions** may open new paths but require validation
+- **Realist constraints** reduce options but increase feasibility
+- **Critic insights** may require cycling back to earlier roles
+
+### Nine Windows + Ergodicity Analysis
+Nine Windows automatically integrates with ergodicity detection:
+- **Past analysis** reveals if the domain has historical ruin events
+- **System levels** show where non-ergodic risks emerge
+- **Future projections** consider both ensemble and time averages
+
+### Multi-Technique Workflows
+Combine techniques for comprehensive analysis:
+```json
+{
+  "techniques": ["nine_windows", "disney_method"],
+  "reasoning": "Use Nine Windows to understand system context, then Disney Method to design solutions"
+}
+```
 
 ## Recent Enhancements
 

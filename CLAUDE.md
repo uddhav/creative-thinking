@@ -218,6 +218,21 @@ The implementation now supports the unified generative/adversarial framework fro
    - Disney Method: 3 steps (dreamer → realist → critic)
    - Nine Windows: 9 steps (3×3 matrix: past/present/future × sub-system/system/super-system)
 
+8. **Disney Method Guidance**:
+   - Dreamer step: Encourage wild, unconstrained ideas without judgment
+   - Realist step: Focus on practical implementation and resource requirements
+   - Critic step: Identify risks and gaps constructively, not destructively
+   - Track path dependencies between roles - decisions in one role affect others
+   - Consider multiple cycles through the roles for refinement
+
+9. **Nine Windows Guidance**:
+   - Work systematically through the 3×3 grid (time × system levels)
+   - Start with present system (step 5) as the anchor point
+   - Look for patterns across time dimensions (vertical connections)
+   - Identify constraints at different system levels (horizontal connections)
+   - Use insights from past to predict future trends
+   - Track how sub-system changes propagate to super-system level
+
 ## Architecture Principles
 
 ### Three-Layer Design (Core Principle)

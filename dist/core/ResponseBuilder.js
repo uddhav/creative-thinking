@@ -4,6 +4,8 @@
  */
 import { CreativeThinkingError, ValidationError, ErrorCode } from '../errors/types.js';
 export class ResponseBuilder {
+    // Performance optimization: Cache for expensive session metric calculations
+    metricsCache = new Map();
     /**
      * Build a success response with formatted content
      */
@@ -59,6 +61,7 @@ export class ResponseBuilder {
             recommendations: output.recommendations,
             reasoning: this.buildReasoningString(output),
             suggestedWorkflow: this.buildSuggestedWorkflow(output),
+            nextStepGuidance: this.buildNextStepGuidance(output),
             // Include other fields that might be expected
             problemCategory: output.problemCategory,
             warnings: output.warnings,
@@ -165,6 +168,12 @@ export class ResponseBuilder {
      * Add completion data to a response
      */
     addCompletionData(response, session) {
+        // Performance optimization: Check cache first
+        const cacheKey = `completion-${session.technique}-${session.history.length}`;
+        const cached = this.metricsCache.get(cacheKey);
+        if (cached && cached.historyLength === session.history.length) {
+            return { ...response, ...cached.value };
+        }
         const completionData = {
             sessionComplete: true,
             completed: true, // Add for backward compatibility
@@ -199,6 +208,11 @@ export class ResponseBuilder {
                 steps: session.escapeRecommendation.steps.slice(0, 3),
             };
         }
+        // Cache the computed result
+        this.metricsCache.set(cacheKey, {
+            value: completionData,
+            historyLength: session.history.length,
+        });
         return { ...response, ...completionData };
     }
     /**
@@ -455,6 +469,41 @@ export class ResponseBuilder {
             .map(phase => `${phase.name}: ${phase.techniques.join(', ')}`)
             .join(' → ');
         return `Suggested workflow: ${phases}`;
+    }
+    /**
+     * Build next step guidance from discovery output
+     */
+    buildNextStepGuidance(output) {
+        if (output.recommendations.length === 0) {
+            return undefined;
+        }
+        const topRecommendations = output.recommendations.slice(0, 3);
+        const selectedTechniques = topRecommendations.map(r => r.technique);
+        return {
+            message: `To apply ${selectedTechniques.length > 1 ? 'these techniques' : 'this technique'}, use the plan_thinking_session tool next.`,
+            nextTool: 'plan_thinking_session',
+            suggestedParameters: {
+                problem: output.problem,
+                techniques: selectedTechniques,
+                objectives: output.contextAnalysis?.collaborationNeeded
+                    ? ['Achieve team consensus', 'Generate diverse perspectives']
+                    : ['Generate innovative solutions', 'Identify potential risks'],
+                constraints: output.warnings?.filter(w => w.includes('constraint')) || undefined,
+                timeframe: output.contextAnalysis?.timeConstraint ? 'quick' : 'thorough',
+            },
+            example: {
+                tool: 'plan_thinking_session',
+                parameters: {
+                    problem: output.problem,
+                    techniques: [selectedTechniques[0]],
+                    objectives: ['Generate innovative solutions'],
+                    timeframe: 'thorough',
+                },
+            },
+            alternativeApproach: selectedTechniques.length > 1
+                ? `You can also plan with multiple techniques: ${selectedTechniques.join(', ')}. The planning tool will create an integrated workflow.`
+                : undefined,
+        };
     }
 }
 //# sourceMappingURL=ResponseBuilder.js.map

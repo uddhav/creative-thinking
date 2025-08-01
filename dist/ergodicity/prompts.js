@@ -87,6 +87,22 @@ export function requiresRuinCheck(technique, keywords) {
         'bankruptcy',
         'fatal',
         'critical',
+        'stock',
+        'portfolio',
+        'trade',
+        'savings',
+        'retirement',
+        'medical',
+        'surgery',
+        'climb',
+        'extreme',
+        'career',
+        'quit',
+        'resign',
+        'reputation',
+        'public',
+        'lawsuit',
+        'legal',
     ];
     const hasRuinKeyword = keywords.some(keyword => ruinKeywords.some(ruinWord => keyword.toLowerCase().includes(ruinWord)));
     const highRiskTechniques = [

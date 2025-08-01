@@ -119,6 +119,22 @@ export function requiresRuinCheck(technique: LateralTechnique, keywords: string[
     'bankruptcy',
     'fatal',
     'critical',
+    'stock',
+    'portfolio',
+    'trade',
+    'savings',
+    'retirement',
+    'medical',
+    'surgery',
+    'climb',
+    'extreme',
+    'career',
+    'quit',
+    'resign',
+    'reputation',
+    'public',
+    'lawsuit',
+    'legal',
   ];
 
   const hasRuinKeyword = keywords.some(keyword =>

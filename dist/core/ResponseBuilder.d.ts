@@ -4,7 +4,23 @@
  */
 import type { LateralThinkingResponse, SessionData, ThinkingOperationData } from '../types/index.js';
 import type { DiscoverTechniquesOutput, PlanThinkingSessionOutput } from '../types/planning.js';
+export interface ExecutionMetadata {
+    techniqueEffectiveness: number;
+    pathDependenciesCreated: string[];
+    flexibilityImpact: number;
+    noteworthyMoment?: string;
+    futureRelevance?: string;
+    errorContext?: {
+        providedStep: number;
+        validRange: string;
+        technique: string;
+        techniqueLocalStep: number;
+        globalStep: number;
+        message: string;
+    };
+}
 export declare class ResponseBuilder {
+    private metricsCache;
     /**
      * Build a success response with formatted content
      */
@@ -24,7 +40,7 @@ export declare class ResponseBuilder {
     /**
      * Build an execution response
      */
-    buildExecutionResponse(sessionId: string, input: ThinkingOperationData, insights: string[], nextStepGuidance?: string, historyLength?: number, executionMetadata?: Record<string, unknown>): LateralThinkingResponse;
+    buildExecutionResponse(sessionId: string, input: ThinkingOperationData, insights: string[], nextStepGuidance?: string, historyLength?: number, executionMetadata?: ExecutionMetadata): LateralThinkingResponse;
     /**
      * Build a session operation response
      */
@@ -64,5 +80,9 @@ export declare class ResponseBuilder {
      * Build suggested workflow from discovery output
      */
     private buildSuggestedWorkflow;
+    /**
+     * Build next step guidance from discovery output
+     */
+    private buildNextStepGuidance;
 }
 //# sourceMappingURL=ResponseBuilder.d.ts.map
