@@ -262,7 +262,7 @@ describe('FilesystemAdapter', () => {
 
       // Should save both session and metadata files to temp files first
       expect(fs.writeFile).toHaveBeenCalledTimes(2);
-      
+
       // Check that temp files were written
       expect(fs.writeFile).toHaveBeenCalledWith(
         expect.stringMatching(/sessions\/test-session\.json\.tmp\./),
@@ -284,7 +284,7 @@ describe('FilesystemAdapter', () => {
         expect.any(String),
         'utf8'
       );
-      
+
       // Check that rename was called to move temp files to final location
       expect(fs.rename).toHaveBeenCalledTimes(2);
       expect(fs.rename).toHaveBeenCalledWith(
