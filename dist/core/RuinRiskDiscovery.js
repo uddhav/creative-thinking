@@ -276,9 +276,24 @@ export class RuinRiskDiscovery {
         const relationships = [];
         // Extract subject-verb-object patterns with multiple verb patterns
         const relationVerbs = [
-            'affect', 'affects', 'impact', 'impacts', 'influence', 'influences',
-            'depend on', 'depends on', 'rely on', 'relies on', 'cause', 'causes',
-            'lead to', 'leads to', 'result in', 'results in', 'trigger', 'triggers',
+            'affect',
+            'affects',
+            'impact',
+            'impacts',
+            'influence',
+            'influences',
+            'depend on',
+            'depends on',
+            'rely on',
+            'relies on',
+            'cause',
+            'causes',
+            'lead to',
+            'leads to',
+            'result in',
+            'results in',
+            'trigger',
+            'triggers',
         ];
         // Build match patterns for each verb - handle multi-word nouns
         relationVerbs.forEach(verb => {
@@ -396,7 +411,7 @@ export class RuinRiskDiscovery {
         try {
             // Look for explicit domain mentions
             const domainPatterns = [
-                /this (?:is|involves?|relates to|concerns?)(?: a| an| the)? ([^.!?]+) (?:domain|area|field|decision|problem)/i,
+                /this (?:is|involves?|relates to|concerns?) (?:a |an |the )?([^.!?]{1,100}) (?:domain|area|field|decision|problem)/i,
                 /in the (?:domain|area|field) of ([^.!?]+)/i,
                 /(?:domain|area|field):\s*([^.!?\n]+)/i,
             ];
@@ -406,7 +421,7 @@ export class RuinRiskDiscovery {
                     // Clean up the match - remove articles and extra words
                     const domain = match[1]
                         .replace(/^(a|an|the)\s+/i, '')
-                        .replace(/\s+(domain|area|field|decision|problem)$/i, '')
+                        .replace(/\s{1,5}(?:domain|area|field|decision|problem)$/i, '')
                         .trim();
                     if (domain && domain.length < 50) {
                         // Reasonable length for a domain name
@@ -601,9 +616,9 @@ export class RuinRiskDiscovery {
         // Use NLP to extract meaningful domain label
         const doc = nlpTyped(response);
         // Extract nouns that could represent the domain
-        const nouns = (doc.nouns ? doc.nouns().out('array') : []);
+        const nouns = doc.nouns ? doc.nouns().out('array') : [];
         // Extract topics using NLP
-        const topics = (doc.topics ? doc.topics().out('array') : []);
+        const topics = doc.topics ? doc.topics().out('array') : [];
         // Look for meaningful domain descriptors
         const meaningfulWords = [...nouns, ...topics]
             .filter(word => word.length > 3)
@@ -620,14 +635,13 @@ export class RuinRiskDiscovery {
         const lower = response.toLowerCase();
         const doc = nlpDoc || nlpTyped(response);
         // Extract temporal expressions for better time horizon detection
-        const docTyped = doc;
-        const dates = docTyped.dates ? docTyped.dates().out('array') : [];
-        const durations = (doc.match('#Duration').out('array') || []);
+        const dates = doc.dates ? doc.dates().out('array') : [];
+        const durations = doc.match('#Duration').out('array') || [];
         // Look for negation patterns
         const negativeContexts = doc.match('(cannot|never|no) #Verb').out('array');
         const positiveRecovery = doc.match('(can|will|able to) recover').out('array');
         // Extract adjectives that might indicate characteristics
-        const adjectives = docTyped.adjectives ? docTyped.adjectives().out('array') : [];
+        const adjectives = doc.adjectives ? doc.adjectives().out('array') : [];
         // Extract each characteristic based on common patterns in responses
         return {
             hasIrreversibleActions: lower.includes('irreversible') ||
@@ -873,7 +887,7 @@ Consider revising your recommendation to respect these discovered limits.`;
             }
         });
         // Also look for numbered patterns
-        const numberedPattern = /\d+\.\s*([^:]+):\s*([^\n]+)/g;
+        const numberedPattern = /^\d{1,3}\.\s{1,3}([^:\n]{1,200}):\s{1,3}([^\n]{1,500})/gm;
         const numberedMatches = response.matchAll(numberedPattern);
         for (const match of numberedMatches) {
             if (match[2] && match[2].toLowerCase().includes('pattern')) {

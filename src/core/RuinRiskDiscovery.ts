@@ -197,7 +197,7 @@ export class RuinRiskDiscovery {
     // Cache the NLP doc to avoid reprocessing
     let nlpDoc: CompromiseDoc | undefined;
     try {
-      nlpDoc = nlpTyped(response) as CompromiseDoc;
+      nlpDoc = nlpTyped(response);
     } catch (error) {
       console.error('Failed to parse response with NLP:', error);
     }
@@ -387,7 +387,7 @@ export class RuinRiskDiscovery {
     const verbs = doc.verbs ? doc.verbs().out('array') : [];
     const actionVerbs = verbs
       .map(v => {
-        const verbDoc = nlpTyped(v) as CompromiseDoc;
+        const verbDoc = nlpTyped(v);
         if (verbDoc.verbs) {
           const vDoc = verbDoc.verbs();
           return vDoc.out('text');
@@ -426,14 +426,31 @@ export class RuinRiskDiscovery {
   /**
    * Extract relationships between entities from NLP document
    */
-  private extractRelationships(doc: CompromiseDoc): Array<{ subject: string; relation: string; object: string }> {
+  private extractRelationships(
+    doc: CompromiseDoc
+  ): Array<{ subject: string; relation: string; object: string }> {
     const relationships: Array<{ subject: string; relation: string; object: string }> = [];
 
     // Extract subject-verb-object patterns with multiple verb patterns
     const relationVerbs = [
-      'affect', 'affects', 'impact', 'impacts', 'influence', 'influences',
-      'depend on', 'depends on', 'rely on', 'relies on', 'cause', 'causes',
-      'lead to', 'leads to', 'result in', 'results in', 'trigger', 'triggers',
+      'affect',
+      'affects',
+      'impact',
+      'impacts',
+      'influence',
+      'influences',
+      'depend on',
+      'depends on',
+      'rely on',
+      'relies on',
+      'cause',
+      'causes',
+      'lead to',
+      'leads to',
+      'result in',
+      'results in',
+      'trigger',
+      'triggers',
     ];
 
     // Build match patterns for each verb - handle multi-word nouns
@@ -501,7 +518,7 @@ export class RuinRiskDiscovery {
         throw new Error('Text input is empty or too large (max 10,000 characters)');
       }
 
-      const doc = nlpTyped(text) as CompromiseDoc;
+      const doc = nlpTyped(text);
 
       // Use helper methods to extract different types of information
       const entities = this.extractEntities(doc);
@@ -569,49 +586,49 @@ export class RuinRiskDiscovery {
    */
   private extractDomainFromDescription(response: string): string {
     try {
-    // Look for explicit domain mentions
-    const domainPatterns = [
-      /this (?:is|involves?|relates to|concerns?)(?: a| an| the)? ([^.!?]+) (?:domain|area|field|decision|problem)/i,
-      /in the (?:domain|area|field) of ([^.!?]+)/i,
-      /(?:domain|area|field):\s*([^.!?\n]+)/i,
-    ];
+      // Look for explicit domain mentions
+      const domainPatterns = [
+        /this (?:is|involves?|relates to|concerns?) (?:a |an |the )?([^.!?]{1,100}) (?:domain|area|field|decision|problem)/i,
+        /in the (?:domain|area|field) of ([^.!?]+)/i,
+        /(?:domain|area|field):\s*([^.!?\n]+)/i,
+      ];
 
-    for (const pattern of domainPatterns) {
-      const match = response.match(pattern);
-      if (match && match[1]) {
-        // Clean up the match - remove articles and extra words
-        const domain = match[1]
-          .replace(/^(a|an|the)\s+/i, '')
-          .replace(/\s+(domain|area|field|decision|problem)$/i, '')
-          .trim();
+      for (const pattern of domainPatterns) {
+        const match = response.match(pattern);
+        if (match && match[1]) {
+          // Clean up the match - remove articles and extra words
+          const domain = match[1]
+            .replace(/^(a|an|the)\s+/i, '')
+            .replace(/\s{1,5}(?:domain|area|field|decision|problem)$/i, '')
+            .trim();
 
-        if (domain && domain.length < 50) {
-          // Reasonable length for a domain name
-          return domain.toLowerCase();
+          if (domain && domain.length < 50) {
+            // Reasonable length for a domain name
+            return domain.toLowerCase();
+          }
         }
       }
-    }
 
-    // If no explicit domain, extract the main topic from the response
-    const firstSentence = response.split(/[.!?]/)[0] || '';
-    const doc = nlpTyped(firstSentence) as CompromiseDoc;
-    const topics = doc.topics ? doc.topics().out('array') : [];
+      // If no explicit domain, extract the main topic from the response
+      const firstSentence = response.split(/[.!?]/)[0] || '';
+      const doc = nlpTyped(firstSentence);
+      const topics = doc.topics ? doc.topics().out('array') : [];
 
-    if (topics.length > 0) {
-      return topics[0].toLowerCase();
-    }
+      if (topics.length > 0) {
+        return topics[0].toLowerCase();
+      }
 
-    // Ultimate fallback - extract the main noun phrase
-    const nouns = doc.nouns ? doc.nouns().out('array') : [];
-    const significantNoun = nouns.find(
-      n =>
-        n.length > 4 &&
-        !['this', 'that', 'problem', 'issue', 'matter', 'question', 'decision'].includes(
-          n.toLowerCase()
-        )
-    );
+      // Ultimate fallback - extract the main noun phrase
+      const nouns = doc.nouns ? doc.nouns().out('array') : [];
+      const significantNoun = nouns.find(
+        n =>
+          n.length > 4 &&
+          !['this', 'that', 'problem', 'issue', 'matter', 'question', 'decision'].includes(
+            n.toLowerCase()
+          )
+      );
 
-    return significantNoun ? significantNoun.toLowerCase() : 'unspecified';
+      return significantNoun ? significantNoun.toLowerCase() : 'unspecified';
     } catch (error) {
       console.error('Failed to extract domain from response:', error);
       return 'unspecified';
@@ -844,20 +861,20 @@ export class RuinRiskDiscovery {
     }
 
     // Use NLP to extract meaningful domain label
-    const doc = nlpTyped(response) as CompromiseDoc;
+    const doc = nlpTyped(response);
 
     // Extract nouns that could represent the domain
-    const nouns = (doc.nouns ? doc.nouns().out('array') : []) as string[];
+    const nouns = doc.nouns ? doc.nouns().out('array') : [];
 
     // Extract topics using NLP
-    const topics = (doc.topics ? doc.topics().out('array') : []) as string[];
+    const topics = doc.topics ? doc.topics().out('array') : [];
 
     // Look for meaningful domain descriptors
     const meaningfulWords = [...nouns, ...topics]
       .filter(word => word.length > 3)
       .filter(word => {
         // Use NLP to filter out generic terms
-        const wordDoc = nlpTyped(word) as CompromiseDoc;
+        const wordDoc = nlpTyped(word);
         const isGeneric =
           wordDoc.has('#Determiner') || wordDoc.has('#Preposition') || wordDoc.has('#Conjunction');
         return !isGeneric;
@@ -867,24 +884,23 @@ export class RuinRiskDiscovery {
     return meaningfulWords[0]?.toLowerCase() || 'general';
   }
 
-  private extractCharacteristics(response: string, nlpDoc?: CompromiseDoc): DomainAssessment['domainCharacteristics'] {
+  private extractCharacteristics(
+    response: string,
+    nlpDoc?: CompromiseDoc
+  ): DomainAssessment['domainCharacteristics'] {
     const lower = response.toLowerCase();
-    const doc = nlpDoc || (nlpTyped(response) as CompromiseDoc);
+    const doc = nlpDoc || nlpTyped(response);
 
     // Extract temporal expressions for better time horizon detection
-    const docTyped = doc as {
-      dates?: () => { out: (format: string) => string[] };
-      adjectives?: () => { out: (format: string) => string[] };
-    };
-    const dates = docTyped.dates ? docTyped.dates().out('array') : [];
-    const durations = (doc.match('#Duration').out('array') || []) as string[];
+    const dates = doc.dates ? doc.dates().out('array') : [];
+    const durations = doc.match('#Duration').out('array') || [];
 
     // Look for negation patterns
-    const negativeContexts = doc.match('(cannot|never|no) #Verb').out('array') as string[];
-    const positiveRecovery = doc.match('(can|will|able to) recover').out('array') as string[];
+    const negativeContexts = doc.match('(cannot|never|no) #Verb').out('array');
+    const positiveRecovery = doc.match('(can|will|able to) recover').out('array');
 
     // Extract adjectives that might indicate characteristics
-    const adjectives = docTyped.adjectives ? docTyped.adjectives().out('array') : [];
+    const adjectives = doc.adjectives ? doc.adjectives().out('array') : [];
 
     // Extract each characteristic based on common patterns in responses
     return {
@@ -1207,7 +1223,7 @@ Consider revising your recommendation to respect these discovered limits.`;
     });
 
     // Also look for numbered patterns
-    const numberedPattern = /\d+\.\s*([^:]+):\s*([^\n]+)/g;
+    const numberedPattern = /^\d{1,3}\.\s{1,3}([^:\n]{1,200}):\s{1,3}([^\n]{1,500})/gm;
     const numberedMatches = response.matchAll(numberedPattern);
     for (const match of numberedMatches) {
       if (match[2] && match[2].toLowerCase().includes('pattern')) {

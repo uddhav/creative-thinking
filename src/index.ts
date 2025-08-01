@@ -127,7 +127,7 @@ export class LateralThinkingServer {
     // Store feature flags for use by techniques
     this.neuralOptimizationEnabled =
       (process.env.NEURAL_OPTIMIZATION || '').toLowerCase() === 'true';
-    this.culturalFrameworksEnabled = !!process.env.CULTURAL_FRAMEWORKS;
+    this.culturalFrameworksEnabled = process.env.CULTURAL_FRAMEWORKS !== undefined;
   }
 
   /**

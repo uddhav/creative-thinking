@@ -20,6 +20,8 @@ vi.mock('fs', () => ({
     readdir: vi.fn(),
     access: vi.fn(),
     unlink: vi.fn(),
+    rename: vi.fn(),
+    stat: vi.fn(),
   },
 }));
 
@@ -258,10 +260,12 @@ describe('FilesystemAdapter', () => {
       await adapter.initialize({ adapter: 'filesystem', options: { path: tempDir } });
       await adapter.save(mockSession.id, mockSession);
 
-      // Should save both session and metadata files
+      // Should save both session and metadata files to temp files first
       expect(fs.writeFile).toHaveBeenCalledTimes(2);
+      
+      // Check that temp files were written
       expect(fs.writeFile).toHaveBeenCalledWith(
-        path.join(tempDir, 'sessions', 'test-session.json'),
+        expect.stringMatching(/sessions\/test-session\.json\.tmp\./),
         JSON.stringify(
           {
             version: '1.0.0',
@@ -276,9 +280,20 @@ describe('FilesystemAdapter', () => {
         'utf8'
       );
       expect(fs.writeFile).toHaveBeenCalledWith(
-        path.join(tempDir, 'metadata', 'test-session.json'),
+        expect.stringMatching(/metadata\/test-session\.json\.tmp\./),
         expect.any(String),
         'utf8'
+      );
+      
+      // Check that rename was called to move temp files to final location
+      expect(fs.rename).toHaveBeenCalledTimes(2);
+      expect(fs.rename).toHaveBeenCalledWith(
+        expect.stringMatching(/sessions\/test-session\.json\.tmp\./),
+        path.join(tempDir, 'sessions', 'test-session.json')
+      );
+      expect(fs.rename).toHaveBeenCalledWith(
+        expect.stringMatching(/metadata\/test-session\.json\.tmp\./),
+        path.join(tempDir, 'metadata', 'test-session.json')
       );
     });
 
