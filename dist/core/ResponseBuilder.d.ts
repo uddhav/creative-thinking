@@ -64,5 +64,9 @@ export declare class ResponseBuilder {
      * Build suggested workflow from discovery output
      */
     private buildSuggestedWorkflow;
+    /**
+     * Build next step guidance from discovery output
+     */
+    private buildNextStepGuidance;
 }
 //# sourceMappingURL=ResponseBuilder.d.ts.map

@@ -257,11 +257,18 @@ export async function executeThinkingStep(
       }
     }
 
-    // Check if output requires ruin assessment
+    // Check if output or problem requires ruin assessment
     const outputWords = input.output.toLowerCase().split(/\s+/);
-    if (requiresRuinCheck(input.technique, outputWords)) {
+    const problemWords = input.problem.toLowerCase().split(/\s+/);
+    const allWords = [...outputWords, ...problemWords];
+
+    if (requiresRuinCheck(input.technique, allWords)) {
       const ruinPrompt = generateRuinAssessmentPrompt(input.problem, input.technique, input.output);
       const ruinRiskAssessment = assessRuinRisk(input.problem, input.technique, input.output);
+
+      // Detect domain from assessment
+      const domain = ruinRiskAssessment.domain || 'general';
+
       const inputWithRuin = input as ExecuteThinkingStepInput & {
         ruinAssessment: {
           required: boolean;
@@ -274,7 +281,7 @@ export async function executeThinkingStep(
         required: true,
         prompt: ruinPrompt,
         assessment: ruinRiskAssessment,
-        survivalConstraints: generateSurvivalConstraints('general'),
+        survivalConstraints: generateSurvivalConstraints(domain),
       };
     }
 

@@ -58,10 +58,10 @@ export class SixHatsHandler extends BaseTechniqueHandler {
     },
     purple: {
       name: 'Purple Hat',
-      focus: 'Path dependency and ergodicity analysis',
+      focus: 'Path dependency, ergodicity, and ruin risk analysis',
       emoji: '🟣',
       enhancedFocus:
-        'Path analysis: Irreversible decisions, option creation/destruction, flexibility preservation',
+        'Ruin risk analysis: Identify non-ergodic domains, survival constraints, irreversible decisions, and escape routes',
     },
   };
 
@@ -128,7 +128,11 @@ export class SixHatsHandler extends BaseTechniqueHandler {
         return `🟢 Green Hat: Generate creative solutions for "${problem}". Think laterally - what are unconventional approaches?`;
 
       case 'purple':
-        return `🟣 Purple Hat: Analyze path dependencies in "${problem}". Which decisions would be irreversible? How can we preserve optionality?`;
+        return `🟣 Purple Hat: Analyze path dependencies and ruin risks in "${problem}". 
+• Which decisions would be irreversible? 
+• What are the ruin risks (financial bankruptcy, health damage, career destruction, reputation loss)?
+• Is this domain ergodic (can recover from failures) or non-ergodic (one failure = permanent ruin)?
+• How can we preserve optionality and build escape routes?`;
 
       default:
         return `Apply ${hat.name} thinking to "${problem}"`;
