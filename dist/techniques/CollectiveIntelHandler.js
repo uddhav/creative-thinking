@@ -2,6 +2,7 @@
  * Collective Intelligence technique handler
  */
 import { BaseTechniqueHandler } from './types.js';
+import { ValidationError, ErrorCode } from '../errors/types.js';
 export class CollectiveIntelHandler extends BaseTechniqueHandler {
     getTechniqueInfo() {
         return {
@@ -41,7 +42,7 @@ export class CollectiveIntelHandler extends BaseTechniqueHandler {
             },
         ];
         if (step < 1 || step > steps.length) {
-            throw new Error(`Invalid step ${step} for Collective Intelligence`);
+            throw new ValidationError(ErrorCode.INVALID_STEP, `Invalid step ${step} for Collective Intelligence technique. Valid steps are 1-${steps.length}`, 'step', { providedStep: step, validRange: [1, steps.length] });
         }
         return steps[step - 1];
     }

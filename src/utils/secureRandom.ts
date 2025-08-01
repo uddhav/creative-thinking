@@ -4,6 +4,7 @@
  */
 
 import { randomBytes } from 'crypto';
+import { ValidationError, ErrorCode } from '../errors/types.js';
 
 /**
  * Get a cryptographically secure random integer for array index selection
@@ -12,7 +13,12 @@ import { randomBytes } from 'crypto';
  */
 export function getSecureRandomIndex(arrayLength: number): number {
   if (arrayLength <= 0) {
-    throw new Error('Array length must be positive');
+    throw new ValidationError(
+      ErrorCode.INVALID_FIELD_VALUE,
+      'Array length must be positive',
+      'arrayLength',
+      { providedValue: arrayLength, requirement: 'positive integer' }
+    );
   }
 
   // For small arrays, use a single byte
@@ -35,7 +41,12 @@ export function getSecureRandomIndex(arrayLength: number): number {
  */
 export function getSecureRandomFloat(min: number, max: number): number {
   if (min >= max) {
-    throw new Error('Min must be less than max');
+    throw new ValidationError(
+      ErrorCode.INVALID_FIELD_VALUE,
+      'Min value must be less than max value',
+      'min/max',
+      { min, max, requirement: 'min < max' }
+    );
   }
 
   const buffer = randomBytes(4);
@@ -52,7 +63,12 @@ export function getSecureRandomFloat(min: number, max: number): number {
  */
 export function getSecureRandomBoolean(probabilityTrue: number = 0.5): boolean {
   if (probabilityTrue < 0 || probabilityTrue > 1) {
-    throw new Error('Probability must be between 0 and 1');
+    throw new ValidationError(
+      ErrorCode.INVALID_FIELD_VALUE,
+      'Probability must be between 0 and 1 (inclusive)',
+      'probabilityTrue',
+      { providedValue: probabilityTrue, validRange: '[0, 1]' }
+    );
   }
 
   return getSecureRandomFloat(0, 1) < probabilityTrue;

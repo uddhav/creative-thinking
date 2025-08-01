@@ -2,6 +2,7 @@
  * Six Thinking Hats technique handler
  */
 import { BaseTechniqueHandler } from './types.js';
+import { ValidationError, ErrorCode } from '../errors/types.js';
 export class SixHatsHandler extends BaseTechniqueHandler {
     hats = {
         blue: {
@@ -69,7 +70,7 @@ export class SixHatsHandler extends BaseTechniqueHandler {
     getStepInfo(step) {
         const hatColor = this.hatOrder[step - 1];
         if (!hatColor) {
-            throw new Error(`Invalid step ${step} for Six Hats`);
+            throw new ValidationError(ErrorCode.INVALID_STEP, `Invalid step ${step} for Six Hats technique. Valid steps are 1-${Object.keys(this.hats).length}`, 'step', { providedStep: step, validRange: `1-${Object.keys(this.hats).length}` });
         }
         return this.hats[hatColor];
     }

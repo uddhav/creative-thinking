@@ -4,6 +4,7 @@
 
 import type { DesignThinkingStage } from '../types/index.js';
 import { BaseTechniqueHandler, type TechniqueInfo } from './types.js';
+import { ValidationError, ErrorCode } from '../errors/types.js';
 
 interface StageInfo {
   name: string;
@@ -67,7 +68,12 @@ export class DesignThinkingHandler extends BaseTechniqueHandler {
   getStepInfo(step: number): { name: string; focus: string; emoji: string } {
     const stage = this.stageOrder[step - 1];
     if (!stage) {
-      throw new Error(`Invalid step ${step} for Design Thinking`);
+      throw new ValidationError(
+        ErrorCode.INVALID_STEP,
+        `Invalid step ${step} for Design Thinking technique. Valid steps are 1-${this.stageOrder.length}`,
+        'step',
+        { providedStep: step, validRange: [1, this.stageOrder.length] }
+      );
     }
     const info = this.stages[stage];
     return {

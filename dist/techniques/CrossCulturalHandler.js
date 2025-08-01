@@ -2,6 +2,7 @@
  * Cross-Cultural Integration technique handler
  */
 import { BaseTechniqueHandler } from './types.js';
+import { ValidationError, ErrorCode } from '../errors/types.js';
 export class CrossCulturalHandler extends BaseTechniqueHandler {
     getTechniqueInfo() {
         return {
@@ -41,7 +42,7 @@ export class CrossCulturalHandler extends BaseTechniqueHandler {
             },
         ];
         if (step < 1 || step > steps.length) {
-            throw new Error(`Invalid step ${step} for Cross-Cultural`);
+            throw new ValidationError(ErrorCode.INVALID_STEP, `Invalid step ${step} for Cross-Cultural technique. Valid steps are 1-${steps.length}`, 'step', { providedStep: step, validRange: [1, steps.length] });
         }
         return steps[step - 1];
     }

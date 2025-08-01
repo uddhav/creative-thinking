@@ -18,6 +18,7 @@ export var ErrorCode;
     ErrorCode["PLAN_NOT_FOUND"] = "PLAN_NOT_FOUND";
     ErrorCode["PLAN_EXPIRED"] = "PLAN_EXPIRED";
     // Business logic errors
+    ErrorCode["INVALID_STEP"] = "INVALID_STEP";
     ErrorCode["INVALID_STEP_SEQUENCE"] = "INVALID_STEP_SEQUENCE";
     ErrorCode["TECHNIQUE_NOT_SUPPORTED"] = "TECHNIQUE_NOT_SUPPORTED";
     ErrorCode["TECHNIQUE_MISMATCH"] = "TECHNIQUE_MISMATCH";

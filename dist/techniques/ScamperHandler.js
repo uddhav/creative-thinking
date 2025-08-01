@@ -2,6 +2,7 @@
  * SCAMPER technique handler with Path Dependency Analysis
  */
 import { BaseTechniqueHandler } from './types.js';
+import { ValidationError, ErrorCode } from '../errors/types.js';
 // Constants for path degradation factors
 const HIGH_COMMITMENT_DEGRADATION_FACTOR = 0.7; // Flexibility loss per high commitment action
 const STEP_DEGRADATION_FACTOR = 0.95; // Gradual flexibility loss per step
@@ -96,7 +97,7 @@ export class ScamperHandler extends BaseTechniqueHandler {
     getStepInfo(step) {
         const action = this.actionOrder[step - 1];
         if (!action) {
-            throw new Error(`Invalid step ${step} for SCAMPER`);
+            throw new ValidationError(ErrorCode.INVALID_STEP, `Invalid step ${step} for SCAMPER technique. Valid steps are 1-${this.actionOrder.length}`, 'step', { providedStep: step, validRange: `1-${this.actionOrder.length}` });
         }
         const info = this.actions[action];
         return {
@@ -113,7 +114,7 @@ export class ScamperHandler extends BaseTechniqueHandler {
     analyzePathImpact(action, modification, history) {
         const actionInfo = this.actions[action];
         if (!actionInfo) {
-            throw new Error(`Invalid SCAMPER action: ${action}`);
+            throw new ValidationError(ErrorCode.INVALID_FIELD_VALUE, `Invalid SCAMPER action: ${action}. Valid actions are: ${Object.keys(this.actions).join(', ')}`, 'scamperAction', { providedAction: action, validActions: Object.keys(this.actions) });
         }
         // Base impact from action type
         const baseImpact = {

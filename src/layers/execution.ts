@@ -21,6 +21,11 @@ import type { ScamperHandler } from '../techniques/ScamperHandler.js';
 import { MemoryAnalyzer } from '../core/MemoryAnalyzer.js';
 import { RealityIntegration } from '../reality/integration.js';
 import { SessionError, ExecutionError, ErrorCode } from '../errors/types.js';
+import {
+  monitorCriticalSection,
+  monitorCriticalSectionAsync,
+  addPerformanceSummary,
+} from '../utils/PerformanceIntegration.js';
 
 // Type for the result from ErgodicityManager.recordThinkingStep
 interface ErgodicityResult {
@@ -251,24 +256,30 @@ export async function executeThinkingStep(
       | Awaited<ReturnType<typeof ergodicityManager.recordThinkingStep>>
       | undefined;
     if (input.pathImpact) {
-      ergodicityResult = await ergodicityManager.recordThinkingStep(
-        input.technique,
-        input.currentStep,
-        input.output,
-        {
-          optionsClosed: input.pathImpact.optionsClosed,
-          optionsOpened: input.pathImpact.optionsOpened,
-          reversibilityCost: 1 - input.pathImpact.flexibilityRetention,
-          commitmentLevel:
-            input.pathImpact.commitmentLevel === 'low'
-              ? 0.2
-              : input.pathImpact.commitmentLevel === 'medium'
-                ? 0.5
-                : input.pathImpact.commitmentLevel === 'high'
-                  ? 0.8
-                  : 1.0,
-        },
-        session
+      const pathImpact = input.pathImpact;
+      ergodicityResult = await monitorCriticalSectionAsync(
+        'ergodicity_tracking',
+        () =>
+          ergodicityManager.recordThinkingStep(
+            input.technique,
+            input.currentStep,
+            input.output,
+            {
+              optionsClosed: pathImpact.optionsClosed,
+              optionsOpened: pathImpact.optionsOpened,
+              reversibilityCost: 1 - pathImpact.flexibilityRetention,
+              commitmentLevel:
+                pathImpact.commitmentLevel === 'low'
+                  ? 0.2
+                  : pathImpact.commitmentLevel === 'medium'
+                    ? 0.5
+                    : pathImpact.commitmentLevel === 'high'
+                      ? 0.8
+                      : 1.0,
+            },
+            session
+          ),
+        { technique: input.technique, step: input.currentStep }
       );
 
       // Update session with ergodicity data
@@ -322,7 +333,11 @@ export async function executeThinkingStep(
     metricsCollector.updateMetrics(session, operationData);
 
     // Extract insights
-    const currentInsights = handler.extractInsights(session.history);
+    const currentInsights = monitorCriticalSection(
+      'extract_insights',
+      () => handler.extractInsights(session.history),
+      { technique: input.technique, historyLength: session.history.length }
+    );
     currentInsights.forEach(insight => {
       if (!session.insights.includes(insight)) {
         session.insights.push(insight);
@@ -336,7 +351,11 @@ export async function executeThinkingStep(
     const realityResult = RealityIntegration.enhanceWithReality(input, input.output);
 
     // Check complexity and suggest sequential thinking
-    const complexityCheck = checkExecutionComplexity(input, session, complexityAnalyzer);
+    const complexityCheck = monitorCriticalSection(
+      'complexity_check',
+      () => checkExecutionComplexity(input, session, complexityAnalyzer),
+      { outputLength: input.output.length }
+    );
 
     // Generate next step guidance if needed
     let nextStepGuidance: string | undefined;
@@ -431,7 +450,11 @@ export async function executeThinkingStep(
     // Auto-save if enabled
     if (input.autoSave) {
       try {
-        await sessionManager.saveSessionToPersistence(sessionId);
+        await monitorCriticalSectionAsync(
+          'session_autosave',
+          () => sessionManager.saveSessionToPersistence(sessionId),
+          { sessionId }
+        );
       } catch (error) {
         // Auto-save error is added to response instead of console logging
         // console.error('Auto-save failed:', error);
@@ -442,7 +465,8 @@ export async function executeThinkingStep(
       }
     }
 
-    return response;
+    // Add performance summary if profiling is enabled
+    return addPerformanceSummary(response);
   } catch (error) {
     if (error instanceof Error) {
       return responseBuilder.buildErrorResponse(error, 'execution');

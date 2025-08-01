@@ -21,6 +21,11 @@ import { TechniqueRegistry } from './techniques/TechniqueRegistry.js';
 // Utils
 import { VisualFormatter } from './utils/VisualFormatter.js';
 import { HybridComplexityAnalyzer } from './complexity/analyzer.js';
+import {
+  wrapComplexityAnalyzer,
+  wrapErgodicityManager,
+  wrapSessionManager,
+} from './utils/PerformanceIntegration.js';
 
 // Ergodicity
 import { ErgodicityManager } from './ergodicity/index.js';
@@ -100,12 +105,20 @@ export class LateralThinkingServer {
   }
 
   constructor() {
-    this.sessionManager = new SessionManager();
+    // Create core components
+    const sessionManager = new SessionManager();
+    const complexityAnalyzer = new HybridComplexityAnalyzer();
+    const ergodicityManager = new ErgodicityManager();
+
+    // Wrap with performance monitoring if enabled
+    this.sessionManager = wrapSessionManager(sessionManager);
+    this.complexityAnalyzer = wrapComplexityAnalyzer(complexityAnalyzer);
+    this.ergodicityManager = wrapErgodicityManager(ergodicityManager);
+
+    // Initialize other components
     this.responseBuilder = new ResponseBuilder();
     this.metricsCollector = new MetricsCollector();
     this.techniqueRegistry = new TechniqueRegistry();
-    this.complexityAnalyzer = new HybridComplexityAnalyzer();
-    this.ergodicityManager = new ErgodicityManager();
 
     const disableThoughtLogging =
       (process.env.DISABLE_THOUGHT_LOGGING || '').toLowerCase() === 'true';

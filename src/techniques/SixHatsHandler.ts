@@ -4,6 +4,7 @@
 
 import type { SixHatsColor } from '../types/index.js';
 import { BaseTechniqueHandler, type TechniqueInfo } from './types.js';
+import { ValidationError, ErrorCode } from '../errors/types.js';
 
 interface HatInfo {
   name: string;
@@ -88,7 +89,12 @@ export class SixHatsHandler extends BaseTechniqueHandler {
   getStepInfo(step: number): HatInfo {
     const hatColor = this.hatOrder[step - 1];
     if (!hatColor) {
-      throw new Error(`Invalid step ${step} for Six Hats`);
+      throw new ValidationError(
+        ErrorCode.INVALID_STEP,
+        `Invalid step ${step} for Six Hats technique. Valid steps are 1-${Object.keys(this.hats).length}`,
+        'step',
+        { providedStep: step, validRange: `1-${Object.keys(this.hats).length}` }
+      );
     }
     return this.hats[hatColor];
   }
