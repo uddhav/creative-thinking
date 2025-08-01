@@ -19,6 +19,7 @@ export declare class SessionManager {
     private cleanupInterval;
     private persistenceAdapter;
     private readonly PLAN_TTL;
+    private memoryManager;
     private config;
     constructor();
     private initializePersistence;

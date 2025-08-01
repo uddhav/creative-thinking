@@ -20,6 +20,7 @@ import { ResponseBuilder } from '../core/ResponseBuilder.js';
 import type { ScamperHandler } from '../techniques/ScamperHandler.js';
 import { MemoryAnalyzer } from '../core/MemoryAnalyzer.js';
 import { RealityIntegration } from '../reality/integration.js';
+import { SessionError, ExecutionError, ErrorCode } from '../errors/types.js';
 
 // Type for the result from ErgodicityManager.recordThinkingStep
 interface ErgodicityResult {
@@ -114,7 +115,11 @@ export async function executeThinkingStep(
     if (sessionId) {
       const existingSession = sessionManager.getSession(sessionId);
       if (!existingSession) {
-        throw new Error(`Session ${sessionId} not found`);
+        throw new SessionError(
+          ErrorCode.SESSION_NOT_FOUND,
+          `Session ${sessionId} not found`,
+          sessionId
+        );
       }
       session = existingSession;
     } else {
@@ -439,8 +444,15 @@ export async function executeThinkingStep(
 
     return response;
   } catch (error) {
+    if (error instanceof Error) {
+      return responseBuilder.buildErrorResponse(error, 'execution');
+    }
     return responseBuilder.buildErrorResponse(
-      error instanceof Error ? error : new Error('Unknown error'),
+      new ExecutionError(
+        ErrorCode.INTERNAL_ERROR,
+        'An unexpected error occurred during execution',
+        { error: String(error) }
+      ),
       'execution'
     );
   }

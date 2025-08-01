@@ -10,7 +10,7 @@ import type {
   LateralTechnique,
 } from '../types/index.js';
 import type { DiscoverTechniquesOutput, PlanThinkingSessionOutput } from '../types/planning.js';
-import { CreativeThinkingError } from '../errors/types.js';
+import { CreativeThinkingError, ValidationError, ErrorCode } from '../errors/types.js';
 
 export class ResponseBuilder {
   /**
@@ -278,7 +278,12 @@ export class ResponseBuilder {
         return this.formatAsCSV(session);
 
       default:
-        throw new Error(`Unsupported export format: ${format as string}`);
+        throw new ValidationError(
+          ErrorCode.INVALID_FIELD_VALUE,
+          `Unsupported export format: ${format as string}`,
+          'format',
+          { providedFormat: format }
+        );
     }
   }
 

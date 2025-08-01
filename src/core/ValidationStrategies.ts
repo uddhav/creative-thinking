@@ -693,7 +693,12 @@ export class ValidationStrategyFactory {
       case 'session':
         return new SessionOperationValidator();
       default:
-        throw new Error(`Unknown operation type: ${operationType}`);
+        throw new ValidationError(
+          ErrorCode.INVALID_INPUT,
+          `Unknown operation type: ${operationType}`,
+          'operationType',
+          { providedType: operationType }
+        );
     }
   }
 }

@@ -4,6 +4,7 @@
  */
 import { randomUUID } from 'crypto';
 import { createAdapter, getDefaultConfig } from '../persistence/factory.js';
+import { MemoryManager } from './MemoryManager.js';
 // Constants for memory management
 const MEMORY_THRESHOLD_FOR_GC = 0.8; // Trigger garbage collection when heap usage exceeds 80%
 export class SessionManager {
@@ -13,6 +14,7 @@ export class SessionManager {
     cleanupInterval = null;
     persistenceAdapter = null;
     PLAN_TTL = 4 * 60 * 60 * 1000; // 4 hours for plans
+    memoryManager;
     config = {
         maxSessions: parseInt(process.env.MAX_SESSIONS || '100', 10),
         maxSessionSize: parseInt(process.env.MAX_SESSION_SIZE || String(1024 * 1024), 10), // 1MB default
@@ -21,6 +23,14 @@ export class SessionManager {
         enableMemoryMonitoring: process.env.ENABLE_MEMORY_MONITORING === 'true',
     };
     constructor() {
+        this.memoryManager = MemoryManager.getInstance({
+            gcThreshold: MEMORY_THRESHOLD_FOR_GC,
+            enableGC: true,
+            onGCTriggered: () => {
+                // eslint-disable-next-line no-console
+                console.log('[Memory Usage] Triggering garbage collection...');
+            },
+        });
         this.startSessionCleanup();
         void this.initializePersistence();
     }
@@ -113,15 +123,12 @@ export class SessionManager {
      * Log memory usage metrics
      */
     logMemoryMetrics() {
-        const usage = process.memoryUsage();
-        const heapUsedMB = Math.round(usage.heapUsed / 1024 / 1024);
-        const heapTotalMB = Math.round(usage.heapTotal / 1024 / 1024);
-        const rssMB = Math.round(usage.rss / 1024 / 1024);
-        // Calculate approximate session memory usage
+        const { heapUsed: heapUsedMB, heapTotal: heapTotalMB, rss: rssMB, } = this.memoryManager.getMemoryUsageMB();
+        // Calculate approximate session memory usage using optimized estimation
         let totalSessionSize = 0;
         for (const [_, session] of this.sessions) {
-            // Rough estimate of session size
-            totalSessionSize += JSON.stringify(session).length;
+            // Use optimized size estimation instead of JSON.stringify
+            totalSessionSize += this.memoryManager.estimateObjectSize(session);
         }
         const sessionSizeKB = Math.round(totalSessionSize / 1024);
         const averageSizeKB = this.sessions.size > 0 ? Math.round(sessionSizeKB / this.sessions.size) : 0;
@@ -143,14 +150,8 @@ export class SessionManager {
                 count: this.plans.size,
             },
         });
-        // Force garbage collection if available and memory usage is high
-        if (typeof global !== 'undefined' &&
-            global.gc &&
-            heapUsedMB > heapTotalMB * MEMORY_THRESHOLD_FOR_GC) {
-            // eslint-disable-next-line no-console
-            console.log('[Memory Usage] Triggering garbage collection...');
-            global.gc();
-        }
+        // Trigger garbage collection if needed
+        this.memoryManager.triggerGCIfNeeded();
         // Warning if memory usage is concerning
         if (heapUsedMB > 500) {
             console.warn('[Memory Warning] High memory usage detected');
@@ -283,12 +284,12 @@ export class SessionManager {
     // Memory and size utilities
     getSessionSize(sessionId) {
         const session = this.sessions.get(sessionId);
-        return session ? JSON.stringify(session).length : 0;
+        return session ? this.memoryManager.estimateObjectSize(session) : 0;
     }
     getTotalMemoryUsage() {
         let total = 0;
         for (const [_, session] of this.sessions) {
-            total += JSON.stringify(session).length;
+            total += this.memoryManager.estimateObjectSize(session);
         }
         return total;
     }
