@@ -94,18 +94,18 @@ describe('Issue #114: Step 9999 bug', () => {
 
     // Should not throw an error (this was the bug - it used to throw "Invalid step 9999")
     expect(response.isError).toBeUndefined();
-    
+
     const responseData = JSON.parse(response.content[0].text) as Record<string, unknown>;
-    
+
     // Should NOT complete the session because nextStepNeeded is still true
     expect(responseData.sessionComplete).toBeUndefined();
     expect(responseData.completed).toBeUndefined();
-    
+
     // Should provide completion guidance since we're past the last step
     expect(responseData.nextStepGuidance).toBeDefined();
     expect(responseData.nextStepGuidance).toContain('Complete');
     expect(responseData.nextStepGuidance).toContain('Six Thinking Hats');
-    
+
     // Should not have any step 9999 references (the actual bug that was fixed)
     const responseText = JSON.stringify(responseData);
     expect(responseText).not.toContain('9999');
@@ -173,17 +173,17 @@ describe('Issue #114: Step 9999 bug', () => {
 
     // Should not throw an error
     expect(response.isError).toBeUndefined();
-    
+
     const responseData = JSON.parse(response.content[0].text) as Record<string, unknown>;
-    
+
     // Should NOT complete (nextStepNeeded is true)
     expect(responseData.sessionComplete).toBeUndefined();
-    
+
     // Should provide completion guidance
     expect(responseData.nextStepGuidance).toBeDefined();
     expect(responseData.nextStepGuidance).toContain('Complete');
     expect(responseData.nextStepGuidance).toContain('Nine Windows');
-    
+
     // No 9999 references
     expect(JSON.stringify(responseData)).not.toContain('9999');
   });
@@ -250,17 +250,17 @@ describe('Issue #114: Step 9999 bug', () => {
     );
 
     expect(response.isError).toBeUndefined();
-    
+
     const responseData = JSON.parse(response.content[0].text) as Record<string, unknown>;
-    
+
     // Should not complete yet (multi-technique workflow)
     expect(responseData.sessionComplete).toBeFalsy();
-    
+
     // Should provide guidance for next technique
     expect(responseData.nextStepGuidance).toBeDefined();
     // The guidance should mention transitioning to the next technique
     expect(responseData.nextStepGuidance).toMatch(/Transitioning to|scamper/i);
-    
+
     // No 9999 references (the bug that was fixed)
     expect(JSON.stringify(responseData)).not.toContain('9999');
   });
