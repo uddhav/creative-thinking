@@ -339,7 +339,7 @@ describe('Layered Tools Architecture', () => {
       expect(result.isError).toBeTruthy();
       const errorText = result.content[0]?.text || '';
       const errorData = JSON.parse(errorText) as { error: string; workflow: string };
-      expect(errorData.error).toBe('planId is required');
+      expect(errorData.error).toBe('❌ MISSING REQUIRED FIELD: planId is required to execute thinking steps');
       expect(errorData.workflow).toContain(
         'discover_techniques → plan_thinking_session → execute_thinking_step'
       );
@@ -359,7 +359,7 @@ describe('Layered Tools Architecture', () => {
       expect(result.isError).toBeTruthy();
       const errorText = result.content[0]?.text || '';
       const errorData = JSON.parse(errorText) as { error: string; message: string };
-      expect(errorData.error).toBe('Plan not found');
+      expect(errorData.error).toBe('❌ WORKFLOW ERROR: Plan not found');
       expect(errorData.message).toContain('does not exist');
     });
 
@@ -382,10 +382,15 @@ describe('Layered Tools Architecture', () => {
       const errorText = result.content[0]?.text || '';
       const errorData = JSON.parse(errorText) as {
         error: string;
-        plannedTechniques: string[];
+        yourPlan: {
+          planId: string;
+          techniques: string[];
+        };
+        requestedTechnique: string;
       };
-      expect(errorData.error).toBe('Technique mismatch');
-      expect(errorData.plannedTechniques).toContain('six_hats');
+      expect(errorData.error).toBe('❌ TECHNIQUE MISMATCH ERROR');
+      expect(errorData.yourPlan.techniques).toContain('six_hats');
+      expect(errorData.requestedTechnique).toBe('po');
     });
   });
 

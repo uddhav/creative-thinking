@@ -261,7 +261,7 @@ export class ExecutionValidator extends BaseValidator {
     if (!data.planId) {
       return {
         valid: false,
-        errors: ['planId is required'],
+        errors: ['❌ MISSING REQUIRED FIELD: planId is required to execute thinking steps'],
         workflow: 'discover_techniques → plan_thinking_session → execute_thinking_step',
       };
     }
@@ -281,7 +281,9 @@ export class ExecutionValidator extends BaseValidator {
     }
 
     if (!this.isValidTechnique(data.technique)) {
-      errors.push(`Invalid technique: ${data.technique}`);
+      errors.push(
+        `❌ INVALID TECHNIQUE: '${data.technique}' is not a valid technique. Valid techniques are: ${this.getValidTechniques().join(', ')}`
+      );
     }
 
     if (!data.problem) {
@@ -522,6 +524,25 @@ export class ExecutionValidator extends BaseValidator {
       'nine_windows',
     ];
     return validTechniques.includes(value as LateralTechnique);
+  }
+
+  private getValidTechniques(): string[] {
+    return [
+      'six_hats',
+      'po',
+      'random_entry',
+      'scamper',
+      'concept_extraction',
+      'yes_and',
+      'design_thinking',
+      'triz',
+      'neural_state',
+      'temporal_work',
+      'cross_cultural',
+      'collective_intel',
+      'disney_method',
+      'nine_windows',
+    ];
   }
 }
 

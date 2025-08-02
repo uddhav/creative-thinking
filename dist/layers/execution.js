@@ -36,15 +36,45 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
                         {
                             type: 'text',
                             text: JSON.stringify({
-                                error: 'Plan not found',
-                                message: `Plan '${input.planId}' does not exist.`,
-                                guidance: 'Please follow the correct workflow:',
+                                error: '❌ WORKFLOW ERROR: Plan not found',
+                                message: `The planId '${input.planId}' does not exist. You cannot skip the planning step!`,
+                                guidance: '⚠️ REQUIRED THREE-STEP WORKFLOW:',
                                 workflow: [
-                                    '1. Call discover_techniques to analyze your problem',
-                                    '2. Call plan_thinking_session to create a plan',
-                                    '3. Call execute_thinking_step with the planId from step 2',
+                                    '1️⃣ Call discover_techniques to analyze your problem',
+                                    '2️⃣ Call plan_thinking_session to create a plan (returns planId)',
+                                    '3️⃣ Call execute_thinking_step with the planId from step 2',
                                 ],
-                                nextStep: 'Start with discover_techniques to find suitable techniques for your problem.',
+                                example: {
+                                    correct_sequence: [
+                                        {
+                                            step: 1,
+                                            tool: 'discover_techniques',
+                                            args: { problem: 'Your problem here' },
+                                            returns: 'Recommended techniques',
+                                        },
+                                        {
+                                            step: 2,
+                                            tool: 'plan_thinking_session',
+                                            args: { problem: 'Your problem here', techniques: ['six_hats'] },
+                                            returns: { planId: 'plan_abc123', workflow: '...' },
+                                        },
+                                        {
+                                            step: 3,
+                                            tool: 'execute_thinking_step',
+                                            args: {
+                                                planId: 'plan_abc123', // ← Use the ACTUAL planId from step 2
+                                                technique: 'six_hats',
+                                                problem: 'Your problem here',
+                                                currentStep: 1,
+                                                totalSteps: 6,
+                                                output: 'Your thinking here',
+                                                nextStepNeeded: true,
+                                            },
+                                        },
+                                    ],
+                                },
+                                your_error: `You tried to use planId '${input.planId}' which doesn't exist`,
+                                fix: '👉 Start over with discover_techniques',
                             }, null, 2),
                         },
                     ],
@@ -58,9 +88,26 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
                         {
                             type: 'text',
                             text: JSON.stringify({
-                                error: 'Technique mismatch',
-                                plannedTechniques: plan.techniques,
+                                error: '❌ TECHNIQUE MISMATCH ERROR',
+                                message: `You requested technique '${input.technique}' but your plan only includes: ${plan.techniques.join(', ')}`,
+                                guidance: 'You must use one of the techniques from your plan',
+                                yourPlan: {
+                                    planId: input.planId,
+                                    techniques: plan.techniques,
+                                },
                                 requestedTechnique: input.technique,
+                                fix: `Change your technique parameter to one of: ${plan.techniques.join(', ')}`,
+                                example: {
+                                    correct: {
+                                        planId: input.planId,
+                                        technique: plan.techniques[0], // Use first technique from plan
+                                        problem: input.problem,
+                                        currentStep: 1,
+                                        totalSteps: techniqueRegistry.getTechniqueSteps(plan.techniques[0]),
+                                        output: 'Your thinking here',
+                                        nextStepNeeded: true,
+                                    },
+                                },
                             }, null, 2),
                         },
                     ],

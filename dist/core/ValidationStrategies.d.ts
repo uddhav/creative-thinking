@@ -42,6 +42,7 @@ export declare class ExecutionValidator extends BaseValidator {
     validate(input: unknown): ValidationResult;
     private validateTechniqueSpecificFields;
     private isValidTechnique;
+    private getValidTechniques;
 }
 /**
  * Validator for session operations

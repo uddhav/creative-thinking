@@ -403,11 +403,11 @@ describe('Three-Layer Architecture', () => {
         guidance: string;
         workflow: string[];
       };
-      expect(error.error).toBe('Plan not found');
+      expect(error.error).toBe('❌ WORKFLOW ERROR: Plan not found');
 
       // Should provide helpful guidance
       expect(error.message).toContain('does not exist');
-      expect(error.guidance).toBe('Please follow the correct workflow:');
+      expect(error.guidance).toBe('⚠️ REQUIRED THREE-STEP WORKFLOW:');
       expect(error.workflow).toBeDefined();
       expect(error.workflow.length).toBe(3);
     });
