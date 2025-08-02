@@ -14,22 +14,13 @@ This project uses semantic-release for automated versioning and releases.
    - Determine version bump
    - Update CHANGELOG.md
    - Create GitHub release
-   - Publish to NPM
+   - Update package.json version
 
 ## Setup Requirements
 
 ### GitHub Secrets
 
-Configure these secrets in your GitHub repository:
-- `NPM_TOKEN`: NPM automation token for publishing
-- `GITHUB_TOKEN`: Automatically provided by GitHub Actions
-
-### NPM Token Setup
-
-1. Login to npmjs.com
-2. Go to Access Tokens
-3. Generate new token (Automation type)
-4. Add as `NPM_TOKEN` secret in GitHub
+- `GITHUB_TOKEN`: Automatically provided by GitHub Actions (no setup required)
 
 ## Manual Release (if needed)
 
@@ -78,10 +69,11 @@ BREAKING CHANGE: The execute_thinking_step tool now requires a planId parameter"
 1. Check commit messages follow conventional format
 2. Ensure pushing to main branch
 3. Check GitHub Actions logs
-4. Verify NPM_TOKEN is set correctly
+4. Verify branch has new commits since last release
 
-### Version Already Published
+### Version Already Exists
 
-Semantic-release tracks releases via Git tags. If a version was manually published:
-1. Create corresponding Git tag: `git tag v1.2.3`
-2. Push tag: `git push origin v1.2.3`
+Semantic-release tracks releases via Git tags:
+1. Check existing tags: `git tag -l`
+2. If needed, create tag manually: `git tag v1.2.3`
+3. Push tag: `git push origin v1.2.3`
