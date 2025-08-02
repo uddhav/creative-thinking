@@ -23,12 +23,19 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
     try {
         // Validate plan if provided
         const planValidation = executionValidator.validatePlan(input);
-        if (!planValidation.isValid) {
+        if (!planValidation.isValid && planValidation.error) {
             return planValidation.error;
         }
         const plan = planValidation.plan;
         // Get or create session
-        const { session, sessionId } = executionValidator.validateAndGetSession(input, ergodicityManager);
+        const sessionValidation = executionValidator.validateAndGetSession(input, ergodicityManager);
+        if (sessionValidation.error) {
+            return sessionValidation.error;
+        }
+        const { session, sessionId } = sessionValidation;
+        if (!session || !sessionId) {
+            throw new Error('Session validation succeeded but session/sessionId is missing');
+        }
         // Get technique handler
         const handler = techniqueRegistry.getHandler(input.technique);
         // Calculate technique-local step
@@ -67,7 +74,7 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
         ergodicityOrchestrator.checkErgodicityPrompts(input, techniqueLocalStep);
         // Perform comprehensive risk assessment
         const riskAssessment = riskAssessmentOrchestrator.assessRisks(input, session);
-        if (riskAssessment.requiresIntervention) {
+        if (riskAssessment.requiresIntervention && riskAssessment.interventionResponse) {
             return riskAssessment.interventionResponse;
         }
         // Get mode indicator

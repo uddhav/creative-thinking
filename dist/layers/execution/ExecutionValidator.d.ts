@@ -19,7 +19,11 @@ export interface ValidationResult {
     techniqueIndex?: number;
     stepsBeforeThisTechnique?: number;
     handler?: TechniqueHandler;
-    stepInfo?: any;
+    stepInfo?: {
+        name: string;
+        focus: string;
+        emoji: string;
+    } | null;
 }
 export declare class ExecutionValidator {
     private sessionManager;
@@ -38,8 +42,9 @@ export declare class ExecutionValidator {
      * Get or create session
      */
     validateAndGetSession(input: ExecuteThinkingStepInput, ergodicityManager: ErgodicityManager): {
-        session: SessionData;
-        sessionId: string;
+        session?: SessionData;
+        sessionId?: string;
+        error?: LateralThinkingResponse;
     };
     /**
      * Calculate technique-local step from cumulative step
@@ -54,7 +59,11 @@ export declare class ExecutionValidator {
      */
     validateStepAndGetInfo(input: ExecuteThinkingStepInput, techniqueLocalStep: number, handler: TechniqueHandler): {
         isValid: boolean;
-        stepInfo?: any;
+        stepInfo?: {
+            name: string;
+            focus: string;
+            emoji: string;
+        } | null;
         normalizedStep: number;
     };
     /**

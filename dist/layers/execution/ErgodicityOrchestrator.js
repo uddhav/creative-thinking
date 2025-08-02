@@ -84,8 +84,68 @@ export class ErgodicityOrchestrator {
         if (currentFlexibility < 0.4) {
             optionGenerationResult = this.generateOptions(input, session, currentFlexibility, sessionId);
         }
+        // Convert the ergodicity result to match the expected interface
+        const adaptedErgodicityResult = {
+            event: {
+                type: `${ergodicityResult.event.technique}_step`,
+                timestamp: Date.parse(ergodicityResult.event.timestamp),
+                technique: ergodicityResult.event.technique,
+                step: ergodicityResult.event.step,
+                reversibilityCost: ergodicityResult.event.reversibilityCost,
+                description: ergodicityResult.event.decision,
+            },
+            metrics: {
+                currentFlexibility,
+                pathDivergence: ergodicityResult.metrics.pathDivergence,
+                constraintLevel: ergodicityResult.metrics.commitmentDepth || 0.5, // Use commitmentDepth as constraint level
+                optionSpaceSize: ergodicityResult.metrics.optionVelocity || 1.0, // Use optionVelocity as option space size
+            },
+            warnings: ergodicityResult.warnings.map(warning => ({
+                type: warning.metric || 'unknown',
+                message: warning.message,
+                severity: warning.level === 'critical'
+                    ? 'critical'
+                    : warning.level === 'warning'
+                        ? 'high'
+                        : warning.level === 'caution'
+                            ? 'medium'
+                            : 'low',
+            })),
+            earlyWarningState: ergodicityResult.earlyWarningState
+                ? {
+                    activeWarnings: ergodicityResult.earlyWarningState.activeWarnings.map(warning => ({
+                        type: warning.sensor || 'unknown',
+                        message: warning.message,
+                        severity: warning.severity === 'critical'
+                            ? 'critical'
+                            : warning.severity === 'warning'
+                                ? 'high'
+                                : warning.severity === 'caution'
+                                    ? 'medium'
+                                    : 'low',
+                        timestamp: Date.parse(warning.timestamp),
+                    })),
+                    overallSeverity: ergodicityResult.earlyWarningState.overallRisk || 'medium',
+                }
+                : undefined,
+            escapeRecommendation: ergodicityResult.escapeRecommendation
+                ? {
+                    name: ergodicityResult.escapeRecommendation.name,
+                    description: ergodicityResult.escapeRecommendation.description,
+                    steps: ergodicityResult.escapeRecommendation.steps,
+                    urgency: ergodicityResult.escapeRecommendation.level >= 4
+                        ? 'immediate'
+                        : ergodicityResult.escapeRecommendation.level >= 3
+                            ? 'high'
+                            : ergodicityResult.escapeRecommendation.level >= 2
+                                ? 'medium'
+                                : 'low',
+                }
+                : undefined,
+            escapeVelocityNeeded: ergodicityResult.escapeVelocityNeeded,
+        };
         return {
-            ergodicityResult,
+            ergodicityResult: adaptedErgodicityResult,
             currentFlexibility,
             optionGenerationResult,
             pathMemory: session.pathMemory,

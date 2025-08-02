@@ -25,7 +25,7 @@ export interface ValidationResult {
   techniqueIndex?: number;
   stepsBeforeThisTechnique?: number;
   handler?: TechniqueHandler;
-  stepInfo?: any;
+  stepInfo?: { name: string; focus: string; emoji: string } | null;
 }
 
 export class ExecutionValidator {
@@ -159,8 +159,9 @@ export class ExecutionValidator {
     input: ExecuteThinkingStepInput,
     ergodicityManager: ErgodicityManager
   ): {
-    session: SessionData;
-    sessionId: string;
+    session?: SessionData;
+    sessionId?: string;
+    error?: LateralThinkingResponse;
   } {
     let session: SessionData;
     let sessionId = input.sessionId;
@@ -170,8 +171,38 @@ export class ExecutionValidator {
       if (!existingSession) {
         // Create new session with the user-provided ID
         session = this.initializeSession(input, ergodicityManager);
-        sessionId = this.sessionManager.createSession(session, sessionId);
-        console.error(`Created new session with user-provided ID: ${sessionId}`);
+        try {
+          sessionId = this.sessionManager.createSession(session, sessionId);
+          console.error(`Created new session with user-provided ID: ${sessionId}`);
+        } catch (error) {
+          // Handle session creation errors (e.g. invalid session ID format)
+          return {
+            error: {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(
+                    {
+                      error: {
+                        message:
+                          'Invalid session ID format: ' +
+                          (error instanceof Error
+                            ? error.message
+                            : 'The provided session ID format is invalid'),
+                      },
+                      guidance:
+                        'Session IDs must be alphanumeric with underscores, hyphens, and dots only, maximum 64 characters',
+                      providedSessionId: input.sessionId,
+                    },
+                    null,
+                    2
+                  ),
+                },
+              ],
+              isError: true,
+            },
+          };
+        }
       } else {
         session = existingSession;
       }
@@ -228,7 +259,7 @@ export class ExecutionValidator {
     handler: TechniqueHandler
   ): {
     isValid: boolean;
-    stepInfo?: any;
+    stepInfo?: { name: string; focus: string; emoji: string } | null;
     normalizedStep: number;
   } {
     // Store original step for error reporting

@@ -25,6 +25,7 @@ import type {
 import { generateConstraintViolationFeedback } from '../../ergodicity/riskDiscoveryPrompts.js';
 import { RiskDismissalTracker } from '../../ergodicity/riskDismissalTracker.js';
 import { EscalationPromptGenerator } from '../../ergodicity/escalationPrompts.js';
+import type { EscalationPrompt } from '../../ergodicity/escalationPrompts.js';
 
 export interface RiskAssessmentResult {
   requiresIntervention: boolean;
@@ -33,7 +34,7 @@ export interface RiskAssessmentResult {
   domainAssessment?: DomainAssessment;
   discoveredRisks?: RiskDiscovery;
   validation?: ValidationResult;
-  escalationPrompt?: any;
+  escalationPrompt?: EscalationPrompt;
   behavioralFeedback?: string;
 }
 
@@ -47,10 +48,7 @@ export class RiskAssessmentOrchestrator {
   /**
    * Perform comprehensive risk assessment
    */
-  assessRisks(
-    input: ExecuteThinkingStepInput,
-    session: SessionData
-  ): RiskAssessmentResult {
+  assessRisks(input: ExecuteThinkingStepInput, session: SessionData): RiskAssessmentResult {
     const result: RiskAssessmentResult = {
       requiresIntervention: false,
     };
@@ -103,7 +101,7 @@ export class RiskAssessmentOrchestrator {
     ruinRiskAssessment?: RuinRiskAssessment;
     escalationRequired: boolean;
     interventionResponse?: LateralThinkingResponse;
-    escalationPrompt?: any;
+    escalationPrompt?: EscalationPrompt;
     behavioralFeedback?: string;
   } {
     const ruinPrompt = generateRuinAssessmentPrompt(input.problem, input.technique, input.output);
@@ -211,7 +209,7 @@ export class RiskAssessmentOrchestrator {
     return {
       ruinRiskAssessment,
       escalationRequired: false,
-      escalationPrompt,
+      escalationPrompt: escalationPrompt || undefined,
       behavioralFeedback,
     };
   }

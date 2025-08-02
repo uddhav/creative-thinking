@@ -6,6 +6,7 @@ import type { ExecuteThinkingStepInput, SessionData, LateralThinkingResponse } f
 import type { VisualFormatter } from '../../utils/VisualFormatter.js';
 import type { RuinRiskAssessment } from '../../ergodicity/prompts.js';
 import type { DomainAssessment, RiskDiscovery, ValidationResult } from '../../core/RuinRiskDiscovery.js';
+import type { EscalationPrompt } from '../../ergodicity/escalationPrompts.js';
 export interface RiskAssessmentResult {
     requiresIntervention: boolean;
     interventionResponse?: LateralThinkingResponse;
@@ -13,7 +14,7 @@ export interface RiskAssessmentResult {
     domainAssessment?: DomainAssessment;
     discoveredRisks?: RiskDiscovery;
     validation?: ValidationResult;
-    escalationPrompt?: any;
+    escalationPrompt?: EscalationPrompt;
     behavioralFeedback?: string;
 }
 export declare class RiskAssessmentOrchestrator {

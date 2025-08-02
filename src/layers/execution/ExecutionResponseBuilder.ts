@@ -16,6 +16,7 @@ import type { TechniqueRegistry } from '../../techniques/TechniqueRegistry.js';
 import type { ExecutionMetadata } from '../../core/ResponseBuilder.js';
 import { ResponseBuilder } from '../../core/ResponseBuilder.js';
 import { MemoryAnalyzer } from '../../core/MemoryAnalyzer.js';
+import type { MemoryOutputs } from '../../core/MemoryAnalyzer.js';
 import { RealityIntegration } from '../../reality/integration.js';
 import type { TechniqueHandler } from '../../techniques/types.js';
 import type { EscalationPromptGenerator } from '../../ergodicity/escalationPrompts.js';
@@ -241,13 +242,24 @@ export class ExecutionResponseBuilder {
     return metadata;
   }
 
-  private addMemoryOutputs(parsedResponse: Record<string, unknown>, memoryOutputs: any): void {
+  private addMemoryOutputs(
+    parsedResponse: Record<string, unknown>,
+    memoryOutputs: MemoryOutputs
+  ): void {
     Object.assign(parsedResponse, memoryOutputs);
   }
 
   private addTechniqueProgress(
     parsedResponse: Record<string, unknown>,
-    techniqueProgress: any
+    techniqueProgress: {
+      techniqueStep: number;
+      techniqueTotalSteps: number;
+      globalStep: number;
+      globalTotalSteps: number;
+      currentTechnique: string;
+      techniqueIndex: number;
+      totalTechniques: number;
+    }
   ): void {
     parsedResponse.techniqueProgress = techniqueProgress;
   }

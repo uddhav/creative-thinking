@@ -130,7 +130,7 @@ export class RiskAssessmentOrchestrator {
         return {
             ruinRiskAssessment,
             escalationRequired: false,
-            escalationPrompt,
+            escalationPrompt: escalationPrompt || undefined,
             behavioralFeedback,
         };
     }
