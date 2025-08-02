@@ -1,3 +1,10 @@
+## [v0.3.2] - 2025-08-02
+
+### Changes from PR #129
+
+- fix: prevent LLM from skipping discovery/planning workflow (#119)
+
+
 # Changelog
 
 All notable changes to the Creative Thinking MCP Server will be documented in this file.
