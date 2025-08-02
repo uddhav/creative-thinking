@@ -5,13 +5,11 @@
  */
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 // Core modules
 import { SessionManager } from './core/SessionManager.js';
 import { ResponseBuilder } from './core/ResponseBuilder.js';
 import { MetricsCollector } from './core/MetricsCollector.js';
 import { ValidationStrategyFactory } from './core/ValidationStrategies.js';
-import { workflowGuard } from './core/WorkflowGuard.js';
 // Technique system
 import { TechniqueRegistry } from './techniques/TechniqueRegistry.js';
 // Utils
@@ -20,7 +18,7 @@ import { HybridComplexityAnalyzer } from './complexity/analyzer.js';
 import { wrapComplexityAnalyzer, wrapErgodicityManager, wrapSessionManager, } from './utils/PerformanceIntegration.js';
 // Ergodicity
 import { ErgodicityManager } from './ergodicity/index.js';
-import { CreativeThinkingError, ErrorCode, SessionError, ValidationError } from './errors/types.js';
+import { CreativeThinkingError, ErrorCode } from './errors/types.js';
 // Discovery and planning logic
 import { discoverTechniques } from './layers/discovery.js';
 import { planThinkingSession } from './layers/planning.js';
@@ -28,6 +26,9 @@ import { executeThinkingStep } from './layers/execution.js';
 // Export types for external use
 export * from './types/index.js';
 export * from './types/planning.js';
+// Server modules
+import { RequestHandlers } from './server/RequestHandlers.js';
+import { SessionOperationsHandler } from './server/SessionOperationsHandler.js';
 /**
  * Main server class that orchestrates all components
  */
@@ -41,6 +42,7 @@ export class LateralThinkingServer {
     ergodicityManager;
     neuralOptimizationEnabled;
     culturalFrameworksEnabled;
+    sessionOperationsHandler;
     // Expose for testing
     get sessions() {
         return this.sessionManager['sessions'];
@@ -48,6 +50,9 @@ export class LateralThinkingServer {
     get config() {
         // Return the actual config object for testing
         return this.sessionManager['config'];
+    }
+    cleanupOldSessions() {
+        this.sessionManager.cleanupOldSessions();
     }
     // Test methods
     initializeSession(technique, problem) {
@@ -65,14 +70,13 @@ export class LateralThinkingServer {
     touchSession(sessionId) {
         this.sessionManager.touchSession(sessionId);
     }
-    cleanupOldSessions() {
-        this.sessionManager['cleanupOldSessions']();
-    }
     evictOldestSessions() {
-        this.sessionManager['evictOldestSessions']();
+        // Eviction is handled internally by SessionManager
+        console.error('[Server] Manual eviction requested - eviction is automatically handled');
     }
     logMemoryMetrics() {
-        this.sessionManager['logMemoryMetrics']();
+        // Delegate to SessionManager which delegates to SessionCleaner
+        this.sessionManager.logMemoryMetrics();
     }
     constructor() {
         // Create core components
@@ -93,6 +97,8 @@ export class LateralThinkingServer {
         this.neuralOptimizationEnabled =
             (process.env.NEURAL_OPTIMIZATION || '').toLowerCase() === 'true';
         this.culturalFrameworksEnabled = process.env.CULTURAL_FRAMEWORKS !== undefined;
+        // Initialize session operations handler
+        this.sessionOperationsHandler = new SessionOperationsHandler(this.sessionManager, this.responseBuilder);
     }
     /**
      * Process lateral thinking requests
@@ -186,101 +192,10 @@ export class LateralThinkingServer {
         return this.processLateralThinking(input);
     }
     /**
-     * Handle session operations
+     * Handle session operations - delegate to SessionOperationsHandler
      */
     async handleSessionOperation(input) {
-        try {
-            switch (input.sessionOperation) {
-                case 'save':
-                    return await this.handleSaveOperation();
-                case 'load':
-                    return await this.handleLoadOperation(input);
-                case 'list':
-                    return await this.handleListOperation(input);
-                case 'delete':
-                    return await this.handleDeleteOperation(input);
-                case 'export':
-                    return await this.handleExportOperation(input);
-                default:
-                    throw new ValidationError(ErrorCode.INVALID_INPUT, `Unknown session operation: ${input.sessionOperation}`, 'sessionOperation', { providedOperation: input.sessionOperation });
-            }
-        }
-        catch (error) {
-            if (error instanceof Error) {
-                return this.responseBuilder.buildErrorResponse(error, 'session');
-            }
-            return this.responseBuilder.buildErrorResponse(new CreativeThinkingError(ErrorCode.INTERNAL_ERROR, 'An unexpected error occurred during session operation', 'session', { error: String(error) }), 'session');
-        }
-    }
-    async handleSaveOperation() {
-        const currentSessionId = this.sessionManager.getCurrentSessionId();
-        if (!currentSessionId) {
-            throw new SessionError(ErrorCode.SESSION_NOT_FOUND, 'No active session to save', undefined, {
-                operation: 'save',
-            });
-        }
-        await this.sessionManager.saveSessionToPersistence(currentSessionId);
-        return this.responseBuilder.buildSessionOperationResponse('save', {
-            sessionId: currentSessionId,
-            message: 'Session saved successfully',
-        });
-    }
-    async handleLoadOperation(input) {
-        if (!input.loadOptions?.sessionId) {
-            throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'sessionId is required for load operation', 'loadOptions.sessionId');
-        }
-        const session = await this.sessionManager.loadSessionFromPersistence(input.loadOptions.sessionId);
-        return this.responseBuilder.buildSessionOperationResponse('load', {
-            sessionId: input.loadOptions.sessionId,
-            session: {
-                technique: session.technique,
-                problem: session.problem,
-                stepsCompleted: session.history.length,
-                lastStep: session.history[session.history.length - 1]?.currentStep || 0,
-            },
-        });
-    }
-    async handleListOperation(input) {
-        const sessions = await this.sessionManager.listPersistedSessions(input.listOptions);
-        const formatted = this.responseBuilder.formatSessionList(sessions);
-        return this.responseBuilder.buildSessionOperationResponse('list', formatted);
-    }
-    async handleDeleteOperation(input) {
-        if (!input.deleteOptions?.sessionId) {
-            throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'sessionId is required for delete operation', 'deleteOptions.sessionId');
-        }
-        await this.sessionManager.deletePersistedSession(input.deleteOptions.sessionId);
-        return this.responseBuilder.buildSessionOperationResponse('delete', {
-            sessionId: input.deleteOptions.sessionId,
-            message: 'Session deleted successfully',
-        });
-    }
-    async handleExportOperation(input) {
-        if (!input.exportOptions?.sessionId) {
-            throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'sessionId is required for export operation', 'exportOptions.sessionId');
-        }
-        if (!input.exportOptions?.format) {
-            throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'format is required for export operation', 'exportOptions.format');
-        }
-        const validFormats = ['json', 'markdown', 'csv'];
-        if (!validFormats.includes(input.exportOptions.format)) {
-            throw new ValidationError(ErrorCode.INVALID_FIELD_VALUE, `Invalid export format: ${input.exportOptions.format}. Must be one of: ${validFormats.join(', ')}`, 'exportOptions.format', { providedFormat: input.exportOptions.format, validFormats });
-        }
-        const session = this.sessionManager.getSession(input.exportOptions.sessionId);
-        if (!session) {
-            // Try loading from persistence
-            const loadedSession = await this.sessionManager.loadSessionFromPersistence(input.exportOptions.sessionId);
-            if (!loadedSession) {
-                throw new SessionError(ErrorCode.SESSION_NOT_FOUND, `Session ${input.exportOptions.sessionId} not found`, input.exportOptions.sessionId);
-            }
-        }
-        const sessionData = session ||
-            (await this.sessionManager.loadSessionFromPersistence(input.exportOptions.sessionId));
-        const exportData = this.responseBuilder.formatExportData(sessionData, input.exportOptions.format);
-        return this.responseBuilder.buildSessionOperationResponse('export', {
-            format: input.exportOptions.format,
-            data: exportData,
-        });
+        return this.sessionOperationsHandler.handleSessionOperation(input);
     }
     isSessionOperation(input) {
         return typeof input === 'object' && input !== null && 'sessionOperation' in input;
@@ -292,236 +207,6 @@ export class LateralThinkingServer {
         this.sessionManager.destroy();
     }
 }
-// Tool definitions
-const DISCOVER_TECHNIQUES_TOOL = {
-    name: 'discover_techniques',
-    description: 'STEP 1 of 3: Analyzes a problem and recommends appropriate lateral thinking techniques. This is the FIRST tool you must call when starting any creative thinking session. Returns recommendations and available techniques that can be used in the next step.',
-    inputSchema: {
-        type: 'object',
-        properties: {
-            problem: {
-                type: 'string',
-                description: 'The problem or challenge to solve',
-            },
-            context: {
-                type: 'string',
-                description: 'Additional context about the situation',
-            },
-            preferredOutcome: {
-                type: 'string',
-                enum: ['innovative', 'systematic', 'risk-aware', 'collaborative', 'analytical'],
-                description: 'The type of solution preferred',
-            },
-            constraints: {
-                type: 'array',
-                items: { type: 'string' },
-                description: 'Any constraints or limitations to consider',
-            },
-        },
-        required: ['problem'],
-    },
-};
-const PLAN_THINKING_SESSION_TOOL = {
-    name: 'plan_thinking_session',
-    description: 'STEP 2 of 3: Creates a structured workflow for applying lateral thinking techniques. This tool MUST be called AFTER discover_techniques and BEFORE execute_thinking_step. Returns a planId that is REQUIRED for the execution step. Valid techniques: six_hats, po, random_entry, scamper, concept_extraction, yes_and, design_thinking, triz, neural_state, temporal_work, cross_cultural, collective_intel, disney_method, nine_windows',
-    inputSchema: {
-        type: 'object',
-        properties: {
-            problem: {
-                type: 'string',
-                description: 'The problem to solve',
-            },
-            techniques: {
-                type: 'array',
-                items: {
-                    type: 'string',
-                    enum: [
-                        'six_hats',
-                        'po',
-                        'random_entry',
-                        'scamper',
-                        'concept_extraction',
-                        'yes_and',
-                        'design_thinking',
-                        'triz',
-                        'neural_state',
-                        'temporal_work',
-                        'cross_cultural',
-                        'collective_intel',
-                        'disney_method',
-                        'nine_windows',
-                    ],
-                },
-                description: 'The techniques to include in the workflow',
-            },
-            objectives: {
-                type: 'array',
-                items: { type: 'string' },
-                description: 'Specific objectives for this session',
-            },
-            constraints: {
-                type: 'array',
-                items: { type: 'string' },
-                description: 'Constraints to work within',
-            },
-            timeframe: {
-                type: 'string',
-                enum: ['quick', 'thorough', 'comprehensive'],
-                description: 'How much time/depth to invest',
-            },
-        },
-        required: ['problem', 'techniques'],
-    },
-};
-const EXECUTE_THINKING_STEP_TOOL = {
-    name: 'execute_thinking_step',
-    description: 'STEP 3 of 3: Executes a single step in the lateral thinking process. WARNING: This tool REQUIRES a valid planId from plan_thinking_session. DO NOT call this tool directly - you MUST first call discover_techniques, then plan_thinking_session to get a planId. Attempting to use this tool without following the proper workflow (discover → plan → execute) will result in an error.',
-    inputSchema: {
-        type: 'object',
-        properties: {
-            planId: { type: 'string' },
-            sessionId: { type: 'string' },
-            technique: { type: 'string' },
-            problem: { type: 'string' },
-            currentStep: { type: 'number' },
-            totalSteps: { type: 'number' },
-            output: { type: 'string' },
-            nextStepNeeded: { type: 'boolean' },
-            autoSave: {
-                type: 'boolean',
-                description: 'Whether to automatically save the session after this step',
-            },
-            // Six Hats specific
-            hatColor: {
-                type: 'string',
-                enum: ['blue', 'white', 'red', 'yellow', 'black', 'green'],
-            },
-            // PO specific
-            provocation: { type: 'string' },
-            principles: { type: 'array', items: { type: 'string' } },
-            // Random Entry specific
-            randomStimulus: { type: 'string' },
-            connections: { type: 'array', items: { type: 'string' } },
-            // SCAMPER specific
-            scamperAction: {
-                type: 'string',
-                enum: [
-                    'substitute',
-                    'combine',
-                    'adapt',
-                    'modify',
-                    'put_to_other_use',
-                    'eliminate',
-                    'reverse',
-                    'parameterize',
-                ],
-            },
-            modifications: { type: 'array', items: { type: 'string' } },
-            pathImpact: { type: 'object' },
-            // Concept Extraction specific
-            successExample: { type: 'string' },
-            extractedConcepts: { type: 'array', items: { type: 'string' } },
-            abstractedPatterns: { type: 'array', items: { type: 'string' } },
-            applications: { type: 'array', items: { type: 'string' } },
-            // Yes, And... specific
-            initialIdea: { type: 'string' },
-            additions: { type: 'array', items: { type: 'string' } },
-            evaluations: { type: 'array', items: { type: 'string' } },
-            synthesis: { type: 'string' },
-            // Design Thinking specific
-            designStage: {
-                type: 'string',
-                enum: ['empathize', 'define', 'ideate', 'prototype', 'test'],
-            },
-            empathyInsights: { type: 'array', items: { type: 'string' } },
-            problemStatement: { type: 'string' },
-            ideaList: { type: 'array', items: { type: 'string' } },
-            prototypeDescription: { type: 'string' },
-            userFeedback: { type: 'array', items: { type: 'string' } },
-            // TRIZ specific
-            contradiction: { type: 'string' },
-            inventivePrinciples: { type: 'array', items: { type: 'string' } },
-            minimalSolution: { type: 'string' },
-            // Neural State specific
-            dominantNetwork: { type: 'string', enum: ['dmn', 'ecn'] },
-            suppressionDepth: { type: 'number', minimum: 0, maximum: 10 },
-            switchingRhythm: { type: 'array', items: { type: 'string' } },
-            integrationInsights: { type: 'array', items: { type: 'string' } },
-            // Temporal Work specific
-            temporalLandscape: { type: 'object' },
-            circadianAlignment: { type: 'array', items: { type: 'string' } },
-            pressureTransformation: { type: 'array', items: { type: 'string' } },
-            asyncSyncBalance: { type: 'array', items: { type: 'string' } },
-            temporalEscapeRoutes: { type: 'array', items: { type: 'string' } },
-            // Cross-Cultural specific
-            culturalFrameworks: { type: 'array', items: { type: 'string' } },
-            bridgeBuilding: { type: 'array', items: { type: 'string' } },
-            respectfulSynthesis: { type: 'array', items: { type: 'string' } },
-            parallelPaths: { type: 'array', items: { type: 'string' } },
-            // Collective Intelligence specific
-            wisdomSources: { type: 'array', items: { type: 'string' } },
-            emergentPatterns: { type: 'array', items: { type: 'string' } },
-            synergyCombinations: { type: 'array', items: { type: 'string' } },
-            collectiveInsights: { type: 'array', items: { type: 'string' } },
-            // Disney Method specific
-            disneyRole: {
-                type: 'string',
-                enum: ['dreamer', 'realist', 'critic'],
-            },
-            dreamerVision: { type: 'array', items: { type: 'string' } },
-            realistPlan: { type: 'array', items: { type: 'string' } },
-            criticRisks: { type: 'array', items: { type: 'string' } },
-            // Nine Windows specific
-            nineWindowsMatrix: {
-                type: 'array',
-                items: {
-                    type: 'object',
-                    properties: {
-                        timeFrame: { type: 'string', enum: ['past', 'present', 'future'] },
-                        systemLevel: { type: 'string', enum: ['sub-system', 'system', 'super-system'] },
-                        content: { type: 'string' },
-                        pathDependencies: { type: 'array', items: { type: 'string' } },
-                        irreversible: { type: 'boolean' },
-                    },
-                },
-            },
-            currentCell: {
-                type: 'object',
-                properties: {
-                    timeFrame: { type: 'string', enum: ['past', 'present', 'future'] },
-                    systemLevel: { type: 'string', enum: ['sub-system', 'system', 'super-system'] },
-                },
-            },
-            interdependencies: { type: 'array', items: { type: 'string' } },
-            // Risk/Adversarial fields (unified framework)
-            risks: { type: 'array', items: { type: 'string' } },
-            failureModes: { type: 'array', items: { type: 'string' } },
-            mitigations: { type: 'array', items: { type: 'string' } },
-            antifragileProperties: { type: 'array', items: { type: 'string' } },
-            blackSwans: { type: 'array', items: { type: 'string' } },
-            failureInsights: { type: 'array', items: { type: 'string' } },
-            stressTestResults: { type: 'array', items: { type: 'string' } },
-            failureModesPredicted: { type: 'array', items: { type: 'string' } },
-            viaNegativaRemovals: { type: 'array', items: { type: 'string' } },
-            // Revision support
-            isRevision: { type: 'boolean' },
-            revisesStep: { type: 'number' },
-            branchFromStep: { type: 'number' },
-            branchId: { type: 'string' },
-            flexibilityScore: { type: 'number', minimum: 0, maximum: 1 },
-            alternativeSuggestions: { type: 'array', items: { type: 'string' } },
-        },
-        required: [
-            'planId',
-            'technique',
-            'problem',
-            'currentStep',
-            'totalSteps',
-            'output',
-            'nextStepNeeded',
-        ],
-    },
-};
 // Initialize MCP server
 const server = new Server({
     name: 'creative-thinking',
@@ -533,61 +218,9 @@ const server = new Server({
 });
 // Create server instance
 const lateralServer = new LateralThinkingServer();
-// Handle tool listing
-server.setRequestHandler(ListToolsRequestSchema, () => ({
-    tools: [DISCOVER_TECHNIQUES_TOOL, PLAN_THINKING_SESSION_TOOL, EXECUTE_THINKING_STEP_TOOL],
-}));
-// Handle tool calls
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    const { name, arguments: args } = request.params;
-    try {
-        // Record the tool call for workflow tracking
-        workflowGuard.recordCall(name, args);
-        // Check for workflow violations before executing
-        const violation = workflowGuard.checkWorkflowViolation(name, args);
-        if (violation) {
-            const violationResponse = workflowGuard.getViolationResponse(violation);
-            return {
-                content: [
-                    {
-                        type: 'text',
-                        text: JSON.stringify(violationResponse, null, 2),
-                    },
-                ],
-            };
-        }
-        let result;
-        switch (name) {
-            case 'discover_techniques':
-                result = lateralServer.discoverTechniques(args);
-                break;
-            case 'plan_thinking_session':
-                result = lateralServer.planThinkingSession(args);
-                break;
-            case 'execute_thinking_step':
-                result = await lateralServer.executeThinkingStep(args);
-                break;
-            default:
-                throw new ValidationError(ErrorCode.INVALID_INPUT, `Unknown tool: ${name}`, 'toolName', {
-                    providedTool: name,
-                });
-        }
-        // MCP expects the content array directly
-        return {
-            content: result.content,
-        };
-    }
-    catch (error) {
-        return {
-            content: [
-                {
-                    type: 'text',
-                    text: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
-                },
-            ],
-        };
-    }
-});
+// Set up request handlers
+const requestHandlers = new RequestHandlers(server, lateralServer);
+requestHandlers.setupHandlers();
 // Start server
 async function main() {
     const transport = new StdioServerTransport();

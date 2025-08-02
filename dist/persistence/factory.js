@@ -36,7 +36,7 @@ export function getDefaultConfig(adapter) {
             return {
                 adapter: 'filesystem',
                 options: {
-                    path: '.creative-thinking',
+                    path: process.env.PERSISTENCE_PATH || '.creative-thinking',
                     autoSave: true,
                     saveInterval: 60000, // 1 minute
                     compression: false,

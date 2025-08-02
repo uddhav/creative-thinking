@@ -3,21 +3,26 @@
  * Constructs formatted responses for MCP tools
  */
 import { CreativeThinkingError, ValidationError, ErrorCode } from '../errors/types.js';
+import { JsonOptimizer } from '../utils/JsonOptimizer.js';
 export class ResponseBuilder {
     // Performance optimization: Cache for expensive session metric calculations
     metricsCache = new Map();
+    // JSON optimizer for response size management
+    jsonOptimizer;
+    constructor() {
+        this.jsonOptimizer = new JsonOptimizer({
+            maxArrayLength: 100,
+            maxStringLength: 1000,
+            maxDepth: 10,
+            maxResponseSize: 1024 * 1024, // 1MB
+        });
+    }
     /**
      * Build a success response with formatted content
      */
     buildSuccessResponse(content) {
-        return {
-            content: [
-                {
-                    type: 'text',
-                    text: JSON.stringify(content, null, 2),
-                },
-            ],
-        };
+        // Use optimizer for all responses
+        return this.jsonOptimizer.buildOptimizedResponse(content);
     }
     /**
      * Build an error response

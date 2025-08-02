@@ -1,6 +1,6 @@
 {
   "name": "creative-thinking",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Three-layer MCP server for structured creative problem-solving techniques",
   "license": "GPL-3.0",
   "author": "@uddhav",
@@ -28,12 +28,17 @@
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
     "prepublishOnly": "npm run build && npm run test:run",
-    "lint": "eslint . --ext .ts,.tsx",
+    "lint": "eslint . --ext .ts,.tsx --max-warnings 0",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "format": "prettier --write \"src/**/*.{ts,tsx,json,md}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,json,md}\"",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist coverage",
+    "clean": "rm -rf dist coverage .build-output",
+    "build:quiet": "./scripts/run-with-output.sh build",
+    "test:quiet": "./scripts/run-with-output.sh test:run",
+    "lint:quiet": "./scripts/run-with-output.sh lint",
+    "check:all": "npm run lint:quiet && npm run build:quiet && npm run test:quiet",
+    "check:status": "node scripts/check-status.js",
     "pretest": "npm run build",
     "version": "npm run build && git add -A dist",
     "release": "standard-version",
@@ -67,6 +72,7 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.3",
     "husky": "^9.1.7",
+    "lint-staged": "^16.1.2",
     "prettier": "^3.6.2",
     "semantic-release": "^24.2.7",
     "standard-version": "^9.5.0",
@@ -92,5 +98,13 @@
     "commitizen": {
       "path": "./node_modules/cz-conventional-changelog"
     }
+  },
+  "lint-staged": {
+    "src/**/*.{js,ts,tsx}": [
+      "eslint --max-warnings 0"
+    ],
+    "*.{js,ts,tsx,json,md}": [
+      "prettier --check"
+    ]
   }
 }
