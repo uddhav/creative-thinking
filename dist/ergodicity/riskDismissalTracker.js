@@ -163,12 +163,16 @@ export class RiskDismissalTracker {
         const actionLower = proposedAction.toLowerCase();
         // Use word boundaries to avoid false positives like "allocation" containing "all"
         const actionWords = actionLower.split(/\b/);
-        if (actionWords.includes('all') || actionWords.includes('everything') ||
-            actionLower.includes('all in') || actionLower.includes('entire')) {
+        if (actionWords.includes('all') ||
+            actionWords.includes('everything') ||
+            actionLower.includes('all in') ||
+            actionLower.includes('entire')) {
             indicators.push('total commitment language');
         }
-        if (actionWords.includes('bet') || actionWords.includes('gamble') ||
-            actionLower.includes('betting') || actionLower.includes('gambling')) {
+        if (actionWords.includes('bet') ||
+            actionWords.includes('gamble') ||
+            actionLower.includes('betting') ||
+            actionLower.includes('gambling')) {
             indicators.push('gambling language');
         }
         return indicators;
