@@ -19,11 +19,12 @@ export declare class LateralThinkingServer {
     private ergodicityManager;
     private neuralOptimizationEnabled;
     private culturalFrameworksEnabled;
+    private sessionOperationsHandler;
     get sessions(): Map<string, SessionData>;
     get config(): import("./core/SessionManager.js").SessionConfig;
+    cleanupOldSessions(): void;
     initializeSession(technique: string, problem: string): string;
     touchSession(sessionId: string): void;
-    cleanupOldSessions(): void;
     evictOldestSessions(): void;
     logMemoryMetrics(): void;
     constructor();
@@ -44,14 +45,9 @@ export declare class LateralThinkingServer {
      */
     executeThinkingStep(input: unknown): Promise<import("./types/index.js").LateralThinkingResponse>;
     /**
-     * Handle session operations
+     * Handle session operations - delegate to SessionOperationsHandler
      */
     private handleSessionOperation;
-    private handleSaveOperation;
-    private handleLoadOperation;
-    private handleListOperation;
-    private handleDeleteOperation;
-    private handleExportOperation;
     private isSessionOperation;
     /**
      * Clean up resources

@@ -50,7 +50,8 @@ describe('ResponseBuilder', () => {
     it('should handle undefined content', () => {
       const response = builder.buildSuccessResponse(undefined);
 
-      expect(response.content[0].text).toBe(undefined);
+      // JsonOptimizer returns "undefined" string for undefined values
+      expect(response.content[0].text).toBe('undefined');
     });
 
     it('should handle complex nested objects', () => {

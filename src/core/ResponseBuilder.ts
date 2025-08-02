@@ -11,6 +11,7 @@ import type {
 } from '../types/index.js';
 import type { DiscoverTechniquesOutput, PlanThinkingSessionOutput } from '../types/planning.js';
 import { CreativeThinkingError, ValidationError, ErrorCode } from '../errors/types.js';
+import { JsonOptimizer } from '../utils/JsonOptimizer.js';
 
 // Type for execution metadata
 export interface ExecutionMetadata {
@@ -39,18 +40,24 @@ export class ResponseBuilder {
     }
   > = new Map();
 
+  // JSON optimizer for response size management
+  private jsonOptimizer: JsonOptimizer;
+
+  constructor() {
+    this.jsonOptimizer = new JsonOptimizer({
+      maxArrayLength: 100,
+      maxStringLength: 1000,
+      maxDepth: 10,
+      maxResponseSize: 1024 * 1024, // 1MB
+    });
+  }
+
   /**
    * Build a success response with formatted content
    */
   public buildSuccessResponse(content: unknown): LateralThinkingResponse {
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(content, null, 2),
-        },
-      ],
-    };
+    // Use optimizer for all responses
+    return this.jsonOptimizer.buildOptimizedResponse(content);
   }
 
   /**

@@ -21,6 +21,8 @@ export interface ExecutionMetadata {
 }
 export declare class ResponseBuilder {
     private metricsCache;
+    private jsonOptimizer;
+    constructor();
     /**
      * Build a success response with formatted content
      */

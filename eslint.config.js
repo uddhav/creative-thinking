@@ -14,8 +14,8 @@ export default [
       'examples/',
       '*.js',
       '*.d.ts',
-      '!eslint.config.js'
-    ]
+      '!eslint.config.js',
+    ],
   },
   {
     files: ['src/**/*.ts', 'test/**/*.ts', 'vitest.config.ts'],
@@ -24,7 +24,7 @@ export default [
       parserOptions: {
         ecmaVersion: 2022,
         sourceType: 'module',
-        project: './tsconfig.eslint.json'
+        project: './tsconfig.eslint.json',
       },
       globals: {
         console: 'readonly',
@@ -38,62 +38,77 @@ export default [
         setTimeout: 'readonly',
         clearTimeout: 'readonly',
         NodeJS: 'readonly',
-        global: 'readonly'
-      }
+        global: 'readonly',
+      },
     },
     plugins: {
       '@typescript-eslint': typescript,
-      prettier
+      prettier,
     },
     rules: {
       // Include all recommended TypeScript rules
       ...typescript.configs['recommended'].rules,
       ...typescript.configs['recommended-requiring-type-checking'].rules,
-      
+
       // TypeScript specific rules
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
       '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-unused-vars': ['error', {
-        argsIgnorePattern: '^_',
-        varsIgnorePattern: '^_'
-      }],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+        },
+      ],
       '@typescript-eslint/no-non-null-assertion': 'warn',
-      '@typescript-eslint/consistent-type-imports': ['error', {
-        prefer: 'type-imports'
-      }],
-      
+      '@typescript-eslint/consistent-type-imports': [
+        'error',
+        {
+          prefer: 'type-imports',
+        },
+      ],
+
       // General rules
-      'no-console': ['warn', {
-        allow: ['warn', 'error']
-      }],
+      'no-console': [
+        'warn',
+        {
+          allow: ['warn', 'error'],
+        },
+      ],
       'no-debugger': 'error',
       'prefer-const': 'error',
       'no-var': 'error',
-      'eqeqeq': ['error', 'always'],
-      'curly': ['error', 'all'],
-      
+      eqeqeq: ['error', 'always'],
+      curly: ['error', 'all'],
+
       // MCP Protocol Compliance Rules
       'no-restricted-syntax': [
         'error',
         {
-          selector: "CallExpression[callee.object.object.name='process'][callee.object.property.name='stdout'][callee.property.name='write']",
-          message: 'Do not use process.stdout.write() - MCP servers must only send JSON-RPC to stdout. Use process.stderr.write() for debug output.'
+          selector:
+            "CallExpression[callee.object.object.name='process'][callee.object.property.name='stdout'][callee.property.name='write']",
+          message:
+            'Do not use process.stdout.write() - MCP servers must only send JSON-RPC to stdout. Use process.stderr.write() for debug output.',
         },
         {
           selector: "CallExpression[callee.object.name='console'][callee.property.name='log']",
-          message: 'Do not use console.log() - MCP servers must only send JSON-RPC to stdout. Use console.error() for debug output.'
-        }
+          message:
+            'Do not use console.log() - MCP servers must only send JSON-RPC to stdout. Use console.error() for debug output.',
+        },
       ],
-      
+
       // Prettier integration
-      'prettier/prettier': ['error', {
-        endOfLine: 'auto'
-      }],
-      
+      'prettier/prettier': [
+        'error',
+        {
+          endOfLine: 'auto',
+        },
+      ],
+
       // Disable conflicting rules from prettier config
-      ...prettierConfig.rules
-    }
+      ...prettierConfig.rules,
+    },
   },
   // Test file specific configuration
   {
@@ -106,7 +121,44 @@ export default [
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',
       '@typescript-eslint/no-unsafe-call': 'off',
-      '@typescript-eslint/no-unsafe-argument': 'off'
-    }
-  }
+      '@typescript-eslint/no-unsafe-argument': 'off',
+    },
+  },
+  // JavaScript files configuration (e.g., scripts)
+  {
+    files: ['scripts/**/*.js'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'module',
+      globals: {
+        console: 'readonly',
+        process: 'readonly',
+        Buffer: 'readonly',
+        __dirname: 'readonly',
+        __filename: 'readonly',
+        URL: 'readonly',
+      },
+    },
+    rules: {
+      // Disable TypeScript-specific rules for JS files
+      '@typescript-eslint/explicit-function-return-type': 'off',
+      '@typescript-eslint/no-var-requires': 'off',
+      // Allow console.error in scripts
+      'no-console': [
+        'warn',
+        {
+          allow: ['warn', 'error'],
+        },
+      ],
+      // Don't apply TypeScript parser rules to JS files
+      '@typescript-eslint/no-unused-vars': 'off',
+      'no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+        },
+      ],
+    },
+  },
 ];
