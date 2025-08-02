@@ -5,6 +5,7 @@
 import { ResponseBuilder } from '../../core/ResponseBuilder.js';
 import { MemoryAnalyzer } from '../../core/MemoryAnalyzer.js';
 import { RealityIntegration } from '../../reality/integration.js';
+import { JsonOptimizer } from '../../utils/JsonOptimizer.js';
 import { monitorCriticalSection } from '../../utils/PerformanceIntegration.js';
 export class ExecutionResponseBuilder {
     complexityAnalyzer;
@@ -12,23 +13,91 @@ export class ExecutionResponseBuilder {
     techniqueRegistry;
     responseBuilder = new ResponseBuilder();
     memoryAnalyzer = new MemoryAnalyzer();
+    jsonOptimizer;
     constructor(complexityAnalyzer, escalationGenerator, techniqueRegistry) {
         this.complexityAnalyzer = complexityAnalyzer;
         this.escalationGenerator = escalationGenerator;
         this.techniqueRegistry = techniqueRegistry;
+        this.jsonOptimizer = new JsonOptimizer({
+            maxArrayLength: 50, // Limit array sizes for history, path memory
+            maxStringLength: 800, // Reasonable string length
+            maxDepth: 8, // Prevent deep nesting issues
+            maxResponseSize: 512 * 1024, // 512KB limit
+        });
     }
     /**
      * Build comprehensive execution response
      */
     buildResponse(input, session, sessionId, handler, techniqueLocalStep, techniqueIndex, plan, currentFlexibility, optionGenerationResult) {
+        // Build core response object (not JSON) with insights and metadata
+        const { responseData } = this.buildCoreResponseData(input, session, sessionId, handler, techniqueLocalStep, techniqueIndex, plan, currentFlexibility);
+        // Enhance response object directly (no parsing needed)
+        this.enhanceWithMemoryAndProgress(responseData, input, session, sessionId, handler, techniqueLocalStep, techniqueIndex, plan);
+        // Enhance with flexibility and warnings
+        this.enhanceWithFlexibilityAndWarnings(responseData, currentFlexibility, input, session);
+        // Enhance with analysis and options
+        this.enhanceWithAnalysisAndOptions(responseData, input, session, currentFlexibility, optionGenerationResult);
+        // Build optimized response with single JSON stringify
+        const response = this.jsonOptimizer.buildOptimizedResponse(responseData);
+        // Handle session completion
+        if (!input.nextStepNeeded) {
+            this.handleSessionCompletion(response, session);
+        }
+        return response;
+    }
+    /**
+     * Build core response data object with insights and metadata
+     */
+    buildCoreResponseData(input, session, sessionId, handler, techniqueLocalStep, techniqueIndex, plan, currentFlexibility) {
         // Extract insights
         const currentInsights = this.extractInsights(handler, session, input);
-        // Generate memory outputs
-        const memoryOutputs = this.memoryAnalyzer.generateMemoryOutputs(this.createOperationData(input, sessionId), session);
         // Generate next step guidance
         const nextStepGuidance = this.generateNextStepGuidance(input, session, handler, techniqueLocalStep, techniqueIndex, plan);
         // Generate execution metadata
         const executionMetadata = this.generateExecutionMetadata(input, session, currentInsights, session.pathMemory, currentFlexibility);
+        // Build response data object
+        const operationData = this.createOperationData(input, sessionId);
+        const responseData = {
+            sessionId,
+            technique: operationData.technique,
+            problem: operationData.problem,
+            currentStep: operationData.currentStep,
+            totalSteps: operationData.totalSteps,
+            nextStepNeeded: operationData.nextStepNeeded,
+            insights: currentInsights,
+            ...this.extractTechniqueSpecificFields(operationData),
+            historyLength: session.history.length,
+        };
+        // Add optional fields
+        if (nextStepGuidance) {
+            responseData.nextStepGuidance = nextStepGuidance;
+        }
+        if (executionMetadata) {
+            responseData.executionMetadata = executionMetadata;
+        }
+        return { responseData, currentInsights };
+    }
+    /**
+     * Build core response with insights and metadata
+     */
+    buildCoreResponse(input, session, sessionId, handler, techniqueLocalStep, techniqueIndex, plan, currentFlexibility) {
+        // Extract insights
+        const currentInsights = this.extractInsights(handler, session, input);
+        // Generate next step guidance
+        const nextStepGuidance = this.generateNextStepGuidance(input, session, handler, techniqueLocalStep, techniqueIndex, plan);
+        // Generate execution metadata
+        const executionMetadata = this.generateExecutionMetadata(input, session, currentInsights, session.pathMemory, currentFlexibility);
+        // Build base response
+        const operationData = this.createOperationData(input, sessionId);
+        const response = this.responseBuilder.buildExecutionResponse(sessionId, operationData, currentInsights, nextStepGuidance, session.history.length, executionMetadata);
+        return { response, currentInsights };
+    }
+    /**
+     * Enhance response with memory outputs and technique progress
+     */
+    enhanceWithMemoryAndProgress(parsedResponse, input, session, sessionId, handler, techniqueLocalStep, techniqueIndex, plan) {
+        // Generate memory outputs
+        const memoryOutputs = this.memoryAnalyzer.generateMemoryOutputs(this.createOperationData(input, sessionId), session);
         // Build technique progress info
         const techniqueProgress = {
             techniqueStep: techniqueLocalStep,
@@ -39,29 +108,26 @@ export class ExecutionResponseBuilder {
             techniqueIndex: techniqueIndex + 1,
             totalTechniques: plan?.techniques.length || 1,
         };
-        // Build base response
-        const operationData = this.createOperationData(input, sessionId);
-        const response = this.responseBuilder.buildExecutionResponse(sessionId, operationData, currentInsights, nextStepGuidance, session.history.length, executionMetadata);
-        // Parse response for enhancement
-        const parsedResponse = JSON.parse(response.content[0].text);
-        // Add all enhancements
         this.addMemoryOutputs(parsedResponse, memoryOutputs);
         this.addTechniqueProgress(parsedResponse, techniqueProgress);
+    }
+    /**
+     * Enhance response with flexibility and warnings
+     */
+    enhanceWithFlexibilityAndWarnings(parsedResponse, currentFlexibility, input, session) {
         this.addFlexibilityInfo(parsedResponse, currentFlexibility, input.alternativeSuggestions);
         this.addPathAnalysis(parsedResponse, session.pathMemory, currentFlexibility);
         this.addWarnings(parsedResponse, session);
+    }
+    /**
+     * Enhance response with analysis and option generation
+     */
+    enhanceWithAnalysisAndOptions(parsedResponse, input, session, currentFlexibility, optionGenerationResult) {
         this.addRealityAssessment(parsedResponse, input);
         this.addComplexityAnalysis(parsedResponse, input, session);
         this.addRiskAssessments(parsedResponse, input);
         this.addReflectionRequirement(parsedResponse, session, input);
         this.addOptionGeneration(parsedResponse, currentFlexibility, optionGenerationResult);
-        // Finalize response
-        response.content[0].text = JSON.stringify(parsedResponse, null, 2);
-        // Handle session completion
-        if (!input.nextStepNeeded) {
-            this.handleSessionCompletion(response, session);
-        }
-        return response;
     }
     extractInsights(handler, session, input) {
         const currentInsights = monitorCriticalSection('extract_insights', () => handler.extractInsights(session.history), { technique: input.technique, historyLength: session.history.length });
@@ -249,9 +315,66 @@ export class ExecutionResponseBuilder {
     }
     handleSessionCompletion(response, session) {
         session.endTime = Date.now();
-        const completedParsedResponse = JSON.parse(response.content[0].text);
-        const completedResponse = this.responseBuilder.addCompletionData(completedParsedResponse, session);
-        response.content[0].text = JSON.stringify(completedResponse, null, 2);
+        // Optimize: Parse once, modify, and use optimizer to stringify
+        const responseData = JSON.parse(response.content[0].text);
+        const completedData = this.responseBuilder.addCompletionData(responseData, session);
+        // Use optimizer for final response
+        response.content[0].text = this.jsonOptimizer.optimizeResponse(completedData);
+    }
+    /**
+     * Extract technique-specific fields from input
+     */
+    extractTechniqueSpecificFields(input) {
+        const fields = {};
+        // Cast input to ExecuteThinkingStepInput to access all fields
+        const stepInput = input;
+        // Add technique-specific fields based on the technique
+        switch (input.technique) {
+            case 'six_hats':
+                if (stepInput.hatColor)
+                    fields.hatColor = stepInput.hatColor;
+                break;
+            case 'po':
+                if (stepInput.provocation)
+                    fields.provocation = stepInput.provocation;
+                if (stepInput.principles)
+                    fields.principles = stepInput.principles;
+                break;
+            case 'random_entry':
+                if (stepInput.randomStimulus)
+                    fields.randomStimulus = stepInput.randomStimulus;
+                if (stepInput.connections)
+                    fields.connections = stepInput.connections;
+                break;
+            case 'scamper':
+                if (stepInput.scamperAction)
+                    fields.scamperAction = stepInput.scamperAction;
+                if (stepInput.pathImpact)
+                    fields.pathImpact = stepInput.pathImpact;
+                if (stepInput.flexibilityScore !== undefined)
+                    fields.flexibilityScore = stepInput.flexibilityScore;
+                if (stepInput.alternativeSuggestions)
+                    fields.alternativeSuggestions = stepInput.alternativeSuggestions;
+                if (stepInput.modificationHistory)
+                    fields.modificationHistory = stepInput.modificationHistory;
+                break;
+            case 'disney_method':
+                if (stepInput.disneyRole)
+                    fields.disneyRole = stepInput.disneyRole;
+                break;
+            case 'nine_windows':
+                if (stepInput.currentCell)
+                    fields.currentCell = stepInput.currentCell;
+                break;
+        }
+        // Add common risk/adversarial fields if present
+        if (stepInput.risks)
+            fields.risks = stepInput.risks;
+        if (stepInput.failureModes)
+            fields.failureModes = stepInput.failureModes;
+        if (stepInput.mitigations)
+            fields.mitigations = stepInput.mitigations;
+        return fields;
     }
     // Helper methods for metadata generation
     assessTechniqueEffectiveness(input, session, insights) {

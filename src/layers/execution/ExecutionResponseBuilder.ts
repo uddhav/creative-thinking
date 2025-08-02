@@ -18,6 +18,7 @@ import { ResponseBuilder } from '../../core/ResponseBuilder.js';
 import { MemoryAnalyzer } from '../../core/MemoryAnalyzer.js';
 import type { MemoryOutputs } from '../../core/MemoryAnalyzer.js';
 import { RealityIntegration } from '../../reality/integration.js';
+import { JsonOptimizer } from '../../utils/JsonOptimizer.js';
 import type { TechniqueHandler } from '../../techniques/types.js';
 import type { EscalationPromptGenerator } from '../../ergodicity/escalationPrompts.js';
 import type { HybridComplexityAnalyzer } from '../../complexity/analyzer.js';
@@ -31,12 +32,20 @@ interface ComplexitySuggestion {
 export class ExecutionResponseBuilder {
   private responseBuilder = new ResponseBuilder();
   private memoryAnalyzer = new MemoryAnalyzer();
+  private jsonOptimizer: JsonOptimizer;
 
   constructor(
     private complexityAnalyzer: HybridComplexityAnalyzer,
     private escalationGenerator: EscalationPromptGenerator,
     private techniqueRegistry?: TechniqueRegistry
-  ) {}
+  ) {
+    this.jsonOptimizer = new JsonOptimizer({
+      maxArrayLength: 50, // Limit array sizes for history, path memory
+      maxStringLength: 800, // Reasonable string length
+      maxDepth: 8, // Prevent deep nesting issues
+      maxResponseSize: 512 * 1024, // 512KB limit
+    });
+  }
 
   /**
    * Build comprehensive execution response
@@ -52,14 +61,68 @@ export class ExecutionResponseBuilder {
     currentFlexibility: number,
     optionGenerationResult: OptionGenerationResult | undefined
   ): LateralThinkingResponse {
+    // Build core response object (not JSON) with insights and metadata
+    const { responseData } = this.buildCoreResponseData(
+      input,
+      session,
+      sessionId,
+      handler,
+      techniqueLocalStep,
+      techniqueIndex,
+      plan,
+      currentFlexibility
+    );
+
+    // Enhance response object directly (no parsing needed)
+    this.enhanceWithMemoryAndProgress(
+      responseData,
+      input,
+      session,
+      sessionId,
+      handler,
+      techniqueLocalStep,
+      techniqueIndex,
+      plan
+    );
+
+    // Enhance with flexibility and warnings
+    this.enhanceWithFlexibilityAndWarnings(responseData, currentFlexibility, input, session);
+
+    // Enhance with analysis and options
+    this.enhanceWithAnalysisAndOptions(
+      responseData,
+      input,
+      session,
+      currentFlexibility,
+      optionGenerationResult
+    );
+
+    // Build optimized response with single JSON stringify
+    const response = this.jsonOptimizer.buildOptimizedResponse(responseData);
+
+    // Handle session completion
+    if (!input.nextStepNeeded) {
+      this.handleSessionCompletion(response, session);
+    }
+
+    return response;
+  }
+
+  /**
+   * Build core response data object with insights and metadata
+   */
+  private buildCoreResponseData(
+    input: ExecuteThinkingStepInput,
+    session: SessionData,
+    sessionId: string,
+    handler: TechniqueHandler,
+    techniqueLocalStep: number,
+    techniqueIndex: number,
+    plan: PlanThinkingSessionOutput | undefined,
+    currentFlexibility: number
+  ): { responseData: Record<string, unknown>; currentInsights: string[] } {
     // Extract insights
     const currentInsights = this.extractInsights(handler, session, input);
-
-    // Generate memory outputs
-    const memoryOutputs = this.memoryAnalyzer.generateMemoryOutputs(
-      this.createOperationData(input, sessionId),
-      session
-    );
 
     // Generate next step guidance
     const nextStepGuidance = this.generateNextStepGuidance(
@@ -80,17 +143,65 @@ export class ExecutionResponseBuilder {
       currentFlexibility
     );
 
-    // Build technique progress info
-    const techniqueProgress = {
-      techniqueStep: techniqueLocalStep,
-      techniqueTotalSteps:
-        plan?.workflow[techniqueIndex]?.steps.length || handler.getTechniqueInfo().totalSteps,
-      globalStep: input.currentStep,
-      globalTotalSteps: input.totalSteps,
-      currentTechnique: input.technique,
-      techniqueIndex: techniqueIndex + 1,
-      totalTechniques: plan?.techniques.length || 1,
+    // Build response data object
+    const operationData = this.createOperationData(input, sessionId);
+    const responseData: Record<string, unknown> = {
+      sessionId,
+      technique: operationData.technique,
+      problem: operationData.problem,
+      currentStep: operationData.currentStep,
+      totalSteps: operationData.totalSteps,
+      nextStepNeeded: operationData.nextStepNeeded,
+      insights: currentInsights,
+      ...this.extractTechniqueSpecificFields(operationData),
+      historyLength: session.history.length,
     };
+
+    // Add optional fields
+    if (nextStepGuidance) {
+      responseData.nextStepGuidance = nextStepGuidance;
+    }
+    if (executionMetadata) {
+      responseData.executionMetadata = executionMetadata;
+    }
+
+    return { responseData, currentInsights };
+  }
+
+  /**
+   * Build core response with insights and metadata
+   */
+  private buildCoreResponse(
+    input: ExecuteThinkingStepInput,
+    session: SessionData,
+    sessionId: string,
+    handler: TechniqueHandler,
+    techniqueLocalStep: number,
+    techniqueIndex: number,
+    plan: PlanThinkingSessionOutput | undefined,
+    currentFlexibility: number
+  ): { response: LateralThinkingResponse; currentInsights: string[] } {
+    // Extract insights
+    const currentInsights = this.extractInsights(handler, session, input);
+
+    // Generate next step guidance
+    const nextStepGuidance = this.generateNextStepGuidance(
+      input,
+      session,
+      handler,
+      techniqueLocalStep,
+      techniqueIndex,
+      plan
+    );
+
+    // Generate execution metadata
+    const executionMetadata = this.generateExecutionMetadata(
+      input,
+      session,
+      currentInsights,
+      session.pathMemory,
+      currentFlexibility
+    );
 
     // Build base response
     const operationData = this.createOperationData(input, sessionId);
@@ -103,30 +214,73 @@ export class ExecutionResponseBuilder {
       executionMetadata
     );
 
-    // Parse response for enhancement
-    const parsedResponse = JSON.parse(response.content[0].text) as Record<string, unknown>;
+    return { response, currentInsights };
+  }
 
-    // Add all enhancements
+  /**
+   * Enhance response with memory outputs and technique progress
+   */
+  private enhanceWithMemoryAndProgress(
+    parsedResponse: Record<string, unknown>,
+    input: ExecuteThinkingStepInput,
+    session: SessionData,
+    sessionId: string,
+    handler: TechniqueHandler,
+    techniqueLocalStep: number,
+    techniqueIndex: number,
+    plan: PlanThinkingSessionOutput | undefined
+  ): void {
+    // Generate memory outputs
+    const memoryOutputs = this.memoryAnalyzer.generateMemoryOutputs(
+      this.createOperationData(input, sessionId),
+      session
+    );
+
+    // Build technique progress info
+    const techniqueProgress = {
+      techniqueStep: techniqueLocalStep,
+      techniqueTotalSteps:
+        plan?.workflow[techniqueIndex]?.steps.length || handler.getTechniqueInfo().totalSteps,
+      globalStep: input.currentStep,
+      globalTotalSteps: input.totalSteps,
+      currentTechnique: input.technique,
+      techniqueIndex: techniqueIndex + 1,
+      totalTechniques: plan?.techniques.length || 1,
+    };
+
     this.addMemoryOutputs(parsedResponse, memoryOutputs);
     this.addTechniqueProgress(parsedResponse, techniqueProgress);
+  }
+
+  /**
+   * Enhance response with flexibility and warnings
+   */
+  private enhanceWithFlexibilityAndWarnings(
+    parsedResponse: Record<string, unknown>,
+    currentFlexibility: number,
+    input: ExecuteThinkingStepInput,
+    session: SessionData
+  ): void {
     this.addFlexibilityInfo(parsedResponse, currentFlexibility, input.alternativeSuggestions);
     this.addPathAnalysis(parsedResponse, session.pathMemory, currentFlexibility);
     this.addWarnings(parsedResponse, session);
+  }
+
+  /**
+   * Enhance response with analysis and option generation
+   */
+  private enhanceWithAnalysisAndOptions(
+    parsedResponse: Record<string, unknown>,
+    input: ExecuteThinkingStepInput,
+    session: SessionData,
+    currentFlexibility: number,
+    optionGenerationResult: OptionGenerationResult | undefined
+  ): void {
     this.addRealityAssessment(parsedResponse, input);
     this.addComplexityAnalysis(parsedResponse, input, session);
     this.addRiskAssessments(parsedResponse, input);
     this.addReflectionRequirement(parsedResponse, session, input);
     this.addOptionGeneration(parsedResponse, currentFlexibility, optionGenerationResult);
-
-    // Finalize response
-    response.content[0].text = JSON.stringify(parsedResponse, null, 2);
-
-    // Handle session completion
-    if (!input.nextStepNeeded) {
-      this.handleSessionCompletion(response, session);
-    }
-
-    return response;
   }
 
   private extractInsights(
@@ -427,12 +581,66 @@ export class ExecutionResponseBuilder {
 
   private handleSessionCompletion(response: LateralThinkingResponse, session: SessionData): void {
     session.endTime = Date.now();
-    const completedParsedResponse = JSON.parse(response.content[0].text) as Record<string, unknown>;
-    const completedResponse = this.responseBuilder.addCompletionData(
-      completedParsedResponse,
-      session
-    );
-    response.content[0].text = JSON.stringify(completedResponse, null, 2);
+
+    // Optimize: Parse once, modify, and use optimizer to stringify
+    const responseData = JSON.parse(response.content[0].text) as Record<string, unknown>;
+    const completedData = this.responseBuilder.addCompletionData(responseData, session);
+
+    // Use optimizer for final response
+    response.content[0].text = this.jsonOptimizer.optimizeResponse(completedData);
+  }
+
+  /**
+   * Extract technique-specific fields from input
+   */
+  private extractTechniqueSpecificFields(input: ThinkingOperationData): Record<string, unknown> {
+    const fields: Record<string, unknown> = {};
+
+    // Cast input to ExecuteThinkingStepInput to access all fields
+    const stepInput = input as ExecuteThinkingStepInput;
+
+    // Add technique-specific fields based on the technique
+    switch (input.technique) {
+      case 'six_hats':
+        if (stepInput.hatColor) fields.hatColor = stepInput.hatColor;
+        break;
+
+      case 'po':
+        if (stepInput.provocation) fields.provocation = stepInput.provocation;
+        if (stepInput.principles) fields.principles = stepInput.principles;
+        break;
+
+      case 'random_entry':
+        if (stepInput.randomStimulus) fields.randomStimulus = stepInput.randomStimulus;
+        if (stepInput.connections) fields.connections = stepInput.connections;
+        break;
+
+      case 'scamper':
+        if (stepInput.scamperAction) fields.scamperAction = stepInput.scamperAction;
+        if (stepInput.pathImpact) fields.pathImpact = stepInput.pathImpact;
+        if (stepInput.flexibilityScore !== undefined)
+          fields.flexibilityScore = stepInput.flexibilityScore;
+        if (stepInput.alternativeSuggestions)
+          fields.alternativeSuggestions = stepInput.alternativeSuggestions;
+        if (stepInput.modificationHistory)
+          fields.modificationHistory = stepInput.modificationHistory;
+        break;
+
+      case 'disney_method':
+        if (stepInput.disneyRole) fields.disneyRole = stepInput.disneyRole;
+        break;
+
+      case 'nine_windows':
+        if (stepInput.currentCell) fields.currentCell = stepInput.currentCell;
+        break;
+    }
+
+    // Add common risk/adversarial fields if present
+    if (stepInput.risks) fields.risks = stepInput.risks;
+    if (stepInput.failureModes) fields.failureModes = stepInput.failureModes;
+    if (stepInput.mitigations) fields.mitigations = stepInput.mitigations;
+
+    return fields;
   }
 
   // Helper methods for metadata generation

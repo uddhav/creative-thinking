@@ -6,6 +6,7 @@
 import { ResponseBuilder } from '../core/ResponseBuilder.js';
 import { ExecutionError, ErrorCode, PersistenceError } from '../errors/types.js';
 import { monitorCriticalSectionAsync, addPerformanceSummary, } from '../utils/PerformanceIntegration.js';
+import { ErrorContextBuilder } from '../core/ErrorContextBuilder.js';
 // Risk and option generation imports are now handled by orchestrators
 // Import new orchestrators
 import { ExecutionValidator } from './execution/ExecutionValidator.js';
@@ -15,6 +16,7 @@ import { ExecutionResponseBuilder } from './execution/ExecutionResponseBuilder.j
 import { EscalationPromptGenerator } from '../ergodicity/escalationPrompts.js';
 export async function executeThinkingStep(input, sessionManager, techniqueRegistry, visualFormatter, metricsCollector, complexityAnalyzer, ergodicityManager) {
     const responseBuilder = new ResponseBuilder();
+    const errorContextBuilder = new ErrorContextBuilder();
     // Initialize orchestrators
     const executionValidator = new ExecutionValidator(sessionManager, techniqueRegistry, visualFormatter);
     const riskAssessmentOrchestrator = new RiskAssessmentOrchestrator(visualFormatter);
@@ -45,14 +47,14 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
         if (!stepValidation.isValid) {
             // Handle invalid step gracefully with detailed context
             const techniqueInfo = handler.getTechniqueInfo();
-            const errorContext = {
+            const errorContext = errorContextBuilder.buildStepErrorContext({
                 providedStep: input.currentStep,
                 validRange: `1-${techniqueInfo.totalSteps}`,
                 technique: input.technique,
                 techniqueLocalStep: calculatedTechniqueLocalStep,
                 globalStep: input.currentStep,
                 message: `Step ${input.currentStep} is outside valid range for ${techniqueInfo.name}`,
-            };
+            });
             const operationData = {
                 ...input,
                 sessionId,

@@ -22,9 +22,9 @@ export declare class LateralThinkingServer {
     private sessionOperationsHandler;
     get sessions(): Map<string, SessionData>;
     get config(): import("./core/SessionManager.js").SessionConfig;
+    cleanupOldSessions(): void;
     initializeSession(technique: string, problem: string): string;
     touchSession(sessionId: string): void;
-    cleanupOldSessions(): void;
     evictOldestSessions(): void;
     logMemoryMetrics(): void;
     constructor();

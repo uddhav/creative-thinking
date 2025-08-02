@@ -15,11 +15,32 @@ export declare class ExecutionResponseBuilder {
     private techniqueRegistry?;
     private responseBuilder;
     private memoryAnalyzer;
+    private jsonOptimizer;
     constructor(complexityAnalyzer: HybridComplexityAnalyzer, escalationGenerator: EscalationPromptGenerator, techniqueRegistry?: TechniqueRegistry | undefined);
     /**
      * Build comprehensive execution response
      */
     buildResponse(input: ExecuteThinkingStepInput, session: SessionData, sessionId: string, handler: TechniqueHandler, techniqueLocalStep: number, techniqueIndex: number, plan: PlanThinkingSessionOutput | undefined, currentFlexibility: number, optionGenerationResult: OptionGenerationResult | undefined): LateralThinkingResponse;
+    /**
+     * Build core response data object with insights and metadata
+     */
+    private buildCoreResponseData;
+    /**
+     * Build core response with insights and metadata
+     */
+    private buildCoreResponse;
+    /**
+     * Enhance response with memory outputs and technique progress
+     */
+    private enhanceWithMemoryAndProgress;
+    /**
+     * Enhance response with flexibility and warnings
+     */
+    private enhanceWithFlexibilityAndWarnings;
+    /**
+     * Enhance response with analysis and option generation
+     */
+    private enhanceWithAnalysisAndOptions;
     private extractInsights;
     private createOperationData;
     private generateNextStepGuidance;
@@ -35,6 +56,10 @@ export declare class ExecutionResponseBuilder {
     private addReflectionRequirement;
     private addOptionGeneration;
     private handleSessionCompletion;
+    /**
+     * Extract technique-specific fields from input
+     */
+    private extractTechniqueSpecificFields;
     private assessTechniqueEffectiveness;
     private extractPathDependencies;
     private calculateFlexibilityImpact;

@@ -14,6 +14,7 @@ import type { TechniqueRegistry } from '../../techniques/TechniqueRegistry.js';
 import type { TechniqueHandler } from '../../techniques/types.js';
 import type { VisualFormatter } from '../../utils/VisualFormatter.js';
 import type { ErgodicityManager } from '../../ergodicity/index.js';
+import { ErrorContextBuilder } from '../../core/ErrorContextBuilder.js';
 
 export interface ValidationResult {
   isValid: boolean;
@@ -29,6 +30,8 @@ export interface ValidationResult {
 }
 
 export class ExecutionValidator {
+  private errorBuilder = new ErrorContextBuilder();
+
   constructor(
     private sessionManager: SessionManager,
     private techniqueRegistry: TechniqueRegistry,
@@ -51,59 +54,9 @@ export class ExecutionValidator {
     if (!plan) {
       return {
         isValid: false,
-        error: {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(
-                {
-                  error: '❌ WORKFLOW ERROR: Plan not found',
-                  message: `The planId '${input.planId}' does not exist. You cannot skip the planning step!`,
-                  guidance: '⚠️ REQUIRED THREE-STEP WORKFLOW:',
-                  workflow: [
-                    '1️⃣ Call discover_techniques to analyze your problem',
-                    '2️⃣ Call plan_thinking_session to create a plan (returns planId)',
-                    '3️⃣ Call execute_thinking_step with the planId from step 2',
-                  ],
-                  example: {
-                    correct_sequence: [
-                      {
-                        step: 1,
-                        tool: 'discover_techniques',
-                        args: { problem: 'Your problem here' },
-                        returns: 'Recommended techniques',
-                      },
-                      {
-                        step: 2,
-                        tool: 'plan_thinking_session',
-                        args: { problem: 'Your problem here', techniques: ['six_hats'] },
-                        returns: { planId: 'plan_abc123', workflow: '...' },
-                      },
-                      {
-                        step: 3,
-                        tool: 'execute_thinking_step',
-                        args: {
-                          planId: 'plan_abc123', // ← Use the ACTUAL planId from step 2
-                          technique: 'six_hats',
-                          problem: 'Your problem here',
-                          currentStep: 1,
-                          totalSteps: 6,
-                          output: 'Your thinking here',
-                          nextStepNeeded: true,
-                        },
-                      },
-                    ],
-                  },
-                  your_error: `You tried to use planId '${input.planId}' which doesn't exist`,
-                  fix: '👉 Start over with discover_techniques',
-                },
-                null,
-                2
-              ),
-            },
-          ],
-          isError: true,
-        },
+        error: this.errorBuilder.buildWorkflowError('plan_not_found', {
+          planId: input.planId,
+        }),
       };
     }
 
@@ -111,40 +64,11 @@ export class ExecutionValidator {
     if (!plan.techniques.includes(input.technique)) {
       return {
         isValid: false,
-        error: {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(
-                {
-                  error: '❌ TECHNIQUE MISMATCH ERROR',
-                  message: `You requested technique '${input.technique}' but your plan only includes: ${plan.techniques.join(', ')}`,
-                  guidance: 'You must use one of the techniques from your plan',
-                  yourPlan: {
-                    planId: input.planId,
-                    techniques: plan.techniques,
-                  },
-                  requestedTechnique: input.technique,
-                  fix: `Change your technique parameter to one of: ${plan.techniques.join(', ')}`,
-                  example: {
-                    correct: {
-                      planId: input.planId,
-                      technique: plan.techniques[0], // Use first technique from plan
-                      problem: input.problem,
-                      currentStep: 1,
-                      totalSteps: this.techniqueRegistry.getTechniqueSteps(plan.techniques[0]),
-                      output: 'Your thinking here',
-                      nextStepNeeded: true,
-                    },
-                  },
-                },
-                null,
-                2
-              ),
-            },
-          ],
-          isError: true,
-        },
+        error: this.errorBuilder.buildWorkflowError('technique_mismatch', {
+          planId: input.planId,
+          technique: input.technique,
+          expectedTechniques: plan.techniques,
+        }),
         plan,
       };
     }
@@ -177,30 +101,15 @@ export class ExecutionValidator {
         } catch (error) {
           // Handle session creation errors (e.g. invalid session ID format)
           return {
-            error: {
-              content: [
-                {
-                  type: 'text',
-                  text: JSON.stringify(
-                    {
-                      error: {
-                        message:
-                          'Invalid session ID format: ' +
-                          (error instanceof Error
-                            ? error.message
-                            : 'The provided session ID format is invalid'),
-                      },
-                      guidance:
-                        'Session IDs must be alphanumeric with underscores, hyphens, and dots only, maximum 64 characters',
-                      providedSessionId: input.sessionId,
-                    },
-                    null,
-                    2
-                  ),
-                },
-              ],
-              isError: true,
-            },
+            error: this.errorBuilder.buildSessionError({
+              sessionId: input.sessionId,
+              errorType: 'invalid_format',
+              message:
+                'Invalid session ID format: ' +
+                (error instanceof Error
+                  ? error.message
+                  : 'The provided session ID format is invalid'),
+            }),
           };
         }
       } else {

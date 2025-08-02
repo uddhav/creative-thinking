@@ -22,6 +22,7 @@ import {
   monitorCriticalSectionAsync,
   addPerformanceSummary,
 } from '../utils/PerformanceIntegration.js';
+import { ErrorContextBuilder } from '../core/ErrorContextBuilder.js';
 // Risk and option generation imports are now handled by orchestrators
 
 // Import new orchestrators
@@ -41,6 +42,7 @@ export async function executeThinkingStep(
   ergodicityManager: ErgodicityManager
 ): Promise<LateralThinkingResponse> {
   const responseBuilder = new ResponseBuilder();
+  const errorContextBuilder = new ErrorContextBuilder();
 
   // Initialize orchestrators
   const executionValidator = new ExecutionValidator(
@@ -90,14 +92,14 @@ export async function executeThinkingStep(
     if (!stepValidation.isValid) {
       // Handle invalid step gracefully with detailed context
       const techniqueInfo = handler.getTechniqueInfo();
-      const errorContext = {
+      const errorContext = errorContextBuilder.buildStepErrorContext({
         providedStep: input.currentStep,
         validRange: `1-${techniqueInfo.totalSteps}`,
         technique: input.technique,
         techniqueLocalStep: calculatedTechniqueLocalStep,
         globalStep: input.currentStep,
         message: `Step ${input.currentStep} is outside valid range for ${techniqueInfo.name}`,
-      };
+      });
 
       const operationData: ThinkingOperationData = {
         ...input,

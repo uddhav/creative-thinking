@@ -51,6 +51,9 @@ export class LateralThinkingServer {
         // Return the actual config object for testing
         return this.sessionManager['config'];
     }
+    cleanupOldSessions() {
+        this.sessionManager.cleanupOldSessions();
+    }
     // Test methods
     initializeSession(technique, problem) {
         const sessionData = {
@@ -67,18 +70,13 @@ export class LateralThinkingServer {
     touchSession(sessionId) {
         this.sessionManager.touchSession(sessionId);
     }
-    cleanupOldSessions() {
-        // Cleanup is handled internally by SessionManager
-        console.error('[Server] Manual cleanup requested - cleanup is automatically handled');
-    }
     evictOldestSessions() {
         // Eviction is handled internally by SessionManager
         console.error('[Server] Manual eviction requested - eviction is automatically handled');
     }
     logMemoryMetrics() {
-        // Log current session metrics using available methods
-        const stats = this.sessionManager.getMemoryStats();
-        console.error(`[Memory Metrics] Sessions: ${stats.sessionCount}, Memory: ${stats.totalMemoryUsage} bytes`);
+        // Delegate to SessionManager which delegates to SessionCleaner
+        this.sessionManager.logMemoryMetrics();
     }
     constructor() {
         // Create core components
