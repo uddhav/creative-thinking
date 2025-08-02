@@ -30,7 +30,7 @@ import { ResponseBuilder } from '../core/ResponseBuilder.js';
 import type { ScamperHandler } from '../techniques/ScamperHandler.js';
 import { MemoryAnalyzer } from '../core/MemoryAnalyzer.js';
 import { RealityIntegration } from '../reality/integration.js';
-import { ExecutionError, ErrorCode } from '../errors/types.js';
+import { ExecutionError, ErrorCode, PersistenceError } from '../errors/types.js';
 import {
   monitorCriticalSection,
   monitorCriticalSectionAsync,
@@ -1010,11 +1010,23 @@ export async function executeThinkingStep(
           { sessionId }
         );
       } catch (error) {
-        // Auto-save error is added to response instead of console logging
-        // console.error('Auto-save failed:', error);
-        // Add auto-save failure to response
+        // Add auto-save failure to response with context
         const parsedResponse = JSON.parse(response.content[0].text) as Record<string, unknown>;
-        parsedResponse.autoSaveError = error instanceof Error ? error.message : 'Auto-save failed';
+
+        // Provide more context about the error
+        if (
+          error instanceof PersistenceError &&
+          error.code === ErrorCode.PERSISTENCE_NOT_AVAILABLE
+        ) {
+          parsedResponse.autoSaveStatus = 'disabled';
+          parsedResponse.autoSaveMessage =
+            'Persistence is not configured. Session data is stored in memory only.';
+        } else {
+          parsedResponse.autoSaveStatus = 'failed';
+          parsedResponse.autoSaveError =
+            error instanceof Error ? error.message : 'Auto-save failed';
+        }
+
         response.content[0].text = JSON.stringify(parsedResponse, null, 2);
       }
     }

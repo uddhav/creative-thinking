@@ -1,0 +1,18 @@
+{
+  "id": "session_66223395-06d1-494a-82fb-f5d65cc9be47",
+  "problem": "Test problem",
+  "technique": "scamper",
+  "createdAt": "2025-08-02T00:58:41.977Z",
+  "updatedAt": "2025-08-02T00:58:41.998Z",
+  "status": "active",
+  "stepsCompleted": 1,
+  "totalSteps": 8,
+  "tags": [],
+  "insights": 0,
+  "branches": 0,
+  "metrics": {
+    "creativityScore": 0.13862943611198905,
+    "risksCaught": 0,
+    "antifragileFeatures": 0
+  }
+}

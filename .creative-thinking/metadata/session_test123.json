@@ -1,0 +1,18 @@
+{
+  "id": "session_test123",
+  "problem": "Test problem",
+  "technique": "six_hats",
+  "createdAt": "2025-08-02T00:59:14.354Z",
+  "updatedAt": "2025-08-02T00:59:14.384Z",
+  "status": "active",
+  "stepsCompleted": 1,
+  "totalSteps": 6,
+  "tags": [],
+  "insights": 0,
+  "branches": 0,
+  "metrics": {
+    "creativityScore": 0.13862943611198905,
+    "risksCaught": 0,
+    "antifragileFeatures": 0
+  }
+}

@@ -20,6 +20,8 @@ export declare class SessionManager {
     private persistenceAdapter;
     private readonly PLAN_TTL;
     private memoryManager;
+    private initializationPromise;
+    private isInitialized;
     private config;
     constructor();
     private initializePersistence;

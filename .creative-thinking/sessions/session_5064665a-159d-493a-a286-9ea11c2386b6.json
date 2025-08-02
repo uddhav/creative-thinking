@@ -1,0 +1,207 @@
+{
+  "version": "1.0.0",
+  "format": "json",
+  "compressed": false,
+  "encrypted": false,
+  "data": {
+    "id": "session_5064665a-159d-493a-a286-9ea11c2386b6",
+    "problem": "Test problem",
+    "technique": "yes_and",
+    "currentStep": 1,
+    "totalSteps": 4,
+    "history": [
+      {
+        "step": 1,
+        "timestamp": "2025-08-02T00:58:42.110Z",
+        "input": {
+          "planId": "plan_f0d9ed31-3eb5-4e9c-9e19-602c2bd072e4",
+          "sessionId": "session_5064665a-159d-493a-a286-9ea11c2386b6",
+          "technique": "yes_and",
+          "problem": "Test problem",
+          "currentStep": 1,
+          "totalSteps": 4,
+          "output": "Initial idea",
+          "nextStepNeeded": true,
+          "autoSave": true,
+          "initialIdea": "Start with this",
+          "ergodicityCheck": {
+            "prompt": "🎲 Before we begin: Is \"Test problem\" in an ergodic domain (where time and ensemble averages converge)? Consider:\n• Can you recover from bad outcomes, or is there a risk of ruin?\n• Are you optimizing for one path (time average) or many possible paths (ensemble average)?\n• Is survival a constraint (e.g., staying solvent, staying healthy)?",
+            "followUp": "If ruin is possible, we must prioritize survival over optimization.",
+            "guidance": "Each \"yes\" compounds. In non-ergodic domains, this can lead to overcommitment.",
+            "ruinCheckRequired": true
+          },
+          "ruinAssessment": {
+            "required": true,
+            "prompt": "🚨 RUIN RISK ASSESSMENT for \"Test problem\":\n\nProposed action: Initial idea\n\nPlease evaluate:\n1. **Reversibility**: Can this decision be undone? At what cost?\n2. **Survival Impact**: Does failure threaten survival (financial, health, reputation)?\n3. **Ensemble vs Time**:\n   - Time average: What happens if I repeat this decision over time?\n   - Ensemble average: What happens to many people/entities trying this?\n4. **Absorbing Barriers**: Are there points of no return?\n\nIf ruin is possible:\n- Add survival constraints before optimization\n- Consider barbell strategies (safe + speculative)\n- Preserve optionality\n- Plan escape routes\n\nRemember: In non-ergodic domains, you can't recover from ruin to try again.",
+            "assessment": {
+              "domain": "general",
+              "isIrreversible": false,
+              "survivabilityThreatened": false,
+              "ensembleVsTimeAverage": "time",
+              "recommendation": "Proceed with standard creative thinking process.",
+              "confidence": 0,
+              "riskFeatures": {
+                "hasUndoableActions": false,
+                "timePressure": "none",
+                "expertiseGap": 0.3,
+                "impactRadius": "self",
+                "uncertaintyLevel": "medium"
+              }
+            },
+            "survivalConstraints": [
+              "Identify what cannot be lost",
+              "Set maximum acceptable loss"
+            ]
+          },
+          "riskDiscoveryData": {
+            "domainAssessment": {
+              "primaryDomain": "this problem",
+              "domainCharacteristics": {
+                "hasIrreversibleActions": false,
+                "hasAbsorbingBarriers": false,
+                "allowsRecovery": false,
+                "timeHorizon": "long",
+                "hasNetworkEffects": false,
+                "hasTimeDecay": false,
+                "requiresExpertise": false,
+                "hasRegulation": false,
+                "hasSocialConsequences": false
+              },
+              "confidence": 0.11,
+              "discoveredPatterns": [],
+              "nlpAnalysis": {
+                "entities": [],
+                "topics": [
+                  "This problem",
+                  "Test problem.",
+                  "The user",
+                  "Initial idea"
+                ],
+                "verbs": [
+                  "involves",
+                  "is considering:"
+                ],
+                "temporalExpressions": [],
+                "constraints": [],
+                "relationships": []
+              },
+              "riskFeatures": {
+                "hasUndoableActions": false,
+                "timePressure": "none",
+                "expertiseGap": 0.15000000000000002,
+                "impactRadius": "self",
+                "uncertaintyLevel": "medium"
+              }
+            },
+            "forcedCalculations": {
+              "worstCaseImpact": "If \"Initial idea\" fails completely, what's the specific impact?",
+              "recoveryTime": "How long would it take to recover from the worst case scenario?",
+              "alternativeCount": "How many alternative approaches exist to achieve the same goal?",
+              "reversibilityCost": "What would it cost (time/money/effort) to reverse this action?"
+            }
+          },
+          "timestamp": "2025-08-02T00:58:42.110Z"
+        },
+        "output": {
+          "planId": "plan_f0d9ed31-3eb5-4e9c-9e19-602c2bd072e4",
+          "sessionId": "session_5064665a-159d-493a-a286-9ea11c2386b6",
+          "technique": "yes_and",
+          "problem": "Test problem",
+          "currentStep": 1,
+          "totalSteps": 4,
+          "output": "Initial idea",
+          "nextStepNeeded": true,
+          "autoSave": true,
+          "initialIdea": "Start with this",
+          "ergodicityCheck": {
+            "prompt": "🎲 Before we begin: Is \"Test problem\" in an ergodic domain (where time and ensemble averages converge)? Consider:\n• Can you recover from bad outcomes, or is there a risk of ruin?\n• Are you optimizing for one path (time average) or many possible paths (ensemble average)?\n• Is survival a constraint (e.g., staying solvent, staying healthy)?",
+            "followUp": "If ruin is possible, we must prioritize survival over optimization.",
+            "guidance": "Each \"yes\" compounds. In non-ergodic domains, this can lead to overcommitment.",
+            "ruinCheckRequired": true
+          },
+          "ruinAssessment": {
+            "required": true,
+            "prompt": "🚨 RUIN RISK ASSESSMENT for \"Test problem\":\n\nProposed action: Initial idea\n\nPlease evaluate:\n1. **Reversibility**: Can this decision be undone? At what cost?\n2. **Survival Impact**: Does failure threaten survival (financial, health, reputation)?\n3. **Ensemble vs Time**:\n   - Time average: What happens if I repeat this decision over time?\n   - Ensemble average: What happens to many people/entities trying this?\n4. **Absorbing Barriers**: Are there points of no return?\n\nIf ruin is possible:\n- Add survival constraints before optimization\n- Consider barbell strategies (safe + speculative)\n- Preserve optionality\n- Plan escape routes\n\nRemember: In non-ergodic domains, you can't recover from ruin to try again.",
+            "assessment": {
+              "domain": "general",
+              "isIrreversible": false,
+              "survivabilityThreatened": false,
+              "ensembleVsTimeAverage": "time",
+              "recommendation": "Proceed with standard creative thinking process.",
+              "confidence": 0,
+              "riskFeatures": {
+                "hasUndoableActions": false,
+                "timePressure": "none",
+                "expertiseGap": 0.3,
+                "impactRadius": "self",
+                "uncertaintyLevel": "medium"
+              }
+            },
+            "survivalConstraints": [
+              "Identify what cannot be lost",
+              "Set maximum acceptable loss"
+            ]
+          },
+          "riskDiscoveryData": {
+            "domainAssessment": {
+              "primaryDomain": "this problem",
+              "domainCharacteristics": {
+                "hasIrreversibleActions": false,
+                "hasAbsorbingBarriers": false,
+                "allowsRecovery": false,
+                "timeHorizon": "long",
+                "hasNetworkEffects": false,
+                "hasTimeDecay": false,
+                "requiresExpertise": false,
+                "hasRegulation": false,
+                "hasSocialConsequences": false
+              },
+              "confidence": 0.11,
+              "discoveredPatterns": [],
+              "nlpAnalysis": {
+                "entities": [],
+                "topics": [
+                  "This problem",
+                  "Test problem.",
+                  "The user",
+                  "Initial idea"
+                ],
+                "verbs": [
+                  "involves",
+                  "is considering:"
+                ],
+                "temporalExpressions": [],
+                "constraints": [],
+                "relationships": []
+              },
+              "riskFeatures": {
+                "hasUndoableActions": false,
+                "timePressure": "none",
+                "expertiseGap": 0.15000000000000002,
+                "impactRadius": "self",
+                "uncertaintyLevel": "medium"
+              }
+            },
+            "forcedCalculations": {
+              "worstCaseImpact": "If \"Initial idea\" fails completely, what's the specific impact?",
+              "recoveryTime": "How long would it take to recover from the worst case scenario?",
+              "alternativeCount": "How many alternative approaches exist to achieve the same goal?",
+              "reversibilityCost": "What would it cost (time/money/effort) to reverse this action?"
+            }
+          },
+          "timestamp": "2025-08-02T00:58:42.110Z"
+        }
+      }
+    ],
+    "branches": {},
+    "insights": [
+      "Initial idea: Start with this"
+    ],
+    "startTime": 1754096322104,
+    "metrics": {
+      "creativityScore": 0.10986122886681096,
+      "risksCaught": 0,
+      "antifragileFeatures": 0
+    }
+  }
+}

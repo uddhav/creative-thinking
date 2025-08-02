@@ -1,0 +1,63 @@
+{
+  "version": "1.0.0",
+  "format": "json",
+  "compressed": false,
+  "encrypted": false,
+  "data": {
+    "id": "session_test123",
+    "problem": "Test problem",
+    "technique": "six_hats",
+    "currentStep": 1,
+    "totalSteps": 6,
+    "history": [
+      {
+        "step": 1,
+        "timestamp": "2025-08-02T00:59:14.356Z",
+        "input": {
+          "planId": "plan_f8457f46-3885-4053-bf30-ee240a0178fd",
+          "sessionId": "session_test123",
+          "technique": "six_hats",
+          "problem": "Test problem",
+          "currentStep": 1,
+          "totalSteps": 6,
+          "output": "Blue hat thinking...",
+          "nextStepNeeded": true,
+          "autoSave": true,
+          "ergodicityCheck": {
+            "prompt": "🎲 Before we begin: Is \"Test problem\" in an ergodic domain (where time and ensemble averages converge)? Consider:\n• Can you recover from bad outcomes, or is there a risk of ruin?\n• Are you optimizing for one path (time average) or many possible paths (ensemble average)?\n• Is survival a constraint (e.g., staying solvent, staying healthy)?",
+            "followUp": "If ruin is possible, we must prioritize survival over optimization.",
+            "guidance": "Black Hat thinking is crucial for identifying non-ergodic risks.",
+            "ruinCheckRequired": true
+          },
+          "timestamp": "2025-08-02T00:59:14.356Z"
+        },
+        "output": {
+          "planId": "plan_f8457f46-3885-4053-bf30-ee240a0178fd",
+          "sessionId": "session_test123",
+          "technique": "six_hats",
+          "problem": "Test problem",
+          "currentStep": 1,
+          "totalSteps": 6,
+          "output": "Blue hat thinking...",
+          "nextStepNeeded": true,
+          "autoSave": true,
+          "ergodicityCheck": {
+            "prompt": "🎲 Before we begin: Is \"Test problem\" in an ergodic domain (where time and ensemble averages converge)? Consider:\n• Can you recover from bad outcomes, or is there a risk of ruin?\n• Are you optimizing for one path (time average) or many possible paths (ensemble average)?\n• Is survival a constraint (e.g., staying solvent, staying healthy)?",
+            "followUp": "If ruin is possible, we must prioritize survival over optimization.",
+            "guidance": "Black Hat thinking is crucial for identifying non-ergodic risks.",
+            "ruinCheckRequired": true
+          },
+          "timestamp": "2025-08-02T00:59:14.356Z"
+        }
+      }
+    ],
+    "branches": {},
+    "insights": [],
+    "startTime": 1754096354354,
+    "metrics": {
+      "creativityScore": 0.13862943611198905,
+      "risksCaught": 0,
+      "antifragileFeatures": 0
+    }
+  }
+}

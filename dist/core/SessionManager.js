@@ -16,6 +16,8 @@ export class SessionManager {
     persistenceAdapter = null;
     PLAN_TTL = 4 * 60 * 60 * 1000; // 4 hours for plans
     memoryManager;
+    initializationPromise = null;
+    isInitialized = false;
     config = {
         maxSessions: parseInt(process.env.MAX_SESSIONS || '100', 10),
         maxSessionSize: parseInt(process.env.MAX_SESSION_SIZE || String(1024 * 1024), 10), // 1MB default
@@ -32,7 +34,7 @@ export class SessionManager {
             },
         });
         this.startSessionCleanup();
-        void this.initializePersistence();
+        this.initializationPromise = this.initializePersistence();
     }
     async initializePersistence() {
         try {
@@ -43,10 +45,12 @@ export class SessionManager {
                 config.options.path = process.env.PERSISTENCE_PATH;
             }
             this.persistenceAdapter = await createAdapter(config);
+            this.isInitialized = true;
         }
         catch (error) {
             console.error('Failed to initialize persistence:', error);
             // Continue without persistence
+            this.isInitialized = true; // Mark as complete even on failure
         }
     }
     startSessionCleanup() {
@@ -233,8 +237,12 @@ export class SessionManager {
     }
     // Persistence operations
     async saveSessionToPersistence(sessionId) {
+        // Wait for initialization if still in progress
+        if (this.initializationPromise && !this.isInitialized) {
+            await this.initializationPromise;
+        }
         if (!this.persistenceAdapter) {
-            throw new PersistenceError(ErrorCode.PERSISTENCE_NOT_AVAILABLE, 'Persistence adapter is not available', 'saveSession');
+            throw new PersistenceError(ErrorCode.PERSISTENCE_NOT_AVAILABLE, 'Persistence is not configured. AutoSave is disabled.', 'saveSession');
         }
         const session = this.sessions.get(sessionId);
         if (!session) {
@@ -258,8 +266,12 @@ export class SessionManager {
         return session;
     }
     async listPersistedSessions(options) {
+        // Wait for initialization if still in progress
+        if (this.initializationPromise && !this.isInitialized) {
+            await this.initializationPromise;
+        }
         if (!this.persistenceAdapter) {
-            throw new PersistenceError(ErrorCode.PERSISTENCE_NOT_AVAILABLE, 'Persistence adapter is not available', 'listPersistedSessions');
+            throw new PersistenceError(ErrorCode.PERSISTENCE_NOT_AVAILABLE, 'Persistence is not configured.', 'listPersistedSessions');
         }
         // The adapter returns metadata, we need to load full sessions
         const metadata = await this.persistenceAdapter.list(options);
@@ -281,8 +293,12 @@ export class SessionManager {
         return sessions;
     }
     async deletePersistedSession(sessionId) {
+        // Wait for initialization if still in progress
+        if (this.initializationPromise && !this.isInitialized) {
+            await this.initializationPromise;
+        }
         if (!this.persistenceAdapter) {
-            throw new PersistenceError(ErrorCode.PERSISTENCE_NOT_AVAILABLE, 'Persistence adapter is not available', 'deleteSession');
+            throw new PersistenceError(ErrorCode.PERSISTENCE_NOT_AVAILABLE, 'Persistence is not configured.', 'deleteSession');
         }
         await this.persistenceAdapter.delete(sessionId);
     }
