@@ -1,1 +1,38 @@
-npm test
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+# Check if we're on the main branch
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+if [ "$BRANCH" = "main" ]; then
+  echo "Error: You are on the main branch. Please create a feature branch before committing."
+  echo "You can create a new branch with: git checkout -b feat/your-feature-name"
+  exit 1
+fi
+
+# Create temp directory for logs
+TEMP_DIR=$(mktemp -d)
+LINT_LOG="$TEMP_DIR/lint.log"
+TEST_LOG="$TEMP_DIR/test.log"
+
+# Run lint-staged to check only staged files
+echo "Running lint-staged..."
+if ! npx lint-staged > "$LINT_LOG" 2>&1; then
+  echo "❌ Lint-staged failed. See output below:"
+  cat "$LINT_LOG"
+  rm -rf "$TEMP_DIR"
+  exit 1
+fi
+echo "✅ Lint-staged passed"
+
+# Run tests
+echo "Running tests..."
+if ! npm test > "$TEST_LOG" 2>&1; then
+  echo "❌ Tests failed. See output below:"
+  cat "$TEST_LOG"
+  rm -rf "$TEMP_DIR"
+  exit 1
+fi
+echo "✅ Tests passed"
+
+# Clean up temp files
+rm -rf "$TEMP_DIR"
