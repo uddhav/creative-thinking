@@ -13,20 +13,28 @@ TEMP_DIR=$(mktemp -d)
 LINT_LOG="$TEMP_DIR/lint.log"
 TEST_LOG="$TEMP_DIR/test.log"
 
-# Run lint-staged to check only staged files
+# Run lint-staged to check only staged files (with 5 minute timeout)
 echo "Running lint-staged..."
-if ! npx lint-staged > "$LINT_LOG" 2>&1; then
-  echo "❌ Lint-staged failed. See output below:"
+if ! timeout 300 npx lint-staged > "$LINT_LOG" 2>&1; then
+  if [ $? -eq 124 ]; then
+    echo "❌ Lint-staged timed out after 5 minutes"
+  else
+    echo "❌ Lint-staged failed. See output below:"
+  fi
   cat "$LINT_LOG"
   rm -rf "$TEMP_DIR"
   exit 1
 fi
 echo "✅ Lint-staged passed"
 
-# Run tests
+# Run tests (with 10 minute timeout)
 echo "Running tests..."
-if ! npm test > "$TEST_LOG" 2>&1; then
-  echo "❌ Tests failed. See output below:"
+if ! timeout 600 npm test > "$TEST_LOG" 2>&1; then
+  if [ $? -eq 124 ]; then
+    echo "❌ Tests timed out after 10 minutes"
+  else
+    echo "❌ Tests failed. See output below:"
+  fi
   cat "$TEST_LOG"
   rm -rf "$TEMP_DIR"
   exit 1

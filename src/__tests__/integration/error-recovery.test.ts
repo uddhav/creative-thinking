@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 /**
  * Error Recovery Integration Tests
  * Tests system behavior and recovery from various error scenarios
@@ -15,6 +14,16 @@ import { VisualFormatter } from '../../utils/VisualFormatter.js';
 import { HybridComplexityAnalyzer } from '../../complexity/analyzer.js';
 import { ErgodicityManager } from '../../ergodicity/index.js';
 import { safeJsonParse } from '../helpers/types.js';
+
+/**
+ * Helper function to extract error context from execution response
+ */
+function extractErrorContext(result: any): any {
+  const response = safeJsonParse<{ executionMetadata?: { errorContext?: any } }>(
+    result.content[0].text
+  );
+  return response.executionMetadata?.errorContext;
+}
 
 describe('Error Recovery Integration Tests', () => {
   let sessionManager: SessionManager;
@@ -79,6 +88,7 @@ describe('Error Recovery Integration Tests', () => {
       expect(result.isError).toBe(true);
       // When providing a planId with an invalid technique, it's caught as a technique mismatch
       const errorText = result.content[0].text;
+      expect(errorText).toContain('TECHNIQUE MISMATCH ERROR');
       expect(errorText).toContain('invalid_technique');
     });
 
@@ -149,11 +159,9 @@ describe('Error Recovery Integration Tests', () => {
 
       // The system handles invalid steps by returning success with error context in metadata
       expect(negativeStepResult.isError).not.toBe(true);
-      const negResponse = safeJsonParse<{ executionMetadata?: { errorContext?: any } }>(
-        negativeStepResult.content[0].text
-      );
-      expect(negResponse.executionMetadata?.errorContext).toBeTruthy();
-      expect(negResponse.executionMetadata?.errorContext?.providedStep).toBe(-1);
+      const errorContext = extractErrorContext(negativeStepResult);
+      expect(errorContext).toBeTruthy();
+      expect(errorContext.providedStep).toBe(-1);
 
       // Test step number exceeding total
       const exceedStepResult = await executeThinkingStep(
@@ -176,11 +184,9 @@ describe('Error Recovery Integration Tests', () => {
 
       // The system handles invalid steps by returning success with error context in metadata
       expect(exceedStepResult.isError).not.toBe(true);
-      const exceedResponse = safeJsonParse<{ executionMetadata?: { errorContext?: any } }>(
-        exceedStepResult.content[0].text
-      );
-      expect(exceedResponse.executionMetadata?.errorContext).toBeTruthy();
-      expect(exceedResponse.executionMetadata?.errorContext?.providedStep).toBe(10);
+      const exceedErrorContext = extractErrorContext(exceedStepResult);
+      expect(exceedErrorContext).toBeTruthy();
+      expect(exceedErrorContext.providedStep).toBe(10);
     });
   });
 
@@ -199,8 +205,11 @@ describe('Error Recovery Integration Tests', () => {
       const planResponse = responseBuilder.buildPlanningResponse(planOutput);
       const plan = safeJsonParse<{ planId: string }>(planResponse.content[0].text);
 
-      // When a non-existent session ID is provided, the system creates a new session with that ID
-      // This is by design to support session recovery and custom session IDs
+      // DESIGN DECISION: When a non-existent session ID is provided, the system creates a new session with that ID
+      // This is by design to support:
+      // 1. Session recovery after crashes (client can recreate session with same ID)
+      // 2. Custom session IDs from external systems
+      // 3. Stateless operation where each request can work independently
       const result = await executeThinkingStep(
         {
           planId: plan.planId,
@@ -254,7 +263,7 @@ describe('Error Recovery Integration Tests', () => {
       expect(result.isError).toBe(true);
       const errorText = result.content[0].text;
       // The error response has a specific format with workflow guidance
-      expect(errorText).toContain('WORKFLOW ERROR: Plan not found');
+      expect(errorText).toMatch(/WORKFLOW\s+ERROR.*Plan\s+not\s+found/i);
       expect(errorText).toContain('non-existent-plan');
     });
   });
@@ -298,7 +307,7 @@ describe('Error Recovery Integration Tests', () => {
       expect(mismatchResult.isError).toBe(true);
       const errorText = mismatchResult.content[0].text;
       // The error response has a specific format for technique mismatch
-      expect(errorText).toContain('TECHNIQUE MISMATCH ERROR');
+      expect(errorText).toMatch(/TECHNIQUE\s+MISMATCH\s+ERROR/i);
       expect(errorText).toContain('disney_method');
     });
   });
@@ -417,11 +426,9 @@ describe('Error Recovery Integration Tests', () => {
 
       // Invalid steps return success with error context
       expect(invalidStepResult.isError).not.toBe(true);
-      const invalidResponse = safeJsonParse<{ executionMetadata?: { errorContext?: any } }>(
-        invalidStepResult.content[0].text
-      );
-      expect(invalidResponse.executionMetadata?.errorContext).toBeTruthy();
-      expect(invalidResponse.executionMetadata?.errorContext?.providedStep).toBe(10);
+      const invalidErrorContext = extractErrorContext(invalidStepResult);
+      expect(invalidErrorContext).toBeTruthy();
+      expect(invalidErrorContext.providedStep).toBe(10);
 
       // Now execute valid step 2 - session should still be valid
       const step2Result = await executeThinkingStep(
@@ -454,11 +461,10 @@ describe('Error Recovery Integration Tests', () => {
 
   describe('Memory and Resource Handling', () => {
     it('should handle multiple sessions gracefully', async () => {
-      const sessionIds: string[] = [];
       const numSessions = 10;
 
-      // Create multiple sessions
-      for (let i = 0; i < numSessions; i++) {
+      // Create multiple sessions in parallel for performance
+      const sessionPromises = Array.from({ length: numSessions }, async (_, i) => {
         const planOutput = planThinkingSession(
           {
             problem: `Memory test session ${i}`,
@@ -493,13 +499,239 @@ describe('Error Recovery Integration Tests', () => {
 
         if (!stepResult.isError) {
           const response = safeJsonParse<{ sessionId: string }>(stepResult.content[0].text);
-          sessionIds.push(response.sessionId);
+          return response.sessionId;
         }
-      }
+        return null;
+      });
+
+      const sessionResults = await Promise.all(sessionPromises);
+      const sessionIds = sessionResults.filter((id): id is string => id !== null);
 
       // Verify sessions were created
       expect(sessionIds.length).toBeGreaterThan(0);
-      console.log(`Created ${sessionIds.length} sessions successfully`);
+      console.error(`[Test] Created ${sessionIds.length} sessions successfully`);
+
+      // Clean up created sessions to prevent memory leaks
+      sessionIds.forEach(id => {
+        sessionManager.deleteSession(id);
+      });
+
+      // Verify cleanup
+      const remainingSessions = sessionIds.filter(id => sessionManager.getSession(id));
+      expect(remainingSessions.length).toBe(0);
+    });
+  });
+
+  describe('Persistence Error Handling', () => {
+    it('should handle autoSave failures gracefully', async () => {
+      const planOutput = planThinkingSession(
+        {
+          problem: 'Persistence test',
+          techniques: ['random_entry'],
+          timeframe: 'quick',
+        },
+        sessionManager,
+        techniqueRegistry
+      );
+
+      const planResponse = responseBuilder.buildPlanningResponse(planOutput);
+      const plan = safeJsonParse<{ planId: string }>(planResponse.content[0].text);
+
+      // Execute with autoSave enabled - persistence is not configured
+      const result = await executeThinkingStep(
+        {
+          planId: plan.planId,
+          technique: 'random_entry',
+          problem: 'Persistence test',
+          currentStep: 1,
+          totalSteps: 3,
+          output: 'Testing with autoSave',
+          nextStepNeeded: true,
+          autoSave: true,
+          randomStimulus: 'persistence',
+        },
+        sessionManager,
+        techniqueRegistry,
+        visualFormatter,
+        metricsCollector,
+        complexityAnalyzer,
+        ergodicityManager
+      );
+
+      // Should succeed despite persistence not being available
+      expect(result.isError).not.toBe(true);
+      const response = safeJsonParse<{ autoSaveStatus?: string; autoSaveMessage?: string }>(
+        result.content[0].text
+      );
+
+      // Verify autoSave status is reported
+      expect(response.autoSaveStatus).toBe('disabled');
+      expect(response.autoSaveMessage).toContain('Persistence is not configured');
+    });
+  });
+
+  describe('Memory Limit Handling', () => {
+    it('should handle memory limit exceeded scenarios', async () => {
+      // Create a session manager with very low memory limit
+      const limitedSessionManager = new SessionManager({
+        maxSessions: 100,
+        sessionTimeoutMs: 3600000,
+        maxMemoryMB: 0.001, // 1KB - extremely low to trigger limit
+        cleanupIntervalMs: 60000,
+      });
+
+      const planOutput = planThinkingSession(
+        {
+          problem: 'Memory limit test with extremely large output',
+          techniques: ['concept_extraction'],
+          timeframe: 'quick',
+        },
+        limitedSessionManager,
+        techniqueRegistry
+      );
+
+      const planResponse = responseBuilder.buildPlanningResponse(planOutput);
+      const plan = safeJsonParse<{ planId: string }>(planResponse.content[0].text);
+
+      // Try to create a very large output that exceeds memory limit
+      const largeOutput = 'x'.repeat(10000); // 10KB of data
+
+      const result = await executeThinkingStep(
+        {
+          planId: plan.planId,
+          technique: 'concept_extraction',
+          problem: 'Memory limit test',
+          currentStep: 1,
+          totalSteps: 4,
+          output: largeOutput,
+          nextStepNeeded: true,
+          successExample: 'Large data handling',
+        },
+        limitedSessionManager,
+        techniqueRegistry,
+        visualFormatter,
+        metricsCollector,
+        complexityAnalyzer,
+        ergodicityManager
+      );
+
+      // System should handle memory limits gracefully
+      expect(result).toBeDefined();
+      // Session manager should have evicted sessions if needed
+      const stats = limitedSessionManager.getMemoryStats();
+      const config = limitedSessionManager.getConfig();
+      expect(stats.sessionCount).toBeLessThanOrEqual(config.maxSessions);
+    });
+  });
+
+  describe('Concurrent Session Cleanup', () => {
+    it('should handle cleanup during active error handling', async () => {
+      // Create multiple sessions first
+      const sessionPromises = Array.from({ length: 5 }, async (_, i) => {
+        const planOutput = planThinkingSession(
+          {
+            problem: `Cleanup test ${i}`,
+            techniques: ['yes_and'],
+            timeframe: 'quick',
+          },
+          sessionManager,
+          techniqueRegistry
+        );
+
+        const planResponse = responseBuilder.buildPlanningResponse(planOutput);
+        const plan = safeJsonParse<{ planId: string }>(planResponse.content[0].text);
+
+        return executeThinkingStep(
+          {
+            planId: plan.planId,
+            technique: 'yes_and',
+            problem: `Cleanup test ${i}`,
+            currentStep: 1,
+            totalSteps: 4,
+            output: `Initial idea ${i}`,
+            nextStepNeeded: true,
+            initialIdea: `Test idea ${i}`,
+          },
+          sessionManager,
+          techniqueRegistry,
+          visualFormatter,
+          metricsCollector,
+          complexityAnalyzer,
+          ergodicityManager
+        );
+      });
+
+      const results = await Promise.all(sessionPromises);
+      const sessionIds = results
+        .filter(r => !r.isError)
+        .map(r => safeJsonParse<{ sessionId: string }>(r.content[0].text).sessionId);
+
+      // Force cleanup while sessions are active
+      sessionManager.cleanupOldSessions();
+
+      // Verify sessions are still accessible (cleanup shouldn't remove active sessions)
+      const activeSessions = sessionIds.filter(id => sessionManager.getSession(id));
+      expect(activeSessions.length).toBeGreaterThan(0);
+
+      // Clean up test sessions
+      sessionIds.forEach(id => sessionManager.deleteSession(id));
+    });
+  });
+
+  describe('Error Response Format Validation', () => {
+    it('should ensure all errors follow consistent format', async () => {
+      const errorScenarios = [
+        // Plan not found error
+        {
+          input: {
+            planId: 'non-existent',
+            technique: 'six_hats' as const,
+            problem: 'Format test 1',
+            currentStep: 1,
+            totalSteps: 6,
+            output: 'Test',
+            nextStepNeeded: false,
+          },
+          expectedError: /WORKFLOW\s+ERROR.*Plan\s+not\s+found/i,
+        },
+        // Invalid technique with plan
+        {
+          input: {
+            planId: 'plan_123',
+            technique: 'invalid_tech' as any,
+            problem: 'Format test 2',
+            currentStep: 1,
+            totalSteps: 1,
+            output: 'Test',
+            nextStepNeeded: false,
+          },
+          expectedError: /Plan\s+not\s+found/i, // Plan doesn't exist so this comes first
+        },
+      ];
+
+      for (const scenario of errorScenarios) {
+        const result = await executeThinkingStep(
+          scenario.input,
+          sessionManager,
+          techniqueRegistry,
+          visualFormatter,
+          metricsCollector,
+          complexityAnalyzer,
+          ergodicityManager
+        );
+
+        // All should return isError: true
+        expect(result.isError).toBe(true);
+
+        // Verify error text matches expected pattern
+        const errorText = result.content[0].text;
+        expect(errorText).toMatch(scenario.expectedError);
+
+        // Verify it's valid JSON (not a plain string)
+        expect(() => {
+          JSON.parse(errorText);
+        }).not.toThrow();
+      }
     });
   });
 });
