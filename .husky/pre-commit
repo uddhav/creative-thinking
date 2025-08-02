@@ -1,5 +1,4 @@
 #!/bin/sh
-. "$(dirname "$0")/_/husky.sh"
 
 # Check if we're on the main branch
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
