@@ -20,6 +20,13 @@ export {
   type OptionEvaluation,
   type OptionGenerationContext,
 } from './optionGeneration/index.js';
+export {
+  RiskDismissalTracker,
+  type RiskEngagementMetrics,
+  type DismissalPattern,
+} from './riskDismissalTracker.js';
+export { EscalationPromptGenerator, type EscalationPrompt } from './escalationPrompts.js';
+export { StakesDiscovery, type StakesDeclaration, type ExitCondition } from './stakesDiscovery.js';
 
 import { PathMemoryManager } from './pathMemory.js';
 import { MetricsCalculator } from './metrics.js';

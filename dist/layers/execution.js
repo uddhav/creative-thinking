@@ -11,6 +11,8 @@ import { monitorCriticalSection, monitorCriticalSectionAsync, addPerformanceSumm
 import { OptionGenerationEngine } from '../ergodicity/optionGeneration/engine.js';
 import { RuinRiskDiscovery } from '../core/RuinRiskDiscovery.js';
 import { generateConstraintViolationFeedback } from '../ergodicity/riskDiscoveryPrompts.js';
+import { RiskDismissalTracker } from '../ergodicity/riskDismissalTracker.js';
+import { EscalationPromptGenerator } from '../ergodicity/escalationPrompts.js';
 // Type guard for ErgodicityResult
 function isErgodicityResult(value) {
     return (value !== null &&
@@ -198,6 +200,8 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
         const problemWords = input.problem.toLowerCase().split(/\s+/);
         const allWords = [...outputWords, ...problemWords];
         let ruinRiskAssessment = undefined;
+        const dismissalTracker = new RiskDismissalTracker();
+        const escalationGenerator = new EscalationPromptGenerator();
         if (requiresRuinCheck(input.technique, allWords)) {
             const ruinPrompt = generateRuinAssessmentPrompt(input.problem, input.technique, input.output);
             ruinRiskAssessment = assessRuinRisk(input.problem, input.technique, input.output);
@@ -208,6 +212,61 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
                 assessment: ruinRiskAssessment,
                 survivalConstraints: generateSurvivalConstraints(ruinRiskAssessment),
             };
+            // Track the risk assessment
+            const engagementMetrics = dismissalTracker.trackAssessment(ruinRiskAssessment, session, input.output);
+            // Check for dismissal patterns
+            const patterns = dismissalTracker.detectPatterns(session);
+            // Generate escalation if needed
+            const escalationPrompt = escalationGenerator.generatePrompt(engagementMetrics, patterns, session);
+            // Handle escalation
+            if (escalationPrompt) {
+                // Log escalation to stderr
+                if (process.env.DISABLE_THOUGHT_LOGGING !== 'true') {
+                    process.stderr.write('\n' + escalationPrompt.prompt + '\n\n');
+                }
+                // If progress is locked, return early
+                if (escalationPrompt.locksProgress) {
+                    return {
+                        content: [
+                            {
+                                type: 'text',
+                                text: JSON.stringify({
+                                    error: 'Behavioral lock activated',
+                                    escalationLevel: escalationPrompt.level,
+                                    message: escalationPrompt.prompt,
+                                    requirements: {
+                                        minimumConfidence: escalationPrompt.minimumConfidence,
+                                        mustAddress: engagementMetrics.discoveredRiskIndicators,
+                                    },
+                                    behaviorPattern: {
+                                        consecutiveDismissals: engagementMetrics.consecutiveLowConfidence,
+                                        averageConfidence: engagementMetrics.averageConfidence,
+                                        totalDismissals: engagementMetrics.dismissalCount,
+                                    },
+                                }, null, 2),
+                            },
+                        ],
+                        isError: true,
+                    };
+                }
+                // Add escalation to response for visibility
+                if (inputWithRuin.ruinAssessment && typeof inputWithRuin.ruinAssessment === 'object') {
+                    Object.assign(inputWithRuin.ruinAssessment, {
+                        escalation: {
+                            level: escalationPrompt.level,
+                            requiresResponse: escalationPrompt.requiresResponse,
+                            minimumConfidence: escalationPrompt.minimumConfidence,
+                        },
+                    });
+                }
+            }
+            // Add behavioral feedback if patterns detected
+            if (patterns.length > 0) {
+                const behavioralFeedback = dismissalTracker.generateBehavioralFeedback(patterns, engagementMetrics);
+                if (behavioralFeedback && process.env.DISABLE_THOUGHT_LOGGING !== 'true') {
+                    process.stderr.write('\n' + behavioralFeedback + '\n');
+                }
+            }
         }
         // Dynamic Risk Discovery Framework
         // Check if this action requires discovery-based validation
@@ -650,6 +709,13 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
         // Add ruin assessment if required
         if (inputWithChecks.ruinAssessment) {
             parsedResponse.ruinAssessment = inputWithChecks.ruinAssessment;
+        }
+        // Add reflection requirement if escalation is active
+        if (session.riskEngagementMetrics && session.riskEngagementMetrics.escalationLevel >= 2) {
+            const reflectionRequirement = escalationGenerator.generateReflectionRequirement(session, input.currentStep);
+            if (reflectionRequirement) {
+                parsedResponse.reflectionRequired = reflectionRequirement;
+            }
         }
         // Add option generation results if available
         if (optionGenerationResult && optionGenerationResult.options.length > 0) {

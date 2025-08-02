@@ -103,7 +103,7 @@ describe('Option Generation Integration', () => {
       ergodicityManager
     );
 
-    // Step 6: Eliminate with very high commitment - should trigger option generation
+    // Step 6: Eliminate with high commitment - should trigger option generation
     const input: ExecuteThinkingStepInput = {
       planId: plan.planId,
       sessionId: sessionIdFromResponse,
@@ -111,9 +111,18 @@ describe('Option Generation Integration', () => {
       problem: planInput.problem,
       currentStep: 6,
       totalSteps: 8,
-      output: 'Eliminate the entire R&D department to cut costs dramatically',
+      output: 'Eliminate redundant processes and legacy systems',
       nextStepNeeded: true,
       scamperAction: 'eliminate',
+      // Provide path impact to ensure low flexibility
+      pathImpact: {
+        reversible: false,
+        dependenciesCreated: ['Major process change'],
+        optionsClosed: ['Return to old processes', 'Legacy system support'],
+        optionsOpened: ['New efficiency gains'],
+        flexibilityRetention: 0.3, // Low flexibility to trigger option generation
+        commitmentLevel: 'high' as const,
+      },
     };
 
     response = await executeThinkingStep(

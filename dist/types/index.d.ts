@@ -78,6 +78,15 @@ export interface SessionData {
         constraints?: string[];
         validations?: ValidationResult[];
     };
+    riskEngagementMetrics?: {
+        dismissalCount: number;
+        averageConfidence: number;
+        escalationLevel: number;
+        lastSubstantiveEngagement?: string;
+        discoveredRiskIndicators: string[];
+        consecutiveLowConfidence: number;
+        totalAssessments: number;
+    };
 }
 export interface ExecuteThinkingStepInput {
     planId: string;

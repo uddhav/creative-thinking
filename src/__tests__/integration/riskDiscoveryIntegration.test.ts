@@ -77,9 +77,9 @@ describe('Risk Discovery Integration', () => {
         nextStepNeeded: true,
       });
 
-      // Should pass since we're not blocking yet in current implementation
-      // In full implementation, this would check discovered constraints
-      expect(step2.isError).toBeFalsy();
+      // Should now block due to behavioral lock mechanism detecting high-risk action
+      // The escalation system detects "all your savings" as total commitment language
+      expect(step2.isError).toBeTruthy();
     });
   });
 
@@ -294,7 +294,7 @@ describe('Risk Discovery Integration', () => {
 
       const planData = JSON.parse(planResult.content[0].text);
 
-      // Low risk recommendation
+      // Low risk recommendation - provide reasonable confidence to avoid triggering escalation
       const lowRisk = await server.executeThinkingStep({
         planId: planData.planId,
         technique: 'six_hats',
@@ -304,14 +304,18 @@ describe('Risk Discovery Integration', () => {
         hatColor: 'blue',
         output: 'Suggest 5% allocation to growth stocks',
         nextStepNeeded: true,
+        // Add risk assessment data to simulate proper engagement
+        risks: ['Market volatility', 'Growth stock concentration'],
+        mitigations: ['Small allocation', 'Diversified portfolio base'],
       });
 
       expect(lowRisk.isError).toBeFalsy();
+      const sessionId = JSON.parse(lowRisk.content[0].text).sessionId;
 
-      // Medium risk recommendation
+      // Medium risk recommendation - continue with proper risk assessment
       const medRisk = await server.executeThinkingStep({
         planId: planData.planId,
-        sessionId: JSON.parse(lowRisk.content[0].text).sessionId,
+        sessionId,
         technique: 'six_hats',
         problem: 'Portfolio optimization',
         currentStep: 2,
@@ -319,14 +323,20 @@ describe('Risk Discovery Integration', () => {
         hatColor: 'white',
         output: 'Data suggests 20% allocation to emerging markets',
         nextStepNeeded: true,
+        // Provide risk assessment to show engagement
+        risks: ['Currency risk', 'Political instability'],
+        mitigations: ['Geographic diversification', 'Long-term horizon'],
       });
 
+      if (medRisk.isError) {
+        console.error('Medium risk step failed:', JSON.stringify(medRisk.content[0].text, null, 2));
+      }
       expect(medRisk.isError).toBeFalsy();
 
-      // High risk recommendation
+      // High risk recommendation - this might trigger warnings but should still pass
       const highRisk = await server.executeThinkingStep({
         planId: planData.planId,
-        sessionId: JSON.parse(lowRisk.content[0].text).sessionId,
+        sessionId,
         technique: 'six_hats',
         problem: 'Portfolio optimization',
         currentStep: 3,
@@ -335,10 +345,13 @@ describe('Risk Discovery Integration', () => {
         output: 'Feeling drawn to put 80% in cryptocurrency',
         emotions: ['FOMO', 'Excitement about potential'],
         nextStepNeeded: true,
+        // Even high-risk should engage with framework
+        risks: ['Extreme volatility', 'Potential total loss'],
+        mitigations: ['Only invest what can afford to lose', 'Set stop-loss orders'],
       });
 
       expect(highRisk.isError).toBeFalsy();
-      // In full implementation, would trigger stronger warnings
+      // High risk should pass but may include warnings in response
     });
   });
 });
