@@ -100,10 +100,13 @@ describe('Input Validation', () => {
       };
 
       const result = await server.processLateralThinking(input);
-      // Session operations require persistence, so they should fail gracefully
-      expect(result.isError).toBe(true);
-      const errorResponse = JSON.parse(result.content[0].text) as { error: { code: string } };
-      expect(errorResponse.error.code).toBe('PERSISTENCE_NOT_AVAILABLE');
+      // Session operations should gracefully degrade when persistence is not available
+      expect(result.isError).toBeUndefined();
+      const response = JSON.parse(result.content[0].text);
+      expect(response.operation).toBe('list');
+      expect(response.success).toBe(true);
+      expect(response.result).toHaveProperty('sessions');
+      expect(Array.isArray(response.result.sessions)).toBe(true);
     });
 
     it('should validate load operation requires sessionId', async () => {
@@ -165,11 +168,10 @@ describe('Input Validation', () => {
       };
 
       const result = await server.processLateralThinking(input);
-      // Session operations require persistence, but validation should pass
-      // The error should be about persistence, not validation
-      expect(result.isError).toBe(true);
-      const errorResponse = JSON.parse(result.content[0].text) as { error: { code: string } };
-      expect(errorResponse.error.code).toBe('PERSISTENCE_NOT_AVAILABLE');
+      // Session operations should gracefully degrade when persistence is not available
+      expect(result.isError).toBeUndefined();
+      const response = JSON.parse(result.content[0].text);
+      expect(response.operation).toBe('list');
       // Importantly, it should NOT complain about missing technique/problem fields
       expect(result.content[0].text).not.toContain('Invalid technique');
       expect(result.content[0].text).not.toContain('Invalid problem');
@@ -202,12 +204,12 @@ describe('Input Validation', () => {
       };
 
       const sessionResult = await server.processLateralThinking(sessionInput);
-      // Session operations require persistence
-      expect(sessionResult.isError).toBe(true);
-      const errorResponse = JSON.parse(sessionResult.content[0].text) as {
-        error: { code: string };
-      };
-      expect(errorResponse.error.code).toBe('PERSISTENCE_NOT_AVAILABLE');
+      // Session operations should gracefully degrade
+      expect(sessionResult.isError).toBeUndefined();
+      const response = JSON.parse(sessionResult.content[0].text);
+      expect(response.operation).toBe('list');
+      expect(response.success).toBe(true);
+      expect(response.result).toHaveProperty('sessions');
     });
   });
 });

@@ -233,6 +233,35 @@ The implementation now supports the unified generative/adversarial framework fro
    - Use insights from past to predict future trends
    - Track how sub-system changes propagate to super-system level
 
+## Session Management and Persistence
+
+### AutoSave Feature
+The `execute_thinking_step` tool supports an optional `autoSave` parameter:
+- When `autoSave: true`, the system attempts to save session data to persistent storage
+- Persistence is **optional** - the tool works perfectly without it
+- Sessions are always stored in memory during active use
+
+### Persistence Configuration
+Persistence can be configured via environment variables:
+- `PERSISTENCE_TYPE`: `filesystem` (default) or `memory`
+- `PERSISTENCE_PATH`: Directory for filesystem storage (default: `.creative-thinking`)
+
+### AutoSave Behavior
+When `autoSave: true` is used:
+1. **If persistence is configured**: Session data is saved to disk/storage
+2. **If persistence is not configured**: 
+   - Response includes `autoSaveStatus: "disabled"`
+   - Message explains: "Persistence is not configured. Session data is stored in memory only."
+3. **If save fails**: 
+   - Response includes `autoSaveStatus: "failed"` and error details
+   - Session continues normally (memory storage is unaffected)
+
+### Important Notes
+- **Persistence is optional**: The tool is fully functional without persistence
+- **Memory-only mode**: Default behavior when persistence is not configured
+- **Graceful degradation**: Persistence failures don't interrupt the thinking process
+- **Session lifetime**: In-memory sessions last for the duration of the server process
+
 ## Architecture Principles
 
 ### Three-Layer Design (Core Principle)

@@ -1,0 +1,18 @@
+{
+  "id": "session_5064665a-159d-493a-a286-9ea11c2386b6",
+  "problem": "Test problem",
+  "technique": "yes_and",
+  "createdAt": "2025-08-02T00:58:42.104Z",
+  "updatedAt": "2025-08-02T00:58:42.112Z",
+  "status": "active",
+  "stepsCompleted": 1,
+  "totalSteps": 4,
+  "tags": [],
+  "insights": 1,
+  "branches": 0,
+  "metrics": {
+    "creativityScore": 0.10986122886681096,
+    "risksCaught": 0,
+    "antifragileFeatures": 0
+  }
+}
