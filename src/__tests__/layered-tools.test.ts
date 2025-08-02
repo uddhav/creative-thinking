@@ -339,7 +339,9 @@ describe('Layered Tools Architecture', () => {
       expect(result.isError).toBeTruthy();
       const errorText = result.content[0]?.text || '';
       const errorData = JSON.parse(errorText) as { error: string; workflow: string };
-      expect(errorData.error).toBe('❌ MISSING REQUIRED FIELD: planId is required to execute thinking steps');
+      expect(errorData.error).toBe(
+        '❌ MISSING REQUIRED FIELD: planId is required to execute thinking steps'
+      );
       expect(errorData.workflow).toContain(
         'discover_techniques → plan_thinking_session → execute_thinking_step'
       );

@@ -29,7 +29,9 @@ describe('LLM Workflow Validation', () => {
       const result = await server.executeThinkingStep(input);
       const response = JSON.parse(result.content[0].text);
 
-      expect(response.error).toBe('❌ MISSING REQUIRED FIELD: planId is required to execute thinking steps');
+      expect(response.error).toBe(
+        '❌ MISSING REQUIRED FIELD: planId is required to execute thinking steps'
+      );
       expect(response.workflow).toContain(
         'discover_techniques → plan_thinking_session → execute_thinking_step'
       );
