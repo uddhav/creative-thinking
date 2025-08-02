@@ -4,6 +4,7 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import { randomUUID } from 'crypto';
+import os from 'os';
 import { PersistenceError, PersistenceErrorCode } from './types.js';
 import { ExportFactory } from '../export/index.js';
 /**
@@ -20,16 +21,28 @@ export class FilesystemAdapter {
         }
         this.config = config;
         // Validate and sanitize the base path
-        const providedPath = config.options.path || path.join(process.cwd(), '.creative-thinking');
+        const providedPath = config.options.path || '.creative-thinking';
         // Check for path traversal patterns before normalization
         if (providedPath.includes('..') || providedPath.includes('~')) {
             throw new PersistenceError('Invalid base path: Path traversal detected', PersistenceErrorCode.PERMISSION_DENIED);
         }
         // Resolve to absolute path and normalize
-        this.basePath = path.resolve(path.normalize(providedPath));
+        // If path is relative, use home directory as base instead of cwd
+        if (!path.isAbsolute(providedPath)) {
+            // Use home directory as the base for relative paths
+            this.basePath = path.resolve(os.homedir(), providedPath);
+        }
+        else {
+            this.basePath = path.resolve(path.normalize(providedPath));
+        }
         // Additional check after resolution
         if (!path.isAbsolute(this.basePath)) {
             throw new PersistenceError('Invalid base path: Must be an absolute path', PersistenceErrorCode.PERMISSION_DENIED);
+        }
+        // Prevent usage of root directory
+        if (this.basePath === '/' ||
+            (this.basePath.match(/^\/[^/]+$/) && !this.basePath.startsWith('/home'))) {
+            throw new PersistenceError('Invalid base path: Cannot use root directory for persistence', PersistenceErrorCode.PERMISSION_DENIED);
         }
         // Create base directory if it doesn't exist
         try {
