@@ -9,33 +9,18 @@ import type { RealityAssessment, LateralTechnique, ExecuteThinkingStepInput } fr
 import { RealityAssessor } from './index.js';
 
 /**
- * Domain detection patterns
+ * Risk indicator patterns (not domain-specific)
  */
-const DOMAIN_PATTERNS: Record<string, RegExp[]> = {
-  finance: [
-    /tax|taxes|taxation/i,
-    /investment|portfolio|trading/i,
-    /stock|bond|security|securities/i,
-    /loss harvesting|capital gains/i,
-  ],
-  healthcare: [
-    /medical|medicine|health/i,
-    /treatment|therapy|diagnosis/i,
-    /patient|doctor|clinical/i,
-    /drug|pharmaceutical/i,
-  ],
-  technology: [
-    /software|hardware|code/i,
-    /algorithm|data structure/i,
-    /system|architecture|design/i,
-    /ai|machine learning|neural/i,
-  ],
+const RISK_INDICATOR_PATTERNS = {
   regulatory: [
     /compliance|regulation|law/i,
     /legal|policy|governance/i,
     /privacy|gdpr|ccpa/i,
     /sec|fda|regulatory/i,
   ],
+  irreversible: [/permanent|irreversible|cannot undo/i, /one-way|final|no going back/i],
+  expertise: [/professional|expert|specialist/i, /licensed|certified|qualified/i],
+  systemic: [/systemic|widespread|global/i, /infrastructure|ecosystem|platform/i],
 };
 
 /**
@@ -61,18 +46,19 @@ const TECHNIQUE_REALITY_CHECKS: Partial<Record<LateralTechnique, string[]>> = {
 
 export class RealityIntegration {
   /**
-   * Detect domain from problem and context
+   * Detect risk indicators from problem and context
    */
-  static detectDomain(problem: string, context?: string): string | undefined {
+  static detectRiskIndicators(problem: string, context?: string): string[] {
     const combined = `${problem} ${context || ''}`.toLowerCase();
+    const indicators: string[] = [];
 
-    for (const [domain, patterns] of Object.entries(DOMAIN_PATTERNS)) {
+    for (const [indicator, patterns] of Object.entries(RISK_INDICATOR_PATTERNS)) {
       if (patterns.some(pattern => pattern.test(combined))) {
-        return domain;
+        indicators.push(indicator);
       }
     }
 
-    return undefined;
+    return indicators;
   }
 
   /**
@@ -90,11 +76,32 @@ export class RealityIntegration {
       return { enhancedOutput: output };
     }
 
-    // Detect domain
-    const domain = this.detectDomain(input.problem, output);
+    // Detect risk indicators
+    const riskIndicators = this.detectRiskIndicators(input.problem, output);
 
-    // Perform reality assessment
-    const assessment = RealityAssessor.assess(output, input.problem, domain);
+    // Perform reality assessment (domain is always general now)
+    const assessment = RealityAssessor.assess(output, input.problem, 'general');
+
+    // Enhance assessment with risk indicators if any were detected
+    if (riskIndicators.length > 0 && assessment.confidenceLevel < 0.9) {
+      // Adjust confidence based on risk indicators
+      if (riskIndicators.includes('regulatory')) {
+        assessment.confidenceLevel = Math.max(assessment.confidenceLevel, 0.7);
+        if (!assessment.mechanismExplanation?.includes('regulation')) {
+          assessment.mechanismExplanation =
+            (assessment.mechanismExplanation || '') + ' May face regulatory constraints.';
+        }
+      }
+      if (riskIndicators.includes('irreversible')) {
+        assessment.confidenceLevel = Math.max(assessment.confidenceLevel, 0.8);
+        if (!assessment.breakthroughsRequired?.includes('Risk mitigation strategy')) {
+          assessment.breakthroughsRequired = [
+            ...(assessment.breakthroughsRequired || []),
+            'Risk mitigation strategy for irreversible actions',
+          ];
+        }
+      }
+    }
 
     // Only add assessment if it's not trivially feasible
     if (assessment.possibilityLevel === 'feasible' && assessment.confidenceLevel >= 0.7) {

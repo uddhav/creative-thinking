@@ -66,9 +66,7 @@ export class MemoryManager {
    * Check if garbage collection is available
    */
   isGCAvailable(): boolean {
-    return (
-      typeof global !== 'undefined' && global.gc !== undefined && typeof global.gc === 'function'
-    );
+    return typeof global !== 'undefined' && typeof global.gc === 'function';
   }
 
   /**

@@ -7,9 +7,9 @@
 import type { RealityAssessment, LateralTechnique, ExecuteThinkingStepInput } from '../index.js';
 export declare class RealityIntegration {
     /**
-     * Detect domain from problem and context
+     * Detect risk indicators from problem and context
      */
-    static detectDomain(problem: string, context?: string): string | undefined;
+    static detectRiskIndicators(problem: string, context?: string): string[];
     /**
      * Enhance technique output with reality assessment
      */

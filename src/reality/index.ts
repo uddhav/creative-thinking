@@ -232,8 +232,9 @@ export class RealityAssessor {
       data: ['personal data without consent', 'violate privacy', 'sell user data'],
     };
 
-    const keywords = regulatoryKeywords[domain] || [];
-    return keywords.some(keyword => idea.includes(keyword));
+    // Check all regulatory keywords regardless of domain
+    const allKeywords = Object.values(regulatoryKeywords).flat();
+    return allKeywords.some(keyword => idea.includes(keyword));
   }
 
   /**

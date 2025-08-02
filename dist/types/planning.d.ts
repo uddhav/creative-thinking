@@ -32,6 +32,15 @@ export interface DiscoverTechniquesOutput {
             reason: string;
             strategies: string[];
         };
+        riskAwareness?: {
+            required: boolean;
+            risks: Array<{
+                category: string;
+                severity: string;
+                description: string;
+            }>;
+            mitigationStrategies: string[];
+        };
     };
     workflow?: {
         phases: Array<{
@@ -57,6 +66,22 @@ export interface DiscoverTechniquesOutput {
         historicalRelevance: string;
         searchableFactors: string[];
     };
+    riskAssessment?: {
+        overallRiskLevel: string;
+        requiresErgodicityCheck: boolean;
+        requiresRuinCheck: boolean;
+        identifiedRisks: Array<{
+            id: string;
+            category: string;
+            severity: string;
+            description: string;
+            probability: number;
+            impact: number;
+            isAbsorbingBarrier: boolean;
+        }>;
+        blockedActions: string[];
+        alternativeApproaches: string[];
+    };
 }
 export interface ThinkingStep {
     stepNumber: number;
@@ -65,6 +90,11 @@ export interface ThinkingStep {
     criticalLens?: string;
     risks?: string[];
     successCriteria?: string[];
+    ergodicityCheck?: {
+        required: boolean;
+        prompt: string;
+        minimumResponseLength?: number;
+    };
 }
 export interface PlanThinkingSessionInput {
     problem: string;

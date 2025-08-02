@@ -79,6 +79,9 @@ export function discoverTechniques(
         : undefined,
   };
 
+  // Domain is always general - we don't pigeonhole into categories
+  // No domain-specific warnings as we treat all problems generically
+
   return {
     problem,
     problemCategory,

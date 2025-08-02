@@ -15,6 +15,14 @@ export interface RuinRiskAssessment {
     survivabilityThreatened: boolean;
     ensembleVsTimeAverage: 'ensemble' | 'time' | 'both';
     recommendation: string;
+    confidence: number;
+    riskFeatures?: {
+        hasUndoableActions: boolean;
+        timePressure: 'none' | 'low' | 'medium' | 'high' | 'critical';
+        expertiseGap: number;
+        impactRadius: 'self' | 'limited' | 'broad' | 'systemic';
+        uncertaintyLevel: 'low' | 'medium' | 'high';
+    };
 }
 /**
  * Get ergodicity prompts for a specific technique and step
@@ -37,7 +45,7 @@ export declare function getErgodicityGuidance(technique: LateralTechnique): stri
  */
 export declare function assessRuinRisk(problem: string, technique: LateralTechnique, userResponse: string): RuinRiskAssessment;
 /**
- * Generate survival constraints based on domain
+ * Generate survival constraints based on risk features
  */
-export declare function generateSurvivalConstraints(domain: string): string[];
+export declare function generateSurvivalConstraints(assessment: RuinRiskAssessment): string[];
 //# sourceMappingURL=prompts.d.ts.map

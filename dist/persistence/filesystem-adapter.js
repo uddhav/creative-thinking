@@ -46,6 +46,9 @@ export class FilesystemAdapter {
         this.ensureInitialized();
         const sessionPath = this.getSessionPath(sessionId);
         const metadataPath = this.getMetadataPath(sessionId);
+        // Keep track of temp files for cleanup
+        let tempSessionPath = null;
+        let tempMetadataPath = null;
         try {
             // Save full session state
             const sessionData = {
@@ -61,12 +64,30 @@ export class FilesystemAdapter {
             if (Buffer.byteLength(serialized, 'utf8') > MAX_FILE_SIZE) {
                 throw new PersistenceError(`Session data too large: exceeds ${MAX_FILE_SIZE} bytes limit`, PersistenceErrorCode.STORAGE_FULL);
             }
-            await fs.writeFile(sessionPath, serialized, 'utf8');
+            // Use atomic writes to prevent race conditions and partial writes
+            // Write to temporary file first, then rename atomically
+            tempSessionPath = `${sessionPath}.tmp.${randomUUID()}`;
+            tempMetadataPath = `${metadataPath}.tmp.${randomUUID()}`;
+            // Write session data atomically
+            await fs.writeFile(tempSessionPath, serialized, 'utf8');
+            await fs.rename(tempSessionPath, sessionPath);
+            tempSessionPath = null; // Mark as successfully moved
             // Save metadata for fast listing
             const metadata = this.extractMetadata(state);
-            await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2), 'utf8');
+            const metadataJson = JSON.stringify(metadata, null, 2);
+            // Write metadata atomically
+            await fs.writeFile(tempMetadataPath, metadataJson, 'utf8');
+            await fs.rename(tempMetadataPath, metadataPath);
+            tempMetadataPath = null; // Mark as successfully moved
         }
         catch (error) {
+            // Clean up any temporary files that may have been created
+            if (tempSessionPath) {
+                await fs.unlink(tempSessionPath).catch(() => { });
+            }
+            if (tempMetadataPath) {
+                await fs.unlink(tempMetadataPath).catch(() => { });
+            }
             throw new PersistenceError(`Failed to save session ${sessionId}: ${String(error)}`, PersistenceErrorCode.IO_ERROR, error);
         }
     }

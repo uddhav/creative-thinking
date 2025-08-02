@@ -351,9 +351,6 @@ export async function executeThinkingStep(
       const ruinPrompt = generateRuinAssessmentPrompt(input.problem, input.technique, input.output);
       ruinRiskAssessment = assessRuinRisk(input.problem, input.technique, input.output);
 
-      // Detect domain from assessment
-      const domain = ruinRiskAssessment.domain || 'general';
-
       const inputWithRuin = input as ExecuteThinkingStepInput & {
         ruinAssessment: {
           required: boolean;
@@ -366,7 +363,7 @@ export async function executeThinkingStep(
         required: true,
         prompt: ruinPrompt,
         assessment: ruinRiskAssessment,
-        survivalConstraints: generateSurvivalConstraints(domain),
+        survivalConstraints: generateSurvivalConstraints(ruinRiskAssessment),
       };
     }
 
@@ -404,19 +401,9 @@ export async function executeThinkingStep(
       // Phase 2: Force domain identification if not cached
       const cachedDomain = session.riskDiscoveryData.domainAssessment?.primaryDomain;
       if (!cachedDomain) {
-        // In a real implementation, this would prompt the LLM
-        // For now, we'll use the existing domain detection
-        const detectedDomain = ruinRiskAssessment?.domain || 'general';
-        domainAssessment = {
-          primaryDomain: detectedDomain,
-          domainCharacteristics: {
-            hasIrreversibleActions: detectedDomain === 'financial' || detectedDomain === 'health',
-            hasAbsorbingBarriers: detectedDomain === 'financial' || detectedDomain === 'career',
-            allowsRecovery: detectedDomain !== 'health' && detectedDomain !== 'financial',
-            timeHorizon: detectedDomain === 'financial' ? 'long' : 'medium',
-          },
-          confidence: 0.8,
-        };
+        // Use the new NLP-based domain assessment
+        const domainResponse = `This problem involves ${input.problem}. The user is considering: ${input.output}`;
+        domainAssessment = riskDiscovery.processDomainAssessment(domainResponse);
         session.riskDiscoveryData.domainAssessment = domainAssessment;
       }
 
@@ -425,7 +412,11 @@ export async function executeThinkingStep(
       discoveredRisks = riskDiscovery.getCachedDiscovery(domain);
 
       // Phase 4: Get forced calculations for validation
-      const forcedCalculations = riskDiscovery.getForcedCalculations(domain, input.output);
+      const currentDomainAssessment =
+        session.riskDiscoveryData.domainAssessment || domainAssessment;
+      const forcedCalculations = currentDomainAssessment
+        ? riskDiscovery.getForcedCalculations(currentDomainAssessment, input.output)
+        : {};
 
       // Phase 5: Validate against discovered risks if we have them
       if (discoveredRisks && session.riskDiscoveryData.ruinScenarios) {

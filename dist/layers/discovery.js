@@ -43,6 +43,8 @@ export function discoverTechniques(input, techniqueRegistry, complexityAnalyzer)
             ? 'Consider using sequential thinking to break down this complex problem'
             : undefined,
     };
+    // Domain is always general - we don't pigeonhole into categories
+    // No domain-specific warnings as we treat all problems generically
     return {
         problem,
         problemCategory,

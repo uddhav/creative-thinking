@@ -58,13 +58,12 @@ export function getDiscoveryPhasePrompt(
  * Domain identification prompt
  */
 function getDomainIdentificationPrompt(problem: string): string {
-  return `🎯 DOMAIN IDENTIFICATION for "${problem}"
+  return `🎯 RISK CHARACTERISTIC ANALYSIS for "${problem}"
 
 Please analyze this problem and identify:
 
-1. **Primary Domain**: What is the main domain? 
-   Examples: financial, health/medical, career/professional, military/defense, 
-   transportation/driving, legal, relationships, education, technology, environmental
+1. **Problem Context**: Describe the nature and scope of this problem
+   (without forcing it into predefined categories)
 
 2. **Non-Ergodic Characteristics**: 
    - Can failures be recovered from, or are there points of no return?
