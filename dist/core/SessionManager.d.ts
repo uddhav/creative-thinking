@@ -5,6 +5,7 @@
 import type { SessionData } from '../types/index.js';
 import type { PlanThinkingSessionOutput } from '../types/planning.js';
 import type { PersistenceAdapter } from '../persistence/adapter.js';
+import type { SessionState } from '../persistence/types.js';
 export interface SessionConfig {
     maxSessions: number;
     maxSessionSize: number;
@@ -14,37 +15,49 @@ export interface SessionConfig {
 }
 export declare class SessionManager {
     private sessions;
-    private plans;
     private currentSessionId;
-    private cleanupInterval;
-    private persistenceAdapter;
-    private readonly PLAN_TTL;
     private memoryManager;
-    private initializationPromise;
-    private isInitialized;
+    private sessionCleaner;
+    private sessionPersistence;
+    private sessionMetrics;
+    private planManager;
     private config;
     constructor();
-    private initializePersistence;
-    private startSessionCleanup;
     /**
      * Update session activity time
      */
     touchSession(sessionId: string): void;
-    private cleanupOldSessions;
     /**
-     * Evict oldest sessions using LRU (Least Recently Used) strategy
+     * Clean up resources on shutdown
      */
-    private evictOldestSessions;
-    /**
-     * Log memory usage metrics
-     */
-    private logMemoryMetrics;
     destroy(): void;
+    /**
+     * Exposed for testing - triggers cleanup manually
+     */
+    cleanupOldSessions(): void;
+    /**
+     * Create a new session
+     */
     createSession(sessionData: SessionData, providedSessionId?: string): string;
+    /**
+     * Validate session ID format
+     */
     private isValidSessionId;
+    /**
+     * Get a session by ID
+     */
     getSession(sessionId: string): SessionData | undefined;
+    /**
+     * Update session data
+     */
     updateSession(sessionId: string, data: Partial<SessionData>): void;
+    /**
+     * Delete a session
+     */
     deleteSession(sessionId: string): boolean;
+    /**
+     * List all sessions
+     */
     listSessions(): Array<[string, SessionData]>;
     savePlan(planId: string, plan: PlanThinkingSessionOutput): void;
     storePlan(planId: string, plan: PlanThinkingSessionOutput): void;
@@ -57,12 +70,10 @@ export declare class SessionManager {
     loadSessionFromPersistence(sessionId: string): Promise<SessionData>;
     listPersistedSessions(options?: {
         limit?: number;
-        technique?: string;
-        status?: string;
-    }): Promise<Array<{
-        id: string;
-        data: SessionData;
-    }>>;
+        offset?: number;
+        sortBy?: 'created' | 'updated' | 'name' | 'technique';
+        order?: 'asc' | 'desc';
+    }): Promise<SessionState[]>;
     deletePersistedSession(sessionId: string): Promise<void>;
     getPersistenceAdapter(): PersistenceAdapter | null;
     getSessionSize(sessionId: string): number;
@@ -73,10 +84,15 @@ export declare class SessionManager {
     getMemoryStats(): {
         sessionCount: number;
         planCount: number;
-        totalMemoryBytes: number;
+        totalMemoryUsage: number;
         averageSessionSize: number;
+        largestSessionSize: number;
+        memoryUsageBySession: Map<string, number>;
+        heapUsed: number;
+        heapTotal: number;
+        external: number;
+        rss: number;
     };
-    private convertToSessionState;
-    private convertFromSessionState;
+    logMemoryMetrics(): void;
 }
 //# sourceMappingURL=SessionManager.d.ts.map

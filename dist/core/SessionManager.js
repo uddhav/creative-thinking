@@ -3,21 +3,23 @@
  * Handles session lifecycle, persistence, and cleanup
  */
 import { randomUUID } from 'crypto';
-import { createAdapter, getDefaultConfig } from '../persistence/factory.js';
 import { MemoryManager } from './MemoryManager.js';
-import { SessionError, PersistenceError, ErrorCode } from '../errors/types.js';
+import { SessionError, ErrorCode } from '../errors/types.js';
+import { SessionCleaner } from './session/SessionCleaner.js';
+import { SessionPersistence } from './session/SessionPersistence.js';
+import { SessionMetrics } from './session/SessionMetrics.js';
+import { PlanManager } from './session/PlanManager.js';
 // Constants for memory management
 const MEMORY_THRESHOLD_FOR_GC = 0.8; // Trigger garbage collection when heap usage exceeds 80%
 export class SessionManager {
     sessions = new Map();
-    plans = new Map();
     currentSessionId = null;
-    cleanupInterval = null;
-    persistenceAdapter = null;
-    PLAN_TTL = 4 * 60 * 60 * 1000; // 4 hours for plans
     memoryManager;
-    initializationPromise = null;
-    isInitialized = false;
+    // Extracted components
+    sessionCleaner;
+    sessionPersistence;
+    sessionMetrics;
+    planManager;
     config = {
         maxSessions: parseInt(process.env.MAX_SESSIONS || '100', 10),
         maxSessionSize: parseInt(process.env.MAX_SESSION_SIZE || String(1024 * 1024), 10), // 1MB default
@@ -33,30 +35,13 @@ export class SessionManager {
                 console.error('[Memory Usage] Triggering garbage collection...');
             },
         });
-        this.startSessionCleanup();
-        this.initializationPromise = this.initializePersistence();
-    }
-    async initializePersistence() {
-        try {
-            const persistenceType = (process.env.PERSISTENCE_TYPE || 'filesystem');
-            const config = getDefaultConfig(persistenceType);
-            // Override with environment variables if provided
-            if (process.env.PERSISTENCE_PATH) {
-                config.options.path = process.env.PERSISTENCE_PATH;
-            }
-            this.persistenceAdapter = await createAdapter(config);
-            this.isInitialized = true;
-        }
-        catch (error) {
-            console.error('Failed to initialize persistence:', error);
-            // Continue without persistence
-            this.isInitialized = true; // Mark as complete even on failure
-        }
-    }
-    startSessionCleanup() {
-        this.cleanupInterval = setInterval(() => {
-            this.cleanupOldSessions();
-        }, this.config.cleanupInterval);
+        // Initialize extracted components
+        this.planManager = new PlanManager();
+        this.sessionCleaner = new SessionCleaner(this.sessions, this.planManager.getAllPlans(), this.config, this.memoryManager, this.touchSession.bind(this));
+        this.sessionPersistence = new SessionPersistence();
+        this.sessionMetrics = new SessionMetrics(this.sessions, this.planManager.getAllPlans(), this.config);
+        this.sessionCleaner.startCleanup();
+        void this.sessionPersistence.initialize();
     }
     /**
      * Update session activity time
@@ -67,130 +52,68 @@ export class SessionManager {
             session.lastActivityTime = Date.now();
         }
     }
-    cleanupOldSessions() {
-        const now = Date.now();
-        // Clean up expired sessions
-        for (const [id, session] of this.sessions) {
-            if (now - session.lastActivityTime > this.config.sessionTTL) {
-                this.sessions.delete(id);
-                if (this.currentSessionId === id) {
-                    this.currentSessionId = null;
-                }
-            }
-        }
-        // Clean up expired plans
-        for (const [planId, plan] of this.plans) {
-            if (plan.createdAt && now - plan.createdAt > this.PLAN_TTL) {
-                this.plans.delete(planId);
-            }
-        }
-        // Check if eviction is needed
-        if (this.sessions.size > this.config.maxSessions) {
-            this.evictOldestSessions();
-        }
-        // Log memory metrics if monitoring is enabled
-        if (this.config.enableMemoryMonitoring) {
-            this.logMemoryMetrics();
-        }
-    }
     /**
-     * Evict oldest sessions using LRU (Least Recently Used) strategy
+     * Clean up resources on shutdown
      */
-    evictOldestSessions() {
-        // Skip if we're within limits
-        if (this.sessions.size <= this.config.maxSessions) {
-            return;
-        }
-        // Sort sessions by last activity time (oldest first)
-        const sessionList = Array.from(this.sessions.entries()).sort((a, b) => a[1].lastActivityTime - b[1].lastActivityTime);
-        // Calculate how many sessions to evict
-        const sessionsToEvict = this.sessions.size - this.config.maxSessions;
-        // Evict oldest sessions
-        for (let i = 0; i < sessionsToEvict && i < sessionList.length; i++) {
-            const [sessionId] = sessionList[i];
-            this.sessions.delete(sessionId);
-            // Update current session if it was evicted
-            if (this.currentSessionId === sessionId) {
-                this.currentSessionId = null;
-            }
-            if (this.config.enableMemoryMonitoring) {
-                console.error(`[Session Eviction] Evicted session ${sessionId} (LRU)`);
-            }
-        }
-        if (this.config.enableMemoryMonitoring) {
-            console.error(`[Memory Management] Sessions after eviction: ${this.sessions.size}/${this.config.maxSessions}`);
-        }
-    }
-    /**
-     * Log memory usage metrics
-     */
-    logMemoryMetrics() {
-        const { heapUsed: heapUsedMB, heapTotal: heapTotalMB, rss: rssMB, } = this.memoryManager.getMemoryUsageMB();
-        // Calculate approximate session memory usage using optimized estimation
-        let totalSessionSize = 0;
-        for (const [_, session] of this.sessions) {
-            // Use optimized size estimation instead of JSON.stringify
-            totalSessionSize += this.memoryManager.estimateObjectSize(session);
-        }
-        const sessionSizeKB = Math.round(totalSessionSize / 1024);
-        const averageSizeKB = this.sessions.size > 0 ? Math.round(sessionSizeKB / this.sessions.size) : 0;
-        // Log in the format expected by tests
-        console.error('[Memory Metrics]', {
-            timestamp: new Date().toISOString(),
-            process: {
-                heapUsed: `${heapUsedMB}MB`,
-                heapTotal: `${heapTotalMB}MB`,
-                rss: `${rssMB}MB`,
-            },
-            sessions: {
-                count: this.sessions.size,
-                estimatedSize: `${sessionSizeKB}KB`,
-                averageSize: `${averageSizeKB}KB`,
-            },
-            plans: {
-                count: this.plans.size,
-            },
-        });
-        // Trigger garbage collection if needed
-        this.memoryManager.triggerGCIfNeeded();
-        // Warning if memory usage is concerning
-        if (heapUsedMB > 500) {
-            console.warn('[Memory Warning] High memory usage detected');
-        }
-    }
     destroy() {
-        if (this.cleanupInterval) {
-            clearInterval(this.cleanupInterval);
-            this.cleanupInterval = null;
-        }
+        this.sessionCleaner.stopCleanup();
         this.sessions.clear();
-        this.plans.clear();
+        this.planManager.clearAllPlans();
     }
-    // Session CRUD operations
+    /**
+     * Exposed for testing - triggers cleanup manually
+     */
+    cleanupOldSessions() {
+        this.sessionCleaner.cleanupOldSessions();
+    }
+    /**
+     * Create a new session
+     */
     createSession(sessionData, providedSessionId) {
-        // Use provided ID if given, otherwise generate a new one
-        const sessionId = providedSessionId || `session_${randomUUID()}`;
-        // Validate provided session ID format if given
-        if (providedSessionId && !this.isValidSessionId(providedSessionId)) {
-            throw new SessionError(ErrorCode.INVALID_INPUT, `Invalid session ID format: ${providedSessionId}. Session IDs must be alphanumeric with hyphens, underscores, or dots.`, providedSessionId);
+        let sessionId;
+        if (providedSessionId) {
+            // Validate provided session ID
+            if (!this.isValidSessionId(providedSessionId)) {
+                throw new SessionError(ErrorCode.INVALID_INPUT, `Invalid session ID format: ${providedSessionId}. Session IDs must be alphanumeric with underscores, hyphens, and dots only, maximum 64 characters.`);
+            }
+            sessionId = providedSessionId;
+        }
+        else {
+            // Generate new session ID
+            sessionId = `session_${randomUUID()}`;
+        }
+        if (this.sessions.has(sessionId)) {
+            throw new SessionError(ErrorCode.SESSION_ALREADY_EXISTS, `Session ${sessionId} already exists`);
+        }
+        // Check memory pressure before creating new session
+        if (this.sessions.size >= this.config.maxSessions) {
+            console.error(`[Session Manager] Maximum sessions (${this.config.maxSessions}) reached, triggering cleanup`);
+            this.sessionCleaner.cleanupOldSessions();
+            // If still over limit after cleanup, throw error
+            if (this.sessions.size >= this.config.maxSessions) {
+                throw new SessionError(ErrorCode.MAX_SESSIONS_EXCEEDED, 'Maximum number of sessions exceeded');
+            }
         }
         this.sessions.set(sessionId, sessionData);
         this.currentSessionId = sessionId;
-        // Check if eviction is needed after adding the new session
-        if (this.sessions.size > this.config.maxSessions) {
-            this.evictOldestSessions();
-        }
         return sessionId;
     }
+    /**
+     * Validate session ID format
+     */
     isValidSessionId(sessionId) {
-        // Allow alphanumeric characters, hyphens, underscores, and dots
-        // Must be 1-100 characters long
-        const sessionIdPattern = /^[a-zA-Z0-9\-_.]{1,100}$/;
-        return sessionIdPattern.test(sessionId);
+        // Session IDs should be alphanumeric with underscores, hyphens, and dots
+        return /^[a-zA-Z0-9._-]+$/.test(sessionId) && sessionId.length <= 64;
     }
+    /**
+     * Get a session by ID
+     */
     getSession(sessionId) {
         return this.sessions.get(sessionId);
     }
+    /**
+     * Update session data
+     */
     updateSession(sessionId, data) {
         const session = this.sessions.get(sessionId);
         if (session) {
@@ -198,32 +121,37 @@ export class SessionManager {
             this.touchSession(sessionId);
         }
     }
+    /**
+     * Delete a session
+     */
     deleteSession(sessionId) {
-        const deleted = this.sessions.delete(sessionId);
-        if (deleted && this.currentSessionId === sessionId) {
+        if (this.currentSessionId === sessionId) {
             this.currentSessionId = null;
         }
-        return deleted;
+        return this.sessions.delete(sessionId);
     }
+    /**
+     * List all sessions
+     */
     listSessions() {
         return Array.from(this.sessions.entries());
     }
-    // Plan management
+    // Plan management - delegate to PlanManager
     savePlan(planId, plan) {
-        this.plans.set(planId, plan);
+        this.planManager.savePlan(planId, plan);
     }
     storePlan(planId, plan) {
-        this.plans.set(planId, plan);
-        // Clean up old plans after TTL
-        setTimeout(() => {
-            this.deletePlan(planId);
-        }, this.PLAN_TTL);
+        // Add createdAt if not present
+        if (!plan.createdAt) {
+            plan.createdAt = Date.now();
+        }
+        this.planManager.savePlan(planId, plan);
     }
     getPlan(planId) {
-        return this.plans.get(planId);
+        return this.planManager.getPlan(planId);
     }
     deletePlan(planId) {
-        return this.plans.delete(planId);
+        return this.planManager.deletePlan(planId);
     }
     // Current session management
     getCurrentSessionId() {
@@ -233,152 +161,58 @@ export class SessionManager {
         this.currentSessionId = sessionId;
     }
     setCurrentSession(sessionId) {
-        this.currentSessionId = sessionId;
+        this.setCurrentSessionId(sessionId);
     }
-    // Persistence operations
+    // Persistence operations - delegate to SessionPersistence
     async saveSessionToPersistence(sessionId) {
-        // Wait for initialization if still in progress
-        if (this.initializationPromise && !this.isInitialized) {
-            await this.initializationPromise;
-        }
-        if (!this.persistenceAdapter) {
-            throw new PersistenceError(ErrorCode.PERSISTENCE_NOT_AVAILABLE, 'Persistence is not configured. AutoSave is disabled.', 'saveSession');
-        }
         const session = this.sessions.get(sessionId);
         if (!session) {
-            throw new SessionError(ErrorCode.SESSION_NOT_FOUND, `Session ${sessionId} not found`, sessionId);
+            throw new SessionError(ErrorCode.SESSION_NOT_FOUND, `Session ${sessionId} not found`);
         }
-        // Convert SessionData to SessionState for persistence
-        const sessionState = this.convertToSessionState(sessionId, session);
-        await this.persistenceAdapter.save(sessionId, sessionState);
+        // Check session size before saving
+        const size = this.sessionMetrics.getSessionSize(sessionId);
+        if (size > this.config.maxSessionSize) {
+            throw new SessionError(ErrorCode.SESSION_TOO_LARGE, `Session ${sessionId} exceeds maximum size (${size} > ${this.config.maxSessionSize})`);
+        }
+        await this.sessionPersistence.saveSession(sessionId, session);
     }
     async loadSessionFromPersistence(sessionId) {
-        if (!this.persistenceAdapter) {
-            throw new PersistenceError(ErrorCode.PERSISTENCE_NOT_AVAILABLE, 'Persistence adapter is not available', 'loadSession');
-        }
-        const sessionState = await this.persistenceAdapter.load(sessionId);
-        if (!sessionState) {
-            throw new SessionError(ErrorCode.SESSION_NOT_FOUND, `Session ${sessionId} not found in persistence`, sessionId);
-        }
-        const session = this.convertFromSessionState(sessionState);
+        const session = await this.sessionPersistence.loadSession(sessionId);
+        // Add to in-memory sessions
         this.sessions.set(sessionId, session);
-        this.currentSessionId = sessionId;
+        this.touchSession(sessionId);
         return session;
     }
     async listPersistedSessions(options) {
-        // Wait for initialization if still in progress
-        if (this.initializationPromise && !this.isInitialized) {
-            await this.initializationPromise;
-        }
-        if (!this.persistenceAdapter) {
-            throw new PersistenceError(ErrorCode.PERSISTENCE_NOT_AVAILABLE, 'Persistence is not configured.', 'listPersistedSessions');
-        }
-        // The adapter returns metadata, we need to load full sessions
-        const metadata = await this.persistenceAdapter.list(options);
-        const sessions = [];
-        for (const meta of metadata) {
-            try {
-                const sessionState = await this.persistenceAdapter.load(meta.id);
-                if (sessionState) {
-                    sessions.push({
-                        id: meta.id,
-                        data: this.convertFromSessionState(sessionState),
-                    });
-                }
-            }
-            catch {
-                // Skip sessions that can't be loaded
-            }
-        }
-        return sessions;
+        return this.sessionPersistence.listPersistedSessions(options);
     }
     async deletePersistedSession(sessionId) {
-        // Wait for initialization if still in progress
-        if (this.initializationPromise && !this.isInitialized) {
-            await this.initializationPromise;
-        }
-        if (!this.persistenceAdapter) {
-            throw new PersistenceError(ErrorCode.PERSISTENCE_NOT_AVAILABLE, 'Persistence is not configured.', 'deleteSession');
-        }
-        await this.persistenceAdapter.delete(sessionId);
+        await this.sessionPersistence.deletePersistedSession(sessionId);
     }
     getPersistenceAdapter() {
-        return this.persistenceAdapter;
+        return this.sessionPersistence.getPersistenceAdapter();
     }
-    // Memory and size utilities
+    // Metrics operations - delegate to SessionMetrics
     getSessionSize(sessionId) {
-        const session = this.sessions.get(sessionId);
-        return session ? this.memoryManager.estimateObjectSize(session) : 0;
+        return this.sessionMetrics.getSessionSize(sessionId);
     }
     getTotalMemoryUsage() {
-        let total = 0;
-        for (const [_, session] of this.sessions) {
-            total += this.memoryManager.estimateObjectSize(session);
-        }
-        return total;
+        return this.sessionMetrics.getTotalMemoryUsage();
     }
     getConfig() {
-        return { ...this.config };
+        return this.sessionMetrics.getConfig();
     }
-    // Statistics and monitoring
     getSessionCount() {
-        return this.sessions.size;
+        return this.sessionMetrics.getSessionCount();
     }
     getPlanCount() {
-        return this.plans.size;
+        return this.planManager.getPlanCount();
     }
     getMemoryStats() {
-        const totalMemory = this.getTotalMemoryUsage();
-        const sessionCount = this.sessions.size;
-        return {
-            sessionCount,
-            planCount: this.plans.size,
-            totalMemoryBytes: totalMemory,
-            averageSessionSize: sessionCount > 0 ? totalMemory / sessionCount : 0,
-        };
+        return this.sessionMetrics.getMemoryStats();
     }
-    // Conversion helpers
-    convertToSessionState(sessionId, session) {
-        // Convert SessionData to SessionState format for persistence
-        return {
-            id: sessionId,
-            problem: session.problem,
-            technique: session.technique,
-            currentStep: session.history.length > 0 ? session.history[session.history.length - 1].currentStep : 0,
-            totalSteps: session.history.length > 0 ? session.history[0].totalSteps : 0,
-            history: session.history.map(entry => ({
-                step: entry.currentStep,
-                timestamp: entry.timestamp,
-                input: entry,
-                output: entry,
-            })),
-            branches: session.branches,
-            insights: session.insights,
-            startTime: session.startTime,
-            endTime: session.endTime,
-            metrics: session.metrics,
-            tags: session.tags,
-            name: session.name,
-        };
-    }
-    convertFromSessionState(sessionState) {
-        // Convert SessionState format back to SessionData
-        return {
-            technique: sessionState.technique,
-            problem: sessionState.problem,
-            history: sessionState.history.map(h => ({
-                ...h.output,
-                timestamp: h.timestamp,
-            })),
-            branches: sessionState.branches || {},
-            insights: sessionState.insights || [],
-            startTime: sessionState.startTime,
-            endTime: sessionState.endTime,
-            lastActivityTime: Date.now(),
-            metrics: sessionState.metrics,
-            tags: sessionState.tags,
-            name: sessionState.name,
-        };
+    logMemoryMetrics() {
+        this.sessionCleaner.logMemoryMetrics();
     }
 }
 //# sourceMappingURL=SessionManager.js.map
