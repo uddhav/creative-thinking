@@ -29,7 +29,9 @@ describe('LLM Workflow Validation', () => {
       const result = await server.executeThinkingStep(input);
       const response = JSON.parse(result.content[0].text);
 
-      expect(response.error).toBe('planId is required');
+      expect(response.error).toBe(
+        '❌ MISSING REQUIRED FIELD: planId is required to execute thinking steps'
+      );
       expect(response.workflow).toContain(
         'discover_techniques → plan_thinking_session → execute_thinking_step'
       );
@@ -69,7 +71,7 @@ describe('LLM Workflow Validation', () => {
         // Otherwise check for invalid technique error
         const errorMessage =
           typeof response.error === 'string' ? response.error : response.error.message;
-        expect(errorMessage).toContain('Invalid technique');
+        expect(errorMessage).toContain('❌ INVALID TECHNIQUE');
       }
     });
   });
@@ -90,14 +92,14 @@ describe('LLM Workflow Validation', () => {
       const response = JSON.parse(result.content[0].text);
 
       // Should get an error with workflow guidance
-      expect(response.error).toBe('Plan not found');
-      expect(response.message).toContain("Plan 'fake-plan-id' does not exist");
-      expect(response.guidance).toBe('Please follow the correct workflow:');
+      expect(response.error).toBe('❌ WORKFLOW ERROR: Plan not found');
+      expect(response.message).toContain("planId 'fake-plan-id' does not exist");
+      expect(response.guidance).toBe('⚠️ REQUIRED THREE-STEP WORKFLOW:');
       expect(response.workflow).toHaveLength(3);
       expect(response.workflow[0]).toContain('discover_techniques');
       expect(response.workflow[1]).toContain('plan_thinking_session');
       expect(response.workflow[2]).toContain('execute_thinking_step');
-      expect(response.nextStep).toContain('discover_techniques');
+      expect(response.fix).toContain('discover_techniques');
     });
   });
 

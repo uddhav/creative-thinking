@@ -11,6 +11,7 @@ import { SessionManager } from './core/SessionManager.js';
 import { ResponseBuilder } from './core/ResponseBuilder.js';
 import { MetricsCollector } from './core/MetricsCollector.js';
 import { ValidationStrategyFactory } from './core/ValidationStrategies.js';
+import { workflowGuard } from './core/WorkflowGuard.js';
 // Technique system
 import { TechniqueRegistry } from './techniques/TechniqueRegistry.js';
 // Utils
@@ -294,7 +295,7 @@ export class LateralThinkingServer {
 // Tool definitions
 const DISCOVER_TECHNIQUES_TOOL = {
     name: 'discover_techniques',
-    description: 'Analyzes a problem and recommends appropriate lateral thinking techniques based on problem characteristics and desired outcomes',
+    description: 'STEP 1 of 3: Analyzes a problem and recommends appropriate lateral thinking techniques. This is the FIRST tool you must call when starting any creative thinking session. Returns recommendations and available techniques that can be used in the next step.',
     inputSchema: {
         type: 'object',
         properties: {
@@ -322,7 +323,7 @@ const DISCOVER_TECHNIQUES_TOOL = {
 };
 const PLAN_THINKING_SESSION_TOOL = {
     name: 'plan_thinking_session',
-    description: 'Creates a structured workflow for applying one or more lateral thinking techniques to a problem',
+    description: 'STEP 2 of 3: Creates a structured workflow for applying lateral thinking techniques. This tool MUST be called AFTER discover_techniques and BEFORE execute_thinking_step. Returns a planId that is REQUIRED for the execution step. Valid techniques: six_hats, po, random_entry, scamper, concept_extraction, yes_and, design_thinking, triz, neural_state, temporal_work, cross_cultural, collective_intel, disney_method, nine_windows',
     inputSchema: {
         type: 'object',
         properties: {
@@ -374,7 +375,7 @@ const PLAN_THINKING_SESSION_TOOL = {
 };
 const EXECUTE_THINKING_STEP_TOOL = {
     name: 'execute_thinking_step',
-    description: 'Executes a single step in the lateral thinking process, maintaining session state and providing structured guidance',
+    description: 'STEP 3 of 3: Executes a single step in the lateral thinking process. WARNING: This tool REQUIRES a valid planId from plan_thinking_session. DO NOT call this tool directly - you MUST first call discover_techniques, then plan_thinking_session to get a planId. Attempting to use this tool without following the proper workflow (discover → plan → execute) will result in an error.',
     inputSchema: {
         type: 'object',
         properties: {
@@ -540,6 +541,21 @@ server.setRequestHandler(ListToolsRequestSchema, () => ({
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
     try {
+        // Record the tool call for workflow tracking
+        workflowGuard.recordCall(name, args);
+        // Check for workflow violations before executing
+        const violation = workflowGuard.checkWorkflowViolation(name, args);
+        if (violation) {
+            const violationResponse = workflowGuard.getViolationResponse(violation);
+            return {
+                content: [
+                    {
+                        type: 'text',
+                        text: JSON.stringify(violationResponse, null, 2),
+                    },
+                ],
+            };
+        }
         let result;
         switch (name) {
             case 'discover_techniques':
