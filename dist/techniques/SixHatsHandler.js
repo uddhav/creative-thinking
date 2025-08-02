@@ -70,7 +70,7 @@ export class SixHatsHandler extends BaseTechniqueHandler {
     getStepInfo(step) {
         const hatColor = this.hatOrder[step - 1];
         if (!hatColor) {
-            throw new ValidationError(ErrorCode.INVALID_STEP, `Invalid step ${step} for Six Hats technique. Valid steps are 1-${Object.keys(this.hats).length}`, 'step', { providedStep: step, validRange: `1-${Object.keys(this.hats).length}` });
+            throw new ValidationError(ErrorCode.INVALID_STEP, `Invalid step ${step} for Six Hats technique. Valid steps are 1-${this.hatOrder.length}`, 'step', { providedStep: step, validRange: `1-${this.hatOrder.length}` });
         }
         return this.hats[hatColor];
     }
