@@ -124,6 +124,15 @@ export interface SessionData {
     constraints?: string[];
     validations?: ValidationResult[];
   };
+  riskEngagementMetrics?: {
+    dismissalCount: number;
+    averageConfidence: number;
+    escalationLevel: number;
+    lastSubstantiveEngagement?: string; // timestamp
+    discoveredRiskIndicators: string[]; // from LLM's own analysis
+    consecutiveLowConfidence: number;
+    totalAssessments: number;
+  };
 }
 
 // Execution input type
