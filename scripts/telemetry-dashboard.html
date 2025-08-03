@@ -151,10 +151,18 @@
             metrics.forEach(metric => {
                 const card = document.createElement('div');
                 card.className = 'metric-card';
-                card.innerHTML = `
-                    <div class="metric-label">${metric.label}</div>
-                    <div class="metric-value">${metric.value}</div>
-                `;
+
+                const labelDiv = document.createElement('div');
+                labelDiv.className = 'metric-label';
+                labelDiv.textContent = metric.label;
+
+                const valueDiv = document.createElement('div');
+                valueDiv.className = 'metric-value';
+                valueDiv.textContent = metric.value;
+
+                card.appendChild(labelDiv);
+                card.appendChild(valueDiv);
+
                 metricsGrid.appendChild(card);
             });
         }
