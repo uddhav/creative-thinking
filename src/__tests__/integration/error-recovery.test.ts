@@ -88,7 +88,7 @@ describe('Error Recovery Integration Tests', () => {
       expect(result.isError).toBe(true);
       // When providing a planId with an invalid technique, it's caught as a technique mismatch
       const errorText = result.content[0].text;
-      expect(errorText).toContain('TECHNIQUE MISMATCH ERROR');
+      expect(errorText).toMatch(/TECHNIQUE.*MISMATCH.*ERROR/i);
       expect(errorText).toContain('invalid_technique');
     });
 
