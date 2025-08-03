@@ -15,6 +15,7 @@ import type { TechniqueHandler } from '../../techniques/types.js';
 import type { VisualFormatter } from '../../utils/VisualFormatter.js';
 import type { ErgodicityManager } from '../../ergodicity/index.js';
 import { ErrorContextBuilder } from '../../core/ErrorContextBuilder.js';
+import { TelemetryCollector } from '../../telemetry/TelemetryCollector.js';
 
 export interface ValidationResult {
   isValid: boolean;
@@ -31,6 +32,7 @@ export interface ValidationResult {
 
 export class ExecutionValidator {
   private errorBuilder = new ErrorContextBuilder();
+  private telemetry = TelemetryCollector.getInstance();
 
   constructor(
     private sessionManager: SessionManager,
@@ -98,6 +100,10 @@ export class ExecutionValidator {
         try {
           sessionId = this.sessionManager.createSession(session, sessionId);
           console.error(`Created new session with user-provided ID: ${sessionId}`);
+
+          // Track session start and technique start
+          this.telemetry.trackSessionStart(sessionId, input.problem.length).catch(console.error);
+          this.telemetry.trackTechniqueStart(sessionId, input.technique).catch(console.error);
         } catch (error) {
           // Handle session creation errors (e.g. invalid session ID format)
           return {
@@ -114,11 +120,20 @@ export class ExecutionValidator {
         }
       } else {
         session = existingSession;
+
+        // Track technique start if this is the first step
+        if (input.currentStep === 1) {
+          this.telemetry.trackTechniqueStart(sessionId, input.technique).catch(console.error);
+        }
       }
     } else {
       // Create new session with auto-generated ID
       session = this.initializeSession(input, ergodicityManager);
       sessionId = this.sessionManager.createSession(session);
+
+      // Track session start and technique start
+      this.telemetry.trackSessionStart(sessionId, input.problem.length).catch(console.error);
+      this.telemetry.trackTechniqueStart(sessionId, input.technique).catch(console.error);
     }
 
     // Update session activity

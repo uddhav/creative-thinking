@@ -30,6 +30,7 @@ export declare class ExecutionValidator {
     private techniqueRegistry;
     private visualFormatter;
     private errorBuilder;
+    private telemetry;
     constructor(sessionManager: SessionManager, techniqueRegistry: TechniqueRegistry, visualFormatter: VisualFormatter);
     /**
      * Validate plan exists and technique matches
