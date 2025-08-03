@@ -20,6 +20,7 @@ describe('InversionStrategy - Edge Cases', () => {
   let mockSessionState: SessionState;
 
   beforeEach(() => {
+    vi.clearAllMocks();
     strategy = new InversionStrategy();
 
     mockSessionState = {
@@ -604,6 +605,9 @@ describe('InversionStrategy - Edge Cases', () => {
 
   describe('Example Generation', () => {
     it('should provide domain-specific examples', () => {
+      // Mock to return 0 to ensure we get the first example
+      vi.mocked(secureRandom.getSecureRandomIndex).mockReturnValue(0);
+
       const options = strategy.generate(mockContext);
 
       // Check if at least one option has a real-world example
