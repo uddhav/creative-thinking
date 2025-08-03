@@ -4,7 +4,8 @@ This project uses semantic-release for automated versioning and releases.
 
 ## How It Works
 
-1. **Conventional Commits**: All commits must follow the [Conventional Commits](https://www.conventionalcommits.org/) specification
+1. **Conventional Commits**: All commits must follow the
+   [Conventional Commits](https://www.conventionalcommits.org/) specification
 2. **Automated Version Bumping**: Based on commit types:
    - `fix:` triggers a patch release (1.0.0 → 1.0.1)
    - `feat:` triggers a minor release (1.0.0 → 1.1.0)
@@ -74,6 +75,7 @@ BREAKING CHANGE: The execute_thinking_step tool now requires a planId parameter"
 ### Version Already Exists
 
 Semantic-release tracks releases via Git tags:
+
 1. Check existing tags: `git tag -l`
 2. If needed, create tag manually: `git tag v1.2.3`
 3. Push tag: `git push origin v1.2.3`

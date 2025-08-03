@@ -2,15 +2,20 @@
 
 ## Overview
 
-The Absorbing Barrier Early Warning System is a sophisticated monitoring framework designed to detect and prevent irreversible lock-in states in creative thinking processes. Based on ergodicity economics principles, it recognizes that creative processes are non-ergodic—path-dependent with potential points of no return.
+The Absorbing Barrier Early Warning System is a sophisticated monitoring framework designed to
+detect and prevent irreversible lock-in states in creative thinking processes. Based on ergodicity
+economics principles, it recognizes that creative processes are non-ergodic—path-dependent with
+potential points of no return.
 
 ## Key Concepts
 
 ### Absorbing Barriers
-Absorbing barriers are states or conditions that, once reached, become extremely difficult or impossible to escape from. In creative thinking, these include:
+
+Absorbing barriers are states or conditions that, once reached, become extremely difficult or
+impossible to escape from. In creative thinking, these include:
 
 - **Cognitive Lock-in**: Inability to see beyond current framework
-- **Resource Depletion**: Exhaustion of time, energy, or material resources  
+- **Resource Depletion**: Exhaustion of time, energy, or material resources
 - **Technical Debt**: Accumulated complexity preventing further progress
 - **Analysis Paralysis**: Overthinking preventing any action
 - **Perfectionism**: Endless refinement without progress
@@ -18,15 +23,17 @@ Absorbing barriers are states or conditions that, once reached, become extremely
 
 ### Multi-Sensor Architecture
 
-The system employs multiple specialized sensors that continuously monitor different aspects of the creative process:
+The system employs multiple specialized sensors that continuously monitor different aspects of the
+creative process:
 
 1. **ResourceMonitor**: Tracks depletion of time, energy, and resources
 2. **CognitiveAssessor**: Monitors mental flexibility and detects cognitive rigidity
 3. **TechnicalDebtAnalyzer**: Measures solution complexity and technical lock-in
 
 Future sensors planned:
+
 - ReputationTracker
-- RelationshipMonitor  
+- RelationshipMonitor
 - MarketSensor
 - ComplianceChecker
 
@@ -35,7 +42,7 @@ Future sensors planned:
 The system uses four warning levels based on distance to barriers:
 
 - 🟢 **SAFE**: > 60% distance from barrier
-- 🟡 **CAUTION**: 40-60% distance from barrier  
+- 🟡 **CAUTION**: 40-60% distance from barrier
 - 🟠 **WARNING**: 20-40% distance from barrier
 - 🔴 **CRITICAL**: < 20% distance from barrier
 
@@ -57,7 +64,7 @@ const result = await manager.recordThinkingStep(
     optionsOpened: ['option1', 'option2'],
     optionsClosed: [],
     reversibilityCost: 0.3,
-    commitmentLevel: 0.4
+    commitmentLevel: 0.4,
   },
   sessionData
 );
@@ -96,30 +103,35 @@ When warnings are detected, they appear prominently in the visual output:
 The system provides five levels of escape protocols:
 
 ### Level 1: Pattern Interruption
+
 - **Required Flexibility**: 0.1
 - **Flexibility Gain**: ~0.3
 - **Success Rate**: 85%
 - **Steps**: Stop current approach, use Random Entry, challenge assumptions
 
-### Level 2: Resource Reallocation  
+### Level 2: Resource Reallocation
+
 - **Required Flexibility**: 0.2
 - **Flexibility Gain**: ~0.25
 - **Success Rate**: 75%
 - **Steps**: Identify commitments, free up resources, invest in exploration
 
 ### Level 3: Stakeholder Reset
+
 - **Required Flexibility**: 0.3
 - **Flexibility Gain**: ~0.4
 - **Success Rate**: 65%
 - **Steps**: Document constraints, negotiate flexibility, reset expectations
 
 ### Level 4: Technical Refactoring
+
 - **Required Flexibility**: 0.4
 - **Flexibility Gain**: ~0.5
 - **Success Rate**: 70%
 - **Steps**: Assess debt, design modular architecture, implement abstractions
 
 ### Level 5: Strategic Pivot
+
 - **Required Flexibility**: 0.5
 - **Flexibility Gain**: ~0.7
 - **Success Rate**: 50%
@@ -130,12 +142,14 @@ The system provides five levels of escape protocols:
 ### ResourceMonitor
 
 Tracks:
+
 - Energy levels (decision quality degradation)
 - Burn rate (resource consumption speed)
 - Efficiency (progress vs effort)
 - Session duration fatigue
 
 Indicators:
+
 - Low energy levels
 - Rapid energy drain pattern
 - Slow progress rate
@@ -145,13 +159,15 @@ Indicators:
 ### CognitiveAssessor
 
 Monitors:
+
 - Perspective diversity
 - Assumption challenge rate
-- Learning velocity  
+- Learning velocity
 - Mental model flexibility
 - Creative divergence
 
 Indicators:
+
 - Limited perspective diversity
 - Perspective narrowing over time
 - Rarely questioning assumptions
@@ -162,6 +178,7 @@ Indicators:
 ### TechnicalDebtAnalyzer
 
 Measures:
+
 - Solution entropy (disorder)
 - Change velocity
 - Modularity index
@@ -169,6 +186,7 @@ Measures:
 - Refactoring cost
 
 Indicators:
+
 - High solution entropy
 - Rapid debt accumulation
 - Low solution modularity
@@ -185,11 +203,11 @@ const monitor = new ResourceMonitor({
     safe: 0.6,
     caution: 0.4,
     warning: 0.2,
-    critical: 0.1
+    critical: 0.1,
   },
   sensitivity: 0.8,
   updateInterval: 5000,
-  historyWindow: 20
+  historyWindow: 20,
 });
 ```
 

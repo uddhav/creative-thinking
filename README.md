@@ -1037,6 +1037,28 @@ Multi-sensor architecture monitoring:
 4. Technical Refactoring (flexibility 0.2-0.3)
 5. Strategic Pivot (flexibility < 0.2)
 
+## Documentation
+
+### Error Recovery and Resilience
+
+The Creative Thinking Server implements comprehensive error recovery patterns to ensure robust
+operation:
+
+- **[Error Recovery Patterns](docs/ERROR_RECOVERY_PATTERNS.md)** - Detailed guide to error handling
+  patterns and recovery strategies
+- **[Implementation Guide](docs/ERROR_RECOVERY_IMPLEMENTATION_GUIDE.md)** - Practical guide for
+  implementing error recovery in new features
+- **[Quick Reference](docs/ERROR_HANDLING_QUICK_REFERENCE.md)** - Concise reference card for error
+  handling best practices
+
+Key error recovery features:
+
+- Automatic session recovery with custom IDs
+- Graceful degradation when persistence unavailable
+- Clear workflow guidance for user errors
+- State preservation through error conditions
+- Memory management with automatic eviction
+
 ## Building
 
 Docker:

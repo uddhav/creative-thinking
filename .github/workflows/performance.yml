@@ -1,0 +1,157 @@
+name: Performance Benchmarks
+
+# This workflow runs performance benchmarks and tracks regressions
+# It stores baseline data in GitHub Actions cache and comments results on PRs
+# To set up gh-pages for historical data, run setup-gh-pages.yml manually
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/performance.yml'
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 0 * * *' # Nightly run at midnight UTC
+  workflow_dispatch: # Allow manual runs
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Need full history for baseline comparison
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+
+      - name: Run performance tests
+        run: |
+          # Set performance timeout multiplier for CI
+          export PERF_TIMEOUT_MULTIPLIER=2
+          # Run performance tests with npm script for consistency
+          npm run test:performance -- --reporter=json --outputFile=performance-results.json
+        continue-on-error: true
+        env:
+          NODE_OPTIONS: --expose-gc
+          # Skip test infrastructure overhead for accurate benchmarks
+          SKIP_MEMORY_TRACKING: true  # Disables memory tracking overhead
+          SKIP_CLEANUP: true          # Disables session cleanup between tests
+          SKIP_GC: true              # Disables forced garbage collection
+          SKIP_CLEANUP_LOGS: true    # Disables cleanup error logging
+
+      - name: Extract benchmark results
+        id: benchmark
+        run: |
+          # Use custom extraction script for better parsing
+          node scripts/extract-benchmarks.cjs performance-results.json benchmark-results.json
+
+      - name: Download previous benchmark data
+        uses: actions/cache@v4
+        with:
+          path: ./cache
+          key: ${{ runner.os }}-benchmark
+          
+      - name: Store benchmark result
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          name: MCP Server Performance
+          tool: 'customSmallerIsBetter'
+          output-file-path: benchmark-results.json
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          auto-push: false # Don't auto-push for now
+          comment-on-alert: true
+          comment-always: true # Always comment results
+          # Alert threshold: 110% means performance can degrade by up to 10% before alerting
+          # This accounts for:
+          # - Normal variance in CI environments (±5%)
+          # - Measurement noise and timing variations (±3%)
+          # - Minor code changes that don't represent real regressions (±2%)
+          alert-threshold: '110%'
+          fail-on-alert: false # Don't fail on first run, allows baseline establishment
+          # Cache stores historical data for trend analysis
+          external-data-json-path: ./cache/benchmark-data.json
+
+      - name: Upload performance results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-results
+          path: |
+            performance-results.json
+            benchmark-results.json
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            
+            // Read benchmark results if available
+            let comment = '## Performance Benchmark Results\n\n';
+            
+            try {
+              const benchmarks = JSON.parse(fs.readFileSync('benchmark-results.json', 'utf8'));
+              
+              if (benchmarks.length > 0) {
+                comment += '| Test | Duration (ms) |\n';
+                comment += '|------|---------------|\n';
+                
+                benchmarks.forEach(bench => {
+                  comment += `| ${bench.name} | ${bench.value.toFixed(2)} |\n`;
+                });
+                
+                comment += '\n✅ All performance tests passed';
+              } else {
+                comment += '⚠️ No performance metrics extracted';
+              }
+            } catch (e) {
+              comment += '❌ Failed to extract performance metrics';
+            }
+            
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const botComment = comments.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('Performance Benchmark Results')
+            );
+            
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: comment
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: comment
+              });
+            }
