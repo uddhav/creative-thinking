@@ -10,6 +10,9 @@ import { ProblemAnalyzer } from './discovery/ProblemAnalyzer.js';
 import { TechniqueRecommender } from './discovery/TechniqueRecommender.js';
 import { WorkflowBuilder } from './discovery/WorkflowBuilder.js';
 import { MemoryContextGenerator } from './discovery/MemoryContextGenerator.js';
+import { ParallelismDetector } from './discovery/ParallelismDetector.js';
+import { ParallelismValidator } from './discovery/ParallelismValidator.js';
+import { ExecutionModeController } from './discovery/ExecutionModeController.js';
 
 export function discoverTechniques(
   input: DiscoverTechniquesInput,
@@ -28,6 +31,14 @@ export function discoverTechniques(
   const workflowBuilder = new WorkflowBuilder();
   const memoryContextGenerator = new MemoryContextGenerator();
 
+  // Initialize parallelism components
+  const parallelismDetector = new ParallelismDetector();
+  const parallelismValidator = new ParallelismValidator();
+  const executionModeController = new ExecutionModeController(
+    parallelismDetector,
+    parallelismValidator
+  );
+
   // Categorize the problem
   const problemCategory = problemAnalyzer.categorizeProblem(problem, context);
 
@@ -40,11 +51,31 @@ export function discoverTechniques(
     techniqueRegistry
   );
 
+  // Determine execution mode
+  const executionDecision = executionModeController.determineExecutionMode(
+    input,
+    recommendations.map(r => r.technique)
+  );
+
+  // Get detailed execution mode analysis (not used in output currently)
+  const _executionModeAnalysis = executionModeController.analyzeExecutionMode(
+    input,
+    recommendations.map(r => r.technique)
+  );
+
   // Build integration suggestions
   let integrationSuggestions = workflowBuilder.buildIntegrationSuggestions(
     recommendations.map(r => r.technique),
     complexityAssessment.level
   );
+
+  // Update integration suggestions based on execution mode
+  if (executionDecision.mode === 'parallel') {
+    if (!integrationSuggestions) {
+      integrationSuggestions = {};
+    }
+    integrationSuggestions.parallel = recommendations.map(r => r.technique);
+  }
 
   // Create workflow if multiple techniques recommended
   const workflow =
@@ -60,6 +91,11 @@ export function discoverTechniques(
   if (complexityAssessment.level === 'high') {
     warnings.push('High complexity detected - consider sequential thinking approach');
     warnings.push('Breaking down the problem into smaller parts may be beneficial');
+  }
+
+  // Add execution mode warnings
+  if (executionDecision.warnings) {
+    warnings.push(...executionDecision.warnings);
   }
 
   // Check for low flexibility

@@ -4,7 +4,7 @@
  */
 import { randomUUID } from 'crypto';
 export function planThinkingSession(input, sessionManager, techniqueRegistry) {
-    const { problem, techniques, objectives, constraints, timeframe = 'thorough' } = input;
+    const { problem, techniques, objectives, constraints, timeframe = 'thorough', executionMode = 'sequential', } = input;
     // Generate unique plan ID
     const planId = `plan_${randomUUID()}`;
     // Build workflow for each technique
@@ -56,6 +56,7 @@ export function planThinkingSession(input, sessionManager, techniqueRegistry) {
         createdAt: Date.now(),
         planningInsights,
         complexityAssessment,
+        executionMode,
     };
     sessionManager.savePlan(planId, plan);
     return plan;

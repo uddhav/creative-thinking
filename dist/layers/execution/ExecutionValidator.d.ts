@@ -69,6 +69,10 @@ export declare class ExecutionValidator {
         normalizedStep: number;
     };
     /**
+     * Validate convergence technique usage
+     */
+    validateConvergenceTechnique(input: ExecuteThinkingStepInput): ValidationResult;
+    /**
      * Initialize a new session
      */
     private initializeSession;

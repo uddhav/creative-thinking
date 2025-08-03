@@ -38,7 +38,7 @@ export const DISCOVER_TECHNIQUES_TOOL: Tool = {
 export const PLAN_THINKING_SESSION_TOOL: Tool = {
   name: 'plan_thinking_session',
   description:
-    'STEP 2 of 3: Creates a structured workflow for applying lateral thinking techniques. This tool MUST be called AFTER discover_techniques and BEFORE execute_thinking_step. Returns a planId that is REQUIRED for the execution step. Valid techniques: six_hats, po, random_entry, scamper, concept_extraction, yes_and, design_thinking, triz, neural_state, temporal_work, cross_cultural, collective_intel, disney_method, nine_windows',
+    'STEP 2 of 3: Creates a structured workflow for applying lateral thinking techniques. This tool MUST be called AFTER discover_techniques and BEFORE execute_thinking_step. Returns a planId that is REQUIRED for the execution step. Valid techniques: six_hats, po, random_entry, scamper, concept_extraction, yes_and, design_thinking, triz, neural_state, temporal_work, cross_cultural, collective_intel, disney_method, nine_windows, convergence (for synthesizing parallel results)',
   inputSchema: {
     type: 'object',
     properties: {
@@ -65,6 +65,7 @@ export const PLAN_THINKING_SESSION_TOOL: Tool = {
             'collective_intel',
             'disney_method',
             'nine_windows',
+            'convergence',
           ],
         },
         description: 'The techniques to include in the workflow',
@@ -83,6 +84,20 @@ export const PLAN_THINKING_SESSION_TOOL: Tool = {
         type: 'string',
         enum: ['quick', 'thorough', 'comprehensive'],
         description: 'How much time/depth to invest',
+      },
+      executionMode: {
+        type: 'string',
+        enum: ['sequential', 'parallel', 'auto'],
+        description:
+          'How to execute techniques: sequential (one after another), parallel (simultaneously), auto (let system decide)',
+        default: 'sequential',
+      },
+      maxParallelism: {
+        type: 'number',
+        description: 'Maximum number of techniques to run in parallel (1-10)',
+        minimum: 1,
+        maximum: 10,
+        default: 3,
       },
     },
     required: ['problem', 'techniques'],
@@ -227,6 +242,28 @@ export const EXECUTE_THINKING_STEP_TOOL: Tool = {
       branchId: { type: 'string' },
       flexibilityScore: { type: 'number', minimum: 0, maximum: 1 },
       alternativeSuggestions: { type: 'array', items: { type: 'string' } },
+      // Convergence technique specific
+      parallelResults: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            planId: { type: 'string' },
+            technique: { type: 'string' },
+            results: { type: 'object' },
+            insights: { type: 'array', items: { type: 'string' } },
+            metrics: { type: 'object' },
+          },
+        },
+        description:
+          'Results from parallel technique executions to synthesize (convergence technique only)',
+      },
+      convergenceStrategy: {
+        type: 'string',
+        enum: ['merge', 'select', 'hierarchical'],
+        description:
+          'How to synthesize parallel results: merge (combine all), select (choose best), hierarchical (organize by importance)',
+      },
     },
     required: [
       'planId',

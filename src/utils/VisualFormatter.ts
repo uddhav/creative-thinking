@@ -277,6 +277,7 @@ export class VisualFormatter {
       collective_intel: '🧬',
       disney_method: '🎬',
       nine_windows: '🪟',
+      convergence: '🔀',
     };
     return emojis[technique] || '❓';
   }
@@ -300,6 +301,7 @@ export class VisualFormatter {
       collective_intel: 'Collective Intelligence',
       disney_method: 'Disney Method',
       nine_windows: 'Nine Windows',
+      convergence: 'Convergence Synthesis',
     };
     return names[technique] || technique;
   }

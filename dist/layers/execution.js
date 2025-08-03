@@ -29,6 +29,11 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
             return planValidation.error;
         }
         const plan = planValidation.plan;
+        // Validate convergence technique usage
+        const convergenceValidation = executionValidator.validateConvergenceTechnique(input);
+        if (!convergenceValidation.isValid && convergenceValidation.error) {
+            return convergenceValidation.error;
+        }
         // Get or create session
         const sessionValidation = executionValidator.validateAndGetSession(input, ergodicityManager);
         if (sessionValidation.error) {

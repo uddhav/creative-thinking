@@ -505,6 +505,11 @@ export class ErgodicityManager {
         typicalCommitment: 0.3,
         riskProfile: 'Low - Analysis without action commitment',
       },
+      convergence: {
+        typicalReversibility: 0.3,
+        typicalCommitment: 0.8,
+        riskProfile: 'High - Synthesis creates binding commitments',
+      },
     };
 
     return profiles[technique];

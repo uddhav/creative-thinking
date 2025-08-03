@@ -11,6 +11,7 @@ import type {
   RuinScenario,
   ValidationResult,
 } from '../core/RuinRiskDiscovery.js';
+import type { ConvergenceOptions } from './planning.js';
 
 // Technique types
 export type LateralTechnique =
@@ -27,7 +28,8 @@ export type LateralTechnique =
   | 'cross_cultural'
   | 'collective_intel'
   | 'disney_method'
-  | 'nine_windows';
+  | 'nine_windows'
+  | 'convergence'; // Special technique for synthesizing parallel results
 
 export type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green' | 'purple';
 export type ScamperAction =
@@ -133,6 +135,48 @@ export interface SessionData {
     consecutiveLowConfidence: number;
     totalAssessments: number;
   };
+
+  /**
+   * Link to the parallel execution group this session belongs to
+   */
+  parallelGroupId?: string;
+
+  /**
+   * Whether this is a convergence session that synthesizes parallel results
+   */
+  isConvergenceSession?: boolean;
+
+  /**
+   * Session IDs that must complete before this session can proceed
+   */
+  dependsOn?: string[];
+}
+
+/**
+ * Group of sessions executing in parallel
+ * Manages coordination, status tracking, and convergence
+ * @example
+ * ```typescript
+ * const group: ParallelSessionGroup = {
+ *   groupId: 'group_123',
+ *   sessionIds: ['session_1', 'session_2', 'session_3'],
+ *   parentProblem: 'How to improve user retention?',
+ *   executionMode: 'parallel',
+ *   status: 'active',
+ *   startTime: Date.now(),
+ *   completedSessions: ['session_1']
+ * };
+ * ```
+ */
+export interface ParallelSessionGroup {
+  groupId: string;
+  sessionIds: string[];
+  parentProblem: string;
+  executionMode: 'sequential' | 'parallel' | 'auto';
+  status: 'active' | 'converging' | 'completed' | 'failed';
+  convergenceOptions?: ConvergenceOptions;
+  startTime: number;
+  completedSessions: string[]; // Changed from Set<string> for better JSON serialization
 }
 
 // Execution input type
@@ -261,6 +305,25 @@ export interface ExecuteThinkingStepInput {
     prompt: string;
     survivalConstraints: string[];
   };
+
+  /**
+   * Results from parallel technique executions (convergence technique only)
+   * Contains the outputs from all parallel plans that need to be synthesized
+   */
+  parallelResults?: Array<{
+    planId: string;
+    technique: LateralTechnique;
+    results: unknown; // Technique-specific results
+    insights: string[];
+    metrics?: Record<string, number>;
+  }>;
+  /**
+   * Strategy for synthesizing parallel results (convergence technique only)
+   * - merge: Combine all results into a unified output
+   * - select: Choose the best result based on criteria
+   * - hierarchical: Organize results in a hierarchical structure
+   */
+  convergenceStrategy?: 'merge' | 'select' | 'hierarchical';
 }
 
 // Operation data types

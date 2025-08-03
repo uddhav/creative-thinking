@@ -34,7 +34,14 @@ export function planThinkingSession(
   sessionManager: SessionManager,
   techniqueRegistry: TechniqueRegistry
 ): PlanThinkingSessionOutput {
-  const { problem, techniques, objectives, constraints, timeframe = 'thorough' } = input;
+  const {
+    problem,
+    techniques,
+    objectives,
+    constraints,
+    timeframe = 'thorough',
+    executionMode = 'sequential',
+  } = input;
 
   // Generate unique plan ID
   const planId = `plan_${randomUUID()}`;
@@ -99,6 +106,7 @@ export function planThinkingSession(
     createdAt: Date.now(),
     planningInsights,
     complexityAssessment,
+    executionMode,
   };
 
   sessionManager.savePlan(planId, plan);
