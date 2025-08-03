@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-env node */
 
 /**
  * Extract benchmark results from vitest performance test output
@@ -6,7 +7,6 @@
  */
 
 const fs = require('fs');
-const path = require('path');
 
 // Read test results
 const resultsPath = process.argv[2] || 'performance-results.json';

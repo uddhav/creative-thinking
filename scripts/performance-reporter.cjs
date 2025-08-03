@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+/* eslint-env node */
+/* eslint-disable no-unused-vars */
 
 /**
  * Custom Vitest reporter for performance tests
