@@ -5,7 +5,7 @@ export default defineConfig({
   ...baseConfig,
   test: {
     ...baseConfig.test,
-    reporters: ['json', './scripts/performance-reporter.js'],
+    reporters: ['json', './scripts/performance-reporter.cjs'],
     outputFile: {
       json: './performance-results.json',
     },

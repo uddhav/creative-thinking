@@ -51,7 +51,7 @@ jobs:
         id: benchmark
         run: |
           # Use custom extraction script for better parsing
-          node scripts/extract-benchmarks.js performance-results.json benchmark-results.json
+          node scripts/extract-benchmarks.cjs performance-results.json benchmark-results.json
 
       - name: Store benchmark result
         uses: benchmark-action/github-action-benchmark@v1
