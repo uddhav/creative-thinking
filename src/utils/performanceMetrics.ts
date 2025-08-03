@@ -22,6 +22,10 @@ export class PerformanceTracker {
   private startTime: number = 0;
   private startMemory: MemoryMetrics | null = null;
 
+  // Memory threshold constants
+  private static readonly MEMORY_WARNING_THRESHOLD_MB = 500;
+  private static readonly MEMORY_CRITICAL_THRESHOLD_MB = 1000;
+
   start(): void {
     this.startTime = Date.now();
     this.startMemory = this.getMemoryMetrics();
@@ -35,6 +39,7 @@ export class PerformanceTracker {
   end(name: string, metadata?: Record<string, unknown>): PerformanceMetric {
     const duration = Date.now() - this.startTime;
     const endMemory = this.getMemoryMetrics();
+    const memoryWarnings = this.checkMemoryThresholds();
 
     const metric: PerformanceMetric = {
       name,
@@ -54,9 +59,17 @@ export class PerformanceTracker {
                 rss: endMemory.rss - this.startMemory.rss,
               }
             : null,
+          warnings: Object.keys(memoryWarnings).length > 0 ? memoryWarnings : undefined,
         },
       },
     };
+
+    // Log memory warnings to stderr
+    if (memoryWarnings.critical) {
+      console.error(`[Performance] CRITICAL: ${memoryWarnings.critical}`);
+    } else if (memoryWarnings.warning) {
+      console.error(`[Performance] WARNING: ${memoryWarnings.warning}`);
+    }
 
     this.metrics.push(metric);
     return metric;
@@ -70,6 +83,23 @@ export class PerformanceTracker {
       external: Math.round(usage.external / 1024 / 1024), // MB
       rss: Math.round(usage.rss / 1024 / 1024), // MB
     };
+  }
+
+  checkMemoryThresholds(): { warning?: string; critical?: string } {
+    const current = this.getMemoryMetrics();
+    const warnings: { warning?: string; critical?: string } = {};
+
+    if (current.heapUsed > PerformanceTracker.MEMORY_CRITICAL_THRESHOLD_MB) {
+      warnings.critical = `Heap usage (${current.heapUsed}MB) exceeds critical threshold (${PerformanceTracker.MEMORY_CRITICAL_THRESHOLD_MB}MB)`;
+    } else if (current.heapUsed > PerformanceTracker.MEMORY_WARNING_THRESHOLD_MB) {
+      warnings.warning = `Heap usage (${current.heapUsed}MB) exceeds warning threshold (${PerformanceTracker.MEMORY_WARNING_THRESHOLD_MB}MB)`;
+    }
+
+    if (current.rss > PerformanceTracker.MEMORY_CRITICAL_THRESHOLD_MB * 1.5) {
+      warnings.critical = `RSS memory (${current.rss}MB) exceeds critical threshold`;
+    }
+
+    return warnings;
   }
 
   getAllMetrics(): PerformanceMetric[] {

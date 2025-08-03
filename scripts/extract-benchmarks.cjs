@@ -23,6 +23,30 @@ if (!fs.existsSync(resultsPath)) {
 const results = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
 const benchmarks = [];
 
+// Validate parsed data structure
+if (!results || typeof results !== 'object') {
+  console.error('[extract-benchmarks] ERROR: Invalid benchmark data structure');
+  console.error('[extract-benchmarks] Expected object with testResults property');
+  process.exit(1);
+}
+
+// Helper to validate individual benchmark results
+function validateBenchmarkResult(benchmark) {
+  if (!benchmark.name || typeof benchmark.name !== 'string') {
+    console.warn('[extract-benchmarks] Invalid benchmark: missing or invalid name');
+    return false;
+  }
+  if (typeof benchmark.value !== 'number' || benchmark.value < 0) {
+    console.warn(`[extract-benchmarks] Invalid benchmark value for ${benchmark.name}: ${benchmark.value}`);
+    return false;
+  }
+  if (!benchmark.unit || typeof benchmark.unit !== 'string') {
+    console.warn(`[extract-benchmarks] Invalid benchmark unit for ${benchmark.name}: ${benchmark.unit}`);
+    return false;
+  }
+  return true;
+}
+
 // Helper to extract metrics from test names and durations
 function extractBenchmarks(testResults) {
   if (!testResults || !testResults.testResults) {
@@ -49,7 +73,7 @@ function extractBenchmarks(testResults) {
           const data = pattern.extract(match);
           const label = data.count ? `${pattern.name} (${data.count})` : pattern.name;
           
-          benchmarks.push({
+          const benchmark = {
             name: label,
             unit: 'ms',
             value: test.duration || 0,
@@ -57,7 +81,14 @@ function extractBenchmarks(testResults) {
               ...data,
               fullTitle: test.fullTitle,
             },
-          });
+          };
+          
+          // Validate benchmark before adding
+          if (validateBenchmarkResult(benchmark)) {
+            benchmarks.push(benchmark);
+          } else {
+            console.error(`[extract-benchmarks] Skipping invalid benchmark: ${test.title}`);
+          }
           break;
         }
       }
