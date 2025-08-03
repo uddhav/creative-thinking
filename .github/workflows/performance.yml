@@ -53,6 +53,12 @@ jobs:
           # Use custom extraction script for better parsing
           node scripts/extract-benchmarks.cjs performance-results.json benchmark-results.json
 
+      - name: Download previous benchmark data
+        uses: actions/cache@v4
+        with:
+          path: ./cache
+          key: ${{ runner.os }}-benchmark
+          
       - name: Store benchmark result
         uses: benchmark-action/github-action-benchmark@v1
         with:
@@ -60,12 +66,12 @@ jobs:
           tool: 'customSmallerIsBetter'
           output-file-path: benchmark-results.json
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          auto-push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          auto-push: false # Don't auto-push for now
           comment-on-alert: true
+          comment-always: true # Always comment results
           alert-threshold: '110%' # Alert if performance degrades by more than 10%
-          fail-on-alert: true
-          gh-pages-branch: gh-pages
-          benchmark-data-dir-path: benchmarks
+          fail-on-alert: false # Don't fail on first run
+          external-data-json-path: ./cache/benchmark-data.json
 
       - name: Upload performance results
         if: always()

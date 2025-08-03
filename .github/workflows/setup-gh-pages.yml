@@ -1,0 +1,70 @@
+name: Setup GitHub Pages for Benchmarks
+
+on:
+  workflow_dispatch: # Manual trigger only
+
+permissions:
+  contents: write
+  pages: write
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout default branch
+        uses: actions/checkout@v4
+        
+      - name: Create and push gh-pages branch
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email github-actions[bot]@users.noreply.github.com
+          
+          # Check if gh-pages exists
+          if git ls-remote --heads origin gh-pages | grep gh-pages; then
+            echo "gh-pages branch already exists"
+            exit 0
+          fi
+          
+          # Create orphan gh-pages branch
+          git checkout --orphan gh-pages
+          
+          # Remove all files
+          git rm -rf .
+          
+          # Create initial benchmark structure
+          mkdir -p benchmarks
+          echo '{"lastUpdate": 0, "entries": {}}' > benchmarks/data.json
+          
+          # Create index.html for GitHub Pages
+          cat > index.html << 'EOF'
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Creative Thinking MCP Server - Performance Benchmarks</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://benchmarkjs-chart.github.io/themes/default/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Creative Thinking MCP Server</h1>
+        <h2>Performance Benchmarks</h2>
+        <div id="chart"></div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+    <script src="https://benchmarkjs-chart.github.io/dist/benchmarkjs-chart.min.js"></script>
+    <script>
+        window.BENCHMARK_DATA = 'benchmarks/data.json';
+    </script>
+</body>
+</html>
+EOF
+          
+          # Add files and commit
+          git add .
+          git commit -m "Initialize gh-pages branch for benchmarks"
+          
+          # Push to origin
+          git push -u origin gh-pages
+          
+          echo "✅ gh-pages branch created successfully"
