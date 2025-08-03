@@ -345,6 +345,27 @@ creative journey:
 - Noteworthy moments flagged
 - Future relevance assessments
 
+### 📊 Analytics and Effectiveness Tracking (NEW)
+
+Optional telemetry system for tracking technique effectiveness:
+
+**Privacy-First Design:**
+
+- Opt-in only (disabled by default)
+- No personal data collection
+- Local storage by default
+- Anonymous session tracking
+
+**Insights Available:**
+
+- Technique effectiveness scores
+- Insight generation patterns
+- Risk identification rates
+- Session completion analytics
+- Technique combination success
+
+Enable with `TELEMETRY_ENABLED=true`. See [Telemetry Documentation](docs/TELEMETRY.md) for details.
+
 ### 🚀 Integrated Early Warning System
 
 Continuously monitors for approaching "points of no return" in your creative process:
@@ -773,6 +794,15 @@ The server supports environment variables for advanced features:
 - `DISABLE_THOUGHT_LOGGING=true` - Disable visual output logging
 - `PERSISTENCE_TYPE=filesystem|memory` - Choose storage type
 - `PERSISTENCE_PATH=/path/to/sessions` - Custom session storage location
+
+### Telemetry Configuration (Optional)
+
+- `TELEMETRY_ENABLED=true` - Enable anonymous usage analytics (opt-in)
+- `TELEMETRY_LEVEL=basic|detailed|full` - Control data collection granularity
+- `TELEMETRY_STORAGE=memory|filesystem` - Analytics storage backend
+- `TELEMETRY_PRIVACY_MODE=strict|balanced|minimal` - Privacy protection level
+
+See [Telemetry Documentation](docs/TELEMETRY.md) for details.
 
 ## Configuration
 

@@ -23,6 +23,7 @@ import type { TechniqueHandler } from '../../techniques/types.js';
 import type { EscalationPromptGenerator } from '../../ergodicity/escalationPrompts.js';
 import type { HybridComplexityAnalyzer } from '../../complexity/analyzer.js';
 import { monitorCriticalSection } from '../../utils/PerformanceIntegration.js';
+import { TelemetryCollector } from '../../telemetry/TelemetryCollector.js';
 
 interface ComplexitySuggestion {
   complexityNote: string;
@@ -33,6 +34,7 @@ export class ExecutionResponseBuilder {
   private responseBuilder = new ResponseBuilder();
   private memoryAnalyzer = new MemoryAnalyzer();
   private jsonOptimizer: JsonOptimizer;
+  private telemetry = TelemetryCollector.getInstance();
 
   constructor(
     private complexityAnalyzer: HybridComplexityAnalyzer,
@@ -61,8 +63,19 @@ export class ExecutionResponseBuilder {
     currentFlexibility: number,
     optionGenerationResult: OptionGenerationResult | undefined
   ): LateralThinkingResponse {
+    // Track technique step
+    this.telemetry
+      .trackTechniqueStep(sessionId, input.technique, input.currentStep, input.totalSteps, {
+        techniqueStep: techniqueLocalStep,
+        techniqueTotalSteps: handler.getTechniqueInfo().totalSteps,
+        flexibilityScore: currentFlexibility,
+        problemLength: input.problem.length,
+        outputLength: input.output.length,
+      })
+      .catch(console.error);
+
     // Build core response object (not JSON) with insights and metadata
-    const { responseData } = this.buildCoreResponseData(
+    const { responseData, currentInsights } = this.buildCoreResponseData(
       input,
       session,
       sessionId,
@@ -72,6 +85,18 @@ export class ExecutionResponseBuilder {
       plan,
       currentFlexibility
     );
+
+    // Track insights if generated
+    if (currentInsights.length > 0) {
+      this.telemetry
+        .trackInsight(sessionId, input.technique, currentInsights.length)
+        .catch(console.error);
+    }
+
+    // Track risks if identified
+    if (input.risks && input.risks.length > 0) {
+      this.telemetry.trackRisk(sessionId, input.technique, input.risks.length).catch(console.error);
+    }
 
     // Enhance response object directly (no parsing needed)
     this.enhanceWithMemoryAndProgress(
@@ -88,6 +113,15 @@ export class ExecutionResponseBuilder {
     // Enhance with flexibility and warnings
     this.enhanceWithFlexibilityAndWarnings(responseData, currentFlexibility, input, session);
 
+    // Track flexibility warnings
+    if (currentFlexibility < 0.4) {
+      const warningLevel =
+        currentFlexibility < 0.2 ? 'critical' : currentFlexibility < 0.3 ? 'high' : 'medium';
+      this.telemetry
+        .trackFlexibilityWarning(sessionId, currentFlexibility, warningLevel)
+        .catch(console.error);
+    }
+
     // Enhance with analysis and options
     this.enhanceWithAnalysisAndOptions(
       responseData,
@@ -97,12 +131,31 @@ export class ExecutionResponseBuilder {
       optionGenerationResult
     );
 
+    // Track option generation if occurred
+    if (optionGenerationResult && optionGenerationResult.options.length > 0) {
+      this.telemetry
+        .trackOptionGeneration(sessionId, optionGenerationResult.options.length, currentFlexibility)
+        .catch(console.error);
+    }
+
     // Build optimized response with single JSON stringify
     const response = this.jsonOptimizer.buildOptimizedResponse(responseData);
 
     // Handle session completion
     if (!input.nextStepNeeded) {
       this.handleSessionCompletion(response, session);
+
+      // Track technique completion
+      const effectiveness = this.assessTechniqueEffectiveness(input, session, currentInsights);
+      this.telemetry
+        .trackTechniqueComplete(sessionId, input.technique, effectiveness, {
+          insightCount: currentInsights.length,
+          riskCount: input.risks?.length || 0,
+          duration: Date.now() - (session.startTime || Date.now()),
+          revisionCount: session.history.filter(h => h.isRevision).length,
+          branchCount: Object.keys(session.branches).length,
+        })
+        .catch(console.error);
     }
 
     return response;
@@ -342,6 +395,11 @@ export class ExecutionResponseBuilder {
       if (techniqueIndex + 1 < (plan?.techniques.length || 1)) {
         const nextTechnique = plan?.techniques[techniqueIndex + 1];
         if (nextTechnique) {
+          // Track workflow transition
+          this.telemetry
+            .trackWorkflowTransition(input.sessionId || '', input.technique, nextTechnique)
+            .catch(console.error);
+
           const nextHandler = this.techniqueRegistry?.getHandler(nextTechnique);
           return nextHandler
             ? `Transitioning to ${nextTechnique}. ${nextHandler.getStepGuidance(1, input.problem)}`
@@ -588,6 +646,22 @@ export class ExecutionResponseBuilder {
 
     // Use optimizer for final response
     response.content[0].text = this.jsonOptimizer.optimizeResponse(completedData);
+
+    // Track session completion
+    const sessionId = (responseData.sessionId as string) || '';
+    this.telemetry
+      .trackSessionComplete(sessionId, {
+        duration: session.endTime - (session.startTime || Date.now()),
+        insightCount: session.insights.length,
+        riskCount: session.history.reduce((sum, h) => sum + (h.risks?.length || 0), 0),
+        totalSteps: session.history.length,
+        completedSteps: session.history.length,
+        revisionCount: session.history.filter(h => h.isRevision).length,
+        branchCount: Object.keys(session.branches).length,
+        flexibilityScore: session.pathMemory?.currentFlexibility?.flexibilityScore,
+        effectiveness: session.metrics?.creativityScore || 0.5,
+      })
+      .catch(console.error);
   }
 
   /**
