@@ -4,7 +4,13 @@
  */
 
 import chalk from 'chalk';
-import type { LateralTechnique, ThinkingOperationData } from '../types/index.js';
+import type {
+  LateralTechnique,
+  ThinkingOperationData,
+  ScamperAction,
+  DesignThinkingStage,
+  DisneyRole,
+} from '../types/index.js';
 
 export class VisualFormatter {
   private readonly maxLineLength = 80;
@@ -58,27 +64,29 @@ export class VisualFormatter {
         chalk.blue('│')
     );
 
-    // Add technique state indicator if enabled
-    const stateIndicator = this.getTechniqueStateIndicator(technique, currentStep, input);
-    const riskIndicator = this.getRiskLevelIndicator(input.risks);
-    const flexibilityIndicator = this.getFlexibilityIndicator(input);
+    // Add technique state indicator if enabled - early exit for performance
+    if (this.showTechniqueIndicators) {
+      const stateIndicator = this.getTechniqueStateIndicator(technique, currentStep, input);
+      const riskIndicator = this.getRiskLevelIndicator(input.risks);
+      const flexibilityIndicator = this.getFlexibilityIndicator(input);
 
-    if (stateIndicator || riskIndicator || flexibilityIndicator) {
-      const indicators = [stateIndicator, riskIndicator, flexibilityIndicator]
-        .filter(Boolean)
-        .join(' ');
+      if (stateIndicator || riskIndicator || flexibilityIndicator) {
+        const indicators = [stateIndicator, riskIndicator, flexibilityIndicator]
+          .filter(Boolean)
+          .join(' ');
 
-      const indicatorPadding = Math.max(0, borderLength - indicators.length - 2);
-      const indicatorPaddingLeft = Math.floor(indicatorPadding / 2);
-      const indicatorPaddingRight = indicatorPadding - indicatorPaddingLeft;
+        const indicatorPadding = Math.max(0, borderLength - indicators.length - 2);
+        const indicatorPaddingLeft = Math.floor(indicatorPadding / 2);
+        const indicatorPaddingRight = indicatorPadding - indicatorPaddingLeft;
 
-      lines.push(
-        chalk.blue('│') +
-          ' '.repeat(indicatorPaddingLeft) +
-          chalk.gray(indicators) +
-          ' '.repeat(indicatorPaddingRight) +
-          chalk.blue('│')
-      );
+        lines.push(
+          chalk.blue('│') +
+            ' '.repeat(indicatorPaddingLeft) +
+            chalk.gray(indicators) +
+            ' '.repeat(indicatorPaddingRight) +
+            chalk.blue('│')
+        );
+      }
     }
 
     // Problem
@@ -304,19 +312,24 @@ export class VisualFormatter {
     currentStep: number,
     input: ThinkingOperationData
   ): string {
-    if (!this.showTechniqueIndicators) {
-      return '';
-    }
-
+    // Already checked in formatOutput, but keep for safety
     let indicator = '';
 
     switch (technique) {
       case 'six_hats': {
         // Show current hat color
-        const hatColors = ['🔵', '⚪', '🔴', '🟡', '⚫', '🟢', '🟣'];
-        const hatNames = ['Blue', 'White', 'Red', 'Yellow', 'Black', 'Green', 'Purple'];
-        if (currentStep >= 1 && currentStep <= 7) {
-          indicator = `[${hatColors[currentStep - 1]} ${hatNames[currentStep - 1]} Hat]`;
+        const hatMapping: Record<number, { color: string; name: string }> = {
+          1: { color: '🔵', name: 'Blue' },
+          2: { color: '⚪', name: 'White' },
+          3: { color: '🔴', name: 'Red' },
+          4: { color: '🟡', name: 'Yellow' },
+          5: { color: '⚫', name: 'Black' },
+          6: { color: '🟢', name: 'Green' },
+          7: { color: '🟣', name: 'Purple' },
+        };
+        const hat = hatMapping[currentStep];
+        if (hat) {
+          indicator = `[${hat.color} ${hat.name} Hat]`;
         }
         break;
       }
@@ -324,7 +337,7 @@ export class VisualFormatter {
       case 'scamper': {
         // Show current SCAMPER action
         if (input.scamperAction) {
-          const actionEmojis: Record<string, string> = {
+          const actionEmojis: Record<ScamperAction, string> = {
             substitute: '🔄',
             combine: '🔗',
             adapt: '🔧',
@@ -343,7 +356,7 @@ export class VisualFormatter {
       case 'design_thinking': {
         // Show current design thinking stage
         if (input.designStage) {
-          const stageEmojis: Record<string, string> = {
+          const stageEmojis: Record<DesignThinkingStage, string> = {
             empathize: '💚',
             define: '🎯',
             ideate: '💡',
@@ -359,7 +372,7 @@ export class VisualFormatter {
       case 'disney_method': {
         // Show current Disney role
         if (input.disneyRole) {
-          const roleEmojis: Record<string, string> = {
+          const roleEmojis: Record<DisneyRole, string> = {
             dreamer: '🌟',
             realist: '🔨',
             critic: '🔍',
@@ -373,7 +386,7 @@ export class VisualFormatter {
       case 'neural_state': {
         // Show dominant network
         if (input.dominantNetwork) {
-          const networkEmojis: Record<string, string> = {
+          const networkEmojis: Record<'dmn' | 'ecn', string> = {
             dmn: '🧘',
             ecn: '⚡',
           };
@@ -386,8 +399,16 @@ export class VisualFormatter {
       case 'nine_windows': {
         // Show current window position
         if (input.currentCell) {
-          const timeEmojis = { past: '⏮️', present: '▶️', future: '⏭️' };
-          const systemEmojis = { 'sub-system': '🔧', system: '⚙️', 'super-system': '🌍' };
+          const timeEmojis: Record<'past' | 'present' | 'future', string> = {
+            past: '⏮️',
+            present: '▶️',
+            future: '⏭️',
+          };
+          const systemEmojis: Record<'sub-system' | 'system' | 'super-system', string> = {
+            'sub-system': '🔧',
+            system: '⚙️',
+            'super-system': '🌍',
+          };
           const timeEmoji = timeEmojis[input.currentCell.timeFrame] || '❓';
           const systemEmoji = systemEmojis[input.currentCell.systemLevel] || '❓';
           indicator = `[${timeEmoji}${systemEmoji}]`;
@@ -403,7 +424,8 @@ export class VisualFormatter {
    * Get risk level indicator
    */
   private getRiskLevelIndicator(risks: string[] | undefined): string {
-    if (!this.showTechniqueIndicators || !risks) {
+    // Already checked in formatOutput, but keep for safety
+    if (!risks) {
       return '';
     }
 
@@ -425,7 +447,8 @@ export class VisualFormatter {
   private getFlexibilityIndicator(input: ThinkingOperationData): string {
     const flexibility = input.flexibilityScore;
 
-    if (!this.showTechniqueIndicators || flexibility === undefined || flexibility > 0.4) {
+    // Already checked in formatOutput, but keep for safety
+    if (flexibility === undefined || flexibility > 0.4) {
       return '';
     }
 

@@ -435,4 +435,141 @@ describe('Visual Indicators', () => {
       expect(output).not.toContain('Flexibility:');
     });
   });
+
+  describe('Complete Output Integration', () => {
+    it('should display all elements in correct positions with proper formatting', () => {
+      const input: ThinkingOperationData = {
+        technique: 'scamper',
+        problem: 'Improve user onboarding process',
+        currentStep: 6,
+        totalSteps: 8,
+        output: 'Eliminating unnecessary steps from the onboarding flow',
+        nextStepNeeded: true,
+        scamperAction: 'eliminate',
+        flexibilityScore: 0.25,
+        risks: [
+          'May confuse existing users',
+          'Could reduce data collection',
+          'Might skip important features',
+        ],
+      };
+
+      const output = formatter.formatOutput(
+        'scamper',
+        'Improve user onboarding process',
+        6,
+        8,
+        { name: 'Eliminate', focus: 'Remove unnecessary elements', emoji: '❌' },
+        { color: (s: string) => s, symbol: '⚠️' },
+        input
+      );
+
+      // Verify the complete structure
+      const lines = output.split('\n');
+
+      // Header border
+      expect(lines[0]).toBe('┌' + '─'.repeat(78) + '┐');
+
+      // Title line with technique and step
+      expect(lines[1]).toContain('⚠️ 🔧 SCAMPER - Step 6/8');
+
+      // Indicators line
+      expect(lines[2]).toContain('[❌ ELIMINATE] [🔴 High Risk] [⚠️  Flexibility: 25%]');
+
+      // Separator
+      expect(lines[3]).toBe('├' + '─'.repeat(78) + '┤');
+
+      // Problem line
+      expect(lines[4]).toContain('Problem: Improve user onboarding process');
+
+      // Another separator
+      expect(lines[5]).toBe('├' + '─'.repeat(78) + '┤');
+
+      // Step info
+      expect(lines[6]).toContain('❌ Eliminate: Remove unnecessary elements');
+
+      // Progress section separator
+      expect(lines[7]).toBe('├' + '─'.repeat(78) + '┤');
+
+      // Progress bar
+      expect(lines[8]).toContain('Progress:');
+      expect(lines[8]).toContain('75%'); // 6/8 = 75%
+
+      // Verify risks section exists
+      expect(output).toContain('⚠️  Risks Identified:');
+      expect(output).toContain('1. May confuse existing users');
+      expect(output).toContain('2. Could reduce data collection');
+      expect(output).toContain('3. Might skip important features');
+
+      // Footer
+      expect(lines[lines.length - 1]).toBe('└' + '─'.repeat(78) + '┘');
+    });
+
+    it('should handle edge case with minimal indicators', () => {
+      const input: ThinkingOperationData = {
+        technique: 'po',
+        problem: 'Test problem',
+        currentStep: 1,
+        totalSteps: 4,
+        output: 'Creating provocative statement',
+        nextStepNeeded: true,
+        risks: [],
+      };
+
+      const output = formatter.formatOutput(
+        'po',
+        'Test problem',
+        1,
+        4,
+        { name: 'Provocation', focus: 'Create PO statement', emoji: '💥' },
+        { color: (s: string) => s, symbol: '✨' },
+        input
+      );
+
+      // Should only show risk indicator (no technique state for PO, no flexibility)
+      expect(output).toContain('[🟢 Low Risk]');
+      expect(output).not.toContain('[💥');
+      expect(output).not.toContain('Flexibility:');
+    });
+
+    it('should handle all indicators for Disney Method', () => {
+      const input: ThinkingOperationData = {
+        technique: 'disney_method',
+        problem: 'Design new product feature',
+        currentStep: 3,
+        totalSteps: 3,
+        output: 'Critically evaluating the proposed feature',
+        nextStepNeeded: false,
+        disneyRole: 'critic',
+        flexibilityScore: 0.15,
+        risks: [
+          'Technical complexity',
+          'Budget constraints',
+          'Timeline pressure',
+          'User adoption',
+          'Market competition',
+        ],
+        mitigations: ['Phased rollout', 'MVP approach', 'User testing'],
+      };
+
+      const output = formatter.formatOutput(
+        'disney_method',
+        'Design new product feature',
+        3,
+        3,
+        { name: 'Critic', focus: 'Identify risks and gaps', emoji: '🔍' },
+        { color: (s: string) => s, symbol: '⚠️' },
+        input
+      );
+
+      // Verify all indicators are present
+      expect(output).toContain('[🔍 Critic]');
+      expect(output).toContain('[⚫ Ruin Risk]'); // 5 risks
+      expect(output).toContain('[⛔ Flexibility: 15%]');
+
+      // Verify risks and mitigations sections
+      expect(output).toContain('⚠️  Risks Identified:');
+      expect(output).toContain('✅ Mitigations:');
+    });
+  });
 });

@@ -38,22 +38,24 @@ export class VisualFormatter {
             modeIndicator.color(title) +
             ' '.repeat(paddingRight) +
             chalk.blue('│'));
-        // Add technique state indicator if enabled
-        const stateIndicator = this.getTechniqueStateIndicator(technique, currentStep, input);
-        const riskIndicator = this.getRiskLevelIndicator(input.risks);
-        const flexibilityIndicator = this.getFlexibilityIndicator(input);
-        if (stateIndicator || riskIndicator || flexibilityIndicator) {
-            const indicators = [stateIndicator, riskIndicator, flexibilityIndicator]
-                .filter(Boolean)
-                .join(' ');
-            const indicatorPadding = Math.max(0, borderLength - indicators.length - 2);
-            const indicatorPaddingLeft = Math.floor(indicatorPadding / 2);
-            const indicatorPaddingRight = indicatorPadding - indicatorPaddingLeft;
-            lines.push(chalk.blue('│') +
-                ' '.repeat(indicatorPaddingLeft) +
-                chalk.gray(indicators) +
-                ' '.repeat(indicatorPaddingRight) +
-                chalk.blue('│'));
+        // Add technique state indicator if enabled - early exit for performance
+        if (this.showTechniqueIndicators) {
+            const stateIndicator = this.getTechniqueStateIndicator(technique, currentStep, input);
+            const riskIndicator = this.getRiskLevelIndicator(input.risks);
+            const flexibilityIndicator = this.getFlexibilityIndicator(input);
+            if (stateIndicator || riskIndicator || flexibilityIndicator) {
+                const indicators = [stateIndicator, riskIndicator, flexibilityIndicator]
+                    .filter(Boolean)
+                    .join(' ');
+                const indicatorPadding = Math.max(0, borderLength - indicators.length - 2);
+                const indicatorPaddingLeft = Math.floor(indicatorPadding / 2);
+                const indicatorPaddingRight = indicatorPadding - indicatorPaddingLeft;
+                lines.push(chalk.blue('│') +
+                    ' '.repeat(indicatorPaddingLeft) +
+                    chalk.gray(indicators) +
+                    ' '.repeat(indicatorPaddingRight) +
+                    chalk.blue('│'));
+            }
         }
         // Problem
         lines.push(chalk.blue('├' + '─'.repeat(borderLength - 2) + '┤'));
@@ -227,20 +229,27 @@ export class VisualFormatter {
      * Get technique-specific state indicator
      */
     getTechniqueStateIndicator(technique, currentStep, input) {
-        if (!this.showTechniqueIndicators) {
-            return '';
-        }
+        // Already checked in formatOutput, but keep for safety
         let indicator = '';
         switch (technique) {
-            case 'six_hats':
+            case 'six_hats': {
                 // Show current hat color
-                const hatColors = ['🔵', '⚪', '🔴', '🟡', '⚫', '🟢', '🟣'];
-                const hatNames = ['Blue', 'White', 'Red', 'Yellow', 'Black', 'Green', 'Purple'];
-                if (currentStep >= 1 && currentStep <= 7) {
-                    indicator = `[${hatColors[currentStep - 1]} ${hatNames[currentStep - 1]} Hat]`;
+                const hatMapping = {
+                    1: { color: '🔵', name: 'Blue' },
+                    2: { color: '⚪', name: 'White' },
+                    3: { color: '🔴', name: 'Red' },
+                    4: { color: '🟡', name: 'Yellow' },
+                    5: { color: '⚫', name: 'Black' },
+                    6: { color: '🟢', name: 'Green' },
+                    7: { color: '🟣', name: 'Purple' },
+                };
+                const hat = hatMapping[currentStep];
+                if (hat) {
+                    indicator = `[${hat.color} ${hat.name} Hat]`;
                 }
                 break;
-            case 'scamper':
+            }
+            case 'scamper': {
                 // Show current SCAMPER action
                 if (input.scamperAction) {
                     const actionEmojis = {
@@ -257,7 +266,8 @@ export class VisualFormatter {
                     indicator = `[${emoji} ${input.scamperAction.toUpperCase()}]`;
                 }
                 break;
-            case 'design_thinking':
+            }
+            case 'design_thinking': {
                 // Show current design thinking stage
                 if (input.designStage) {
                     const stageEmojis = {
@@ -271,7 +281,8 @@ export class VisualFormatter {
                     indicator = `[${emoji} ${input.designStage.charAt(0).toUpperCase() + input.designStage.slice(1)}]`;
                 }
                 break;
-            case 'disney_method':
+            }
+            case 'disney_method': {
                 // Show current Disney role
                 if (input.disneyRole) {
                     const roleEmojis = {
@@ -283,7 +294,8 @@ export class VisualFormatter {
                     indicator = `[${emoji} ${input.disneyRole.charAt(0).toUpperCase() + input.disneyRole.slice(1)}]`;
                 }
                 break;
-            case 'neural_state':
+            }
+            case 'neural_state': {
                 // Show dominant network
                 if (input.dominantNetwork) {
                     const networkEmojis = {
@@ -294,16 +306,26 @@ export class VisualFormatter {
                     indicator = `[${emoji} ${input.dominantNetwork.toUpperCase()}]`;
                 }
                 break;
-            case 'nine_windows':
+            }
+            case 'nine_windows': {
                 // Show current window position
                 if (input.currentCell) {
-                    const timeEmojis = { past: '⏮️', present: '▶️', future: '⏭️' };
-                    const systemEmojis = { 'sub-system': '🔧', system: '⚙️', 'super-system': '🌍' };
+                    const timeEmojis = {
+                        past: '⏮️',
+                        present: '▶️',
+                        future: '⏭️'
+                    };
+                    const systemEmojis = {
+                        'sub-system': '🔧',
+                        system: '⚙️',
+                        'super-system': '🌍'
+                    };
                     const timeEmoji = timeEmojis[input.currentCell.timeFrame] || '❓';
                     const systemEmoji = systemEmojis[input.currentCell.systemLevel] || '❓';
                     indicator = `[${timeEmoji}${systemEmoji}]`;
                 }
                 break;
+            }
         }
         return indicator;
     }
@@ -311,7 +333,8 @@ export class VisualFormatter {
      * Get risk level indicator
      */
     getRiskLevelIndicator(risks) {
-        if (!this.showTechniqueIndicators || !risks) {
+        // Already checked in formatOutput, but keep for safety
+        if (!risks) {
             return '';
         }
         const riskCount = risks.length;
@@ -333,7 +356,8 @@ export class VisualFormatter {
      */
     getFlexibilityIndicator(input) {
         const flexibility = input.flexibilityScore;
-        if (!this.showTechniqueIndicators || flexibility === undefined || flexibility > 0.4) {
+        // Already checked in formatOutput, but keep for safety
+        if (flexibility === undefined || flexibility > 0.4) {
             return '';
         }
         if (flexibility < 0.2) {
