@@ -46,6 +46,7 @@ export declare class PrivacyManager {
     private generateSalt;
     /**
      * Clear session mappings (for memory management)
+     * Implements LRU-like cleanup to preserve memory
      */
     clearMappings(): void;
     /**

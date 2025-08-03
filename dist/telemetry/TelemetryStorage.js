@@ -67,11 +67,24 @@ export class TelemetryStorage {
             if (stats.size + Buffer.byteLength(lines) > this.maxFileSize) {
                 // Rotate file if it would exceed max size
                 const rotatedPath = filepath.replace('.jsonl', `-${Date.now()}.jsonl`);
-                try {
-                    await fs.rename(filepath, rotatedPath);
-                }
-                catch {
-                    // File might not exist, ignore
+                // Try rotation with retry logic
+                let retries = 3;
+                while (retries > 0) {
+                    try {
+                        await fs.rename(filepath, rotatedPath);
+                        break;
+                    }
+                    catch (error) {
+                        retries--;
+                        if (retries === 0) {
+                            // If rotation fails after retries, continue without rotation
+                            console.error('File rotation failed after retries:', error);
+                        }
+                        else {
+                            // Wait briefly before retry
+                            await new Promise(resolve => setTimeout(resolve, 100));
+                        }
+                    }
                 }
             }
             // Append to file

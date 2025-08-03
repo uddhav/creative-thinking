@@ -4,6 +4,9 @@ A Model Context Protocol (MCP) server that provides structured creative thinking
 problem-solving and ideation. This server implements a unified framework combining generative
 creativity with systematic risk assessment.
 
+> **Note**: This repository is a public fork of work originally developed with Munshy, Personal
+> Secretary.
+
 ## Architecture Principles
 
 This project follows a three-layer tool architecture as its core design principle:
@@ -147,6 +150,15 @@ All three layers now provide memory-suggestive outputs to enhance contextual und
 - Support for revisions and branching during creative exploration
 - Progress tracking with visual indicators and formatted output
 - Insights extraction and summary generation upon completion
+
+### Telemetry & Analytics (v0.4.0 - pending release)
+
+- Privacy-first analytics with opt-in by default (disabled unless `TELEMETRY_ENABLED=true`)
+- Three privacy modes: strict, balanced, minimal
+- Technique effectiveness tracking and analysis
+- Session duration and completion metrics
+- Visualization tools for data analysis
+- Configurable data collection levels
 
 ### Ergodicity Awareness (NEW)
 
@@ -1170,6 +1182,24 @@ The pre-push hook will:
 - **SCAMPER** - Complete all seven transformations for comprehensive exploration
 - **Design Thinking** - Engage real users throughout the process
 - **TRIZ** - Focus on identifying and resolving core contradictions
+
+## Roadmap
+
+The project roadmap is tracked through GitHub issues with priority and timeline labels. View the
+[2025 Roadmap & Prioritization](https://github.com/uddhav/creative-thinking/issues/162) for detailed
+plans.
+
+### Coming Soon
+
+- **v0.4.0** - Telemetry & Analytics (PR in review)
+- **v0.5.0** - Parallel Execution (Q1 2025)
+- **v0.6.0+** - Part VII Advanced Techniques (Q2-Q4 2025)
+
+### Filter Issues By:
+
+- [Critical Priority](https://github.com/uddhav/creative-thinking/issues?q=is%3Aopen+label%3Apriority%3A1-critical)
+- [Q1 2025](https://github.com/uddhav/creative-thinking/issues?q=is%3Aopen+label%3Aroadmap%3AQ1-2025)
+- [Part VII Techniques](https://github.com/uddhav/creative-thinking/issues?q=is%3Aopen+label%3Apart-vii)
 
 ## License
 

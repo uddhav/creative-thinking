@@ -247,8 +247,9 @@ export class TelemetryCollector {
         ];
         const allowedFields = this.config.level === 'basic' ? basicFields : detailedFields;
         for (const field of allowedFields) {
-            if (metadata[field] !== undefined) {
-                filtered[field] = metadata[field];
+            const key = field;
+            if (metadata[key] !== undefined) {
+                filtered[key] = metadata[key];
             }
         }
         return filtered;

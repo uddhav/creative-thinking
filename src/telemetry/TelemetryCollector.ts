@@ -360,7 +360,9 @@ export class TelemetryCollector {
 
     for (const field of allowedFields) {
       if (metadata[field] !== undefined) {
-        (filtered as Record<string, unknown>)[field] = metadata[field];
+        // Use a type assertion that satisfies ESLint
+        const target = filtered as Record<keyof TelemetryMetadata, unknown>;
+        target[field] = metadata[field];
       }
     }
 

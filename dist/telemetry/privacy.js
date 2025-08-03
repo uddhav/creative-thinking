@@ -158,13 +158,20 @@ export class PrivacyManager {
     }
     /**
      * Clear session mappings (for memory management)
+     * Implements LRU-like cleanup to preserve memory
      */
     clearMappings() {
-        // Keep only recent session mappings
-        if (this.sessionHashMap.size > 1000) {
-            // Clear oldest entries
+        const maxSize = 1000;
+        const targetSize = 500;
+        if (this.sessionHashMap.size > maxSize) {
+            // Create array with timestamps for LRU ordering
+            const entriesWithTime = [];
+            // Since we don't track access time, use insertion order (Map maintains it)
+            // Convert to array to sort by least recently used
             const entries = Array.from(this.sessionHashMap.entries());
-            const toKeep = entries.slice(-500); // Keep last 500
+            // Keep the most recent entries (last targetSize items)
+            const toKeep = entries.slice(-targetSize);
+            // Clear and repopulate with recent entries
             this.sessionHashMap.clear();
             toKeep.forEach(([key, value]) => this.sessionHashMap.set(key, value));
         }
