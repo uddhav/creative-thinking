@@ -313,12 +313,12 @@ export class VisualFormatter {
                     const timeEmojis = {
                         past: '⏮️',
                         present: '▶️',
-                        future: '⏭️'
+                        future: '⏭️',
                     };
                     const systemEmojis = {
                         'sub-system': '🔧',
                         system: '⚙️',
-                        'super-system': '🌍'
+                        'super-system': '🌍',
                     };
                     const timeEmoji = timeEmojis[input.currentCell.timeFrame] || '❓';
                     const systemEmoji = systemEmojis[input.currentCell.systemLevel] || '❓';
@@ -579,4 +579,5 @@ export class VisualFormatter {
         return lines.join('\n');
     }
 }
+// test src change
 //# sourceMappingURL=VisualFormatter.js.map
