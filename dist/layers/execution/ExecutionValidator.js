@@ -168,6 +168,46 @@ export class ExecutionValidator {
         };
     }
     /**
+     * Validate convergence technique usage
+     */
+    validateConvergenceTechnique(input) {
+        if (input.technique === 'convergence') {
+            // Convergence technique requires parallel results
+            if (!input.parallelResults) {
+                return {
+                    isValid: false,
+                    error: this.errorBuilder.buildGenericError('Convergence technique requires parallel results', {
+                        technique: input.technique,
+                        hasParallelResults: false,
+                    }),
+                };
+            }
+            // Ensure parallel results is not empty
+            if (input.parallelResults.length === 0) {
+                return {
+                    isValid: false,
+                    error: this.errorBuilder.buildGenericError('Convergence technique requires at least one parallel result', {
+                        technique: input.technique,
+                        parallelResultsCount: 0,
+                    }),
+                };
+            }
+        }
+        else {
+            // Non-convergence techniques should not have parallel-specific fields
+            if (input.parallelResults) {
+                return {
+                    isValid: false,
+                    error: this.errorBuilder.buildGenericError('Non-convergence techniques should not have parallel results', {
+                        technique: input.technique,
+                        hasParallelResults: true,
+                    }),
+                };
+            }
+        }
+        return { isValid: true };
+    }
+    /**
      * Initialize a new session
      */
     initializeSession(input, ergodicityManager) {

@@ -49,7 +49,7 @@ export function isConvergenceTechnique(technique: LateralTechnique): technique i
  * Validate max parallelism value
  */
 export function isValidMaxParallelism(value: unknown): value is number {
-  return typeof value === 'number' && value >= 1 && value <= 10;
+  return typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= 10;
 }
 
 /**

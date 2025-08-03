@@ -113,7 +113,7 @@ export interface SessionData {
  *   executionMode: 'parallel',
  *   status: 'active',
  *   startTime: Date.now(),
- *   completedSessions: new Set(['session_1'])
+ *   completedSessions: ['session_1']
  * };
  * ```
  */
@@ -125,7 +125,7 @@ export interface ParallelSessionGroup {
     status: 'active' | 'converging' | 'completed' | 'failed';
     convergenceOptions?: ConvergenceOptions;
     startTime: number;
-    completedSessions: Set<string>;
+    completedSessions: string[];
 }
 export interface ExecuteThinkingStepInput {
     planId: string;

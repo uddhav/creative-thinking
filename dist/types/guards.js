@@ -38,7 +38,7 @@ export function isConvergenceTechnique(technique) {
  * Validate max parallelism value
  */
 export function isValidMaxParallelism(value) {
-    return typeof value === 'number' && value >= 1 && value <= 10;
+    return typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= 10;
 }
 /**
  * Get default max parallelism based on technique count

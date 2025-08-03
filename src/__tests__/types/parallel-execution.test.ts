@@ -91,7 +91,7 @@ describe('Parallel Execution Types', () => {
         expect(isValidMaxParallelism(0)).toBe(false);
         expect(isValidMaxParallelism(11)).toBe(false);
         expect(isValidMaxParallelism(-1)).toBe(false);
-        expect(isValidMaxParallelism(3.5)).toBe(true); // Numbers are allowed
+        expect(isValidMaxParallelism(3.5)).toBe(false); // Only integers allowed
         expect(isValidMaxParallelism('3')).toBe(false);
         expect(isValidMaxParallelism(null)).toBe(false);
       });
@@ -174,11 +174,11 @@ describe('Parallel Execution Types', () => {
         executionMode: 'parallel',
         status: 'active',
         startTime: Date.now(),
-        completedSessions: new Set(['session_1']),
+        completedSessions: ['session_1'],
       };
 
       expect(group.executionMode).toBe('parallel');
-      expect(group.completedSessions.has('session_1')).toBe(true);
+      expect(group.completedSessions.includes('session_1')).toBe(true);
     });
 
     it('should support convergence fields in ExecuteThinkingStepInput', () => {
