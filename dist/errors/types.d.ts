@@ -30,7 +30,18 @@ export declare enum ErrorCode {
     PERSISTENCE_WRITE_FAILED = "PERSISTENCE_WRITE_FAILED",
     PERSISTENCE_READ_FAILED = "PERSISTENCE_READ_FAILED",
     RESOURCE_LIMIT_EXCEEDED = "RESOURCE_LIMIT_EXCEEDED",
-    TIMEOUT_ERROR = "TIMEOUT_ERROR"
+    TIMEOUT_ERROR = "TIMEOUT_ERROR",
+    /**
+     * Parallel execution errors
+     */
+    /** Requested parallel execution but feature not enabled/supported */
+    PARALLEL_EXECUTION_NOT_SUPPORTED = "PARALLEL_EXECUTION_NOT_SUPPORTED",
+    /** Convergence attempted before all dependencies completed */
+    CONVERGENCE_DEPENDENCIES_NOT_MET = "CONVERGENCE_DEPENDENCIES_NOT_MET",
+    /** Requested parallelism exceeds maximum allowed (10) */
+    MAX_PARALLELISM_EXCEEDED = "MAX_PARALLELISM_EXCEEDED",
+    /** Referenced parallel session not found in group */
+    PARALLEL_SESSION_NOT_FOUND = "PARALLEL_SESSION_NOT_FOUND"
 }
 /**
  * Layer where the error occurred
@@ -105,4 +116,22 @@ export declare function createErrorResponse(error: unknown, layer?: ErrorLayer):
  * Type guard to check if a response is an error
  */
 export declare function isErrorResponse(response: unknown): response is ErrorResponse;
+/**
+ * Parallel execution-related error
+ * Used for errors during parallel technique execution or convergence
+ * @example
+ * ```typescript
+ * throw new ParallelExecutionError(
+ *   ErrorCode.CONVERGENCE_DEPENDENCIES_NOT_MET,
+ *   'Cannot converge: 2 of 3 parallel plans still running',
+ *   ['plan1', 'plan2'],
+ *   [{ technique: 'six_hats', insights: ['partial'] }]
+ * );
+ * ```
+ */
+export declare class ParallelExecutionError extends CreativeThinkingError {
+    readonly failedPlans?: string[] | undefined;
+    readonly partialResults?: unknown[] | undefined;
+    constructor(code: ErrorCode.PARALLEL_EXECUTION_NOT_SUPPORTED | ErrorCode.MAX_PARALLELISM_EXCEEDED | ErrorCode.CONVERGENCE_DEPENDENCIES_NOT_MET | ErrorCode.PARALLEL_SESSION_NOT_FOUND, message: string, failedPlans?: string[] | undefined, partialResults?: unknown[] | undefined, details?: unknown);
+}
 //# sourceMappingURL=types.d.ts.map

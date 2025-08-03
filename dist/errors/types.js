@@ -39,6 +39,17 @@ export var ErrorCode;
     // Resource errors
     ErrorCode["RESOURCE_LIMIT_EXCEEDED"] = "RESOURCE_LIMIT_EXCEEDED";
     ErrorCode["TIMEOUT_ERROR"] = "TIMEOUT_ERROR";
+    /**
+     * Parallel execution errors
+     */
+    /** Requested parallel execution but feature not enabled/supported */
+    ErrorCode["PARALLEL_EXECUTION_NOT_SUPPORTED"] = "PARALLEL_EXECUTION_NOT_SUPPORTED";
+    /** Convergence attempted before all dependencies completed */
+    ErrorCode["CONVERGENCE_DEPENDENCIES_NOT_MET"] = "CONVERGENCE_DEPENDENCIES_NOT_MET";
+    /** Requested parallelism exceeds maximum allowed (10) */
+    ErrorCode["MAX_PARALLELISM_EXCEEDED"] = "MAX_PARALLELISM_EXCEEDED";
+    /** Referenced parallel session not found in group */
+    ErrorCode["PARALLEL_SESSION_NOT_FOUND"] = "PARALLEL_SESSION_NOT_FOUND";
 })(ErrorCode || (ErrorCode = {}));
 /**
  * Custom error class for Creative Thinking errors
@@ -168,5 +179,28 @@ export function isErrorResponse(response) {
         'isError' in response &&
         response.isError === true &&
         'error' in response);
+}
+/**
+ * Parallel execution-related error
+ * Used for errors during parallel technique execution or convergence
+ * @example
+ * ```typescript
+ * throw new ParallelExecutionError(
+ *   ErrorCode.CONVERGENCE_DEPENDENCIES_NOT_MET,
+ *   'Cannot converge: 2 of 3 parallel plans still running',
+ *   ['plan1', 'plan2'],
+ *   [{ technique: 'six_hats', insights: ['partial'] }]
+ * );
+ * ```
+ */
+export class ParallelExecutionError extends CreativeThinkingError {
+    failedPlans;
+    partialResults;
+    constructor(code, message, failedPlans, partialResults, details) {
+        super(code, message, 'execution', details);
+        this.failedPlans = failedPlans;
+        this.partialResults = partialResults;
+        this.name = 'ParallelExecutionError';
+    }
 }
 //# sourceMappingURL=types.js.map
