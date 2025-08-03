@@ -4,7 +4,7 @@
  * Tests system performance under various load conditions
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
 import { LateralThinkingServer } from '../../index.js';
 import type { ExecuteThinkingStepInput, SixHatsColor } from '../../index.js';
 import { safeJsonParse } from '../helpers/types.js';
@@ -44,8 +44,10 @@ describe('Performance Integration Tests', () => {
   }
 
   beforeEach(async () => {
-    // Start memory tracking
-    memTracker.start();
+    // Start memory tracking only if not skipping
+    if (!process.env.SKIP_MEMORY_TRACKING) {
+      memTracker.start();
+    }
 
     server = new LateralThinkingServer();
     // Force garbage collection if available (run tests with --expose-gc flag)
@@ -53,24 +55,33 @@ describe('Performance Integration Tests', () => {
       global.gc();
     }
 
-    // Wait for memory to stabilize
-    await waitForMemoryStabilization(500);
+    // Only stabilize memory for memory-specific tests
+    if (process.env.MEMORY_TEST_MODE) {
+      await waitForMemoryStabilization(500);
+    }
   });
 
   afterEach(async () => {
-    // Clean up all sessions to prevent leakage
-    cleanupSessions(server);
+    // Only do cleanup if not in performance benchmark mode
+    if (!process.env.SKIP_CLEANUP) {
+      // Clean up all sessions to prevent leakage
+      cleanupSessions(server);
 
-    // Log memory delta for debugging
-    memTracker.logDelta('Test cleanup');
+      // Log memory delta for debugging
+      if (!process.env.SKIP_MEMORY_TRACKING) {
+        memTracker.logDelta('Test cleanup');
+      }
 
-    // Force final GC
-    if (typeof global !== 'undefined' && global.gc) {
-      global.gc();
+      // Force final GC
+      if (typeof global !== 'undefined' && global.gc) {
+        global.gc();
+      }
     }
 
-    // Wait for cleanup to complete
-    await waitForMemoryStabilization(500);
+    // Only stabilize for memory-specific tests
+    if (process.env.MEMORY_TEST_MODE) {
+      await waitForMemoryStabilization(500);
+    }
   });
 
   describe('Concurrent Operations', () => {
@@ -369,6 +380,16 @@ describe('Performance Integration Tests', () => {
   });
 
   describe('Memory Usage', () => {
+    beforeAll(() => {
+      // Enable memory test mode for this suite
+      process.env.MEMORY_TEST_MODE = 'true';
+    });
+
+    afterAll(() => {
+      // Disable memory test mode
+      delete process.env.MEMORY_TEST_MODE;
+    });
+
     it('should handle memory efficiently with many sessions', async () => {
       const sessionIds: string[] = [];
 

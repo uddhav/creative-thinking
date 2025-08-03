@@ -91,24 +91,40 @@ export function getMemoryThresholds(): {
  * Cleans up all sessions in the server
  */
 export function cleanupSessions(server: LateralThinkingServer): void {
-  // Access the sessions map and clear it
+  // Quick check if cleanup is needed
   const sessions = server.sessions;
-  const sessionIds = Object.keys(sessions);
+  if (!sessions || Object.keys(sessions).length === 0) {
+    return;
+  }
 
+  // Try bulk cleanup first if available
+  const sessionManager = (server as any).sessionManager;
+  if (sessionManager && typeof sessionManager.clearAllSessions === 'function') {
+    try {
+      sessionManager.clearAllSessions();
+      return;
+    } catch {
+      // Fall through to individual cleanup
+    }
+  }
+
+  // Individual cleanup as fallback
+  const sessionIds = Object.keys(sessions);
   sessionIds.forEach(id => {
     try {
-      // Use the session manager's delete method if available
-      const sessionManager = (server as any).sessionManager;
       if (sessionManager && typeof sessionManager.deleteSession === 'function') {
         sessionManager.deleteSession(id);
       }
     } catch (error) {
-      console.error(`[Performance] Failed to clean up session ${id}:`, error);
+      // Silently continue - don't log in performance tests
+      if (!process.env.SKIP_CLEANUP_LOGS) {
+        console.error(`[Performance] Failed to clean up session ${id}:`, error);
+      }
     }
   });
 
-  // Force garbage collection if available
-  if (typeof global !== 'undefined' && global.gc) {
+  // Force garbage collection if available and not skipped
+  if (!process.env.SKIP_GC && typeof global !== 'undefined' && global.gc) {
     global.gc();
   }
 }

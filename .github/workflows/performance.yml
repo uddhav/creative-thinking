@@ -52,6 +52,11 @@ jobs:
         continue-on-error: true
         env:
           NODE_OPTIONS: --expose-gc
+          # Skip test infrastructure overhead for accurate benchmarks
+          SKIP_MEMORY_TRACKING: true  # Disables memory tracking overhead
+          SKIP_CLEANUP: true          # Disables session cleanup between tests
+          SKIP_GC: true              # Disables forced garbage collection
+          SKIP_CLEANUP_LOGS: true    # Disables cleanup error logging
 
       - name: Extract benchmark results
         id: benchmark

@@ -56,9 +56,23 @@ npm run test:performance
 # Run with custom timeout multiplier
 PERF_TIMEOUT_MULTIPLIER=2 npm run test:performance
 
+# Run with minimal overhead (for accurate benchmarking)
+SKIP_MEMORY_TRACKING=true SKIP_CLEANUP=true npm run test:performance
+
+# Run memory-specific tests with full tracking
+MEMORY_TEST_MODE=true npm run test:performance
+
 # Run with GC exposed for memory metrics
 node --expose-gc ./node_modules/.bin/vitest run src/__tests__/integration/performance.test.ts
 ```
+
+### Environment Variables for Performance Testing
+
+- `PERF_TIMEOUT_MULTIPLIER`: Adjusts timeouts (default: 1, CI: 2)
+- `SKIP_MEMORY_TRACKING`: Disables memory tracking overhead
+- `SKIP_CLEANUP`: Disables session cleanup between tests
+- `SKIP_GC`: Disables forced garbage collection
+- `MEMORY_TEST_MODE`: Enables memory stabilization waits for memory tests
 
 ## Baseline Management
 
