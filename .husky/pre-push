@@ -1,0 +1,49 @@
+#!/bin/sh
+
+# Check for uncommitted changes in dist/
+if git status --porcelain | grep -q "dist/"; then
+  echo "❌ Error: Uncommitted changes detected in dist/ directory"
+  echo ""
+  echo "Please commit or discard these changes before pushing:"
+  git status --short | grep "dist/"
+  echo ""
+  echo "To fix this:"
+  echo "1. Run 'npm run build' to ensure dist is up-to-date"
+  echo "2. Commit any changes: git add dist/ && git commit -m 'chore: update dist files'"
+  echo ""
+  exit 1
+fi
+
+# Check if dist/ is out of sync with src/
+echo "Checking if dist/ is up-to-date with src/..."
+
+# Get the latest commit that modified src/
+LAST_SRC_COMMIT=$(git log -1 --format="%H" -- src/)
+
+# Get the latest commit that modified dist/
+LAST_DIST_COMMIT=$(git log -1 --format="%H" -- dist/)
+
+# If src was modified more recently than dist, warn
+if [ "$LAST_SRC_COMMIT" != "$LAST_DIST_COMMIT" ]; then
+  # Check if there are any src changes since the last dist update
+  SRC_CHANGES=$(git diff --name-only "$LAST_DIST_COMMIT" "$LAST_SRC_COMMIT" -- src/)
+  
+  if [ -n "$SRC_CHANGES" ]; then
+    echo "⚠️  Warning: src/ has been modified more recently than dist/"
+    echo ""
+    echo "Last src/ commit:  $LAST_SRC_COMMIT"
+    echo "Last dist/ commit: $LAST_DIST_COMMIT"
+    echo ""
+    echo "Please run 'npm run build' to ensure dist is up-to-date"
+    echo "Do you want to continue pushing anyway? (y/N)"
+    
+    # Read user input
+    read -r response
+    if [ "$response" != "y" ] && [ "$response" != "Y" ]; then
+      echo "Push cancelled"
+      exit 1
+    fi
+  fi
+fi
+
+echo "✅ Pre-push checks passed"

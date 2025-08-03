@@ -413,10 +413,19 @@ Run tasks with subagents in order to preserve main agent context.
 
 ## Pre-Commit Checklist (MANDATORY)
 
-1. **Run build**: `npm run build` to ensure TypeScript compiles
+1. **Run build**: `npm run build` to ensure TypeScript compiles and dist is updated
 2. **Run tests**: `npm run test:run` for affected areas
 3. **Run lint LAST**: `npm run lint` (fix with `npm run lint -- --fix`)
 4. **NEVER commit if ANY of the above fail**
+5. **Commit dist files**: Always commit updated dist files with src changes
+
+## Dist File Management
+
+- The `dist/` directory is NOT gitignored to support GitHub distribution via npx
+- Always run `npm run build` after modifying src files
+- Commit dist changes together with src changes
+- Pre-push hook will prevent pushing with uncommitted dist files
+- Pre-push hook warns if src is newer than dist
 
 ## PR Review Process
 

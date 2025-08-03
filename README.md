@@ -1103,16 +1103,37 @@ Development:
 npm run dev     # TypeScript watch mode
 npm run lint    # ESLint checks
 npm run test    # Run tests
+```
+
+## Development Guidelines
+
+### Dist File Management
+
+This project includes compiled `dist/` files in the repository to support GitHub distribution via
+`npx`. When making changes:
+
+1. **Always rebuild after modifying src files**: Run `npm run build` before committing
+2. **Commit dist changes with src changes**: Keep src and dist in sync
+3. **Pre-push hook**: A git hook will prevent pushing with uncommitted dist changes
+4. **Version script**: The `npm version` command automatically rebuilds and stages dist files
+
+The pre-push hook will:
+
+- ❌ Block pushes with uncommitted dist changes
+- ⚠️ Warn if src was modified more recently than dist
+- ✅ Pass when everything is in sync
 
 ## Best Practices
 
 ### Getting Started
+
 1. Use `discover_techniques` to find the best approach for your problem
 2. Create comprehensive workflows with `plan_thinking_session`
 3. Follow the structured guidance through `execute_thinking_step`
 4. Combine multiple techniques for complex challenges
 
 ### Technique-Specific Tips
+
 - **Six Hats** - Begin with the Blue Hat to establish process and objectives
 - **PO** - The more provocative the statement, the better the creative breakthrough
 - **Random Entry** - Use genuinely random stimuli for unexpected connections
@@ -1122,5 +1143,10 @@ npm run test    # Run tests
 
 ## License
 
-This MCP server is licensed under the GPL-3.0 License. This means you are free to use, modify, and distribute the software, subject to the terms and conditions of the GPL-3.0 License. For more details, please see the LICENSE file in the project repository.
+This MCP server is licensed under the GPL-3.0 License. This means you are free to use, modify, and
+distribute the software, subject to the terms and conditions of the GPL-3.0 License. For more
+details, please see the LICENSE file in the project repository.
+
+```
+
 ```
