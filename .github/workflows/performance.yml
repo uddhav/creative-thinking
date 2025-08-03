@@ -1,5 +1,9 @@
 name: Performance Benchmarks
 
+# This workflow runs performance benchmarks and tracks regressions
+# It stores baseline data in GitHub Actions cache and comments results on PRs
+# To set up gh-pages for historical data, run setup-gh-pages.yml manually
+
 on:
   pull_request:
     branches: [main]
@@ -43,9 +47,11 @@ jobs:
         run: |
           # Set performance timeout multiplier for CI
           export PERF_TIMEOUT_MULTIPLIER=2
-          # Run with Node.js garbage collection exposed for memory metrics
-          node --expose-gc ./node_modules/.bin/vitest run src/__tests__/integration/performance.test.ts --reporter=json --outputFile=performance-results.json
+          # Run performance tests with npm script for consistency
+          npm run test:performance -- --reporter=json --outputFile=performance-results.json
         continue-on-error: true
+        env:
+          NODE_OPTIONS: --expose-gc
 
       - name: Extract benchmark results
         id: benchmark

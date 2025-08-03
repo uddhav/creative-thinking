@@ -7,13 +7,16 @@
  */
 
 const fs = require('fs');
+const { benchmarkPatterns } = require('./benchmark-patterns.cjs');
 
 // Read test results
 const resultsPath = process.argv[2] || 'performance-results.json';
 const outputPath = process.argv[3] || 'benchmark-results.json';
 
 if (!fs.existsSync(resultsPath)) {
-  console.error(`Results file not found: ${resultsPath}`);
+  console.error(`[extract-benchmarks] ERROR: Results file not found: ${resultsPath}`);
+  console.error(`[extract-benchmarks] Current directory: ${process.cwd()}`);
+  console.error(`[extract-benchmarks] Directory contents: ${fs.readdirSync('.').join(', ')}`);
   process.exit(1);
 }
 
@@ -22,49 +25,32 @@ const benchmarks = [];
 
 // Helper to extract metrics from test names and durations
 function extractBenchmarks(testResults) {
-  if (!testResults || !testResults.testResults) return;
+  if (!testResults || !testResults.testResults) {
+    console.error('[extract-benchmarks] WARNING: No test results found in input');
+    return;
+  }
 
   testResults.testResults.forEach(suite => {
-    if (!suite.assertionResults) return;
+    if (!suite.assertionResults) {
+      console.error('[extract-benchmarks] WARNING: No assertion results in test suite');
+      return;
+    }
 
     suite.assertionResults.forEach(test => {
-      if (test.status !== 'passed') return;
+      if (test.status !== 'passed') {
+        console.error(`[extract-benchmarks] Skipping failed test: ${test.title}`);
+        return;
+      }
 
-      // Extract metrics based on test patterns
-      const patterns = [
-        {
-          regex: /should handle (\d+) concurrent discovery requests/,
-          name: 'Concurrent Discovery Requests',
-          extract: match => ({ count: parseInt(match[1]) }),
-        },
-        {
-          regex: /should handle (\d+) concurrent planning sessions/,
-          name: 'Concurrent Planning Sessions',
-          extract: match => ({ count: parseInt(match[1]) }),
-        },
-        {
-          regex: /should handle (\d+) concurrent step executions/,
-          name: 'Concurrent Step Executions',
-          extract: match => ({ count: parseInt(match[1]) }),
-        },
-        {
-          regex: /should handle session with (\d+) steps efficiently/,
-          name: 'Large Session Steps',
-          extract: match => ({ count: parseInt(match[1]) }),
-        },
-        {
-          regex: /should handle (\d+) concurrent sessions without degradation/,
-          name: 'Concurrent Sessions',
-          extract: match => ({ count: parseInt(match[1]) }),
-        },
-      ];
-
-      for (const pattern of patterns) {
+      // Use shared patterns
+      for (const pattern of benchmarkPatterns) {
         const match = test.title.match(pattern.regex);
         if (match) {
           const data = pattern.extract(match);
+          const label = data.count ? `${pattern.name} (${data.count})` : pattern.name;
+          
           benchmarks.push({
-            name: `${pattern.name} (${data.count})`,
+            name: label,
             unit: 'ms',
             value: test.duration || 0,
             extra: {
