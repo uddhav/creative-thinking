@@ -42,7 +42,7 @@ export interface DiscoverTechniquesInput {
   constraints?: string[];
   currentFlexibility?: number;
   sessionId?: string;
-  executionMode?: ExecutionMode;
+  executionMode?: ExecutionMode; // Optional here - can be inferred from problem
   maxParallelism?: number; // Maximum number of parallel branches (default: 3)
 }
 
@@ -279,8 +279,10 @@ export interface PlanThinkingSessionOutput {
     suggestion?: string;
   };
 
-  // New fields for parallel execution
+  // Required field to force awareness of execution modes
   executionMode: ExecutionMode;
+
+  // Additional fields populated when executionMode is 'parallel'
   parallelPlans?: ParallelPlan[];
   coordinationStrategy?: CoordinationStrategy;
   convergenceOptions?: ConvergenceOptions;

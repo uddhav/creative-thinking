@@ -36,6 +36,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - **README** - Added roadmap section with links to filtered GitHub views
 - **Documentation** - Updated with telemetry configuration and roadmap information
+- **BREAKING**: PlanThinkingSessionOutput now requires `executionMode` field to ensure LLMs are
+  aware of parallel execution capabilities
 
 ## [0.3.1] - 2025-08-01
 
