@@ -247,9 +247,10 @@ export class TelemetryCollector {
         ];
         const allowedFields = this.config.level === 'basic' ? basicFields : detailedFields;
         for (const field of allowedFields) {
-            const key = field;
-            if (metadata[key] !== undefined) {
-                filtered[key] = metadata[key];
+            if (metadata[field] !== undefined) {
+                // Use a type assertion that satisfies ESLint
+                const target = filtered;
+                target[field] = metadata[field];
             }
         }
         return filtered;

@@ -164,8 +164,6 @@ export class PrivacyManager {
         const maxSize = 1000;
         const targetSize = 500;
         if (this.sessionHashMap.size > maxSize) {
-            // Create array with timestamps for LRU ordering
-            const entriesWithTime = [];
             // Since we don't track access time, use insertion order (Map maintains it)
             // Convert to array to sort by least recently used
             const entries = Array.from(this.sessionHashMap.entries());
