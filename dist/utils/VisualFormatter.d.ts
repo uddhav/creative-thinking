@@ -7,6 +7,7 @@ import type { LateralTechnique, ThinkingOperationData } from '../types/index.js'
 export declare class VisualFormatter {
     private readonly maxLineLength;
     private readonly disableThoughtLogging;
+    private readonly showTechniqueIndicators;
     constructor(disableThoughtLogging?: boolean);
     /**
      * Format the main output display
@@ -51,6 +52,18 @@ export declare class VisualFormatter {
      * Get technique name
      */
     private getTechniqueName;
+    /**
+     * Get technique-specific state indicator
+     */
+    private getTechniqueStateIndicator;
+    /**
+     * Get risk level indicator
+     */
+    private getRiskLevelIndicator;
+    /**
+     * Get flexibility score indicator
+     */
+    private getFlexibilityIndicator;
     /**
      * Format session summary
      */

@@ -6,8 +6,11 @@ import chalk from 'chalk';
 export class VisualFormatter {
     maxLineLength = 80;
     disableThoughtLogging;
+    showTechniqueIndicators;
     constructor(disableThoughtLogging = false) {
         this.disableThoughtLogging = disableThoughtLogging;
+        // Enable visual indicators via environment variable
+        this.showTechniqueIndicators = process.env.SHOW_TECHNIQUE_INDICATORS === 'true';
     }
     /**
      * Format the main output display
@@ -35,6 +38,23 @@ export class VisualFormatter {
             modeIndicator.color(title) +
             ' '.repeat(paddingRight) +
             chalk.blue('│'));
+        // Add technique state indicator if enabled
+        const stateIndicator = this.getTechniqueStateIndicator(technique, currentStep, input);
+        const riskIndicator = this.getRiskLevelIndicator(input.risks);
+        const flexibilityIndicator = this.getFlexibilityIndicator(input);
+        if (stateIndicator || riskIndicator || flexibilityIndicator) {
+            const indicators = [stateIndicator, riskIndicator, flexibilityIndicator]
+                .filter(Boolean)
+                .join(' ');
+            const indicatorPadding = Math.max(0, borderLength - indicators.length - 2);
+            const indicatorPaddingLeft = Math.floor(indicatorPadding / 2);
+            const indicatorPaddingRight = indicatorPadding - indicatorPaddingLeft;
+            lines.push(chalk.blue('│') +
+                ' '.repeat(indicatorPaddingLeft) +
+                chalk.gray(indicators) +
+                ' '.repeat(indicatorPaddingRight) +
+                chalk.blue('│'));
+        }
         // Problem
         lines.push(chalk.blue('├' + '─'.repeat(borderLength - 2) + '┤'));
         this.addWrappedLine(lines, `Problem: ${problem}`, chalk.white, borderLength);
@@ -202,6 +222,129 @@ export class VisualFormatter {
             nine_windows: 'Nine Windows',
         };
         return names[technique] || technique;
+    }
+    /**
+     * Get technique-specific state indicator
+     */
+    getTechniqueStateIndicator(technique, currentStep, input) {
+        if (!this.showTechniqueIndicators) {
+            return '';
+        }
+        let indicator = '';
+        switch (technique) {
+            case 'six_hats':
+                // Show current hat color
+                const hatColors = ['🔵', '⚪', '🔴', '🟡', '⚫', '🟢', '🟣'];
+                const hatNames = ['Blue', 'White', 'Red', 'Yellow', 'Black', 'Green', 'Purple'];
+                if (currentStep >= 1 && currentStep <= 7) {
+                    indicator = `[${hatColors[currentStep - 1]} ${hatNames[currentStep - 1]} Hat]`;
+                }
+                break;
+            case 'scamper':
+                // Show current SCAMPER action
+                if (input.scamperAction) {
+                    const actionEmojis = {
+                        substitute: '🔄',
+                        combine: '🔗',
+                        adapt: '🔧',
+                        modify: '✏️',
+                        put_to_other_use: '🎯',
+                        eliminate: '❌',
+                        reverse: '↩️',
+                        parameterize: '📊',
+                    };
+                    const emoji = actionEmojis[input.scamperAction] || '❓';
+                    indicator = `[${emoji} ${input.scamperAction.toUpperCase()}]`;
+                }
+                break;
+            case 'design_thinking':
+                // Show current design thinking stage
+                if (input.designStage) {
+                    const stageEmojis = {
+                        empathize: '💚',
+                        define: '🎯',
+                        ideate: '💡',
+                        prototype: '🔨',
+                        test: '🧪',
+                    };
+                    const emoji = stageEmojis[input.designStage] || '❓';
+                    indicator = `[${emoji} ${input.designStage.charAt(0).toUpperCase() + input.designStage.slice(1)}]`;
+                }
+                break;
+            case 'disney_method':
+                // Show current Disney role
+                if (input.disneyRole) {
+                    const roleEmojis = {
+                        dreamer: '🌟',
+                        realist: '🔨',
+                        critic: '🔍',
+                    };
+                    const emoji = roleEmojis[input.disneyRole] || '❓';
+                    indicator = `[${emoji} ${input.disneyRole.charAt(0).toUpperCase() + input.disneyRole.slice(1)}]`;
+                }
+                break;
+            case 'neural_state':
+                // Show dominant network
+                if (input.dominantNetwork) {
+                    const networkEmojis = {
+                        dmn: '🧘',
+                        ecn: '⚡',
+                    };
+                    const emoji = networkEmojis[input.dominantNetwork] || '🧠';
+                    indicator = `[${emoji} ${input.dominantNetwork.toUpperCase()}]`;
+                }
+                break;
+            case 'nine_windows':
+                // Show current window position
+                if (input.currentCell) {
+                    const timeEmojis = { past: '⏮️', present: '▶️', future: '⏭️' };
+                    const systemEmojis = { 'sub-system': '🔧', system: '⚙️', 'super-system': '🌍' };
+                    const timeEmoji = timeEmojis[input.currentCell.timeFrame] || '❓';
+                    const systemEmoji = systemEmojis[input.currentCell.systemLevel] || '❓';
+                    indicator = `[${timeEmoji}${systemEmoji}]`;
+                }
+                break;
+        }
+        return indicator;
+    }
+    /**
+     * Get risk level indicator
+     */
+    getRiskLevelIndicator(risks) {
+        if (!this.showTechniqueIndicators || !risks) {
+            return '';
+        }
+        const riskCount = risks.length;
+        if (riskCount === 0) {
+            return '[🟢 Low Risk]';
+        }
+        else if (riskCount <= 2) {
+            return '[🟡 Medium Risk]';
+        }
+        else if (riskCount <= 4) {
+            return '[🔴 High Risk]';
+        }
+        else {
+            return '[⚫ Ruin Risk]';
+        }
+    }
+    /**
+     * Get flexibility score indicator
+     */
+    getFlexibilityIndicator(input) {
+        const flexibility = input.flexibilityScore;
+        if (!this.showTechniqueIndicators || flexibility === undefined || flexibility > 0.4) {
+            return '';
+        }
+        if (flexibility < 0.2) {
+            return `[⛔ Flexibility: ${(flexibility * 100).toFixed(0)}%]`;
+        }
+        else if (flexibility < 0.3) {
+            return `[⚠️  Flexibility: ${(flexibility * 100).toFixed(0)}%]`;
+        }
+        else {
+            return `[🔶 Flexibility: ${(flexibility * 100).toFixed(0)}%]`;
+        }
     }
     /**
      * Format session summary

@@ -206,6 +206,29 @@ and synergy with existing choices, ensuring practical and effective recommendati
 The Creative Thinking Server includes several advanced features that enhance the quality and safety
 of your creative process:
 
+### 📍 Visual Indicators (NEW)
+
+Optional technique-specific state indicators provide real-time context on stderr output:
+
+**Key Features:**
+
+- **Technique State**: Shows current mode (e.g., `[🔴 Red Hat]`, `[❌ ELIMINATE]`)
+- **Risk Level**: Visual risk assessment (`[🟢 Low Risk]` to `[⚫ Ruin Risk]`)
+- **Flexibility Score**: Path flexibility warnings (`[⚠️ Flexibility: 25%]`)
+- **Environment Control**: Enable with `SHOW_TECHNIQUE_INDICATORS=true`
+- **Clean Output**: Disabled by default to maintain minimal interface
+
+**Example Display:**
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                    ✨ 🔧 SCAMPER - Step 6/8                                 │
+│                  [❌ ELIMINATE] [🔴 High Risk] [⚠️ Flexibility: 25%]        │
+├──────────────────────────────────────────────────────────────────────────────┤
+```
+
+See [Visual Indicators Documentation](docs/VISUAL_INDICATORS.md) for full details.
+
 ### 📊 Reality Gradient System
 
 The Reality Gradient System enhances creative thinking by annotating ideas with their possibility
