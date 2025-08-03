@@ -1,0 +1,112 @@
+{
+  "numTotalTestSuites": 7,
+  "numPassedTestSuites": 7,
+  "numFailedTestSuites": 0,
+  "numPendingTestSuites": 0,
+  "numTotalTests": 8,
+  "numPassedTests": 8,
+  "numFailedTests": 0,
+  "numPendingTests": 0,
+  "numTodoTests": 0,
+  "snapshot": {
+    "added": 0,
+    "failure": false,
+    "filesAdded": 0,
+    "filesRemoved": 0,
+    "filesRemovedList": [],
+    "filesUnmatched": 0,
+    "filesUpdated": 0,
+    "matched": 0,
+    "total": 0,
+    "unchecked": 0,
+    "uncheckedKeysByFile": [],
+    "unmatched": 0,
+    "updated": 0,
+    "didUpdate": false
+  },
+  "startTime": 1754242893143,
+  "success": true,
+  "testResults": [
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": ["Performance Integration Tests", "Concurrent Operations"],
+          "fullName": "Performance Integration Tests Concurrent Operations should handle 50 concurrent discovery requests",
+          "status": "passed",
+          "title": "should handle 50 concurrent discovery requests",
+          "duration": 65.03883300000007,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["Performance Integration Tests", "Concurrent Operations"],
+          "fullName": "Performance Integration Tests Concurrent Operations should handle 100 concurrent planning requests",
+          "status": "passed",
+          "title": "should handle 100 concurrent planning requests",
+          "duration": 8.617791000000011,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["Performance Integration Tests", "Concurrent Operations"],
+          "fullName": "Performance Integration Tests Concurrent Operations should handle 100 concurrent step executions",
+          "status": "passed",
+          "title": "should handle 100 concurrent step executions",
+          "duration": 81.94058299999995,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["Performance Integration Tests", "Large Session Handling"],
+          "fullName": "Performance Integration Tests Large Session Handling should handle session with 100 steps efficiently",
+          "status": "passed",
+          "title": "should handle session with 100 steps efficiently",
+          "duration": 102.73641699999996,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["Performance Integration Tests", "Large Session Handling"],
+          "fullName": "Performance Integration Tests Large Session Handling should handle deep revision chains efficiently",
+          "status": "passed",
+          "title": "should handle deep revision chains efficiently",
+          "duration": 49.51095800000007,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["Performance Integration Tests", "Memory Usage"],
+          "fullName": "Performance Integration Tests Memory Usage should handle memory efficiently with many sessions",
+          "status": "passed",
+          "title": "should handle memory efficiently with many sessions",
+          "duration": 634.45675,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["Performance Integration Tests", "Response Time Consistency"],
+          "fullName": "Performance Integration Tests Response Time Consistency should maintain consistent response times under load",
+          "status": "passed",
+          "title": "should maintain consistent response times under load",
+          "duration": 11.795041999999967,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["Performance Integration Tests", "Complex Workflow Performance"],
+          "fullName": "Performance Integration Tests Complex Workflow Performance should handle multi-technique workflow efficiently",
+          "status": "passed",
+          "title": "should handle multi-technique workflow efficiently",
+          "duration": 21.832000000000107,
+          "failureMessages": [],
+          "meta": {}
+        }
+      ],
+      "startTime": 1754242893816,
+      "endTime": 1754242894792.832,
+      "status": "passed",
+      "message": "",
+      "name": "/Users/uddhav/Workspace/creative-thinking/src/__tests__/integration/performance.test.ts"
+    }
+  ]
+}
