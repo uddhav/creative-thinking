@@ -47,7 +47,26 @@ Tests the core architectural flow:
 **Note**: These tests validate the complete three-layer architecture using direct server method
 calls for clarity and maintainability.
 
-### 4. Persistence Tests (`persistence.test.ts`)
+### 4. Error Recovery Tests (`error-recovery.test.ts`)
+
+Comprehensive error handling and recovery scenarios:
+
+- **Invalid Input Handling**: Missing fields, invalid techniques, bad step numbers
+- **Session Error Handling**: Non-existent sessions, automatic session creation
+- **Technique Mismatch**: Wrong technique for plan
+- **Concurrent Errors**: Multiple simultaneous failures
+- **State Consistency**: Session integrity through errors
+- **Memory Limits**: Graceful degradation under memory pressure
+- **Persistence Failures**: Fallback to memory-only operation
+
+Key recovery patterns tested:
+
+- Automatic session creation for recovery
+- Graceful degradation with error context
+- State preservation during failures
+- Clear workflow guidance in errors
+
+### 5. Persistence Tests (`persistence.test.ts`)
 
 Tests session persistence functionality:
 
@@ -58,7 +77,7 @@ Tests session persistence functionality:
 - **Search/Filter**: Finding sessions by tags and metadata
 - **Concurrent Sessions**: Multi-session handling
 
-### 5. Performance Tests (`performance.test.ts`)
+### 6. Performance Tests (`performance.test.ts`)
 
 Tests system performance under load:
 
