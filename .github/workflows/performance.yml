@@ -75,8 +75,14 @@ jobs:
           auto-push: false # Don't auto-push for now
           comment-on-alert: true
           comment-always: true # Always comment results
-          alert-threshold: '110%' # Alert if performance degrades by more than 10%
-          fail-on-alert: false # Don't fail on first run
+          # Alert threshold: 110% means performance can degrade by up to 10% before alerting
+          # This accounts for:
+          # - Normal variance in CI environments (±5%)
+          # - Measurement noise and timing variations (±3%)
+          # - Minor code changes that don't represent real regressions (±2%)
+          alert-threshold: '110%'
+          fail-on-alert: false # Don't fail on first run, allows baseline establishment
+          # Cache stores historical data for trend analysis
           external-data-json-path: ./cache/benchmark-data.json
 
       - name: Upload performance results

@@ -4,20 +4,34 @@
  * Tests system performance under various load conditions
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { LateralThinkingServer } from '../../index.js';
 import type { ExecuteThinkingStepInput, SixHatsColor } from '../../index.js';
 import { safeJsonParse } from '../helpers/types.js';
+import {
+  detectEnvironment,
+  getTimeoutMultiplier,
+  cleanupSessions,
+  MemoryTracker,
+  waitForMemoryStabilization,
+} from '../helpers/performance.js';
 
 describe('Performance Integration Tests', () => {
   let server: LateralThinkingServer;
+  const env = detectEnvironment();
+  const memTracker = new MemoryTracker();
 
   // Configurable timeouts based on environment
-  const PERF_TIMEOUT_MULTIPLIER = parseFloat(process.env.PERF_TIMEOUT_MULTIPLIER || '1');
+  const PERF_TIMEOUT_MULTIPLIER = getTimeoutMultiplier();
   const TIMEOUT_50_CONCURRENT = 3000 * PERF_TIMEOUT_MULTIPLIER;
   const TIMEOUT_100_CONCURRENT = 5000 * PERF_TIMEOUT_MULTIPLIER;
   const TIMEOUT_100_STEPS = 10000 * PERF_TIMEOUT_MULTIPLIER;
   const TIMEOUT_50_REVISIONS = 5000 * PERF_TIMEOUT_MULTIPLIER;
+
+  // Log environment info once
+  console.error(
+    `[Performance] Running in ${env.environmentName} environment with ${PERF_TIMEOUT_MULTIPLIER}x timeout multiplier`
+  );
 
   // Helper to get memory usage in MB
   function getMemoryUsageMB(): { heapUsed: number; external: number; rss: number } {
@@ -29,12 +43,34 @@ describe('Performance Integration Tests', () => {
     };
   }
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    // Start memory tracking
+    memTracker.start();
+
     server = new LateralThinkingServer();
     // Force garbage collection if available (run tests with --expose-gc flag)
     if (typeof global !== 'undefined' && global.gc) {
       global.gc();
     }
+
+    // Wait for memory to stabilize
+    await waitForMemoryStabilization(500);
+  });
+
+  afterEach(async () => {
+    // Clean up all sessions to prevent leakage
+    cleanupSessions(server);
+
+    // Log memory delta for debugging
+    memTracker.logDelta('Test cleanup');
+
+    // Force final GC
+    if (typeof global !== 'undefined' && global.gc) {
+      global.gc();
+    }
+
+    // Wait for cleanup to complete
+    await waitForMemoryStabilization(500);
   });
 
   describe('Concurrent Operations', () => {
@@ -68,9 +104,9 @@ describe('Performance Integration Tests', () => {
 
       // Memory usage check
       const memoryIncrease = memoryAfter.heapUsed - memoryBefore.heapUsed;
-      console.log(`50 concurrent discoveries completed in ${duration}ms`);
+      console.log(`[${env.environmentName}] 50 concurrent discoveries completed in ${duration}ms`);
       console.log(
-        `Memory usage - Before: ${memoryBefore.heapUsed}MB, After: ${memoryAfter.heapUsed}MB, Increase: ${memoryIncrease}MB`
+        `[${env.environmentName}] Memory usage - Before: ${memoryBefore.heapUsed}MB, After: ${memoryAfter.heapUsed}MB, Increase: ${memoryIncrease}MB`
       );
 
       // Ensure memory usage doesn't grow excessively (less than 50MB for 50 requests)
