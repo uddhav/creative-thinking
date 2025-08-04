@@ -34,9 +34,10 @@ export class MemoryAnalyzer {
   private solutionPatternIdentifier: SolutionPatternIdentifier;
 
   constructor() {
-    this.insightRegistry = new InsightStrategyRegistry();
-    this.problemCategorizer = new ProblemCategorizationEngine();
-    this.solutionPatternIdentifier = new SolutionPatternIdentifier();
+    // Use singleton instances to avoid repeated instantiation
+    this.insightRegistry = InsightStrategyRegistry.getInstance();
+    this.problemCategorizer = ProblemCategorizationEngine.getInstance();
+    this.solutionPatternIdentifier = SolutionPatternIdentifier.getInstance();
   }
 
   /**

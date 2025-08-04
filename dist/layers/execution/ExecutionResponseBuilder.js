@@ -142,8 +142,12 @@ export class ExecutionResponseBuilder {
      * Enhance response with memory outputs and technique progress
      */
     enhanceWithMemoryAndProgress(parsedResponse, input, session, sessionId, handler, techniqueLocalStep, techniqueIndex, plan) {
-        // Generate memory outputs
-        const memoryOutputs = this.memoryAnalyzer.generateMemoryOutputs(this.createOperationData(input, sessionId), session);
+        // Optimization: Skip or simplify memory analysis for deep revision chains
+        const revisionCount = session.history.filter(h => h.isRevision).length;
+        const skipMemoryAnalysis = input.isRevision && revisionCount > 30 && revisionCount % 5 !== 0;
+        const memoryOutputs = skipMemoryAnalysis
+            ? {} // Skip memory analysis for performance
+            : this.memoryAnalyzer.generateMemoryOutputs(this.createOperationData(input, sessionId), session);
         // Build technique progress info
         const techniqueProgress = {
             techniqueStep: techniqueLocalStep,

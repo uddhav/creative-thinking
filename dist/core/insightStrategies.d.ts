@@ -50,8 +50,11 @@ export declare class TemporalWorkInsightStrategy implements InsightStrategy {
  * Registry of all insight strategies
  */
 export declare class InsightStrategyRegistry {
+    private static instance;
     private strategies;
-    constructor();
+    private strategyCache;
+    private constructor();
+    static getInstance(): InsightStrategyRegistry;
     private registerDefaultStrategies;
     getStrategy(technique: string): InsightStrategy | undefined;
     registerStrategy(strategy: InsightStrategy): void;
@@ -64,7 +67,11 @@ export interface ProblemCategoryStrategy {
     category: string;
 }
 export declare class ProblemCategorizationEngine {
+    private static instance;
     private strategies;
+    private categoryCache;
+    private constructor();
+    static getInstance(): ProblemCategorizationEngine;
     categorize(problem: string): string;
 }
 /**
@@ -77,9 +84,14 @@ export interface SolutionPatternStrategy {
     pattern: string;
 }
 export declare class SolutionPatternIdentifier {
+    private static instance;
     private strategies;
+    private patternCache;
+    private constructor();
+    static getInstance(): SolutionPatternIdentifier;
     identify(techniques: string[], history: Array<{
         antifragileProperties?: string[];
     }>): string;
+    private hasAntifragileProperties;
 }
 //# sourceMappingURL=insightStrategies.d.ts.map

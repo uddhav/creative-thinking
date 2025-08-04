@@ -147,10 +147,18 @@ export class TemporalWorkInsightStrategy {
  * Registry of all insight strategies
  */
 export class InsightStrategyRegistry {
+    static instance;
     strategies;
+    strategyCache = new Map();
     constructor() {
         this.strategies = new Map();
         this.registerDefaultStrategies();
+    }
+    static getInstance() {
+        if (!InsightStrategyRegistry.instance) {
+            InsightStrategyRegistry.instance = new InsightStrategyRegistry();
+        }
+        return InsightStrategyRegistry.instance;
     }
     registerDefaultStrategies() {
         const strategies = [
@@ -170,30 +178,60 @@ export class InsightStrategyRegistry {
         });
     }
     getStrategy(technique) {
-        return this.strategies.get(technique);
+        // Check cache first
+        if (this.strategyCache.has(technique)) {
+            return this.strategyCache.get(technique);
+        }
+        // Look up and cache result
+        const strategy = this.strategies.get(technique);
+        this.strategyCache.set(technique, strategy);
+        return strategy;
     }
     registerStrategy(strategy) {
         this.strategies.set(strategy.technique, strategy);
+        // Clear cache entry for this technique
+        this.strategyCache.delete(strategy.technique);
     }
 }
 export class ProblemCategorizationEngine {
+    static instance;
     strategies = [
         { keywords: ['optimize', 'improve'], category: 'optimization' },
         { keywords: ['create', 'design'], category: 'creation' },
         { keywords: ['solve', 'fix'], category: 'problem-solving' },
         { keywords: ['understand', 'analyze'], category: 'analysis' },
     ];
+    categoryCache = new Map();
+    constructor() { }
+    static getInstance() {
+        if (!ProblemCategorizationEngine.instance) {
+            ProblemCategorizationEngine.instance = new ProblemCategorizationEngine();
+        }
+        return ProblemCategorizationEngine.instance;
+    }
     categorize(problem) {
-        const lowerProblem = problem.toLowerCase();
-        for (const strategy of this.strategies) {
-            if (strategy.keywords.some(keyword => lowerProblem.includes(keyword))) {
-                return strategy.category;
+        // Check cache first
+        if (this.categoryCache.has(problem)) {
+            const cachedCategory = this.categoryCache.get(problem);
+            if (cachedCategory !== undefined) {
+                return cachedCategory;
             }
         }
-        return 'exploration';
+        const lowerProblem = problem.toLowerCase();
+        let category = 'exploration';
+        for (const strategy of this.strategies) {
+            if (strategy.keywords.some(keyword => lowerProblem.includes(keyword))) {
+                category = strategy.category;
+                break;
+            }
+        }
+        // Cache result
+        this.categoryCache.set(problem, category);
+        return category;
     }
 }
 export class SolutionPatternIdentifier {
+    static instance;
     strategies = [
         {
             identifier: techniques => new Set(techniques).size > 1,
@@ -224,13 +262,39 @@ export class SolutionPatternIdentifier {
             pattern: 'antifragile-design',
         },
     ];
+    patternCache = new Map();
+    constructor() { }
+    static getInstance() {
+        if (!SolutionPatternIdentifier.instance) {
+            SolutionPatternIdentifier.instance = new SolutionPatternIdentifier();
+        }
+        return SolutionPatternIdentifier.instance;
+    }
     identify(techniques, history) {
-        for (const strategy of this.strategies) {
-            if (strategy.identifier(techniques, history)) {
-                return strategy.pattern;
+        // Create cache key from techniques
+        const cacheKey = techniques.join('|');
+        // Check cache first (note: history changes may affect result, so cache is technique-based only)
+        if (this.patternCache.has(cacheKey) && !this.hasAntifragileProperties(history)) {
+            const cachedPattern = this.patternCache.get(cacheKey);
+            if (cachedPattern !== undefined) {
+                return cachedPattern;
             }
         }
-        return 'creative-exploration';
+        let pattern = 'creative-exploration';
+        for (const strategy of this.strategies) {
+            if (strategy.identifier(techniques, history)) {
+                pattern = strategy.pattern;
+                break;
+            }
+        }
+        // Cache result if no antifragile properties (which depend on history)
+        if (!this.hasAntifragileProperties(history)) {
+            this.patternCache.set(cacheKey, pattern);
+        }
+        return pattern;
+    }
+    hasAntifragileProperties(history) {
+        return history.some(h => h.antifragileProperties && h.antifragileProperties.length > 0);
     }
 }
 //# sourceMappingURL=insightStrategies.js.map
