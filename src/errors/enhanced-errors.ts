@@ -170,7 +170,7 @@ export class WorkflowError extends CreativeThinkingError {
       severity: 'medium',
       recovery,
       context,
-      documentation: 'https://docs.creative-thinking.dev/errors#workflow',
+      // documentation: URL will be added when deployed
     });
     this.name = 'WorkflowError';
   }
@@ -193,7 +193,7 @@ export class ValidationError extends CreativeThinkingError {
       severity: 'medium',
       recovery,
       context,
-      documentation: 'https://docs.creative-thinking.dev/errors#validation',
+      // documentation: URL will be added when deployed
     });
     this.name = 'ValidationError';
   }
@@ -216,7 +216,7 @@ export class StateError extends CreativeThinkingError {
       severity: 'medium',
       recovery,
       context,
-      documentation: 'https://docs.creative-thinking.dev/errors#state',
+      // documentation: URL will be added when deployed
     });
     this.name = 'StateError';
   }
@@ -242,7 +242,7 @@ export class SystemError extends CreativeThinkingError {
       context,
       retryable,
       retryDelayMs: retryable ? 1000 : undefined,
-      documentation: 'https://docs.creative-thinking.dev/errors#system',
+      // documentation: URL will be added when deployed
     });
     this.name = 'SystemError';
   }
@@ -462,7 +462,7 @@ export class ErrorFactory {
         'Check individual plan results for errors',
       ],
       context: { reason, parallelPlans },
-      documentation: 'https://docs.creative-thinking.dev/errors#convergence',
+      // documentation: URL will be added when deployed
     });
   }
 
