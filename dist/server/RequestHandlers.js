@@ -40,12 +40,18 @@ export class RequestHandlers {
                 // Check for workflow violations before executing
                 const violation = workflowGuard.checkWorkflowViolation(name, args);
                 if (violation) {
-                    const violationResponse = workflowGuard.getViolationResponse(violation);
+                    const violationError = workflowGuard.getViolationError(violation);
+                    // Since ErrorFactory returns CreativeThinkingError which implements EnhancedError
+                    const enhancedError = violationError;
                     return {
                         content: [
                             {
                                 type: 'text',
-                                text: JSON.stringify(violationResponse, null, 2),
+                                text: JSON.stringify({
+                                    error: enhancedError.message,
+                                    code: enhancedError.code,
+                                    recovery: enhancedError.recovery,
+                                }, null, 2),
                             },
                         ],
                     };

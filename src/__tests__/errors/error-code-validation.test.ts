@@ -168,28 +168,37 @@ describe('Error Code Validation', () => {
         E202: 'Plan not found',
         E203: 'Workflow skip detected',
         E204: 'Technique mismatch',
+        E205: 'Missing plan',
+        E206: 'Invalid step',
+        E207: 'Discovery phase was skipped',
+        E208: 'Planning phase was skipped',
+        E209: 'Using non-recommended technique',
+        E210: 'Attempting to bypass workflow',
 
         // State Errors (E300-E399)
         E301: 'Session not found',
         E302: 'Session expired',
-        E303: 'Invalid state', // Also used by NETWORK_ERROR - BUG!
+        E303: 'Invalid state',
 
         // System Errors (E400-E499)
-        E401: 'File access error', // Also used by MISSING_CONFIG - BUG!
-        E402: 'Memory limit exceeded', // Also used by INVALID_CONFIG - BUG!
-        E403: 'Persistence error',
+        E401: 'File I/O error',
+        E402: 'Memory limit exceeded',
+        E403: 'Permission error',
+        E404: 'Network error',
 
         // Permission Errors (E500-E599)
         E501: 'Access denied',
         E502: 'Rate limit exceeded',
 
         // Configuration Errors (E600-E699)
-        E601: 'Missing configuration', // Should be used by MISSING_CONFIG
-        E602: 'Invalid configuration', // Should be used by INVALID_CONFIG
+        E601: 'Missing configuration',
+        E602: 'Invalid configuration',
 
         // Technique Errors (E700-E799)
         E701: 'Technique execution failed',
         E702: 'Technique dependency missing',
+        E703: 'Technique not found',
+        E704: 'Technique misconfigured',
 
         // Convergence Errors (E800-E899)
         E801: 'Parallel execution error',

@@ -143,36 +143,46 @@ export class SystemError extends CreativeThinkingError {
  * Error codes for consistent identification
  */
 export const ErrorCodes = {
-    // Workflow errors
-    WRONG_TOOL_ORDER: 'E001',
-    MISSING_PLAN: 'E002',
-    TECHNIQUE_MISMATCH: 'E003',
-    INVALID_STEP: 'E004',
-    // Validation errors
+    // Validation errors (E100-E199)
     INVALID_INPUT: 'E101',
     MISSING_PARAMETER: 'E102',
     INVALID_TYPE: 'E103',
     OUT_OF_RANGE: 'E104',
-    // State errors
-    SESSION_NOT_FOUND: 'E301',
+    // Workflow errors (E200-E299)
+    WRONG_TOOL_ORDER: 'E201',
     PLAN_NOT_FOUND: 'E202',
-    INVALID_STATE: 'E303',
+    WORKFLOW_SKIP: 'E203',
+    TECHNIQUE_MISMATCH: 'E204',
+    MISSING_PLAN: 'E205',
+    INVALID_STEP: 'E206',
+    DISCOVERY_SKIPPED: 'E207',
+    PLANNING_SKIPPED: 'E208',
+    UNAUTHORIZED_TECHNIQUE: 'E209',
+    WORKFLOW_BYPASS_ATTEMPT: 'E210',
+    // State errors (E300-E399)
+    SESSION_NOT_FOUND: 'E301',
     SESSION_EXPIRED: 'E302',
-    // System errors
-    FILE_IO_ERROR: 'E403',
+    INVALID_STATE: 'E303',
+    // System errors (E400-E499)
+    FILE_IO_ERROR: 'E401',
     MEMORY_ERROR: 'E402',
-    NETWORK_ERROR: 'E303',
-    PERMISSION_ERROR: 'E304',
-    // Configuration errors
-    MISSING_CONFIG: 'E401',
-    INVALID_CONFIG: 'E402',
-    // Technique errors
-    TECHNIQUE_NOT_FOUND: 'E501',
-    TECHNIQUE_ERROR: 'E502',
-    // Convergence errors
-    CONVERGENCE_FAILED: 'E601',
-    PARALLEL_TIMEOUT: 'E602',
-    DEPENDENCY_ERROR: 'E603',
+    PERMISSION_ERROR: 'E403',
+    NETWORK_ERROR: 'E404',
+    // Permission errors (E500-E599)
+    ACCESS_DENIED: 'E501',
+    RATE_LIMIT_EXCEEDED: 'E502',
+    // Configuration errors (E600-E699)
+    MISSING_CONFIG: 'E601',
+    INVALID_CONFIG: 'E602',
+    // Technique errors (E700-E799)
+    TECHNIQUE_EXECUTION_FAILED: 'E701',
+    TECHNIQUE_DEPENDENCY_MISSING: 'E702',
+    TECHNIQUE_NOT_FOUND: 'E703',
+    TECHNIQUE_MISCONFIGURED: 'E704',
+    // Convergence errors (E800-E899)
+    CONVERGENCE_FAILED: 'E801',
+    PARALLEL_TIMEOUT: 'E802',
+    DEPENDENCY_ERROR: 'E803',
 };
 /**
  * Factory for creating common errors
@@ -286,20 +296,20 @@ export class ErrorFactory {
      * Create a missing field error
      */
     static missingField(fieldName) {
-        return new ValidationError('E101', `Missing required field: '${fieldName}'`, [
-            `Provide the '${fieldName}' field`,
-            'Check the API documentation for required fields',
-            'Review the error context for expected format',
+        return new ValidationError(ErrorCodes.INVALID_INPUT, `Missing required field: '${fieldName}'`, [
+            `Provide the '${fieldName}' field in your request`,
+            'Ensure all required fields are included: problem, techniques, etc.',
+            'Example: { "problem": "your problem", "techniques": ["six_hats"] }',
         ], { field: fieldName });
     }
     /**
      * Create an invalid field type error
      */
     static invalidFieldType(fieldName, expectedType, actualType) {
-        return new ValidationError('E102', `Invalid field type for '${fieldName}': expected ${expectedType}, got ${actualType}`, [
-            `Change '${fieldName}' to be of type ${expectedType}`,
-            'Check the API documentation for field types',
-            'Validate input before sending',
+        return new ValidationError(ErrorCodes.MISSING_PARAMETER, `Invalid field type for '${fieldName}': expected ${expectedType}, got ${actualType}`, [
+            `Change '${fieldName}' from ${actualType} to ${expectedType}`,
+            `Example: if techniques is a string, change to array: ["${fieldName}"]`,
+            'Use JSON.stringify() to verify your data structure',
         ], { field: fieldName, expectedType, actualType });
     }
     /**
@@ -322,7 +332,7 @@ export class ErrorFactory {
             'disney_method',
             'nine_windows',
         ];
-        return new ValidationError('E103', `Invalid technique: '${technique}'`, [
+        return new ValidationError(ErrorCodes.INVALID_TYPE, `Invalid technique: '${technique}'`, [
             'Use one of the valid techniques',
             `Valid techniques: ${validTechniques.slice(0, 5).join(', ')}, ...`,
             "Call 'discover_techniques' to get recommendations",
@@ -332,7 +342,7 @@ export class ErrorFactory {
      * Create a workflow order error
      */
     static workflowOrder(currentTool, expectedTool) {
-        return new WorkflowError('E201', `Workflow error: Called '${currentTool}' but should call '${expectedTool}' first`, [
+        return new WorkflowError(ErrorCodes.WRONG_TOOL_ORDER, `Workflow error: Called '${currentTool}' but should call '${expectedTool}' first`, [
             `Call '${expectedTool}' first`,
             'Follow the three-step workflow',
             'Reset and start from discovery',
@@ -342,7 +352,7 @@ export class ErrorFactory {
      * Create a missing workflow step error
      */
     static missingWorkflowStep(missingStep) {
-        return new WorkflowError('E202', `Missing workflow step: '${missingStep}' must be called first`, [
+        return new WorkflowError(ErrorCodes.PLAN_NOT_FOUND, `Missing workflow step: '${missingStep}' must be called first`, [
             `Call '${missingStep}' first`,
             'Check the workflow documentation',
             'Start from the beginning with discovery',
@@ -352,17 +362,58 @@ export class ErrorFactory {
      * Create a workflow skip detected error
      */
     static workflowSkipDetected() {
-        return new WorkflowError('E203', 'Workflow skip detected: Attempting to bypass the three-layer architecture', [
+        return new WorkflowError(ErrorCodes.WORKFLOW_SKIP, 'Workflow skip detected: Attempting to bypass the three-layer architecture', [
             'Use the proper workflow: discover → plan → execute',
             'Do not skip directly to execution',
             'Call discover_techniques first',
         ], { severity: 'critical' });
     }
     /**
+     * Create a discovery skipped error
+     */
+    static discoverySkipped() {
+        return new WorkflowError(ErrorCodes.DISCOVERY_SKIPPED, 'Discovery phase skipped: Cannot proceed without technique recommendations', [
+            'Call discover_techniques with your problem statement',
+            'Discovery provides personalized technique recommendations',
+            'Example: discover_techniques({ problem: "How to innovate?" })',
+        ], { requiredTool: 'discover_techniques', severity: 'high' });
+    }
+    /**
+     * Create a planning skipped error
+     */
+    static planningSkipped() {
+        return new WorkflowError(ErrorCodes.PLANNING_SKIPPED, 'Planning phase skipped: Cannot execute without a plan', [
+            'Call plan_thinking_session after discovery',
+            'Planning creates a structured workflow for execution',
+            'Use techniques recommended by discovery phase',
+        ], { requiredTool: 'plan_thinking_session', severity: 'high' });
+    }
+    /**
+     * Create an unauthorized technique error
+     */
+    static unauthorizedTechnique(technique, recommendedTechniques) {
+        return new WorkflowError(ErrorCodes.UNAUTHORIZED_TECHNIQUE, `Technique '${technique}' was not recommended by discovery phase`, [
+            'Use one of the recommended techniques: ' + recommendedTechniques.join(', '),
+            'Run discovery again if you need different recommendations',
+            'Techniques should align with your problem type',
+        ], { attemptedTechnique: technique, recommendedTechniques, severity: 'medium' });
+    }
+    /**
+     * Create a workflow bypass attempt error
+     */
+    static workflowBypassAttempt(attemptType) {
+        return new WorkflowError(ErrorCodes.WORKFLOW_BYPASS_ATTEMPT, `Workflow bypass attempt detected: ${attemptType}`, [
+            'Follow the mandatory three-step workflow',
+            'Each phase builds on the previous one',
+            'Bypassing steps leads to suboptimal results',
+            'Start with discover_techniques',
+        ], { attemptType, severity: 'critical' });
+    }
+    /**
      * Create a session expired error
      */
     static sessionExpired(sessionId, expiryMinutes) {
-        return new StateError('E302', `Session '${sessionId}' has expired after ${expiryMinutes} minutes of inactivity`, [
+        return new StateError(ErrorCodes.SESSION_EXPIRED, `Session '${sessionId}' has expired after ${expiryMinutes} minutes of inactivity`, [
             'Create a new session',
             'Increase session timeout in configuration',
             'Use session persistence for longer sessions',
@@ -372,7 +423,7 @@ export class ErrorFactory {
      * Create an invalid step error
      */
     static invalidStep(requestedStep, maxSteps) {
-        return new StateError('E303', `Invalid step: Step ${requestedStep} requested but technique only has ${maxSteps} steps`, [
+        return new StateError(ErrorCodes.INVALID_STATE, `Invalid step: Step ${requestedStep} requested but technique only has ${maxSteps} steps`, [
             `Use a step between 1 and ${maxSteps}`,
             'Check the technique documentation',
             'Verify your step counter logic',
@@ -382,7 +433,7 @@ export class ErrorFactory {
      * Create a file access error
      */
     static fileAccessError(filePath, reason) {
-        return new SystemError('E401', `Cannot access file: ${filePath}`, [
+        return new SystemError(ErrorCodes.FILE_IO_ERROR, `Cannot access file: ${filePath}`, [
             'Check file permissions',
             'Ensure the file exists',
             'Verify the file path is correct',
@@ -394,7 +445,7 @@ export class ErrorFactory {
      * Create a memory limit exceeded error
      */
     static memoryLimitExceeded(usagePercent) {
-        return new SystemError('E402', `Memory limit exceeded: ${usagePercent}% of available memory in use`, [
+        return new SystemError(ErrorCodes.MEMORY_ERROR, `Memory limit exceeded: ${usagePercent}% of available memory in use`, [
             'Reduce session count',
             'Clear old sessions',
             'Increase memory allocation',
@@ -406,7 +457,7 @@ export class ErrorFactory {
      * Create a persistence error
      */
     static persistenceError(operation, reason) {
-        return new SystemError('E403', `Persistence error during ${operation}: ${reason}`, [
+        return new SystemError(ErrorCodes.PERMISSION_ERROR, `Persistence error during ${operation}: ${reason}`, [
             'Check storage availability',
             'Verify write permissions',
             'Use in-memory mode temporarily',
@@ -419,7 +470,7 @@ export class ErrorFactory {
      */
     static accessDenied(resource) {
         return new CreativeThinkingError({
-            code: 'E501',
+            code: ErrorCodes.ACCESS_DENIED,
             message: `Access denied to resource: ${resource}`,
             category: 'permission',
             severity: 'high',
@@ -432,7 +483,7 @@ export class ErrorFactory {
      */
     static rateLimitExceeded(retryAfterSeconds) {
         return new CreativeThinkingError({
-            code: 'E502',
+            code: ErrorCodes.RATE_LIMIT_EXCEEDED,
             message: `Rate limit exceeded. Try again in ${retryAfterSeconds} seconds`,
             category: 'permission',
             severity: 'medium',
@@ -450,7 +501,7 @@ export class ErrorFactory {
      */
     static missingConfiguration(configKey) {
         return new CreativeThinkingError({
-            code: 'E601',
+            code: ErrorCodes.MISSING_CONFIG,
             message: `Missing required configuration: ${configKey}`,
             category: 'configuration',
             severity: 'high',
@@ -467,7 +518,7 @@ export class ErrorFactory {
      */
     static invalidConfiguration(configKey, value, expectedFormat) {
         return new CreativeThinkingError({
-            code: 'E602',
+            code: ErrorCodes.INVALID_CONFIG,
             message: `Invalid configuration for '${configKey}': ${value} (expected ${expectedFormat})`,
             category: 'configuration',
             severity: 'high',
@@ -484,7 +535,7 @@ export class ErrorFactory {
      */
     static techniqueExecutionFailed(technique, reason) {
         return new CreativeThinkingError({
-            code: 'E701',
+            code: ErrorCodes.TECHNIQUE_EXECUTION_FAILED,
             message: `Technique '${technique}' execution failed: ${reason}`,
             category: 'technique',
             severity: 'medium',
@@ -502,7 +553,7 @@ export class ErrorFactory {
      */
     static techniqueDependencyMissing(technique, dependency) {
         return new CreativeThinkingError({
-            code: 'E702',
+            code: ErrorCodes.TECHNIQUE_DEPENDENCY_MISSING,
             message: `Technique '${technique}' requires '${dependency}' to be executed first`,
             category: 'technique',
             severity: 'medium',
@@ -519,7 +570,7 @@ export class ErrorFactory {
      */
     static parallelExecutionError(failedPlans, reason) {
         return new CreativeThinkingError({
-            code: 'E801',
+            code: ErrorCodes.CONVERGENCE_FAILED,
             message: `Parallel execution failed for plans: ${failedPlans.join(', ')}`,
             category: 'convergence',
             severity: 'high',
@@ -537,7 +588,7 @@ export class ErrorFactory {
      */
     static convergenceFailure(totalPlans, completedPlans) {
         return new CreativeThinkingError({
-            code: 'E802',
+            code: ErrorCodes.CONVERGENCE_FAILED,
             message: `Convergence failed: Only ${completedPlans} of ${totalPlans} plans completed`,
             category: 'convergence',
             severity: 'high',
@@ -555,7 +606,7 @@ export class ErrorFactory {
      */
     static convergenceDependencyNotMet(planId, missingDependencies) {
         return new CreativeThinkingError({
-            code: 'E803',
+            code: ErrorCodes.DEPENDENCY_ERROR,
             message: `Convergence plan '${planId}' dependencies not met`,
             category: 'convergence',
             severity: 'high',

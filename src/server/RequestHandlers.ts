@@ -9,6 +9,7 @@ import type { LateralThinkingServer } from '../index.js';
 import { workflowGuard } from '../core/WorkflowGuard.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 import { getAllTools } from './ToolDefinitions.js';
+import type { CreativeThinkingError } from '../errors/enhanced-errors.js';
 
 export class RequestHandlers {
   constructor(
@@ -47,12 +48,22 @@ export class RequestHandlers {
         // Check for workflow violations before executing
         const violation = workflowGuard.checkWorkflowViolation(name, args);
         if (violation) {
-          const violationResponse = workflowGuard.getViolationResponse(violation);
+          const violationError = workflowGuard.getViolationError(violation);
+          // Since ErrorFactory returns CreativeThinkingError which implements EnhancedError
+          const enhancedError = violationError as CreativeThinkingError;
           return {
             content: [
               {
                 type: 'text',
-                text: JSON.stringify(violationResponse, null, 2),
+                text: JSON.stringify(
+                  {
+                    error: enhancedError.message,
+                    code: enhancedError.code,
+                    recovery: enhancedError.recovery,
+                  },
+                  null,
+                  2
+                ),
               },
             ],
           };

@@ -110,29 +110,38 @@ export declare class SystemError extends CreativeThinkingError {
  * Error codes for consistent identification
  */
 export declare const ErrorCodes: {
-    readonly WRONG_TOOL_ORDER: "E001";
-    readonly MISSING_PLAN: "E002";
-    readonly TECHNIQUE_MISMATCH: "E003";
-    readonly INVALID_STEP: "E004";
     readonly INVALID_INPUT: "E101";
     readonly MISSING_PARAMETER: "E102";
     readonly INVALID_TYPE: "E103";
     readonly OUT_OF_RANGE: "E104";
-    readonly SESSION_NOT_FOUND: "E301";
+    readonly WRONG_TOOL_ORDER: "E201";
     readonly PLAN_NOT_FOUND: "E202";
-    readonly INVALID_STATE: "E303";
+    readonly WORKFLOW_SKIP: "E203";
+    readonly TECHNIQUE_MISMATCH: "E204";
+    readonly MISSING_PLAN: "E205";
+    readonly INVALID_STEP: "E206";
+    readonly DISCOVERY_SKIPPED: "E207";
+    readonly PLANNING_SKIPPED: "E208";
+    readonly UNAUTHORIZED_TECHNIQUE: "E209";
+    readonly WORKFLOW_BYPASS_ATTEMPT: "E210";
+    readonly SESSION_NOT_FOUND: "E301";
     readonly SESSION_EXPIRED: "E302";
-    readonly FILE_IO_ERROR: "E403";
+    readonly INVALID_STATE: "E303";
+    readonly FILE_IO_ERROR: "E401";
     readonly MEMORY_ERROR: "E402";
-    readonly NETWORK_ERROR: "E303";
-    readonly PERMISSION_ERROR: "E304";
-    readonly MISSING_CONFIG: "E401";
-    readonly INVALID_CONFIG: "E402";
-    readonly TECHNIQUE_NOT_FOUND: "E501";
-    readonly TECHNIQUE_ERROR: "E502";
-    readonly CONVERGENCE_FAILED: "E601";
-    readonly PARALLEL_TIMEOUT: "E602";
-    readonly DEPENDENCY_ERROR: "E603";
+    readonly PERMISSION_ERROR: "E403";
+    readonly NETWORK_ERROR: "E404";
+    readonly ACCESS_DENIED: "E501";
+    readonly RATE_LIMIT_EXCEEDED: "E502";
+    readonly MISSING_CONFIG: "E601";
+    readonly INVALID_CONFIG: "E602";
+    readonly TECHNIQUE_EXECUTION_FAILED: "E701";
+    readonly TECHNIQUE_DEPENDENCY_MISSING: "E702";
+    readonly TECHNIQUE_NOT_FOUND: "E703";
+    readonly TECHNIQUE_MISCONFIGURED: "E704";
+    readonly CONVERGENCE_FAILED: "E801";
+    readonly PARALLEL_TIMEOUT: "E802";
+    readonly DEPENDENCY_ERROR: "E803";
 };
 /**
  * Factory for creating common errors
@@ -198,6 +207,22 @@ export declare class ErrorFactory {
      * Create a workflow skip detected error
      */
     static workflowSkipDetected(): WorkflowError;
+    /**
+     * Create a discovery skipped error
+     */
+    static discoverySkipped(): WorkflowError;
+    /**
+     * Create a planning skipped error
+     */
+    static planningSkipped(): WorkflowError;
+    /**
+     * Create an unauthorized technique error
+     */
+    static unauthorizedTechnique(technique: string, recommendedTechniques: string[]): WorkflowError;
+    /**
+     * Create a workflow bypass attempt error
+     */
+    static workflowBypassAttempt(attemptType: string): WorkflowError;
     /**
      * Create a session expired error
      */

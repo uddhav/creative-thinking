@@ -75,7 +75,7 @@ describe('Enhanced Error System', () => {
         expect(error.category).toBe('validation');
         expect(error.severity).toBe('medium');
         expect(error.message).toContain('problem');
-        expect(error.recovery).toContain("Provide the 'problem' field");
+        expect(error.recovery).toContain("Provide the 'problem' field in your request");
       });
 
       it('should create invalid field type error', () => {
@@ -249,7 +249,7 @@ describe('Enhanced Error System', () => {
       it('should create convergence failure error', () => {
         const error = ErrorFactory.convergenceFailure(3, 2);
 
-        expect(error.code).toBe('E802');
+        expect(error.code).toBe('E801');
         expect(error.message).toContain('2 of 3');
         expect(error.recovery).toContain('Retry failed plans');
       });

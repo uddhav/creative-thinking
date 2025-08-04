@@ -41,9 +41,9 @@ export class ErrorHandler {
             category: 'system',
             severity: 'high',
             recovery: [
-                'Check the error message for details',
-                'Consult the documentation',
-                'Contact support if the issue persists',
+                'Review the full error message above for specific details',
+                'Verify your request follows the three-step workflow: discover → plan → execute',
+                'If using a custom integration, ensure all parameters are correctly formatted',
             ],
             context,
         });
@@ -133,7 +133,7 @@ export class ErrorHandler {
         // Check if it's a retryable system error
         if (ErrorRecovery.isRetryable(error)) {
             return new EnhancedError({
-                code: 'E303', // NETWORK_ERROR or similar
+                code: 'E404', // NETWORK_ERROR
                 message: error.message,
                 category: 'system',
                 severity: 'medium',
@@ -158,9 +158,9 @@ export class ErrorHandler {
             category: 'system',
             severity: 'high',
             recovery: [
-                'Check the error details for more information',
-                'Review your input parameters',
-                'Contact support if the issue persists',
+                'Check the error stack trace for the exact failure point',
+                'Verify all input parameters match expected types and formats',
+                'If the error persists, it may indicate a server-side issue - retry after a moment',
             ],
             context: {
                 ...context,
@@ -259,7 +259,11 @@ export class ErrorHandler {
                 code: 'E101',
                 category: 'validation',
                 severity: 'medium',
-                recovery: ['Check input format', 'Review API documentation'],
+                recovery: [
+                    'Ensure your input is valid JSON format',
+                    'Verify required fields: problem (string), techniques (array), etc.',
+                    'Example: { "problem": "How to innovate?", "techniques": ["six_hats"] }',
+                ],
             },
             [ErrorCode.MISSING_REQUIRED_FIELD]: {
                 code: 'E101',
@@ -267,20 +271,28 @@ export class ErrorHandler {
                 severity: 'medium',
                 recovery: [
                     'Provide all required fields',
-                    'Check the API documentation for required fields',
+                    'Required fields: problem, techniques (array), timeframe (optional)',
                 ],
             },
             [ErrorCode.INVALID_TECHNIQUE]: {
                 code: 'E103',
                 category: 'validation',
                 severity: 'medium',
-                recovery: ['Use a valid technique', 'Call discover_techniques for recommendations'],
+                recovery: [
+                    'Use one of: six_hats, po, random_entry, scamper, concept_extraction, yes_and, design_thinking, triz, neural_state, temporal_work, cross_cultural, collective_intel, disney_method, nine_windows',
+                    'Call discover_techniques first to get personalized recommendations',
+                    'Techniques must match those specified in your plan',
+                ],
             },
             [ErrorCode.INVALID_FIELD_VALUE]: {
                 code: 'E102',
                 category: 'validation',
                 severity: 'medium',
-                recovery: ['Check field value format', 'Review expected values'],
+                recovery: [
+                    'Verify the field value matches the expected format',
+                    'Common issues: strings instead of arrays, missing quotes in JSON',
+                    'Use typeof to check your value type before sending',
+                ],
             },
             // Session errors
             [ErrorCode.SESSION_NOT_FOUND]: {
@@ -321,7 +333,11 @@ export class ErrorHandler {
                 code: 'E202',
                 category: 'state',
                 severity: 'high',
-                recovery: ['Create a new plan', 'Check planId'],
+                recovery: [
+                    'Call plan_thinking_session to create a new plan',
+                    'Verify your planId matches the one returned from planning',
+                    'Plans expire after 1 hour of inactivity',
+                ],
             },
             [ErrorCode.PLAN_EXPIRED]: {
                 code: 'E302',
@@ -337,56 +353,68 @@ export class ErrorHandler {
                 recovery: ['Follow the three-step workflow', 'Start with discover_techniques'],
             },
             [ErrorCode.INVALID_STEP]: {
-                code: 'E303',
+                code: 'E206',
                 category: 'state',
                 severity: 'medium',
-                recovery: ['Check step range', 'Review technique documentation'],
+                recovery: [
+                    'Steps must be between 1 and totalSteps',
+                    'Current step should increment by 1 from previous step',
+                    'Each technique has a specific number of steps (e.g., six_hats has 6)',
+                ],
             },
             [ErrorCode.INVALID_STEP_SEQUENCE]: {
-                code: 'E201',
+                code: 'E206',
                 category: 'workflow',
                 severity: 'high',
                 recovery: ['Follow correct step order', 'Reset to step 1'],
             },
             [ErrorCode.TECHNIQUE_MISMATCH]: {
-                code: 'E201',
+                code: 'E204',
                 category: 'workflow',
                 severity: 'high',
                 recovery: ['Use technique from plan', 'Create new plan with desired technique'],
             },
             [ErrorCode.TECHNIQUE_NOT_SUPPORTED]: {
-                code: 'E103',
-                category: 'validation',
+                code: 'E703',
+                category: 'technique',
                 severity: 'medium',
                 recovery: ['Use supported technique', 'Check available techniques'],
             },
             // System errors
             [ErrorCode.INTERNAL_ERROR]: {
-                code: 'E401',
+                code: 'E999',
                 category: 'system',
                 severity: 'critical',
-                recovery: ['Retry operation', 'Contact support'],
+                recovery: [
+                    'Wait a moment and retry the operation',
+                    'Check system logs for more detailed error information',
+                    'Ensure the server has sufficient resources (memory, disk space)',
+                ],
             },
             [ErrorCode.PERSISTENCE_ERROR]: {
-                code: 'E403',
+                code: 'E401',
                 category: 'system',
                 severity: 'high',
-                recovery: ['Check storage', 'Use in-memory mode'],
+                recovery: [
+                    'Verify storage path has write permissions',
+                    'Set autoSave: false to use memory-only mode',
+                    'Check disk space availability',
+                ],
             },
             [ErrorCode.PERSISTENCE_NOT_AVAILABLE]: {
-                code: 'E403',
+                code: 'E401',
                 category: 'system',
                 severity: 'medium',
                 recovery: ['Use in-memory mode', 'Check configuration'],
             },
             [ErrorCode.PERSISTENCE_WRITE_FAILED]: {
-                code: 'E403',
+                code: 'E401',
                 category: 'system',
                 severity: 'high',
                 recovery: ['Check disk space', 'Verify permissions'],
             },
             [ErrorCode.PERSISTENCE_READ_FAILED]: {
-                code: 'E403',
+                code: 'E401',
                 category: 'system',
                 severity: 'high',
                 recovery: ['Check file exists', 'Verify permissions'],
@@ -399,27 +427,31 @@ export class ErrorHandler {
                 recovery: ['Reduce resource usage', 'Increase limits'],
             },
             [ErrorCode.TIMEOUT_ERROR]: {
-                code: 'E303',
+                code: 'E404',
                 category: 'system',
                 severity: 'medium',
-                recovery: ['Retry operation', 'Increase timeout'],
+                recovery: [
+                    'Wait 1-2 seconds before retrying',
+                    'If timeout persists, operation may be too complex',
+                    'Consider breaking down into smaller steps',
+                ],
             },
             // Risk errors
             [ErrorCode.BLOCKED_ACTION]: {
-                code: 'E603',
-                category: 'workflow',
+                code: 'E501',
+                category: 'permission',
                 severity: 'critical',
                 recovery: ['Review action', 'Check permissions'],
             },
             [ErrorCode.ERGODICITY_CHECK_REQUIRED]: {
-                code: 'E603',
-                category: 'workflow',
+                code: 'E701',
+                category: 'technique',
                 severity: 'high',
                 recovery: ['Complete ergodicity check', 'Review risk assessment'],
             },
             [ErrorCode.INVALID_ERGODICITY_RESPONSE]: {
-                code: 'E603',
-                category: 'validation',
+                code: 'E702',
+                category: 'technique',
                 severity: 'medium',
                 recovery: ['Check response format', 'Review ergodicity documentation'],
             },
@@ -453,7 +485,11 @@ export class ErrorHandler {
             code: 'E999',
             category: 'system',
             severity: 'high',
-            recovery: ['Check the error message for details', 'Consult the documentation'],
+            recovery: [
+                'Review the specific error details provided above',
+                'Ensure you are following the correct workflow sequence',
+                'Verify all required parameters are present and correctly typed',
+            ],
         });
     }
     /**

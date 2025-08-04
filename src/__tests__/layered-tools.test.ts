@@ -393,7 +393,7 @@ describe('Layered Tools Architecture', () => {
       expect(result.isError).toBeTruthy();
       const errorText = result.content[0]?.text || '';
       const errorData = JSON.parse(errorText) as { error: { code: string; message: string } };
-      expect(errorData.error.code).toBe('E003');
+      expect(errorData.error.code).toBe('E204');
       expect(errorData.error.message).toContain('Technique mismatch');
       expect(errorData.error.message).toContain('po');
     });

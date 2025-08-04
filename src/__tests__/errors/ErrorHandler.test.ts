@@ -30,7 +30,7 @@ describe('ErrorHandler', () => {
       expect(parsedError.error).toEqual({
         code: 'E101',
         message: expect.stringContaining('problem'),
-        recovery: expect.arrayContaining(["Provide the 'problem' field"]),
+        recovery: expect.arrayContaining(["Provide the 'problem' field in your request"]),
         severity: 'medium',
         category: 'validation',
         layer: 'discovery',
@@ -53,7 +53,7 @@ describe('ErrorHandler', () => {
       expect(parsedError.error?.code).toBe('E101');
       expect(parsedError.error?.category).toBe('validation');
       expect(parsedError.error?.recovery).toContain(
-        'Check the API documentation for required fields'
+        'Required fields: problem, techniques (array), timeframe (optional)'
       );
     });
 
@@ -95,7 +95,7 @@ describe('ErrorHandler', () => {
 
       expect(response.isError).toBe(true);
       const parsedError = JSON.parse(response.content[0].text);
-      expect(parsedError.error?.code).toBe('E303');
+      expect(parsedError.error?.code).toBe('E206');
       expect(parsedError.error?.category).toBe('state');
     });
 
@@ -188,8 +188,8 @@ describe('ErrorHandler', () => {
     it('should return generic suggestions for unknown codes', () => {
       const suggestions = errorHandler.getRecoverySuggestions('UNKNOWN_CODE' as any);
 
-      expect(suggestions).toContain('Check the error message for details');
-      expect(suggestions).toContain('Consult the documentation');
+      expect(suggestions).toContain('Review the specific error details provided above');
+      expect(suggestions).toContain('Ensure you are following the correct workflow sequence');
     });
   });
 
@@ -261,7 +261,12 @@ describe('ErrorHandler', () => {
       systemCodes.forEach(code => {
         const mapping = (errorHandler as any)['mapErrorCode'](code);
         expect(mapping.category).toBe('system');
-        expect(mapping.code).toMatch(/^E4\d{2}$/);
+        // Most system errors are E4XX, but INTERNAL_ERROR is E999
+        if (code === ErrorCode.INTERNAL_ERROR) {
+          expect(mapping.code).toBe('E999');
+        } else {
+          expect(mapping.code).toMatch(/^E4\d{2}$/);
+        }
       });
     });
   });

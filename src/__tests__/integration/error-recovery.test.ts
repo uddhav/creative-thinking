@@ -89,7 +89,7 @@ describe('Error Recovery Integration Tests', () => {
       // When providing a planId with an invalid technique, it's caught as a technique mismatch
       const errorText = result.content[0].text;
       const parsedError = JSON.parse(errorText);
-      expect(parsedError.error.code).toBe('E003');
+      expect(parsedError.error.code).toBe('E204');
       expect(parsedError.error.message).toContain('invalid_technique');
     });
 
@@ -310,7 +310,7 @@ describe('Error Recovery Integration Tests', () => {
       expect(mismatchResult.isError).toBe(true);
       const errorText = mismatchResult.content[0].text;
       const parsedError = JSON.parse(errorText);
-      expect(parsedError.error.code).toBe('E003');
+      expect(parsedError.error.code).toBe('E204');
       expect(parsedError.error.message).toContain('Technique mismatch');
       expect(parsedError.error.message).toContain('disney_method');
     });
