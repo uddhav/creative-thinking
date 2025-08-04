@@ -5,6 +5,7 @@
 import { randomUUID } from 'crypto';
 import { TechniqueDependencyAnalyzer, } from './TechniqueDependencyAnalyzer.js';
 import { defaultParallelismConfig } from '../../config/parallelism.js';
+import { logger } from '../../utils/Logger.js';
 /**
  * Generates parallel execution plans for creative thinking sessions
  */
@@ -282,7 +283,12 @@ export class ParallelPlanGenerator {
             const minSize = Math.min(...optimized.map(g => g.length));
             // Log optimization info for debugging
             if (maxSize - minSize > 2 || Math.max(...groupComplexities) > avgComplexity * 2) {
-                console.error(`Group imbalance detected: sizes ${minSize}-${maxSize}, complexities: ${groupComplexities.join(', ')}, avg complexity: ${avgComplexity.toFixed(2)}`);
+                logger.debug('Group imbalance detected', {
+                    sizeRange: `${minSize}-${maxSize}`,
+                    complexities: groupComplexities,
+                    avgComplexity: parseFloat(avgComplexity.toFixed(2)),
+                    imbalanceType: maxSize - minSize > 2 ? 'size' : 'complexity',
+                });
             }
         }
         return optimized.filter(group => group.length > 0); // Remove empty groups

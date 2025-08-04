@@ -2,7 +2,7 @@
  * Five-level escape protocol implementations
  */
 import { EscapeLevel } from './types.js';
-import { getSecureRandomIndex, getSecureRandomFloat } from '../../utils/secureRandom.js';
+import { getSecureRandomIndex, getSecureRandomFloat } from '../../utils/safeCrypto.js';
 /**
  * Level 1: Pattern Interruption
  * Quick, low-cost interventions to break thinking patterns

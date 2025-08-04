@@ -2,7 +2,16 @@
  * Memory Analyzer
  * Generates memory-suggestive outputs based on session history and patterns
  */
+import { InsightStrategyRegistry, ProblemCategorizationEngine, SolutionPatternIdentifier, } from './insightStrategies.js';
 export class MemoryAnalyzer {
+    insightRegistry;
+    problemCategorizer;
+    solutionPatternIdentifier;
+    constructor() {
+        this.insightRegistry = new InsightStrategyRegistry();
+        this.problemCategorizer = new ProblemCategorizationEngine();
+        this.solutionPatternIdentifier = new SolutionPatternIdentifier();
+    }
     /**
      * Generate memory-suggestive outputs for a thinking step
      */
@@ -41,108 +50,13 @@ export class MemoryAnalyzer {
     }
     generateContextualInsight(input, session) {
         const { technique, currentStep } = input;
-        // Technique-specific insights
-        switch (technique) {
-            case 'six_hats':
-                if (input.hatColor === 'black' && input.risks && input.risks.length > 0) {
-                    return `Critical thinking revealed ${input.risks.length} risk factors that require mitigation`;
-                }
-                if (input.hatColor === 'green' && currentStep === 6) {
-                    return 'Creative solutions generated after systematic analysis';
-                }
-                break;
-            case 'po':
-                if (currentStep === 2 && input.principles) {
-                    return `Provocation successfully challenged ${input.principles.length} core assumptions`;
-                }
-                break;
-            case 'design_thinking':
-                if (currentStep === 1 && input.empathyInsights && input.empathyInsights.length > 0) {
-                    return `User research uncovered ${input.empathyInsights.length} key pain points`;
-                }
-                if (currentStep === 5 && input.userFeedback) {
-                    return 'Testing validated solution assumptions with real users';
-                }
-                break;
-            case 'triz':
-                if (input.contradiction) {
-                    return 'Technical contradiction identified, opening path to breakthrough';
-                }
-                break;
-            case 'scamper':
-                if (input.pathImpact && input.pathImpact.flexibilityRetention < 0.3) {
-                    return 'High-commitment modification: consider generating alternatives';
-                }
-                break;
-            case 'yes_and':
-                if (currentStep === 3 && input.additions && input.additions.length > 3) {
-                    return 'Collaborative momentum achieved with multiple building iterations';
-                }
-                break;
-            case 'neural_state':
-                if (currentStep === 1 && input.dominantNetwork === 'ecn') {
-                    return 'Executive Control Network dominance detected';
-                }
-                if (currentStep === 1 && input.dominantNetwork === 'dmn') {
-                    return 'Default Mode Network dominance detected';
-                }
-                if (currentStep === 2 && input.suppressionDepth !== undefined) {
-                    if (input.suppressionDepth >= 8) {
-                        return `Network suppression depth: ${input.suppressionDepth}/10 - High rigidity detected`;
-                    }
-                    return `Network suppression depth: ${input.suppressionDepth}/10`;
-                }
-                if (input.dominantNetwork && input.suppressionDepth && input.suppressionDepth > 7) {
-                    return 'Deep neural state manipulation achieved - breakthrough potential high';
-                }
-                break;
-            case 'collective_intel':
-                if (currentStep === 1 && input.wisdomSources && input.wisdomSources.length > 0) {
-                    return `${input.wisdomSources.length} wisdom sources identified`;
-                }
-                if (currentStep === 3 && input.emergentPatterns && input.emergentPatterns.length > 0) {
-                    return `${input.emergentPatterns.length} emergent patterns discovered`;
-                }
-                if (currentStep === 4 &&
-                    input.synergyCombinations &&
-                    input.synergyCombinations.length > 0) {
-                    return `${input.synergyCombinations.length} synergistic combinations created`;
-                }
-                break;
-            case 'cross_cultural':
-                if (currentStep === 1 && input.culturalFrameworks && input.culturalFrameworks.length > 0) {
-                    return `${input.culturalFrameworks.length} cultural perspectives identified`;
-                }
-                if (currentStep === 2 && input.bridgeBuilding && input.bridgeBuilding.length > 0) {
-                    return `${input.bridgeBuilding.length} cultural bridges discovered`;
-                }
-                if (currentStep === 3 &&
-                    input.respectfulSynthesis &&
-                    input.respectfulSynthesis.length > 0) {
-                    return `Creating inclusive solution from ${input.respectfulSynthesis.length} synthesized approaches`;
-                }
-                if (currentStep === 4 && input.parallelPaths && input.parallelPaths.length > 0) {
-                    return `${input.parallelPaths.length} parallel paths designed`;
-                }
-                break;
-            case 'temporal_work':
-                if (currentStep === 1 && input.temporalLandscape) {
-                    const fixed = input.temporalLandscape.fixedDeadlines?.length || 0;
-                    const kairos = input.temporalLandscape.kairosOpportunities?.length || 0;
-                    if (fixed > 0 || kairos > 0) {
-                        return `${fixed} fixed constraints, ${kairos} kairos opportunities`;
-                    }
-                }
-                if (currentStep === 3 &&
-                    input.pressureTransformation &&
-                    input.pressureTransformation.length > 0) {
-                    return `${input.pressureTransformation.length} catalytic techniques applied`;
-                }
-                if (input.temporalLandscape?.kairosOpportunities &&
-                    input.temporalLandscape.kairosOpportunities.length > 0) {
-                    return 'Kairos moments identified - optimal timing windows available';
-                }
-                break;
+        // Use strategy pattern for technique-specific insights
+        const strategy = this.insightRegistry.getStrategy(technique);
+        if (strategy) {
+            const insight = strategy.generateInsight(input, session);
+            if (insight) {
+                return insight;
+            }
         }
         // Generic insights based on risk/antifragile properties
         if (input.antifragileProperties && input.antifragileProperties.length > 0) {
@@ -245,52 +159,12 @@ export class MemoryAnalyzer {
         return undefined;
     }
     categorizeProblem(problem) {
-        const lowerProblem = problem.toLowerCase();
-        if (lowerProblem.includes('optimize') || lowerProblem.includes('improve')) {
-            return 'optimization';
-        }
-        if (lowerProblem.includes('create') || lowerProblem.includes('design')) {
-            return 'creation';
-        }
-        if (lowerProblem.includes('solve') || lowerProblem.includes('fix')) {
-            return 'problem-solving';
-        }
-        if (lowerProblem.includes('understand') || lowerProblem.includes('analyze')) {
-            return 'analysis';
-        }
-        return 'exploration';
+        return this.problemCategorizer.categorize(problem);
     }
     identifySolutionPattern(session, input) {
         // Include current technique in the analysis
         const techniques = [...session.history.map(h => h.technique), input.technique];
-        const uniqueTechniques = [...new Set(techniques)];
-        // Multi-technique synthesis
-        if (uniqueTechniques.length > 1) {
-            return 'multi-technique synthesis';
-        }
-        // Check if all techniques are six_hats with multiple perspectives
-        if (uniqueTechniques.length === 1 &&
-            uniqueTechniques[0] === 'six_hats' &&
-            techniques.length > 1) {
-            return 'multi-perspective synthesis';
-        }
-        // Single technique patterns
-        if (techniques.includes('triz')) {
-            return 'contradiction-resolution';
-        }
-        if (techniques.includes('design_thinking')) {
-            return 'user-centered';
-        }
-        if (techniques.includes('random_entry')) {
-            return 'linear progression';
-        }
-        if (techniques.includes('six_hats')) {
-            return 'multi-perspective synthesis';
-        }
-        if (session.history.some(h => h.antifragileProperties && h.antifragileProperties.length > 0)) {
-            return 'antifragile-design';
-        }
-        return 'creative-exploration';
+        return this.solutionPatternIdentifier.identify(techniques, session.history);
     }
     assessBreakthroughLevel(session) {
         let level = 0;

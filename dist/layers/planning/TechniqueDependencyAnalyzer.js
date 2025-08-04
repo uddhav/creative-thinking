@@ -3,6 +3,12 @@
  * This module helps determine which techniques can run in parallel and which have dependencies
  */
 /**
+ * Constants for special dependency markers
+ */
+export const DEPENDENCY_MARKERS = {
+    ALL_TECHNIQUES: '*',
+};
+/**
  * Graph structure for dependency analysis
  */
 export class DependencyGraph {
@@ -118,7 +124,7 @@ export class TechniqueDependencyAnalyzer {
     static HARD_DEPENDENCIES = {
         triz: ['design_thinking'], // TRIZ benefits from problem definition
         yes_and: ['concept_extraction'], // Builds on extracted concepts
-        convergence: ['*'], // Special marker - depends on all techniques
+        convergence: [DEPENDENCY_MARKERS.ALL_TECHNIQUES], // Special marker - depends on all techniques
     };
     /**
      * Define soft dependencies (beneficial but not required)
@@ -168,7 +174,7 @@ export class TechniqueDependencyAnalyzer {
             const dependencies = TechniqueDependencyAnalyzer.HARD_DEPENDENCIES[technique];
             if (dependencies) {
                 for (const dep of dependencies) {
-                    if (dep === '*') {
+                    if (dep === DEPENDENCY_MARKERS.ALL_TECHNIQUES) {
                         // Special case: depends on all other techniques
                         techniques.filter(t => t !== technique).forEach(t => graph.addEdge(technique, t));
                     }
@@ -224,7 +230,7 @@ export class TechniqueDependencyAnalyzer {
         const hard = TechniqueDependencyAnalyzer.HARD_DEPENDENCIES[technique] || [];
         const soft = TechniqueDependencyAnalyzer.SOFT_DEPENDENCIES[technique] || [];
         return {
-            hard: hard.filter((d) => d !== '*'), // Remove special marker
+            hard: hard.filter((d) => d !== DEPENDENCY_MARKERS.ALL_TECHNIQUES), // Remove special marker
             soft,
         };
     }

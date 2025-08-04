@@ -3,7 +3,7 @@
  */
 
 import { BaseOptionStrategy } from './base.js';
-import { getSecureRandomIndex } from '../../../utils/secureRandom.js';
+import { getSecureRandomIndex } from '../../../utils/safeCrypto.js';
 import type {
   Option,
   OptionGenerationContext,

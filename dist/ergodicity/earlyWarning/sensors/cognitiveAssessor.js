@@ -274,14 +274,26 @@ export class CognitiveAssessor extends Sensor {
         if (sessionData.insights.length < 3) {
             return false;
         }
-        // Check if insights are becoming less frequent
+        const densities = this.calculateInsightDensities(sessionData);
+        return densities.secondHalf < densities.firstHalf * 0.5;
+    }
+    /**
+     * Calculate insight densities for first and second halves of session
+     */
+    calculateInsightDensities(sessionData) {
         const totalSteps = sessionData.history.length;
-        const firstHalfInsights = sessionData.insights.filter((_, i) => i < sessionData.insights.length / 2).length;
+        const insightMidpoint = sessionData.insights.length / 2;
+        // Count insights in each half
+        const firstHalfInsights = sessionData.insights.filter((_, i) => i < insightMidpoint).length;
         const secondHalfInsights = sessionData.insights.length - firstHalfInsights;
-        // Use totalSteps to determine if the decline is significant relative to session length
-        const insightDensityFirstHalf = firstHalfInsights / (totalSteps / 2);
-        const insightDensitySecondHalf = secondHalfInsights / (totalSteps / 2);
-        return insightDensitySecondHalf < insightDensityFirstHalf * 0.5;
+        // Calculate densities relative to session steps
+        const stepsPerHalf = totalSteps / 2;
+        const insightDensityFirstHalf = firstHalfInsights / stepsPerHalf;
+        const insightDensitySecondHalf = secondHalfInsights / stepsPerHalf;
+        return {
+            firstHalf: insightDensityFirstHalf,
+            secondHalf: insightDensitySecondHalf,
+        };
     }
     /**
      * Detect framework lock-in

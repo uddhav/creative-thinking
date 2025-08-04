@@ -4,7 +4,7 @@
  */
 // Removed unused import
 import { BarrierWarningLevel } from './types.js';
-import { getSecureRandomFloat, getSecureRandomBoolean } from '../../utils/secureRandom.js';
+import { getSecureRandomFloat, getSecureRandomBoolean } from '../../utils/safeCrypto.js';
 export class ResponseProtocolSystem {
     protocolHistory = [];
     /**

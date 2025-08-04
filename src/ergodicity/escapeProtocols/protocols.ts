@@ -4,7 +4,7 @@
 
 import { EscapeLevel } from './types.js';
 import type { EscapeProtocol, EscapeContext, EscapeAttemptResult } from './types.js';
-import { getSecureRandomIndex, getSecureRandomFloat } from '../../utils/secureRandom.js';
+import { getSecureRandomIndex, getSecureRandomFloat } from '../../utils/safeCrypto.js';
 
 /**
  * Level 1: Pattern Interruption

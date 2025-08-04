@@ -2,7 +2,7 @@
  * Inversion Strategy - Create options by flipping assumptions
  */
 import { BaseOptionStrategy } from './base.js';
-import { getSecureRandomIndex } from '../../../utils/secureRandom.js';
+import { getSecureRandomIndex } from '../../../utils/safeCrypto.js';
 export class InversionStrategy extends BaseOptionStrategy {
     strategyName = 'inversion';
     description = 'Create options by inverting current assumptions and constraints';

@@ -11,6 +11,13 @@ import type { LateralTechnique } from '../../types/index.js';
 type DependencyMarker = '*';
 
 /**
+ * Constants for special dependency markers
+ */
+export const DEPENDENCY_MARKERS = {
+  ALL_TECHNIQUES: '*' as const,
+} as const;
+
+/**
  * Represents a dependency relationship between techniques
  */
 export interface TechniqueDependency {
@@ -157,7 +164,7 @@ export class TechniqueDependencyAnalyzer {
   > = {
     triz: ['design_thinking'], // TRIZ benefits from problem definition
     yes_and: ['concept_extraction'], // Builds on extracted concepts
-    convergence: ['*'], // Special marker - depends on all techniques
+    convergence: [DEPENDENCY_MARKERS.ALL_TECHNIQUES], // Special marker - depends on all techniques
   };
 
   /**
@@ -214,7 +221,7 @@ export class TechniqueDependencyAnalyzer {
       const dependencies = TechniqueDependencyAnalyzer.HARD_DEPENDENCIES[technique];
       if (dependencies) {
         for (const dep of dependencies) {
-          if (dep === '*') {
+          if (dep === DEPENDENCY_MARKERS.ALL_TECHNIQUES) {
             // Special case: depends on all other techniques
             techniques.filter(t => t !== technique).forEach(t => graph.addEdge(technique, t));
           } else if (techniques.includes(dep)) {
@@ -284,7 +291,7 @@ export class TechniqueDependencyAnalyzer {
     const soft = TechniqueDependencyAnalyzer.SOFT_DEPENDENCIES[technique] || [];
 
     return {
-      hard: hard.filter((d): d is LateralTechnique => d !== '*'), // Remove special marker
+      hard: hard.filter((d): d is LateralTechnique => d !== DEPENDENCY_MARKERS.ALL_TECHNIQUES), // Remove special marker
       soft,
     };
   }

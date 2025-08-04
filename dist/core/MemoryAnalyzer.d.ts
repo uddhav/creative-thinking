@@ -21,6 +21,10 @@ export interface MemoryOutputs {
     };
 }
 export declare class MemoryAnalyzer {
+    private insightRegistry;
+    private problemCategorizer;
+    private solutionPatternIdentifier;
+    constructor();
     /**
      * Generate memory-suggestive outputs for a thinking step
      */

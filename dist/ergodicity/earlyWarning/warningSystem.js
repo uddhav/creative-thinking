@@ -4,6 +4,7 @@
  */
 import { randomUUID } from 'crypto';
 import { BarrierWarningLevel } from './types.js';
+import { logger } from '../../utils/Logger.js';
 import { ResourceMonitor } from './sensors/resourceMonitor.js';
 import { CognitiveAssessor } from './sensors/cognitiveAssessor.js';
 import { TechnicalDebtAnalyzer } from './sensors/technicalDebtAnalyzer.js';
@@ -28,10 +29,11 @@ export class AbsorbingBarrierEarlyWarning {
         this.onError =
             config.onError ??
                 ((error, context) => {
-                    console.error(`Early Warning System Error [${context.operation}]:`, error);
-                    if (context.sensor) {
-                        console.error(`Sensor: ${context.sensor}`);
-                    }
+                    logger.error(`Early Warning System Error [${context.operation}]`, {
+                        error: error.message,
+                        stack: error.stack,
+                        sensor: context.sensor,
+                    });
                 });
         // Initialize sensors with calibration
         this.sensors = new Map();
@@ -43,11 +45,9 @@ export class AbsorbingBarrierEarlyWarning {
      * Perform continuous monitoring of all sensors
      */
     async continuousMonitoring(pathMemory, sessionData) {
-        const sensorReadings = new Map();
-        const activeWarnings = [];
         const now = Date.now();
-        // Run all sensors with throttling
-        for (const [sensorType, sensor] of this.sensors) {
+        // Prepare sensor tasks for parallel execution
+        const sensorTasks = Array.from(this.sensors.entries()).map(async ([sensorType, sensor]) => {
             try {
                 const lastMeasurement = this.lastMeasurementTime.get(sensorType) || 0;
                 const timeSinceLastMeasurement = now - lastMeasurement;
@@ -55,31 +55,45 @@ export class AbsorbingBarrierEarlyWarning {
                 if (timeSinceLastMeasurement < this.measurementThrottleMs && this.lastWarningState) {
                     const cachedReading = this.lastWarningState.sensorReadings.get(sensorType);
                     if (cachedReading) {
-                        sensorReadings.set(sensorType, cachedReading);
-                        // Still check for warnings with cached reading
                         const warnings = this.generateWarningsFromReading(cachedReading, sensor, pathMemory, sessionData);
-                        activeWarnings.push(...warnings);
-                        continue;
+                        return { sensorType, reading: cachedReading, warnings, cached: true };
                     }
                 }
                 // Take new measurement
                 const reading = await sensor.measure(pathMemory, sessionData);
-                sensorReadings.set(sensorType, reading);
                 this.lastMeasurementTime.set(sensorType, now);
                 // Generate warnings if needed
                 const warnings = this.generateWarningsFromReading(reading, sensor, pathMemory, sessionData);
-                activeWarnings.push(...warnings);
                 // Reset failure count on success
                 this.sensorFailures.set(sensorType, 0);
+                return { sensorType, reading, warnings, cached: false };
             }
             catch (error) {
                 this.handleSensorError(error, sensorType);
                 // Use fallback reading if available
                 const fallbackReading = this.createFallbackReading(sensorType);
-                if (fallbackReading) {
-                    sensorReadings.set(sensorType, fallbackReading);
-                }
+                return {
+                    sensorType,
+                    reading: fallbackReading,
+                    warnings: [],
+                    error: true,
+                };
             }
+        });
+        // Execute all sensor measurements in parallel
+        const startTime = Date.now();
+        const sensorResults = await Promise.all(sensorTasks);
+        const executionTime = Date.now() - startTime;
+        // Log performance metrics
+        logger.logPerformance('sensor measurements (parallel)', executionTime, 100);
+        // Collect results
+        const sensorReadings = new Map();
+        const activeWarnings = [];
+        for (const result of sensorResults) {
+            if (result.reading) {
+                sensorReadings.set(result.sensorType, result.reading);
+            }
+            activeWarnings.push(...result.warnings);
         }
         // Prioritize warnings
         const prioritizedWarnings = this.prioritizeWarnings(activeWarnings);

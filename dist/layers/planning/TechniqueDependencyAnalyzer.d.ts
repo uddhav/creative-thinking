@@ -4,6 +4,12 @@
  */
 import type { LateralTechnique } from '../../types/index.js';
 /**
+ * Constants for special dependency markers
+ */
+export declare const DEPENDENCY_MARKERS: {
+    readonly ALL_TECHNIQUES: "*";
+};
+/**
  * Represents a dependency relationship between techniques
  */
 export interface TechniqueDependency {

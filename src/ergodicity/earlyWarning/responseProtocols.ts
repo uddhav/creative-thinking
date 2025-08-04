@@ -8,7 +8,7 @@ import { BarrierWarningLevel } from './types.js';
 import type { EscapeProtocol, EscapeResponse, BarrierWarning } from './types.js';
 import type { PathMemory } from '../types.js';
 import type { SessionData } from '../../index.js';
-import { getSecureRandomFloat, getSecureRandomBoolean } from '../../utils/secureRandom.js';
+import { getSecureRandomFloat, getSecureRandomBoolean } from '../../utils/safeCrypto.js';
 
 export class ResponseProtocolSystem {
   private protocolHistory: EscapeResponse[] = [];
