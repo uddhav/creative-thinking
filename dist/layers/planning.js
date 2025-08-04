@@ -3,8 +3,35 @@
  * Creates structured workflows for thinking sessions
  */
 import { randomUUID } from 'crypto';
+import { ParallelPlanGenerator } from './planning/ParallelPlanGenerator.js';
+import { ParallelismDetector } from './discovery/ParallelismDetector.js';
+import { ParallelismValidator } from './discovery/ParallelismValidator.js';
 export function planThinkingSession(input, sessionManager, techniqueRegistry) {
-    const { problem, techniques, objectives, constraints, timeframe = 'thorough', executionMode = 'sequential', } = input;
+    const { problem, techniques, objectives, constraints, timeframe = 'thorough', executionMode = 'sequential', maxParallelism, convergenceOptions, } = input;
+    // Check if parallel execution is requested or should be considered
+    if (executionMode === 'parallel' || executionMode === 'auto') {
+        // Use ParallelPlanGenerator for parallel planning
+        const parallelGenerator = new ParallelPlanGenerator(sessionManager, techniqueRegistry);
+        // For 'auto' mode, detect if parallel is beneficial
+        let finalExecutionMode = executionMode === 'auto' ? 'sequential' : executionMode;
+        if (executionMode === 'auto') {
+            const detector = new ParallelismDetector();
+            const validator = new ParallelismValidator();
+            const detection = detector.detectExecutionMode(problem);
+            const validation = validator.validateParallelRequest(techniques, maxParallelism);
+            // Use parallel if confidence is high and validation passes
+            finalExecutionMode =
+                detection.confidence > 0.7 && validation.isValid ? 'parallel' : 'sequential';
+        }
+        // Generate parallel plans if appropriate
+        if (finalExecutionMode === 'parallel') {
+            const parallelPlan = parallelGenerator.generateParallelPlans(input, 'parallel', convergenceOptions);
+            // Save plan
+            sessionManager.savePlan(parallelPlan.planId, parallelPlan);
+            return parallelPlan;
+        }
+    }
+    // Continue with sequential planning
     // Generate unique plan ID
     const planId = `plan_${randomUUID()}`;
     // Build workflow for each technique
