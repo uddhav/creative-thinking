@@ -9,7 +9,7 @@ export class TechnicalDebtAnalyzer extends Sensor {
     /**
      * Calculate technical debt level
      */
-    getRawReading(pathMemory, sessionData) {
+    getRawReading(pathMemory, _sessionData) {
         const metrics = this.calculateTechnicalDebtMetrics(pathMemory);
         // Weighted combination of debt factors
         const weights = {
