@@ -239,6 +239,20 @@ export async function executeThinkingStep(
 
     // Handle revisions and branches
     if (input.isRevision && input.revisesStep !== undefined) {
+      // Performance monitoring for revision chains
+      const revisionCount = session.history.filter(h => h.isRevision).length;
+      if (revisionCount > 0 && revisionCount % 10 === 0) {
+        // Log performance warning every 10 revisions
+        const sessionDuration = Date.now() - (session.startTime || Date.now());
+        const avgRevisionTime = sessionDuration / revisionCount;
+
+        if (process.env.LOG_LEVEL === 'DEBUG' || process.env.NODE_ENV === 'development') {
+          process.stderr.write(
+            `[Performance] Deep revision chain detected: ${revisionCount} revisions, avg time: ${avgRevisionTime.toFixed(2)}ms\n`
+          );
+        }
+      }
+
       if (!input.branchId) {
         input.branchId = `branch_${Date.now()}`;
       }

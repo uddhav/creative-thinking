@@ -29,10 +29,10 @@ export class CSVExporter extends BaseExporter {
             return this.generateMetricsCSV([session]);
         }
         else {
-            return this.generateDetailedCSV(session, options);
+            return this.generateDetailedCSV(session);
         }
     }
-    generateDetailedCSV(session, _options) {
+    generateDetailedCSV(session) {
         const rows = [];
         // Determine headers based on what data is available
         const headers = this.determineHeaders(session);
@@ -186,7 +186,7 @@ export class CSVExporter extends BaseExporter {
     /**
      * Special method to export multiple sessions as a comparative CSV
      */
-    exportMultiple(sessions, _options) {
+    exportMultiple(sessions) {
         const content = this.generateMetricsCSV(sessions);
         const date = new Date().toISOString().split('T')[0];
         return {

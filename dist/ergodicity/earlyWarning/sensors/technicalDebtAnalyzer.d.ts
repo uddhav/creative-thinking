@@ -10,7 +10,7 @@ export declare class TechnicalDebtAnalyzer extends Sensor {
     /**
      * Calculate technical debt level
      */
-    protected getRawReading(pathMemory: PathMemory, sessionData: SessionData): Promise<number>;
+    protected getRawReading(pathMemory: PathMemory, _sessionData: SessionData): Promise<number>;
     /**
      * Detect specific technical debt indicators
      */

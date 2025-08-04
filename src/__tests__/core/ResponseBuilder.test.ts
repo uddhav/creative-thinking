@@ -865,12 +865,12 @@ describe('ResponseBuilder', () => {
         ],
       ];
 
-      techniques.forEach(([_technique, input, expected]) => {
+      techniques.forEach(([technique, input, expected]) => {
         const response = builder.buildExecutionResponse('test', input, []);
         const parsed = parseExecutionTestResponse(response.content[0].text);
 
         Object.entries(expected).forEach(([key, value]) => {
-          expect(parsed[key]).toEqual(value);
+          expect(parsed[key], `Failed for technique: ${technique}, field: ${key}`).toEqual(value);
         });
       });
     });

@@ -6,15 +6,16 @@ export class ErgodicityResultAdapter {
     /**
      * Adapt ergodicity manager result to the expected interface
      */
-    adapt(managerResult, currentFlexibility, _pathMemory) {
-        return {
+    adapt(managerResult, currentFlexibility, pathMemory) {
+        const result = {
             event: this.adaptEvent(managerResult.event),
-            metrics: this.adaptMetrics(managerResult.metrics, currentFlexibility),
+            metrics: this.adaptMetrics(managerResult.metrics, currentFlexibility, pathMemory),
             warnings: this.adaptWarnings(managerResult.warnings),
             earlyWarningState: this.adaptEarlyWarningState(managerResult.earlyWarningState),
             escapeRecommendation: this.adaptEscapeRecommendation(managerResult.escapeRecommendation),
             escapeVelocityNeeded: managerResult.escapeVelocityNeeded,
         };
+        return result;
     }
     /**
      * Adapt event data
@@ -32,12 +33,20 @@ export class ErgodicityResultAdapter {
     /**
      * Adapt metrics data
      */
-    adaptMetrics(metrics, currentFlexibility) {
+    adaptMetrics(metrics, currentFlexibility, pathMemory) {
+        // Use path memory to enhance constraint level calculation
+        const enhancedConstraintLevel = pathMemory
+            ? Math.min(1, (metrics.commitmentDepth || 0.5) + pathMemory.constraints.length * 0.05)
+            : metrics.commitmentDepth || 0.5;
+        // Use path memory to adjust option space size
+        const adjustedOptionSpace = pathMemory
+            ? (metrics.optionVelocity || 1.0) * Math.max(0.5, 1 - pathMemory.pathHistory.length * 0.01)
+            : metrics.optionVelocity || 1.0;
         return {
             currentFlexibility,
             pathDivergence: metrics.pathDivergence,
-            constraintLevel: metrics.commitmentDepth || 0.5,
-            optionSpaceSize: metrics.optionVelocity || 1.0,
+            constraintLevel: enhancedConstraintLevel,
+            optionSpaceSize: adjustedOptionSpace,
         };
     }
     /**
