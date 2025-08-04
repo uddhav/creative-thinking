@@ -3,6 +3,8 @@
  * Tracks tool usage and provides helpful guidance when workflow is violated
  */
 
+import { ErrorFactory } from '../errors/enhanced-errors.js';
+
 interface ToolCall {
   toolName: string;
   timestamp: number;
@@ -63,29 +65,34 @@ export class WorkflowGuard {
 
   /**
    * Get helpful error response for workflow violations
+   * Now returns specialized error objects instead of generic responses
    */
-  getViolationResponse(violation: WorkflowViolation): {
-    error: string;
-    message: string;
-    workflowRequired: string;
-    guidance: string[];
-    example?: string;
-    validTechniques?: string[];
-  } {
-    const response = {
-      error: 'Workflow Violation',
-      message: violation.message,
-      workflowRequired: 'discover_techniques → plan_thinking_session → execute_thinking_step',
-      guidance: violation.guidance,
-      example: violation.example,
-      validTechniques: undefined as string[] | undefined,
-    };
+  getViolationError(violation: WorkflowViolation): Error {
+    switch (violation.type) {
+      case 'skipped_discovery':
+        return ErrorFactory.discoverySkipped();
 
-    if (violation.type === 'invalid_technique') {
-      response.validTechniques = this.validTechniques;
+      case 'skipped_planning':
+        return ErrorFactory.planningSkipped();
+
+      case 'invalid_technique': {
+        // Extract technique from violation message
+        const match = violation.message.match(/Invalid technique '([^']+)'/);
+        const technique = match ? match[1] : 'unknown';
+        // Get recommended techniques from recent discovery call
+        const discoveryCall = this.recentCalls.find(
+          call => call.toolName === 'discover_techniques'
+        );
+        const recommended = this.getRecommendedTechniques(discoveryCall);
+        return ErrorFactory.unauthorizedTechnique(technique, recommended);
+      }
+
+      case 'fabricated_planid':
+        return ErrorFactory.workflowBypassAttempt('Using fabricated or invalid planId');
+
+      default:
+        return ErrorFactory.workflowBypassAttempt(violation.message);
     }
-
-    return response;
   }
 
   private checkExecutionViolations(args: unknown): WorkflowViolation | null {
@@ -176,6 +183,17 @@ export class WorkflowGuard {
   private cleanupOldCalls(): void {
     const cutoff = Date.now() - this.CALL_WINDOW_MS;
     this.recentCalls = this.recentCalls.filter(call => call.timestamp > cutoff);
+  }
+
+  /**
+   * Extract recommended techniques from discovery call
+   */
+  private getRecommendedTechniques(discoveryCall?: ToolCall): string[] {
+    if (!discoveryCall) return [];
+
+    // In a real implementation, this would parse the discovery response
+    // For now, return a sensible default based on validTechniques
+    return this.validTechniques.slice(0, 3);
   }
 }
 

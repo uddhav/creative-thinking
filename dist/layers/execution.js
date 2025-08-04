@@ -4,9 +4,11 @@
  */
 // Most ergodicity imports are now handled by orchestrators
 import { ResponseBuilder } from '../core/ResponseBuilder.js';
-import { ExecutionError, ErrorCode, PersistenceError } from '../errors/types.js';
+import { ErrorCode, PersistenceError } from '../errors/types.js';
 import { monitorCriticalSectionAsync, addPerformanceSummary, } from '../utils/PerformanceIntegration.js';
 import { ErrorContextBuilder } from '../core/ErrorContextBuilder.js';
+import { ErrorHandler } from '../errors/ErrorHandler.js';
+import { ErrorFactory } from '../errors/enhanced-errors.js';
 // Risk and option generation imports are now handled by orchestrators
 // Import new orchestrators
 import { ExecutionValidator } from './execution/ExecutionValidator.js';
@@ -17,6 +19,7 @@ import { EscalationPromptGenerator } from '../ergodicity/escalationPrompts.js';
 export async function executeThinkingStep(input, sessionManager, techniqueRegistry, visualFormatter, metricsCollector, complexityAnalyzer, ergodicityManager) {
     const responseBuilder = new ResponseBuilder();
     const errorContextBuilder = new ErrorContextBuilder();
+    const errorHandler = new ErrorHandler();
     // Initialize orchestrators
     const executionValidator = new ExecutionValidator(sessionManager, techniqueRegistry, visualFormatter);
     const riskAssessmentOrchestrator = new RiskAssessmentOrchestrator(visualFormatter);
@@ -41,7 +44,7 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
         }
         const { session, sessionId } = sessionValidation;
         if (!session || !sessionId) {
-            throw new Error('Session validation succeeded but session/sessionId is missing');
+            throw ErrorFactory.sessionNotFound(input.sessionId || 'unknown');
         }
         // Get technique handler
         const handler = techniqueRegistry.getHandler(input.technique);
@@ -195,10 +198,11 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
         return addPerformanceSummary(response);
     }
     catch (error) {
-        if (error instanceof Error) {
-            return responseBuilder.buildErrorResponse(error, 'execution');
-        }
-        return responseBuilder.buildErrorResponse(new ExecutionError(ErrorCode.INTERNAL_ERROR, 'An unexpected error occurred during execution', { error: String(error) }), 'execution');
+        return errorHandler.handleError(error, 'execution', {
+            technique: input.technique,
+            step: input.currentStep,
+            sessionId: input.sessionId,
+        });
     }
 }
 //# sourceMappingURL=execution.js.map

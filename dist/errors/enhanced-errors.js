@@ -15,6 +15,7 @@ export class CreativeThinkingError extends Error {
     retryable;
     retryDelayMs;
     cause;
+    timestamp;
     constructor(config) {
         super(config.message);
         this.name = 'CreativeThinkingError';
@@ -27,6 +28,7 @@ export class CreativeThinkingError extends Error {
         this.retryable = config.retryable;
         this.retryDelayMs = config.retryDelayMs;
         this.cause = config.cause;
+        this.timestamp = Date.now();
     }
     /**
      * Convert to JSON for serialization
@@ -42,6 +44,7 @@ export class CreativeThinkingError extends Error {
             documentation: this.documentation,
             retryable: this.retryable,
             retryDelayMs: this.retryDelayMs,
+            timestamp: this.timestamp,
         };
     }
     /**
@@ -78,7 +81,7 @@ export class WorkflowError extends CreativeThinkingError {
             severity: 'medium',
             recovery,
             context,
-            documentation: 'https://docs.creative-thinking.dev/errors#workflow',
+            // documentation: URL will be added when deployed
         });
         this.name = 'WorkflowError';
     }
@@ -92,10 +95,10 @@ export class ValidationError extends CreativeThinkingError {
             code,
             message,
             category: 'validation',
-            severity: 'low',
+            severity: 'medium',
             recovery,
             context,
-            documentation: 'https://docs.creative-thinking.dev/errors#validation',
+            // documentation: URL will be added when deployed
         });
         this.name = 'ValidationError';
     }
@@ -112,7 +115,7 @@ export class StateError extends CreativeThinkingError {
             severity: 'medium',
             recovery,
             context,
-            documentation: 'https://docs.creative-thinking.dev/errors#state',
+            // documentation: URL will be added when deployed
         });
         this.name = 'StateError';
     }
@@ -131,7 +134,7 @@ export class SystemError extends CreativeThinkingError {
             context,
             retryable,
             retryDelayMs: retryable ? 1000 : undefined,
-            documentation: 'https://docs.creative-thinking.dev/errors#system',
+            // documentation: URL will be added when deployed
         });
         this.name = 'SystemError';
     }
@@ -140,36 +143,46 @@ export class SystemError extends CreativeThinkingError {
  * Error codes for consistent identification
  */
 export const ErrorCodes = {
-    // Workflow errors
-    WRONG_TOOL_ORDER: 'E001',
-    MISSING_PLAN: 'E002',
-    TECHNIQUE_MISMATCH: 'E003',
-    INVALID_STEP: 'E004',
-    // Validation errors
+    // Validation errors (E100-E199)
     INVALID_INPUT: 'E101',
     MISSING_PARAMETER: 'E102',
     INVALID_TYPE: 'E103',
     OUT_OF_RANGE: 'E104',
-    // State errors
-    SESSION_NOT_FOUND: 'E201',
+    // Workflow errors (E200-E299)
+    WRONG_TOOL_ORDER: 'E201',
     PLAN_NOT_FOUND: 'E202',
-    INVALID_STATE: 'E203',
-    SESSION_EXPIRED: 'E204',
-    // System errors
-    FILE_IO_ERROR: 'E301',
-    MEMORY_ERROR: 'E302',
-    NETWORK_ERROR: 'E303',
-    PERMISSION_ERROR: 'E304',
-    // Configuration errors
-    MISSING_CONFIG: 'E401',
-    INVALID_CONFIG: 'E402',
-    // Technique errors
-    TECHNIQUE_NOT_FOUND: 'E501',
-    TECHNIQUE_ERROR: 'E502',
-    // Convergence errors
-    CONVERGENCE_FAILED: 'E601',
-    PARALLEL_TIMEOUT: 'E602',
-    DEPENDENCY_ERROR: 'E603',
+    WORKFLOW_SKIP: 'E203',
+    TECHNIQUE_MISMATCH: 'E204',
+    MISSING_PLAN: 'E205',
+    INVALID_STEP: 'E206',
+    DISCOVERY_SKIPPED: 'E207',
+    PLANNING_SKIPPED: 'E208',
+    UNAUTHORIZED_TECHNIQUE: 'E209',
+    WORKFLOW_BYPASS_ATTEMPT: 'E210',
+    // State errors (E300-E399)
+    SESSION_NOT_FOUND: 'E301',
+    SESSION_EXPIRED: 'E302',
+    INVALID_STATE: 'E303',
+    // System errors (E400-E499)
+    FILE_IO_ERROR: 'E401',
+    MEMORY_ERROR: 'E402',
+    PERMISSION_ERROR: 'E403',
+    NETWORK_ERROR: 'E404',
+    // Permission errors (E500-E599)
+    ACCESS_DENIED: 'E501',
+    RATE_LIMIT_EXCEEDED: 'E502',
+    // Configuration errors (E600-E699)
+    MISSING_CONFIG: 'E601',
+    INVALID_CONFIG: 'E602',
+    // Technique errors (E700-E799)
+    TECHNIQUE_EXECUTION_FAILED: 'E701',
+    TECHNIQUE_DEPENDENCY_MISSING: 'E702',
+    TECHNIQUE_NOT_FOUND: 'E703',
+    TECHNIQUE_MISCONFIGURED: 'E704',
+    // Convergence errors (E800-E899)
+    CONVERGENCE_FAILED: 'E801',
+    PARALLEL_TIMEOUT: 'E802',
+    DEPENDENCY_ERROR: 'E803',
 };
 /**
  * Factory for creating common errors
@@ -180,7 +193,7 @@ export class ErrorFactory {
      */
     static sessionNotFound(sessionId) {
         return new StateError(ErrorCodes.SESSION_NOT_FOUND, `Session '${sessionId}' not found. The session may have expired or been deleted.`, [
-            'Start a new session with discover_techniques',
+            "Start a new session with 'plan_thinking_session'",
             'Check if the sessionId is correct',
             'If using persistence, ensure the session was saved',
             'List available sessions if persistence is enabled',
@@ -224,7 +237,7 @@ export class ErrorFactory {
             `Provide a valid ${expectedType} for ${parameter}`,
             'Check the parameter documentation',
             'Use the example in the documentation',
-        ], { parameter, expectedType, actualValue });
+        ], { parameter, expectedType, actualValue: String(actualValue) });
     }
     /**
      * Create a missing parameter error
@@ -276,7 +289,333 @@ export class ErrorFactory {
                 'Check individual plan results for errors',
             ],
             context: { reason, parallelPlans },
-            documentation: 'https://docs.creative-thinking.dev/errors#convergence',
+            // documentation: URL will be added when deployed
+        });
+    }
+    /**
+     * Create a missing field error
+     */
+    static missingField(fieldName) {
+        return new ValidationError(ErrorCodes.INVALID_INPUT, `Missing required field: '${fieldName}'`, [
+            `Provide the '${fieldName}' field in your request`,
+            'Ensure all required fields are included: problem, techniques, etc.',
+            'Example: { "problem": "your problem", "techniques": ["six_hats"] }',
+        ], { field: fieldName });
+    }
+    /**
+     * Create an invalid field type error
+     */
+    static invalidFieldType(fieldName, expectedType, actualType) {
+        return new ValidationError(ErrorCodes.MISSING_PARAMETER, `Invalid field type for '${fieldName}': expected ${expectedType}, got ${actualType}`, [
+            `Change '${fieldName}' from ${actualType} to ${expectedType}`,
+            `Example: if techniques is a string, change to array: ["${fieldName}"]`,
+            'Use JSON.stringify() to verify your data structure',
+        ], { field: fieldName, expectedType, actualType });
+    }
+    /**
+     * Create an invalid technique error
+     */
+    static invalidTechnique(technique) {
+        const validTechniques = [
+            'six_hats',
+            'po',
+            'random_entry',
+            'scamper',
+            'concept_extraction',
+            'yes_and',
+            'design_thinking',
+            'triz',
+            'neural_state',
+            'temporal_work',
+            'cross_cultural',
+            'collective_intel',
+            'disney_method',
+            'nine_windows',
+        ];
+        return new ValidationError(ErrorCodes.INVALID_TYPE, `Invalid technique: '${technique}'`, [
+            'Use one of the valid techniques',
+            `Valid techniques: ${validTechniques.slice(0, 5).join(', ')}, ...`,
+            "Call 'discover_techniques' to get recommendations",
+        ], { technique, validTechniques });
+    }
+    /**
+     * Create a workflow order error
+     */
+    static workflowOrder(currentTool, expectedTool) {
+        return new WorkflowError(ErrorCodes.WRONG_TOOL_ORDER, `Workflow error: Called '${currentTool}' but should call '${expectedTool}' first`, [
+            `Call '${expectedTool}' first`,
+            'Follow the three-step workflow',
+            'Reset and start from discovery',
+        ], { currentTool, expectedTool });
+    }
+    /**
+     * Create a missing workflow step error
+     */
+    static missingWorkflowStep(missingStep) {
+        return new WorkflowError(ErrorCodes.PLAN_NOT_FOUND, `Missing workflow step: '${missingStep}' must be called first`, [
+            `Call '${missingStep}' first`,
+            'Check the workflow documentation',
+            'Start from the beginning with discovery',
+        ], { missingStep });
+    }
+    /**
+     * Create a workflow skip detected error
+     */
+    static workflowSkipDetected() {
+        return new WorkflowError(ErrorCodes.WORKFLOW_SKIP, 'Workflow skip detected: Attempting to bypass the three-layer architecture', [
+            'Use the proper workflow: discover → plan → execute',
+            'Do not skip directly to execution',
+            'Call discover_techniques first',
+        ], { severity: 'critical' });
+    }
+    /**
+     * Create a discovery skipped error
+     */
+    static discoverySkipped() {
+        return new WorkflowError(ErrorCodes.DISCOVERY_SKIPPED, 'Discovery phase skipped: Cannot proceed without technique recommendations', [
+            'Call discover_techniques with your problem statement',
+            'Discovery provides personalized technique recommendations',
+            'Example: discover_techniques({ problem: "How to innovate?" })',
+        ], { requiredTool: 'discover_techniques', severity: 'high' });
+    }
+    /**
+     * Create a planning skipped error
+     */
+    static planningSkipped() {
+        return new WorkflowError(ErrorCodes.PLANNING_SKIPPED, 'Planning phase skipped: Cannot execute without a plan', [
+            'Call plan_thinking_session after discovery',
+            'Planning creates a structured workflow for execution',
+            'Use techniques recommended by discovery phase',
+        ], { requiredTool: 'plan_thinking_session', severity: 'high' });
+    }
+    /**
+     * Create an unauthorized technique error
+     */
+    static unauthorizedTechnique(technique, recommendedTechniques) {
+        return new WorkflowError(ErrorCodes.UNAUTHORIZED_TECHNIQUE, `Technique '${technique}' was not recommended by discovery phase`, [
+            'Use one of the recommended techniques: ' + recommendedTechniques.join(', '),
+            'Run discovery again if you need different recommendations',
+            'Techniques should align with your problem type',
+        ], { attemptedTechnique: technique, recommendedTechniques, severity: 'medium' });
+    }
+    /**
+     * Create a workflow bypass attempt error
+     */
+    static workflowBypassAttempt(attemptType) {
+        return new WorkflowError(ErrorCodes.WORKFLOW_BYPASS_ATTEMPT, `Workflow bypass attempt detected: ${attemptType}`, [
+            'Follow the mandatory three-step workflow',
+            'Each phase builds on the previous one',
+            'Bypassing steps leads to suboptimal results',
+            'Start with discover_techniques',
+        ], { attemptType, severity: 'critical' });
+    }
+    /**
+     * Create a session expired error
+     */
+    static sessionExpired(sessionId, expiryMinutes) {
+        return new StateError(ErrorCodes.SESSION_EXPIRED, `Session '${sessionId}' has expired after ${expiryMinutes} minutes of inactivity`, [
+            'Create a new session',
+            'Increase session timeout in configuration',
+            'Use session persistence for longer sessions',
+        ], { sessionId, expiryMinutes });
+    }
+    /**
+     * Create an invalid step error
+     */
+    static invalidStep(requestedStep, maxSteps) {
+        return new StateError(ErrorCodes.INVALID_STATE, `Invalid step: Step ${requestedStep} requested but technique only has ${maxSteps} steps`, [
+            `Use a step between 1 and ${maxSteps}`,
+            'Check the technique documentation',
+            'Verify your step counter logic',
+        ], { requestedStep, maxSteps });
+    }
+    /**
+     * Create a file access error
+     */
+    static fileAccessError(filePath, reason) {
+        return new SystemError(ErrorCodes.FILE_IO_ERROR, `Cannot access file: ${filePath}`, [
+            'Check file permissions',
+            'Ensure the file exists',
+            'Verify the file path is correct',
+            'Check disk space and availability',
+        ], { filePath, reason }, true // retryable
+        );
+    }
+    /**
+     * Create a memory limit exceeded error
+     */
+    static memoryLimitExceeded(usagePercent) {
+        return new SystemError(ErrorCodes.MEMORY_ERROR, `Memory limit exceeded: ${usagePercent}% of available memory in use`, [
+            'Reduce session count',
+            'Clear old sessions',
+            'Increase memory allocation',
+            'Restart the server',
+        ], { usagePercent }, false // not retryable
+        );
+    }
+    /**
+     * Create a persistence error
+     */
+    static persistenceError(operation, reason) {
+        return new SystemError(ErrorCodes.PERMISSION_ERROR, `Persistence error during ${operation}: ${reason}`, [
+            'Check storage availability',
+            'Verify write permissions',
+            'Use in-memory mode temporarily',
+            'Retry the operation',
+        ], { operation, reason }, true // retryable
+        );
+    }
+    /**
+     * Create an access denied error
+     */
+    static accessDenied(resource) {
+        return new CreativeThinkingError({
+            code: ErrorCodes.ACCESS_DENIED,
+            message: `Access denied to resource: ${resource}`,
+            category: 'permission',
+            severity: 'high',
+            recovery: ['Check your permissions', 'Contact an administrator', 'Use a different resource'],
+            context: { resource },
+        });
+    }
+    /**
+     * Create a rate limit exceeded error
+     */
+    static rateLimitExceeded(retryAfterSeconds) {
+        return new CreativeThinkingError({
+            code: ErrorCodes.RATE_LIMIT_EXCEEDED,
+            message: `Rate limit exceeded. Try again in ${retryAfterSeconds} seconds`,
+            category: 'permission',
+            severity: 'medium',
+            recovery: [
+                `Wait ${retryAfterSeconds} seconds before retrying`,
+                'Reduce request frequency',
+                'Use batch operations where possible',
+            ],
+            context: { retryAfterSeconds },
+            retryable: true,
+        });
+    }
+    /**
+     * Create a missing configuration error
+     */
+    static missingConfiguration(configKey) {
+        return new CreativeThinkingError({
+            code: ErrorCodes.MISSING_CONFIG,
+            message: `Missing required configuration: ${configKey}`,
+            category: 'configuration',
+            severity: 'high',
+            recovery: [
+                `Set the ${configKey} configuration value`,
+                'Check environment variables',
+                'Review configuration documentation',
+            ],
+            context: { configKey },
+        });
+    }
+    /**
+     * Create an invalid configuration error
+     */
+    static invalidConfiguration(configKey, value, expectedFormat) {
+        return new CreativeThinkingError({
+            code: ErrorCodes.INVALID_CONFIG,
+            message: `Invalid configuration for '${configKey}': ${value} (expected ${expectedFormat})`,
+            category: 'configuration',
+            severity: 'high',
+            recovery: [
+                `Update ${configKey} to match ${expectedFormat}`,
+                'Check configuration documentation',
+                'Use default values if unsure',
+            ],
+            context: { configKey, value, expectedFormat },
+        });
+    }
+    /**
+     * Create a technique execution failed error
+     */
+    static techniqueExecutionFailed(technique, reason) {
+        return new CreativeThinkingError({
+            code: ErrorCodes.TECHNIQUE_EXECUTION_FAILED,
+            message: `Technique '${technique}' execution failed: ${reason}`,
+            category: 'technique',
+            severity: 'medium',
+            recovery: [
+                'Check technique parameters',
+                'Review technique documentation',
+                'Try a different technique',
+                'Simplify the problem statement',
+            ],
+            context: { technique, reason },
+        });
+    }
+    /**
+     * Create a technique dependency missing error
+     */
+    static techniqueDependencyMissing(technique, dependency) {
+        return new CreativeThinkingError({
+            code: ErrorCodes.TECHNIQUE_DEPENDENCY_MISSING,
+            message: `Technique '${technique}' requires '${dependency}' to be executed first`,
+            category: 'technique',
+            severity: 'medium',
+            recovery: [
+                `Execute '${dependency}' first`,
+                'Check technique dependencies',
+                'Use a technique without dependencies',
+            ],
+            context: { technique, dependency },
+        });
+    }
+    /**
+     * Create a parallel execution error
+     */
+    static parallelExecutionError(failedPlans, reason) {
+        return new CreativeThinkingError({
+            code: ErrorCodes.CONVERGENCE_FAILED,
+            message: `Parallel execution failed for plans: ${failedPlans.join(', ')}`,
+            category: 'convergence',
+            severity: 'high',
+            recovery: [
+                'Retry failed plans individually',
+                'Use sequential execution mode',
+                'Check individual plan errors',
+                'Reduce parallelism level',
+            ],
+            context: { failedPlans, reason },
+        });
+    }
+    /**
+     * Create a convergence failure error
+     */
+    static convergenceFailure(totalPlans, completedPlans) {
+        return new CreativeThinkingError({
+            code: ErrorCodes.CONVERGENCE_FAILED,
+            message: `Convergence failed: Only ${completedPlans} of ${totalPlans} plans completed`,
+            category: 'convergence',
+            severity: 'high',
+            recovery: [
+                'Retry failed plans',
+                'Continue with partial results',
+                'Use sequential execution',
+                'Check plan dependencies',
+            ],
+            context: { totalPlans, completedPlans },
+        });
+    }
+    /**
+     * Create a convergence dependency not met error
+     */
+    static convergenceDependencyNotMet(planId, missingDependencies) {
+        return new CreativeThinkingError({
+            code: ErrorCodes.DEPENDENCY_ERROR,
+            message: `Convergence plan '${planId}' dependencies not met`,
+            category: 'convergence',
+            severity: 'high',
+            recovery: [
+                'Complete required dependencies first',
+                'Check dependency configuration',
+                'Use independent plans only',
+            ],
+            context: { planId, missingDependencies },
         });
     }
 }
@@ -285,6 +624,20 @@ export class ErrorFactory {
  */
 export class ErrorRecovery {
     /**
+     * Check if an error is recoverable
+     */
+    static isRecoverable(error) {
+        if (error instanceof CreativeThinkingError) {
+            // Critical errors are not recoverable
+            if (error.severity === 'critical') {
+                return false;
+            }
+            // Errors with recovery suggestions are generally recoverable
+            return error.recovery.length > 0;
+        }
+        return true; // Assume unknown errors might be recoverable
+    }
+    /**
      * Check if an error is retryable
      */
     static isRetryable(error) {
@@ -292,25 +645,25 @@ export class ErrorRecovery {
             return error.retryable || false;
         }
         // Check for common retryable system errors
-        const retryableMessages = [
-            'ECONNRESET',
-            'ETIMEDOUT',
-            'ENOTFOUND',
-            'ECONNREFUSED',
-            'EPIPE',
-        ];
+        const retryableMessages = ['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND', 'ECONNREFUSED', 'EPIPE'];
         return retryableMessages.some(msg => error.message.includes(msg));
     }
     /**
      * Get retry delay for an error
      */
     static getRetryDelay(error, attemptNumber) {
+        const maxDelay = 30000; // 30 seconds maximum
+        let delay;
         if (error instanceof CreativeThinkingError && error.retryDelayMs) {
-            // Exponential backoff
-            return error.retryDelayMs * Math.pow(2, attemptNumber - 1);
+            // Exponential backoff with jitter
+            delay = error.retryDelayMs * Math.pow(2, attemptNumber - 1);
         }
-        // Default exponential backoff
-        return 1000 * Math.pow(2, attemptNumber - 1);
+        else {
+            // Default exponential backoff
+            delay = 1000 * Math.pow(2, attemptNumber - 1);
+        }
+        // Cap at maximum delay
+        return Math.min(delay, maxDelay);
     }
     /**
      * Execute with retry
@@ -333,7 +686,7 @@ export class ErrorRecovery {
                 await new Promise(resolve => setTimeout(resolve, delay));
             }
         }
-        throw lastError;
+        throw lastError || new Error('Operation failed after max attempts');
     }
 }
 //# sourceMappingURL=enhanced-errors.js.map

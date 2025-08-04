@@ -40,21 +40,22 @@ describe('LLM Bypass Prevention', () => {
       expect(violation).toBeDefined();
       expect(violation?.type).toBe('skipped_discovery');
 
-      const violationResponse = workflowGuard.getViolationResponse(violation);
-      expect(violationResponse.error).toBe('Workflow Violation');
-      expect(violationResponse.message).toContain('must start with discover_techniques');
-      expect(violationResponse.guidance).toBeDefined();
-      expect(violationResponse.example).toBeDefined();
+      const violationError = workflowGuard.getViolationError(violation);
+      expect(violationError).toBeInstanceOf(Error);
+      expect(violationError.message).toContain('Discovery phase skipped');
+      expect((violationError as any).code).toBe('E207');
+      expect((violationError as any).recovery).toBeDefined();
 
       // Also test the actual execution path
       const result = await lateralServer.executeThinkingStep(args);
       const responseText = result.content[0].text;
       const response = JSON.parse(responseText);
 
-      expect(response.error).toContain('❌ WORKFLOW ERROR');
-      expect(response.message).toContain('does not exist');
-      expect(response.your_error).toContain('fake-plan-123');
-      expect(response.fix).toContain('Start over with discover_techniques');
+      expect(response.error).toBeDefined();
+      expect(response.error.code).toBe('E202');
+      expect(response.error.message).toContain('fake-plan-123');
+      expect(response.error.message).toContain('not found');
+      expect(response.error.recovery).toContain('Create a new plan with plan_thinking_session');
     });
 
     it('should prevent using invalid techniques', async () => {
@@ -93,10 +94,14 @@ describe('LLM Bypass Prevention', () => {
       const execResult = await lateralServer.executeThinkingStep(executeArgs);
       const execResponse = JSON.parse(execResult.content[0].text);
 
-      expect(execResponse.error).toContain('❌ TECHNIQUE MISMATCH');
-      expect(execResponse.message).toContain('random_entry');
-      expect(execResponse.yourPlan.techniques).toContain('six_hats');
-      expect(execResponse.fix).toContain('Change your technique parameter');
+      expect(execResponse.error).toBeDefined();
+      expect(execResponse.error.code).toBe('E204');
+      expect(execResponse.error.message).toContain('Technique mismatch');
+      expect(execResponse.error.message).toContain('random_entry');
+      expect(execResponse.error.context.planTechnique).toBe('six_hats');
+      expect(execResponse.error.recovery).toContain(
+        "Use technique 'six_hats' as specified in the plan"
+      );
     });
 
     it('should provide helpful guidance when skipping planning', () => {
@@ -125,10 +130,11 @@ describe('LLM Bypass Prevention', () => {
       expect(violation).toBeDefined();
       expect(violation?.type).toBe('skipped_planning');
 
-      const violationResponse = workflowGuard.getViolationResponse(violation);
-      expect(violationResponse.error).toBe('Workflow Violation');
-      expect(violationResponse.message).toContain('must create a plan');
-      expect(violationResponse.guidance[0]).toContain('already called discover_techniques');
+      const violationError = workflowGuard.getViolationError(violation);
+      expect(violationError).toBeInstanceOf(Error);
+      expect(violationError.message).toContain('Planning phase skipped');
+      expect((violationError as any).code).toBe('E208');
+      expect((violationError as any).recovery[0]).toContain('Call plan_thinking_session');
     });
   });
 
@@ -213,11 +219,11 @@ describe('LLM Bypass Prevention', () => {
       // Check workflow guard first
       const violation = workflowGuard.checkWorkflowViolation('execute_thinking_step', executeArgs);
       if (violation) {
-        const violationResponse = workflowGuard.getViolationResponse(violation);
-        expect(violationResponse.error).toBe('Workflow Violation');
-        expect(violationResponse.message).toContain('Invalid technique');
-        expect(violationResponse.validTechniques).toBeDefined();
-        expect(violationResponse.validTechniques).toContain('six_hats');
+        const violationError = workflowGuard.getViolationError(violation);
+        expect(violationError).toBeInstanceOf(Error);
+        expect(violationError.message).toContain('was not recommended');
+        expect((violationError as any).code).toBe('E209');
+        expect((violationError as any).recovery).toBeDefined();
       }
 
       // Also test server validation

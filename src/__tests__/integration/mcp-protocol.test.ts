@@ -191,8 +191,11 @@ describe('MCP Protocol Integration', () => {
       const result = await server.executeThinkingStep(input);
 
       expect(result.isError).toBe(true);
-      const errorData = JSON.parse(result.content[0].text) as { error: string };
-      expect(errorData.error).toBe('❌ WORKFLOW ERROR: Plan not found');
+      const errorData = JSON.parse(result.content[0].text);
+      expect(errorData.error).toBeDefined();
+      expect(errorData.error.code).toBe('E202');
+      expect(errorData.error.message).toContain('Plan');
+      expect(errorData.error.message).toContain('not found');
     });
 
     it('should complete workflow and generate insights', async () => {

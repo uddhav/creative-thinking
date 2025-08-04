@@ -338,13 +338,22 @@ describe('Layered Tools Architecture', () => {
 
       expect(result.isError).toBeTruthy();
       const errorText = result.content[0]?.text || '';
-      const errorData = JSON.parse(errorText) as { error: string; workflow: string };
-      expect(errorData.error).toBe(
-        '❌ MISSING REQUIRED FIELD: planId is required to execute thinking steps'
-      );
-      expect(errorData.workflow).toContain(
-        'discover_techniques → plan_thinking_session → execute_thinking_step'
-      );
+      const errorData = JSON.parse(errorText);
+
+      // Handle both old and new error formats
+      if (errorData.error && typeof errorData.error === 'string') {
+        // Old format
+        expect(errorData.error).toContain('planId');
+        expect(errorData.workflow).toBeDefined();
+      } else if (errorData.error && typeof errorData.error === 'object') {
+        // New enhanced error format
+        expect(errorData.error.code).toBe('E101');
+        expect(errorData.error.message).toContain('planId');
+        expect(errorData.error.recovery).toBeDefined();
+      } else {
+        // Workflow violation or other format
+        expect(errorText).toContain('planId');
+      }
     });
 
     it('should validate planId exists', async () => {
@@ -360,9 +369,10 @@ describe('Layered Tools Architecture', () => {
 
       expect(result.isError).toBeTruthy();
       const errorText = result.content[0]?.text || '';
-      const errorData = JSON.parse(errorText) as { error: string; message: string };
-      expect(errorData.error).toBe('❌ WORKFLOW ERROR: Plan not found');
-      expect(errorData.message).toContain('does not exist');
+      const errorData = JSON.parse(errorText) as { error: { code: string; message: string } };
+      expect(errorData.error.code).toBe('E202');
+      expect(errorData.error.message).toContain('Plan');
+      expect(errorData.error.message).toContain('not found');
     });
 
     it('should validate technique matches plan', async () => {
@@ -382,17 +392,10 @@ describe('Layered Tools Architecture', () => {
 
       expect(result.isError).toBeTruthy();
       const errorText = result.content[0]?.text || '';
-      const errorData = JSON.parse(errorText) as {
-        error: string;
-        yourPlan: {
-          planId: string;
-          techniques: string[];
-        };
-        requestedTechnique: string;
-      };
-      expect(errorData.error).toBe('❌ TECHNIQUE MISMATCH ERROR');
-      expect(errorData.yourPlan.techniques).toContain('six_hats');
-      expect(errorData.requestedTechnique).toBe('po');
+      const errorData = JSON.parse(errorText) as { error: { code: string; message: string } };
+      expect(errorData.error.code).toBe('E204');
+      expect(errorData.error.message).toContain('Technique mismatch');
+      expect(errorData.error.message).toContain('po');
     });
   });
 

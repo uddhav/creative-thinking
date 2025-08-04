@@ -5,6 +5,7 @@
 import { randomUUID } from 'crypto';
 import { MemoryManager } from './MemoryManager.js';
 import { SessionError, ErrorCode } from '../errors/types.js';
+import { ErrorFactory } from '../errors/enhanced-errors.js';
 import { SessionCleaner } from './session/SessionCleaner.js';
 import { SessionPersistence } from './session/SessionPersistence.js';
 import { SessionMetrics } from './session/SessionMetrics.js';
@@ -74,7 +75,7 @@ export class SessionManager {
         if (providedSessionId) {
             // Validate provided session ID
             if (!this.isValidSessionId(providedSessionId)) {
-                throw new SessionError(ErrorCode.INVALID_INPUT, `Invalid session ID format: ${providedSessionId}. Session IDs must be alphanumeric with underscores, hyphens, and dots only, maximum 64 characters.`);
+                throw ErrorFactory.invalidInput('sessionId', 'alphanumeric with underscores, hyphens, and dots only (max 64 chars)', providedSessionId);
             }
             sessionId = providedSessionId;
         }
@@ -91,7 +92,7 @@ export class SessionManager {
             this.sessionCleaner.cleanupOldSessions();
             // If still over limit after cleanup, throw error
             if (this.sessions.size >= this.config.maxSessions) {
-                throw new SessionError(ErrorCode.MAX_SESSIONS_EXCEEDED, 'Maximum number of sessions exceeded');
+                throw ErrorFactory.memoryLimitExceeded(Math.round((this.sessions.size / this.config.maxSessions) * 100));
             }
         }
         this.sessions.set(sessionId, sessionData);
@@ -167,7 +168,7 @@ export class SessionManager {
     async saveSessionToPersistence(sessionId) {
         const session = this.sessions.get(sessionId);
         if (!session) {
-            throw new SessionError(ErrorCode.SESSION_NOT_FOUND, `Session ${sessionId} not found`);
+            throw ErrorFactory.sessionNotFound(sessionId);
         }
         // Check session size before saving
         const size = this.sessionMetrics.getSessionSize(sessionId);

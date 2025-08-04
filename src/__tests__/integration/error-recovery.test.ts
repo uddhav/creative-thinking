@@ -88,8 +88,9 @@ describe('Error Recovery Integration Tests', () => {
       expect(result.isError).toBe(true);
       // When providing a planId with an invalid technique, it's caught as a technique mismatch
       const errorText = result.content[0].text;
-      expect(errorText).toMatch(/TECHNIQUE.*MISMATCH.*ERROR/i);
-      expect(errorText).toContain('invalid_technique');
+      const parsedError = JSON.parse(errorText);
+      expect(parsedError.error.code).toBe('E204');
+      expect(parsedError.error.message).toContain('invalid_technique');
     });
 
     it('should handle missing required fields gracefully', () => {
@@ -262,9 +263,11 @@ describe('Error Recovery Integration Tests', () => {
 
       expect(result.isError).toBe(true);
       const errorText = result.content[0].text;
-      // The error response has a specific format with workflow guidance
-      expect(errorText).toMatch(/WORKFLOW\s+ERROR.*Plan\s+not\s+found/i);
-      expect(errorText).toContain('non-existent-plan');
+      const parsedError = JSON.parse(errorText);
+      expect(parsedError.error.code).toBe('E202');
+      expect(parsedError.error.message).toContain('Plan');
+      expect(parsedError.error.message).toContain('not found');
+      expect(parsedError.error.message).toContain('non-existent-plan');
     });
   });
 
@@ -306,9 +309,10 @@ describe('Error Recovery Integration Tests', () => {
 
       expect(mismatchResult.isError).toBe(true);
       const errorText = mismatchResult.content[0].text;
-      // The error response has a specific format for technique mismatch
-      expect(errorText).toMatch(/TECHNIQUE\s+MISMATCH\s+ERROR/i);
-      expect(errorText).toContain('disney_method');
+      const parsedError = JSON.parse(errorText);
+      expect(parsedError.error.code).toBe('E204');
+      expect(parsedError.error.message).toContain('Technique mismatch');
+      expect(parsedError.error.message).toContain('disney_method');
     });
   });
 
@@ -361,7 +365,9 @@ describe('Error Recovery Integration Tests', () => {
       // Verify each has proper error content
       results.forEach(result => {
         const errorText = result.content[0].text;
-        expect(errorText).toContain('Plan not found');
+        const parsedError = JSON.parse(errorText);
+        expect(parsedError.error.code).toBe('E202');
+        expect(parsedError.error.message).toContain('not found');
       });
     });
   });
@@ -692,7 +698,7 @@ describe('Error Recovery Integration Tests', () => {
             output: 'Test',
             nextStepNeeded: false,
           },
-          expectedError: /WORKFLOW\s+ERROR.*Plan\s+not\s+found/i,
+          expectedError: /Plan.*not found/i,
         },
         // Invalid technique with plan
         {
@@ -705,7 +711,7 @@ describe('Error Recovery Integration Tests', () => {
             output: 'Test',
             nextStepNeeded: false,
           },
-          expectedError: /Plan\s+not\s+found/i, // Plan doesn't exist so this comes first
+          expectedError: /Plan.*not found/i, // Plan doesn't exist so this comes first
         },
       ];
 
@@ -723,14 +729,20 @@ describe('Error Recovery Integration Tests', () => {
         // All should return isError: true
         expect(result.isError).toBe(true);
 
-        // Verify error text matches expected pattern
+        // Verify error text is valid JSON
         const errorText = result.content[0].text;
-        expect(errorText).toMatch(scenario.expectedError);
-
-        // Verify it's valid JSON (not a plain string)
+        let parsedError: any;
         expect(() => {
-          JSON.parse(errorText);
+          parsedError = JSON.parse(errorText);
         }).not.toThrow();
+
+        // Verify error structure
+        expect(parsedError).toHaveProperty('error');
+        expect(parsedError.error).toHaveProperty('code');
+        expect(parsedError.error).toHaveProperty('message');
+
+        // Check that the error message matches expected pattern
+        expect(parsedError.error.message).toMatch(scenario.expectedError);
       }
     });
   });

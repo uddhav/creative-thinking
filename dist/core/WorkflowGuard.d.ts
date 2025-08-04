@@ -22,17 +22,15 @@ export declare class WorkflowGuard {
     checkWorkflowViolation(toolName: string, args: unknown): WorkflowViolation | null;
     /**
      * Get helpful error response for workflow violations
+     * Now returns specialized error objects instead of generic responses
      */
-    getViolationResponse(violation: WorkflowViolation): {
-        error: string;
-        message: string;
-        workflowRequired: string;
-        guidance: string[];
-        example?: string;
-        validTechniques?: string[];
-    };
+    getViolationError(violation: WorkflowViolation): Error;
     private checkExecutionViolations;
     private cleanupOldCalls;
+    /**
+     * Extract recommended techniques from discovery call
+     */
+    private getRecommendedTechniques;
 }
 export declare const workflowGuard: WorkflowGuard;
 export {};
