@@ -54,7 +54,6 @@ describe('Option Generation Integration', () => {
     expect(plan.flexibilityAssessment?.optionGenerationRecommended).toBe(true);
 
     // First, execute a few steps to build up constraints and reduce flexibility
-    const _sessionId: string | undefined = undefined;
 
     // Step 1: Substitute with high commitment
     const step1: ExecuteThinkingStepInput = {

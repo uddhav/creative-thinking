@@ -1,6 +1,6 @@
 // Example demonstrating improved validation for unified framework fields
 
-const _validationTestExamples = {
+const validationTestExamples = {
   // Valid example - all string arrays
   validExample: {
     technique: 'po',
@@ -51,3 +51,6 @@ console.log('\nExpected validation errors:');
 console.log("- 'risks must be an array of strings' (for non-string elements)");
 console.log("- 'mitigations must be an array of strings' (for non-array value)");
 console.log('\nThis ensures type safety and prevents runtime errors from invalid data.');
+
+// Export the examples so they can be used elsewhere
+export { validationTestExamples };

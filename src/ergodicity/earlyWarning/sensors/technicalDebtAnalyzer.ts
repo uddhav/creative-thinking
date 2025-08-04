@@ -15,8 +15,8 @@ export class TechnicalDebtAnalyzer extends Sensor {
   /**
    * Calculate technical debt level
    */
-  protected getRawReading(pathMemory: PathMemory, sessionData: SessionData): Promise<number> {
-    const metrics = this.calculateTechnicalDebtMetrics(pathMemory, sessionData);
+  protected getRawReading(pathMemory: PathMemory, _sessionData: SessionData): Promise<number> {
+    const metrics = this.calculateTechnicalDebtMetrics(pathMemory);
 
     // Weighted combination of debt factors
     const weights = {
@@ -47,7 +47,7 @@ export class TechnicalDebtAnalyzer extends Sensor {
    */
   protected detectIndicators(pathMemory: PathMemory, sessionData: SessionData): Promise<string[]> {
     const indicators: string[] = [];
-    const metrics = this.calculateTechnicalDebtMetrics(pathMemory, sessionData);
+    const metrics = this.calculateTechnicalDebtMetrics(pathMemory);
 
     // Entropy indicators
     if (metrics.entropyScore > 0.7) {
@@ -82,6 +82,24 @@ export class TechnicalDebtAnalyzer extends Sensor {
       indicators.push('Quick-fix patterns accumulating');
     }
 
+    // Session-specific indicators
+    const latestStep = sessionData.history[sessionData.history.length - 1];
+    if (
+      latestStep &&
+      latestStep.currentStep > latestStep.totalSteps * 0.8 &&
+      metrics.entropyScore > 0.5
+    ) {
+      indicators.push('Late-stage complexity accumulation');
+    }
+
+    // Session-specific indicators
+    if (sessionData.history.length > 30 && metrics.changeVelocity < 0.3) {
+      indicators.push('Extended session with low change velocity');
+    }
+    if (sessionData.history.length > 40) {
+      indicators.push(`Very long session (${sessionData.history.length} operations)`);
+    }
+
     return Promise.resolve(indicators);
   }
 
@@ -92,7 +110,7 @@ export class TechnicalDebtAnalyzer extends Sensor {
     pathMemory: PathMemory,
     sessionData: SessionData
   ): Promise<Record<string, unknown>> {
-    const metrics = this.calculateTechnicalDebtMetrics(pathMemory, sessionData);
+    const metrics = this.calculateTechnicalDebtMetrics(pathMemory);
 
     return Promise.resolve({
       technicalDebtMetrics: metrics,
@@ -100,16 +118,15 @@ export class TechnicalDebtAnalyzer extends Sensor {
       irreversibleDecisions: this.countIrreversibleDecisions(pathMemory),
       solutionComplexity: this.calculateSolutionComplexity(pathMemory),
       refactorOpportunities: this.identifyRefactorOpportunities(pathMemory),
+      sessionLength: sessionData.history.length,
+      techniqueUsed: sessionData.technique,
     });
   }
 
   /**
    * Calculate technical debt metrics
    */
-  private calculateTechnicalDebtMetrics(
-    pathMemory: PathMemory,
-    _sessionData: SessionData
-  ): TechnicalDebtMetrics {
+  private calculateTechnicalDebtMetrics(pathMemory: PathMemory): TechnicalDebtMetrics {
     return {
       entropyScore: this.calculateEntropy(pathMemory),
       changeVelocity: this.calculateChangeVelocity(pathMemory),

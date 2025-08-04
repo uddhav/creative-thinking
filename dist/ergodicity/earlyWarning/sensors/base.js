@@ -34,7 +34,7 @@ export class Sensor {
         // Calculate distance to barrier
         const distance = 1 - filteredValue;
         // Calculate approach rate
-        const approachRate = this.calculateApproachRate(filteredValue);
+        const approachRate = this.calculateApproachRate();
         // Determine warning level
         const warningLevel = this.determineWarningLevel(distance);
         // Get specific indicators
@@ -50,7 +50,7 @@ export class Sensor {
             distance,
             approachRate,
             timeToImpact,
-            confidence: this.calculateConfidence(pathMemory, sessionData),
+            confidence: this.calculateConfidence(),
             indicators,
             context: await this.gatherContext(pathMemory, sessionData),
         };
@@ -62,7 +62,7 @@ export class Sensor {
      * Calculate sensor confidence in the reading
      * Can be overridden by specific sensors
      */
-    calculateConfidence(_pathMemory, _sessionData) {
+    calculateConfidence() {
         // Base confidence on data availability and history
         let confidence = 0.5;
         // More history = more confidence
@@ -104,7 +104,7 @@ export class Sensor {
     /**
      * Calculate how fast we're approaching the barrier
      */
-    calculateApproachRate(_currentValue) {
+    calculateApproachRate() {
         if (this.readingHistory.length < 2) {
             return 0;
         }

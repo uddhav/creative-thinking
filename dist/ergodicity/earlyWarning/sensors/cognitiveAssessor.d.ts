@@ -60,6 +60,10 @@ export declare class CognitiveAssessor extends Sensor {
      */
     private detectLearningPlateau;
     /**
+     * Calculate insight densities for first and second halves of session
+     */
+    private calculateInsightDensities;
+    /**
      * Detect framework lock-in
      */
     private detectFrameworkLockIn;

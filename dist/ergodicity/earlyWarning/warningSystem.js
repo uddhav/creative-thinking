@@ -4,6 +4,7 @@
  */
 import { randomUUID } from 'crypto';
 import { BarrierWarningLevel } from './types.js';
+import { logger } from '../../utils/Logger.js';
 import { ResourceMonitor } from './sensors/resourceMonitor.js';
 import { CognitiveAssessor } from './sensors/cognitiveAssessor.js';
 import { TechnicalDebtAnalyzer } from './sensors/technicalDebtAnalyzer.js';
@@ -28,10 +29,11 @@ export class AbsorbingBarrierEarlyWarning {
         this.onError =
             config.onError ??
                 ((error, context) => {
-                    console.error(`Early Warning System Error [${context.operation}]:`, error);
-                    if (context.sensor) {
-                        console.error(`Sensor: ${context.sensor}`);
-                    }
+                    logger.error(`Early Warning System Error [${context.operation}]`, {
+                        error: error.message,
+                        stack: error.stack,
+                        sensor: context.sensor,
+                    });
                 });
         // Initialize sensors with calibration
         this.sensors = new Map();
@@ -43,11 +45,9 @@ export class AbsorbingBarrierEarlyWarning {
      * Perform continuous monitoring of all sensors
      */
     async continuousMonitoring(pathMemory, sessionData) {
-        const sensorReadings = new Map();
-        const activeWarnings = [];
         const now = Date.now();
-        // Run all sensors with throttling
-        for (const [sensorType, sensor] of this.sensors) {
+        // Prepare sensor tasks for parallel execution
+        const sensorTasks = Array.from(this.sensors.entries()).map(async ([sensorType, sensor]) => {
             try {
                 const lastMeasurement = this.lastMeasurementTime.get(sensorType) || 0;
                 const timeSinceLastMeasurement = now - lastMeasurement;
@@ -55,31 +55,45 @@ export class AbsorbingBarrierEarlyWarning {
                 if (timeSinceLastMeasurement < this.measurementThrottleMs && this.lastWarningState) {
                     const cachedReading = this.lastWarningState.sensorReadings.get(sensorType);
                     if (cachedReading) {
-                        sensorReadings.set(sensorType, cachedReading);
-                        // Still check for warnings with cached reading
                         const warnings = this.generateWarningsFromReading(cachedReading, sensor, pathMemory, sessionData);
-                        activeWarnings.push(...warnings);
-                        continue;
+                        return { sensorType, reading: cachedReading, warnings, cached: true };
                     }
                 }
                 // Take new measurement
                 const reading = await sensor.measure(pathMemory, sessionData);
-                sensorReadings.set(sensorType, reading);
                 this.lastMeasurementTime.set(sensorType, now);
                 // Generate warnings if needed
                 const warnings = this.generateWarningsFromReading(reading, sensor, pathMemory, sessionData);
-                activeWarnings.push(...warnings);
                 // Reset failure count on success
                 this.sensorFailures.set(sensorType, 0);
+                return { sensorType, reading, warnings, cached: false };
             }
             catch (error) {
                 this.handleSensorError(error, sensorType);
                 // Use fallback reading if available
                 const fallbackReading = this.createFallbackReading(sensorType);
-                if (fallbackReading) {
-                    sensorReadings.set(sensorType, fallbackReading);
-                }
+                return {
+                    sensorType,
+                    reading: fallbackReading,
+                    warnings: [],
+                    error: true,
+                };
             }
+        });
+        // Execute all sensor measurements in parallel
+        const startTime = Date.now();
+        const sensorResults = await Promise.all(sensorTasks);
+        const executionTime = Date.now() - startTime;
+        // Log performance metrics
+        logger.logPerformance('sensor measurements (parallel)', executionTime, 100);
+        // Collect results
+        const sensorReadings = new Map();
+        const activeWarnings = [];
+        for (const result of sensorResults) {
+            if (result.reading) {
+                sensorReadings.set(result.sensorType, result.reading);
+            }
+            activeWarnings.push(...result.warnings);
         }
         // Prioritize warnings
         const prioritizedWarnings = this.prioritizeWarnings(activeWarnings);
@@ -110,7 +124,7 @@ export class AbsorbingBarrierEarlyWarning {
     /**
      * Generate warnings from a sensor reading
      */
-    generateWarningsFromReading(reading, sensor, _pathMemory, _sessionData) {
+    generateWarningsFromReading(reading, sensor, pathMemory, sessionData) {
         const warnings = [];
         // Get barriers monitored by this sensor
         const monitoredBarriers = sensor.getMonitoredBarriers();
@@ -123,6 +137,13 @@ export class AbsorbingBarrierEarlyWarning {
             // Generate warning if threshold exceeded
             if (reading.warningLevel !== BarrierWarningLevel.SAFE) {
                 const warning = this.createBarrierWarning(reading, barrierWithProximity, sensor.type);
+                // Enhance warning message with context
+                if (pathMemory.currentFlexibility.flexibilityScore < 0.3) {
+                    warning.message += ' [LOW FLEXIBILITY - URGENT]';
+                }
+                if (sessionData.history.length > 20) {
+                    warning.detailedAnalysis += ` Extended session detected (${sessionData.history.length} steps).`;
+                }
                 warnings.push(warning);
             }
         }
@@ -207,13 +228,13 @@ ${barrier.description}
     /**
      * Generate escape protocols based on severity
      */
-    generateEscapeProtocols(severity, _barrier) {
+    generateEscapeProtocols(severity, barrier) {
         const protocols = [];
         if (severity === BarrierWarningLevel.CRITICAL) {
             protocols.push({
                 level: 1,
                 name: 'Pattern Interruption',
-                description: 'Break current thinking patterns immediately',
+                description: `Break current thinking patterns immediately - ${barrier.name} barrier detected`,
                 automaticTrigger: false,
                 requiredFlexibility: 0.1,
                 estimatedFlexibilityGain: 0.3,
@@ -222,9 +243,10 @@ ${barrier.description}
                     'Use Random Entry technique',
                     'Challenge all assumptions',
                     'Seek opposite perspective',
+                    `Specifically avoid ${barrier.subtype} patterns`,
                 ],
                 risks: ['May feel disorienting', 'Loss of current progress'],
-                successProbability: 0.8,
+                successProbability: barrier.impact === 'irreversible' ? 0.7 : 0.8,
             });
         }
         if (severity >= BarrierWarningLevel.WARNING) {
@@ -292,18 +314,30 @@ ${barrier.description}
     /**
      * Identify barriers in critical range
      */
-    identifyCriticalBarriers(readings, _pathMemory) {
+    identifyCriticalBarriers(readings, pathMemory) {
         const criticalBarriers = [];
         for (const [sensorType, reading] of readings) {
             if (reading.warningLevel === BarrierWarningLevel.CRITICAL) {
                 const sensor = this.sensors.get(sensorType);
                 if (sensor) {
                     const barriers = sensor.getMonitoredBarriers();
+                    // Add all barriers from this sensor
                     criticalBarriers.push(...barriers);
                 }
             }
         }
-        return criticalBarriers;
+        // Sort by impact severity and path state
+        return criticalBarriers.sort((a, b) => {
+            const impactWeight = { irreversible: 3, difficult: 2, recoverable: 1 };
+            let aScore = impactWeight[a.impact] || 0;
+            let bScore = impactWeight[b.impact] || 0;
+            // Boost score for barriers that match current constraint types
+            if (pathMemory.constraints.some(c => a.description.toLowerCase().includes(c.type)))
+                aScore += 0.5;
+            if (pathMemory.constraints.some(c => b.description.toLowerCase().includes(c.type)))
+                bScore += 0.5;
+            return bScore - aScore;
+        });
     }
     /**
      * Determine recommended action based on warnings
@@ -415,7 +449,7 @@ ${barrier.description}
             byBarrier.get(key)?.push(warning);
         }
         // Analyze each barrier type
-        for (const [_barrierType, barrierWarnings] of byBarrier) {
+        for (const [barrierType, barrierWarnings] of byBarrier) {
             if (barrierWarnings.length >= 2) {
                 patterns.push({
                     type: 'recurring',
@@ -425,6 +459,14 @@ ${barrier.description}
                     commonTriggers: this.identifyCommonTriggers(barrierWarnings),
                     effectiveEscapes: [],
                 });
+                // If this barrier type appears very frequently, add it to pattern description
+                if (barrierWarnings.length > 5) {
+                    const lastPattern = patterns[patterns.length - 1];
+                    if (lastPattern.type === 'recurring') {
+                        // Store dominant barrier type in the existing commonTriggers array
+                        lastPattern.commonTriggers.push(`Dominant barrier type: ${barrierType}`);
+                    }
+                }
             }
         }
         return patterns;
@@ -453,8 +495,8 @@ ${barrier.description}
         // Return indicators that appear in >50% of warnings
         const threshold = warnings.length * 0.5;
         return Array.from(counts.entries())
-            .filter(([_, count]) => count >= threshold)
-            .map(([indicator, _]) => indicator);
+            .filter(([, count]) => count >= threshold)
+            .map(([indicator]) => indicator);
     }
     /**
      * Extract learnings from history

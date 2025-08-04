@@ -61,7 +61,8 @@ describe('LLM Bypass Prevention', () => {
       // First, properly go through discovery and planning
       workflowGuard.recordCall('discover_techniques', { problem: 'How to reduce stress' });
 
-      const _discoverResult = lateralServer.discoverTechniques({
+      // Call discover to set up workflow state
+      lateralServer.discoverTechniques({
         problem: 'How to reduce stress',
       });
 

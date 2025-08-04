@@ -79,7 +79,7 @@ export declare class ErgodicityResultAdapter {
     /**
      * Adapt ergodicity manager result to the expected interface
      */
-    adapt(managerResult: ErgodicityManagerResult, currentFlexibility: number, _pathMemory?: PathMemory): ErgodicityResult;
+    adapt(managerResult: ErgodicityManagerResult, currentFlexibility: number, pathMemory?: PathMemory): ErgodicityResult;
     /**
      * Adapt event data
      */

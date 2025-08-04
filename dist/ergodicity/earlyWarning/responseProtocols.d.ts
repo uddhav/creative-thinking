@@ -34,7 +34,7 @@ export declare class ResponseProtocolSystem {
     /**
      * Execute an escape protocol
      */
-    executeProtocol(protocol: EscapeProtocol, pathMemory: PathMemory, sessionData: SessionData, _userConfirmation?: boolean): Promise<EscapeResponse>;
+    executeProtocol(protocol: EscapeProtocol, pathMemory: PathMemory, sessionData: SessionData, userConfirmation?: boolean): Promise<EscapeResponse>;
     /**
      * Generate side effects from protocol execution
      */
@@ -62,7 +62,7 @@ export declare class ResponseProtocolSystem {
     /**
      * Get emergency response plan
      */
-    getEmergencyResponsePlan(warnings: BarrierWarning[], _pathMemory: PathMemory): {
+    getEmergencyResponsePlan(warnings: BarrierWarning[], pathMemory: PathMemory): {
         immediate: string[];
         shortTerm: string[];
         longTerm: string[];
