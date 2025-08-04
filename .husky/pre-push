@@ -26,7 +26,18 @@ LAST_DIST_COMMIT=$(git log -1 --format="%H" -- dist/)
 # If src was modified more recently than dist, warn
 if [ "$LAST_SRC_COMMIT" != "$LAST_DIST_COMMIT" ]; then
   # Check if there are any src changes since the last dist update
-  SRC_CHANGES=$(git diff --name-only "$LAST_DIST_COMMIT" "$LAST_SRC_COMMIT" -- src/)
+  # Exclude test files since they don't affect the dist output
+  ALL_SRC_CHANGES=$(git diff --name-only "$LAST_DIST_COMMIT" "$LAST_SRC_COMMIT" -- src/)
+  
+  # Filter out test files
+  SRC_CHANGES=""
+  for file in $ALL_SRC_CHANGES; do
+    case "$file" in
+      *__tests__*) continue ;;
+      *.test.ts) continue ;;
+      *) SRC_CHANGES="${SRC_CHANGES}${file}\n" ;;
+    esac
+  done
   
   if [ -n "$SRC_CHANGES" ]; then
     echo "⚠️  Warning: src/ has been modified more recently than dist/"
