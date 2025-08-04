@@ -137,7 +137,7 @@ describe('Session ID Handling', () => {
       // Should get an error response
       expect(response.isError).toBe(true);
       const errorData = JSON.parse(response.content[0].text) as { error: { message: string } };
-      expect(errorData.error.message).toContain('Invalid session ID format');
+      expect(errorData.error.message).toContain("Invalid input for 'sessionId'");
     });
 
     it('should generate session ID when not provided', async () => {

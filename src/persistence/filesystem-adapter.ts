@@ -18,6 +18,7 @@ import type {
 } from './types.js';
 import { PersistenceError, PersistenceErrorCode } from './types.js';
 import { ExportFactory } from '../export/index.js';
+import { ErrorFactory } from '../errors/enhanced-errors.js';
 
 /**
  * Filesystem-based persistence adapter
@@ -84,11 +85,12 @@ export class FilesystemAdapter implements PersistenceAdapter {
       await fs.mkdir(path.join(this.basePath, 'metadata'), { recursive: true });
       this.initialized = true;
     } catch (error) {
-      throw new PersistenceError(
-        `Failed to initialize filesystem adapter: ${String(error)}`,
-        PersistenceErrorCode.IO_ERROR,
-        error
-      );
+      // Use enhanced error for better recovery guidance
+      const enhancedError = ErrorFactory.fileIOError('initialize', this.basePath, error as Error);
+      throw new PersistenceError(enhancedError.message, PersistenceErrorCode.IO_ERROR, {
+        ...enhancedError.toJSON(),
+        originalError: error,
+      });
     }
   }
 
@@ -150,11 +152,17 @@ export class FilesystemAdapter implements PersistenceAdapter {
         await fs.unlink(tempMetadataPath).catch(() => {});
       }
 
-      throw new PersistenceError(
-        `Failed to save session ${sessionId}: ${String(error)}`,
-        PersistenceErrorCode.IO_ERROR,
-        error
-      );
+      // Re-throw PersistenceError as-is to preserve specific error messages
+      if (error instanceof PersistenceError) {
+        throw error;
+      }
+
+      // Use enhanced error for better recovery guidance
+      const enhancedError = ErrorFactory.fileIOError('save', sessionPath, error as Error);
+      throw new PersistenceError(enhancedError.message, PersistenceErrorCode.IO_ERROR, {
+        ...enhancedError.toJSON(),
+        originalError: error,
+      });
     }
   }
 
@@ -177,11 +185,12 @@ export class FilesystemAdapter implements PersistenceAdapter {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
         return null;
       }
-      throw new PersistenceError(
-        `Failed to load session ${sessionId}: ${String(error)}`,
-        PersistenceErrorCode.IO_ERROR,
-        error
-      );
+      // Use enhanced error for better recovery guidance
+      const enhancedError = ErrorFactory.fileIOError('load', sessionPath, error as Error);
+      throw new PersistenceError(enhancedError.message, PersistenceErrorCode.IO_ERROR, {
+        ...enhancedError.toJSON(),
+        originalError: error,
+      });
     }
   }
 

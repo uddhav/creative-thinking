@@ -15,6 +15,7 @@ export class CreativeThinkingError extends Error {
     retryable;
     retryDelayMs;
     cause;
+    timestamp;
     constructor(config) {
         super(config.message);
         this.name = 'CreativeThinkingError';
@@ -27,6 +28,7 @@ export class CreativeThinkingError extends Error {
         this.retryable = config.retryable;
         this.retryDelayMs = config.retryDelayMs;
         this.cause = config.cause;
+        this.timestamp = Date.now();
     }
     /**
      * Convert to JSON for serialization
@@ -42,6 +44,7 @@ export class CreativeThinkingError extends Error {
             documentation: this.documentation,
             retryable: this.retryable,
             retryDelayMs: this.retryDelayMs,
+            timestamp: this.timestamp,
         };
     }
     /**
@@ -92,7 +95,7 @@ export class ValidationError extends CreativeThinkingError {
             code,
             message,
             category: 'validation',
-            severity: 'low',
+            severity: 'medium',
             recovery,
             context,
             documentation: 'https://docs.creative-thinking.dev/errors#validation',
@@ -151,13 +154,13 @@ export const ErrorCodes = {
     INVALID_TYPE: 'E103',
     OUT_OF_RANGE: 'E104',
     // State errors
-    SESSION_NOT_FOUND: 'E201',
+    SESSION_NOT_FOUND: 'E301',
     PLAN_NOT_FOUND: 'E202',
-    INVALID_STATE: 'E203',
-    SESSION_EXPIRED: 'E204',
+    INVALID_STATE: 'E303',
+    SESSION_EXPIRED: 'E302',
     // System errors
-    FILE_IO_ERROR: 'E301',
-    MEMORY_ERROR: 'E302',
+    FILE_IO_ERROR: 'E403',
+    MEMORY_ERROR: 'E402',
     NETWORK_ERROR: 'E303',
     PERMISSION_ERROR: 'E304',
     // Configuration errors
@@ -180,7 +183,7 @@ export class ErrorFactory {
      */
     static sessionNotFound(sessionId) {
         return new StateError(ErrorCodes.SESSION_NOT_FOUND, `Session '${sessionId}' not found. The session may have expired or been deleted.`, [
-            'Start a new session with discover_techniques',
+            "Start a new session with 'plan_thinking_session'",
             'Check if the sessionId is correct',
             'If using persistence, ensure the session was saved',
             'List available sessions if persistence is enabled',
@@ -224,7 +227,7 @@ export class ErrorFactory {
             `Provide a valid ${expectedType} for ${parameter}`,
             'Check the parameter documentation',
             'Use the example in the documentation',
-        ], { parameter, expectedType, actualValue });
+        ], { parameter, expectedType, actualValue: String(actualValue) });
     }
     /**
      * Create a missing parameter error
@@ -279,11 +282,310 @@ export class ErrorFactory {
             documentation: 'https://docs.creative-thinking.dev/errors#convergence',
         });
     }
+    /**
+     * Create a missing field error
+     */
+    static missingField(fieldName) {
+        return new ValidationError('E101', `Missing required field: '${fieldName}'`, [
+            `Provide the '${fieldName}' field`,
+            'Check the API documentation for required fields',
+            'Review the error context for expected format',
+        ], { field: fieldName });
+    }
+    /**
+     * Create an invalid field type error
+     */
+    static invalidFieldType(fieldName, expectedType, actualType) {
+        return new ValidationError('E102', `Invalid field type for '${fieldName}': expected ${expectedType}, got ${actualType}`, [
+            `Change '${fieldName}' to be of type ${expectedType}`,
+            'Check the API documentation for field types',
+            'Validate input before sending',
+        ], { field: fieldName, expectedType, actualType });
+    }
+    /**
+     * Create an invalid technique error
+     */
+    static invalidTechnique(technique) {
+        const validTechniques = [
+            'six_hats',
+            'po',
+            'random_entry',
+            'scamper',
+            'concept_extraction',
+            'yes_and',
+            'design_thinking',
+            'triz',
+            'neural_state',
+            'temporal_work',
+            'cross_cultural',
+            'collective_intel',
+            'disney_method',
+            'nine_windows',
+        ];
+        return new ValidationError('E103', `Invalid technique: '${technique}'`, [
+            'Use one of the valid techniques',
+            `Valid techniques: ${validTechniques.slice(0, 5).join(', ')}, ...`,
+            "Call 'discover_techniques' to get recommendations",
+        ], { technique, validTechniques });
+    }
+    /**
+     * Create a workflow order error
+     */
+    static workflowOrder(currentTool, expectedTool) {
+        return new WorkflowError('E201', `Workflow error: Called '${currentTool}' but should call '${expectedTool}' first`, [
+            `Call '${expectedTool}' first`,
+            'Follow the three-step workflow',
+            'Reset and start from discovery',
+        ], { currentTool, expectedTool });
+    }
+    /**
+     * Create a missing workflow step error
+     */
+    static missingWorkflowStep(missingStep) {
+        return new WorkflowError('E202', `Missing workflow step: '${missingStep}' must be called first`, [
+            `Call '${missingStep}' first`,
+            'Check the workflow documentation',
+            'Start from the beginning with discovery',
+        ], { missingStep });
+    }
+    /**
+     * Create a workflow skip detected error
+     */
+    static workflowSkipDetected() {
+        return new WorkflowError('E203', 'Workflow skip detected: Attempting to bypass the three-layer architecture', [
+            'Use the proper workflow: discover → plan → execute',
+            'Do not skip directly to execution',
+            'Call discover_techniques first',
+        ], { severity: 'critical' });
+    }
+    /**
+     * Create a session expired error
+     */
+    static sessionExpired(sessionId, expiryMinutes) {
+        return new StateError('E302', `Session '${sessionId}' has expired after ${expiryMinutes} minutes of inactivity`, [
+            'Create a new session',
+            'Increase session timeout in configuration',
+            'Use session persistence for longer sessions',
+        ], { sessionId, expiryMinutes });
+    }
+    /**
+     * Create an invalid step error
+     */
+    static invalidStep(requestedStep, maxSteps) {
+        return new StateError('E303', `Invalid step: Step ${requestedStep} requested but technique only has ${maxSteps} steps`, [
+            `Use a step between 1 and ${maxSteps}`,
+            'Check the technique documentation',
+            'Verify your step counter logic',
+        ], { requestedStep, maxSteps });
+    }
+    /**
+     * Create a file access error
+     */
+    static fileAccessError(filePath, reason) {
+        return new SystemError('E401', `Cannot access file: ${filePath}`, [
+            'Check file permissions',
+            'Ensure the file exists',
+            'Verify the file path is correct',
+            'Check disk space and availability',
+        ], { filePath, reason }, true // retryable
+        );
+    }
+    /**
+     * Create a memory limit exceeded error
+     */
+    static memoryLimitExceeded(usagePercent) {
+        return new SystemError('E402', `Memory limit exceeded: ${usagePercent}% of available memory in use`, [
+            'Reduce session count',
+            'Clear old sessions',
+            'Increase memory allocation',
+            'Restart the server',
+        ], { usagePercent }, false // not retryable
+        );
+    }
+    /**
+     * Create a persistence error
+     */
+    static persistenceError(operation, reason) {
+        return new SystemError('E403', `Persistence error during ${operation}: ${reason}`, [
+            'Check storage availability',
+            'Verify write permissions',
+            'Use in-memory mode temporarily',
+            'Retry the operation',
+        ], { operation, reason }, true // retryable
+        );
+    }
+    /**
+     * Create an access denied error
+     */
+    static accessDenied(resource) {
+        return new CreativeThinkingError({
+            code: 'E501',
+            message: `Access denied to resource: ${resource}`,
+            category: 'permission',
+            severity: 'high',
+            recovery: ['Check your permissions', 'Contact an administrator', 'Use a different resource'],
+            context: { resource },
+        });
+    }
+    /**
+     * Create a rate limit exceeded error
+     */
+    static rateLimitExceeded(retryAfterSeconds) {
+        return new CreativeThinkingError({
+            code: 'E502',
+            message: `Rate limit exceeded. Try again in ${retryAfterSeconds} seconds`,
+            category: 'permission',
+            severity: 'medium',
+            recovery: [
+                `Wait ${retryAfterSeconds} seconds before retrying`,
+                'Reduce request frequency',
+                'Use batch operations where possible',
+            ],
+            context: { retryAfterSeconds },
+            retryable: true,
+        });
+    }
+    /**
+     * Create a missing configuration error
+     */
+    static missingConfiguration(configKey) {
+        return new CreativeThinkingError({
+            code: 'E601',
+            message: `Missing required configuration: ${configKey}`,
+            category: 'configuration',
+            severity: 'high',
+            recovery: [
+                `Set the ${configKey} configuration value`,
+                'Check environment variables',
+                'Review configuration documentation',
+            ],
+            context: { configKey },
+        });
+    }
+    /**
+     * Create an invalid configuration error
+     */
+    static invalidConfiguration(configKey, value, expectedFormat) {
+        return new CreativeThinkingError({
+            code: 'E602',
+            message: `Invalid configuration for '${configKey}': ${value} (expected ${expectedFormat})`,
+            category: 'configuration',
+            severity: 'high',
+            recovery: [
+                `Update ${configKey} to match ${expectedFormat}`,
+                'Check configuration documentation',
+                'Use default values if unsure',
+            ],
+            context: { configKey, value, expectedFormat },
+        });
+    }
+    /**
+     * Create a technique execution failed error
+     */
+    static techniqueExecutionFailed(technique, reason) {
+        return new CreativeThinkingError({
+            code: 'E701',
+            message: `Technique '${technique}' execution failed: ${reason}`,
+            category: 'technique',
+            severity: 'medium',
+            recovery: [
+                'Check technique parameters',
+                'Review technique documentation',
+                'Try a different technique',
+                'Simplify the problem statement',
+            ],
+            context: { technique, reason },
+        });
+    }
+    /**
+     * Create a technique dependency missing error
+     */
+    static techniqueDependencyMissing(technique, dependency) {
+        return new CreativeThinkingError({
+            code: 'E702',
+            message: `Technique '${technique}' requires '${dependency}' to be executed first`,
+            category: 'technique',
+            severity: 'medium',
+            recovery: [
+                `Execute '${dependency}' first`,
+                'Check technique dependencies',
+                'Use a technique without dependencies',
+            ],
+            context: { technique, dependency },
+        });
+    }
+    /**
+     * Create a parallel execution error
+     */
+    static parallelExecutionError(failedPlans, reason) {
+        return new CreativeThinkingError({
+            code: 'E801',
+            message: `Parallel execution failed for plans: ${failedPlans.join(', ')}`,
+            category: 'convergence',
+            severity: 'high',
+            recovery: [
+                'Retry failed plans individually',
+                'Use sequential execution mode',
+                'Check individual plan errors',
+                'Reduce parallelism level',
+            ],
+            context: { failedPlans, reason },
+        });
+    }
+    /**
+     * Create a convergence failure error
+     */
+    static convergenceFailure(totalPlans, completedPlans) {
+        return new CreativeThinkingError({
+            code: 'E802',
+            message: `Convergence failed: Only ${completedPlans} of ${totalPlans} plans completed`,
+            category: 'convergence',
+            severity: 'high',
+            recovery: [
+                'Retry failed plans',
+                'Continue with partial results',
+                'Use sequential execution',
+                'Check plan dependencies',
+            ],
+            context: { totalPlans, completedPlans },
+        });
+    }
+    /**
+     * Create a convergence dependency not met error
+     */
+    static convergenceDependencyNotMet(planId, missingDependencies) {
+        return new CreativeThinkingError({
+            code: 'E803',
+            message: `Convergence plan '${planId}' dependencies not met`,
+            category: 'convergence',
+            severity: 'high',
+            recovery: [
+                'Complete required dependencies first',
+                'Check dependency configuration',
+                'Use independent plans only',
+            ],
+            context: { planId, missingDependencies },
+        });
+    }
 }
 /**
  * Error recovery helper
  */
 export class ErrorRecovery {
+    /**
+     * Check if an error is recoverable
+     */
+    static isRecoverable(error) {
+        if (error instanceof CreativeThinkingError) {
+            // Critical errors are not recoverable
+            if (error.severity === 'critical') {
+                return false;
+            }
+            // Errors with recovery suggestions are generally recoverable
+            return error.recovery.length > 0;
+        }
+        return true; // Assume unknown errors might be recoverable
+    }
     /**
      * Check if an error is retryable
      */
@@ -292,25 +594,25 @@ export class ErrorRecovery {
             return error.retryable || false;
         }
         // Check for common retryable system errors
-        const retryableMessages = [
-            'ECONNRESET',
-            'ETIMEDOUT',
-            'ENOTFOUND',
-            'ECONNREFUSED',
-            'EPIPE',
-        ];
+        const retryableMessages = ['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND', 'ECONNREFUSED', 'EPIPE'];
         return retryableMessages.some(msg => error.message.includes(msg));
     }
     /**
      * Get retry delay for an error
      */
     static getRetryDelay(error, attemptNumber) {
+        const maxDelay = 30000; // 30 seconds maximum
+        let delay;
         if (error instanceof CreativeThinkingError && error.retryDelayMs) {
-            // Exponential backoff
-            return error.retryDelayMs * Math.pow(2, attemptNumber - 1);
+            // Exponential backoff with jitter
+            delay = error.retryDelayMs * Math.pow(2, attemptNumber - 1);
         }
-        // Default exponential backoff
-        return 1000 * Math.pow(2, attemptNumber - 1);
+        else {
+            // Default exponential backoff
+            delay = 1000 * Math.pow(2, attemptNumber - 1);
+        }
+        // Cap at maximum delay
+        return Math.min(delay, maxDelay);
     }
     /**
      * Execute with retry
@@ -333,7 +635,7 @@ export class ErrorRecovery {
                 await new Promise(resolve => setTimeout(resolve, delay));
             }
         }
-        throw lastError;
+        throw lastError || new Error('Operation failed after max attempts');
     }
 }
 //# sourceMappingURL=enhanced-errors.js.map

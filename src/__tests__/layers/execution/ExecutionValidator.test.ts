@@ -67,7 +67,9 @@ describe('ExecutionValidator', () => {
       const result = validator.validateConvergenceTechnique(input);
       expect(result.isValid).toBe(false);
       expect(result.error).toBeDefined();
-      expect(result.error?.content?.[0]?.text).toContain('requires parallel results');
+      expect(result.error?.content?.[0]?.text).toContain(
+        "Missing required parameter 'parallelResults' for tool 'convergence'"
+      );
     });
 
     it('should reject convergence technique with empty parallelResults', () => {
@@ -84,7 +86,9 @@ describe('ExecutionValidator', () => {
 
       const result = validator.validateConvergenceTechnique(input);
       expect(result.isValid).toBe(false);
-      expect(result.error?.content?.[0]?.text).toContain('at least one parallel result');
+      expect(result.error?.content?.[0]?.text).toContain(
+        "Invalid input for 'parallelResults'. Expected non-empty array"
+      );
     });
 
     it('should reject non-convergence technique with parallel fields', () => {

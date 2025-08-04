@@ -16,6 +16,8 @@ import type { VisualFormatter } from '../../utils/VisualFormatter.js';
 import type { ErgodicityManager } from '../../ergodicity/index.js';
 import { ErrorContextBuilder } from '../../core/ErrorContextBuilder.js';
 import { TelemetryCollector } from '../../telemetry/TelemetryCollector.js';
+import { ErrorFactory } from '../../errors/enhanced-errors.js';
+import { ErrorHandler } from '../../errors/ErrorHandler.js';
 
 export interface ValidationResult {
   isValid: boolean;
@@ -33,6 +35,7 @@ export interface ValidationResult {
 export class ExecutionValidator {
   private errorBuilder = new ErrorContextBuilder();
   private telemetry = TelemetryCollector.getInstance();
+  private errorHandler = new ErrorHandler();
 
   constructor(
     private sessionManager: SessionManager,
@@ -54,9 +57,10 @@ export class ExecutionValidator {
 
     const plan = this.sessionManager.getPlan(input.planId);
     if (!plan) {
+      const enhancedError = ErrorFactory.planNotFound(input.planId);
       return {
         isValid: false,
-        error: this.errorBuilder.buildWorkflowError('plan_not_found', {
+        error: this.errorHandler.handleError(enhancedError, 'planning', {
           planId: input.planId,
         }),
       };
@@ -64,9 +68,15 @@ export class ExecutionValidator {
 
     // Validate technique matches plan
     if (!plan.techniques.includes(input.technique)) {
+      const planTechnique = plan.techniques[0]; // Use first technique as the expected one
+      const enhancedError = ErrorFactory.techniqueMismatch(
+        planTechnique,
+        input.technique,
+        input.planId
+      );
       return {
         isValid: false,
-        error: this.errorBuilder.buildWorkflowError('technique_mismatch', {
+        error: this.errorHandler.handleError(enhancedError, 'planning', {
           planId: input.planId,
           technique: input.technique,
           expectedTechniques: plan.techniques,
@@ -106,15 +116,18 @@ export class ExecutionValidator {
           this.telemetry.trackTechniqueStart(sessionId, input.technique).catch(console.error);
         } catch (error) {
           // Handle session creation errors (e.g. invalid session ID format)
+          const message =
+            error instanceof Error ? error.message : 'The provided session ID format is invalid';
+          const enhancedError = ErrorFactory.invalidInput(
+            'sessionId',
+            'valid session ID format',
+            input.sessionId
+          );
           return {
-            error: this.errorBuilder.buildSessionError({
+            error: this.errorHandler.handleError(enhancedError, 'discovery', {
               sessionId: input.sessionId,
               errorType: 'invalid_format',
-              message:
-                'Invalid session ID format: ' +
-                (error instanceof Error
-                  ? error.message
-                  : 'The provided session ID format is invalid'),
+              message,
             }),
           };
         }
@@ -254,29 +267,29 @@ export class ExecutionValidator {
     if (input.technique === 'convergence') {
       // Convergence technique requires parallel results
       if (!input.parallelResults) {
+        const enhancedError = ErrorFactory.missingParameter('parallelResults', 'convergence');
         return {
           isValid: false,
-          error: this.errorBuilder.buildGenericError(
-            'Convergence technique requires parallel results',
-            {
-              technique: input.technique,
-              hasParallelResults: false,
-            }
-          ),
+          error: this.errorHandler.handleError(enhancedError, 'discovery', {
+            technique: input.technique,
+            hasParallelResults: false,
+          }),
         };
       }
 
       // Ensure parallel results is not empty
       if (input.parallelResults.length === 0) {
+        const enhancedError = ErrorFactory.invalidInput(
+          'parallelResults',
+          'non-empty array',
+          input.parallelResults
+        );
         return {
           isValid: false,
-          error: this.errorBuilder.buildGenericError(
-            'Convergence technique requires at least one parallel result',
-            {
-              technique: input.technique,
-              parallelResultsCount: 0,
-            }
-          ),
+          error: this.errorHandler.handleError(enhancedError, 'discovery', {
+            technique: input.technique,
+            parallelResultsCount: 0,
+          }),
         };
       }
     } else {

@@ -397,19 +397,15 @@ describe('Three-Layer Architecture', () => {
       });
 
       expect(execResult.isError).toBe(true);
-      const error = JSON.parse(execResult.content[0].text) as {
-        error: string;
-        message: string;
-        guidance: string;
-        workflow: string[];
-      };
-      expect(error.error).toBe('❌ WORKFLOW ERROR: Plan not found');
+      const parsedError = JSON.parse(execResult.content[0].text);
+      expect(parsedError.error).toBeDefined();
+      expect(parsedError.error.code).toBe('E202');
+      expect(parsedError.error.message).toContain('not found');
 
-      // Should provide helpful guidance
-      expect(error.message).toContain('does not exist');
-      expect(error.guidance).toBe('⚠️ REQUIRED THREE-STEP WORKFLOW:');
-      expect(error.workflow).toBeDefined();
-      expect(error.workflow.length).toBe(3);
+      // Should provide recovery guidance
+      expect(parsedError.error.recovery).toBeDefined();
+      expect(parsedError.error.recovery.length).toBeGreaterThan(0);
+      expect(parsedError.error.recovery).toContain('Create a new plan with plan_thinking_session');
     });
 
     it('should validate layer requirements', () => {

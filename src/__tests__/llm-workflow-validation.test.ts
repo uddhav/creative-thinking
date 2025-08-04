@@ -89,17 +89,20 @@ describe('LLM Workflow Validation', () => {
       };
 
       const result = await server.executeThinkingStep(input);
+      expect(result.isError).toBe(true);
       const response = JSON.parse(result.content[0].text);
 
-      // Should get an error with workflow guidance
-      expect(response.error).toBe('❌ WORKFLOW ERROR: Plan not found');
-      expect(response.message).toContain("planId 'fake-plan-id' does not exist");
-      expect(response.guidance).toBe('⚠️ REQUIRED THREE-STEP WORKFLOW:');
-      expect(response.workflow).toHaveLength(3);
-      expect(response.workflow[0]).toContain('discover_techniques');
-      expect(response.workflow[1]).toContain('plan_thinking_session');
-      expect(response.workflow[2]).toContain('execute_thinking_step');
-      expect(response.fix).toContain('discover_techniques');
+      // Should get an error with enhanced error format
+      expect(response.error.code).toBe('E202');
+      expect(response.error.message).toContain('Plan');
+      expect(response.error.message).toContain('not found');
+      expect(response.error.category).toBe('state');
+      expect(response.error.recovery).toBeDefined();
+      expect(response.error.recovery.length).toBeGreaterThan(0);
+
+      // The recovery guidance should include workflow information
+      const recoveryText = response.error.recovery.join(' ');
+      expect(recoveryText).toMatch(/plan|planId|create|new/i);
     });
   });
 

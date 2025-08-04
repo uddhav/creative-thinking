@@ -38,7 +38,7 @@ export interface EnhancedError {
     /**
      * Additional context about the error
      */
-    context?: Record<string, any>;
+    context?: Record<string, unknown>;
     /**
      * Link to documentation
      */
@@ -64,16 +64,19 @@ export declare class CreativeThinkingError extends Error implements EnhancedErro
     category: ErrorCategory;
     severity: ErrorSeverity;
     recovery: string[];
-    context?: Record<string, any>;
+    context?: Record<string, unknown>;
     documentation?: string;
     retryable?: boolean;
     retryDelayMs?: number;
     cause?: Error;
+    timestamp: number;
     constructor(config: EnhancedError);
     /**
      * Convert to JSON for serialization
      */
-    toJSON(): EnhancedError;
+    toJSON(): EnhancedError & {
+        timestamp: number;
+    };
     /**
      * Get formatted error for LLM consumption
      */
@@ -83,25 +86,25 @@ export declare class CreativeThinkingError extends Error implements EnhancedErro
  * Workflow-related errors
  */
 export declare class WorkflowError extends CreativeThinkingError {
-    constructor(code: string, message: string, recovery: string[], context?: Record<string, any>);
+    constructor(code: string, message: string, recovery: string[], context?: Record<string, unknown>);
 }
 /**
  * Validation-related errors
  */
 export declare class ValidationError extends CreativeThinkingError {
-    constructor(code: string, message: string, recovery: string[], context?: Record<string, any>);
+    constructor(code: string, message: string, recovery: string[], context?: Record<string, unknown>);
 }
 /**
  * State-related errors
  */
 export declare class StateError extends CreativeThinkingError {
-    constructor(code: string, message: string, recovery: string[], context?: Record<string, any>);
+    constructor(code: string, message: string, recovery: string[], context?: Record<string, unknown>);
 }
 /**
  * System-related errors
  */
 export declare class SystemError extends CreativeThinkingError {
-    constructor(code: string, message: string, recovery: string[], context?: Record<string, any>, retryable?: boolean);
+    constructor(code: string, message: string, recovery: string[], context?: Record<string, unknown>, retryable?: boolean);
 }
 /**
  * Error codes for consistent identification
@@ -115,12 +118,12 @@ export declare const ErrorCodes: {
     readonly MISSING_PARAMETER: "E102";
     readonly INVALID_TYPE: "E103";
     readonly OUT_OF_RANGE: "E104";
-    readonly SESSION_NOT_FOUND: "E201";
+    readonly SESSION_NOT_FOUND: "E301";
     readonly PLAN_NOT_FOUND: "E202";
-    readonly INVALID_STATE: "E203";
-    readonly SESSION_EXPIRED: "E204";
-    readonly FILE_IO_ERROR: "E301";
-    readonly MEMORY_ERROR: "E302";
+    readonly INVALID_STATE: "E303";
+    readonly SESSION_EXPIRED: "E302";
+    readonly FILE_IO_ERROR: "E403";
+    readonly MEMORY_ERROR: "E402";
     readonly NETWORK_ERROR: "E303";
     readonly PERMISSION_ERROR: "E304";
     readonly MISSING_CONFIG: "E401";
@@ -154,7 +157,7 @@ export declare class ErrorFactory {
     /**
      * Create an invalid input error
      */
-    static invalidInput(parameter: string, expectedType: string, actualValue: any): ValidationError;
+    static invalidInput(parameter: string, expectedType: string, actualValue: unknown): ValidationError;
     /**
      * Create a missing parameter error
      */
@@ -171,11 +174,95 @@ export declare class ErrorFactory {
      * Create a convergence error
      */
     static convergenceError(reason: string, parallelPlans: string[]): CreativeThinkingError;
+    /**
+     * Create a missing field error
+     */
+    static missingField(fieldName: string): ValidationError;
+    /**
+     * Create an invalid field type error
+     */
+    static invalidFieldType(fieldName: string, expectedType: string, actualType: string): ValidationError;
+    /**
+     * Create an invalid technique error
+     */
+    static invalidTechnique(technique: string): ValidationError;
+    /**
+     * Create a workflow order error
+     */
+    static workflowOrder(currentTool: string, expectedTool: string): WorkflowError;
+    /**
+     * Create a missing workflow step error
+     */
+    static missingWorkflowStep(missingStep: string): WorkflowError;
+    /**
+     * Create a workflow skip detected error
+     */
+    static workflowSkipDetected(): WorkflowError;
+    /**
+     * Create a session expired error
+     */
+    static sessionExpired(sessionId: string, expiryMinutes: number): StateError;
+    /**
+     * Create an invalid step error
+     */
+    static invalidStep(requestedStep: number, maxSteps: number): StateError;
+    /**
+     * Create a file access error
+     */
+    static fileAccessError(filePath: string, reason: string): SystemError;
+    /**
+     * Create a memory limit exceeded error
+     */
+    static memoryLimitExceeded(usagePercent: number): SystemError;
+    /**
+     * Create a persistence error
+     */
+    static persistenceError(operation: string, reason: string): SystemError;
+    /**
+     * Create an access denied error
+     */
+    static accessDenied(resource: string): CreativeThinkingError;
+    /**
+     * Create a rate limit exceeded error
+     */
+    static rateLimitExceeded(retryAfterSeconds: number): CreativeThinkingError;
+    /**
+     * Create a missing configuration error
+     */
+    static missingConfiguration(configKey: string): CreativeThinkingError;
+    /**
+     * Create an invalid configuration error
+     */
+    static invalidConfiguration(configKey: string, value: string, expectedFormat: string): CreativeThinkingError;
+    /**
+     * Create a technique execution failed error
+     */
+    static techniqueExecutionFailed(technique: string, reason: string): CreativeThinkingError;
+    /**
+     * Create a technique dependency missing error
+     */
+    static techniqueDependencyMissing(technique: string, dependency: string): CreativeThinkingError;
+    /**
+     * Create a parallel execution error
+     */
+    static parallelExecutionError(failedPlans: string[], reason: string): CreativeThinkingError;
+    /**
+     * Create a convergence failure error
+     */
+    static convergenceFailure(totalPlans: number, completedPlans: number): CreativeThinkingError;
+    /**
+     * Create a convergence dependency not met error
+     */
+    static convergenceDependencyNotMet(planId: string, missingDependencies: string[]): CreativeThinkingError;
 }
 /**
  * Error recovery helper
  */
 export declare class ErrorRecovery {
+    /**
+     * Check if an error is recoverable
+     */
+    static isRecoverable(error: Error): boolean;
     /**
      * Check if an error is retryable
      */

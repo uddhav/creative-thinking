@@ -51,10 +51,11 @@ describe('LLM Bypass Prevention', () => {
       const responseText = result.content[0].text;
       const response = JSON.parse(responseText);
 
-      expect(response.error).toContain('❌ WORKFLOW ERROR');
-      expect(response.message).toContain('does not exist');
-      expect(response.your_error).toContain('fake-plan-123');
-      expect(response.fix).toContain('Start over with discover_techniques');
+      expect(response.error).toBeDefined();
+      expect(response.error.code).toBe('E202');
+      expect(response.error.message).toContain('fake-plan-123');
+      expect(response.error.message).toContain('not found');
+      expect(response.error.recovery).toContain('Create a new plan with plan_thinking_session');
     });
 
     it('should prevent using invalid techniques', async () => {
@@ -93,10 +94,14 @@ describe('LLM Bypass Prevention', () => {
       const execResult = await lateralServer.executeThinkingStep(executeArgs);
       const execResponse = JSON.parse(execResult.content[0].text);
 
-      expect(execResponse.error).toContain('❌ TECHNIQUE MISMATCH');
-      expect(execResponse.message).toContain('random_entry');
-      expect(execResponse.yourPlan.techniques).toContain('six_hats');
-      expect(execResponse.fix).toContain('Change your technique parameter');
+      expect(execResponse.error).toBeDefined();
+      expect(execResponse.error.code).toBe('E003');
+      expect(execResponse.error.message).toContain('Technique mismatch');
+      expect(execResponse.error.message).toContain('random_entry');
+      expect(execResponse.error.context.planTechnique).toBe('six_hats');
+      expect(execResponse.error.recovery).toContain(
+        "Use technique 'six_hats' as specified in the plan"
+      );
     });
 
     it('should provide helpful guidance when skipping planning', () => {
