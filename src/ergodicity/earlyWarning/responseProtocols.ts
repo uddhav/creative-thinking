@@ -185,9 +185,24 @@ export class ResponseProtocolSystem {
     protocol: EscapeProtocol,
     pathMemory: PathMemory,
     sessionData: SessionData,
-    _userConfirmation: boolean = true
+    userConfirmation: boolean = true
   ): Promise<EscapeResponse> {
     const flexibilityBefore = pathMemory.currentFlexibility.flexibilityScore;
+
+    // Check if user confirmation is required for high-level protocols
+    if (!userConfirmation && protocol.level >= 4) {
+      return Promise.resolve({
+        protocol,
+        executionTime: new Date().toISOString(),
+        success: false,
+        flexibilityBefore,
+        flexibilityAfter: flexibilityBefore,
+        flexibilityGained: 0,
+        sideEffects: ['User confirmation required for high-impact protocols'],
+        nextSteps: ['Obtain user confirmation before proceeding'],
+        newConstraints: [],
+      });
+    }
 
     // Check if protocol can be executed
     if (flexibilityBefore < protocol.requiredFlexibility) {
@@ -212,10 +227,10 @@ export class ResponseProtocolSystem {
     const flexibilityAfter = Math.min(1, flexibilityBefore + flexibilityGained);
 
     // Generate side effects
-    const sideEffects = this.generateSideEffects(protocol, success);
+    const sideEffects = this.generateSideEffects(protocol, success, sessionData);
 
     // Generate next steps
-    const nextSteps = this.generateNextSteps(protocol, success);
+    const nextSteps = this.generateNextSteps(protocol, success, sessionData);
 
     // Generate new constraints
     const newConstraints = this.generateNewConstraints(protocol, success);
@@ -241,7 +256,11 @@ export class ResponseProtocolSystem {
   /**
    * Generate side effects from protocol execution
    */
-  private generateSideEffects(protocol: EscapeProtocol, success: boolean): string[] {
+  private generateSideEffects(
+    protocol: EscapeProtocol,
+    success: boolean,
+    sessionData: SessionData
+  ): string[] {
     const effects: string[] = [];
 
     if (success) {
@@ -249,6 +268,9 @@ export class ResponseProtocolSystem {
         case 1:
           effects.push('Mental model shift achieved');
           effects.push('Some disorientation in team');
+          if (sessionData.technique) {
+            effects.push(`Interrupted ${sessionData.technique} technique`);
+          }
           break;
         case 2:
           effects.push('Resources successfully reallocated');
@@ -278,23 +300,33 @@ export class ResponseProtocolSystem {
   /**
    * Generate next steps after protocol execution
    */
-  private generateNextSteps(protocol: EscapeProtocol, success: boolean): string[] {
-    if (success) {
-      return [
-        'Monitor flexibility metrics closely',
-        'Avoid high-commitment decisions temporarily',
-        'Build on recovered flexibility',
-        'Document lessons learned',
-        'Prepare for potential regression',
-      ];
-    } else {
-      return [
-        'Analyze failure reasons',
-        'Consider lower-level protocol',
-        'Address blocking factors',
-        'Prepare for retry with modifications',
-      ];
+  private generateNextSteps(
+    protocol: EscapeProtocol,
+    success: boolean,
+    sessionData: SessionData
+  ): string[] {
+    const baseSteps = success
+      ? [
+          'Monitor flexibility metrics closely',
+          'Avoid high-commitment decisions temporarily',
+          'Build on recovered flexibility',
+          'Document lessons learned',
+          'Prepare for potential regression',
+        ]
+      : [
+          'Analyze failure reasons',
+          'Consider lower-level protocol',
+          'Address blocking factors',
+          'Prepare for retry with modifications',
+        ];
+
+    // Add context-aware step based on current session
+    const lastOperation = sessionData.history[sessionData.history.length - 1];
+    if (lastOperation && lastOperation.currentStep < lastOperation.totalSteps && success) {
+      baseSteps.push(`Resume ${sessionData.technique} from step ${lastOperation.currentStep + 1}`);
     }
+
+    return baseSteps;
   }
 
   /**
@@ -377,27 +409,42 @@ export class ResponseProtocolSystem {
    */
   getEmergencyResponsePlan(
     warnings: BarrierWarning[],
-    _pathMemory: PathMemory
+    pathMemory: PathMemory
   ): {
     immediate: string[];
     shortTerm: string[];
     longTerm: string[];
   } {
-    const _criticalWarnings = warnings.filter(w => w.severity === BarrierWarningLevel.CRITICAL);
+    const criticalWarnings = warnings.filter(w => w.severity === BarrierWarningLevel.CRITICAL);
+    const currentFlexibility = pathMemory.currentFlexibility.flexibilityScore;
+
+    const immediate = [
+      'Stop all high-commitment decisions',
+      'Execute Pattern Interruption Protocol',
+      'Gather emergency response team',
+      'Assess available flexibility',
+    ];
+
+    // Add urgency if multiple critical warnings
+    if (criticalWarnings.length > 1) {
+      immediate.unshift(`URGENT: ${criticalWarnings.length} critical barriers detected`);
+    }
+
+    const shortTerm = [
+      'Implement Resource Reallocation',
+      'Begin stakeholder communications',
+      'Create flexibility recovery plan',
+      'Monitor all barrier distances',
+    ];
+
+    // Add flexibility-specific guidance
+    if (currentFlexibility < 0.2) {
+      shortTerm.push('Priority: Recover flexibility above 20%');
+    }
 
     return {
-      immediate: [
-        'Stop all high-commitment decisions',
-        'Execute Pattern Interruption Protocol',
-        'Gather emergency response team',
-        'Assess available flexibility',
-      ],
-      shortTerm: [
-        'Implement Resource Reallocation',
-        'Begin stakeholder communications',
-        'Create flexibility recovery plan',
-        'Monitor all barrier distances',
-      ],
+      immediate,
+      shortTerm,
       longTerm: [
         'Consider Technical Refactoring',
         'Evaluate need for Strategic Pivot',

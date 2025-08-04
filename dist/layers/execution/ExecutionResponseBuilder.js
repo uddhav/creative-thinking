@@ -186,9 +186,10 @@ export class ExecutionResponseBuilder {
     }
     createOperationData(input, sessionId) {
         // Remove realityAssessment to avoid duplication
-        const { realityAssessment: _inputRealityAssessment, ...inputWithoutReality } = input;
+        const inputCopy = { ...input };
+        delete inputCopy.realityAssessment;
         return {
-            ...inputWithoutReality,
+            ...inputCopy,
             sessionId,
         };
     }

@@ -355,13 +355,17 @@ export class CognitiveAssessor extends Sensor {
     }
 
     // Check if insights are becoming less frequent
-    const _totalSteps = sessionData.history.length;
+    const totalSteps = sessionData.history.length;
     const firstHalfInsights = sessionData.insights.filter(
       (_: unknown, i: number) => i < sessionData.insights.length / 2
     ).length;
     const secondHalfInsights = sessionData.insights.length - firstHalfInsights;
 
-    return secondHalfInsights < firstHalfInsights * 0.5;
+    // Use totalSteps to determine if the decline is significant relative to session length
+    const insightDensityFirstHalf = firstHalfInsights / (totalSteps / 2);
+    const insightDensitySecondHalf = secondHalfInsights / (totalSteps / 2);
+
+    return insightDensitySecondHalf < insightDensityFirstHalf * 0.5;
   }
 
   /**

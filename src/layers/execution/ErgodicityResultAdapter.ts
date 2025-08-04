@@ -88,16 +88,18 @@ export class ErgodicityResultAdapter {
   adapt(
     managerResult: ErgodicityManagerResult,
     currentFlexibility: number,
-    _pathMemory?: PathMemory
+    pathMemory?: PathMemory
   ): ErgodicityResult {
-    return {
+    const result: ErgodicityResult = {
       event: this.adaptEvent(managerResult.event),
-      metrics: this.adaptMetrics(managerResult.metrics, currentFlexibility),
+      metrics: this.adaptMetrics(managerResult.metrics, currentFlexibility, pathMemory),
       warnings: this.adaptWarnings(managerResult.warnings),
       earlyWarningState: this.adaptEarlyWarningState(managerResult.earlyWarningState),
       escapeRecommendation: this.adaptEscapeRecommendation(managerResult.escapeRecommendation),
       escapeVelocityNeeded: managerResult.escapeVelocityNeeded,
     };
+
+    return result;
   }
 
   /**
@@ -117,12 +119,26 @@ export class ErgodicityResultAdapter {
   /**
    * Adapt metrics data
    */
-  private adaptMetrics(metrics: ErgodicityManagerResult['metrics'], currentFlexibility: number) {
+  private adaptMetrics(
+    metrics: ErgodicityManagerResult['metrics'],
+    currentFlexibility: number,
+    pathMemory?: PathMemory
+  ) {
+    // Use path memory to enhance constraint level calculation
+    const enhancedConstraintLevel = pathMemory
+      ? Math.min(1, (metrics.commitmentDepth || 0.5) + pathMemory.constraints.length * 0.05)
+      : metrics.commitmentDepth || 0.5;
+
+    // Use path memory to adjust option space size
+    const adjustedOptionSpace = pathMemory
+      ? (metrics.optionVelocity || 1.0) * Math.max(0.5, 1 - pathMemory.pathHistory.length * 0.01)
+      : metrics.optionVelocity || 1.0;
+
     return {
       currentFlexibility,
       pathDivergence: metrics.pathDivergence,
-      constraintLevel: metrics.commitmentDepth || 0.5,
-      optionSpaceSize: metrics.optionVelocity || 1.0,
+      constraintLevel: enhancedConstraintLevel,
+      optionSpaceSize: adjustedOptionSpace,
     };
   }
 

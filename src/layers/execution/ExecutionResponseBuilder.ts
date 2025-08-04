@@ -361,10 +361,11 @@ export class ExecutionResponseBuilder {
     sessionId: string
   ): ThinkingOperationData {
     // Remove realityAssessment to avoid duplication
-    const { realityAssessment: _inputRealityAssessment, ...inputWithoutReality } = input;
+    const inputCopy: Partial<ExecuteThinkingStepInput> = { ...input };
+    delete inputCopy.realityAssessment;
 
     return {
-      ...inputWithoutReality,
+      ...(inputCopy as Omit<ExecuteThinkingStepInput, 'realityAssessment'>),
       sessionId,
     };
   }

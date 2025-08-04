@@ -51,7 +51,7 @@ export function planThinkingSession(
   // Check if parallel execution is requested or should be considered
   if (executionMode === 'parallel' || executionMode === 'auto') {
     // Use ParallelPlanGenerator for parallel planning
-    const parallelGenerator = new ParallelPlanGenerator(sessionManager, techniqueRegistry);
+    const parallelGenerator = new ParallelPlanGenerator(techniqueRegistry);
 
     // For 'auto' mode, detect if parallel is beneficial
     let finalExecutionMode: 'parallel' | 'sequential' =

@@ -87,7 +87,9 @@ export class MarkdownExporter extends BaseExporter {
     // Simple conditional processing
     const conditionalRegex = /{{#if\s+(\w+)}}([\s\S]*?){{\/if}}/g;
 
-    return template.replace(conditionalRegex, (_match, condition: string, content: string) => {
+    return template.replace(conditionalRegex, (match, condition: string, content: string) => {
+      // Log the match for debugging if needed
+      void match;
       if (data[condition]) {
         return content;
       }

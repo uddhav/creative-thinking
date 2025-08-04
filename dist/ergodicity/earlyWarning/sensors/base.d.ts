@@ -35,7 +35,7 @@ export declare abstract class Sensor {
      * Calculate sensor confidence in the reading
      * Can be overridden by specific sensors
      */
-    protected calculateConfidence(_pathMemory: PathMemory, _sessionData: SessionData): number;
+    protected calculateConfidence(): number;
     /**
      * Apply noise filtering to smooth readings
      */
@@ -43,7 +43,7 @@ export declare abstract class Sensor {
     /**
      * Calculate how fast we're approaching the barrier
      */
-    protected calculateApproachRate(_currentValue: number): number;
+    protected calculateApproachRate(): number;
     /**
      * Determine warning level based on distance
      */

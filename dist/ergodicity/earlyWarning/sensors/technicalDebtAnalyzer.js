@@ -10,7 +10,7 @@ export class TechnicalDebtAnalyzer extends Sensor {
      * Calculate technical debt level
      */
     getRawReading(pathMemory, sessionData) {
-        const metrics = this.calculateTechnicalDebtMetrics(pathMemory, sessionData);
+        const metrics = this.calculateTechnicalDebtMetrics(pathMemory);
         // Weighted combination of debt factors
         const weights = {
             entropy: 0.3,
@@ -35,7 +35,7 @@ export class TechnicalDebtAnalyzer extends Sensor {
      */
     detectIndicators(pathMemory, sessionData) {
         const indicators = [];
-        const metrics = this.calculateTechnicalDebtMetrics(pathMemory, sessionData);
+        const metrics = this.calculateTechnicalDebtMetrics(pathMemory);
         // Entropy indicators
         if (metrics.entropyScore > 0.7) {
             indicators.push('High solution entropy detected');
@@ -63,25 +63,41 @@ export class TechnicalDebtAnalyzer extends Sensor {
         if (this.detectHackyPatterns(pathMemory)) {
             indicators.push('Quick-fix patterns accumulating');
         }
+        // Session-specific indicators
+        const latestStep = sessionData.history[sessionData.history.length - 1];
+        if (latestStep &&
+            latestStep.currentStep > latestStep.totalSteps * 0.8 &&
+            metrics.entropyScore > 0.5) {
+            indicators.push('Late-stage complexity accumulation');
+        }
+        // Session-specific indicators
+        if (sessionData.history.length > 30 && metrics.changeVelocity < 0.3) {
+            indicators.push('Extended session with low change velocity');
+        }
+        if (sessionData.history.length > 40) {
+            indicators.push(`Very long session (${sessionData.history.length} operations)`);
+        }
         return Promise.resolve(indicators);
     }
     /**
      * Gather technical debt context
      */
     gatherContext(pathMemory, sessionData) {
-        const metrics = this.calculateTechnicalDebtMetrics(pathMemory, sessionData);
+        const metrics = this.calculateTechnicalDebtMetrics(pathMemory);
         return Promise.resolve({
             technicalDebtMetrics: metrics,
             quickFixCount: this.countQuickFixes(pathMemory),
             irreversibleDecisions: this.countIrreversibleDecisions(pathMemory),
             solutionComplexity: this.calculateSolutionComplexity(pathMemory),
             refactorOpportunities: this.identifyRefactorOpportunities(pathMemory),
+            sessionLength: sessionData.history.length,
+            techniqueUsed: sessionData.technique,
         });
     }
     /**
      * Calculate technical debt metrics
      */
-    calculateTechnicalDebtMetrics(pathMemory, _sessionData) {
+    calculateTechnicalDebtMetrics(pathMemory) {
         return {
             entropyScore: this.calculateEntropy(pathMemory),
             changeVelocity: this.calculateChangeVelocity(pathMemory),

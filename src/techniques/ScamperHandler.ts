@@ -199,7 +199,7 @@ export class ScamperHandler extends BaseTechniqueHandler {
     return baseImpact;
   }
 
-  private identifyDependencies(action: ScamperAction, _modification: string): string[] {
+  private identifyDependencies(action: ScamperAction, modification: string): string[] {
     const dependencies: string[] = [];
 
     switch (action) {
@@ -216,25 +216,30 @@ export class ScamperHandler extends BaseTechniqueHandler {
         dependencies.push('Environmental constraints');
         break;
       case 'eliminate':
-        dependencies.push('Removed functionality dependencies');
-        dependencies.push('Downstream process impacts');
+        dependencies.push('Dependencies on eliminated component');
+        dependencies.push('Downstream impacts');
         break;
       case 'parameterize':
-        dependencies.push('Parameter range constraints');
+        dependencies.push('Parameter constraints');
         dependencies.push('Variable interdependencies');
         dependencies.push('Configuration management');
         break;
     }
 
+    // Add context-specific dependency if modification is substantive
+    if (modification && modification.length > 20) {
+      dependencies.push(`Specific constraints from: ${modification.substring(0, 30)}...`);
+    }
+
     return dependencies;
   }
 
-  private identifyClosedOptions(action: ScamperAction, _modification: string): string[] {
+  private identifyClosedOptions(action: ScamperAction, modification: string): string[] {
     const closed: string[] = [];
 
     switch (action) {
       case 'eliminate':
-        closed.push('Restoration of removed elements');
+        closed.push(`Restoration of removed ${modification}`);
         closed.push('Features dependent on eliminated elements');
         break;
       case 'combine':
@@ -254,7 +259,7 @@ export class ScamperHandler extends BaseTechniqueHandler {
     return closed;
   }
 
-  private identifyOpenedOptions(action: ScamperAction, _modification: string): string[] {
+  private identifyOpenedOptions(action: ScamperAction, modification: string): string[] {
     const opened: string[] = [];
 
     switch (action) {
@@ -268,17 +273,22 @@ export class ScamperHandler extends BaseTechniqueHandler {
         break;
       case 'put_to_other_use':
         opened.push('New market segments');
-        opened.push('Cross-domain solutions');
+        opened.push('Cross-domain applications');
         break;
       case 'reverse':
         opened.push('Counter-intuitive approaches');
-        opened.push('Paradigm shift opportunities');
+        opened.push('Paradigm shifts from inversion');
         break;
       case 'parameterize':
-        opened.push('Configuration optimization space');
-        opened.push('Dynamic adaptation capabilities');
+        opened.push('Configuration space');
+        opened.push('Dynamic adaptation');
         opened.push('A/B testing opportunities');
         break;
+    }
+
+    // Add specific opportunity based on the modification length/complexity
+    if (modification && modification.split(' ').length > 5) {
+      opened.push('Complex transformation opportunities');
     }
 
     return opened;

@@ -6,12 +6,10 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { ParallelPlanGenerator } from '../../../layers/planning/ParallelPlanGenerator.js';
 import type { LateralTechnique } from '../../../types/index.js';
 import type { PlanThinkingSessionInput, ConvergenceOptions } from '../../../types/planning.js';
-import type { SessionManager } from '../../../core/SessionManager.js';
 import type { TechniqueRegistry } from '../../../techniques/TechniqueRegistry.js';
 import type { TechniqueHandler } from '../../../techniques/types.js';
 
 // Mock implementations
-const mockSessionManager = {} as SessionManager;
 
 const createMockHandler = (technique: LateralTechnique, totalSteps: number): TechniqueHandler => ({
   getTechniqueInfo: () => ({
@@ -56,7 +54,7 @@ describe('ParallelPlanGenerator', () => {
   let generator: ParallelPlanGenerator;
 
   beforeEach(() => {
-    generator = new ParallelPlanGenerator(mockSessionManager, mockTechniqueRegistry);
+    generator = new ParallelPlanGenerator(mockTechniqueRegistry);
   });
 
   describe('Sequential Plan Generation', () => {

@@ -3,16 +3,14 @@
  * Splits multi-technique sessions into independent plans that can run concurrently
  */
 import type { PlanThinkingSessionInput, PlanThinkingSessionOutput, ExecutionMode, ConvergenceOptions } from '../../types/planning.js';
-import type { SessionManager } from '../../core/SessionManager.js';
 import type { TechniqueRegistry } from '../../techniques/TechniqueRegistry.js';
 /**
  * Generates parallel execution plans for creative thinking sessions
  */
 export declare class ParallelPlanGenerator {
-    private sessionManager;
     private techniqueRegistry;
     private dependencyAnalyzer;
-    constructor(sessionManager: SessionManager, techniqueRegistry: TechniqueRegistry);
+    constructor(techniqueRegistry: TechniqueRegistry);
     /**
      * Generate parallel or sequential plans based on execution mode
      */

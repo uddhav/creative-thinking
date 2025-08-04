@@ -9,11 +9,9 @@ import { defaultParallelismConfig } from '../../config/parallelism.js';
  * Generates parallel execution plans for creative thinking sessions
  */
 export class ParallelPlanGenerator {
-    sessionManager;
     techniqueRegistry;
     dependencyAnalyzer;
-    constructor(sessionManager, techniqueRegistry) {
-        this.sessionManager = sessionManager;
+    constructor(techniqueRegistry) {
         this.techniqueRegistry = techniqueRegistry;
         this.dependencyAnalyzer = new TechniqueDependencyAnalyzer();
     }
@@ -123,27 +121,32 @@ export class ParallelPlanGenerator {
     /**
      * Create a convergence plan for synthesizing parallel results
      */
-    createConvergencePlan(parallelPlans, _input, _convergenceOptions) {
+    createConvergencePlan(parallelPlans, input, convergenceOptions) {
         const planId = `plan_convergence_${randomUUID()}`;
-        // Create convergence workflow
+        // Create convergence workflow based on input context
+        const { problem, objectives, constraints } = input;
+        // Customize steps based on convergence options
+        const synthesisStrategy = convergenceOptions.convergencePlan?.metadata?.synthesisStrategy || 'comprehensive';
         const convergenceSteps = [
             {
                 stepNumber: 1,
-                description: 'Analyze results from all parallel techniques',
+                description: `Analyze results from all parallel techniques for: ${problem}`,
                 expectedOutput: 'Comprehensive overview of all generated ideas and insights',
                 criticalLens: 'Identify patterns, conflicts, and synergies across approaches',
                 successCriteria: ['All parallel results reviewed', 'Key themes identified'],
             },
             {
                 stepNumber: 2,
-                description: 'Synthesize insights across techniques',
+                description: 'Synthesize insights across techniques' +
+                    (objectives?.length ? ` to meet objectives: ${objectives.join(', ')}` : ''),
                 expectedOutput: 'Unified insights that leverage strengths of each approach',
                 criticalLens: 'Resolve conflicts and find complementary aspects',
                 successCriteria: ['Conflicts resolved', 'Synergies exploited', 'Gaps identified'],
             },
             {
                 stepNumber: 3,
-                description: 'Generate final recommendations',
+                description: 'Generate final recommendations' +
+                    (constraints?.length ? ` respecting constraints: ${constraints.join(', ')}` : ''),
                 expectedOutput: 'Actionable recommendations based on synthesized insights',
                 criticalLens: 'Ensure recommendations are practical and comprehensive',
                 successCriteria: [
@@ -171,8 +174,8 @@ export class ParallelPlanGenerator {
             dependencies: parallelPlans.map(p => p.planId),
             metadata: {
                 techniqueCount: 1,
-                totalSteps: 3,
-                complexity: 'medium',
+                totalSteps: convergenceSteps.length,
+                complexity: synthesisStrategy === 'comprehensive' ? 'high' : 'medium',
             },
         };
     }
@@ -241,20 +244,48 @@ export class ParallelPlanGenerator {
     /**
      * Optimize groups for balanced execution
      */
-    optimizeGroups(groups, _dependencyGraph) {
-        // Balance groups by estimated execution time
+    optimizeGroups(groups, dependencyGraph) {
+        // Balance groups by estimated execution time and dependencies
         const optimized = [...groups];
-        // Simple optimization: try to balance group sizes
-        if (optimized.length > 1) {
-            // Rebalance if there's significant imbalance
-            const maxSize = Math.max(...optimized.map(g => g.length));
-            const minSize = Math.min(...optimized.map(g => g.length));
-            if (maxSize - minSize > 2) {
-                // TODO: Implement more sophisticated rebalancing
-                // For now, return as is
+        // Verify no dependencies are split across groups
+        for (let i = 0; i < optimized.length; i++) {
+            for (const technique of optimized[i]) {
+                const dependencies = dependencyGraph.getDependencies(technique);
+                // Check if any dependencies are in other groups
+                for (let j = 0; j < optimized.length; j++) {
+                    if (i === j)
+                        continue;
+                    for (const dep of dependencies) {
+                        if (optimized[j].includes(dep)) {
+                            // Move dependent technique to the same group as its dependency
+                            optimized[i] = optimized[i].filter(t => t !== technique);
+                            optimized[j].push(technique);
+                            break;
+                        }
+                    }
+                }
             }
         }
-        return optimized;
+        // Calculate dependency depth for each group for complexity assessment
+        const groupComplexities = optimized.map(group => {
+            let maxDepth = 0;
+            for (const technique of group) {
+                const deps = dependencyGraph.getDependencies(technique);
+                maxDepth = Math.max(maxDepth, deps.length);
+            }
+            return maxDepth;
+        });
+        // Balance groups by size and complexity
+        if (optimized.length > 1) {
+            const avgComplexity = groupComplexities.reduce((a, b) => a + b, 0) / groupComplexities.length;
+            const maxSize = Math.max(...optimized.map(g => g.length));
+            const minSize = Math.min(...optimized.map(g => g.length));
+            // Log optimization info for debugging
+            if (maxSize - minSize > 2 || Math.max(...groupComplexities) > avgComplexity * 2) {
+                console.error(`Group imbalance detected: sizes ${minSize}-${maxSize}, complexities: ${groupComplexities.join(', ')}, avg complexity: ${avgComplexity.toFixed(2)}`);
+            }
+        }
+        return optimized.filter(group => group.length > 0); // Remove empty groups
     }
     /**
      * Create sequential workflow for backward compatibility

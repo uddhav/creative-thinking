@@ -69,7 +69,7 @@ export class MemoryAnalyzer {
 
   private generateContextualInsight(
     input: ThinkingOperationData,
-    _session: SessionData
+    session: SessionData
   ): string | undefined {
     const { technique, currentStep } = input;
 
@@ -201,6 +201,16 @@ export class MemoryAnalyzer {
 
     if (input.risks && input.risks.length >= 3) {
       return `Critical analysis identified ${input.risks.length} potential failure modes`;
+    }
+
+    // Session-based insights
+    const sessionProgress = currentStep / input.totalSteps;
+    if (sessionProgress > 0.8 && session.insights.length === 0) {
+      return 'Near session completion - consider capturing key insights';
+    }
+
+    if (session.history.length > 20) {
+      return `Extended ${technique} session (${session.history.length} operations) - consider synthesis`;
     }
 
     return undefined;

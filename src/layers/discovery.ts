@@ -57,12 +57,6 @@ export function discoverTechniques(
     recommendations.map(r => r.technique)
   );
 
-  // Get detailed execution mode analysis (not used in output currently)
-  const _executionModeAnalysis = executionModeController.analyzeExecutionMode(
-    input,
-    recommendations.map(r => r.technique)
-  );
-
   // Build integration suggestions
   let integrationSuggestions = workflowBuilder.buildIntegrationSuggestions(
     recommendations.map(r => r.technique),

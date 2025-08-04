@@ -14,7 +14,7 @@ export class TelemetryAnalyzer {
     async getAnalytics(query) {
         const events = await this.getEventsForQuery(query);
         const results = this.analyzeEvents(events, query);
-        const summary = this.generateSummary(events, results);
+        const summary = this.generateSummary(events);
         return {
             query,
             generatedAt: Date.now(),
@@ -49,7 +49,7 @@ export class TelemetryAnalyzer {
             }
             const stats = techniqueMap.get(event.technique);
             if (stats) {
-                this.updateTechniqueStats(stats, event, events);
+                this.updateTechniqueStats(stats, event);
             }
         }
         // Calculate final metrics
@@ -246,7 +246,7 @@ export class TelemetryAnalyzer {
     /**
      * Generate analytics summary
      */
-    generateSummary(events, _results) {
+    generateSummary(events) {
         const sessions = new Set(events.map(e => e.anonymousSessionId));
         const techniques = new Map();
         // Count techniques and effectiveness
@@ -300,7 +300,7 @@ export class TelemetryAnalyzer {
     /**
      * Update technique statistics
      */
-    updateTechniqueStats(stats, event, _allEvents) {
+    updateTechniqueStats(stats, event) {
         if (event.eventType === 'technique_start') {
             stats.sessionsUsed++;
         }

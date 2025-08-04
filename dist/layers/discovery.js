@@ -29,8 +29,6 @@ export function discoverTechniques(input, techniqueRegistry, complexityAnalyzer)
     const recommendations = techniqueRecommender.recommendTechniques(problemCategory, preferredOutcome, constraints, complexityAssessment.level, techniqueRegistry);
     // Determine execution mode
     const executionDecision = executionModeController.determineExecutionMode(input, recommendations.map(r => r.technique));
-    // Get detailed execution mode analysis (not used in output currently)
-    const _executionModeAnalysis = executionModeController.analyzeExecutionMode(input, recommendations.map(r => r.technique));
     // Build integration suggestions
     let integrationSuggestions = workflowBuilder.buildIntegrationSuggestions(recommendations.map(r => r.technique), complexityAssessment.level);
     // Update integration suggestions based on execution mode

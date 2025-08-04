@@ -15,7 +15,6 @@ import type {
   ThinkingStep,
   TechniqueWorkflow,
 } from '../../types/planning.js';
-import type { SessionManager } from '../../core/SessionManager.js';
 import type { TechniqueRegistry } from '../../techniques/TechniqueRegistry.js';
 import {
   TechniqueDependencyAnalyzer,
@@ -29,10 +28,7 @@ import { defaultParallelismConfig } from '../../config/parallelism.js';
 export class ParallelPlanGenerator {
   private dependencyAnalyzer: TechniqueDependencyAnalyzer;
 
-  constructor(
-    private sessionManager: SessionManager,
-    private techniqueRegistry: TechniqueRegistry
-  ) {
+  constructor(private techniqueRegistry: TechniqueRegistry) {
     this.dependencyAnalyzer = new TechniqueDependencyAnalyzer();
   }
 
@@ -185,30 +181,40 @@ export class ParallelPlanGenerator {
    */
   private createConvergencePlan(
     parallelPlans: ParallelPlan[],
-    _input: PlanThinkingSessionInput,
-    _convergenceOptions: ConvergenceOptions
+    input: PlanThinkingSessionInput,
+    convergenceOptions: ConvergenceOptions
   ): ParallelPlan {
     const planId = `plan_convergence_${randomUUID()}`;
 
-    // Create convergence workflow
+    // Create convergence workflow based on input context
+    const { problem, objectives, constraints } = input;
+
+    // Customize steps based on convergence options
+    const synthesisStrategy =
+      convergenceOptions.convergencePlan?.metadata?.synthesisStrategy || 'comprehensive';
+
     const convergenceSteps: ThinkingStep[] = [
       {
         stepNumber: 1,
-        description: 'Analyze results from all parallel techniques',
+        description: `Analyze results from all parallel techniques for: ${problem}`,
         expectedOutput: 'Comprehensive overview of all generated ideas and insights',
         criticalLens: 'Identify patterns, conflicts, and synergies across approaches',
         successCriteria: ['All parallel results reviewed', 'Key themes identified'],
       },
       {
         stepNumber: 2,
-        description: 'Synthesize insights across techniques',
+        description:
+          'Synthesize insights across techniques' +
+          (objectives?.length ? ` to meet objectives: ${objectives.join(', ')}` : ''),
         expectedOutput: 'Unified insights that leverage strengths of each approach',
         criticalLens: 'Resolve conflicts and find complementary aspects',
         successCriteria: ['Conflicts resolved', 'Synergies exploited', 'Gaps identified'],
       },
       {
         stepNumber: 3,
-        description: 'Generate final recommendations',
+        description:
+          'Generate final recommendations' +
+          (constraints?.length ? ` respecting constraints: ${constraints.join(', ')}` : ''),
         expectedOutput: 'Actionable recommendations based on synthesized insights',
         criticalLens: 'Ensure recommendations are practical and comprehensive',
         successCriteria: [
@@ -238,8 +244,9 @@ export class ParallelPlanGenerator {
       dependencies: parallelPlans.map(p => p.planId),
       metadata: {
         techniqueCount: 1,
-        totalSteps: 3,
-        complexity: 'medium' as 'low' | 'medium' | 'high',
+        totalSteps: convergenceSteps.length,
+        complexity:
+          synthesisStrategy === 'comprehensive' ? 'high' : ('medium' as 'low' | 'medium' | 'high'),
       },
     };
   }
@@ -344,24 +351,57 @@ export class ParallelPlanGenerator {
    */
   private optimizeGroups(
     groups: LateralTechnique[][],
-    _dependencyGraph: DependencyGraph
+    dependencyGraph: DependencyGraph
   ): LateralTechnique[][] {
-    // Balance groups by estimated execution time
+    // Balance groups by estimated execution time and dependencies
     const optimized = [...groups];
 
-    // Simple optimization: try to balance group sizes
-    if (optimized.length > 1) {
-      // Rebalance if there's significant imbalance
-      const maxSize = Math.max(...optimized.map(g => g.length));
-      const minSize = Math.min(...optimized.map(g => g.length));
+    // Verify no dependencies are split across groups
+    for (let i = 0; i < optimized.length; i++) {
+      for (const technique of optimized[i]) {
+        const dependencies = dependencyGraph.getDependencies(technique);
 
-      if (maxSize - minSize > 2) {
-        // TODO: Implement more sophisticated rebalancing
-        // For now, return as is
+        // Check if any dependencies are in other groups
+        for (let j = 0; j < optimized.length; j++) {
+          if (i === j) continue;
+
+          for (const dep of dependencies) {
+            if (optimized[j].includes(dep)) {
+              // Move dependent technique to the same group as its dependency
+              optimized[i] = optimized[i].filter(t => t !== technique);
+              optimized[j].push(technique);
+              break;
+            }
+          }
+        }
       }
     }
 
-    return optimized;
+    // Calculate dependency depth for each group for complexity assessment
+    const groupComplexities = optimized.map(group => {
+      let maxDepth = 0;
+      for (const technique of group) {
+        const deps = dependencyGraph.getDependencies(technique);
+        maxDepth = Math.max(maxDepth, deps.length);
+      }
+      return maxDepth;
+    });
+
+    // Balance groups by size and complexity
+    if (optimized.length > 1) {
+      const avgComplexity = groupComplexities.reduce((a, b) => a + b, 0) / groupComplexities.length;
+      const maxSize = Math.max(...optimized.map(g => g.length));
+      const minSize = Math.min(...optimized.map(g => g.length));
+
+      // Log optimization info for debugging
+      if (maxSize - minSize > 2 || Math.max(...groupComplexities) > avgComplexity * 2) {
+        console.error(
+          `Group imbalance detected: sizes ${minSize}-${maxSize}, complexities: ${groupComplexities.join(', ')}, avg complexity: ${avgComplexity.toFixed(2)}`
+        );
+      }
+    }
+
+    return optimized.filter(group => group.length > 0); // Remove empty groups
   }
 
   /**

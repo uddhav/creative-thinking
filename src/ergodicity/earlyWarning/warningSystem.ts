@@ -159,8 +159,8 @@ export class AbsorbingBarrierEarlyWarning {
   private generateWarningsFromReading(
     reading: SensorReading,
     sensor: Sensor,
-    _pathMemory: PathMemory,
-    _sessionData: SessionData
+    pathMemory: PathMemory,
+    sessionData: SessionData
   ): BarrierWarning[] {
     const warnings: BarrierWarning[] = [];
 
@@ -177,6 +177,15 @@ export class AbsorbingBarrierEarlyWarning {
       // Generate warning if threshold exceeded
       if (reading.warningLevel !== BarrierWarningLevel.SAFE) {
         const warning = this.createBarrierWarning(reading, barrierWithProximity, sensor.type);
+
+        // Enhance warning message with context
+        if (pathMemory.currentFlexibility.flexibilityScore < 0.3) {
+          warning.message += ' [LOW FLEXIBILITY - URGENT]';
+        }
+        if (sessionData.history.length > 20) {
+          warning.detailedAnalysis += ` Extended session detected (${sessionData.history.length} steps).`;
+        }
+
         warnings.push(warning);
       }
     }
@@ -279,7 +288,7 @@ ${barrier.description}
    */
   private generateEscapeProtocols(
     severity: BarrierWarningLevel,
-    _barrier: Barrier
+    barrier: Barrier
   ): EscapeProtocol[] {
     const protocols: EscapeProtocol[] = [];
 
@@ -287,7 +296,7 @@ ${barrier.description}
       protocols.push({
         level: 1,
         name: 'Pattern Interruption',
-        description: 'Break current thinking patterns immediately',
+        description: `Break current thinking patterns immediately - ${barrier.name} barrier detected`,
         automaticTrigger: false,
         requiredFlexibility: 0.1,
         estimatedFlexibilityGain: 0.3,
@@ -296,9 +305,10 @@ ${barrier.description}
           'Use Random Entry technique',
           'Challenge all assumptions',
           'Seek opposite perspective',
+          `Specifically avoid ${barrier.subtype} patterns`,
         ],
         risks: ['May feel disorienting', 'Loss of current progress'],
-        successProbability: 0.8,
+        successProbability: barrier.impact === 'irreversible' ? 0.7 : 0.8,
       });
     }
 
@@ -376,7 +386,7 @@ ${barrier.description}
    */
   private identifyCriticalBarriers(
     readings: Map<SensorType, SensorReading>,
-    _pathMemory: PathMemory
+    pathMemory: PathMemory
   ): Barrier[] {
     const criticalBarriers: Barrier[] = [];
 
@@ -385,12 +395,26 @@ ${barrier.description}
         const sensor = this.sensors.get(sensorType);
         if (sensor) {
           const barriers = sensor.getMonitoredBarriers();
+          // Add all barriers from this sensor
           criticalBarriers.push(...barriers);
         }
       }
     }
 
-    return criticalBarriers;
+    // Sort by impact severity and path state
+    return criticalBarriers.sort((a, b) => {
+      const impactWeight = { irreversible: 3, difficult: 2, recoverable: 1 };
+      let aScore = impactWeight[a.impact] || 0;
+      let bScore = impactWeight[b.impact] || 0;
+
+      // Boost score for barriers that match current constraint types
+      if (pathMemory.constraints.some(c => a.description.toLowerCase().includes(c.type)))
+        aScore += 0.5;
+      if (pathMemory.constraints.some(c => b.description.toLowerCase().includes(c.type)))
+        bScore += 0.5;
+
+      return bScore - aScore;
+    });
   }
 
   /**
@@ -533,7 +557,7 @@ ${barrier.description}
     }
 
     // Analyze each barrier type
-    for (const [_barrierType, barrierWarnings] of byBarrier) {
+    for (const [barrierType, barrierWarnings] of byBarrier) {
       if (barrierWarnings.length >= 2) {
         patterns.push({
           type: 'recurring',
@@ -543,6 +567,15 @@ ${barrier.description}
           commonTriggers: this.identifyCommonTriggers(barrierWarnings),
           effectiveEscapes: [],
         });
+
+        // If this barrier type appears very frequently, add it to pattern description
+        if (barrierWarnings.length > 5) {
+          const lastPattern = patterns[patterns.length - 1];
+          if (lastPattern.type === 'recurring') {
+            // Store dominant barrier type in the existing commonTriggers array
+            lastPattern.commonTriggers.push(`Dominant barrier type: ${barrierType}`);
+          }
+        }
       }
     }
 
@@ -576,8 +609,8 @@ ${barrier.description}
     // Return indicators that appear in >50% of warnings
     const threshold = warnings.length * 0.5;
     return Array.from(counts.entries())
-      .filter(([_, count]) => count >= threshold)
-      .map(([indicator, _]) => indicator);
+      .filter(([, count]) => count >= threshold)
+      .map(([indicator]) => indicator);
   }
 
   /**
