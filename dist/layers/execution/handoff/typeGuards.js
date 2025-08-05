@@ -57,9 +57,7 @@ export function extractTextContent(value) {
             if (typeof item === 'string') {
                 textParts.push(item);
             }
-            else if (typeof item === 'object' &&
-                item !== null &&
-                'description' in item) {
+            else if (typeof item === 'object' && item !== null && 'description' in item) {
                 const desc = item.description;
                 if (typeof desc === 'string') {
                     textParts.push(desc);

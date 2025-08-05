@@ -39,7 +39,9 @@ export class LLMHandoffBridge {
         const metadata = this.prepareMetadata(parallelResults);
         // 5. Generate visualization data (with size limit)
         const visualizations = options.visualizationLevel !== 'none'
-            ? this.visualizationGenerator.generateVisualizations(parallelResults).slice(0, MAX_VISUALIZATIONS)
+            ? this.visualizationGenerator
+                .generateVisualizations(parallelResults)
+                .slice(0, MAX_VISUALIZATIONS)
             : [];
         // 6. Create action recommendations
         const suggestedActions = this.actionSuggester.suggestNextActions(parallelResults, options);
