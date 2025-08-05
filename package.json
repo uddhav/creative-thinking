@@ -28,6 +28,8 @@
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:performance": "vitest run --config vitest.config.performance.ts src/__tests__/integration/performance.test.ts",
+    "benchmark": "npm run build && node dist/benchmarks/parallel-execution-runner.js",
+    "benchmark:parallel": "npm run build && node dist/benchmarks/parallel-execution-runner.js",
     "prepublishOnly": "npm run build && npm run test:run",
     "lint": "eslint . --ext .ts,.tsx --max-warnings 0",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
