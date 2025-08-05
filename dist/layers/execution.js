@@ -70,7 +70,7 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
         // If session can't proceed due to dependencies, return waiting response
         if (parallelContext.groupId && !parallelContext.canProceed) {
             // Report progress as waiting
-            progressCoordinator.reportProgress({
+            void progressCoordinator.reportProgress({
                 groupId: parallelContext.groupId,
                 sessionId,
                 technique: input.technique,
@@ -135,7 +135,7 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
         }
         // Report progress for parallel execution
         if (parallelContext.groupId) {
-            progressCoordinator.reportProgress({
+            void progressCoordinator.reportProgress({
                 groupId: parallelContext.groupId,
                 sessionId,
                 technique: input.technique,
@@ -235,7 +235,7 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
             session.endTime = Date.now();
             // Report completion for parallel execution
             if (parallelContext.groupId) {
-                progressCoordinator.reportProgress({
+                void progressCoordinator.reportProgress({
                     groupId: parallelContext.groupId,
                     sessionId,
                     technique: input.technique,
@@ -291,7 +291,7 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
                 errorType: 'execution_error',
             };
             // Report error to progress coordinator
-            progressCoordinator?.reportProgress({
+            void progressCoordinator?.reportProgress({
                 groupId: session.parallelGroupId,
                 sessionId,
                 technique: input.technique,

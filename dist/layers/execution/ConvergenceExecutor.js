@@ -317,7 +317,9 @@ export class ConvergenceExecutor {
                         typeof value === 'number' ||
                         typeof value === 'boolean' ||
                         Array.isArray(value) ||
-                        (typeof value === 'object' && value !== null && value.constructor === Object)) {
+                        (typeof value === 'object' &&
+                            value !== null &&
+                            Object.prototype.toString.call(value) === '[object Object]')) {
                         normalized[key] = value;
                     }
                 }
