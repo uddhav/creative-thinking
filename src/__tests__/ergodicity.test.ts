@@ -223,9 +223,13 @@ describe('Ergodicity and Path Dependency Tracking', () => {
 
       expect(step2Result.isError).toBeFalsy();
 
-      // The formatted output should include ergodicity metrics
-      // Note: Visual output goes to console.error, so we're checking the response
-      expect(step2Result.content[0]?.text).toContain('completed');
+      // With the new enforcement system, early termination is blocked
+      const step2Content = JSON.parse(step2Result.content[0]?.text || '{}');
+
+      // Should be blocked because trying to terminate at 2/7 steps (28%)
+      expect(step2Content.blocked).toBe(true);
+      expect(step2Content.title).toBe('Early Termination Blocked');
+      expect(step2Content.completionStatus.overallProgress).toBeLessThan(30);
     });
   });
 

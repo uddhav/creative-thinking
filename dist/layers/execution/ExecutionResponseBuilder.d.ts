@@ -17,6 +17,7 @@ export declare class ExecutionResponseBuilder {
     private memoryAnalyzer;
     private jsonOptimizer;
     private telemetry;
+    private completionTracker;
     constructor(complexityAnalyzer: HybridComplexityAnalyzer, escalationGenerator: EscalationPromptGenerator, techniqueRegistry?: TechniqueRegistry | undefined);
     /**
      * Build comprehensive execution response
@@ -45,9 +46,11 @@ export declare class ExecutionResponseBuilder {
     private extractInsights;
     private createOperationData;
     private generateNextStepGuidance;
+    private getBaseGuidance;
     private generateExecutionMetadata;
     private addMemoryOutputs;
     private addTechniqueProgress;
+    private addCompletionMetadata;
     private addFlexibilityInfo;
     private addPathAnalysis;
     private addWarnings;

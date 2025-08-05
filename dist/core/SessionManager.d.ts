@@ -2,11 +2,12 @@
  * Session Manager
  * Handles session lifecycle, persistence, and cleanup
  */
-import type { SessionData } from '../types/index.js';
+import type { SessionData, LateralTechnique } from '../types/index.js';
 import type { PlanThinkingSessionOutput, ParallelPlan, ConvergenceOptions } from '../types/planning.js';
 import type { PersistenceAdapter } from '../persistence/adapter.js';
 import type { SessionState } from '../persistence/types.js';
 import type { ParallelSessionGroup, ParallelExecutionResult } from '../types/parallel-session.js';
+import { type SkipDetectionResult, type SkipPattern } from './session/SkipDetector.js';
 export interface SessionConfig {
     maxSessions: number;
     maxSessionSize: number;
@@ -22,6 +23,7 @@ export declare class SessionManager {
     private sessionPersistence;
     private sessionMetrics;
     private planManager;
+    private skipDetector;
     private sessionIndex;
     private parallelGroupManager;
     private config;
@@ -158,5 +160,26 @@ export declare class SessionManager {
      * Clean up old parallel groups
      */
     cleanupOldParallelGroups(): number;
+    /**
+     * Analyze skip patterns for a specific session
+     */
+    analyzeSessionSkipPatterns(sessionId: string): SkipDetectionResult | null;
+    /**
+     * Analyze skip patterns across all sessions for a user
+     */
+    analyzeUserSkipPatterns(limit?: number): {
+        consistentPatterns: SkipPattern[];
+        problematicTechniques: LateralTechnique[];
+        overallSkipRate: number;
+        improvementTrend: 'improving' | 'declining' | 'stable';
+    };
+    /**
+     * Get skip pattern recommendations for current session
+     */
+    getSkipPatternRecommendations(sessionId: string): string[];
+    /**
+     * Check if session has concerning skip patterns
+     */
+    hasHighRiskSkipPatterns(sessionId: string): boolean;
 }
 //# sourceMappingURL=SessionManager.d.ts.map

@@ -120,15 +120,20 @@ describe('Session Persistence - Simple Integration', () => {
           planId: plan.planId,
           technique: 'po',
           problem: `Problem ${i}`,
-          currentStep: 1,
+          currentStep: 4,
           totalSteps: 4,
           provocation: `Po: Provocation ${i}`,
           output: `Output ${i}`,
+          synthesis: `Final solution ${i}`,
           nextStepNeeded: false,
           autoSave: true,
         });
 
-        sessionIds.push(safeJsonParse(stepResult.content[0].text).sessionId);
+        const responseData = safeJsonParse(stepResult.content[0].text);
+        // Only push sessionId if not blocked
+        if (!responseData.blocked && responseData.sessionId) {
+          sessionIds.push(responseData.sessionId);
+        }
       }
 
       // Wait for file system operations

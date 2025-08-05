@@ -12,6 +12,7 @@ import { SessionMetrics } from './session/SessionMetrics.js';
 import { PlanManager } from './session/PlanManager.js';
 import { SessionIndex } from './session/SessionIndex.js';
 import { ParallelGroupManager } from './session/ParallelGroupManager.js';
+import { SkipDetector, } from './session/SkipDetector.js';
 // Constants for memory management
 const MEMORY_THRESHOLD_FOR_GC = 0.8; // Trigger garbage collection when heap usage exceeds 80%
 export class SessionManager {
@@ -23,6 +24,7 @@ export class SessionManager {
     sessionPersistence;
     sessionMetrics;
     planManager;
+    skipDetector;
     // Parallel execution components (lazy initialized)
     sessionIndex = null;
     parallelGroupManager = null;
@@ -43,6 +45,7 @@ export class SessionManager {
         });
         // Initialize core components only
         this.planManager = new PlanManager();
+        this.skipDetector = new SkipDetector();
         // Parallel components will be initialized on first use (lazy initialization)
         this.sessionCleaner = new SessionCleaner(this.sessions, this.planManager.getAllPlans(), this.config, this.memoryManager, this.touchSession.bind(this));
         this.sessionPersistence = new SessionPersistence();
@@ -348,6 +351,59 @@ export class SessionManager {
      */
     cleanupOldParallelGroups() {
         return this.getParallelGroupManager().cleanupOldGroups(this.config.sessionTTL);
+    }
+    // ============= Skip Detection Methods =============
+    /**
+     * Analyze skip patterns for a specific session
+     */
+    analyzeSessionSkipPatterns(sessionId) {
+        const session = this.sessions.get(sessionId);
+        if (!session) {
+            return null;
+        }
+        // Get plan if available - need to look up via session metadata or current plan
+        // Sessions don't store planId in history, so we'll check active plans
+        let plan;
+        // Try to find a plan that includes this session's technique
+        for (const [_planId, p] of this.planManager.getAllPlans()) {
+            if (p.techniques.includes(session.technique)) {
+                plan = p;
+                break;
+            }
+        }
+        return this.skipDetector.analyzeSession(session, plan);
+    }
+    /**
+     * Analyze skip patterns across all sessions for a user
+     */
+    analyzeUserSkipPatterns(limit = 10) {
+        // Get recent sessions sorted by last activity
+        const recentSessions = Array.from(this.sessions.values())
+            .sort((a, b) => b.lastActivityTime - a.lastActivityTime)
+            .slice(0, limit);
+        if (recentSessions.length === 0) {
+            return {
+                consistentPatterns: [],
+                problematicTechniques: [],
+                overallSkipRate: 0,
+                improvementTrend: 'stable',
+            };
+        }
+        return this.skipDetector.analyzeUserPatterns(recentSessions);
+    }
+    /**
+     * Get skip pattern recommendations for current session
+     */
+    getSkipPatternRecommendations(sessionId) {
+        const analysis = this.analyzeSessionSkipPatterns(sessionId);
+        return analysis?.recommendations || [];
+    }
+    /**
+     * Check if session has concerning skip patterns
+     */
+    hasHighRiskSkipPatterns(sessionId) {
+        const analysis = this.analyzeSessionSkipPatterns(sessionId);
+        return analysis ? analysis.riskScore > 0.7 : false;
     }
 }
 //# sourceMappingURL=SessionManager.js.map

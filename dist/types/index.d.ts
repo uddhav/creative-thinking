@@ -248,6 +248,24 @@ export interface ExecuteThinkingStepInput {
      * - hierarchical: Organize results in a hierarchical structure
      */
     convergenceStrategy?: 'merge' | 'select' | 'hierarchical';
+    /**
+     * Completion tracking metadata
+     * Tracks progress through planned workflow and identifies gaps
+     */
+    completionMetadata?: {
+        overallProgress: number;
+        totalPlannedSteps: number;
+        completedSteps: number;
+        techniqueStatuses: Array<{
+            technique: LateralTechnique;
+            completionPercentage: number;
+            skippedSteps: number[];
+        }>;
+        skippedTechniques: LateralTechnique[];
+        missedPerspectives: string[];
+        completionWarnings: string[];
+        minimumThresholdMet: boolean;
+    };
 }
 export interface ThinkingOperationData {
     sessionId?: string;

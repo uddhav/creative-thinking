@@ -534,11 +534,11 @@ describe('Technique Implementations', () => {
       const poResult = await executeStep(planId, {
         technique: 'po',
         problem: 'Complex problem solving',
-        currentStep: 1,
+        currentStep: 4,
         totalSteps: 4,
-        output: 'Creating provocation',
-        provocation: 'PO: Problems solve themselves',
-        nextStepNeeded: false, // Complete PO
+        output: 'Final practical solution',
+        synthesis: 'Problems can be reframed to become opportunities',
+        nextStepNeeded: false, // Complete PO at final step
       });
 
       expect(poResult.completed).toBe(true);

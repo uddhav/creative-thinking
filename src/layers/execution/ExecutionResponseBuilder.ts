@@ -24,6 +24,7 @@ import type { EscalationPromptGenerator } from '../../ergodicity/escalationPromp
 import type { HybridComplexityAnalyzer } from '../../complexity/analyzer.js';
 import { monitorCriticalSection } from '../../utils/PerformanceIntegration.js';
 import { TelemetryCollector } from '../../telemetry/TelemetryCollector.js';
+import { SessionCompletionTracker } from '../../core/session/SessionCompletionTracker.js';
 
 interface ComplexitySuggestion {
   complexityNote: string;
@@ -35,6 +36,7 @@ export class ExecutionResponseBuilder {
   private memoryAnalyzer = new MemoryAnalyzer();
   private jsonOptimizer: JsonOptimizer;
   private telemetry = TelemetryCollector.getInstance();
+  private completionTracker = new SessionCompletionTracker();
 
   constructor(
     private complexityAnalyzer: HybridComplexityAnalyzer,
@@ -308,6 +310,10 @@ export class ExecutionResponseBuilder {
 
     this.addMemoryOutputs(parsedResponse, memoryOutputs);
     this.addTechniqueProgress(parsedResponse, techniqueProgress);
+
+    // Add completion tracking metadata
+    const completionMetadata = this.completionTracker.calculateCompletionMetadata(session, plan);
+    this.addCompletionMetadata(parsedResponse, completionMetadata);
   }
 
   /**
@@ -392,6 +398,19 @@ export class ExecutionResponseBuilder {
       return `Complete the ${handler.getTechniqueInfo().name} process`;
     }
 
+    // Check completion status and add assertive guidance if needed
+    const completionMetadata = this.completionTracker.calculateCompletionMetadata(session, plan);
+    const remainingSteps = input.totalSteps - input.currentStep;
+
+    // Add assertive guidance for low completion
+    if (completionMetadata.overallProgress < 0.3 && remainingSteps > 10) {
+      const percentage = Math.round(completionMetadata.overallProgress * 100);
+      return (
+        `⚠️ Only ${percentage}% complete with ${remainingSteps} steps remaining. ` +
+        `Continue to avoid incomplete analysis. Next: ${this.getBaseGuidance(handler, techniqueLocalStep + 1, input)}`
+      );
+    }
+
     // Check if we're transitioning to a new technique
     const currentTechniqueSteps =
       plan?.workflow[techniqueIndex]?.steps.length || handler.getTechniqueInfo().totalSteps;
@@ -432,6 +451,14 @@ export class ExecutionResponseBuilder {
     }
 
     return undefined;
+  }
+
+  private getBaseGuidance(
+    handler: TechniqueHandler,
+    nextLocalStep: number,
+    input: ExecuteThinkingStepInput
+  ): string {
+    return handler.getStepGuidance(nextLocalStep, input.problem);
   }
 
   private generateExecutionMetadata(
@@ -480,6 +507,33 @@ export class ExecutionResponseBuilder {
     }
   ): void {
     parsedResponse.techniqueProgress = techniqueProgress;
+  }
+
+  private addCompletionMetadata(
+    parsedResponse: Record<string, unknown>,
+    completionMetadata: ReturnType<SessionCompletionTracker['calculateCompletionMetadata']>
+  ): void {
+    // Add completion metadata
+    parsedResponse.completionMetadata = {
+      overallProgress: completionMetadata.overallProgress,
+      totalPlannedSteps: completionMetadata.totalPlannedSteps,
+      completedSteps: completionMetadata.completedSteps,
+      techniqueStatuses: completionMetadata.techniqueStatuses.map(status => ({
+        technique: status.technique,
+        completionPercentage: status.completionPercentage,
+        skippedSteps: status.skippedSteps,
+      })),
+      skippedTechniques: completionMetadata.skippedTechniques,
+      missedPerspectives: completionMetadata.missedPerspectives,
+      completionWarnings: completionMetadata.completionWarnings,
+      minimumThresholdMet: completionMetadata.minimumThresholdMet,
+    };
+
+    // Add visual progress indicator
+    if (completionMetadata.overallProgress < 0.8) {
+      parsedResponse.progressDisplay =
+        this.completionTracker.formatProgressDisplay(completionMetadata);
+    }
   }
 
   private addFlexibilityInfo(

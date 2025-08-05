@@ -3,11 +3,13 @@
  * Handles visual output formatting for the console
  */
 import chalk from 'chalk';
-import type { LateralTechnique, ThinkingOperationData } from '../types/index.js';
+import type { LateralTechnique, ThinkingOperationData, SessionData } from '../types/index.js';
+import type { PlanThinkingSessionOutput } from '../types/planning.js';
 export declare class VisualFormatter {
     private readonly maxLineLength;
     private readonly disableThoughtLogging;
     private readonly showTechniqueIndicators;
+    private completionTracker;
     constructor(disableThoughtLogging?: boolean);
     /**
      * Format the main output display
@@ -19,7 +21,7 @@ export declare class VisualFormatter {
     } | null, modeIndicator: {
         color: typeof chalk;
         symbol: string;
-    }, input: ThinkingOperationData): string;
+    }, input: ThinkingOperationData, session?: SessionData, plan?: PlanThinkingSessionOutput): string;
     /**
      * Format progress bar
      */
@@ -105,5 +107,13 @@ export declare class VisualFormatter {
      * Format convergence progress display
      */
     formatConvergenceProgress(currentStep: number, totalSteps: number, sessionCount: number, techniques: string[]): string;
+    /**
+     * Format progress bar for session completion
+     */
+    private formatSessionProgressBar;
+    /**
+     * Format inline progress indicator (compact)
+     */
+    formatInlineProgress(progress: number): string;
 }
 //# sourceMappingURL=VisualFormatter.d.ts.map
