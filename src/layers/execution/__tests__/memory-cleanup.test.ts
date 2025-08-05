@@ -7,6 +7,7 @@ import { ProgressCoordinator } from '../ProgressCoordinator.js';
 import { ParallelErrorHandler } from '../ParallelErrorHandler.js';
 import { SessionManager } from '../../../core/SessionManager.js';
 import type { ProgressUpdate } from '../ProgressCoordinator.js';
+import type { ParallelPlan } from '../../../types/planning.js';
 
 describe('Memory Cleanup', () => {
   let sessionManager: SessionManager;
@@ -26,18 +27,43 @@ describe('Memory Cleanup', () => {
 
   describe('ProgressCoordinator Memory Management', () => {
     it('should automatically clean up old completed groups', async () => {
-      // Create a test group
-      const groupId = 'test-group-1';
-      const sessionIds = ['session-1', 'session-2'];
+      // Create plans for parallel group
+      const plans: ParallelPlan[] = [
+        {
+          planId: 'plan-1',
+          techniques: ['six_hats'],
+          workflow: [
+            {
+              technique: 'six_hats',
+              stepCount: 6,
+              description: 'Test plan 1',
+            },
+          ],
+          estimatedTime: 'quick',
+          canExecuteIndependently: true,
+        },
+        {
+          planId: 'plan-2',
+          techniques: ['six_hats'],
+          workflow: [
+            {
+              technique: 'six_hats',
+              stepCount: 6,
+              description: 'Test plan 2',
+            },
+          ],
+          estimatedTime: 'quick',
+          canExecuteIndependently: true,
+        },
+      ];
 
-      // Create parallel group
-      sessionManager.createParallelGroup({
-        groupId,
-        sessionIds,
-        technique: 'convergence',
+      const groupId = sessionManager.createParallelSessionGroup('Test problem', plans, {
         strategy: 'merge',
-        dependencies: new Map(),
       });
+
+      // Get the actual session IDs
+      const group = sessionManager.getParallelGroup(groupId);
+      const sessionIds = group?.sessionIds || [];
 
       // Start the group
       progressCoordinator.startGroup(groupId);
@@ -88,14 +114,17 @@ describe('Memory Cleanup', () => {
       const groupId = 'concurrent-group';
       const sessionId = 'concurrent-session';
 
-      sessionManager.createSession(sessionId, {
-        problem: 'Test problem',
-        technique: 'six_hats',
-        currentStep: 1,
-        totalSteps: 6,
-        output: 'Test output',
-        nextStepNeeded: true,
-      });
+      sessionManager.createSession(
+        {
+          problem: 'Test problem',
+          technique: 'six_hats',
+          currentStep: 1,
+          totalSteps: 6,
+          output: 'Test output',
+          nextStepNeeded: true,
+        },
+        sessionId
+      );
 
       // Create multiple concurrent updates
       const updates = Array.from({ length: 10 }, (_, i) => ({
@@ -118,15 +147,38 @@ describe('Memory Cleanup', () => {
     });
 
     it('should clean up event listeners properly', () => {
-      const groupId = 'listener-test-group';
-      const sessionIds = ['session-1', 'session-2'];
+      // Create plans for parallel group
+      const plans: ParallelPlan[] = [
+        {
+          planId: 'listener-plan-1',
+          techniques: ['six_hats'],
+          workflow: [
+            {
+              technique: 'six_hats',
+              stepCount: 6,
+              description: 'Test plan 1',
+            },
+          ],
+          estimatedTime: 'quick',
+          canExecuteIndependently: true,
+        },
+        {
+          planId: 'listener-plan-2',
+          techniques: ['six_hats'],
+          workflow: [
+            {
+              technique: 'six_hats',
+              stepCount: 6,
+              description: 'Test plan 2',
+            },
+          ],
+          estimatedTime: 'quick',
+          canExecuteIndependently: true,
+        },
+      ];
 
-      sessionManager.createParallelGroup({
-        groupId,
-        sessionIds,
-        technique: 'convergence',
+      const groupId = sessionManager.createParallelSessionGroup('Test problem', plans, {
         strategy: 'merge',
-        dependencies: new Map(),
       });
 
       // Add some listeners
@@ -177,14 +229,17 @@ describe('Memory Cleanup', () => {
       const groupId = 'cleanup-group';
 
       // Create session
-      sessionManager.createSession(sessionId, {
-        problem: 'Test',
-        technique: 'six_hats',
-        currentStep: 1,
-        totalSteps: 6,
-        output: 'Test',
-        nextStepNeeded: true,
-      });
+      sessionManager.createSession(
+        {
+          problem: 'Test',
+          technique: 'six_hats',
+          currentStep: 1,
+          totalSteps: 6,
+          output: 'Test',
+          nextStepNeeded: true,
+        },
+        sessionId
+      );
 
       // Add retry attempt
       const context = {
@@ -214,14 +269,17 @@ describe('Memory Cleanup', () => {
       const groupId = 'test-group';
 
       // Create only active session
-      sessionManager.createSession(activeSessionId, {
-        problem: 'Test',
-        technique: 'six_hats',
-        currentStep: 1,
-        totalSteps: 6,
-        output: 'Test',
-        nextStepNeeded: true,
-      });
+      sessionManager.createSession(
+        {
+          problem: 'Test',
+          technique: 'six_hats',
+          currentStep: 1,
+          totalSteps: 6,
+          output: 'Test',
+          nextStepNeeded: true,
+        },
+        activeSessionId
+      );
 
       // Add retry attempts for both (stale session doesn't exist)
       const staleContext = {
@@ -260,21 +318,35 @@ describe('Memory Cleanup', () => {
       const groupId = 'integration-group';
       const sessionIds = ['session-1', 'session-2', 'session-3'];
 
-      // Create group
-      sessionManager.createParallelGroup({
-        groupId,
-        sessionIds,
-        technique: 'convergence',
+      // Create plans for parallel group
+      const plans: ParallelPlan[] = sessionIds.map((id, index) => ({
+        planId: `integration-plan-${index + 1}`,
+        techniques: ['six_hats'],
+        workflow: [
+          {
+            technique: 'six_hats',
+            stepCount: 6,
+            description: `Integration plan ${index + 1}`,
+          },
+        ],
+        estimatedTime: 'quick',
+        canExecuteIndependently: true,
+      }));
+
+      const createdGroupId = sessionManager.createParallelSessionGroup('Test problem', plans, {
         strategy: 'merge',
-        dependencies: new Map(),
       });
 
-      progressCoordinator.startGroup(groupId);
+      // Get the actual session IDs
+      const group = sessionManager.getParallelGroup(createdGroupId);
+      const actualSessionIds = group?.sessionIds || [];
+
+      progressCoordinator.startGroup(createdGroupId);
 
       // Complete some sessions successfully
-      for (const sessionId of sessionIds.slice(0, 2)) {
+      for (const sessionId of actualSessionIds.slice(0, 2)) {
         const update: ProgressUpdate = {
-          groupId,
+          groupId: createdGroupId,
           sessionId,
           technique: 'six_hats',
           currentStep: 6,
@@ -287,8 +359,8 @@ describe('Memory Cleanup', () => {
 
       // Fail one session
       const failedUpdate: ProgressUpdate = {
-        groupId,
-        sessionId: sessionIds[2],
+        groupId: createdGroupId,
+        sessionId: actualSessionIds[2],
         technique: 'six_hats',
         currentStep: 3,
         totalSteps: 6,
@@ -298,7 +370,7 @@ describe('Memory Cleanup', () => {
       await progressCoordinator.reportProgress(failedUpdate);
 
       // Check group progress
-      const summary = progressCoordinator.getGroupProgress(groupId);
+      const summary = progressCoordinator.getGroupProgress(createdGroupId);
       expect(summary).toBeDefined();
       expect(summary?.completedSessions).toBe(2);
       expect(summary?.failedSessions).toBe(1);
