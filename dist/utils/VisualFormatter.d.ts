@@ -101,5 +101,9 @@ export declare class VisualFormatter {
         promptText: string;
         followUp?: string;
     }): string;
+    /**
+     * Format convergence progress display
+     */
+    formatConvergenceProgress(currentStep: number, totalSteps: number, sessionCount: number, techniques: string[]): string;
 }
 //# sourceMappingURL=VisualFormatter.d.ts.map

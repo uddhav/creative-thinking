@@ -10,8 +10,15 @@ import { ErrorFactory } from '../../errors/enhanced-errors.js';
 export class ParallelGroupManager {
     parallelGroups = new Map();
     sessionIndex;
+    parallelContext;
     constructor(sessionIndex) {
         this.sessionIndex = sessionIndex;
+    }
+    /**
+     * Set the parallel execution context for metrics and monitoring
+     */
+    setParallelContext(context) {
+        this.parallelContext = context;
     }
     /**
      * Create a new parallel session group
@@ -50,6 +57,15 @@ export class ParallelGroupManager {
         // Store and index the group
         this.parallelGroups.set(groupId, group);
         this.sessionIndex.indexGroup(group);
+        // Start metrics tracking if parallel context is available
+        if (this.parallelContext) {
+            const metrics = this.parallelContext.getExecutionMetrics();
+            // Extract strategy from convergence options if available
+            const metricsOptions = convergenceOptions?.convergencePlan?.metadata?.synthesisStrategy
+                ? { strategy: convergenceOptions.convergencePlan.metadata.synthesisStrategy }
+                : undefined;
+            metrics.startGroup(groupId, sessionIds.length, metricsOptions);
+        }
         return { groupId, sessionIds };
     }
     /**
@@ -140,6 +156,11 @@ export class ParallelGroupManager {
         // Calculate final metrics
         const executionTime = Date.now() - group.startTime;
         console.error(`[ParallelGroupManager] Total execution time: ${executionTime}ms`);
+        // Complete group in metrics if parallel context is available
+        if (this.parallelContext) {
+            const metrics = this.parallelContext.getExecutionMetrics();
+            metrics.completeGroup(group.groupId);
+        }
     }
     /**
      * Get parallel results for a group

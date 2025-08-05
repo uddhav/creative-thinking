@@ -13,6 +13,7 @@ import type {
 import type { PersistenceAdapter } from '../persistence/adapter.js';
 import type { SessionState } from '../persistence/types.js';
 import type { ParallelSessionGroup, ParallelExecutionResult } from '../types/parallel-session.js';
+import type { ParallelExecutionContext } from '../layers/execution/ParallelExecutionContext.js';
 import { MemoryManager } from './MemoryManager.js';
 import { SessionError, ErrorCode } from '../errors/types.js';
 import { ErrorFactory } from '../errors/enhanced-errors.js';
@@ -104,6 +105,13 @@ export class SessionManager {
       this.parallelGroupManager = new ParallelGroupManager(this.getSessionIndex());
     }
     return this.parallelGroupManager;
+  }
+
+  /**
+   * Set the parallel execution context for metrics and monitoring
+   */
+  public setParallelContext(context: unknown): void {
+    this.getParallelGroupManager().setParallelContext(context as ParallelExecutionContext);
   }
 
   /**

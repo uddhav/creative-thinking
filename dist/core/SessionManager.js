@@ -66,6 +66,12 @@ export class SessionManager {
         return this.parallelGroupManager;
     }
     /**
+     * Set the parallel execution context for metrics and monitoring
+     */
+    setParallelContext(context) {
+        this.getParallelGroupManager().setParallelContext(context);
+    }
+    /**
      * Update session activity time
      */
     touchSession(sessionId) {
