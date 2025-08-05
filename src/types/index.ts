@@ -150,6 +150,15 @@ export interface SessionData {
    * Session IDs that must complete before this session can proceed
    */
   dependsOn?: string[];
+
+  /**
+   * Metadata for parallel execution
+   */
+  parallelMetadata?: {
+    planId: string;
+    techniques: LateralTechnique[];
+    canExecuteIndependently: boolean;
+  };
 }
 
 /**

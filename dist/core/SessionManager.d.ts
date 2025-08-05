@@ -3,9 +3,10 @@
  * Handles session lifecycle, persistence, and cleanup
  */
 import type { SessionData } from '../types/index.js';
-import type { PlanThinkingSessionOutput } from '../types/planning.js';
+import type { PlanThinkingSessionOutput, ParallelPlan, ConvergenceOptions } from '../types/planning.js';
 import type { PersistenceAdapter } from '../persistence/adapter.js';
 import type { SessionState } from '../persistence/types.js';
+import type { ParallelSessionGroup, ParallelExecutionResult } from '../types/parallel-session.js';
 export interface SessionConfig {
     maxSessions: number;
     maxSessionSize: number;
@@ -21,6 +22,8 @@ export declare class SessionManager {
     private sessionPersistence;
     private sessionMetrics;
     private planManager;
+    private sessionIndex;
+    private parallelGroupManager;
     private config;
     constructor();
     /**
@@ -94,5 +97,57 @@ export declare class SessionManager {
         rss: number;
     };
     logMemoryMetrics(): void;
+    /**
+     * Create a parallel session group from plans
+     */
+    createParallelSessionGroup(problem: string, plans: ParallelPlan[], convergenceOptions?: ConvergenceOptions): string;
+    /**
+     * Get parallel results for a group
+     */
+    getParallelResults(groupId: string): Promise<ParallelExecutionResult[]>;
+    /**
+     * Mark a session as complete (handles parallel dependencies)
+     */
+    markSessionComplete(sessionId: string): void;
+    /**
+     * Check if a session can start based on dependencies
+     */
+    canSessionStart(sessionId: string): boolean;
+    /**
+     * Get parallel group information
+     */
+    getParallelGroup(groupId: string): ParallelSessionGroup | undefined;
+    /**
+     * Get all active parallel groups
+     */
+    getActiveParallelGroups(): ParallelSessionGroup[];
+    /**
+     * Update parallel group status
+     */
+    updateParallelGroupStatus(groupId: string, status: ParallelSessionGroup['status']): void;
+    /**
+     * Get sessions in a parallel group
+     */
+    getSessionsInGroup(groupId: string): SessionData[];
+    /**
+     * Get sessions by technique
+     */
+    getSessionsByTechnique(technique: SessionData['technique']): SessionData[];
+    /**
+     * Detect circular dependencies
+     */
+    detectCircularDependencies(): string[][];
+    /**
+     * Get dependency statistics
+     */
+    getDependencyStats(): {
+        totalDependencies: number;
+        circularDependencies: string[][];
+        orphanedSessions: string[];
+    };
+    /**
+     * Clean up old parallel groups
+     */
+    cleanupOldParallelGroups(): number;
 }
 //# sourceMappingURL=SessionManager.d.ts.map

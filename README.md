@@ -239,7 +239,7 @@ Optional technique-specific state indicators provide real-time context on stderr
 ├──────────────────────────────────────────────────────────────────────────────┤
 ```
 
-See [Visual Indicators Documentation](docs/VISUAL_INDICATORS.md) for full details.
+See [Visual Indicators in Contributing Guide](./CONTRIBUTING.md#visual-indicators) for full details.
 
 ### 📊 Reality Gradient System
 
@@ -376,7 +376,8 @@ Optional telemetry system for tracking technique effectiveness:
 - Session completion analytics
 - Technique combination success
 
-Enable with `TELEMETRY_ENABLED=true`. See [Telemetry Documentation](docs/TELEMETRY.md) for details.
+Enable with `TELEMETRY_ENABLED=true`. See
+[Telemetry in Contributing Guide](./CONTRIBUTING.md#telemetry-system) for details.
 
 ### 🚀 Integrated Early Warning System
 
@@ -814,7 +815,7 @@ The server supports environment variables for advanced features:
 - `TELEMETRY_STORAGE=memory|filesystem` - Analytics storage backend
 - `TELEMETRY_PRIVACY_MODE=strict|balanced|minimal` - Privacy protection level
 
-See [Telemetry Documentation](docs/TELEMETRY.md) for details.
+See [Telemetry in Contributing Guide](./CONTRIBUTING.md#telemetry-system) for details.
 
 ## Configuration
 
@@ -1109,12 +1110,8 @@ Multi-sensor architecture monitoring:
 The Creative Thinking Server implements comprehensive error recovery patterns to ensure robust
 operation:
 
-- **[Error Recovery Patterns](docs/ERROR_RECOVERY_PATTERNS.md)** - Detailed guide to error handling
-  patterns and recovery strategies
-- **[Implementation Guide](docs/ERROR_RECOVERY_IMPLEMENTATION_GUIDE.md)** - Practical guide for
-  implementing error recovery in new features
-- **[Quick Reference](docs/ERROR_HANDLING_QUICK_REFERENCE.md)** - Concise reference card for error
-  handling best practices
+- **[Error Handling Guide](./CONTRIBUTING.md#error-handling)** - Comprehensive error handling
+  documentation including patterns, implementation guide, and quick reference
 
 Key error recovery features:
 
