@@ -10,6 +10,8 @@ import { ProgressCoordinator } from './ProgressCoordinator.js';
 import { ParallelErrorHandler } from './ParallelErrorHandler.js';
 import { ParallelStepExecutor } from './ParallelStepExecutor.js';
 import { ConvergenceExecutor } from './ConvergenceExecutor.js';
+import { SessionTimeoutMonitor } from './SessionTimeoutMonitor.js';
+import { ParallelExecutionMetrics } from './ParallelExecutionMetrics.js';
 
 /**
  * Singleton instance manager for parallel execution components
@@ -22,11 +24,16 @@ export class ParallelExecutionContext {
   private parallelErrorHandler: ParallelErrorHandler | null = null;
   private parallelStepExecutor: ParallelStepExecutor | null = null;
   private convergenceExecutor: ConvergenceExecutor | null = null;
+  private sessionTimeoutMonitor: SessionTimeoutMonitor | null = null;
+  private executionMetrics: ParallelExecutionMetrics | null = null;
 
   private constructor(
     private sessionManager: SessionManager,
     private visualFormatter: VisualFormatter
-  ) {}
+  ) {
+    // Set this context on the session manager for metrics integration
+    this.sessionManager.setParallelContext(this);
+  }
 
   /**
    * Get or create the singleton instance
@@ -100,7 +107,9 @@ export class ParallelExecutionContext {
     if (!this.parallelStepExecutor) {
       this.parallelStepExecutor = new ParallelStepExecutor(
         this.sessionManager,
-        this.getSessionSynchronizer()
+        this.getSessionSynchronizer(),
+        this.getSessionTimeoutMonitor(),
+        this.getExecutionMetrics()
       );
     }
     return this.parallelStepExecutor;
@@ -114,6 +123,29 @@ export class ParallelExecutionContext {
       this.convergenceExecutor = new ConvergenceExecutor(this.sessionManager, this.visualFormatter);
     }
     return this.convergenceExecutor;
+  }
+
+  /**
+   * Get SessionTimeoutMonitor (lazy initialization)
+   */
+  getSessionTimeoutMonitor(): SessionTimeoutMonitor {
+    if (!this.sessionTimeoutMonitor) {
+      this.sessionTimeoutMonitor = new SessionTimeoutMonitor(
+        this.sessionManager,
+        this.getProgressCoordinator()
+      );
+    }
+    return this.sessionTimeoutMonitor;
+  }
+
+  /**
+   * Get ParallelExecutionMetrics (lazy initialization)
+   */
+  getExecutionMetrics(): ParallelExecutionMetrics {
+    if (!this.executionMetrics) {
+      this.executionMetrics = new ParallelExecutionMetrics();
+    }
+    return this.executionMetrics;
   }
 
   /**
@@ -144,11 +176,18 @@ export class ParallelExecutionContext {
       this.progressCoordinator.stopCleanupTimer();
     }
 
+    // Stop timeout monitoring
+    if (this.sessionTimeoutMonitor) {
+      this.sessionTimeoutMonitor.stopMonitoring();
+    }
+
     // Clear references
     this.sessionSynchronizer = null;
     this.progressCoordinator = null;
     this.parallelErrorHandler = null;
     this.parallelStepExecutor = null;
     this.convergenceExecutor = null;
+    this.sessionTimeoutMonitor = null;
+    this.executionMetrics = null;
   }
 }

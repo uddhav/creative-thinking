@@ -98,6 +98,26 @@ export async function executeThinkingStep(
       throw ErrorFactory.sessionNotFound(input.sessionId || 'unknown');
     }
 
+    // Start timeout monitoring and metrics tracking if this is a parallel session
+    if (plan && plan.executionMode === 'parallel' && session.parallelGroupId) {
+      // Start timeout monitoring for this session if it's the first step
+      if (input.currentStep === 1) {
+        const timeoutMonitor = parallelContext.getSessionTimeoutMonitor();
+        // Use thorough as default timeout for parallel sessions
+        const estimatedTime = 'thorough';
+        timeoutMonitor.startMonitoringSession(sessionId, session.parallelGroupId, estimatedTime);
+
+        // Start metrics tracking
+        const metrics = parallelContext.getExecutionMetrics();
+        // Calculate wait time if session has dependencies
+        let waitTime = 0;
+        if (session.dependsOn && session.dependsOn.length > 0) {
+          waitTime = Date.now() - (session.startTime || Date.now());
+        }
+        metrics.startSession(session.parallelGroupId, sessionId, input.technique, waitTime);
+      }
+    }
+
     // Check if session is part of a parallel group (only if needed)
     const isParallelNeeded = parallelContext.isParallelExecutionNeeded(input.technique, sessionId);
     let parallelExecutionInfo = {

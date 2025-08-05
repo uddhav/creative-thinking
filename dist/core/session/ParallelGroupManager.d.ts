@@ -6,13 +6,19 @@ import type { SessionData } from '../../types/index.js';
 import type { ParallelSessionGroup, ParallelExecutionResult } from '../../types/parallel-session.js';
 import type { ParallelPlan, ConvergenceOptions } from '../../types/planning.js';
 import type { SessionIndex } from './SessionIndex.js';
+import type { ParallelExecutionContext } from '../../layers/execution/ParallelExecutionContext.js';
 /**
  * Manages parallel session groups and their lifecycle
  */
 export declare class ParallelGroupManager {
     private parallelGroups;
     private sessionIndex;
+    private parallelContext?;
     constructor(sessionIndex: SessionIndex);
+    /**
+     * Set the parallel execution context for metrics and monitoring
+     */
+    setParallelContext(context: ParallelExecutionContext): void;
     /**
      * Create a new parallel session group
      */

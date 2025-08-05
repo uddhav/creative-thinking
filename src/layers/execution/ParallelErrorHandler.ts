@@ -10,6 +10,7 @@ import { ErrorHandler } from '../../errors/ErrorHandler.js';
 import { ErrorContextBuilder } from '../../core/ErrorContextBuilder.js';
 import { ResponseBuilder } from '../../core/ResponseBuilder.js';
 import { PartialCompletionHandler } from '../../core/session/PartialCompletionHandler.js';
+import { TimeoutConfigManager } from '../../config/timeouts.js';
 
 /**
  * Error context for parallel execution
@@ -47,17 +48,15 @@ export class ParallelErrorHandler {
   // Track retry attempts per session with timestamp
   private retryAttempts: Map<string, { count: number; lastAttempt: number }> = new Map();
 
-  // Maximum retry attempts
-  private readonly MAX_RETRIES = 3;
-
-  // Retention period for retry attempts (30 minutes)
-  private readonly RETRY_RETENTION_PERIOD = 30 * 60 * 1000;
+  // Timeout configuration
+  private timeoutConfig: TimeoutConfigManager;
 
   constructor(private sessionManager: SessionManager) {
     this.errorHandler = new ErrorHandler();
     this.errorContextBuilder = new ErrorContextBuilder();
     this.responseBuilder = new ResponseBuilder();
     this.partialCompletionHandler = new PartialCompletionHandler();
+    this.timeoutConfig = TimeoutConfigManager.getInstance();
   }
 
   /**
@@ -229,7 +228,8 @@ export class ParallelErrorHandler {
     const retryCount = retryInfo?.count || 0;
 
     // If not recoverable or too many retries, fail
-    if (!errorAnalysis.isRecoverable || retryCount >= this.MAX_RETRIES) {
+    const config = this.timeoutConfig.getConfig();
+    if (!errorAnalysis.isRecoverable || retryCount >= config.retry.maxAttempts) {
       return {
         action: 'fail_group',
         retryCount,
@@ -306,7 +306,7 @@ export class ParallelErrorHandler {
                   status: 'retry_scheduled',
                   sessionId: context.sessionId,
                   retryAttempt: strategy.retryCount,
-                  maxRetries: this.MAX_RETRIES,
+                  maxRetries: this.timeoutConfig.getConfig().retry.maxAttempts,
                   message: 'Session will be retried with adjusted parameters',
                   originalError:
                     originalError instanceof Error ? originalError.message : String(originalError),
@@ -571,7 +571,8 @@ export class ParallelErrorHandler {
    */
   cleanupStaleRetryAttempts(): void {
     const now = Date.now();
-    const cutoffTime = now - this.RETRY_RETENTION_PERIOD;
+    const config = this.timeoutConfig.getConfig();
+    const cutoffTime = now - config.memoryCleanup.retentionPeriod;
     const sessionIdsToRemove: string[] = [];
 
     for (const [sessionId, retryInfo] of this.retryAttempts.entries()) {

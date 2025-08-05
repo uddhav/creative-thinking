@@ -50,8 +50,7 @@ export declare class ProgressCoordinator extends EventEmitter {
     private groupStartTimes;
     private stepDurations;
     private groupCompletionTimes;
-    private readonly CLEANUP_INTERVAL;
-    private readonly DATA_RETENTION_PERIOD;
+    private timeoutConfig;
     private cleanupTimer?;
     private updateLocks;
     private errorHandler?;

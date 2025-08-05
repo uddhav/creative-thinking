@@ -36,8 +36,7 @@ export declare class ParallelErrorHandler {
     private responseBuilder;
     private partialCompletionHandler;
     private retryAttempts;
-    private readonly MAX_RETRIES;
-    private readonly RETRY_RETENTION_PERIOD;
+    private timeoutConfig;
     constructor(sessionManager: SessionManager);
     /**
      * Handle error in parallel execution context

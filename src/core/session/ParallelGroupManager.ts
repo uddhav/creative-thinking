@@ -13,6 +13,7 @@ import type {
 } from '../../types/parallel-session.js';
 import type { ParallelPlan, ConvergenceOptions } from '../../types/planning.js';
 import type { SessionIndex } from './SessionIndex.js';
+import type { ParallelExecutionContext } from '../../layers/execution/ParallelExecutionContext.js';
 import { ErrorFactory } from '../../errors/enhanced-errors.js';
 
 /**
@@ -21,9 +22,17 @@ import { ErrorFactory } from '../../errors/enhanced-errors.js';
 export class ParallelGroupManager {
   private parallelGroups: Map<string, ParallelSessionGroup> = new Map();
   private sessionIndex: SessionIndex;
+  private parallelContext?: ParallelExecutionContext;
 
   constructor(sessionIndex: SessionIndex) {
     this.sessionIndex = sessionIndex;
+  }
+
+  /**
+   * Set the parallel execution context for metrics and monitoring
+   */
+  setParallelContext(context: ParallelExecutionContext): void {
+    this.parallelContext = context;
   }
 
   /**
@@ -73,6 +82,16 @@ export class ParallelGroupManager {
     // Store and index the group
     this.parallelGroups.set(groupId, group);
     this.sessionIndex.indexGroup(group);
+
+    // Start metrics tracking if parallel context is available
+    if (this.parallelContext) {
+      const metrics = this.parallelContext.getExecutionMetrics();
+      // Extract strategy from convergence options if available
+      const metricsOptions = convergenceOptions?.convergencePlan?.metadata?.synthesisStrategy
+        ? { strategy: convergenceOptions.convergencePlan.metadata.synthesisStrategy }
+        : undefined;
+      metrics.startGroup(groupId, sessionIds.length, metricsOptions);
+    }
 
     return { groupId, sessionIds };
   }
@@ -192,6 +211,12 @@ export class ParallelGroupManager {
     // Calculate final metrics
     const executionTime = Date.now() - group.startTime;
     console.error(`[ParallelGroupManager] Total execution time: ${executionTime}ms`);
+
+    // Complete group in metrics if parallel context is available
+    if (this.parallelContext) {
+      const metrics = this.parallelContext.getExecutionMetrics();
+      metrics.completeGroup(group.groupId);
+    }
   }
 
   /**

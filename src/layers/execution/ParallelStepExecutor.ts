@@ -7,6 +7,8 @@ import type { ExecuteThinkingStepInput, LateralThinkingResponse } from '../../ty
 import type { SessionManager } from '../../core/SessionManager.js';
 import type { SessionSynchronizer } from '../../core/session/SessionSynchronizer.js';
 import type { SharedContext } from '../../types/parallel-session.js';
+import type { SessionTimeoutMonitor } from './SessionTimeoutMonitor.js';
+import type { ParallelExecutionMetrics } from './ParallelExecutionMetrics.js';
 import { ParallelErrorHandler } from './ParallelErrorHandler.js';
 import { ErrorFactory } from '../../errors/enhanced-errors.js';
 import { safeParseJSON, ResponseDataSchema } from './schemas/parallelResultSchema.js';
@@ -31,7 +33,9 @@ export class ParallelStepExecutor {
 
   constructor(
     private sessionManager: SessionManager,
-    private sessionSynchronizer: SessionSynchronizer
+    private sessionSynchronizer: SessionSynchronizer,
+    private timeoutMonitor?: SessionTimeoutMonitor,
+    private executionMetrics?: ParallelExecutionMetrics
   ) {
     this.parallelErrorHandler = new ParallelErrorHandler(sessionManager);
   }
@@ -119,25 +123,59 @@ export class ParallelStepExecutor {
       return this.buildWaitingResponse(sessionId, context);
     }
 
+    // Record step start time for metrics
+    const stepStartTime = Date.now();
+
     // Update shared context before execution
     if (context.sharedContext && input.currentStep === 1) {
       await this.updateSharedContextPreExecution(sessionId, context.groupId, input);
     }
 
-    // Execute the step
-    const response = await baseExecutor(input);
+    try {
+      // Execute the step
+      const response = await baseExecutor(input);
 
-    // Update shared context after execution
-    if (context.sharedContext) {
-      await this.updateSharedContextPostExecution(sessionId, context.groupId, input, response);
+      // Record step completion for metrics
+      if (this.executionMetrics) {
+        this.executionMetrics.recordStepCompletion(
+          sessionId,
+          input.currentStep,
+          stepStartTime,
+          Date.now()
+        );
+      }
+
+      // Update shared context after execution
+      if (context.sharedContext) {
+        await this.updateSharedContextPostExecution(sessionId, context.groupId, input, response);
+      }
+
+      // Mark session as complete if this was the last step
+      if (!input.nextStepNeeded) {
+        this.sessionManager.markSessionComplete(sessionId);
+
+        // Complete session metrics
+        if (this.executionMetrics) {
+          const insights = this.extractInsightsFromResponse(response);
+          this.executionMetrics.completeSession(sessionId, 'completed', insights.length);
+        }
+
+        // Stop timeout monitoring for this session
+        if (this.timeoutMonitor) {
+          this.timeoutMonitor.stopMonitoringSession(sessionId);
+        }
+      }
+
+      return response;
+    } catch (error) {
+      // Record error in metrics
+      if (this.executionMetrics) {
+        this.executionMetrics.recordError(sessionId);
+      }
+
+      // Re-throw to let error handler deal with it
+      throw error;
     }
-
-    // Mark session as complete if this was the last step
-    if (!input.nextStepNeeded) {
-      this.sessionManager.markSessionComplete(sessionId);
-    }
-
-    return response;
   }
 
   /**
@@ -298,6 +336,23 @@ export class ParallelStepExecutor {
       .map(([theme, count]) => ({ theme, weight: count }))
       .sort((a, b) => b.weight - a.weight)
       .slice(0, 5); // Top 5 themes
+  }
+
+  /**
+   * Extract insights from response for metrics
+   */
+  private extractInsightsFromResponse(response: LateralThinkingResponse): string[] {
+    try {
+      if (response.content?.[0]?.text) {
+        const parseResult = safeParseJSON(response.content[0].text, ResponseDataSchema);
+        if (parseResult.success && parseResult.data) {
+          return parseResult.data.insights || [];
+        }
+      }
+    } catch {
+      // If parsing fails, return empty array
+    }
+    return [];
   }
 
   /**

@@ -6,6 +6,7 @@
 import { EventEmitter } from 'events';
 import type { SessionManager } from '../../core/SessionManager.js';
 import type { ParallelErrorHandler } from './ParallelErrorHandler.js';
+import { TimeoutConfigManager } from '../../config/timeouts.js';
 
 /**
  * Progress update event data
@@ -64,11 +65,8 @@ export class ProgressCoordinator extends EventEmitter {
   // Track group completion times for cleanup
   private groupCompletionTimes: Map<string, number> = new Map();
 
-  // Cleanup interval (5 minutes)
-  private readonly CLEANUP_INTERVAL = 5 * 60 * 1000;
-
-  // Data retention period (30 minutes)
-  private readonly DATA_RETENTION_PERIOD = 30 * 60 * 1000;
+  // Timeout configuration
+  private timeoutConfig: TimeoutConfigManager;
 
   // Cleanup timer
   private cleanupTimer?: NodeJS.Timeout;
@@ -81,6 +79,7 @@ export class ProgressCoordinator extends EventEmitter {
 
   constructor(private sessionManager: SessionManager) {
     super();
+    this.timeoutConfig = TimeoutConfigManager.getInstance();
     this.startCleanupTimer();
   }
 
@@ -390,9 +389,10 @@ export class ProgressCoordinator extends EventEmitter {
    * Start the cleanup timer
    */
   private startCleanupTimer(): void {
+    const config = this.timeoutConfig.getConfig();
     this.cleanupTimer = setInterval(() => {
       this.performCleanup();
-    }, this.CLEANUP_INTERVAL);
+    }, config.memoryCleanup.interval);
   }
 
   /**
@@ -400,7 +400,8 @@ export class ProgressCoordinator extends EventEmitter {
    */
   private performCleanup(): void {
     const now = Date.now();
-    const cutoffTime = now - this.DATA_RETENTION_PERIOD;
+    const config = this.timeoutConfig.getConfig();
+    const cutoffTime = now - config.memoryCleanup.retentionPeriod;
 
     // Clean up completed groups
     const groupsToClean: string[] = [];

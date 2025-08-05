@@ -9,6 +9,8 @@ import { ProgressCoordinator } from './ProgressCoordinator.js';
 import { ParallelErrorHandler } from './ParallelErrorHandler.js';
 import { ParallelStepExecutor } from './ParallelStepExecutor.js';
 import { ConvergenceExecutor } from './ConvergenceExecutor.js';
+import { SessionTimeoutMonitor } from './SessionTimeoutMonitor.js';
+import { ParallelExecutionMetrics } from './ParallelExecutionMetrics.js';
 /**
  * Singleton instance manager for parallel execution components
  */
@@ -21,6 +23,8 @@ export declare class ParallelExecutionContext {
     private parallelErrorHandler;
     private parallelStepExecutor;
     private convergenceExecutor;
+    private sessionTimeoutMonitor;
+    private executionMetrics;
     private constructor();
     /**
      * Get or create the singleton instance
@@ -50,6 +54,14 @@ export declare class ParallelExecutionContext {
      * Get ConvergenceExecutor (lazy initialization)
      */
     getConvergenceExecutor(): ConvergenceExecutor;
+    /**
+     * Get SessionTimeoutMonitor (lazy initialization)
+     */
+    getSessionTimeoutMonitor(): SessionTimeoutMonitor;
+    /**
+     * Get ParallelExecutionMetrics (lazy initialization)
+     */
+    getExecutionMetrics(): ParallelExecutionMetrics;
     /**
      * Check if parallel execution is needed for this input
      */

@@ -11,10 +11,14 @@ import { safeParseJSON, ResponseDataSchema } from './schemas/parallelResultSchem
 export class ParallelStepExecutor {
     sessionManager;
     sessionSynchronizer;
+    timeoutMonitor;
+    executionMetrics;
     parallelErrorHandler;
-    constructor(sessionManager, sessionSynchronizer) {
+    constructor(sessionManager, sessionSynchronizer, timeoutMonitor, executionMetrics) {
         this.sessionManager = sessionManager;
         this.sessionSynchronizer = sessionSynchronizer;
+        this.timeoutMonitor = timeoutMonitor;
+        this.executionMetrics = executionMetrics;
         this.parallelErrorHandler = new ParallelErrorHandler(sessionManager);
     }
     /**
@@ -76,21 +80,46 @@ export class ParallelStepExecutor {
             // Return a waiting response
             return this.buildWaitingResponse(sessionId, context);
         }
+        // Record step start time for metrics
+        const stepStartTime = Date.now();
         // Update shared context before execution
         if (context.sharedContext && input.currentStep === 1) {
             await this.updateSharedContextPreExecution(sessionId, context.groupId, input);
         }
-        // Execute the step
-        const response = await baseExecutor(input);
-        // Update shared context after execution
-        if (context.sharedContext) {
-            await this.updateSharedContextPostExecution(sessionId, context.groupId, input, response);
+        try {
+            // Execute the step
+            const response = await baseExecutor(input);
+            // Record step completion for metrics
+            if (this.executionMetrics) {
+                this.executionMetrics.recordStepCompletion(sessionId, input.currentStep, stepStartTime, Date.now());
+            }
+            // Update shared context after execution
+            if (context.sharedContext) {
+                await this.updateSharedContextPostExecution(sessionId, context.groupId, input, response);
+            }
+            // Mark session as complete if this was the last step
+            if (!input.nextStepNeeded) {
+                this.sessionManager.markSessionComplete(sessionId);
+                // Complete session metrics
+                if (this.executionMetrics) {
+                    const insights = this.extractInsightsFromResponse(response);
+                    this.executionMetrics.completeSession(sessionId, 'completed', insights.length);
+                }
+                // Stop timeout monitoring for this session
+                if (this.timeoutMonitor) {
+                    this.timeoutMonitor.stopMonitoringSession(sessionId);
+                }
+            }
+            return response;
         }
-        // Mark session as complete if this was the last step
-        if (!input.nextStepNeeded) {
-            this.sessionManager.markSessionComplete(sessionId);
+        catch (error) {
+            // Record error in metrics
+            if (this.executionMetrics) {
+                this.executionMetrics.recordError(sessionId);
+            }
+            // Re-throw to let error handler deal with it
+            throw error;
         }
-        return response;
     }
     /**
      * Get uncompleted dependencies
@@ -216,6 +245,23 @@ export class ParallelStepExecutor {
             .map(([theme, count]) => ({ theme, weight: count }))
             .sort((a, b) => b.weight - a.weight)
             .slice(0, 5); // Top 5 themes
+    }
+    /**
+     * Extract insights from response for metrics
+     */
+    extractInsightsFromResponse(response) {
+        try {
+            if (response.content?.[0]?.text) {
+                const parseResult = safeParseJSON(response.content[0].text, ResponseDataSchema);
+                if (parseResult.success && parseResult.data) {
+                    return parseResult.data.insights || [];
+                }
+            }
+        }
+        catch {
+            // If parsing fails, return empty array
+        }
+        return [];
     }
     /**
      * Check if this session should wait for checkpoint

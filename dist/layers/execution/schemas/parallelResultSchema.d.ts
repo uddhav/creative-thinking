@@ -53,8 +53,8 @@ export declare const ParallelResultSchema: z.ZodObject<{
     }>>;
 }, "strip", z.ZodTypeAny, {
     technique: "six_hats" | "po" | "random_entry" | "scamper" | "concept_extraction" | "yes_and" | "design_thinking" | "triz" | "neural_state" | "temporal_work" | "cross_cultural" | "collective_intel" | "disney_method" | "nine_windows" | "convergence";
-    planId: string;
     insights: string[];
+    planId: string;
     metrics?: {
         confidence?: number | undefined;
         totalSteps?: number | undefined;
@@ -65,8 +65,8 @@ export declare const ParallelResultSchema: z.ZodObject<{
     results?: Record<string, unknown> | undefined;
 }, {
     technique: "six_hats" | "po" | "random_entry" | "scamper" | "concept_extraction" | "yes_and" | "design_thinking" | "triz" | "neural_state" | "temporal_work" | "cross_cultural" | "collective_intel" | "disney_method" | "nine_windows" | "convergence";
-    planId: string;
     insights: string[];
+    planId: string;
     metrics?: {
         confidence?: number | undefined;
         totalSteps?: number | undefined;
@@ -105,8 +105,8 @@ export declare const ParallelResultsArraySchema: z.ZodArray<z.ZodObject<{
     }>>;
 }, "strip", z.ZodTypeAny, {
     technique: "six_hats" | "po" | "random_entry" | "scamper" | "concept_extraction" | "yes_and" | "design_thinking" | "triz" | "neural_state" | "temporal_work" | "cross_cultural" | "collective_intel" | "disney_method" | "nine_windows" | "convergence";
-    planId: string;
     insights: string[];
+    planId: string;
     metrics?: {
         confidence?: number | undefined;
         totalSteps?: number | undefined;
@@ -117,8 +117,8 @@ export declare const ParallelResultsArraySchema: z.ZodArray<z.ZodObject<{
     results?: Record<string, unknown> | undefined;
 }, {
     technique: "six_hats" | "po" | "random_entry" | "scamper" | "concept_extraction" | "yes_and" | "design_thinking" | "triz" | "neural_state" | "temporal_work" | "cross_cultural" | "collective_intel" | "disney_method" | "nine_windows" | "convergence";
-    planId: string;
     insights: string[];
+    planId: string;
     metrics?: {
         confidence?: number | undefined;
         totalSteps?: number | undefined;

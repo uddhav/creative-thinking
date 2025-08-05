@@ -32,6 +32,10 @@ export declare class SessionManager {
     private getSessionIndex;
     private getParallelGroupManager;
     /**
+     * Set the parallel execution context for metrics and monitoring
+     */
+    setParallelContext(context: unknown): void;
+    /**
      * Update session activity time
      */
     touchSession(sessionId: string): void;

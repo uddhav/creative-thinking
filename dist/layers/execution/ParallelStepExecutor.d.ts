@@ -6,6 +6,8 @@ import type { ExecuteThinkingStepInput, LateralThinkingResponse } from '../../ty
 import type { SessionManager } from '../../core/SessionManager.js';
 import type { SessionSynchronizer } from '../../core/session/SessionSynchronizer.js';
 import type { SharedContext } from '../../types/parallel-session.js';
+import type { SessionTimeoutMonitor } from './SessionTimeoutMonitor.js';
+import type { ParallelExecutionMetrics } from './ParallelExecutionMetrics.js';
 /**
  * Handles execution context for parallel sessions
  */
@@ -23,8 +25,10 @@ export interface ParallelExecutionContext {
 export declare class ParallelStepExecutor {
     private sessionManager;
     private sessionSynchronizer;
+    private timeoutMonitor?;
+    private executionMetrics?;
     private parallelErrorHandler;
-    constructor(sessionManager: SessionManager, sessionSynchronizer: SessionSynchronizer);
+    constructor(sessionManager: SessionManager, sessionSynchronizer: SessionSynchronizer, timeoutMonitor?: SessionTimeoutMonitor | undefined, executionMetrics?: ParallelExecutionMetrics | undefined);
     /**
      * Check if a session can execute based on parallel group membership
      */
@@ -53,6 +57,10 @@ export declare class ParallelStepExecutor {
      * Extract themes from output text
      */
     private extractThemes;
+    /**
+     * Extract insights from response for metrics
+     */
+    private extractInsightsFromResponse;
     /**
      * Check if this session should wait for checkpoint
      */

@@ -3,6 +3,7 @@
  * Provides real-time progress updates and coordination for parallel execution
  */
 import { EventEmitter } from 'events';
+import { TimeoutConfigManager } from '../../config/timeouts.js';
 /**
  * Coordinates progress tracking across parallel sessions
  */
@@ -16,10 +17,8 @@ export class ProgressCoordinator extends EventEmitter {
     stepDurations = new Map();
     // Track group completion times for cleanup
     groupCompletionTimes = new Map();
-    // Cleanup interval (5 minutes)
-    CLEANUP_INTERVAL = 5 * 60 * 1000;
-    // Data retention period (30 minutes)
-    DATA_RETENTION_PERIOD = 30 * 60 * 1000;
+    // Timeout configuration
+    timeoutConfig;
     // Cleanup timer
     cleanupTimer;
     // Mutex for concurrent access control
@@ -29,6 +28,7 @@ export class ProgressCoordinator extends EventEmitter {
     constructor(sessionManager) {
         super();
         this.sessionManager = sessionManager;
+        this.timeoutConfig = TimeoutConfigManager.getInstance();
         this.startCleanupTimer();
     }
     /**
@@ -287,16 +287,18 @@ export class ProgressCoordinator extends EventEmitter {
      * Start the cleanup timer
      */
     startCleanupTimer() {
+        const config = this.timeoutConfig.getConfig();
         this.cleanupTimer = setInterval(() => {
             this.performCleanup();
-        }, this.CLEANUP_INTERVAL);
+        }, config.memoryCleanup.interval);
     }
     /**
      * Perform cleanup of old data
      */
     performCleanup() {
         const now = Date.now();
-        const cutoffTime = now - this.DATA_RETENTION_PERIOD;
+        const config = this.timeoutConfig.getConfig();
+        const cutoffTime = now - config.memoryCleanup.retentionPeriod;
         // Clean up completed groups
         const groupsToClean = [];
         for (const [groupId, completionTime] of this.groupCompletionTimes) {

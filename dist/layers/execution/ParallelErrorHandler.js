@@ -6,6 +6,7 @@ import { ErrorHandler } from '../../errors/ErrorHandler.js';
 import { ErrorContextBuilder } from '../../core/ErrorContextBuilder.js';
 import { ResponseBuilder } from '../../core/ResponseBuilder.js';
 import { PartialCompletionHandler } from '../../core/session/PartialCompletionHandler.js';
+import { TimeoutConfigManager } from '../../config/timeouts.js';
 /**
  * Handles errors in parallel execution contexts with recovery strategies
  */
@@ -17,16 +18,15 @@ export class ParallelErrorHandler {
     partialCompletionHandler;
     // Track retry attempts per session with timestamp
     retryAttempts = new Map();
-    // Maximum retry attempts
-    MAX_RETRIES = 3;
-    // Retention period for retry attempts (30 minutes)
-    RETRY_RETENTION_PERIOD = 30 * 60 * 1000;
+    // Timeout configuration
+    timeoutConfig;
     constructor(sessionManager) {
         this.sessionManager = sessionManager;
         this.errorHandler = new ErrorHandler();
         this.errorContextBuilder = new ErrorContextBuilder();
         this.responseBuilder = new ResponseBuilder();
         this.partialCompletionHandler = new PartialCompletionHandler();
+        this.timeoutConfig = TimeoutConfigManager.getInstance();
     }
     /**
      * Handle error in parallel execution context
@@ -154,7 +154,8 @@ export class ParallelErrorHandler {
         const retryInfo = this.retryAttempts.get(context.sessionId);
         const retryCount = retryInfo?.count || 0;
         // If not recoverable or too many retries, fail
-        if (!errorAnalysis.isRecoverable || retryCount >= this.MAX_RETRIES) {
+        const config = this.timeoutConfig.getConfig();
+        if (!errorAnalysis.isRecoverable || retryCount >= config.retry.maxAttempts) {
             return {
                 action: 'fail_group',
                 retryCount,
@@ -219,7 +220,7 @@ export class ParallelErrorHandler {
                                 status: 'retry_scheduled',
                                 sessionId: context.sessionId,
                                 retryAttempt: strategy.retryCount,
-                                maxRetries: this.MAX_RETRIES,
+                                maxRetries: this.timeoutConfig.getConfig().retry.maxAttempts,
                                 message: 'Session will be retried with adjusted parameters',
                                 originalError: originalError instanceof Error ? originalError.message : String(originalError),
                             }, null, 2),
@@ -414,7 +415,8 @@ export class ParallelErrorHandler {
      */
     cleanupStaleRetryAttempts() {
         const now = Date.now();
-        const cutoffTime = now - this.RETRY_RETENTION_PERIOD;
+        const config = this.timeoutConfig.getConfig();
+        const cutoffTime = now - config.memoryCleanup.retentionPeriod;
         const sessionIdsToRemove = [];
         for (const [sessionId, retryInfo] of this.retryAttempts.entries()) {
             // Remove if session doesn't exist or if the retry attempt is too old
