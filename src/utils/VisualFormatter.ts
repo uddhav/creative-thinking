@@ -765,5 +765,86 @@ export class VisualFormatter {
 
     return lines.join('\n');
   }
+
+  /**
+   * Format convergence progress display
+   */
+  formatConvergenceProgress(
+    currentStep: number,
+    totalSteps: number,
+    sessionCount: number,
+    techniques: string[]
+  ): string {
+    if (this.disableThoughtLogging) {
+      return '';
+    }
+
+    const lines: string[] = [];
+    const borderLength = 60;
+
+    // Header
+    lines.push('');
+    lines.push(chalk.magenta('╔' + '═'.repeat(borderLength - 2) + '╗'));
+    lines.push(
+      chalk.magenta('║') +
+        chalk.bold.magenta(' 🔄 CONVERGENCE SYNTHESIS '.padEnd(borderLength - 2)) +
+        chalk.magenta('║')
+    );
+    lines.push(chalk.magenta('╟' + '─'.repeat(borderLength - 2) + '╢'));
+
+    // Progress info
+    lines.push(
+      chalk.magenta('║') +
+        chalk.cyan(`  Step ${currentStep}/${totalSteps}`.padEnd(borderLength - 2)) +
+        chalk.magenta('║')
+    );
+
+    lines.push(
+      chalk.magenta('║') +
+        chalk.yellow(`  Sessions: ${sessionCount}`.padEnd(borderLength - 2)) +
+        chalk.magenta('║')
+    );
+
+    // Techniques being converged
+    const uniqueTechniques = [...new Set(techniques)];
+    const techList = uniqueTechniques.slice(0, 5).join(', ');
+    const techDisplay =
+      uniqueTechniques.length > 5
+        ? `${techList}... (+${uniqueTechniques.length - 5} more)`
+        : techList;
+
+    lines.push(
+      chalk.magenta('║') +
+        chalk.green(`  Techniques: ${techDisplay}`.padEnd(borderLength - 2)) +
+        chalk.magenta('║')
+    );
+
+    // Current phase
+    let phaseDesc = '';
+    switch (currentStep) {
+      case 1:
+        phaseDesc = 'Collecting and categorizing insights...';
+        break;
+      case 2:
+        phaseDesc = 'Identifying patterns and resolving conflicts...';
+        break;
+      case 3:
+        phaseDesc = 'Synthesizing final insights...';
+        break;
+      default:
+        phaseDesc = 'Performing advanced synthesis...';
+    }
+
+    lines.push(chalk.magenta('╟' + '─'.repeat(borderLength - 2) + '╢'));
+    lines.push(
+      chalk.magenta('║') +
+        chalk.bold.white(`  ${phaseDesc}`.padEnd(borderLength - 2)) +
+        chalk.magenta('║')
+    );
+
+    // Footer
+    lines.push(chalk.magenta('╚' + '═'.repeat(borderLength - 2) + '╝'));
+
+    return lines.join('\n');
+  }
 }
-// test src change

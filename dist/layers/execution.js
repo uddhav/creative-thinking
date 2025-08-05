@@ -16,6 +16,12 @@ import { RiskAssessmentOrchestrator } from './execution/RiskAssessmentOrchestrat
 import { ErgodicityOrchestrator } from './execution/ErgodicityOrchestrator.js';
 import { ExecutionResponseBuilder } from './execution/ExecutionResponseBuilder.js';
 import { EscalationPromptGenerator } from '../ergodicity/escalationPrompts.js';
+// Import parallel execution components
+import { ConvergenceExecutor } from './execution/ConvergenceExecutor.js';
+import { ParallelStepExecutor } from './execution/ParallelStepExecutor.js';
+import { ProgressCoordinator } from './execution/ProgressCoordinator.js';
+import { ParallelErrorHandler } from './execution/ParallelErrorHandler.js';
+import { SessionSynchronizer } from '../core/session/SessionSynchronizer.js';
 export async function executeThinkingStep(input, sessionManager, techniqueRegistry, visualFormatter, metricsCollector, complexityAnalyzer, ergodicityManager) {
     const responseBuilder = new ResponseBuilder();
     const errorContextBuilder = new ErrorContextBuilder();
@@ -25,6 +31,9 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
     const riskAssessmentOrchestrator = new RiskAssessmentOrchestrator(visualFormatter);
     const ergodicityOrchestrator = new ErgodicityOrchestrator(visualFormatter, ergodicityManager);
     const executionResponseBuilder = new ExecutionResponseBuilder(complexityAnalyzer, new EscalationPromptGenerator(), techniqueRegistry);
+    // Initialize parallel execution components (declared outside try for catch block access)
+    let progressCoordinator = null;
+    let parallelErrorHandler = null;
     try {
         // Validate plan if provided
         const planValidation = executionValidator.validatePlan(input);
@@ -37,6 +46,15 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
         if (!convergenceValidation.isValid && convergenceValidation.error) {
             return convergenceValidation.error;
         }
+        // Initialize parallel execution components (lazy initialization)
+        const sessionSynchronizer = new SessionSynchronizer();
+        progressCoordinator = new ProgressCoordinator(sessionManager);
+        parallelErrorHandler = new ParallelErrorHandler(sessionManager);
+        // Check if this is a convergence execution
+        if (input.technique === 'convergence') {
+            const convergenceExecutor = new ConvergenceExecutor(sessionManager, visualFormatter);
+            return convergenceExecutor.executeConvergence(input, input.sessionId || '');
+        }
         // Get or create session
         const sessionValidation = executionValidator.validateAndGetSession(input, ergodicityManager);
         if (sessionValidation.error) {
@@ -45,6 +63,34 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
         const { session, sessionId } = sessionValidation;
         if (!session || !sessionId) {
             throw ErrorFactory.sessionNotFound(input.sessionId || 'unknown');
+        }
+        // Check if session is part of a parallel group
+        const parallelStepExecutor = new ParallelStepExecutor(sessionManager, sessionSynchronizer);
+        const parallelContext = parallelStepExecutor.checkParallelExecutionContext(sessionId, input);
+        // If session can't proceed due to dependencies, return waiting response
+        if (parallelContext.groupId && !parallelContext.canProceed) {
+            // Report progress as waiting
+            progressCoordinator.reportProgress({
+                groupId: parallelContext.groupId,
+                sessionId,
+                technique: input.technique,
+                currentStep: input.currentStep,
+                totalSteps: input.totalSteps,
+                status: 'waiting',
+                timestamp: Date.now(),
+                metadata: {
+                    dependencies: parallelContext.dependencies,
+                },
+            });
+            return parallelStepExecutor.executeWithCoordination(input, sessionId, () => Promise.resolve(responseBuilder.buildExecutionResponse(sessionId, { ...input, sessionId }, [], 'Waiting for dependencies to complete', session.history.length, {
+                techniqueEffectiveness: 0.5,
+                pathDependenciesCreated: [],
+                flexibilityImpact: 0,
+            })));
+        }
+        // Initialize shared context for parallel group if needed
+        if (parallelContext.groupId && !parallelContext.sharedContext) {
+            sessionSynchronizer.initializeSharedContext(parallelContext.groupId);
         }
         // Get technique handler
         const handler = techniqueRegistry.getHandler(input.technique);
@@ -86,6 +132,18 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
         const riskAssessment = riskAssessmentOrchestrator.assessRisks(input, session);
         if (riskAssessment.requiresIntervention && riskAssessment.interventionResponse) {
             return riskAssessment.interventionResponse;
+        }
+        // Report progress for parallel execution
+        if (parallelContext.groupId) {
+            progressCoordinator.reportProgress({
+                groupId: parallelContext.groupId,
+                sessionId,
+                technique: input.technique,
+                currentStep: input.currentStep,
+                totalSteps: input.totalSteps,
+                status: 'in_progress',
+                timestamp: Date.now(),
+            });
         }
         // Get mode indicator
         const modeIndicator = visualFormatter.getModeIndicator(input.technique, techniqueLocalStep);
@@ -164,10 +222,32 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
         // Update metrics
         metricsCollector.updateMetrics(session, operationData);
         // Build comprehensive execution response
-        const response = executionResponseBuilder.buildResponse(input, session, sessionId, handler, techniqueLocalStep, techniqueIndex, plan, currentFlexibility, optionGenerationResult);
+        let response;
+        // If in parallel group, execute with coordination
+        if (parallelContext.groupId) {
+            response = await parallelStepExecutor.executeWithCoordination(input, sessionId, () => Promise.resolve(executionResponseBuilder.buildResponse(input, session, sessionId, handler, techniqueLocalStep, techniqueIndex, plan, currentFlexibility, optionGenerationResult)));
+        }
+        else {
+            response = executionResponseBuilder.buildResponse(input, session, sessionId, handler, techniqueLocalStep, techniqueIndex, plan, currentFlexibility, optionGenerationResult);
+        }
         // Handle session completion
         if (!input.nextStepNeeded) {
             session.endTime = Date.now();
+            // Report completion for parallel execution
+            if (parallelContext.groupId) {
+                progressCoordinator.reportProgress({
+                    groupId: parallelContext.groupId,
+                    sessionId,
+                    technique: input.technique,
+                    currentStep: input.currentStep,
+                    totalSteps: input.totalSteps,
+                    status: 'completed',
+                    timestamp: Date.now(),
+                    metadata: {
+                        insightsGenerated: session.insights.length,
+                    },
+                });
+            }
             // Final summary
             visualFormatter.formatSessionSummary(input.technique, input.problem, session.insights, session.metrics);
         }
@@ -198,6 +278,39 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
         return addPerformanceSummary(response);
     }
     catch (error) {
+        // Check if this is a parallel execution error
+        const sessionId = input.sessionId || '';
+        const session = sessionManager.getSession(sessionId);
+        if (session?.parallelGroupId) {
+            // Handle with parallel error handler
+            const parallelContext = {
+                sessionId,
+                groupId: session.parallelGroupId,
+                technique: input.technique,
+                step: input.currentStep,
+                errorType: 'execution_error',
+            };
+            // Report error to progress coordinator
+            progressCoordinator?.reportProgress({
+                groupId: session.parallelGroupId,
+                sessionId,
+                technique: input.technique,
+                currentStep: input.currentStep,
+                totalSteps: input.totalSteps,
+                status: 'failed',
+                timestamp: Date.now(),
+                metadata: {
+                    errorMessage: error instanceof Error ? error.message : String(error),
+                },
+            });
+            return (parallelErrorHandler?.handleParallelError(error, parallelContext) ||
+                errorHandler.handleError(error, 'execution', {
+                    technique: input.technique,
+                    step: input.currentStep,
+                    sessionId: input.sessionId,
+                }));
+        }
+        // Use standard error handler for non-parallel execution
         return errorHandler.handleError(error, 'execution', {
             technique: input.technique,
             step: input.currentStep,
