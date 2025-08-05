@@ -272,7 +272,7 @@ export class ParallelStepExecutor {
   /**
    * Check if this session should wait for checkpoint
    */
-  shouldWaitForCheckpoint(sessionId: string, _currentStep: number): boolean {
+  shouldWaitForCheckpoint(sessionId: string): boolean {
     const session = this.sessionManager.getSession(sessionId);
     if (!session?.parallelGroupId) return false;
 

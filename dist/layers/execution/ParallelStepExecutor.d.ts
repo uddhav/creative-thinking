@@ -56,7 +56,7 @@ export declare class ParallelStepExecutor {
     /**
      * Check if this session should wait for checkpoint
      */
-    shouldWaitForCheckpoint(sessionId: string, _currentStep: number): boolean;
+    shouldWaitForCheckpoint(sessionId: string): boolean;
     /**
      * Wait for checkpoint completion
      */
