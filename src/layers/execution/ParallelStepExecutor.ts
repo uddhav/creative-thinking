@@ -7,7 +7,7 @@ import type { ExecuteThinkingStepInput, LateralThinkingResponse } from '../../ty
 import type { SessionManager } from '../../core/SessionManager.js';
 import type { SessionSynchronizer } from '../../core/session/SessionSynchronizer.js';
 import type { SharedContext } from '../../types/parallel-session.js';
-import { ErrorHandler } from '../../errors/ErrorHandler.js';
+import { ParallelErrorHandler } from './ParallelErrorHandler.js';
 import { ErrorFactory } from '../../errors/enhanced-errors.js';
 
 /**
@@ -26,13 +26,13 @@ export interface ParallelExecutionContext {
  * Executes steps within parallel sessions with proper coordination
  */
 export class ParallelStepExecutor {
-  private errorHandler: ErrorHandler;
+  private parallelErrorHandler: ParallelErrorHandler;
 
   constructor(
     private sessionManager: SessionManager,
     private sessionSynchronizer: SessionSynchronizer
   ) {
-    this.errorHandler = new ErrorHandler();
+    this.parallelErrorHandler = new ParallelErrorHandler(sessionManager);
   }
 
   /**
@@ -42,59 +42,59 @@ export class ParallelStepExecutor {
     sessionId: string,
     input: ExecuteThinkingStepInput
   ): ParallelExecutionContext {
-    try {
-      const session = this.sessionManager.getSession(sessionId);
-      if (!session) {
-        throw ErrorFactory.sessionNotFound(sessionId);
-      }
+    const session = this.sessionManager.getSession(sessionId);
+    if (!session) {
+      throw ErrorFactory.sessionNotFound(sessionId);
+    }
 
-      // Check if session is part of a parallel group
-      if (!session.parallelGroupId) {
-        // Not part of a parallel group, can proceed normally
-        return {
-          sessionId,
-          groupId: '',
-          sharedContext: undefined,
-          canProceed: true,
-          waitingFor: [],
-          dependencies: [],
-        };
-      }
-
-      const groupId = session.parallelGroupId;
-      const group = this.sessionManager.getParallelGroup(groupId);
-
-      if (!group) {
-        throw ErrorFactory.missingField(`Parallel group ${groupId}`);
-      }
-
-      // Check dependencies
-      const canStart = this.sessionManager.canSessionStart(sessionId);
-      const dependencies = session.dependsOn || [];
-      const waitingFor = this.getUncompletedDependencies(
-        sessionId,
-        dependencies,
-        group.completedSessions
-      );
-
-      // Get shared context
-      const sharedContext = this.sessionSynchronizer.getSharedContext(groupId);
-
+    // Check if session is part of a parallel group
+    if (!session.parallelGroupId) {
+      // Not part of a parallel group, can proceed normally
       return {
         sessionId,
-        groupId,
-        sharedContext,
-        canProceed: canStart,
-        waitingFor,
-        dependencies,
+        groupId: '',
+        sharedContext: undefined,
+        canProceed: true,
+        waitingFor: [],
+        dependencies: [],
       };
-    } catch (error) {
-      throw this.errorHandler.wrapError(error as Error, {
-        context: 'parallel_execution_context',
-        sessionId,
-        technique: input.technique,
-      });
     }
+
+    const groupId = session.parallelGroupId;
+    const group = this.sessionManager.getParallelGroup(groupId);
+
+    if (!group) {
+      throw ErrorFactory.missingField(`Parallel group ${groupId}`);
+    }
+
+    // Check dependencies
+    const canStart = this.sessionManager.canSessionStart(sessionId);
+    const dependencies = session.dependsOn || [];
+    const waitingFor = this.getUncompletedDependencies(
+      sessionId,
+      dependencies,
+      group.completedSessions
+    );
+
+    // Get shared context
+    const sharedContext = this.sessionSynchronizer.getSharedContext(groupId);
+
+    // Use input.technique for error context if needed
+    if (!canStart && input.technique) {
+      // Log which technique is waiting
+      process.stderr.write(
+        `[ParallelStepExecutor] Session ${sessionId} (${input.technique}) waiting for dependencies\n`
+      );
+    }
+
+    return {
+      sessionId,
+      groupId,
+      sharedContext,
+      canProceed: canStart,
+      waitingFor,
+      dependencies,
+    };
   }
 
   /**
@@ -211,9 +211,25 @@ export class ParallelStepExecutor {
     response: LateralThinkingResponse
   ): Promise<void> {
     try {
-      // Extract insights from response
-      const responseData = JSON.parse(response.content[0].text) as { insights?: string[] };
-      const insights = responseData.insights || [];
+      // Extract insights from response safely
+      let insights: string[] = [];
+
+      if (response.content?.[0]?.text) {
+        try {
+          const responseData = JSON.parse(response.content[0].text) as { insights?: string[] };
+          insights = responseData.insights || [];
+        } catch {
+          // If JSON parsing fails, try to extract insights from text
+          const text = response.content[0].text;
+          if (text.includes('insights')) {
+            // Extract insights using simple pattern matching
+            const insightMatches = text.match(/["']([^"']+)["']/g);
+            if (insightMatches) {
+              insights = insightMatches.map(m => m.slice(1, -1));
+            }
+          }
+        }
+      }
 
       // Extract themes (simple word frequency for now)
       const themes = this.extractThemes(input.output);
@@ -228,8 +244,14 @@ export class ParallelStepExecutor {
         },
       });
     } catch (error) {
-      // Log error but don't fail the execution
-      console.error(`Failed to update shared context: ${String(error)}`);
+      // Use parallel error handler instead of console.error
+      this.parallelErrorHandler.handleParallelError(error, {
+        sessionId,
+        groupId,
+        technique: input.technique,
+        step: input.currentStep,
+        errorType: 'execution_error',
+      });
     }
   }
 

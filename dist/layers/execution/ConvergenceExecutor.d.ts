@@ -46,5 +46,9 @@ export declare class ConvergenceExecutor {
      * Dynamic synthesis for additional steps
      */
     private performDynamicSynthesis;
+    /**
+     * Validate and normalize results object
+     */
+    private validateAndNormalizeResults;
 }
 //# sourceMappingURL=ConvergenceExecutor.d.ts.map

@@ -35,22 +35,35 @@ export class ConvergenceExecutor {
             }
             // Get parallel results if provided
             const parallelResults = input.parallelResults
-                ? input.parallelResults.map((r, index) => ({
-                    sessionId: `parallel-${r.planId}-${index}`,
-                    planId: r.planId,
-                    technique: r.technique,
-                    problem: input.problem,
-                    insights: r.insights,
-                    results: typeof r.results === 'object' ? r.results : {},
-                    metrics: {
-                        executionTime: 0,
-                        completedSteps: input.currentStep,
-                        totalSteps: input.totalSteps,
-                        confidence: r.metrics?.confidence,
-                        flexibility: r.metrics?.flexibility,
-                    },
-                    status: 'completed',
-                }))
+                ? input.parallelResults.map((r, index) => {
+                    // Validate each result structure
+                    if (!r.planId || typeof r.planId !== 'string') {
+                        throw ErrorFactory.invalidInput('parallelResults[].planId', 'string', r.planId);
+                    }
+                    if (!r.technique || typeof r.technique !== 'string') {
+                        throw ErrorFactory.invalidInput('parallelResults[].technique', 'string', r.technique);
+                    }
+                    if (!Array.isArray(r.insights)) {
+                        throw ErrorFactory.invalidInput('parallelResults[].insights', 'array', r.insights);
+                    }
+                    // Safely construct the result with validated data
+                    return {
+                        sessionId: `parallel-${r.planId}-${index}`,
+                        planId: r.planId,
+                        technique: r.technique,
+                        problem: input.problem,
+                        insights: r.insights,
+                        results: this.validateAndNormalizeResults(r.results),
+                        metrics: {
+                            executionTime: 0,
+                            completedSteps: input.currentStep,
+                            totalSteps: input.totalSteps,
+                            confidence: typeof r.metrics?.confidence === 'number' ? r.metrics.confidence : undefined,
+                            flexibility: typeof r.metrics?.flexibility === 'number' ? r.metrics.flexibility : undefined,
+                        },
+                        status: 'completed',
+                    };
+                })
                 : [];
             // If no parallel results provided, check if session is part of a parallel group
             if (parallelResults.length === 0 && session.parallelGroupId) {
@@ -284,6 +297,34 @@ export class ConvergenceExecutor {
                 resultsAnalyzed: results.length,
             },
         };
+    }
+    /**
+     * Validate and normalize results object
+     */
+    validateAndNormalizeResults(results) {
+        if (results === null || results === undefined) {
+            return {};
+        }
+        if (typeof results === 'object' && !Array.isArray(results)) {
+            // Ensure it's a plain object and filter out non-serializable values
+            const normalized = {};
+            for (const [key, value] of Object.entries(results)) {
+                if (typeof key === 'string') {
+                    // Only include serializable values
+                    if (value === null ||
+                        value === undefined ||
+                        typeof value === 'string' ||
+                        typeof value === 'number' ||
+                        typeof value === 'boolean' ||
+                        Array.isArray(value) ||
+                        (typeof value === 'object' && value !== null && value.constructor === Object)) {
+                        normalized[key] = value;
+                    }
+                }
+            }
+            return normalized;
+        }
+        return {};
     }
 }
 //# sourceMappingURL=ConvergenceExecutor.js.map

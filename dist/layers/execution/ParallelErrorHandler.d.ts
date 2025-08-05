@@ -90,5 +90,17 @@ export declare class ParallelErrorHandler {
      * Clear all retry attempts for a group
      */
     clearGroupRetryAttempts(groupId: string): void;
+    /**
+     * Get retry attempts statistics
+     */
+    getRetryStats(): {
+        totalSessionsWithRetries: number;
+        averageRetryCount: number;
+        maxRetryCount: number;
+    };
+    /**
+     * Cleanup old retry attempts (for sessions that no longer exist)
+     */
+    cleanupStaleRetryAttempts(): void;
 }
 //# sourceMappingURL=ParallelErrorHandler.d.ts.map

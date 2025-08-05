@@ -23,7 +23,7 @@ export interface ParallelExecutionContext {
 export declare class ParallelStepExecutor {
     private sessionManager;
     private sessionSynchronizer;
-    private errorHandler;
+    private parallelErrorHandler;
     constructor(sessionManager: SessionManager, sessionSynchronizer: SessionSynchronizer);
     /**
      * Check if a session can execute based on parallel group membership

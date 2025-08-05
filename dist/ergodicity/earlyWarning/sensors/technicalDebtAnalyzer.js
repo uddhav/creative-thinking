@@ -9,7 +9,7 @@ export class TechnicalDebtAnalyzer extends Sensor {
     /**
      * Calculate technical debt level
      */
-    getRawReading(pathMemory, _sessionData) {
+    getRawReading(pathMemory, sessionData) {
         const metrics = this.calculateTechnicalDebtMetrics(pathMemory);
         // Weighted combination of debt factors
         const weights = {
@@ -24,10 +24,17 @@ export class TechnicalDebtAnalyzer extends Sensor {
         const modularityDebt = 1 - metrics.modularityIndex;
         const couplingDebt = metrics.couplingScore;
         // Weighted average
-        const overallDebt = entropyDebt * weights.entropy +
+        let overallDebt = entropyDebt * weights.entropy +
             velocityDebt * weights.velocity +
             modularityDebt * weights.modularity +
             couplingDebt * weights.coupling;
+        // Adjust debt score based on session length
+        // Longer sessions tend to accumulate more technical debt
+        const sessionLength = sessionData.history.length;
+        if (sessionLength > 50) {
+            // Add 10% penalty for very long sessions
+            overallDebt = Math.min(1, overallDebt * 1.1);
+        }
         return Promise.resolve(Math.min(1, Math.max(0, overallDebt)));
     }
     /**

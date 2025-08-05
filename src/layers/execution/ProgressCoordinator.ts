@@ -60,28 +60,47 @@ export class ProgressCoordinator extends EventEmitter {
   // Track average step durations for time estimation
   private stepDurations: Map<string, number[]> = new Map();
 
+  // Track group completion times for cleanup
+  private groupCompletionTimes: Map<string, number> = new Map();
+
+  // Cleanup interval (5 minutes)
+  private readonly CLEANUP_INTERVAL = 5 * 60 * 1000;
+
+  // Data retention period (30 minutes)
+  private readonly DATA_RETENTION_PERIOD = 30 * 60 * 1000;
+
+  // Cleanup timer
+  private cleanupTimer?: NodeJS.Timeout;
+
+  // Mutex for concurrent access control
+  private updateLocks: Map<string, Promise<void>> = new Map();
+
   constructor(private sessionManager: SessionManager) {
     super();
+    this.startCleanupTimer();
   }
 
   /**
    * Report progress for a session
    */
-  reportProgress(update: ProgressUpdate): void {
-    // Store the update
-    this.sessionProgress.set(update.sessionId, update);
+  async reportProgress(update: ProgressUpdate): Promise<void> {
+    // Use synchronized update to prevent race conditions
+    await this.synchronizedUpdate(update.sessionId, () => {
+      // Store the update
+      this.sessionProgress.set(update.sessionId, update);
 
-    // Track step duration if completed
-    if (update.status === 'completed' || update.status === 'in_progress') {
-      this.trackStepDuration(update.sessionId, update.timestamp);
-    }
+      // Track step duration if completed
+      if (update.status === 'completed' || update.status === 'in_progress') {
+        this.trackStepDuration(update.sessionId, update.timestamp);
+      }
 
-    // Emit progress event
-    this.emit('progress', update);
-    this.emit(`progress:${update.groupId}`, update);
-    this.emit(`progress:${update.sessionId}`, update);
+      // Emit progress event
+      this.emit('progress', update);
+      this.emit(`progress:${update.groupId}`, update);
+      this.emit(`progress:${update.sessionId}`, update);
+    });
 
-    // Check if group is complete
+    // Check if group is complete (outside the lock to prevent deadlock)
     this.checkGroupCompletion(update.groupId);
   }
 
@@ -232,13 +251,16 @@ export class ProgressCoordinator extends EventEmitter {
     for (const sessionId of group.sessionIds) {
       this.sessionProgress.delete(sessionId);
       this.stepDurations.delete(sessionId);
+      // Remove session-specific listeners
+      this.removeAllListeners(`progress:${sessionId}`);
     }
 
     // Clear group data
     this.groupStartTimes.delete(groupId);
 
-    // Remove listeners
+    // Remove group listeners
     this.removeAllListeners(`progress:${groupId}`);
+    this.removeAllListeners(`group:${groupId}`);
   }
 
   /**
@@ -313,6 +335,9 @@ export class ProgressCoordinator extends EventEmitter {
         groupId,
         summary.failedSessions === 0 ? 'completed' : 'partial_success'
       );
+
+      // Mark group for cleanup
+      this.groupCompletionTimes.set(groupId, endTime);
     }
   }
 
@@ -348,5 +373,96 @@ export class ProgressCoordinator extends EventEmitter {
     const filled = Math.round(progress * width);
     const empty = width - filled;
     return `[${'='.repeat(filled)}${' '.repeat(empty)}]`;
+  }
+
+  /**
+   * Start the cleanup timer
+   */
+  private startCleanupTimer(): void {
+    this.cleanupTimer = setInterval(() => {
+      this.performCleanup();
+    }, this.CLEANUP_INTERVAL);
+  }
+
+  /**
+   * Perform cleanup of old data
+   */
+  private performCleanup(): void {
+    const now = Date.now();
+    const cutoffTime = now - this.DATA_RETENTION_PERIOD;
+
+    // Clean up completed groups
+    const groupsToClean: string[] = [];
+    for (const [groupId, completionTime] of this.groupCompletionTimes) {
+      if (completionTime < cutoffTime) {
+        groupsToClean.push(groupId);
+      }
+    }
+
+    // Clean up each group
+    for (const groupId of groupsToClean) {
+      this.clearGroupProgress(groupId);
+      this.groupCompletionTimes.delete(groupId);
+    }
+  }
+
+  /**
+   * Stop the cleanup timer (for cleanup)
+   */
+  stopCleanupTimer(): void {
+    if (this.cleanupTimer) {
+      clearInterval(this.cleanupTimer);
+      this.cleanupTimer = undefined;
+    }
+  }
+
+  /**
+   * Get memory usage statistics
+   */
+  getMemoryStats(): {
+    sessionProgressCount: number;
+    groupCount: number;
+    stepDurationCount: number;
+    completedGroupsAwaitingCleanup: number;
+  } {
+    return {
+      sessionProgressCount: this.sessionProgress.size,
+      groupCount: this.groupStartTimes.size,
+      stepDurationCount: this.stepDurations.size,
+      completedGroupsAwaitingCleanup: this.groupCompletionTimes.size,
+    };
+  }
+
+  /**
+   * Synchronized update to prevent race conditions
+   */
+  private async synchronizedUpdate(key: string, updateFn: () => void): Promise<void> {
+    // Get or create a lock for this key
+    const existingLock = this.updateLocks.get(key);
+
+    // Create a new promise that waits for the existing lock (if any) and then executes
+    const newLock = (async () => {
+      if (existingLock) {
+        try {
+          await existingLock;
+        } catch {
+          // Ignore errors from previous operations
+        }
+      }
+      updateFn();
+    })();
+
+    // Store the new lock
+    this.updateLocks.set(key, newLock);
+
+    // Clean up the lock after completion
+    try {
+      await newLock;
+    } finally {
+      // Only remove if it's still our lock
+      if (this.updateLocks.get(key) === newLock) {
+        this.updateLocks.delete(key);
+      }
+    }
   }
 }

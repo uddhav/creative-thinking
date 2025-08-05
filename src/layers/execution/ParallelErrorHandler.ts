@@ -541,4 +541,38 @@ export class ParallelErrorHandler {
       this.retryAttempts.delete(sessionId);
     }
   }
+
+  /**
+   * Get retry attempts statistics
+   */
+  getRetryStats(): {
+    totalSessionsWithRetries: number;
+    averageRetryCount: number;
+    maxRetryCount: number;
+  } {
+    const retryArray = Array.from(this.retryAttempts.values());
+    return {
+      totalSessionsWithRetries: retryArray.length,
+      averageRetryCount:
+        retryArray.length > 0 ? retryArray.reduce((a, b) => a + b, 0) / retryArray.length : 0,
+      maxRetryCount: retryArray.length > 0 ? Math.max(...retryArray) : 0,
+    };
+  }
+
+  /**
+   * Cleanup old retry attempts (for sessions that no longer exist)
+   */
+  cleanupStaleRetryAttempts(): void {
+    const sessionIdsToRemove: string[] = [];
+
+    for (const sessionId of this.retryAttempts.keys()) {
+      if (!this.sessionManager.getSession(sessionId)) {
+        sessionIdsToRemove.push(sessionId);
+      }
+    }
+
+    for (const sessionId of sessionIdsToRemove) {
+      this.retryAttempts.delete(sessionId);
+    }
+  }
 }

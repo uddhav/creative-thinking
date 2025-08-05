@@ -48,11 +48,16 @@ export declare class ProgressCoordinator extends EventEmitter {
     private sessionProgress;
     private groupStartTimes;
     private stepDurations;
+    private groupCompletionTimes;
+    private readonly CLEANUP_INTERVAL;
+    private readonly DATA_RETENTION_PERIOD;
+    private cleanupTimer?;
+    private updateLocks;
     constructor(sessionManager: SessionManager);
     /**
      * Report progress for a session
      */
-    reportProgress(update: ProgressUpdate): void;
+    reportProgress(update: ProgressUpdate): Promise<void>;
     /**
      * Get progress summary for a group
      */
@@ -97,5 +102,30 @@ export declare class ProgressCoordinator extends EventEmitter {
      * Create a text progress bar
      */
     private createProgressBar;
+    /**
+     * Start the cleanup timer
+     */
+    private startCleanupTimer;
+    /**
+     * Perform cleanup of old data
+     */
+    private performCleanup;
+    /**
+     * Stop the cleanup timer (for cleanup)
+     */
+    stopCleanupTimer(): void;
+    /**
+     * Get memory usage statistics
+     */
+    getMemoryStats(): {
+        sessionProgressCount: number;
+        groupCount: number;
+        stepDurationCount: number;
+        completedGroupsAwaitingCleanup: number;
+    };
+    /**
+     * Synchronized update to prevent race conditions
+     */
+    private synchronizedUpdate;
 }
 //# sourceMappingURL=ProgressCoordinator.d.ts.map
