@@ -153,6 +153,8 @@ export interface ConvergenceOptions {
     metadata?: {
       synthesisStrategy?: 'merge' | 'select' | 'hierarchical';
       conflictResolution?: 'vote' | 'weighted' | 'manual';
+      minSessionsRequired?: number; // Minimum sessions needed for convergence
+      minTechniquesRequired?: number; // Minimum unique techniques needed
     };
   };
   llmHandoff?: {
@@ -195,6 +197,7 @@ export interface CoordinationStrategy {
  */
 export interface ParallelPlan {
   planId: string;
+  problem?: string; // Optional problem statement for this specific plan
   techniques: LateralTechnique[];
   workflow: TechniqueWorkflow[];
   estimatedTime: string;

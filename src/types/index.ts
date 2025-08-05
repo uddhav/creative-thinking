@@ -150,6 +150,15 @@ export interface SessionData {
    * Session IDs that must complete before this session can proceed
    */
   dependsOn?: string[];
+
+  /**
+   * Metadata for parallel execution
+   */
+  parallelMetadata?: {
+    planId: string;
+    techniques: LateralTechnique[];
+    canExecuteIndependently: boolean;
+  };
 }
 
 /**
@@ -527,3 +536,5 @@ export interface Tool {
 
 // Export handoff types
 export * from './handoff.js';
+// Export parallel config types
+export * from './parallel-config.js';
