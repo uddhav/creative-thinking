@@ -64,8 +64,11 @@ Consider using sequential thinking or other tools if deeper analysis would be be
         };
     }
     createComprehensivePrompts(results) {
-        const techniqueCount = results.type === 'hierarchical' ? results.summary.techniqueCount :
-            results.type === 'comparative' ? results.dimensions.length : 0;
+        const techniqueCount = results.type === 'hierarchical'
+            ? results.summary.techniqueCount
+            : results.type === 'comparative'
+                ? results.dimensions.length
+                : 0;
         return [
             {
                 id: 'deep_analysis',
@@ -128,8 +131,11 @@ For each theme:
         ];
     }
     createActionOrientedPrompts(results) {
-        const ideaCount = results.type === 'hierarchical' ? results.summary.totalIdeas :
-            results.type === 'flat' ? results.allIdeas.length : 0;
+        const ideaCount = results.type === 'hierarchical'
+            ? results.summary.totalIdeas
+            : results.type === 'flat'
+                ? results.allIdeas.length
+                : 0;
         return [
             {
                 id: 'immediate_actions',
