@@ -2,7 +2,17 @@
  * Visualization Generator
  * Creates visual representations of parallel results for LLM understanding
  */
+import { getRiskCount } from './typeGuards.js';
+import { MAX_VISUALIZATION_SIZE } from './constants.js';
 export class VisualizationGenerator {
+    // Helper to truncate visualization content
+    truncateContent(content) {
+        if (content.length <= MAX_VISUALIZATION_SIZE) {
+            return content;
+        }
+        // Truncate with a note
+        return content.substring(0, MAX_VISUALIZATION_SIZE - 50) + '\n\n[Truncated for size limits]';
+    }
     generateVisualizations(results) {
         const visualizations = [];
         // Always include technique comparison
@@ -30,7 +40,7 @@ export class VisualizationGenerator {
             technique: r.technique,
             ideaCount: this.countIdeas(r),
             insightCount: r.insights?.length || 0,
-            riskCount: r.results?.risks?.length || 0,
+            riskCount: getRiskCount(r.results),
             completeness: this.calculateCompleteness(r),
             confidence: r.metrics?.confidence || 0,
         }));
@@ -45,7 +55,7 @@ export class VisualizationGenerator {
             description: 'Comparative metrics across all parallel techniques',
             data,
             format: 'markdown_table',
-            content,
+            content: this.truncateContent(content),
         };
     }
     createIdeaDistributionMap(results) {

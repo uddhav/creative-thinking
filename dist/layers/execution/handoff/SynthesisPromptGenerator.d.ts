@@ -4,6 +4,7 @@
  */
 import type { StructuredResults, SynthesisPrompt, PromptStrategy } from '../../../types/handoff.js';
 export declare class SynthesisPromptGenerator {
+    private truncatePrompt;
     generateSynthesisPrompts(structuredResults: StructuredResults, problem: string, strategy: PromptStrategy): SynthesisPrompt[];
     private createCoreSynthesisPrompt;
     private createComprehensivePrompts;

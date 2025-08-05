@@ -29,5 +29,7 @@ export declare class LLMHandoffBridge {
     private calculateIdeaDiversity;
     private calculateInsightDepth;
     private calculateRiskCoverage;
+    private validateParallelResults;
+    private validateProblem;
 }
 //# sourceMappingURL=LLMHandoffBridge.d.ts.map

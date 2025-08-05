@@ -5,6 +5,7 @@
 import type { ParallelResult } from '../../../types/handoff.js';
 import type { Visualization } from '../../../types/handoff.js';
 export declare class VisualizationGenerator {
+    private truncateContent;
     generateVisualizations(results: ParallelResult[]): Visualization[];
     private createTechniqueComparisonChart;
     private createIdeaDistributionMap;

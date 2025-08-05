@@ -10,6 +10,14 @@ import type {
   ComparativeStructure,
   NarrativeStructure,
 } from '../../../types/handoff.js';
+import {
+  getRiskDescription,
+  extractRisksFromResults,
+  getRiskCount,
+  isResultsObject,
+  extractTextContent,
+} from './typeGuards.js';
+import { MAX_IDEAS_PER_FLAT_STRUCTURE, MAX_INSIGHTS_PER_RESULT } from './constants.js';
 
 export class ResultStructures {
   createHierarchicalStructure(results: ParallelResult[]): HierarchicalStructure {
@@ -68,30 +76,22 @@ export class ResultStructures {
         });
       }
 
-      // Extract risks from results (assuming they're stored in the results object)
-      // TODO: Update this when actual risk structure is defined
-      const resultData = result.results as Record<string, unknown>;
-      const risks = resultData?.risks as unknown[];
-      if (risks && Array.isArray(risks)) {
-        risks.forEach((risk: unknown) => {
-          const riskDescription =
-            typeof risk === 'string'
-              ? risk
-              : ((risk as Record<string, unknown>)?.description as string) || 'Unknown risk';
-
-          allRisks.push({
-            risk: riskDescription,
-            technique: result.technique,
-            severity: this.assessSeverity(riskDescription),
-            mitigation: this.suggestMitigation(riskDescription),
-          });
+      // Extract risks from results
+      const risks = extractRisksFromResults(result.results);
+      risks.forEach((risk: unknown) => {
+        const riskDescription = getRiskDescription(risk);
+        allRisks.push({
+          risk: riskDescription,
+          technique: result.technique,
+          severity: this.assessSeverity(riskDescription),
+          mitigation: this.suggestMitigation(riskDescription),
         });
-      }
+      });
     });
 
     return {
       type: 'flat',
-      allIdeas,
+      allIdeas: allIdeas.slice(0, MAX_IDEAS_PER_FLAT_STRUCTURE),
       allInsights,
       allRisks,
     };
@@ -163,9 +163,7 @@ export class ResultStructures {
 
   private summarizeTechnique(result: ParallelResult): string {
     const insightCount = result.insights?.length || 0;
-    const resultData = result.results as Record<string, unknown>;
-    const risks = resultData?.risks as unknown[];
-    const riskCount = risks?.length || 0;
+    const riskCount = getRiskCount(result.results);
     const completeness = result.metrics?.completedSteps
       ? `${result.metrics.completedSteps}/${result.metrics.totalSteps} steps`
       : 'unknown';
@@ -174,7 +172,9 @@ export class ResultStructures {
   }
 
   private extractKeyInsights(result: ParallelResult): string[] {
-    return result.insights?.slice(0, 3) || [];
+    // Limit insights to prevent excessive data
+    const limitedInsights = result.insights?.slice(0, MAX_INSIGHTS_PER_RESULT) || [];
+    return limitedInsights.slice(0, 3);
   }
 
   private structureIdeas(result: ParallelResult): HierarchicalStructure['techniques'][0]['ideas'] {
@@ -208,16 +208,10 @@ export class ResultStructures {
   }
 
   private structureRisks(result: ParallelResult): HierarchicalStructure['techniques'][0]['risks'] {
-    const resultData = result.results as Record<string, unknown>;
-    const risks = resultData?.risks as unknown[];
-    if (!risks || !Array.isArray(risks)) return [];
+    const risks = extractRisksFromResults(result.results);
 
     return risks.map((risk: unknown) => {
-      const riskDescription =
-        typeof risk === 'string'
-          ? risk
-          : ((risk as Record<string, unknown>)?.description as string) || 'Unknown risk';
-
+      const riskDescription = getRiskDescription(risk);
       return {
         description: riskDescription,
         severity: this.assessSeverity(riskDescription),
@@ -433,11 +427,7 @@ export class ResultStructures {
     ];
 
     // Add risk dimension only if risks were identified
-    const hasRisks = results.some(r => {
-      const resultData = r.results as Record<string, unknown>;
-      const risks = resultData?.risks as unknown[];
-      return risks && risks.length > 0;
-    });
+    const hasRisks = results.some(r => getRiskCount(r.results) > 0);
 
     if (hasRisks) {
       dimensions.push({ name: 'Risk Level', description: 'What is the overall risk?' });
@@ -462,11 +452,8 @@ export class ResultStructures {
         return this.assessInnovation(result);
       case 'Implementation Complexity':
         return this.assessComplexity(result);
-      case 'Risk Level': {
-        const resultData = result.results as Record<string, unknown>;
-        const risks = resultData?.risks as unknown[];
-        return risks?.length || 0;
-      }
+      case 'Risk Level':
+        return getRiskCount(result.results);
       case 'User Impact':
         return this.assessUserImpact(result);
       case 'Resource Requirements':
@@ -572,7 +559,6 @@ export class ResultStructures {
   // Utility methods
   private extractThemes(result: ParallelResult): string[] {
     const themes: string[] = [];
-    const text = JSON.stringify(result.insights || []) + JSON.stringify(result.results || {});
 
     const themeKeywords = [
       'innovation',
@@ -585,8 +571,22 @@ export class ResultStructures {
       'quality',
     ];
 
+    // Extract text efficiently without JSON.stringify
+    const textParts: string[] = [];
+
+    if (result.insights && Array.isArray(result.insights)) {
+      textParts.push(...result.insights);
+    }
+
+    if (isResultsObject(result.results)) {
+      Object.values(result.results).forEach(value => {
+        textParts.push(...extractTextContent(value));
+      });
+    }
+
+    const combinedText = textParts.join(' ').toLowerCase();
     themeKeywords.forEach(keyword => {
-      if (text.toLowerCase().includes(keyword)) {
+      if (combinedText.includes(keyword)) {
         themes.push(keyword);
       }
     });
@@ -702,10 +702,13 @@ export class ResultStructures {
     const userKeywords = ['user', 'customer', 'experience', 'satisfaction', 'engagement'];
     let mentions = 0;
 
-    const text = JSON.stringify(result.insights || []);
-    userKeywords.forEach(keyword => {
-      if (text.toLowerCase().includes(keyword)) mentions++;
-    });
+    // Efficiently check insights without JSON.stringify
+    if (result.insights && Array.isArray(result.insights)) {
+      const insightsText = result.insights.join(' ').toLowerCase();
+      userKeywords.forEach(keyword => {
+        if (insightsText.includes(keyword)) mentions++;
+      });
+    }
 
     if (mentions >= 3) return 'High';
     if (mentions >= 1) return 'Medium';
@@ -716,10 +719,13 @@ export class ResultStructures {
     const resourceKeywords = ['resource', 'budget', 'time', 'team', 'investment'];
     let mentions = 0;
 
-    const text = JSON.stringify(result.insights || []);
-    resourceKeywords.forEach(keyword => {
-      if (text.toLowerCase().includes(keyword)) mentions++;
-    });
+    // Efficiently check insights without JSON.stringify
+    if (result.insights && Array.isArray(result.insights)) {
+      const insightsText = result.insights.join(' ').toLowerCase();
+      resourceKeywords.forEach(keyword => {
+        if (insightsText.includes(keyword)) mentions++;
+      });
+    }
 
     if (mentions >= 3) return 'High';
     if (mentions >= 1) return 'Medium';

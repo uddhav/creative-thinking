@@ -2,7 +2,16 @@
  * Synthesis Prompt Generator
  * Generates prompts to guide LLM synthesis of parallel results
  */
+import { MAX_PROMPT_LENGTH } from './constants.js';
 export class SynthesisPromptGenerator {
+    // Helper to truncate prompts to size limit
+    truncatePrompt(prompt) {
+        if (prompt.length <= MAX_PROMPT_LENGTH) {
+            return prompt;
+        }
+        // Truncate with ellipsis
+        return prompt.substring(0, MAX_PROMPT_LENGTH - 3) + '...';
+    }
     generateSynthesisPrompts(structuredResults, problem, strategy) {
         const prompts = [];
         // Core synthesis prompt
@@ -38,10 +47,7 @@ export class SynthesisPromptGenerator {
         const techniqueCount = this.getTechniqueCount(results);
         const totalIdeas = this.getTotalIdeas(results);
         const techniques = this.getTechniqueNames(results);
-        return {
-            id: 'core_synthesis',
-            priority: 'high',
-            prompt: `You have received results from ${techniqueCount} parallel creative thinking techniques exploring: "${problem}"
+        const promptText = `You have received results from ${techniqueCount} parallel creative thinking techniques exploring: "${problem}"
 
 The techniques used were: ${techniques.join(', ')}
 
@@ -53,7 +59,11 @@ Please synthesize these results by:
 3. Resolving any conflicts or contradictions
 4. Creating actionable recommendations
 
-Consider using sequential thinking or other tools if deeper analysis would be beneficial.`,
+Consider using sequential thinking or other tools if deeper analysis would be beneficial.`;
+        return {
+            id: 'core_synthesis',
+            priority: 'high',
+            prompt: this.truncatePrompt(promptText),
             context: {
                 totalIdeas,
                 techniqueCount,

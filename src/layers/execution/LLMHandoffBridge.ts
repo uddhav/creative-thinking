@@ -19,6 +19,8 @@ import { ResultStructures } from './handoff/ResultStructures.js';
 import { SynthesisPromptGenerator } from './handoff/SynthesisPromptGenerator.js';
 import { VisualizationGenerator } from './handoff/VisualizationGenerator.js';
 import { NextActionSuggester } from './handoff/NextActionSuggester.js';
+import { extractTextContent, getRiskCount, isResultsObject } from './handoff/typeGuards.js';
+import { MAX_SYNTHESIS_PROMPTS, MAX_VISUALIZATIONS } from './handoff/constants.js';
 
 export class LLMHandoffBridge {
   private resultStructures: ResultStructures;
@@ -41,26 +43,33 @@ export class LLMHandoffBridge {
     problem: string,
     options: LLMHandoffOptions = {}
   ): LLMHandoffPackage {
+    // Validate inputs
+    this.validateParallelResults(parallelResults);
+    this.validateProblem(problem);
+
     // 1. Gather and structure results
     const structuredResults = this.structureResults(parallelResults, problem, options);
 
     // 2. Generate context summary
     const contextSummary = this.generateContextSummary(parallelResults, problem);
 
-    // 3. Create synthesis prompts
-    const synthesisPrompts = this.promptGenerator.generateSynthesisPrompts(
+    // 3. Create synthesis prompts (with size limit)
+    const allPrompts = this.promptGenerator.generateSynthesisPrompts(
       structuredResults,
       problem,
       options.promptStrategy || 'comprehensive'
     );
+    const synthesisPrompts = allPrompts.slice(0, MAX_SYNTHESIS_PROMPTS);
 
     // 4. Prepare metadata
     const metadata = this.prepareMetadata(parallelResults);
 
-    // 5. Generate visualization data
+    // 5. Generate visualization data (with size limit)
     const visualizations =
       options.visualizationLevel !== 'none'
-        ? this.visualizationGenerator.generateVisualizations(parallelResults)
+        ? this.visualizationGenerator
+            .generateVisualizations(parallelResults)
+            .slice(0, MAX_VISUALIZATIONS)
         : [];
 
     // 6. Create action recommendations
@@ -125,11 +134,20 @@ export class LLMHandoffBridge {
       const themes = this.extractThemes(result);
       majorThemes.push(...themes);
 
-      // Extract critical decisions
-      if (result.metrics?.criticalDecisions) {
-        // Since metrics is Record<string, number>, we need to handle this differently
-        // TODO: Define proper structure for critical decisions
-        criticalDecisions.push(`Decision from ${result.technique}`);
+      // Extract critical decisions from results
+      if (isResultsObject(result.results)) {
+        const resultsObj = result.results;
+        // Look for decision-related fields in results
+        if (resultsObj.decisions && Array.isArray(resultsObj.decisions)) {
+          const decisions = resultsObj.decisions as string[];
+          decisions.forEach(decision => {
+            if (typeof decision === 'string' && decision.length > 0) {
+              criticalDecisions.push(`${result.technique}: ${decision}`);
+            }
+          });
+        } else if (resultsObj.criticalDecision && typeof resultsObj.criticalDecision === 'string') {
+          criticalDecisions.push(`${result.technique}: ${resultsObj.criticalDecision}`);
+        }
       }
     });
 
@@ -190,7 +208,7 @@ export class LLMHandoffBridge {
       technique: result.technique,
       ideaCount: this.countIdeas(result),
       insightCount: result.insights?.length || 0,
-      riskCount: ((result.results as Record<string, unknown>)?.risks as unknown[])?.length || 0,
+      riskCount: getRiskCount(result.results),
       completeness: this.calculateTechniqueCompleteness(result),
       confidence: result.metrics?.confidence || 0.5,
       executionTime: result.metrics?.executionTime || 0,
@@ -214,7 +232,6 @@ export class LLMHandoffBridge {
   // Helper methods
   private extractThemes(result: ParallelResult): string[] {
     const themes: string[] = [];
-    const text = JSON.stringify(result.insights || []) + JSON.stringify(result.results || {});
 
     // Simple theme extraction based on common keywords
     const themeKeywords = [
@@ -230,8 +247,24 @@ export class LLMHandoffBridge {
       'optimization',
     ];
 
+    // Extract text from insights efficiently
+    const textParts: string[] = [];
+
+    if (result.insights && Array.isArray(result.insights)) {
+      textParts.push(...result.insights);
+    }
+
+    // Extract text from results object if it contains string values
+    if (isResultsObject(result.results)) {
+      Object.values(result.results).forEach(value => {
+        textParts.push(...extractTextContent(value));
+      });
+    }
+
+    // Check each text part for theme keywords
+    const combinedText = textParts.join(' ').toLowerCase();
     themeKeywords.forEach(keyword => {
-      if (text.toLowerCase().includes(keyword)) {
+      if (combinedText.includes(keyword)) {
         themes.push(keyword);
       }
     });
@@ -312,11 +345,60 @@ export class LLMHandoffBridge {
   private calculateRiskCoverage(results: ParallelResult[]): number {
     // Calculate based on how many techniques identified risks
     const techniquesWithRisks = results.filter(r => {
-      const resultData = r.results as Record<string, unknown>;
-      const risks = resultData?.risks as unknown[];
-      return risks && risks.length > 0;
+      return getRiskCount(r.results) > 0;
     }).length;
 
     return results.length > 0 ? techniquesWithRisks / results.length : 0;
+  }
+
+  // Input validation methods
+  private validateParallelResults(results: unknown): asserts results is ParallelResult[] {
+    if (!Array.isArray(results)) {
+      throw new Error('ParallelResults must be an array');
+    }
+
+    // Allow empty arrays - methods can handle them gracefully
+    if (results.length === 0) {
+      return;
+    }
+
+    results.forEach((result, index) => {
+      if (!result || typeof result !== 'object') {
+        throw new Error(`Invalid result at index ${index}: must be an object`);
+      }
+
+      const r = result as Record<string, unknown>;
+
+      if (!r.planId || typeof r.planId !== 'string') {
+        throw new Error(`Invalid result at index ${index}: missing or invalid planId`);
+      }
+
+      if (!r.technique || typeof r.technique !== 'string') {
+        throw new Error(`Invalid result at index ${index}: missing or invalid technique`);
+      }
+
+      if (!Array.isArray(r.insights)) {
+        throw new Error(`Invalid result at index ${index}: insights must be an array`);
+      }
+
+      // Validate all insights are strings
+      (r.insights as unknown[]).forEach((insight, i) => {
+        if (typeof insight !== 'string') {
+          throw new Error(
+            `Invalid result at index ${index}: insight at position ${i} must be a string`
+          );
+        }
+      });
+    });
+  }
+
+  private validateProblem(problem: unknown): asserts problem is string {
+    if (!problem || typeof problem !== 'string') {
+      throw new Error('Problem must be a non-empty string');
+    }
+
+    if (problem.trim().length === 0) {
+      throw new Error('Problem cannot be an empty string');
+    }
   }
 }

@@ -2,6 +2,8 @@
  * Result Structuring Strategies
  * Different ways to structure parallel results for LLM consumption
  */
+import { getRiskDescription, extractRisksFromResults, getRiskCount, isResultsObject, extractTextContent, } from './typeGuards.js';
+import { MAX_IDEAS_PER_FLAT_STRUCTURE, MAX_INSIGHTS_PER_RESULT } from './constants.js';
 export class ResultStructures {
     createHierarchicalStructure(results) {
         return {
@@ -55,27 +57,21 @@ export class ResultStructures {
                     });
                 });
             }
-            // Extract risks from results (assuming they're stored in the results object)
-            // TODO: Update this when actual risk structure is defined
-            const resultData = result.results;
-            const risks = resultData?.risks;
-            if (risks && Array.isArray(risks)) {
-                risks.forEach((risk) => {
-                    const riskDescription = typeof risk === 'string'
-                        ? risk
-                        : risk?.description || 'Unknown risk';
-                    allRisks.push({
-                        risk: riskDescription,
-                        technique: result.technique,
-                        severity: this.assessSeverity(riskDescription),
-                        mitigation: this.suggestMitigation(riskDescription),
-                    });
+            // Extract risks from results
+            const risks = extractRisksFromResults(result.results);
+            risks.forEach((risk) => {
+                const riskDescription = getRiskDescription(risk);
+                allRisks.push({
+                    risk: riskDescription,
+                    technique: result.technique,
+                    severity: this.assessSeverity(riskDescription),
+                    mitigation: this.suggestMitigation(riskDescription),
                 });
-            }
+            });
         });
         return {
             type: 'flat',
-            allIdeas,
+            allIdeas: allIdeas.slice(0, MAX_IDEAS_PER_FLAT_STRUCTURE),
             allInsights,
             allRisks,
         };
@@ -140,16 +136,16 @@ export class ResultStructures {
     }
     summarizeTechnique(result) {
         const insightCount = result.insights?.length || 0;
-        const resultData = result.results;
-        const risks = resultData?.risks;
-        const riskCount = risks?.length || 0;
+        const riskCount = getRiskCount(result.results);
         const completeness = result.metrics?.completedSteps
             ? `${result.metrics.completedSteps}/${result.metrics.totalSteps} steps`
             : 'unknown';
         return `Generated ${insightCount} insights and identified ${riskCount} risks. Completeness: ${completeness}`;
     }
     extractKeyInsights(result) {
-        return result.insights?.slice(0, 3) || [];
+        // Limit insights to prevent excessive data
+        const limitedInsights = result.insights?.slice(0, MAX_INSIGHTS_PER_RESULT) || [];
+        return limitedInsights.slice(0, 3);
     }
     structureIdeas(result) {
         const ideas = [];
@@ -178,14 +174,9 @@ export class ResultStructures {
         return ideas;
     }
     structureRisks(result) {
-        const resultData = result.results;
-        const risks = resultData?.risks;
-        if (!risks || !Array.isArray(risks))
-            return [];
+        const risks = extractRisksFromResults(result.results);
         return risks.map((risk) => {
-            const riskDescription = typeof risk === 'string'
-                ? risk
-                : risk?.description || 'Unknown risk';
+            const riskDescription = getRiskDescription(risk);
             return {
                 description: riskDescription,
                 severity: this.assessSeverity(riskDescription),
@@ -360,11 +351,7 @@ export class ResultStructures {
             { name: 'Implementation Complexity', description: 'How complex to implement?' },
         ];
         // Add risk dimension only if risks were identified
-        const hasRisks = results.some(r => {
-            const resultData = r.results;
-            const risks = resultData?.risks;
-            return risks && risks.length > 0;
-        });
+        const hasRisks = results.some(r => getRiskCount(r.results) > 0);
         if (hasRisks) {
             dimensions.push({ name: 'Risk Level', description: 'What is the overall risk?' });
         }
@@ -379,11 +366,8 @@ export class ResultStructures {
                 return this.assessInnovation(result);
             case 'Implementation Complexity':
                 return this.assessComplexity(result);
-            case 'Risk Level': {
-                const resultData = result.results;
-                const risks = resultData?.risks;
-                return risks?.length || 0;
-            }
+            case 'Risk Level':
+                return getRiskCount(result.results);
             case 'User Impact':
                 return this.assessUserImpact(result);
             case 'Resource Requirements':
@@ -458,7 +442,6 @@ export class ResultStructures {
     // Utility methods
     extractThemes(result) {
         const themes = [];
-        const text = JSON.stringify(result.insights || []) + JSON.stringify(result.results || {});
         const themeKeywords = [
             'innovation',
             'efficiency',
@@ -469,8 +452,19 @@ export class ResultStructures {
             'automation',
             'quality',
         ];
+        // Extract text efficiently without JSON.stringify
+        const textParts = [];
+        if (result.insights && Array.isArray(result.insights)) {
+            textParts.push(...result.insights);
+        }
+        if (isResultsObject(result.results)) {
+            Object.values(result.results).forEach(value => {
+                textParts.push(...extractTextContent(value));
+            });
+        }
+        const combinedText = textParts.join(' ').toLowerCase();
         themeKeywords.forEach(keyword => {
-            if (text.toLowerCase().includes(keyword)) {
+            if (combinedText.includes(keyword)) {
                 themes.push(keyword);
             }
         });
@@ -566,11 +560,14 @@ export class ResultStructures {
     assessUserImpact(result) {
         const userKeywords = ['user', 'customer', 'experience', 'satisfaction', 'engagement'];
         let mentions = 0;
-        const text = JSON.stringify(result.insights || []);
-        userKeywords.forEach(keyword => {
-            if (text.toLowerCase().includes(keyword))
-                mentions++;
-        });
+        // Efficiently check insights without JSON.stringify
+        if (result.insights && Array.isArray(result.insights)) {
+            const insightsText = result.insights.join(' ').toLowerCase();
+            userKeywords.forEach(keyword => {
+                if (insightsText.includes(keyword))
+                    mentions++;
+            });
+        }
         if (mentions >= 3)
             return 'High';
         if (mentions >= 1)
@@ -580,11 +577,14 @@ export class ResultStructures {
     assessResourceNeeds(result) {
         const resourceKeywords = ['resource', 'budget', 'time', 'team', 'investment'];
         let mentions = 0;
-        const text = JSON.stringify(result.insights || []);
-        resourceKeywords.forEach(keyword => {
-            if (text.toLowerCase().includes(keyword))
-                mentions++;
-        });
+        // Efficiently check insights without JSON.stringify
+        if (result.insights && Array.isArray(result.insights)) {
+            const insightsText = result.insights.join(' ').toLowerCase();
+            resourceKeywords.forEach(keyword => {
+                if (insightsText.includes(keyword))
+                    mentions++;
+            });
+        }
         if (mentions >= 3)
             return 'High';
         if (mentions >= 1)
