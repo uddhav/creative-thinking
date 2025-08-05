@@ -4,6 +4,7 @@
  */
 import { ParallelErrorHandler } from './ParallelErrorHandler.js';
 import { ErrorFactory } from '../../errors/enhanced-errors.js';
+import { safeParseJSON, ResponseDataSchema } from './schemas/parallelResultSchema.js';
 /**
  * Executes steps within parallel sessions with proper coordination
  */
@@ -141,11 +142,11 @@ export class ParallelStepExecutor {
             // Extract insights from response safely
             let insights = [];
             if (response.content?.[0]?.text) {
-                try {
-                    const responseData = JSON.parse(response.content[0].text);
-                    insights = responseData.insights || [];
+                const parseResult = safeParseJSON(response.content[0].text, ResponseDataSchema);
+                if (parseResult.success && parseResult.data) {
+                    insights = parseResult.data.insights || [];
                 }
-                catch {
+                else {
                     // If JSON parsing fails, try to extract insights from text
                     const text = response.content[0].text;
                     if (text.includes('insights')) {
@@ -154,6 +155,10 @@ export class ParallelStepExecutor {
                         if (insightMatches) {
                             insights = insightMatches.map(m => m.slice(1, -1));
                         }
+                    }
+                    // Log validation error for debugging
+                    if (process.env.LOG_LEVEL === 'DEBUG') {
+                        process.stderr.write(`[ParallelStepExecutor] JSON validation failed: ${parseResult.error}\n`);
                     }
                 }
             }

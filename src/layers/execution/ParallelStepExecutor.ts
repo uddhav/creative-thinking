@@ -9,6 +9,7 @@ import type { SessionSynchronizer } from '../../core/session/SessionSynchronizer
 import type { SharedContext } from '../../types/parallel-session.js';
 import { ParallelErrorHandler } from './ParallelErrorHandler.js';
 import { ErrorFactory } from '../../errors/enhanced-errors.js';
+import { safeParseJSON, ResponseDataSchema } from './schemas/parallelResultSchema.js';
 
 /**
  * Handles execution context for parallel sessions
@@ -215,10 +216,11 @@ export class ParallelStepExecutor {
       let insights: string[] = [];
 
       if (response.content?.[0]?.text) {
-        try {
-          const responseData = JSON.parse(response.content[0].text) as { insights?: string[] };
-          insights = responseData.insights || [];
-        } catch {
+        const parseResult = safeParseJSON(response.content[0].text, ResponseDataSchema);
+
+        if (parseResult.success && parseResult.data) {
+          insights = parseResult.data.insights || [];
+        } else {
           // If JSON parsing fails, try to extract insights from text
           const text = response.content[0].text;
           if (text.includes('insights')) {
@@ -227,6 +229,13 @@ export class ParallelStepExecutor {
             if (insightMatches) {
               insights = insightMatches.map(m => m.slice(1, -1));
             }
+          }
+
+          // Log validation error for debugging
+          if (process.env.LOG_LEVEL === 'DEBUG') {
+            process.stderr.write(
+              `[ParallelStepExecutor] JSON validation failed: ${parseResult.error}\n`
+            );
           }
         }
       }

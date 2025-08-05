@@ -5,6 +5,7 @@
 import { ResponseBuilder } from '../../core/ResponseBuilder.js';
 import { ErrorHandler } from '../../errors/ErrorHandler.js';
 import { ErrorFactory } from '../../errors/enhanced-errors.js';
+import { validateParallelResult } from './schemas/parallelResultSchema.js';
 /**
  * Executes the convergence technique to synthesize results from parallel sessions
  */
@@ -36,30 +37,29 @@ export class ConvergenceExecutor {
             // Get parallel results if provided
             const parallelResults = input.parallelResults
                 ? input.parallelResults.map((r, index) => {
-                    // Validate each result structure
-                    if (!r.planId || typeof r.planId !== 'string') {
-                        throw ErrorFactory.invalidInput('parallelResults[].planId', 'string', r.planId);
+                    // Validate using schema
+                    const validation = validateParallelResult(r);
+                    if (!validation.success) {
+                        throw ErrorFactory.invalidInput(`parallelResults[${index}]`, 'valid parallel result', validation.error);
                     }
-                    if (!r.technique || typeof r.technique !== 'string') {
-                        throw ErrorFactory.invalidInput('parallelResults[].technique', 'string', r.technique);
-                    }
-                    if (!Array.isArray(r.insights)) {
-                        throw ErrorFactory.invalidInput('parallelResults[].insights', 'array', r.insights);
+                    const validatedData = validation.data;
+                    if (!validatedData) {
+                        throw ErrorFactory.invalidInput(`parallelResults[${index}]`, 'valid parallel result', 'Validation passed but data is undefined');
                     }
                     // Safely construct the result with validated data
                     return {
-                        sessionId: `parallel-${r.planId}-${index}`,
-                        planId: r.planId,
-                        technique: r.technique,
+                        sessionId: `parallel-${validatedData.planId}-${index}`,
+                        planId: validatedData.planId,
+                        technique: validatedData.technique,
                         problem: input.problem,
-                        insights: r.insights,
-                        results: this.validateAndNormalizeResults(r.results),
+                        insights: validatedData.insights,
+                        results: this.validateAndNormalizeResults(validatedData.results),
                         metrics: {
                             executionTime: 0,
                             completedSteps: input.currentStep,
                             totalSteps: input.totalSteps,
-                            confidence: typeof r.metrics?.confidence === 'number' ? r.metrics.confidence : undefined,
-                            flexibility: typeof r.metrics?.flexibility === 'number' ? r.metrics.flexibility : undefined,
+                            confidence: validatedData.metrics?.confidence,
+                            flexibility: validatedData.metrics?.flexibility,
                         },
                         status: 'completed',
                     };
