@@ -392,4 +392,5 @@ export interface Tool {
         additionalProperties?: boolean;
     };
 }
+export * from './handoff.js';
 //# sourceMappingURL=index.d.ts.map

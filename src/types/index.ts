@@ -524,3 +524,6 @@ export interface Tool {
     additionalProperties?: boolean;
   };
 }
+
+// Export handoff types
+export * from './handoff.js';
