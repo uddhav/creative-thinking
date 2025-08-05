@@ -10,12 +10,16 @@ import type {
   ScamperAction,
   DesignThinkingStage,
   DisneyRole,
+  SessionData,
 } from '../types/index.js';
+import type { PlanThinkingSessionOutput } from '../types/planning.js';
+import { SessionCompletionTracker } from '../core/session/SessionCompletionTracker.js';
 
 export class VisualFormatter {
   private readonly maxLineLength = 80;
   private readonly disableThoughtLogging: boolean;
   private readonly showTechniqueIndicators: boolean;
+  private completionTracker = new SessionCompletionTracker();
 
   constructor(disableThoughtLogging = false) {
     this.disableThoughtLogging = disableThoughtLogging;
@@ -33,7 +37,9 @@ export class VisualFormatter {
     totalSteps: number,
     stepInfo: { name: string; focus: string; emoji: string } | null,
     modeIndicator: { color: typeof chalk; symbol: string },
-    input: ThinkingOperationData
+    input: ThinkingOperationData,
+    session?: SessionData,
+    plan?: PlanThinkingSessionOutput
   ): string {
     if (this.disableThoughtLogging) {
       return '';
@@ -63,6 +69,14 @@ export class VisualFormatter {
         ' '.repeat(paddingRight) +
         chalk.blue('│')
     );
+
+    // Add progress bar if session and plan are available
+    if (session && plan) {
+      const progressDisplay = this.formatSessionProgressBar(session, plan, currentStep, totalSteps);
+      if (progressDisplay) {
+        lines.push(chalk.blue('│') + progressDisplay + chalk.blue('│'));
+      }
+    }
 
     // Add technique state indicator if enabled - early exit for performance
     if (this.showTechniqueIndicators) {
@@ -846,5 +860,72 @@ export class VisualFormatter {
     lines.push(chalk.magenta('╚' + '═'.repeat(borderLength - 2) + '╝'));
 
     return lines.join('\n');
+  }
+
+  /**
+   * Format progress bar for session completion
+   */
+  private formatSessionProgressBar(
+    session: SessionData,
+    plan: PlanThinkingSessionOutput,
+    _currentStep: number,
+    _totalSteps: number
+  ): string {
+    // Calculate completion metadata
+    const metadata = this.completionTracker.calculateCompletionMetadata(session, plan);
+    const percentage = Math.round(metadata.overallProgress * 100);
+
+    // Create progress bar
+    const barWidth = 30;
+    const filled = Math.round(metadata.overallProgress * barWidth);
+    const empty = barWidth - filled;
+    const progressBar = '█'.repeat(filled) + '░'.repeat(empty);
+
+    // Determine color based on progress
+    let barColor = chalk.green;
+    if (metadata.overallProgress < 0.3) {
+      barColor = chalk.red;
+    } else if (metadata.overallProgress < 0.5) {
+      barColor = chalk.yellow;
+    } else if (metadata.overallProgress < 0.8) {
+      barColor = chalk.cyan;
+    }
+
+    // Format the progress line
+    const progressText = ` Progress: ${barColor(progressBar)} ${percentage}% (${metadata.completedSteps}/${metadata.totalPlannedSteps} steps) `;
+
+    // Add warning indicator if needed
+    let warningIndicator = '';
+    if (metadata.criticalGapsIdentified.length > 0) {
+      warningIndicator = chalk.red(' ⚠️');
+    } else if (!metadata.minimumThresholdMet) {
+      warningIndicator = chalk.yellow(' ⚡');
+    }
+
+    // Center the progress text
+    const totalLength = progressText.length + warningIndicator.length;
+    const padding = Math.max(0, this.maxLineLength - totalLength - 2);
+    const paddingLeft = Math.floor(padding / 2);
+    const paddingRight = padding - paddingLeft;
+
+    return ' '.repeat(paddingLeft) + progressText + warningIndicator + ' '.repeat(paddingRight);
+  }
+
+  /**
+   * Format inline progress indicator (compact)
+   */
+  formatInlineProgress(progress: number): string {
+    const percentage = Math.round(progress * 100);
+    let color = chalk.green;
+
+    if (progress < 0.3) {
+      color = chalk.red;
+    } else if (progress < 0.5) {
+      color = chalk.yellow;
+    } else if (progress < 0.8) {
+      color = chalk.cyan;
+    }
+
+    return color(`[${percentage}%]`);
   }
 }

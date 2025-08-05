@@ -327,7 +327,7 @@ describe('Memory-Suggestive Outputs', () => {
         totalSteps: 8,
         output: 'Eliminating unnecessary features',
         scamperAction: 'eliminate',
-        nextStepNeeded: false,
+        nextStepNeeded: true, // Continue to avoid early termination
       });
 
       expect(result.patternObserved).toBe(

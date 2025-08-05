@@ -18,6 +18,8 @@ import { ExecutionResponseBuilder } from './execution/ExecutionResponseBuilder.j
 import { EscalationPromptGenerator } from '../ergodicity/escalationPrompts.js';
 // Import parallel execution components
 import { ParallelExecutionContext } from './execution/ParallelExecutionContext.js';
+// Import completion tracking components
+import { CompletionGatekeeper } from './execution/CompletionGatekeeper.js';
 export async function executeThinkingStep(input, sessionManager, techniqueRegistry, visualFormatter, metricsCollector, complexityAnalyzer, ergodicityManager) {
     const responseBuilder = new ResponseBuilder();
     const errorContextBuilder = new ErrorContextBuilder();
@@ -29,6 +31,8 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
     const executionResponseBuilder = new ExecutionResponseBuilder(complexityAnalyzer, new EscalationPromptGenerator(), techniqueRegistry);
     // Get parallel execution context (singleton)
     const parallelContext = ParallelExecutionContext.getInstance(sessionManager, visualFormatter);
+    // Initialize completion gatekeeper
+    const completionGatekeeper = new CompletionGatekeeper();
     try {
         // Validate plan if provided
         const planValidation = executionValidator.validatePlan(input);
@@ -171,7 +175,7 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
         // Get mode indicator
         const modeIndicator = visualFormatter.getModeIndicator(input.technique, techniqueLocalStep);
         // Display visual output
-        const visualOutput = visualFormatter.formatOutput(input.technique, input.problem, techniqueLocalStep, input.totalSteps, stepInfo, modeIndicator, input);
+        const visualOutput = visualFormatter.formatOutput(input.technique, input.problem, techniqueLocalStep, input.totalSteps, stepInfo, modeIndicator, input, session, plan);
         if (visualOutput && process.env.DISABLE_THOUGHT_LOGGING !== 'true') {
             // Only log if thought logging is enabled
             // IMPORTANT: Use stderr for visual output - stdout is reserved for JSON-RPC
@@ -253,6 +257,12 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
         }
         else {
             response = executionResponseBuilder.buildResponse(input, session, sessionId, handler, techniqueLocalStep, techniqueIndex, plan, currentFlexibility, optionGenerationResult);
+        }
+        // Check completion gatekeeper before allowing termination
+        const completionCheck = completionGatekeeper.canProceedToNextStep(input, session, plan);
+        if (!completionCheck.allowed && completionCheck.response) {
+            // If gatekeeper blocks termination, return the blocking response
+            return completionCheck.response;
         }
         // Handle session completion
         if (!input.nextStepNeeded) {

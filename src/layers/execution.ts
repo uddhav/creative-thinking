@@ -38,6 +38,9 @@ import { EscalationPromptGenerator } from '../ergodicity/escalationPrompts.js';
 // Import parallel execution components
 import { ParallelExecutionContext } from './execution/ParallelExecutionContext.js';
 
+// Import completion tracking components
+import { CompletionGatekeeper } from './execution/CompletionGatekeeper.js';
+
 export async function executeThinkingStep(
   input: ExecuteThinkingStepInput,
   sessionManager: SessionManager,
@@ -67,6 +70,9 @@ export async function executeThinkingStep(
 
   // Get parallel execution context (singleton)
   const parallelContext = ParallelExecutionContext.getInstance(sessionManager, visualFormatter);
+
+  // Initialize completion gatekeeper
+  const completionGatekeeper = new CompletionGatekeeper();
 
   try {
     // Validate plan if provided
@@ -266,7 +272,9 @@ export async function executeThinkingStep(
       input.totalSteps,
       stepInfo,
       modeIndicator,
-      input
+      input,
+      session,
+      plan
     );
 
     if (visualOutput && process.env.DISABLE_THOUGHT_LOGGING !== 'true') {
@@ -405,6 +413,13 @@ export async function executeThinkingStep(
         currentFlexibility,
         optionGenerationResult
       );
+    }
+
+    // Check completion gatekeeper before allowing termination
+    const completionCheck = completionGatekeeper.canProceedToNextStep(input, session, plan);
+    if (!completionCheck.allowed && completionCheck.response) {
+      // If gatekeeper blocks termination, return the blocking response
+      return completionCheck.response;
     }
 
     // Handle session completion
