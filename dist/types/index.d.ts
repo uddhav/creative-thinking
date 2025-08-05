@@ -401,4 +401,5 @@ export interface Tool {
     };
 }
 export * from './handoff.js';
+export * from './parallel-config.js';
 //# sourceMappingURL=index.d.ts.map

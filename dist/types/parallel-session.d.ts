@@ -48,7 +48,7 @@ export interface ParallelGroupMetadata {
 export interface SharedContext {
     groupId: string;
     sharedInsights: string[];
-    sharedThemes: Map<string, number>;
+    sharedThemes: Record<string, number>;
     sharedMetrics: Record<string, number>;
     lastUpdate: number;
     updateCount: number;

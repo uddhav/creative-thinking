@@ -35,6 +35,10 @@ export class ParallelGroupManager {
     convergenceOptions?: ConvergenceOptions,
     sessions: Map<string, SessionData> = new Map()
   ): { groupId: string; sessionIds: string[] } {
+    if (!plans || plans.length === 0) {
+      throw new Error('Cannot create group with no plans');
+    }
+
     const groupId = `group_${randomUUID()}`;
     const sessionIds: string[] = [];
 

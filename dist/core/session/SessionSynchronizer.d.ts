@@ -4,6 +4,7 @@
  */
 import { EventEmitter } from 'events';
 import type { SharedContext, ContextUpdate, ContextUpdateData, Subscription } from '../../types/parallel-session.js';
+import type { SessionSynchronizerConfig } from '../../types/parallel-config.js';
 /**
  * Update strategy for shared context
  */
@@ -16,7 +17,11 @@ export declare class SessionSynchronizer extends EventEmitter {
     private updateQueues;
     private batchTimers;
     private updateStrategies;
-    private readonly defaultBatchConfig;
+    private activeGroups;
+    private updateLocks;
+    private lockQueues;
+    private config;
+    constructor(config?: Partial<SessionSynchronizerConfig>);
     /**
      * Initialize shared context for a group
      */
@@ -24,7 +29,7 @@ export declare class SessionSynchronizer extends EventEmitter {
     /**
      * Update shared context for a group
      */
-    updateSharedContext(sessionId: string, groupId: string, update: ContextUpdateData): void;
+    updateSharedContext(sessionId: string, groupId: string, update: ContextUpdateData): Promise<void>;
     /**
      * Get shared context for a group
      */
@@ -81,7 +86,7 @@ export declare class SessionSynchronizer extends EventEmitter {
     /**
      * Clear context for a group
      */
-    clearContext(groupId: string): void;
+    clearContext(groupId: string): Promise<void>;
     /**
      * Get statistics about synchronization
      */
@@ -93,9 +98,59 @@ export declare class SessionSynchronizer extends EventEmitter {
         strategyDistribution: Record<UpdateStrategy, number>;
     };
     /**
+     * Clean up resources for inactive groups
+     */
+    cleanupInactiveGroups(activeGroupIds: Set<string>): Promise<void>;
+    /**
      * Clear all contexts
      */
-    clear(): void;
+    clear(): Promise<void>;
+    /**
+     * Execute a function with a lock on a specific group
+     *
+     * Implements a promise-based locking mechanism to ensure atomic operations
+     * for concurrent updates. Each group has its own lock queue, allowing
+     * parallel operations on different groups while serializing operations
+     * within a group.
+     *
+     * @param groupId - The group ID to lock
+     * @param fn - The function to execute atomically
+     * @returns Promise resolving to the function's return value
+     *
+     * @example
+     * // Ensures theme updates are atomic
+     * await this.withLock(groupId, () => {
+     *   const current = context.sharedThemes[theme] || 0;
+     *   context.sharedThemes[theme] = current + delta;
+     * });
+     *
+     * Algorithm:
+     * 1. Get current lock promise for the group (or create if none)
+     * 2. Create new lock promise that will be resolved when operation completes
+     * 3. Chain operation after current lock resolves
+     * 4. Update lock map to new promise for subsequent operations
+     * 5. Clean up lock if it's the last operation
+     *
+     * Thread-safety:
+     * - JavaScript's single-threaded nature ensures atomicity at promise level
+     * - Operations are queued and executed sequentially per group
+     * - Lock cleanup prevents memory leaks from completed operations
+     */
+    private withLock;
+    /**
+     * Perform atomic theme weight update
+     * Ensures thread-safe increment operations
+     */
+    atomicThemeUpdate(groupId: string, theme: string, weightDelta: number): Promise<void>;
+    /**
+     * Perform atomic metric update
+     * Ensures thread-safe metric operations
+     */
+    atomicMetricUpdate(groupId: string, metricName: string, value: number): Promise<void>;
+    /**
+     * Perform atomic increment of a metric
+     */
+    atomicMetricIncrement(groupId: string, metricName: string, delta?: number): Promise<void>;
 }
 export {};
 //# sourceMappingURL=SessionSynchronizer.d.ts.map

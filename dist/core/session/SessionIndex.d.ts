@@ -64,13 +64,49 @@ export declare class SessionIndex {
      */
     getSessionsByStatus(status: IndexEntry['status']): string[];
     /**
-     * Check for circular dependencies
-     * @returns Array of session IDs involved in cycles, empty if no cycles
+     * Check for circular dependencies using Depth-First Search (DFS)
+     *
+     * Detects all cycles in the dependency graph using a modified DFS algorithm
+     * with recursion stack tracking. This is critical for preventing deadlocks
+     * in parallel execution.
+     *
+     * @returns Array of cycles, where each cycle is an array of session IDs
+     *
+     * @example
+     * // Given dependencies: A -> B -> C -> A
+     * const cycles = index.detectCircularDependencies();
+     * // Returns: [['A', 'B', 'C']]
+     *
+     * Algorithm:
+     * - Uses DFS with three states: unvisited, visiting (in recursion stack), visited
+     * - Time complexity: O(V + E) where V is sessions, E is dependencies
+     * - Space complexity: O(V) for visited sets and recursion stack
      */
     detectCircularDependencies(): string[][];
     /**
-     * Get topological order of sessions (respecting dependencies)
-     * @returns Array of session IDs in execution order, or null if cycles exist
+     * Get topologically sorted order of sessions using Kahn's algorithm
+     *
+     * Performs a topological sort on the dependency graph to determine a valid
+     * execution order that respects all dependencies. This is essential for
+     * parallel execution planning.
+     *
+     * @param sessionIds - List of session IDs to sort
+     * @returns Array of session IDs in valid execution order, or null if circular dependency exists
+     *
+     * @example
+     * // With dependencies: A -> B -> C, D -> C
+     * const order = index.getTopologicalOrder(['A', 'B', 'C', 'D']);
+     * // Returns: ['A', 'D', 'B', 'C'] or ['D', 'A', 'B', 'C']
+     *
+     * Algorithm (Kahn's algorithm):
+     * 1. Calculate in-degree (number of dependencies) for each session
+     * 2. Start with sessions that have no dependencies (in-degree = 0)
+     * 3. Process each session, reducing in-degree of dependent sessions
+     * 4. Add sessions to result as their in-degree reaches 0
+     *
+     * Complexity:
+     * - Time: O(V + E) where V is number of sessions, E is number of dependencies
+     * - Space: O(V) for in-degree map and queue
      */
     getTopologicalOrder(sessionIds: string[]): string[] | null;
     /**

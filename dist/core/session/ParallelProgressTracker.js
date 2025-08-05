@@ -56,20 +56,17 @@ export class ParallelProgressTracker extends EventEmitter {
             return;
         const sessionProgress = groupProgress.sessionProgress.get(sessionId);
         if (sessionProgress) {
-            // Update session progress
+            // Update session progress (cap completedSteps at totalSteps)
             const previousCompleted = sessionProgress.completedSteps;
-            sessionProgress.completedSteps = completedSteps;
+            sessionProgress.completedSteps = Math.min(completedSteps, totalSteps);
             sessionProgress.totalSteps = totalSteps;
             // Update status based on progress
-            if (completedSteps === 0 && sessionProgress.status === 'pending') {
-                sessionProgress.status = 'in_progress';
-                sessionProgress.startTime = Date.now();
-            }
-            else if (completedSteps >= totalSteps) {
+            if (completedSteps >= totalSteps) {
                 sessionProgress.status = 'completed';
             }
             else if (sessionProgress.status === 'pending') {
                 sessionProgress.status = 'in_progress';
+                sessionProgress.startTime = Date.now();
             }
             // Update estimated completion for session
             if (sessionProgress.status === 'in_progress' && sessionProgress.startTime) {
@@ -181,12 +178,15 @@ export class ParallelProgressTracker extends EventEmitter {
         // Calculate estimate variance if in progress
         let estimatedVsActual;
         if (progress.status === 'in_progress' && progress.estimatedCompletion) {
-            const currentEstimate = this.estimateTimeRemaining(progress) + Date.now();
-            estimatedVsActual = {
-                originalEstimate: progress.estimatedCompletion,
-                currentEstimate,
-                variance: ((currentEstimate - progress.estimatedCompletion) / progress.estimatedCompletion) * 100,
-            };
+            const timeRemaining = this.estimateTimeRemaining(progress);
+            if (timeRemaining !== undefined) {
+                const currentEstimate = timeRemaining + Date.now();
+                estimatedVsActual = {
+                    originalEstimate: progress.estimatedCompletion,
+                    currentEstimate,
+                    variance: ((currentEstimate - progress.estimatedCompletion) / progress.estimatedCompletion) * 100,
+                };
+            }
         }
         return {
             overall,
@@ -280,9 +280,45 @@ export class ParallelProgressTracker extends EventEmitter {
     estimateTimeRemaining(progress) {
         if (progress.status === 'completed')
             return 0;
-        const now = Date.now();
-        const estimated = progress.estimatedCompletion || now;
-        return Math.max(0, estimated - now);
+        // Calculate based on actual progress rate
+        const activeSessions = Array.from(progress.sessionProgress.values()).filter(s => s.status === 'in_progress' && s.startTime && s.completedSteps > 0);
+        if (activeSessions.length === 0) {
+            // No active sessions with progress - can't estimate
+            return undefined;
+        }
+        // Calculate weighted average completion time
+        let totalRemainingTime = 0;
+        let sessionsWithEstimate = 0;
+        for (const session of activeSessions) {
+            if (session.startTime && session.completedSteps > 0) {
+                const elapsed = Date.now() - session.startTime;
+                const ratePerStep = elapsed / session.completedSteps;
+                const remainingSteps = session.totalSteps - session.completedSteps;
+                const sessionRemainingTime = remainingSteps * ratePerStep;
+                totalRemainingTime = Math.max(totalRemainingTime, sessionRemainingTime);
+                sessionsWithEstimate++;
+            }
+        }
+        // Also consider completed sessions for overall rate
+        const completedSessions = Array.from(progress.sessionProgress.values()).filter(s => s.status === 'completed');
+        if (sessionsWithEstimate === 0 && completedSessions.length === 0) {
+            return undefined;
+        }
+        // For completed sessions, calculate historical rate
+        const remainingSteps = progress.totalSteps - progress.completedSteps;
+        if (remainingSteps === 0)
+            return 0;
+        // If we have in-progress sessions, use their rate
+        if (totalRemainingTime > 0) {
+            return Math.round(totalRemainingTime);
+        }
+        // Otherwise, use the overall progress rate
+        const elapsed = Date.now() - progress.startTime;
+        if (progress.completedSteps > 0) {
+            const overallRate = elapsed / progress.completedSteps;
+            return Math.round(remainingSteps * overallRate);
+        }
+        return undefined;
     }
     /**
      * Track progress history for visualization

@@ -17,6 +17,9 @@ export class ParallelGroupManager {
      * Create a new parallel session group
      */
     createParallelSessionGroup(problem, plans, convergenceOptions, sessions = new Map()) {
+        if (!plans || plans.length === 0) {
+            throw new Error('Cannot create group with no plans');
+        }
         const groupId = `group_${randomUUID()}`;
         const sessionIds = [];
         // Create sessions for each plan

@@ -536,3 +536,5 @@ export interface Tool {
 
 // Export handoff types
 export * from './handoff.js';
+// Export parallel config types
+export * from './parallel-config.js';

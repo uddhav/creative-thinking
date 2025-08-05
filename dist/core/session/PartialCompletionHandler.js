@@ -2,10 +2,15 @@
  * PartialCompletionHandler - Handles scenarios where some parallel sessions fail
  * Provides strategies for continuing with partial results or retrying critical sessions
  */
+import { DEFAULT_PARTIAL_COMPLETION_CONFIG, mergeConfig } from '../../types/parallel-config.js';
 /**
  * Handles partial completion scenarios in parallel execution
  */
 export class PartialCompletionHandler {
+    config;
+    constructor(config) {
+        this.config = mergeConfig(config, DEFAULT_PARTIAL_COMPLETION_CONFIG);
+    }
     /**
      * Handle partial completion of a parallel group
      */
@@ -61,8 +66,8 @@ export class PartialCompletionHandler {
     isCriticalSession(sessionId, groupSessions, sessionManager) {
         // Get all sessions that depend on this one
         const dependents = this.getDependentSessions(sessionId, groupSessions, sessionManager);
-        // Critical if more than 30% of group depends on it
-        return dependents.length > groupSessions.length * 0.3;
+        // Critical if more than configured threshold of group depends on it
+        return dependents.length > groupSessions.length * this.config.criticalSessionThreshold;
     }
     /**
      * Get sessions that depend on a given session
@@ -84,7 +89,7 @@ export class PartialCompletionHandler {
      */
     determineStrategy(completionRate, categorized, convergenceOptions) {
         // If too few sessions completed, abort
-        if (completionRate < 0.3) {
+        if (completionRate < this.config.minimumCompletionRate) {
             return 'abort_group';
         }
         // If critical sessions failed, retry them
@@ -94,7 +99,7 @@ export class PartialCompletionHandler {
         }
         // If we have enough for convergence, proceed
         const minRequired = convergenceOptions?.convergencePlan?.metadata?.minSessionsRequired ||
-            Math.ceil(categorized.completed.length * 0.5);
+            Math.ceil(categorized.completed.length * this.config.minimumCompletionRate);
         if (categorized.completed.length >= minRequired) {
             return 'proceed_with_available';
         }

@@ -27,6 +27,11 @@ export declare class SessionManager {
     private config;
     constructor();
     /**
+     * Lazy initialization for parallel execution components
+     */
+    private getSessionIndex;
+    private getParallelGroupManager;
+    /**
      * Update session activity time
      */
     touchSession(sessionId: string): void;

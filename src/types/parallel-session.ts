@@ -53,7 +53,7 @@ export interface ParallelGroupMetadata {
 export interface SharedContext {
   groupId: string;
   sharedInsights: string[];
-  sharedThemes: Map<string, number>; // theme -> frequency
+  sharedThemes: Record<string, number>; // theme -> frequency (changed from Map for JSON serialization)
   sharedMetrics: Record<string, number>;
   lastUpdate: number;
   updateCount: number;

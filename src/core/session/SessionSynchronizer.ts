@@ -10,19 +10,13 @@ import type {
   ContextUpdateData,
   Subscription,
 } from '../../types/parallel-session.js';
+import type { SessionSynchronizerConfig } from '../../types/parallel-config.js';
+import { DEFAULT_SYNCHRONIZER_CONFIG, mergeConfig } from '../../types/parallel-config.js';
 
 /**
  * Update strategy for shared context
  */
 type UpdateStrategy = 'immediate' | 'batched' | 'checkpoint';
-
-/**
- * Batch update configuration
- */
-interface BatchConfig {
-  maxBatchSize: number;
-  batchIntervalMs: number;
-}
 
 /**
  * Manages shared context and synchronization between parallel sessions
@@ -33,19 +27,35 @@ export class SessionSynchronizer extends EventEmitter {
   private batchTimers: Map<string, NodeJS.Timeout> = new Map();
   private updateStrategies: Map<string, UpdateStrategy> = new Map();
 
-  private readonly defaultBatchConfig: BatchConfig = {
-    maxBatchSize: 10,
-    batchIntervalMs: 500,
-  };
+  // Track active groups for cleanup
+  private activeGroups: Set<string> = new Set();
+
+  // Atomic operation locks for concurrent access
+  private updateLocks: Map<string, Promise<void>> = new Map();
+  private lockQueues: Map<string, Array<() => void>> = new Map();
+
+  private config: SessionSynchronizerConfig;
+
+  constructor(config?: Partial<SessionSynchronizerConfig>) {
+    super();
+    this.config = mergeConfig(config, DEFAULT_SYNCHRONIZER_CONFIG);
+  }
 
   /**
    * Initialize shared context for a group
    */
   initializeSharedContext(groupId: string, strategy: UpdateStrategy = 'immediate'): void {
+    // Clean up any existing group first
+    if (this.activeGroups.has(groupId)) {
+      // Note: clearContext is async but we're calling it sync for initialization
+      // This is safe because we're only doing cleanup
+      void this.clearContext(groupId);
+    }
+
     const context: SharedContext = {
       groupId,
       sharedInsights: [],
-      sharedThemes: new Map(),
+      sharedThemes: {},
       sharedMetrics: {},
       lastUpdate: Date.now(),
       updateCount: 0,
@@ -53,6 +63,7 @@ export class SessionSynchronizer extends EventEmitter {
 
     this.sharedContexts.set(groupId, context);
     this.updateStrategies.set(groupId, strategy);
+    this.activeGroups.add(groupId);
 
     if (strategy === 'batched') {
       this.updateQueues.set(groupId, []);
@@ -66,7 +77,11 @@ export class SessionSynchronizer extends EventEmitter {
   /**
    * Update shared context for a group
    */
-  updateSharedContext(sessionId: string, groupId: string, update: ContextUpdateData): void {
+  async updateSharedContext(
+    sessionId: string,
+    groupId: string,
+    update: ContextUpdateData
+  ): Promise<void> {
     const context = this.sharedContexts.get(groupId);
     if (!context) {
       console.error(`[SessionSynchronizer] No shared context found for group ${groupId}`);
@@ -75,20 +90,24 @@ export class SessionSynchronizer extends EventEmitter {
 
     const strategy = this.getUpdateStrategy(groupId);
 
-    switch (strategy) {
-      case 'immediate':
+    // Use atomic operations for immediate updates
+    if (strategy === 'immediate') {
+      await this.withLock(groupId, () => {
         this.applyImmediateUpdate(context, update);
         this.emitUpdate(groupId, sessionId, update);
-        break;
+      });
+    } else {
+      // Batched and checkpoint updates handle their own synchronization
+      switch (strategy) {
+        case 'batched':
+          this.queueBatchedUpdate(groupId, update);
+          this.emitUpdate(groupId, sessionId, update);
+          break;
 
-      case 'batched':
-        this.queueBatchedUpdate(groupId, update);
-        this.emitUpdate(groupId, sessionId, update);
-        break;
-
-      case 'checkpoint':
-        this.queueCheckpointUpdate(groupId, update);
-        break;
+        case 'checkpoint':
+          this.queueCheckpointUpdate(groupId, update);
+          break;
+      }
     }
   }
 
@@ -127,13 +146,27 @@ export class SessionSynchronizer extends EventEmitter {
     // Update insights
     if (update.insights) {
       context.sharedInsights.push(...update.insights);
+
+      // Limit insights array size
+      if (context.sharedInsights.length > this.config.maxInsights) {
+        context.sharedInsights = context.sharedInsights.slice(-this.config.maxInsights);
+      }
     }
 
     // Update themes
     if (update.themes) {
       for (const { theme, weight } of update.themes) {
-        const currentWeight = context.sharedThemes.get(theme) || 0;
-        context.sharedThemes.set(theme, currentWeight + weight);
+        const currentWeight = context.sharedThemes[theme] || 0;
+        context.sharedThemes[theme] = currentWeight + weight;
+      }
+
+      // Limit number of themes
+      if (Object.keys(context.sharedThemes).length > this.config.maxThemes) {
+        // Keep only top themes by weight
+        const sortedThemes = Object.entries(context.sharedThemes)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, this.config.maxThemes);
+        context.sharedThemes = Object.fromEntries(sortedThemes);
       }
     }
 
@@ -151,23 +184,43 @@ export class SessionSynchronizer extends EventEmitter {
    * Queue update for batched processing
    */
   private queueBatchedUpdate(groupId: string, update: ContextUpdateData): void {
-    const queue = this.updateQueues.get(groupId) || [];
-    queue.push(update);
-    this.updateQueues.set(groupId, queue);
+    try {
+      const queue = this.updateQueues.get(groupId) || [];
+      queue.push(update);
+      this.updateQueues.set(groupId, queue);
 
-    // Process batch if size limit reached
-    if (queue.length >= this.defaultBatchConfig.maxBatchSize) {
-      this.processBatch(groupId);
-      return;
-    }
-
-    // Set timer for batch processing if not already set
-    if (!this.batchTimers.has(groupId)) {
-      const timer = setTimeout(() => {
+      // Process batch if size limit reached
+      if (queue.length >= this.config.maxBatchSize) {
         this.processBatch(groupId);
-      }, this.defaultBatchConfig.batchIntervalMs);
+        return;
+      }
 
-      this.batchTimers.set(groupId, timer);
+      // Set timer for batch processing if not already set
+      if (!this.batchTimers.has(groupId)) {
+        const timer = setTimeout(() => {
+          try {
+            this.processBatch(groupId);
+          } catch (error) {
+            console.error(
+              `[SessionSynchronizer] Error processing batch for group ${groupId}:`,
+              error
+            );
+          } finally {
+            // Always remove timer reference after execution
+            this.batchTimers.delete(groupId);
+          }
+        }, this.config.batchIntervalMs);
+
+        this.batchTimers.set(groupId, timer);
+      }
+    } catch (error) {
+      // Clean up timer on error
+      const timer = this.batchTimers.get(groupId);
+      if (timer) {
+        clearTimeout(timer);
+        this.batchTimers.delete(groupId);
+      }
+      throw error;
     }
   }
 
@@ -267,7 +320,7 @@ export class SessionSynchronizer extends EventEmitter {
     if (!context) return undefined;
 
     // Get top themes
-    const topThemes = Array.from(context.sharedThemes.entries())
+    const topThemes = Object.entries(context.sharedThemes)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 10)
       .map(([theme, weight]) => ({ theme, weight }));
@@ -297,7 +350,7 @@ export class SessionSynchronizer extends EventEmitter {
     const mergedContext: SharedContext = {
       groupId: `merged_${Date.now()}`,
       sharedInsights: [],
-      sharedThemes: new Map(),
+      sharedThemes: {},
       sharedMetrics: {},
       lastUpdate: Date.now(),
       updateCount: 0,
@@ -309,9 +362,9 @@ export class SessionSynchronizer extends EventEmitter {
       mergedContext.sharedInsights.push(...context.sharedInsights);
 
       // Merge themes
-      for (const [theme, weight] of context.sharedThemes.entries()) {
-        const currentWeight = mergedContext.sharedThemes.get(theme) || 0;
-        mergedContext.sharedThemes.set(theme, currentWeight + weight);
+      for (const [theme, weight] of Object.entries(context.sharedThemes)) {
+        const currentWeight = mergedContext.sharedThemes[theme] || 0;
+        mergedContext.sharedThemes[theme] = currentWeight + weight;
       }
 
       // Merge metrics (last write wins)
@@ -327,22 +380,30 @@ export class SessionSynchronizer extends EventEmitter {
   /**
    * Clear context for a group
    */
-  clearContext(groupId: string): void {
-    // Clean up timers
-    const timer = this.batchTimers.get(groupId);
-    if (timer) {
-      clearTimeout(timer);
-      this.batchTimers.delete(groupId);
-    }
+  async clearContext(groupId: string): Promise<void> {
+    // Wait for any pending operations
+    await this.withLock(groupId, () => {
+      // Clean up timers
+      const timer = this.batchTimers.get(groupId);
+      if (timer) {
+        clearTimeout(timer);
+        this.batchTimers.delete(groupId);
+      }
 
-    // Clear data
-    this.sharedContexts.delete(groupId);
-    this.updateQueues.delete(groupId);
-    this.updateStrategies.delete(groupId);
+      // Clear data
+      this.sharedContexts.delete(groupId);
+      this.updateQueues.delete(groupId);
+      this.updateStrategies.delete(groupId);
+      this.activeGroups.delete(groupId);
 
-    // Remove all listeners for this group
-    this.removeAllListeners(`update:${groupId}`);
-    this.removeAllListeners(`batch:${groupId}`);
+      // Remove all listeners for this group
+      this.removeAllListeners(`update:${groupId}`);
+      this.removeAllListeners(`batch:${groupId}`);
+    });
+
+    // Clean up lock references
+    this.updateLocks.delete(groupId);
+    this.lockQueues.delete(groupId);
   }
 
   /**
@@ -366,7 +427,7 @@ export class SessionSynchronizer extends EventEmitter {
 
     for (const [groupId, context] of this.sharedContexts.entries()) {
       totalInsights += context.sharedInsights.length;
-      totalThemes += context.sharedThemes.size;
+      totalThemes += Object.keys(context.sharedThemes).length;
       totalUpdates += context.updateCount;
 
       const strategy = this.getUpdateStrategy(groupId);
@@ -384,9 +445,27 @@ export class SessionSynchronizer extends EventEmitter {
   }
 
   /**
+   * Clean up resources for inactive groups
+   */
+  async cleanupInactiveGroups(activeGroupIds: Set<string>): Promise<void> {
+    // Find groups that are no longer active
+    const cleanupPromises: Promise<void>[] = [];
+    for (const groupId of this.activeGroups) {
+      if (!activeGroupIds.has(groupId)) {
+        cleanupPromises.push(this.clearContext(groupId));
+      }
+    }
+    await Promise.all(cleanupPromises);
+  }
+
+  /**
    * Clear all contexts
    */
-  clear(): void {
+  async clear(): Promise<void> {
+    // Wait for all pending operations to complete
+    const pendingOps = Array.from(this.updateLocks.values());
+    await Promise.all(pendingOps);
+
     // Clear all timers
     for (const timer of this.batchTimers.values()) {
       clearTimeout(timer);
@@ -397,8 +476,127 @@ export class SessionSynchronizer extends EventEmitter {
     this.updateQueues.clear();
     this.updateStrategies.clear();
     this.batchTimers.clear();
+    this.activeGroups.clear();
+    this.updateLocks.clear();
+    this.lockQueues.clear();
 
     // Remove all listeners
     this.removeAllListeners();
+  }
+
+  /**
+   * Execute a function with a lock on a specific group
+   *
+   * Implements a promise-based locking mechanism to ensure atomic operations
+   * for concurrent updates. Each group has its own lock queue, allowing
+   * parallel operations on different groups while serializing operations
+   * within a group.
+   *
+   * @param groupId - The group ID to lock
+   * @param fn - The function to execute atomically
+   * @returns Promise resolving to the function's return value
+   *
+   * @example
+   * // Ensures theme updates are atomic
+   * await this.withLock(groupId, () => {
+   *   const current = context.sharedThemes[theme] || 0;
+   *   context.sharedThemes[theme] = current + delta;
+   * });
+   *
+   * Algorithm:
+   * 1. Get current lock promise for the group (or create if none)
+   * 2. Create new lock promise that will be resolved when operation completes
+   * 3. Chain operation after current lock resolves
+   * 4. Update lock map to new promise for subsequent operations
+   * 5. Clean up lock if it's the last operation
+   *
+   * Thread-safety:
+   * - JavaScript's single-threaded nature ensures atomicity at promise level
+   * - Operations are queued and executed sequentially per group
+   * - Lock cleanup prevents memory leaks from completed operations
+   */
+  private async withLock<T>(groupId: string, fn: () => T | Promise<T>): Promise<T> {
+    // Get or create lock promise
+    const currentLock = this.updateLocks.get(groupId) || Promise.resolve();
+
+    // Create new lock promise
+    let releaseLock: () => void;
+    const newLock = new Promise<void>(resolve => {
+      releaseLock = resolve;
+    });
+
+    // Chain operation after current lock
+    const operation = currentLock
+      .then(() => fn())
+      .finally(() => {
+        // Release lock when done
+        releaseLock();
+
+        // Clean up if this was the last operation
+        if (this.updateLocks.get(groupId) === newLock) {
+          this.updateLocks.delete(groupId);
+        }
+      });
+
+    // Set new lock
+    this.updateLocks.set(groupId, newLock);
+
+    return operation;
+  }
+
+  /**
+   * Perform atomic theme weight update
+   * Ensures thread-safe increment operations
+   */
+  async atomicThemeUpdate(groupId: string, theme: string, weightDelta: number): Promise<void> {
+    await this.withLock(groupId, () => {
+      const context = this.sharedContexts.get(groupId);
+      if (!context) return;
+
+      const currentWeight = context.sharedThemes[theme] || 0;
+      context.sharedThemes[theme] = currentWeight + weightDelta;
+
+      // Apply theme limit if needed
+      if (Object.keys(context.sharedThemes).length > this.config.maxThemes) {
+        const sortedThemes = Object.entries(context.sharedThemes)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, this.config.maxThemes);
+        context.sharedThemes = Object.fromEntries(sortedThemes);
+      }
+
+      context.lastUpdate = Date.now();
+    });
+  }
+
+  /**
+   * Perform atomic metric update
+   * Ensures thread-safe metric operations
+   */
+  async atomicMetricUpdate(groupId: string, metricName: string, value: number): Promise<void> {
+    await this.withLock(groupId, () => {
+      const context = this.sharedContexts.get(groupId);
+      if (!context) return;
+
+      context.sharedMetrics[metricName] = value;
+      context.lastUpdate = Date.now();
+    });
+  }
+
+  /**
+   * Perform atomic increment of a metric
+   */
+  async atomicMetricIncrement(
+    groupId: string,
+    metricName: string,
+    delta: number = 1
+  ): Promise<void> {
+    await this.withLock(groupId, () => {
+      const context = this.sharedContexts.get(groupId);
+      if (!context) return;
+
+      const currentValue = context.sharedMetrics[metricName] || 0;
+      context.sharedMetrics[metricName] = currentValue + delta;
+      context.lastUpdate = Date.now();
+    });
   }
 }

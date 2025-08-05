@@ -45,9 +45,9 @@ export class SessionManager {
   private sessionMetrics: SessionMetrics;
   private planManager: PlanManager;
 
-  // Parallel execution components
-  private sessionIndex: SessionIndex;
-  private parallelGroupManager: ParallelGroupManager;
+  // Parallel execution components (lazy initialized)
+  private sessionIndex: SessionIndex | null = null;
+  private parallelGroupManager: ParallelGroupManager | null = null;
 
   private config: SessionConfig = {
     maxSessions: parseInt(process.env.MAX_SESSIONS || '100', 10),
@@ -66,10 +66,10 @@ export class SessionManager {
       },
     });
 
-    // Initialize extracted components
+    // Initialize core components only
     this.planManager = new PlanManager();
-    this.sessionIndex = new SessionIndex();
-    this.parallelGroupManager = new ParallelGroupManager(this.sessionIndex);
+
+    // Parallel components will be initialized on first use (lazy initialization)
 
     this.sessionCleaner = new SessionCleaner(
       this.sessions,
@@ -87,6 +87,23 @@ export class SessionManager {
 
     this.sessionCleaner.startCleanup();
     void this.sessionPersistence.initialize();
+  }
+
+  /**
+   * Lazy initialization for parallel execution components
+   */
+  private getSessionIndex(): SessionIndex {
+    if (!this.sessionIndex) {
+      this.sessionIndex = new SessionIndex();
+    }
+    return this.sessionIndex;
+  }
+
+  private getParallelGroupManager(): ParallelGroupManager {
+    if (!this.parallelGroupManager) {
+      this.parallelGroupManager = new ParallelGroupManager(this.getSessionIndex());
+    }
+    return this.parallelGroupManager;
   }
 
   /**
@@ -336,7 +353,7 @@ export class SessionManager {
     plans: ParallelPlan[],
     convergenceOptions?: ConvergenceOptions
   ): string {
-    const { groupId, sessionIds } = this.parallelGroupManager.createParallelSessionGroup(
+    const { groupId, sessionIds } = this.getParallelGroupManager().createParallelSessionGroup(
       problem,
       plans,
       convergenceOptions,
@@ -354,7 +371,9 @@ export class SessionManager {
    * Get parallel results for a group
    */
   public async getParallelResults(groupId: string): Promise<ParallelExecutionResult[]> {
-    return Promise.resolve(this.parallelGroupManager.getParallelResults(groupId, this.sessions));
+    return Promise.resolve(
+      this.getParallelGroupManager().getParallelResults(groupId, this.sessions)
+    );
   }
 
   /**
@@ -368,7 +387,7 @@ export class SessionManager {
 
     // Handle parallel group completion
     if (session.parallelGroupId) {
-      this.parallelGroupManager.markSessionComplete(sessionId, this.sessions);
+      this.getParallelGroupManager().markSessionComplete(sessionId, this.sessions);
     } else {
       // Regular session completion
       session.endTime = Date.now();
@@ -384,35 +403,35 @@ export class SessionManager {
       return true; // No dependencies for non-parallel sessions
     }
 
-    return this.parallelGroupManager.canSessionStart(sessionId, session.parallelGroupId);
+    return this.getParallelGroupManager().canSessionStart(sessionId, session.parallelGroupId);
   }
 
   /**
    * Get parallel group information
    */
   public getParallelGroup(groupId: string): ParallelSessionGroup | undefined {
-    return this.parallelGroupManager.getGroup(groupId);
+    return this.getParallelGroupManager().getGroup(groupId);
   }
 
   /**
    * Get all active parallel groups
    */
   public getActiveParallelGroups(): ParallelSessionGroup[] {
-    return this.parallelGroupManager.getActiveGroups();
+    return this.getParallelGroupManager().getActiveGroups();
   }
 
   /**
    * Update parallel group status
    */
   public updateParallelGroupStatus(groupId: string, status: ParallelSessionGroup['status']): void {
-    this.parallelGroupManager.updateGroupStatus(groupId, status);
+    this.getParallelGroupManager().updateGroupStatus(groupId, status);
   }
 
   /**
    * Get sessions in a parallel group
    */
   public getSessionsInGroup(groupId: string): SessionData[] {
-    const sessionIds = this.sessionIndex.getSessionsInGroup(groupId);
+    const sessionIds = this.getSessionIndex().getSessionsInGroup(groupId);
     return sessionIds
       .map(id => this.sessions.get(id))
       .filter((session): session is SessionData => session !== undefined);
@@ -422,7 +441,7 @@ export class SessionManager {
    * Get sessions by technique
    */
   public getSessionsByTechnique(technique: SessionData['technique']): SessionData[] {
-    const sessionIds = this.sessionIndex.getSessionsByTechnique(technique);
+    const sessionIds = this.getSessionIndex().getSessionsByTechnique(technique);
     return sessionIds
       .map(id => this.sessions.get(id))
       .filter((session): session is SessionData => session !== undefined);
@@ -432,7 +451,7 @@ export class SessionManager {
    * Detect circular dependencies
    */
   public detectCircularDependencies(): string[][] {
-    return this.sessionIndex.detectCircularDependencies();
+    return this.getSessionIndex().detectCircularDependencies();
   }
 
   /**
@@ -443,14 +462,16 @@ export class SessionManager {
     circularDependencies: string[][];
     orphanedSessions: string[];
   } {
-    const circular = this.sessionIndex.detectCircularDependencies();
-    const orphaned = this.sessionIndex.getSessionsByStatus('pending').filter(id => {
-      const session = this.sessions.get(id);
-      return session && !session.parallelGroupId;
-    });
+    const circular = this.getSessionIndex().detectCircularDependencies();
+    const orphaned = this.getSessionIndex()
+      .getSessionsByStatus('pending')
+      .filter(id => {
+        const session = this.sessions.get(id);
+        return session && !session.parallelGroupId;
+      });
 
     return {
-      totalDependencies: this.sessionIndex.getStats().totalDependencies,
+      totalDependencies: this.getSessionIndex().getStats().totalDependencies,
       circularDependencies: circular,
       orphanedSessions: orphaned,
     };
@@ -460,6 +481,6 @@ export class SessionManager {
    * Clean up old parallel groups
    */
   public cleanupOldParallelGroups(): number {
-    return this.parallelGroupManager.cleanupOldGroups(this.config.sessionTTL);
+    return this.getParallelGroupManager().cleanupOldGroups(this.config.sessionTTL);
   }
 }

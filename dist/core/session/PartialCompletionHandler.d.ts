@@ -4,10 +4,13 @@
  */
 import type { ParallelSessionGroup, PartialCompletionResult } from '../../types/parallel-session.js';
 import type { SessionManager } from '../SessionManager.js';
+import type { PartialCompletionConfig } from '../../types/parallel-config.js';
 /**
  * Handles partial completion scenarios in parallel execution
  */
 export declare class PartialCompletionHandler {
+    private config;
+    constructor(config?: Partial<PartialCompletionConfig>);
     /**
      * Handle partial completion of a parallel group
      */
