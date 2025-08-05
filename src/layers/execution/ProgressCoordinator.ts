@@ -5,6 +5,7 @@
 
 import { EventEmitter } from 'events';
 import type { SessionManager } from '../../core/SessionManager.js';
+import type { ParallelErrorHandler } from './ParallelErrorHandler.js';
 
 /**
  * Progress update event data
@@ -74,6 +75,9 @@ export class ProgressCoordinator extends EventEmitter {
 
   // Mutex for concurrent access control
   private updateLocks: Map<string, Promise<void>> = new Map();
+
+  // Reference to error handler for cleanup coordination
+  private errorHandler?: ParallelErrorHandler;
 
   constructor(private sessionManager: SessionManager) {
     super();
@@ -376,6 +380,13 @@ export class ProgressCoordinator extends EventEmitter {
   }
 
   /**
+   * Set error handler reference for coordinated cleanup
+   */
+  setErrorHandler(errorHandler: ParallelErrorHandler): void {
+    this.errorHandler = errorHandler;
+  }
+
+  /**
    * Start the cleanup timer
    */
   private startCleanupTimer(): void {
@@ -403,6 +414,11 @@ export class ProgressCoordinator extends EventEmitter {
     for (const groupId of groupsToClean) {
       this.clearGroupProgress(groupId);
       this.groupCompletionTimes.delete(groupId);
+    }
+
+    // Also clean up stale retry attempts in error handler
+    if (this.errorHandler) {
+      this.errorHandler.cleanupStaleRetryAttempts();
     }
   }
 

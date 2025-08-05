@@ -44,11 +44,14 @@ export class ParallelErrorHandler {
   private responseBuilder: ResponseBuilder;
   private partialCompletionHandler: PartialCompletionHandler;
 
-  // Track retry attempts per session
-  private retryAttempts: Map<string, number> = new Map();
+  // Track retry attempts per session with timestamp
+  private retryAttempts: Map<string, { count: number; lastAttempt: number }> = new Map();
 
   // Maximum retry attempts
   private readonly MAX_RETRIES = 3;
+
+  // Retention period for retry attempts (30 minutes)
+  private readonly RETRY_RETENTION_PERIOD = 30 * 60 * 1000;
 
   constructor(private sessionManager: SessionManager) {
     this.errorHandler = new ErrorHandler();
@@ -222,7 +225,8 @@ export class ParallelErrorHandler {
     context: ParallelErrorContext
   ): RecoveryStrategy {
     // Get retry count for this session
-    const retryCount = this.retryAttempts.get(context.sessionId) || 0;
+    const retryInfo = this.retryAttempts.get(context.sessionId);
+    const retryCount = retryInfo?.count || 0;
 
     // If not recoverable or too many retries, fail
     if (!errorAnalysis.isRecoverable || retryCount >= this.MAX_RETRIES) {
@@ -287,8 +291,11 @@ export class ParallelErrorHandler {
   ): LateralThinkingResponse {
     switch (strategy.action) {
       case 'retry':
-        // Update retry count
-        this.retryAttempts.set(context.sessionId, strategy.retryCount || 1);
+        // Update retry count with timestamp
+        this.retryAttempts.set(context.sessionId, {
+          count: strategy.retryCount || 1,
+          lastAttempt: Date.now(),
+        });
 
         return {
           content: [
@@ -550,7 +557,7 @@ export class ParallelErrorHandler {
     averageRetryCount: number;
     maxRetryCount: number;
   } {
-    const retryArray = Array.from(this.retryAttempts.values());
+    const retryArray = Array.from(this.retryAttempts.values()).map(info => info.count);
     return {
       totalSessionsWithRetries: retryArray.length,
       averageRetryCount:
@@ -560,13 +567,16 @@ export class ParallelErrorHandler {
   }
 
   /**
-   * Cleanup old retry attempts (for sessions that no longer exist)
+   * Cleanup old retry attempts (for sessions that no longer exist or are too old)
    */
   cleanupStaleRetryAttempts(): void {
+    const now = Date.now();
+    const cutoffTime = now - this.RETRY_RETENTION_PERIOD;
     const sessionIdsToRemove: string[] = [];
 
-    for (const sessionId of this.retryAttempts.keys()) {
-      if (!this.sessionManager.getSession(sessionId)) {
+    for (const [sessionId, retryInfo] of this.retryAttempts.entries()) {
+      // Remove if session doesn't exist or if the retry attempt is too old
+      if (!this.sessionManager.getSession(sessionId) || retryInfo.lastAttempt < cutoffTime) {
         sessionIdsToRemove.push(sessionId);
       }
     }

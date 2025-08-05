@@ -57,6 +57,10 @@ export class ParallelExecutionContext {
     getProgressCoordinator() {
         if (!this.progressCoordinator) {
             this.progressCoordinator = new ProgressCoordinator(this.sessionManager);
+            // Wire up error handler reference for coordinated cleanup
+            if (this.parallelErrorHandler) {
+                this.progressCoordinator.setErrorHandler(this.parallelErrorHandler);
+            }
         }
         return this.progressCoordinator;
     }
@@ -66,6 +70,10 @@ export class ParallelExecutionContext {
     getParallelErrorHandler() {
         if (!this.parallelErrorHandler) {
             this.parallelErrorHandler = new ParallelErrorHandler(this.sessionManager);
+            // Wire up to progress coordinator if it exists
+            if (this.progressCoordinator) {
+                this.progressCoordinator.setErrorHandler(this.parallelErrorHandler);
+            }
         }
         return this.parallelErrorHandler;
     }

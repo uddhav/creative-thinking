@@ -37,6 +37,7 @@ export declare class ParallelErrorHandler {
     private partialCompletionHandler;
     private retryAttempts;
     private readonly MAX_RETRIES;
+    private readonly RETRY_RETENTION_PERIOD;
     constructor(sessionManager: SessionManager);
     /**
      * Handle error in parallel execution context
@@ -99,7 +100,7 @@ export declare class ParallelErrorHandler {
         maxRetryCount: number;
     };
     /**
-     * Cleanup old retry attempts (for sessions that no longer exist)
+     * Cleanup old retry attempts (for sessions that no longer exist or are too old)
      */
     cleanupStaleRetryAttempts(): void;
 }

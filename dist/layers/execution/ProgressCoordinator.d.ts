@@ -4,6 +4,7 @@
  */
 import { EventEmitter } from 'events';
 import type { SessionManager } from '../../core/SessionManager.js';
+import type { ParallelErrorHandler } from './ParallelErrorHandler.js';
 /**
  * Progress update event data
  */
@@ -53,6 +54,7 @@ export declare class ProgressCoordinator extends EventEmitter {
     private readonly DATA_RETENTION_PERIOD;
     private cleanupTimer?;
     private updateLocks;
+    private errorHandler?;
     constructor(sessionManager: SessionManager);
     /**
      * Report progress for a session
@@ -102,6 +104,10 @@ export declare class ProgressCoordinator extends EventEmitter {
      * Create a text progress bar
      */
     private createProgressBar;
+    /**
+     * Set error handler reference for coordinated cleanup
+     */
+    setErrorHandler(errorHandler: ParallelErrorHandler): void;
     /**
      * Start the cleanup timer
      */

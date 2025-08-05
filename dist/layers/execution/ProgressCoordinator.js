@@ -24,6 +24,8 @@ export class ProgressCoordinator extends EventEmitter {
     cleanupTimer;
     // Mutex for concurrent access control
     updateLocks = new Map();
+    // Reference to error handler for cleanup coordination
+    errorHandler;
     constructor(sessionManager) {
         super();
         this.sessionManager = sessionManager;
@@ -276,6 +278,12 @@ export class ProgressCoordinator extends EventEmitter {
         return `[${'='.repeat(filled)}${' '.repeat(empty)}]`;
     }
     /**
+     * Set error handler reference for coordinated cleanup
+     */
+    setErrorHandler(errorHandler) {
+        this.errorHandler = errorHandler;
+    }
+    /**
      * Start the cleanup timer
      */
     startCleanupTimer() {
@@ -300,6 +308,10 @@ export class ProgressCoordinator extends EventEmitter {
         for (const groupId of groupsToClean) {
             this.clearGroupProgress(groupId);
             this.groupCompletionTimes.delete(groupId);
+        }
+        // Also clean up stale retry attempts in error handler
+        if (this.errorHandler) {
+            this.errorHandler.cleanupStaleRetryAttempts();
         }
     }
     /**
