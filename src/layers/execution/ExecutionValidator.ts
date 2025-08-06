@@ -320,7 +320,7 @@ export class ExecutionValidator {
   ): SessionData {
     const pathMemory = ergodicityManager.getPathMemory();
 
-    return {
+    const sessionData: SessionData = {
       technique: input.technique,
       problem: input.problem,
       history: [],
@@ -331,5 +331,16 @@ export class ExecutionValidator {
       pathMemory,
       ergodicityManager,
     };
+
+    // Add planId in parallelMetadata if provided
+    if (input.planId) {
+      sessionData.parallelMetadata = {
+        planId: input.planId,
+        techniques: [input.technique],
+        canExecuteIndependently: true,
+      };
+    }
+
+    return sessionData;
   }
 }
