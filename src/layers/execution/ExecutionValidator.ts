@@ -171,17 +171,27 @@ export class ExecutionValidator {
     let stepsBeforeThisTechnique = 0;
 
     if (input.planId && plan) {
-      // Find which technique we're on and calculate local step
+      // Find which technique we're on
       for (let i = 0; i < plan.workflow.length; i++) {
         if (plan.workflow[i].technique === input.technique) {
           techniqueIndex = i;
           break;
         }
-        stepsBeforeThisTechnique += plan.workflow[i].steps.length;
+        // Only accumulate steps for sequential execution
+        if (plan.executionMode !== 'parallel') {
+          stepsBeforeThisTechnique += plan.workflow[i].steps.length;
+        }
       }
 
-      // Convert cumulative step to local step
-      techniqueLocalStep = input.currentStep - stepsBeforeThisTechnique;
+      // In parallel mode, each technique uses its own local step numbering
+      // In sequential mode, convert cumulative step to local step
+      if (plan.executionMode === 'parallel') {
+        // Techniques run independently with their own step numbering (1-N)
+        techniqueLocalStep = input.currentStep;
+      } else {
+        // Sequential execution uses cumulative step numbering
+        techniqueLocalStep = input.currentStep - stepsBeforeThisTechnique;
+      }
     }
 
     return { techniqueLocalStep, techniqueIndex, stepsBeforeThisTechnique };
