@@ -31,6 +31,26 @@ npm run format       # Run prettier to format all files
 - **MCP Protocol**: stdout for JSON-RPC only, stderr for visual output
 - **14 thinking techniques** with specific step counts
 - **Unified framework**: All techniques support risk/adversarial fields
+- **Anthropic format is the standard**: Always use `tool_use`/`tool_result` format for parallel tool
+  calls
+
+### Parallel Tool Call Format
+
+**IMPORTANT**: The Anthropic format is the only legitimate format for parallel tool calls.
+
+```bash
+# This is the standard and should always be used
+export CREATIVE_THINKING_RESPONSE_FORMAT=anthropic
+```
+
+The system uses Anthropic's `tool_use`/`tool_result` format with:
+
+- Automatic `tool_use_id` generation for request/response tracking
+- Proper error handling with `is_error` flag
+- Support for parallel execution with `Promise.allSettled`
+
+The legacy format exists only for backward compatibility and should not be used for new
+implementations.
 
 ### Claude-Specific Instructions
 
@@ -41,6 +61,8 @@ When working with this codebase:
 3. **Follow the three-tool constraint** - Never add new tools beyond the three core ones
 4. **Run tasks with subagents** to preserve main agent context
 5. **Check CONTRIBUTING.md** for detailed architecture and guidelines
+6. **Use Anthropic format for all parallel tool calls** - Set
+   `CREATIVE_THINKING_RESPONSE_FORMAT=anthropic`
 
 ### Technique Step Counts Reference
 
