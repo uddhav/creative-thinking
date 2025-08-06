@@ -7,10 +7,27 @@ import type { LateralTechnique, LateralThinkingResponse } from '../types/index.j
 import type { PlanThinkingSessionOutput } from '../types/planning.js';
 /**
  * Represents a single tool call in a parallel batch
+ * Supports both legacy format and Anthropic's tool_use format
  */
 export interface ToolCall {
     name: string;
     arguments: Record<string, unknown>;
+    id?: string;
+    type?: 'tool_use';
+    input?: Record<string, unknown>;
+}
+/**
+ * Anthropic-style tool result
+ */
+export interface ToolResult {
+    type: 'tool_result';
+    tool_use_id: string;
+    output?: unknown;
+    is_error?: boolean;
+    error?: {
+        message: string;
+        code?: string;
+    };
 }
 /**
  * Execution group for parallel technique execution
@@ -28,15 +45,24 @@ export declare class ParallelToolCallHandler {
     private lateralServer;
     private parallelismValidator;
     private maxParallelCalls;
+    private toolCallCounter;
     constructor(lateralServer: LateralThinkingServer, maxParallelCalls?: number);
     /**
      * Check if the request contains parallel tool calls
      */
     isParallelRequest(params: unknown): params is ToolCall[];
     /**
+     * Generate unique tool_use_id
+     */
+    private generateToolUseId;
+    /**
+     * Normalize tool call to common format
+     */
+    private normalizeToolCall;
+    /**
      * Process parallel tool calls
      */
-    processParallelToolCalls(calls: ToolCall[]): Promise<LateralThinkingResponse>;
+    processParallelToolCalls(calls: ToolCall[], useAnthropicFormat?: boolean): Promise<LateralThinkingResponse>;
     /**
      * Process parallel execute_thinking_step calls
      */

@@ -13,6 +13,7 @@ export class ParallelToolCallHandler {
     lateralServer;
     parallelismValidator;
     maxParallelCalls;
+    toolCallCounter = 0; // For generating unique IDs
     constructor(lateralServer, maxParallelCalls = 10) {
         this.lateralServer = lateralServer;
         this.parallelismValidator = new ParallelismValidator();
@@ -24,14 +25,44 @@ export class ParallelToolCallHandler {
     isParallelRequest(params) {
         return (Array.isArray(params) &&
             params.length > 0 &&
-            params.every(call => typeof call === 'object' && call !== null && 'name' in call && 'arguments' in call));
+            params.every(call => typeof call === 'object' &&
+                call !== null &&
+                ('name' in call || 'type' in call) &&
+                ('arguments' in call || 'input' in call)));
+    }
+    /**
+     * Generate unique tool_use_id
+     */
+    generateToolUseId() {
+        this.toolCallCounter++;
+        return `toolu_${Date.now()}_${this.toolCallCounter.toString().padStart(3, '0')}`;
+    }
+    /**
+     * Normalize tool call to common format
+     */
+    normalizeToolCall(call) {
+        // If it's Anthropic format, normalize to our internal format
+        if (call.type === 'tool_use' && call.input) {
+            return {
+                ...call,
+                arguments: call.input,
+                id: call.id || this.generateToolUseId(),
+            };
+        }
+        // Ensure all calls have an ID
+        if (!call.id) {
+            call.id = this.generateToolUseId();
+        }
+        return call;
     }
     /**
      * Process parallel tool calls
      */
-    async processParallelToolCalls(calls) {
+    async processParallelToolCalls(calls, useAnthropicFormat = false) {
+        // Normalize all calls to ensure they have IDs
+        const normalizedCalls = calls.map(call => this.normalizeToolCall(call));
         // Check workflow violations first
-        const workflowViolation = workflowGuard.checkParallelExecutionViolations(calls);
+        const workflowViolation = workflowGuard.checkParallelExecutionViolations(normalizedCalls);
         if (workflowViolation) {
             const error = workflowGuard.getViolationError(workflowViolation);
             return {
@@ -49,7 +80,7 @@ export class ParallelToolCallHandler {
             };
         }
         // Validate parallel calls
-        const validation = this.validateParallelCalls(calls);
+        const validation = this.validateParallelCalls(normalizedCalls);
         if (!validation.isValid) {
             return {
                 content: [
@@ -66,20 +97,20 @@ export class ParallelToolCallHandler {
             };
         }
         // Check if all calls are execute_thinking_step
-        const allExecute = calls.every(call => call.name === 'execute_thinking_step');
+        const allExecute = normalizedCalls.every(call => call.name === 'execute_thinking_step');
         if (allExecute) {
-            return this.processParallelExecutions(calls);
+            return this.processParallelExecutions(normalizedCalls, useAnthropicFormat);
         }
         else {
             // For mixed or non-execute calls, process sequentially for now
             // (discover and plan must be sequential)
-            return this.processSequentialCalls(calls);
+            return this.processSequentialCalls(normalizedCalls, useAnthropicFormat);
         }
     }
     /**
      * Process parallel execute_thinking_step calls
      */
-    async processParallelExecutions(calls) {
+    async processParallelExecutions(calls, useAnthropicFormat = false) {
         try {
             // Check memory pressure before parallel execution
             // Note: We access sessionManager and visualFormatter through the server
@@ -92,7 +123,7 @@ export class ParallelToolCallHandler {
                 if (memoryCheck.warning) {
                     console.error(`[ParallelToolCallHandler] ${memoryCheck.warning}`);
                 }
-                return this.processSequentialCalls(calls);
+                return this.processSequentialCalls(calls, useAnthropicFormat);
             }
             if (memoryCheck.warning) {
                 console.error(`[ParallelToolCallHandler] Warning: ${memoryCheck.warning}`);
@@ -100,65 +131,122 @@ export class ParallelToolCallHandler {
             // Execute all calls in parallel with error isolation
             const results = await Promise.allSettled(calls.map(async (call) => {
                 try {
-                    return await this.lateralServer.executeThinkingStep(call.arguments);
+                    const result = await this.lateralServer.executeThinkingStep(call.arguments);
+                    return { call, result };
                 }
                 catch (error) {
                     // Return error response in expected format
                     return {
-                        isError: true,
-                        content: [
-                            {
-                                type: 'text',
-                                text: JSON.stringify({
-                                    error: {
-                                        message: error instanceof Error ? error.message : 'Unknown error',
-                                        technique: call.arguments.technique,
-                                        step: call.arguments.currentStep,
-                                    },
-                                }),
-                            },
-                        ],
+                        call,
+                        result: {
+                            isError: true,
+                            content: [
+                                {
+                                    type: 'text',
+                                    text: JSON.stringify({
+                                        error: {
+                                            message: error instanceof Error ? error.message : 'Unknown error',
+                                            technique: call.arguments.technique,
+                                            step: call.arguments.currentStep,
+                                        },
+                                    }),
+                                },
+                            ],
+                        },
                     };
                 }
             }));
-            // Process results, handling both successes and failures
-            const combinedContent = results.map((result, index) => {
-                const call = calls[index];
-                if (result.status === 'fulfilled') {
-                    const response = result.value;
-                    return {
-                        type: 'text',
-                        text: JSON.stringify({
-                            toolIndex: index,
-                            technique: call.arguments.technique,
-                            step: call.arguments.currentStep,
-                            status: 'success',
-                            result: response.isError
-                                ? { error: JSON.parse(response.content[0].text) }
-                                : JSON.parse(response.content[0].text),
-                        }, null, 2),
-                    };
-                }
-                else {
-                    // Handle rejected promises
-                    return {
-                        type: 'text',
-                        text: JSON.stringify({
-                            toolIndex: index,
-                            technique: call.arguments.technique,
-                            step: call.arguments.currentStep,
-                            status: 'error',
+            // Build response based on format preference
+            if (useAnthropicFormat) {
+                // Anthropic format: tool_result blocks
+                const toolResults = results.map((result, index) => {
+                    const call = calls[index];
+                    if (result.status === 'fulfilled') {
+                        const { call: originalCall, result: response } = result.value;
+                        if (response.isError) {
+                            // Error result
+                            const errorData = JSON.parse(response.content[0].text);
+                            return {
+                                type: 'tool_result',
+                                tool_use_id: originalCall.id ?? this.generateToolUseId(),
+                                is_error: true,
+                                error: {
+                                    message: errorData.error?.message ?? 'Unknown error',
+                                    code: errorData.error?.code,
+                                },
+                            };
+                        }
+                        else {
+                            // Success result
+                            return {
+                                type: 'tool_result',
+                                tool_use_id: originalCall.id ?? this.generateToolUseId(),
+                                output: JSON.parse(response.content[0].text),
+                            };
+                        }
+                    }
+                    else {
+                        // Handle rejected promises
+                        return {
+                            type: 'tool_result',
+                            tool_use_id: call.id ?? this.generateToolUseId(),
+                            is_error: true,
                             error: {
                                 message: result.reason instanceof Error ? result.reason.message : 'Execution failed',
-                                reason: String(result.reason),
                             },
-                        }, null, 2),
-                    };
-                }
-            });
-            return {
-                content: combinedContent,
-            };
+                        };
+                    }
+                });
+                // Return in Anthropic format
+                return {
+                    content: toolResults.map(result => ({
+                        type: 'text',
+                        text: JSON.stringify(result, null, 2),
+                    })),
+                };
+            }
+            else {
+                // Legacy format: indexed results
+                const combinedContent = results.map((result, index) => {
+                    const call = calls[index];
+                    if (result.status === 'fulfilled') {
+                        const { call: originalCall, result: response } = result.value;
+                        return {
+                            type: 'text',
+                            text: JSON.stringify({
+                                toolIndex: index,
+                                toolId: originalCall.id,
+                                technique: originalCall.arguments.technique,
+                                step: originalCall.arguments.currentStep,
+                                status: 'success',
+                                result: response.isError
+                                    ? { error: JSON.parse(response.content[0].text) }
+                                    : JSON.parse(response.content[0].text),
+                            }, null, 2),
+                        };
+                    }
+                    else {
+                        // Handle rejected promises
+                        return {
+                            type: 'text',
+                            text: JSON.stringify({
+                                toolIndex: index,
+                                toolId: call.id,
+                                technique: call.arguments.technique,
+                                step: call.arguments.currentStep,
+                                status: 'error',
+                                error: {
+                                    message: result.reason instanceof Error ? result.reason.message : 'Execution failed',
+                                    reason: String(result.reason),
+                                },
+                            }, null, 2),
+                        };
+                    }
+                });
+                return {
+                    content: combinedContent,
+                };
+            }
         }
         catch (error) {
             return {
@@ -178,7 +266,7 @@ export class ParallelToolCallHandler {
     /**
      * Process calls sequentially (for non-parallelizable operations)
      */
-    async processSequentialCalls(calls) {
+    async processSequentialCalls(calls, useAnthropicFormat = false) {
         const results = [];
         for (const call of calls) {
             try {
@@ -196,22 +284,59 @@ export class ParallelToolCallHandler {
                     default:
                         throw new ValidationError(ErrorCode.INVALID_INPUT, `Unknown tool: ${call.name}`, 'toolName');
                 }
-                results.push(JSON.parse(result.content[0].text));
+                results.push({ call, result: JSON.parse(result.content[0].text) });
             }
             catch (error) {
                 results.push({
+                    call,
+                    result: null,
                     error: error instanceof Error ? error.message : 'Unknown error',
                 });
             }
         }
-        return {
-            content: [
-                {
+        if (useAnthropicFormat) {
+            // Return as tool_result blocks
+            const toolResults = results.map(({ call, result, error }) => {
+                if (error) {
+                    return {
+                        type: 'tool_result',
+                        tool_use_id: call.id ?? this.generateToolUseId(),
+                        is_error: true,
+                        error: {
+                            message: error,
+                        },
+                    };
+                }
+                else {
+                    return {
+                        type: 'tool_result',
+                        tool_use_id: call.id ?? this.generateToolUseId(),
+                        output: result,
+                    };
+                }
+            });
+            return {
+                content: toolResults.map(result => ({
                     type: 'text',
-                    text: JSON.stringify(results, null, 2),
-                },
-            ],
-        };
+                    text: JSON.stringify(result, null, 2),
+                })),
+            };
+        }
+        else {
+            // Legacy format
+            return {
+                content: [
+                    {
+                        type: 'text',
+                        text: JSON.stringify(results.map(({ call, result, error }) => ({
+                            toolId: call.id,
+                            name: call.name,
+                            ...(error ? { error } : { result }),
+                        })), null, 2),
+                    },
+                ],
+            };
+        }
     }
     /**
      * Validate parallel tool calls

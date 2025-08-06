@@ -41,6 +41,13 @@ export interface ParallelToolCallConfig {
      * @default 5
      */
     maxTechniquesPerGroup: number;
+    /**
+     * Response format for parallel tool calls
+     * - 'anthropic': Anthropic's tool_result format with tool_use_id (the only legitimate format)
+     * - 'legacy': Original indexed format with toolIndex (deprecated, for backward compatibility only)
+     * @default 'anthropic'
+     */
+    responseFormat: 'legacy' | 'anthropic';
 }
 /**
  * Default configuration for parallel tool calls

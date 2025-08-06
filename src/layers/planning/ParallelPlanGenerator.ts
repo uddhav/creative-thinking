@@ -88,7 +88,6 @@ export class ParallelPlanGenerator {
       convergenceOptions,
       coordinationStrategy,
       totalSteps: this.calculateTotalSteps(parallelPlans, convergencePlan),
-      estimatedTotalTime: this.estimateParallelTime(parallelPlans, convergencePlan),
       objectives,
       constraints,
       createdAt: Date.now(),
@@ -100,8 +99,8 @@ export class ParallelPlanGenerator {
    * Generate a sequential plan (fallback for sequential mode)
    */
   private generateSequentialPlan(input: PlanThinkingSessionInput): PlanThinkingSessionOutput {
-    const { problem, techniques, objectives, constraints, timeframe } = input;
-    const workflow = this.createSequentialWorkflow(techniques, problem, timeframe);
+    const { problem, techniques, objectives, constraints } = input;
+    const workflow = this.createSequentialWorkflow(techniques, problem);
 
     return {
       planId: `plan_${randomUUID()}`,
@@ -110,7 +109,6 @@ export class ParallelPlanGenerator {
       executionMode: 'sequential',
       workflow,
       totalSteps: workflow.reduce((sum, item) => sum + item.steps.length, 0),
-      estimatedTotalTime: this.estimateSequentialTime(workflow),
       objectives,
       constraints,
       createdAt: Date.now(),
@@ -153,7 +151,6 @@ export class ParallelPlanGenerator {
       return {
         technique,
         steps,
-        estimatedTime: this.estimateTime(technique, input.timeframe),
         requiredInputs: this.getRequiredInputs(technique),
         expectedOutputs: this.getExpectedOutputs(technique),
       };
@@ -166,7 +163,6 @@ export class ParallelPlanGenerator {
       planId,
       techniques,
       workflow,
-      estimatedTime: this.calculateGroupTime(workflow, 'parallel'),
       canExecuteIndependently: dependencies.length === 0,
       dependencies,
       metadata: {
@@ -230,7 +226,6 @@ export class ParallelPlanGenerator {
       {
         technique: 'convergence' as LateralTechnique,
         steps: convergenceSteps,
-        estimatedTime: '15 minutes',
         requiredInputs: ['Results from all parallel plans'],
         expectedOutputs: ['Synthesized insights', 'Unified recommendations', 'Action plan'],
       },
@@ -240,7 +235,6 @@ export class ParallelPlanGenerator {
       planId,
       techniques: ['convergence'],
       workflow,
-      estimatedTime: '15 minutes',
       canExecuteIndependently: false,
       dependencies: parallelPlans.map(p => p.planId),
       metadata: {
@@ -315,39 +309,6 @@ export class ParallelPlanGenerator {
   }
 
   /**
-   * Estimate time for parallel execution
-   */
-  private estimateParallelTime(
-    parallelPlans: ParallelPlan[],
-    convergencePlan?: ParallelPlan
-  ): string {
-    // Find the longest running parallel group
-    const maxParallelTime = Math.max(
-      ...parallelPlans.map(plan => this.parseTimeMinutes(plan.estimatedTime))
-    );
-
-    // Add convergence time if applicable
-    const convergenceTime = convergencePlan
-      ? this.parseTimeMinutes(convergencePlan.estimatedTime)
-      : 0;
-
-    // Add overhead for coordination (10%)
-    const overhead = Math.ceil(maxParallelTime * 0.1);
-
-    const totalMinutes = maxParallelTime + convergenceTime + overhead;
-
-    return `${totalMinutes} minutes (parallel execution)`;
-  }
-
-  /**
-   * Parse time string to minutes
-   */
-  private parseTimeMinutes(timeStr: string): number {
-    const match = timeStr.match(/(\d+)\s*minutes?/);
-    return match ? parseInt(match[1], 10) : 30;
-  }
-
-  /**
    * Optimize groups for balanced execution
    */
   private optimizeGroups(
@@ -413,8 +374,7 @@ export class ParallelPlanGenerator {
    */
   private createSequentialWorkflow(
     techniques: LateralTechnique[],
-    problem: string,
-    timeframe?: string
+    problem: string
   ): TechniqueWorkflow[] {
     return techniques.map(technique => {
       const handler = this.techniqueRegistry.getHandler(technique);
@@ -424,7 +384,6 @@ export class ParallelPlanGenerator {
       return {
         technique,
         steps,
-        estimatedTime: this.estimateTime(technique, timeframe),
       };
     });
   }
@@ -510,64 +469,8 @@ export class ParallelPlanGenerator {
   }
 
   /**
-   * Estimate time for a technique
-   */
-  private estimateTime(technique: LateralTechnique, timeframe?: string): string {
-    const timeEstimates: Record<LateralTechnique, number> = {
-      six_hats: 30,
-      po: 20,
-      random_entry: 15,
-      scamper: 40,
-      concept_extraction: 25,
-      yes_and: 20,
-      design_thinking: 50,
-      triz: 40,
-      neural_state: 30,
-      temporal_work: 35,
-      cross_cultural: 30,
-      collective_intel: 35,
-      disney_method: 30,
-      nine_windows: 25,
-      convergence: 15,
-    };
-
-    const baseMinutes = timeEstimates[technique] || 30;
-
-    // Adjust based on timeframe
-    let multiplier = 1;
-    if (timeframe === 'quick') multiplier = 0.5;
-    else if (timeframe === 'thorough') multiplier = 1.5;
-    else if (timeframe === 'comprehensive') multiplier = 2;
-
-    const adjustedMinutes = Math.round(baseMinutes * multiplier);
-    return `${adjustedMinutes} minutes`;
-  }
-
-  /**
-   * Calculate time for a group of techniques
-   */
-  private calculateGroupTime(
-    workflow: TechniqueWorkflow[],
-    mode: 'sequential' | 'parallel'
-  ): string {
-    const times = workflow.map(w => this.parseTimeMinutes(w.estimatedTime));
-
-    const totalMinutes =
-      mode === 'sequential' ? times.reduce((sum, t) => sum + t, 0) : Math.max(...times);
-
-    return `${totalMinutes} minutes`;
-  }
-
-  /**
    * Estimate sequential time
    */
-  private estimateSequentialTime(workflow: TechniqueWorkflow[]): string {
-    const totalMinutes = workflow.reduce(
-      (sum, w) => sum + this.parseTimeMinutes(w.estimatedTime),
-      0
-    );
-    return `${totalMinutes} minutes`;
-  }
 
   /**
    * Get required inputs for a technique

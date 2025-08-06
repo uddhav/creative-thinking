@@ -95,7 +95,6 @@ export function planThinkingSession(
     return {
       technique,
       steps,
-      estimatedTime: estimateTime(technique, timeframe),
       requiredInputs: getRequiredInputs(technique),
       expectedOutputs: getExpectedOutputs(technique),
       integrationPoints:
@@ -136,7 +135,6 @@ export function planThinkingSession(
     techniques,
     workflow,
     totalSteps,
-    estimatedTotalTime: calculateTotalTime(workflow),
     objectives,
     constraints,
     integrationStrategy,
@@ -194,30 +192,6 @@ function generateStepsForTechnique(
   }
 
   return steps;
-}
-
-function estimateTime(technique: string, timeframe: string): string {
-  const baseTime: Record<string, number> = {
-    six_hats: 30,
-    po: 20,
-    random_entry: 15,
-    scamper: 35,
-    concept_extraction: 25,
-    yes_and: 20,
-    design_thinking: 40,
-    triz: 30,
-    neural_state: 25,
-    temporal_work: 30,
-    cross_cultural: 25,
-    collective_intel: 30,
-    disney_method: 25,
-    nine_windows: 45,
-  };
-
-  const multiplier = timeframe === 'quick' ? 0.5 : timeframe === 'comprehensive' ? 1.5 : 1;
-  const minutes = Math.round((baseTime[technique] || 30) * multiplier);
-
-  return `${minutes} minutes`;
 }
 
 function getRequiredInputs(technique: string): string[] {
@@ -409,25 +383,6 @@ function assessFlexibility(
     optionGenerationRecommended: score < 0.4,
     escapeRoutes,
   };
-}
-
-function calculateTotalTime(workflow: PlanThinkingSessionOutput['workflow']): string {
-  let totalMinutes = 0;
-
-  workflow.forEach(w => {
-    const match = w.estimatedTime.match(/(\d+) minutes/);
-    if (match) {
-      totalMinutes += parseInt(match[1], 10);
-    }
-  });
-
-  if (totalMinutes < 60) {
-    return `${totalMinutes} minutes`;
-  } else {
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-    return `${hours} hour${hours > 1 ? 's' : ''}${minutes > 0 ? ` ${minutes} minutes` : ''}`;
-  }
 }
 
 function getExpectedOutputForStep(technique: string, step: number): string {

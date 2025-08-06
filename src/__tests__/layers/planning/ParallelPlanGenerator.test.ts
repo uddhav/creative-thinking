@@ -217,7 +217,8 @@ describe('ParallelPlanGenerator', () => {
     });
   });
 
-  describe('Time Estimation', () => {
+  describe.skip('Time Estimation', () => {
+    // Skipped: Time estimation has been removed from the system
     it('should calculate parallel time correctly', () => {
       const input: PlanThinkingSessionInput = {
         problem: 'Test problem',
@@ -285,7 +286,7 @@ describe('ParallelPlanGenerator', () => {
       const workflow = sixHatsPlan?.workflow[0];
       expect(workflow.technique).toBe('six_hats');
       expect(workflow.steps).toHaveLength(6);
-      expect(workflow.estimatedTime).toBeDefined();
+      // estimatedTime removed from workflow
       expect(workflow.requiredInputs).toBeDefined();
       expect(workflow.expectedOutputs).toBeDefined();
     });

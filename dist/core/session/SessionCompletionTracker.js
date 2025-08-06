@@ -294,18 +294,6 @@ export class SessionCompletionTracker {
      */
     generateCompletionWarnings(overallProgress, statuses, criticalGaps) {
         const warnings = [];
-        const isTestEnvironment = process.env.NODE_ENV === 'test' || process.env.VITEST === 'true';
-        // Count total skipped steps across all techniques
-        const totalSkippedSteps = statuses.reduce((sum, s) => sum + s.skippedSteps.length, 0);
-        // CRITICAL: Add warning for ANY skipped steps (but less aggressive in tests)
-        if (!isTestEnvironment && totalSkippedSteps > 0) {
-            warnings.push(`❌ STEP SKIPPING VIOLATION: ${totalSkippedSteps} steps have been skipped! ` +
-                `MANDATORY: ALL steps must be executed sequentially. Each step builds on previous insights. ` +
-                `Skipped steps: ${statuses
-                    .map(s => s.skippedSteps.length > 0 ? `${s.technique}[${s.skippedSteps.join(',')}]` : '')
-                    .filter(Boolean)
-                    .join(', ')}`);
-        }
         // Critical warnings with stronger language
         if (overallProgress < this.CRITICAL_THRESHOLD) {
             warnings.push(`⚠️ CRITICAL FAILURE: Only ${Math.round(overallProgress * 100)}% complete! ` +

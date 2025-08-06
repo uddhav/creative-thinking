@@ -85,7 +85,11 @@ export class RequestHandlers {
         if (process.env.NODE_ENV === 'test') {
           console.error('Processing as parallel tool calls');
         }
-        const result = await this.parallelHandler.processParallelToolCalls(request.params);
+        const useAnthropicFormat = this.parallelConfig.responseFormat === 'anthropic';
+        const result = await this.parallelHandler.processParallelToolCalls(
+          request.params,
+          useAnthropicFormat
+        );
         return {
           content: result.content,
         };

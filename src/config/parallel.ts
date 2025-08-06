@@ -48,6 +48,14 @@ export interface ParallelToolCallConfig {
    * @default 5
    */
   maxTechniquesPerGroup: number;
+
+  /**
+   * Response format for parallel tool calls
+   * - 'anthropic': Anthropic's tool_result format with tool_use_id (the only legitimate format)
+   * - 'legacy': Original indexed format with toolIndex (deprecated, for backward compatibility only)
+   * @default 'anthropic'
+   */
+  responseFormat: 'legacy' | 'anthropic';
 }
 
 /**
@@ -61,6 +69,7 @@ export const defaultParallelConfig: ParallelToolCallConfig = {
   enforceWorkflowValidation: true,
   autoGroupParallelTechniques: true,
   maxTechniquesPerGroup: 5,
+  responseFormat: 'anthropic',
 };
 
 /**
@@ -109,6 +118,13 @@ export function loadParallelConfig(): ParallelToolCallConfig {
     const maxPerGroup = parseInt(process.env.CREATIVE_THINKING_MAX_TECHNIQUES_PER_GROUP, 10);
     if (!isNaN(maxPerGroup) && maxPerGroup > 0) {
       config.maxTechniquesPerGroup = maxPerGroup;
+    }
+  }
+
+  if (process.env.CREATIVE_THINKING_RESPONSE_FORMAT) {
+    const format = process.env.CREATIVE_THINKING_RESPONSE_FORMAT.toLowerCase();
+    if (format === 'legacy' || format === 'anthropic') {
+      config.responseFormat = format;
     }
   }
 
