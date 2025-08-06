@@ -3,7 +3,7 @@
  * Tracks tool usage and provides helpful guidance when workflow is violated
  */
 interface WorkflowViolation {
-    type: 'skipped_discovery' | 'skipped_planning' | 'invalid_technique' | 'fabricated_planid';
+    type: 'skipped_discovery' | 'skipped_planning' | 'invalid_technique' | 'fabricated_planid' | 'parallel_without_plan' | 'parallel_inconsistent';
     message: string;
     guidance: string[];
     example?: string;
@@ -11,6 +11,7 @@ interface WorkflowViolation {
 export declare class WorkflowGuard {
     private recentCalls;
     private readonly CALL_WINDOW_MS;
+    private parallelCallGroups;
     private validTechniques;
     /**
      * Record a tool call
@@ -20,6 +21,13 @@ export declare class WorkflowGuard {
      * Check if the workflow is being followed correctly
      */
     checkWorkflowViolation(toolName: string, args: unknown): WorkflowViolation | null;
+    /**
+     * Check violations for parallel execution calls
+     */
+    checkParallelExecutionViolations(calls: Array<{
+        name: string;
+        arguments: unknown;
+    }>): WorkflowViolation | null;
     /**
      * Get helpful error response for workflow violations
      * Now returns specialized error objects instead of generic responses

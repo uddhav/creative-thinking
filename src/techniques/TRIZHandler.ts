@@ -13,6 +13,16 @@ export class TRIZHandler extends BaseTechniqueHandler {
       totalSteps: 4,
       description: 'Systematic innovation through contradiction resolution',
       focus: 'Resolve contradictions using inventive principles',
+      parallelSteps: {
+        canParallelize: false,
+        dependencies: [
+          [1, 2],
+          [2, 3],
+          [3, 4],
+        ], // Identify → Remove → Apply → Minimize
+        description:
+          'Must be executed sequentially: each step builds on the contradiction analysis',
+      },
     };
   }
 

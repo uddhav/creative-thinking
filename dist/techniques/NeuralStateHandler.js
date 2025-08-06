@@ -11,6 +11,10 @@ export class NeuralStateHandler extends BaseTechniqueHandler {
             totalSteps: 4,
             description: 'Optimize thinking by managing neural network states',
             focus: 'Balance Default Mode Network (DMN) and Executive Control Network (ECN)',
+            parallelSteps: {
+                canParallelize: false,
+                description: 'Neural states transition sequentially through assessment and optimization',
+            },
         };
     }
     getStepInfo(step) {

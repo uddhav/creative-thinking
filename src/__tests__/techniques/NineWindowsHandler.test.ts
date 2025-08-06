@@ -17,13 +17,15 @@ describe('NineWindowsHandler', () => {
     it('should return correct technique information', () => {
       const info = handler.getTechniqueInfo();
 
-      expect(info).toEqual({
+      expect(info).toMatchObject({
         name: 'Nine Windows',
         emoji: '🪟',
         totalSteps: 9,
         description: 'Explore problems across time and system levels',
         focus: 'Systematic analysis through space-time matrix',
       });
+      // Check parallelSteps exists
+      expect(info.parallelSteps).toBeDefined();
     });
   });
 

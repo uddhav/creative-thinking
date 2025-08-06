@@ -27,6 +27,11 @@ export class ParallelExecutionContext {
   private sessionTimeoutMonitor: SessionTimeoutMonitor | null = null;
   private executionMetrics: ParallelExecutionMetrics | null = null;
 
+  // Memory monitoring
+  private memoryHighWaterMark: number = 0;
+  private memoryWarningThreshold: number = 500 * 1024 * 1024; // 500MB
+  private memoryCriticalThreshold: number = 1024 * 1024 * 1024; // 1GB
+
   private constructor(
     private sessionManager: SessionManager,
     private visualFormatter: VisualFormatter
@@ -165,6 +170,71 @@ export class ParallelExecutionContext {
     }
 
     return false;
+  }
+
+  /**
+   * Check memory pressure and determine if parallel execution should proceed
+   */
+  checkMemoryPressure(): {
+    canProceed: boolean;
+    memoryUsage: number;
+    warning?: string;
+  } {
+    const memUsage = process.memoryUsage();
+    const heapUsed = memUsage.heapUsed;
+
+    // Update high water mark
+    if (heapUsed > this.memoryHighWaterMark) {
+      this.memoryHighWaterMark = heapUsed;
+    }
+
+    // Check critical threshold
+    if (heapUsed > this.memoryCriticalThreshold) {
+      return {
+        canProceed: false,
+        memoryUsage: heapUsed,
+        warning: `Memory usage critical: ${Math.round(heapUsed / 1024 / 1024)}MB. Falling back to sequential execution.`,
+      };
+    }
+
+    // Check warning threshold
+    if (heapUsed > this.memoryWarningThreshold) {
+      return {
+        canProceed: true,
+        memoryUsage: heapUsed,
+        warning: `Memory usage high: ${Math.round(heapUsed / 1024 / 1024)}MB. Consider reducing parallel group size.`,
+      };
+    }
+
+    return {
+      canProceed: true,
+      memoryUsage: heapUsed,
+    };
+  }
+
+  /**
+   * Get memory statistics
+   */
+  getMemoryStats(): {
+    current: number;
+    highWaterMark: number;
+    warningThreshold: number;
+    criticalThreshold: number;
+  } {
+    return {
+      current: process.memoryUsage().heapUsed,
+      highWaterMark: this.memoryHighWaterMark,
+      warningThreshold: this.memoryWarningThreshold,
+      criticalThreshold: this.memoryCriticalThreshold,
+    };
+  }
+
+  /**
+   * Update memory thresholds (for configuration)
+   */
+  updateMemoryThresholds(warning: number, critical: number): void {
+    this.memoryWarningThreshold = warning;
+    this.memoryCriticalThreshold = critical;
   }
 
   /**

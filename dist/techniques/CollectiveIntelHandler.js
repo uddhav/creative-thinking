@@ -11,6 +11,10 @@ export class CollectiveIntelHandler extends BaseTechniqueHandler {
             totalSteps: 5,
             description: 'Harness collective wisdom from multiple sources',
             focus: 'Synthesize insights from diverse intelligence sources',
+            parallelSteps: {
+                canParallelize: false,
+                description: 'Collective insights emerge from sequential synthesis of sources',
+            },
         };
     }
     getStepInfo(step) {

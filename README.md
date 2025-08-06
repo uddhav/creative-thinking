@@ -78,6 +78,65 @@ npm run build
 node dist/index.js
 ```
 
+## Parallel Execution
+
+The Creative Thinking server supports parallel execution of techniques, allowing multiple thinking
+methods to be applied simultaneously for improved performance and diverse perspectives.
+
+### How It Works
+
+When you create a plan with `executionMode: 'parallel'`, the server:
+
+1. Analyzes technique dependencies
+2. Groups techniques that can run concurrently
+3. Provides guidance for parallel execution
+4. Tracks progress across all parallel techniques
+
+### Benefits
+
+- **Performance**: Reduce total thinking time by up to 70% for compatible techniques
+- **Diversity**: Apply multiple perspectives simultaneously
+- **Flexibility**: Mix parallel and sequential techniques based on dependencies
+- **Coordination**: Automatic sync points ensure coherent results
+
+### Example
+
+```javascript
+// Step 1: Discover techniques
+const discovery = await discoverTechniques({
+  problem: 'How to improve team collaboration',
+});
+
+// Step 2: Plan with parallel execution
+const plan = await planThinkingSession({
+  problem: 'How to improve team collaboration',
+  techniques: ['six_hats', 'scamper', 'random_entry'],
+  executionMode: 'parallel', // Enable parallel execution
+});
+
+// Step 3: Execute techniques in parallel
+// The plan will indicate which techniques can run simultaneously
+// Example response shows parallel groups:
+// Group 1: six_hats, scamper, random_entry (can run in parallel)
+// Group 2: convergence (runs after all parallel techniques complete)
+```
+
+### Technique Compatibility
+
+**Can Run in Parallel:**
+
+- **Six Thinking Hats** - All hats can be worn simultaneously
+- **SCAMPER** - All transformations can be applied at once
+- **Nine Windows** - All windows can be viewed simultaneously
+- **Random Entry** - Independent stimulus generation
+
+**Must Run Sequentially:**
+
+- **Disney Method** - Dreamer → Realist → Critic
+- **Design Thinking** - Empathize → Define → Ideate → Prototype → Test
+- **TRIZ** - Problem → Contradiction → Principles → Solution
+- **PO** - Provocation → Movement → Development → Implementation
+
 ## Core Features
 
 ### Advanced Architecture Components
@@ -807,6 +866,21 @@ The server supports environment variables for advanced features:
 - `DISABLE_THOUGHT_LOGGING=true` - Disable visual output logging
 - `PERSISTENCE_TYPE=filesystem|memory` - Choose storage type
 - `PERSISTENCE_PATH=/path/to/sessions` - Custom session storage location
+
+### Parallel Execution Configuration
+
+- `CREATIVE_THINKING_PARALLEL_TOOLS_ENABLED=true` - Enable/disable parallel tool calls (default:
+  true)
+- `CREATIVE_THINKING_MAX_PARALLEL_CALLS=10` - Maximum parallel calls allowed (default: 10)
+- `CREATIVE_THINKING_PARALLEL_TIMEOUT_MS=30000` - Timeout for parallel calls in milliseconds
+  (default: 30000)
+- `CREATIVE_THINKING_PARALLEL_SYNC_STRATEGY=checkpoint` - Sync strategy: checkpoint, immediate, or
+  batch (default: checkpoint)
+- `CREATIVE_THINKING_PARALLEL_WORKFLOW_VALIDATION=true` - Enforce workflow validation for parallel
+  calls (default: true)
+- `CREATIVE_THINKING_PARALLEL_AUTO_GROUP=true` - Auto-group techniques that can run in parallel
+  (default: true)
+- `CREATIVE_THINKING_MAX_TECHNIQUES_PER_GROUP=5` - Max techniques per parallel group (default: 5)
 
 ### Telemetry Configuration (Optional)
 

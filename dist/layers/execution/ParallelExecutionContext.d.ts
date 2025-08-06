@@ -25,6 +25,9 @@ export declare class ParallelExecutionContext {
     private convergenceExecutor;
     private sessionTimeoutMonitor;
     private executionMetrics;
+    private memoryHighWaterMark;
+    private memoryWarningThreshold;
+    private memoryCriticalThreshold;
     private constructor();
     /**
      * Get or create the singleton instance
@@ -66,6 +69,27 @@ export declare class ParallelExecutionContext {
      * Check if parallel execution is needed for this input
      */
     isParallelExecutionNeeded(technique: string, sessionId?: string): boolean;
+    /**
+     * Check memory pressure and determine if parallel execution should proceed
+     */
+    checkMemoryPressure(): {
+        canProceed: boolean;
+        memoryUsage: number;
+        warning?: string;
+    };
+    /**
+     * Get memory statistics
+     */
+    getMemoryStats(): {
+        current: number;
+        highWaterMark: number;
+        warningThreshold: number;
+        criticalThreshold: number;
+    };
+    /**
+     * Update memory thresholds (for configuration)
+     */
+    updateMemoryThresholds(warning: number, critical: number): void;
     /**
      * Cleanup resources
      */

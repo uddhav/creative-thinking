@@ -12,7 +12,13 @@ interface ToolCall {
 }
 
 interface WorkflowViolation {
-  type: 'skipped_discovery' | 'skipped_planning' | 'invalid_technique' | 'fabricated_planid';
+  type:
+    | 'skipped_discovery'
+    | 'skipped_planning'
+    | 'invalid_technique'
+    | 'fabricated_planid'
+    | 'parallel_without_plan'
+    | 'parallel_inconsistent';
   message: string;
   guidance: string[];
   example?: string;
@@ -21,6 +27,7 @@ interface WorkflowViolation {
 export class WorkflowGuard {
   private recentCalls: ToolCall[] = [];
   private readonly CALL_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
+  private parallelCallGroups: Map<string, ToolCall[]> = new Map(); // Track parallel calls by planId
   private validTechniques = [
     'six_hats',
     'po',
@@ -64,6 +71,77 @@ export class WorkflowGuard {
   }
 
   /**
+   * Check violations for parallel execution calls
+   */
+  checkParallelExecutionViolations(
+    calls: Array<{ name: string; arguments: unknown }>
+  ): WorkflowViolation | null {
+    this.cleanupOldCalls();
+
+    // All calls must be execute_thinking_step
+    const nonExecuteCalls = calls.filter(call => call.name !== 'execute_thinking_step');
+    if (nonExecuteCalls.length > 0) {
+      return {
+        type: 'parallel_inconsistent',
+        message: 'Parallel calls must all be execute_thinking_step',
+        guidance: [
+          'Only execute_thinking_step can be called in parallel',
+          'discover_techniques and plan_thinking_session must be called individually',
+        ],
+      };
+    }
+
+    // Check that all have the same planId
+    const planIds = new Set(
+      calls.map(call => {
+        const args = call.arguments as Record<string, unknown>;
+        return args.planId as string;
+      })
+    );
+    if (planIds.size > 1) {
+      return {
+        type: 'parallel_inconsistent',
+        message: 'All parallel executions must use the same planId',
+        guidance: [
+          'Parallel calls must be part of the same planning session',
+          'Use the planId from plan_thinking_session for all parallel calls',
+        ],
+      };
+    }
+
+    // Check that discovery and planning were done
+    const hasDiscovery = this.recentCalls.some(call => call.toolName === 'discover_techniques');
+    const hasPlanning = this.recentCalls.some(call => call.toolName === 'plan_thinking_session');
+
+    if (!hasDiscovery || !hasPlanning) {
+      return {
+        type: 'parallel_without_plan',
+        message: 'Parallel execution requires prior discovery and planning',
+        guidance: [
+          '1. First call discover_techniques to analyze the problem',
+          '2. Then call plan_thinking_session with executionMode: "parallel"',
+          '3. Finally execute techniques in parallel using the planId',
+        ],
+      };
+    }
+
+    // Track parallel call group
+    const planId = Array.from(planIds)[0] as string | undefined;
+    if (planId) {
+      this.parallelCallGroups.set(
+        planId,
+        calls.map(call => ({
+          toolName: 'execute_thinking_step',
+          timestamp: Date.now(),
+          args: call.arguments,
+        }))
+      );
+    }
+
+    return null;
+  }
+
+  /**
    * Get helpful error response for workflow violations
    * Now returns specialized error objects instead of generic responses
    */
@@ -89,6 +167,14 @@ export class WorkflowGuard {
 
       case 'fabricated_planid':
         return ErrorFactory.workflowBypassAttempt('Using fabricated or invalid planId');
+
+      case 'parallel_without_plan':
+        return ErrorFactory.workflowBypassAttempt(
+          'Attempting parallel execution without proper planning'
+        );
+
+      case 'parallel_inconsistent':
+        return ErrorFactory.workflowBypassAttempt(violation.message);
 
       default:
         return ErrorFactory.workflowBypassAttempt(violation.message);

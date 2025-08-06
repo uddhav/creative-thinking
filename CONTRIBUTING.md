@@ -197,7 +197,9 @@ When adding a new thinking technique:
 
 ### Overview
 
-Parallel execution allows multiple thinking techniques to run simultaneously, providing **2-3x performance improvement** while maintaining the quality of insights. This is particularly useful when exploring complex problems that benefit from multiple perspectives.
+Parallel execution allows multiple thinking techniques to run simultaneously, providing **2-3x
+performance improvement** while maintaining the quality of insights. This is particularly useful
+when exploring complex problems that benefit from multiple perspectives.
 
 ### Key Features
 
@@ -207,6 +209,7 @@ Parallel execution allows multiple thinking techniques to run simultaneously, pr
 - **Convergence synthesis**: Automatically combine insights from parallel sessions
 - **Timeout protection**: Prevents runaway sessions with configurable timeouts
 - **Performance metrics**: Track efficiency and optimization opportunities
+- **Anthropic-style parallel tool calls**: Support for native parallel tool call format
 
 ### Architecture Components
 
@@ -257,11 +260,63 @@ const input: PlanThinkingSessionInput = {
 
 ### Best Practices
 
-1. **Choose independent techniques**: Techniques that don't depend on each other work best in parallel
+1. **Choose independent techniques**: Techniques that don't depend on each other work best in
+   parallel
 2. **Set reasonable timeframes**: Use "quick" for rapid ideation, "thorough" for detailed analysis
 3. **Handle failures gracefully**: Use Promise.allSettled() to allow partial success
 4. **Monitor metrics**: Use execution metrics to identify bottlenecks
 5. **Use appropriate convergence strategies**: Choose based on your synthesis needs
+
+### Adding Parallel Support to New Techniques
+
+When creating a new technique handler, you must specify its parallelization capability in the
+`getTechniqueInfo()` method:
+
+```typescript
+// In your technique handler
+getTechniqueInfo(): TechniqueInfo {
+  return {
+    name: 'Your Technique',
+    emoji: '🎯',
+    totalSteps: 5,
+    description: 'Description',
+    focus: 'Focus area',
+    parallelSteps: {
+      canParallelize: true,  // or false if steps must be sequential
+      dependencies: [[1, 2], [2, 3]], // Optional: step dependencies
+      description: 'Explanation of parallelization capability'
+    }
+  };
+}
+```
+
+#### Guidelines for Determining Parallelization
+
+**Can Parallelize (true):**
+
+- Steps are independent and can be executed in any order
+- Each step explores a different perspective (e.g., Six Hats)
+- Steps apply different transformations (e.g., SCAMPER)
+- Steps examine different dimensions (e.g., Nine Windows)
+
+**Cannot Parallelize (false):**
+
+- Each step builds on the previous one (e.g., Design Thinking)
+- Steps follow a logical progression (e.g., Disney Method)
+- Later steps require insights from earlier ones (e.g., TRIZ)
+
+#### Testing Parallel Execution
+
+```bash
+# Run parallel execution tests
+npm run test:parallel
+
+# Test with demo script
+node test-parallel-demo.cjs
+
+# Enable debug logging
+NODE_ENV=development npm start
+```
 
 ### Example Usage
 

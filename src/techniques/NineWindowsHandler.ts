@@ -14,6 +14,11 @@ export class NineWindowsHandler extends BaseTechniqueHandler {
       totalSteps: 9,
       description: 'Explore problems across time and system levels',
       focus: 'Systematic analysis through space-time matrix',
+      parallelSteps: {
+        canParallelize: true,
+        description:
+          'All nine windows can be viewed simultaneously for holistic system understanding',
+      },
     };
   }
 

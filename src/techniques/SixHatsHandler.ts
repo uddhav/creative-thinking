@@ -83,6 +83,11 @@ export class SixHatsHandler extends BaseTechniqueHandler {
       description: 'Systematic exploration through different thinking modes',
       focus: 'Parallel thinking to explore all aspects',
       enhancedFocus: 'Now includes Purple Hat for path dependency analysis',
+      parallelSteps: {
+        canParallelize: true,
+        description:
+          'All hats can be worn simultaneously by different thinkers or explored in parallel',
+      },
     };
   }
 

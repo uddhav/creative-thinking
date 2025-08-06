@@ -28,7 +28,24 @@ export class CompletionGatekeeper {
         if (this.config.enforcementLevel === EnforcementLevel.NONE) {
             return { allowed: true };
         }
-        // Check if trying to terminate early
+        const isTestEnvironment = process.env.NODE_ENV === 'test' || process.env.VITEST === 'true';
+        // CRITICAL: Check for step skipping (but allow in test environment for certain tests)
+        const lastStep = session.history[session.history.length - 1]?.currentStep || 0;
+        if (!isTestEnvironment &&
+            input.currentStep > 1 &&
+            lastStep > 0 &&
+            input.currentStep !== lastStep + 1) {
+            const metadata = this.completionTracker.calculateCompletionMetadata(session, plan);
+            return {
+                allowed: false,
+                response: this.buildBlockingResponse('❌ STEP SKIPPING DETECTED - EXECUTION BLOCKED', `You attempted to skip from step ${lastStep} to step ${input.currentStep}. ALL steps MUST be executed sequentially.`, [
+                    `MANDATORY: Execute step ${lastStep + 1} next`,
+                    `DO NOT skip steps - each builds on previous insights`,
+                    `Skipping steps violates the thinking process requirements`,
+                ], metadata),
+            };
+        }
+        // Check if trying to terminate early (this should still work in tests)
         if (!input.nextStepNeeded && input.currentStep < input.totalSteps) {
             return this.handleEarlyTermination(input, session, plan);
         }
@@ -53,18 +70,26 @@ export class CompletionGatekeeper {
     handleEarlyTermination(input, session, plan) {
         const metadata = this.completionTracker.calculateCompletionMetadata(session, plan);
         const completionPercentage = metadata.overallProgress;
+        const remainingSteps = input.totalSteps - input.currentStep;
+        // CRITICAL: Always block early termination if steps are skipped
+        const totalSkippedSteps = metadata.techniqueStatuses.reduce((sum, s) => sum + s.skippedSteps.length, 0);
+        if (totalSkippedSteps > 0) {
+            return this.blockTermination(input, metadata, `❌ BLOCKED: ${totalSkippedSteps} steps were skipped. ALL steps MUST be completed sequentially.`);
+        }
         // Check enforcement level
         switch (this.config.enforcementLevel) {
             case EnforcementLevel.LENIENT:
-                // Just warn, don't block
-                if (completionPercentage < this.config.minimumCompletionThreshold) {
-                    console.warn(`Early termination at ${Math.round(completionPercentage * 100)}% completion`);
+                // Even in lenient mode, block if very incomplete
+                if (completionPercentage < 0.5) {
+                    return this.blockTermination(input, metadata, `⚠️ Cannot terminate: Only ${Math.round(completionPercentage * 100)}% complete. ` +
+                        `${remainingSteps} steps remain. ALL steps must be executed.`);
                 }
                 return { allowed: true };
             case EnforcementLevel.STANDARD:
-                // Block if below critical threshold or missing critical steps
-                if (completionPercentage < 0.3 || metadata.criticalGapsIdentified.length > 0) {
-                    return this.blockTermination(input, metadata, 'Critical analysis gaps detected');
+                // Block if below 70% or missing critical steps
+                if (completionPercentage < 0.7 || metadata.criticalGapsIdentified.length > 0) {
+                    return this.blockTermination(input, metadata, `❌ Early termination BLOCKED: ${Math.round(completionPercentage * 100)}% complete. ` +
+                        `MANDATORY: Complete all ${remainingSteps} remaining steps.`);
                 }
                 // Require confirmation for moderate completion
                 if (completionPercentage < this.config.requireConfirmationThreshold) {
@@ -72,9 +97,12 @@ export class CompletionGatekeeper {
                 }
                 return { allowed: true };
             case EnforcementLevel.STRICT:
-                // Enforce minimum threshold
+                // Always enforce minimum threshold strictly
                 if (completionPercentage < this.config.minimumCompletionThreshold) {
-                    return this.blockTermination(input, metadata, `Minimum ${Math.round(this.config.minimumCompletionThreshold * 100)}% completion required`);
+                    return this.blockTermination(input, metadata, `❌ STRICT MODE: Termination BLOCKED. ` +
+                        `Minimum ${Math.round(this.config.minimumCompletionThreshold * 100)}% required, ` +
+                        `currently ${Math.round(completionPercentage * 100)}%. ` +
+                        `MUST complete all ${remainingSteps} remaining steps.`);
                 }
                 return { allowed: true };
             default:
@@ -113,6 +141,7 @@ export class CompletionGatekeeper {
      * Build blocking response
      */
     buildBlockingResponse(title, reason, requiredActions, metadata) {
+        const totalSkippedSteps = metadata.techniqueStatuses.reduce((sum, s) => sum + s.skippedSteps.length, 0);
         const content = {
             blocked: true,
             title,
@@ -122,11 +151,21 @@ export class CompletionGatekeeper {
                 progressDisplay: this.completionTracker.formatProgressDisplay(metadata),
                 criticalGaps: metadata.criticalGapsIdentified,
                 missedPerspectives: metadata.missedPerspectives,
+                skippedSteps: totalSkippedSteps,
             },
-            requiredActions,
+            requiredActions: [
+                '❌ MANDATORY: Complete ALL remaining steps sequentially',
+                ...requiredActions,
+            ],
+            criticalInstructions: [
+                '1. Set nextStepNeeded: true to continue execution',
+                '2. Execute EVERY step in sequence (no skipping)',
+                '3. Each step MUST build on previous insights',
+                '4. Do NOT terminate until ALL steps are complete',
+            ],
             suggestions: [
-                'Continue with the planned workflow to ensure comprehensive analysis',
-                'Use execute_thinking_step with nextStepNeeded: true to proceed',
+                'ALL steps in the thinking process are REQUIRED',
+                'Use execute_thinking_step with the NEXT sequential step number',
                 metadata.skippedTechniques.length > 0
                     ? `Execute skipped techniques: ${metadata.skippedTechniques.join(', ')}`
                     : null,

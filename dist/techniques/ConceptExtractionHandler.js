@@ -11,6 +11,10 @@ export class ConceptExtractionHandler extends BaseTechniqueHandler {
             totalSteps: 4,
             description: 'Extract underlying principles from successful examples',
             focus: 'Learn from success patterns to create new solutions',
+            parallelSteps: {
+                canParallelize: false,
+                description: 'Concepts must be extracted before abstraction and application',
+            },
         };
     }
     getStepInfo(step) {
