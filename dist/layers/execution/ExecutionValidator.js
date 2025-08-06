@@ -36,7 +36,8 @@ export class ExecutionValidator {
             };
         }
         // Validate technique matches plan
-        if (!plan.techniques.includes(input.technique)) {
+        // Special case: convergence technique is always allowed as it synthesizes parallel results
+        if (input.technique !== 'convergence' && !plan.techniques.includes(input.technique)) {
             const planTechnique = plan.techniques[0]; // Use first technique as the expected one
             const enhancedError = ErrorFactory.techniqueMismatch(planTechnique, input.technique, input.planId);
             return {

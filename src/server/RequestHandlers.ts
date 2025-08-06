@@ -85,11 +85,7 @@ export class RequestHandlers {
         if (process.env.NODE_ENV === 'test') {
           console.error('Processing as parallel tool calls');
         }
-        const useAnthropicFormat = this.parallelConfig.responseFormat === 'anthropic';
-        const result = await this.parallelHandler.processParallelToolCalls(
-          request.params,
-          useAnthropicFormat
-        );
+        const result = await this.parallelHandler.processParallelToolCalls(request.params);
         return {
           content: result.content,
         };
@@ -260,7 +256,7 @@ export class RequestHandlers {
         if (missingParams.length > 0) {
           return (
             `❌ ERROR: execute_thinking_step missing required parameters!\n\n` +
-            `MISSING: ${missingParams.join(', ')}\n\n` +
+            `MANDATORY PARAMETERS MISSING: ${missingParams.join(', ')}\n\n` +
             `⚠️ CRITICAL: You must execute ALL steps sequentially (1, 2, 3, etc.) ` +
             `without skipping any. Each step builds on previous insights.\n\n` +
             `Remember: nextStepNeeded should be true until the FINAL step.`

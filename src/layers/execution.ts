@@ -90,8 +90,18 @@ export async function executeThinkingStep(
 
     // Check if this is a convergence execution
     if (input.technique === 'convergence') {
+      // For convergence, we still need to validate and get/create session
+      const sessionValidation = executionValidator.validateAndGetSession(input, ergodicityManager);
+      if (sessionValidation.error) {
+        return sessionValidation.error;
+      }
+      const { sessionId } = sessionValidation;
+      if (!sessionId) {
+        throw ErrorFactory.sessionNotFound(input.sessionId || 'unknown');
+      }
+
       const convergenceExecutor = parallelContext.getConvergenceExecutor();
-      return convergenceExecutor.executeConvergence(input, input.sessionId || '');
+      return convergenceExecutor.executeConvergence(input, sessionId);
     }
 
     // Get or create session

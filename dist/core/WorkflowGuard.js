@@ -22,6 +22,7 @@ export class WorkflowGuard {
         'collective_intel',
         'disney_method',
         'nine_windows',
+        'convergence', // Special technique for synthesizing parallel results
     ];
     /**
      * Record a tool call

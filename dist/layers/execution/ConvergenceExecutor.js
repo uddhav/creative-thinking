@@ -256,13 +256,15 @@ export class ConvergenceExecutor {
         if (strategy === 'merge') {
             // Merge all unique insights
             const uniqueInsights = new Set(results.flatMap(r => r.insights));
-            synthesizedInsights.push('Merged perspective combining all techniques:', ...Array.from(uniqueInsights).slice(0, 5) // Top 5 insights
-            );
+            synthesizedInsights.push(...Array.from(uniqueInsights));
         }
         else if (strategy === 'select') {
             // Select best insights based on confidence
             const sortedResults = results.sort((a, b) => (b.metrics?.confidence || 0) - (a.metrics?.confidence || 0));
-            synthesizedInsights.push('Selected high-confidence insights:', ...(sortedResults[0]?.insights.slice(0, 3) || []));
+            // Take all insights from the highest confidence result
+            if (sortedResults[0]) {
+                synthesizedInsights.push(...sortedResults[0].insights);
+            }
         }
         else {
             // Hierarchical - organize by importance
