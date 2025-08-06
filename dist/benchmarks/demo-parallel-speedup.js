@@ -6,20 +6,12 @@
 import { performance } from 'perf_hooks';
 import { SessionManager } from '../core/SessionManager.js';
 import { TechniqueRegistry } from '../techniques/TechniqueRegistry.js';
-import { VisualFormatter } from '../utils/VisualFormatter.js';
-import { MetricsCollector } from '../core/MetricsCollector.js';
-import { HybridComplexityAnalyzer } from '../complexity/analyzer.js';
-import { ErgodicityManager } from '../ergodicity/index.js';
 import { planThinkingSession } from '../layers/planning.js';
 console.error('\n🚀 PARALLEL EXECUTION PERFORMANCE DEMONSTRATION\n');
 async function runDemo() {
     // Initialize dependencies
     const sessionManager = new SessionManager();
     const techniqueRegistry = new TechniqueRegistry();
-    const visualFormatter = new VisualFormatter();
-    const metricsCollector = new MetricsCollector();
-    const complexityAnalyzer = new HybridComplexityAnalyzer();
-    const ergodicityManager = new ErgodicityManager();
     const problem = 'How can we reduce plastic waste in oceans?';
     const techniques = ['six_hats', 'scamper', 'po'];
     console.error(`📝 Problem: "${problem}"`);
@@ -44,7 +36,7 @@ async function runDemo() {
         executionMode: 'parallel',
         timeframe: 'thorough',
     };
-    const plan = await planThinkingSession(planInput, sessionManager, techniqueRegistry);
+    planThinkingSession(planInput, sessionManager, techniqueRegistry);
     const parStart = performance.now();
     // Simulate parallel execution
     await Promise.all(techniques.map(async (technique) => {

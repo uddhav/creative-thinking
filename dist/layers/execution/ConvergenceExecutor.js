@@ -86,6 +86,7 @@ export class ConvergenceExecutor {
             const operationData = {
                 ...input,
                 sessionId,
+                synthesis: JSON.stringify(convergenceResult.synthesis),
             };
             return this.responseBuilder.buildExecutionResponse(sessionId, operationData, convergenceResult.insights || [], input.nextStepNeeded
                 ? `Continue convergence synthesis - Step ${input.currentStep + 1}`

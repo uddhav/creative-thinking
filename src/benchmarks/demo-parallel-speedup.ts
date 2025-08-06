@@ -8,12 +8,7 @@
 import { performance } from 'perf_hooks';
 import { SessionManager } from '../core/SessionManager.js';
 import { TechniqueRegistry } from '../techniques/TechniqueRegistry.js';
-import { VisualFormatter } from '../utils/VisualFormatter.js';
-import { MetricsCollector } from '../core/MetricsCollector.js';
-import { HybridComplexityAnalyzer } from '../complexity/analyzer.js';
-import { ErgodicityManager } from '../ergodicity/index.js';
 import { planThinkingSession } from '../layers/planning.js';
-import { executeThinkingStep } from '../layers/execution.js';
 import type { PlanThinkingSessionInput } from '../types/planning.js';
 import type { LateralTechnique } from '../types/index.js';
 
@@ -23,10 +18,6 @@ async function runDemo() {
   // Initialize dependencies
   const sessionManager = new SessionManager();
   const techniqueRegistry = new TechniqueRegistry();
-  const visualFormatter = new VisualFormatter();
-  const metricsCollector = new MetricsCollector();
-  const complexityAnalyzer = new HybridComplexityAnalyzer();
-  const ergodicityManager = new ErgodicityManager();
 
   const problem = 'How can we reduce plastic waste in oceans?';
   const techniques: LateralTechnique[] = ['six_hats', 'scamper', 'po'];
@@ -60,7 +51,7 @@ async function runDemo() {
     timeframe: 'thorough',
   };
 
-  const plan = await planThinkingSession(planInput, sessionManager, techniqueRegistry);
+  planThinkingSession(planInput, sessionManager, techniqueRegistry);
 
   const parStart = performance.now();
 

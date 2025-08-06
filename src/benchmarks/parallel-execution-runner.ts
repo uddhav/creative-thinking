@@ -14,7 +14,6 @@ import { planThinkingSession } from '../layers/planning.js';
 import { executeThinkingStep } from '../layers/execution.js';
 import type { ExecuteThinkingStepInput, LateralTechnique } from '../types/index.js';
 import type { PlanThinkingSessionInput } from '../types/planning.js';
-import { ParallelExecutionContext } from '../layers/execution/ParallelExecutionContext.js';
 
 // ANSI color codes for output
 const colors = {
@@ -113,7 +112,9 @@ async function executeTechnique(
       );
 
       if (!response.isError) {
-        const data = JSON.parse(response.content[0].text);
+        const data = JSON.parse(response.content[0].text) as {
+          insights?: string[];
+        };
         if (data.insights) {
           insights.push(...data.insights);
         }
@@ -200,7 +201,7 @@ async function runBasicComparison(deps: BenchmarkDeps) {
     timeframe: 'thorough',
   };
 
-  const plan = await planThinkingSession(planInput, deps.sessionManager, deps.techniqueRegistry);
+  const plan = planThinkingSession(planInput, deps.sessionManager, deps.techniqueRegistry);
 
   const parStart = performance.now();
   const parPromises = techniques.map(technique =>
@@ -266,7 +267,7 @@ async function runScalabilityTest(deps: BenchmarkDeps) {
       executionMode: 'parallel',
       timeframe: 'quick',
     };
-    const plan = await planThinkingSession(planInput, deps.sessionManager, deps.techniqueRegistry);
+    const plan = planThinkingSession(planInput, deps.sessionManager, deps.techniqueRegistry);
 
     const parStart = performance.now();
     await Promise.all(
@@ -319,7 +320,7 @@ async function runRealWorldScenario(deps: BenchmarkDeps) {
     timeframe: 'thorough',
   };
 
-  const plan = await planThinkingSession(planInput, deps.sessionManager, deps.techniqueRegistry);
+  const plan = planThinkingSession(planInput, deps.sessionManager, deps.techniqueRegistry);
 
   // Execute parallel sessions
   log('Executing parallel thinking sessions...');
@@ -368,7 +369,7 @@ async function runRealWorldScenario(deps: BenchmarkDeps) {
   };
 
   try {
-    const convResponse = await executeThinkingStep(
+    await executeThinkingStep(
       convergenceInput,
       deps.sessionManager,
       deps.techniqueRegistry,
@@ -401,7 +402,7 @@ async function runRealWorldScenario(deps: BenchmarkDeps) {
     const totalInsights = parallelResults.reduce((sum, r) => sum + r.insights.length, 0);
     log(`\nTotal Insights Generated: ${totalInsights}`);
   } catch (error) {
-    log(`  ✗ Convergence failed: ${error}`, colors.yellow);
+    log(`  ✗ Convergence failed: ${String(error)}`, colors.yellow);
   }
 }
 

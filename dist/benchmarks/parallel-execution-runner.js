@@ -131,7 +131,7 @@ async function runBasicComparison(deps) {
         executionMode: 'parallel',
         timeframe: 'thorough',
     };
-    const plan = await planThinkingSession(planInput, deps.sessionManager, deps.techniqueRegistry);
+    const plan = planThinkingSession(planInput, deps.sessionManager, deps.techniqueRegistry);
     const parStart = performance.now();
     const parPromises = techniques.map(technique => executeTechnique(technique, problem, plan.planId, deps, {
         simulateDelay: 50,
@@ -183,7 +183,7 @@ async function runScalabilityTest(deps) {
             executionMode: 'parallel',
             timeframe: 'quick',
         };
-        const plan = await planThinkingSession(planInput, deps.sessionManager, deps.techniqueRegistry);
+        const plan = planThinkingSession(planInput, deps.sessionManager, deps.techniqueRegistry);
         const parStart = performance.now();
         await Promise.all(techniques.map(t => executeTechnique(t, problem, plan.planId, deps, { simulateDelay: 30 })));
         const parTime = performance.now() - parStart;
@@ -221,7 +221,7 @@ async function runRealWorldScenario(deps) {
         },
         timeframe: 'thorough',
     };
-    const plan = await planThinkingSession(planInput, deps.sessionManager, deps.techniqueRegistry);
+    const plan = planThinkingSession(planInput, deps.sessionManager, deps.techniqueRegistry);
     // Execute parallel sessions
     log('Executing parallel thinking sessions...');
     const parStart = performance.now();
@@ -262,7 +262,7 @@ async function runRealWorldScenario(deps) {
         convergenceStrategy: 'merge',
     };
     try {
-        const convResponse = await executeThinkingStep(convergenceInput, deps.sessionManager, deps.techniqueRegistry, deps.visualFormatter, deps.metricsCollector, deps.complexityAnalyzer, deps.ergodicityManager);
+        await executeThinkingStep(convergenceInput, deps.sessionManager, deps.techniqueRegistry, deps.visualFormatter, deps.metricsCollector, deps.complexityAnalyzer, deps.ergodicityManager);
         const convTime = performance.now() - convStart;
         log(`  ✓ Convergence completed: ${convTime.toFixed(0)}ms`, colors.green);
         // Calculate total time and theoretical sequential time
@@ -282,7 +282,7 @@ async function runRealWorldScenario(deps) {
         log(`\nTotal Insights Generated: ${totalInsights}`);
     }
     catch (error) {
-        log(`  ✗ Convergence failed: ${error}`, colors.yellow);
+        log(`  ✗ Convergence failed: ${String(error)}`, colors.yellow);
     }
 }
 // Run benchmarks

@@ -12,11 +12,14 @@ import type { ParallelGroup } from '../../../core/session/types.js';
 import type { SessionData } from '../../../types/index.js';
 
 // Mock dependencies
-const mockSessionManager = {
+const mockSessionManager: Pick<
+  SessionManager,
+  'getSession' | 'getParallelGroup' | 'updateParallelGroupStatus'
+> = {
   getSession: vi.fn(),
   getParallelGroup: vi.fn(),
   updateParallelGroupStatus: vi.fn(),
-} as unknown as SessionManager;
+};
 
 // Mock timers
 vi.useFakeTimers();
@@ -30,7 +33,7 @@ describe('ProgressCoordinator', () => {
     vi.clearAllMocks();
     vi.clearAllTimers();
 
-    coordinator = new ProgressCoordinator(mockSessionManager);
+    coordinator = new ProgressCoordinator(mockSessionManager as SessionManager);
 
     mockSession = {
       id: 'test-session',
@@ -155,8 +158,8 @@ describe('ProgressCoordinator', () => {
       });
 
       // Now set up mocks for getGroupProgress
-      vi.mocked(mockSessionManager.getParallelGroup).mockReturnValue(mockGroup);
-      vi.mocked(mockSessionManager.getSession)
+      mockSessionManager.getParallelGroup.mockReturnValue(mockGroup);
+      mockSessionManager.getSession
         .mockReturnValueOnce({ ...mockSession, id: 'session1', technique: 'six_hats' })
         .mockReturnValueOnce({ ...mockSession, id: 'session2', technique: 'po' })
         .mockReturnValueOnce({ ...mockSession, id: 'session3', technique: 'scamper' });
@@ -172,7 +175,7 @@ describe('ProgressCoordinator', () => {
     });
 
     it('should return null for non-existent group', () => {
-      vi.mocked(mockSessionManager.getParallelGroup).mockReturnValue(null);
+      mockSessionManager.getParallelGroup.mockReturnValue(null);
 
       const summary = coordinator.getGroupProgress('non-existent');
       expect(summary).toBeNull();
@@ -191,8 +194,8 @@ describe('ProgressCoordinator', () => {
       });
 
       // Set up mocks - session2 is missing
-      vi.mocked(mockSessionManager.getParallelGroup).mockReturnValue(mockGroup);
-      vi.mocked(mockSessionManager.getSession)
+      mockSessionManager.getParallelGroup.mockReturnValue(mockGroup);
+      mockSessionManager.getSession
         .mockReturnValueOnce({ ...mockSession, id: 'session1' })
         .mockReturnValueOnce(null) // Missing session
         .mockReturnValueOnce({ ...mockSession, id: 'session3' });
@@ -222,8 +225,8 @@ describe('ProgressCoordinator', () => {
 
   describe('streamGroupProgress', () => {
     it('should stream real-time progress updates', async () => {
-      vi.mocked(mockSessionManager.getParallelGroup).mockReturnValue(mockGroup);
-      vi.mocked(mockSessionManager.getSession).mockReturnValue(mockSession);
+      mockSessionManager.getParallelGroup.mockReturnValue(mockGroup);
+      mockSessionManager.getSession.mockReturnValue(mockSession);
 
       const callback = vi.fn();
       const unsubscribe = coordinator.streamGroupProgress('group-123', callback);
@@ -269,7 +272,7 @@ describe('ProgressCoordinator', () => {
         ...mockGroup,
         completedSessions: new Set(),
       };
-      vi.mocked(mockSessionManager.getParallelGroup).mockReturnValue(waitingGroup);
+      mockSessionManager.getParallelGroup.mockReturnValue(waitingGroup);
 
       // All sessions waiting
       await coordinator.reportProgress({
@@ -306,7 +309,7 @@ describe('ProgressCoordinator', () => {
     });
 
     it('should not detect deadlock when some sessions are active', async () => {
-      vi.mocked(mockSessionManager.getParallelGroup).mockReturnValue(mockGroup);
+      mockSessionManager.getParallelGroup.mockReturnValue(mockGroup);
 
       await coordinator.reportProgress({
         groupId: 'group-123',
@@ -334,8 +337,8 @@ describe('ProgressCoordinator', () => {
 
   describe('group completion', () => {
     it('should emit completion event when all sessions complete', async () => {
-      vi.mocked(mockSessionManager.getParallelGroup).mockReturnValue(mockGroup);
-      vi.mocked(mockSessionManager.getSession).mockReturnValue({ ...mockSession });
+      mockSessionManager.getParallelGroup.mockReturnValue(mockGroup);
+      mockSessionManager.getSession.mockReturnValue({ ...mockSession });
 
       const completionSpy = vi.fn();
       coordinator.on('group:completed', completionSpy);
@@ -369,8 +372,8 @@ describe('ProgressCoordinator', () => {
     });
 
     it('should mark as partial success when some sessions fail', async () => {
-      vi.mocked(mockSessionManager.getParallelGroup).mockReturnValue(mockGroup);
-      vi.mocked(mockSessionManager.getSession).mockReturnValue(mockSession);
+      mockSessionManager.getParallelGroup.mockReturnValue(mockGroup);
+      mockSessionManager.getSession.mockReturnValue(mockSession);
 
       const completionSpy = vi.fn();
       coordinator.on('group:completed', completionSpy);
@@ -423,7 +426,7 @@ describe('ProgressCoordinator', () => {
 
   describe('clearGroupProgress', () => {
     it('should clear all data for a group', async () => {
-      vi.mocked(mockSessionManager.getParallelGroup).mockReturnValue(mockGroup);
+      mockSessionManager.getParallelGroup.mockReturnValue(mockGroup);
 
       // Add progress data
       await coordinator.reportProgress({
@@ -445,8 +448,8 @@ describe('ProgressCoordinator', () => {
 
   describe('formatProgressDisplay', () => {
     it('should format progress display correctly', async () => {
-      vi.mocked(mockSessionManager.getParallelGroup).mockReturnValue(mockGroup);
-      vi.mocked(mockSessionManager.getSession).mockReturnValue(mockSession);
+      mockSessionManager.getParallelGroup.mockReturnValue(mockGroup);
+      mockSessionManager.getSession.mockReturnValue(mockSession);
 
       await coordinator.reportProgress({
         groupId: 'group-123',
@@ -467,8 +470,8 @@ describe('ProgressCoordinator', () => {
     });
 
     it('should show failed and waiting counts', async () => {
-      vi.mocked(mockSessionManager.getParallelGroup).mockReturnValue(mockGroup);
-      vi.mocked(mockSessionManager.getSession)
+      mockSessionManager.getParallelGroup.mockReturnValue(mockGroup);
+      mockSessionManager.getSession
         .mockReturnValueOnce({ ...mockSession, id: 'session1' })
         .mockReturnValueOnce({ ...mockSession, id: 'session2' })
         .mockReturnValueOnce({ ...mockSession, id: 'session3' });
@@ -504,8 +507,8 @@ describe('ProgressCoordinator', () => {
 
   describe('time estimation', () => {
     it('should estimate time remaining', async () => {
-      vi.mocked(mockSessionManager.getParallelGroup).mockReturnValue(mockGroup);
-      vi.mocked(mockSessionManager.getSession).mockReturnValue(mockSession);
+      mockSessionManager.getParallelGroup.mockReturnValue(mockGroup);
+      mockSessionManager.getSession.mockReturnValue(mockSession);
 
       coordinator.startGroup('group-123');
 
@@ -531,8 +534,8 @@ describe('ProgressCoordinator', () => {
 
   describe('cleanup', () => {
     it('should clean up old completed groups', async () => {
-      vi.mocked(mockSessionManager.getParallelGroup).mockReturnValue(mockGroup);
-      vi.mocked(mockSessionManager.getSession).mockReturnValue(mockSession);
+      mockSessionManager.getParallelGroup.mockReturnValue(mockGroup);
+      mockSessionManager.getSession.mockReturnValue(mockSession);
 
       // Complete a group
       for (const sessionId of mockGroup.sessionIds) {

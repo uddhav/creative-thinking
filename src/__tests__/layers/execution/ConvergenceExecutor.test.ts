@@ -6,10 +6,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ConvergenceExecutor } from '../../../layers/execution/ConvergenceExecutor.js';
 import type { SessionManager } from '../../../core/SessionManager.js';
 import type { VisualFormatter } from '../../../utils/VisualFormatter.js';
-import type {
-  ExecuteThinkingStepInput,
-  SessionData,
-} from '../../../types/index.js';
+import type { ExecuteThinkingStepInput, SessionData } from '../../../types/index.js';
 import type { ParallelExecutionResult } from '../../../types/parallel-session.js';
 
 // Mock implementations
@@ -18,8 +15,9 @@ const mockSessionManager = {
   getParallelGroup: vi.fn(),
 } as unknown as SessionManager;
 
+const formatConvergenceProgressMock = vi.fn();
 const mockVisualFormatter = {
-  formatConvergenceProgress: vi.fn(),
+  formatConvergenceProgress: formatConvergenceProgressMock,
 } as unknown as VisualFormatter;
 
 describe('ConvergenceExecutor', () => {
@@ -68,7 +66,7 @@ describe('ConvergenceExecutor', () => {
         ],
       };
 
-      vi.mocked(mockSessionManager).getSession.mockReturnValue(mockSession);
+      mockSessionManager.getSession.mockReturnValue(mockSession);
 
       const result = await executor.executeConvergence(input, 'test-session');
 
@@ -112,7 +110,7 @@ describe('ConvergenceExecutor', () => {
         parallelResults: [],
       };
 
-      vi.mocked(mockSessionManager).getSession.mockReturnValue(null);
+      mockSessionManager.getSession.mockReturnValue(null);
 
       const result = await executor.executeConvergence(input, 'non-existent');
 
@@ -188,11 +186,11 @@ describe('ConvergenceExecutor', () => {
         metrics: { creativityScore: 0.7 },
       };
 
-      vi.mocked(mockSessionManager.getSession)
+      mockSessionManager.getSession
         .mockReturnValueOnce(groupSession)
         .mockReturnValueOnce(completedSession1)
         .mockReturnValueOnce(completedSession2);
-      vi.mocked(mockSessionManager.getParallelGroup).mockReturnValue(mockGroup);
+      mockSessionManager.getParallelGroup.mockReturnValue(mockGroup);
 
       const result = await executor.executeConvergence(input, 'test-session');
 
@@ -214,7 +212,7 @@ describe('ConvergenceExecutor', () => {
         nextStepNeeded: true,
       };
 
-      vi.mocked(mockSessionManager).getSession.mockReturnValue(mockSession);
+      mockSessionManager.getSession.mockReturnValue(mockSession);
 
       const result = await executor.executeConvergence(input, 'test-session');
 
@@ -238,7 +236,7 @@ describe('ConvergenceExecutor', () => {
         ],
       };
 
-      vi.mocked(mockSessionManager).getSession.mockReturnValue(mockSession);
+      mockSessionManager.getSession.mockReturnValue(mockSession);
 
       const result = await executor.executeConvergence(input, 'test-session');
 
@@ -264,7 +262,7 @@ describe('ConvergenceExecutor', () => {
         },
       ];
 
-      vi.mocked(mockSessionManager).getSession.mockReturnValue(mockSession);
+      mockSessionManager.getSession.mockReturnValue(mockSession);
 
       // Test merge strategy
       const mergeInput: ExecuteThinkingStepInput = {
@@ -321,7 +319,7 @@ describe('ConvergenceExecutor', () => {
         },
       ];
 
-      vi.mocked(mockSessionManager).getSession.mockReturnValue(mockSession);
+      mockSessionManager.getSession.mockReturnValue(mockSession);
 
       // Step 1: Collect and categorize
       const step1Input: ExecuteThinkingStepInput = {
@@ -375,7 +373,7 @@ describe('ConvergenceExecutor', () => {
         },
       ];
 
-      vi.mocked(mockSessionManager).getSession.mockReturnValue(mockSession);
+      mockSessionManager.getSession.mockReturnValue(mockSession);
 
       const input: ExecuteThinkingStepInput = {
         technique: 'convergence',
@@ -414,10 +412,8 @@ describe('ConvergenceExecutor', () => {
         sharedContext: {},
       };
 
-      vi.mocked(mockSessionManager.getSession)
-        .mockReturnValueOnce(groupSession)
-        .mockReturnValueOnce(null); // Session not found
-      vi.mocked(mockSessionManager.getParallelGroup).mockReturnValue(mockGroup);
+      mockSessionManager.getSession.mockReturnValueOnce(groupSession).mockReturnValueOnce(null); // Session not found
+      mockSessionManager.getParallelGroup.mockReturnValue(mockGroup);
 
       const result = await executor.executeConvergence(input, 'test-session');
 
@@ -455,7 +451,7 @@ describe('ConvergenceExecutor', () => {
         ],
       };
 
-      vi.mocked(mockSessionManager).getSession.mockReturnValue(mockSession);
+      mockSessionManager.getSession.mockReturnValue(mockSession);
 
       const result = await executor.executeConvergence(input, 'test-session');
       expect(result.isError).toBeUndefined();
@@ -484,21 +480,19 @@ describe('ConvergenceExecutor', () => {
         ],
       };
 
-      vi.mocked(mockSessionManager).getSession.mockReturnValue(mockSession);
-      vi.mocked(mockVisualFormatter.formatConvergenceProgress).mockReturnValue(
-        'Progress: Step 1/3'
-      );
+      mockSessionManager.getSession.mockReturnValue(mockSession);
+      formatConvergenceProgressMock.mockReturnValue('Progress: Step 1/3');
 
-      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+      const writeImpl = vi.fn().mockImplementation(() => true);
+      const originalWrite = process.stderr.write.bind(process.stderr);
+      process.stderr.write = writeImpl as any;
 
       await executor.executeConvergence(input, 'test-session');
 
-      expect(mockVisualFormatter.formatConvergenceProgress).toHaveBeenCalledWith(1, 3, 1, [
-        'six_hats',
-      ]);
-      expect(stderrSpy).toHaveBeenCalledWith('Progress: Step 1/3');
+      expect(formatConvergenceProgressMock).toHaveBeenCalledWith(1, 3, 1, ['six_hats']);
+      expect(writeImpl).toHaveBeenCalledWith('Progress: Step 1/3');
 
-      stderrSpy.mockRestore();
+      process.stderr.write = originalWrite;
       process.env.DISABLE_THOUGHT_LOGGING = originalEnv;
     });
 
@@ -522,15 +516,17 @@ describe('ConvergenceExecutor', () => {
         ],
       };
 
-      vi.mocked(mockSessionManager).getSession.mockReturnValue(mockSession);
-      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+      mockSessionManager.getSession.mockReturnValue(mockSession);
+      const writeImpl = vi.fn().mockImplementation(() => true);
+      const originalWrite = process.stderr.write.bind(process.stderr);
+      process.stderr.write = writeImpl as any;
 
       await executor.executeConvergence(input, 'test-session');
 
-      expect(mockVisualFormatter.formatConvergenceProgress).not.toHaveBeenCalled();
-      expect(stderrSpy).not.toHaveBeenCalled();
+      expect(formatConvergenceProgressMock).not.toHaveBeenCalled();
+      expect(writeImpl).not.toHaveBeenCalled();
 
-      stderrSpy.mockRestore();
+      process.stderr.write = originalWrite;
       delete process.env.DISABLE_THOUGHT_LOGGING;
     });
 
@@ -552,7 +548,7 @@ describe('ConvergenceExecutor', () => {
         ],
       };
 
-      vi.mocked(mockSessionManager.getSession).mockImplementation(() => {
+      mockSessionManager.getSession.mockImplementation(() => {
         throw new Error('Database error');
       });
 

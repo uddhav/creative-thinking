@@ -32,7 +32,7 @@ describe('Parallel Execution Simple Integration', () => {
   });
 
   describe('Basic Parallel Planning', () => {
-    it('should create a parallel plan', async () => {
+    it('should create a parallel plan', () => {
       const input: PlanThinkingSessionInput = {
         problem: 'Test problem',
         techniques: ['six_hats', 'scamper'],
@@ -60,7 +60,7 @@ describe('Parallel Execution Simple Integration', () => {
         timeframe: 'quick',
       };
 
-      const plan = await planThinkingSession(planInput, sessionManager, techniqueRegistry);
+      const plan = planThinkingSession(planInput, sessionManager, techniqueRegistry);
       expect(plan.planId).toBeDefined();
 
       // Execute a single step
@@ -141,18 +141,22 @@ describe('Parallel Execution Simple Integration', () => {
 
   describe('Progress Monitoring', () => {
     it('should track basic progress', async () => {
-      // Create a simple session
-      const sessionId = sessionManager.createSession({
-        technique: 'six_hats',
-        problem: 'Test problem',
-      });
+      // First create a plan
+      const planResponse = planThinkingSession(
+        {
+          problem: 'Test problem',
+          techniques: ['six_hats'],
+          executionMode: 'sequential',
+        },
+        sessionManager,
+        techniqueRegistry
+      );
 
-      const session = sessionManager.getSession(sessionId);
-      expect(session).toBeDefined();
+      expect(planResponse.planId).toBeDefined();
 
-      // Execute a step
+      // Execute a step with the plan
       const input: ExecuteThinkingStepInput = {
-        sessionId,
+        planId: planResponse.planId,
         technique: 'six_hats',
         problem: 'Test problem',
         currentStep: 1,
