@@ -13,6 +13,7 @@ export const defaultParallelConfig = {
     enforceWorkflowValidation: true,
     autoGroupParallelTechniques: true,
     maxTechniquesPerGroup: 5,
+    responseFormat: 'anthropic',
 };
 /**
  * Load parallel configuration from environment variables
@@ -53,6 +54,12 @@ export function loadParallelConfig() {
         const maxPerGroup = parseInt(process.env.CREATIVE_THINKING_MAX_TECHNIQUES_PER_GROUP, 10);
         if (!isNaN(maxPerGroup) && maxPerGroup > 0) {
             config.maxTechniquesPerGroup = maxPerGroup;
+        }
+    }
+    if (process.env.CREATIVE_THINKING_RESPONSE_FORMAT) {
+        const format = process.env.CREATIVE_THINKING_RESPONSE_FORMAT.toLowerCase();
+        if (format === 'legacy' || format === 'anthropic') {
+            config.responseFormat = format;
         }
     }
     return config;

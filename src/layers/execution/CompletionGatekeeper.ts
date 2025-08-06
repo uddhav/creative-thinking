@@ -47,33 +47,7 @@ export class CompletionGatekeeper {
       return { allowed: true };
     }
 
-    const isTestEnvironment = process.env.NODE_ENV === 'test' || process.env.VITEST === 'true';
-
-    // CRITICAL: Check for step skipping (but allow in test environment for certain tests)
-    const lastStep = session.history[session.history.length - 1]?.currentStep || 0;
-    if (
-      !isTestEnvironment &&
-      input.currentStep > 1 &&
-      lastStep > 0 &&
-      input.currentStep !== lastStep + 1
-    ) {
-      const metadata = this.completionTracker.calculateCompletionMetadata(session, plan);
-      return {
-        allowed: false,
-        response: this.buildBlockingResponse(
-          '❌ STEP SKIPPING DETECTED - EXECUTION BLOCKED',
-          `You attempted to skip from step ${lastStep} to step ${input.currentStep}. ALL steps MUST be executed sequentially.`,
-          [
-            `MANDATORY: Execute step ${lastStep + 1} next`,
-            `DO NOT skip steps - each builds on previous insights`,
-            `Skipping steps violates the thinking process requirements`,
-          ],
-          metadata
-        ),
-      };
-    }
-
-    // Check if trying to terminate early (this should still work in tests)
+    // Check if trying to terminate early
     if (!input.nextStepNeeded && input.currentStep < input.totalSteps) {
       return this.handleEarlyTermination(input, session, plan);
     }

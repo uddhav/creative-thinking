@@ -116,7 +116,6 @@ export class ResponseBuilder {
                     stepNumber: overallStepNumber++,
                     technique: techniqueWorkflow.technique,
                     description: step.description,
-                    expectedDuration: '5 minutes', // Default duration per step
                     riskConsiderations: step.risks,
                     totalSteps: techniqueSteps,
                     expectedOutputs: [step.expectedOutput],
@@ -129,7 +128,6 @@ export class ResponseBuilder {
             planId: output.planId,
             workflow: flatWorkflow,
             estimatedSteps: output.totalSteps,
-            estimatedDuration: output.estimatedTotalTime,
             successCriteria: output.successMetrics || [],
             createdAt: new Date(output.createdAt || Date.now()).toISOString(),
             // Include other fields that might be needed
@@ -587,7 +585,6 @@ export class ResponseBuilder {
                     groupNumber: 1,
                     techniques: parallelTechniques,
                     canRunInParallel: true,
-                    estimatedDuration: '10-15 minutes',
                     description: 'These techniques can be executed simultaneously using parallel tool calls',
                 });
             }
@@ -598,7 +595,6 @@ export class ResponseBuilder {
                     groupNumber: groups.length + 1,
                     techniques: [technique],
                     canRunInParallel: false,
-                    estimatedDuration: '10-15 minutes',
                     description: `${technique} must be executed sequentially (steps depend on each other)`,
                 });
             });
@@ -608,7 +604,6 @@ export class ResponseBuilder {
                     groupNumber: groups.length + 1,
                     techniques: ['convergence'],
                     canRunInParallel: false,
-                    estimatedDuration: '5 minutes',
                     description: 'Final synthesis of all technique results',
                 });
             }
@@ -619,7 +614,6 @@ export class ResponseBuilder {
             groupNumber: index + 1,
             techniques: output.techniques.filter((_, i) => output.parallelGroupIds?.[i] === groupId),
             canRunInParallel: true,
-            estimatedDuration: '10-15 minutes',
             description: `Parallel execution group ${groupId}`,
         }));
     }

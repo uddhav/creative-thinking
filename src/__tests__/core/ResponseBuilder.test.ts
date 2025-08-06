@@ -231,13 +231,11 @@ describe('ResponseBuilder', () => {
         stepNumber: 1,
         technique: 'six_hats',
         description: 'Blue hat thinking',
-        expectedDuration: '5 minutes',
         riskConsiderations: ['May be too abstract'],
         totalSteps: 2,
         expectedOutputs: ['Process overview'],
       });
       expect(parsed.estimatedSteps).toBe(3);
-      expect(parsed.estimatedDuration).toBe('15 minutes');
       expect(parsed.objectives).toEqual(['Explore problem space', 'Generate ideas']);
     });
 

@@ -40,7 +40,7 @@ export class ParallelGroupManager {
             totalSteps: plans.reduce((sum, p) => sum + (p.metadata?.totalSteps || 0), 0),
             techniques: this.extractUniqueTechniques(plans),
             startTime: Date.now(),
-            estimatedCompletion: this.estimateGroupCompletion(plans),
+            estimatedCompletion: this.estimateGroupCompletion(),
         };
         // Create the group
         const group = {
@@ -265,18 +265,9 @@ export class ParallelGroupManager {
     /**
      * Estimate group completion time
      */
-    estimateGroupCompletion(plans) {
-        // In parallel execution, completion time is the max of individual times
-        let maxTime = 0;
-        for (const plan of plans) {
-            const timeMatch = plan.estimatedTime.match(/(\d+)/);
-            if (timeMatch) {
-                maxTime = Math.max(maxTime, parseInt(timeMatch[1], 10));
-            }
-        }
-        // Add some buffer for coordination overhead
-        const bufferMs = maxTime * 60 * 1000 * 0.1; // 10% buffer
-        return Date.now() + maxTime * 60 * 1000 + bufferMs;
+    estimateGroupCompletion() {
+        // Return a placeholder timestamp since we're not estimating time anymore
+        return Date.now() + 30 * 60 * 1000; // Default 30 minutes placeholder
     }
     /**
      * Get statistics about parallel groups

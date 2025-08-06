@@ -40,14 +40,6 @@ export declare class ParallelPlanGenerator {
      */
     private calculateTotalSteps;
     /**
-     * Estimate time for parallel execution
-     */
-    private estimateParallelTime;
-    /**
-     * Parse time string to minutes
-     */
-    private parseTimeMinutes;
-    /**
      * Optimize groups for balanced execution
      */
     private optimizeGroups;
@@ -72,17 +64,8 @@ export declare class ParallelPlanGenerator {
      */
     private getSuccessCriteriaForStep;
     /**
-     * Estimate time for a technique
-     */
-    private estimateTime;
-    /**
-     * Calculate time for a group of techniques
-     */
-    private calculateGroupTime;
-    /**
      * Estimate sequential time
      */
-    private estimateSequentialTime;
     /**
      * Get required inputs for a technique
      */

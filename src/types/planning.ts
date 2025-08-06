@@ -200,7 +200,6 @@ export interface ParallelPlan {
   problem?: string; // Optional problem statement for this specific plan
   techniques: LateralTechnique[];
   workflow: TechniqueWorkflow[];
-  estimatedTime: string;
   canExecuteIndependently: boolean;
   dependencies?: string[]; // Other planIds this depends on
   metadata?: {
@@ -217,7 +216,6 @@ export interface ParallelPlan {
 export interface TechniqueWorkflow {
   technique: LateralTechnique;
   steps: ThinkingStep[];
-  estimatedTime: string;
   requiredInputs?: string[];
   expectedOutputs?: string[];
   integrationPoints?: Array<{
@@ -247,7 +245,6 @@ export interface PlanThinkingSessionOutput {
   techniques: LateralTechnique[];
   workflow: Array<TechniqueWorkflow>;
   totalSteps: number;
-  estimatedTotalTime: string;
   objectives?: string[];
   constraints?: string[];
   integrationStrategy?: {
