@@ -57,6 +57,22 @@ export declare class SessionCompletionTracker {
      */
     private calculateTechniqueStatuses;
     /**
+     * Group history entries by technique (only when needed for performance)
+     */
+    private groupHistoryByTechnique;
+    /**
+     * Count completed steps for a technique with proper validation
+     */
+    private countTechniqueCompletedSteps;
+    /**
+     * Check if a step number is valid for a technique
+     */
+    private isValidStepForTechnique;
+    /**
+     * Find skipped steps in technique execution
+     */
+    private findSkippedSteps;
+    /**
      * Calculate overall progress
      */
     private calculateOverallProgress;
