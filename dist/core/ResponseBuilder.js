@@ -436,6 +436,9 @@ export class ResponseBuilder {
         // Add reality assessment if present
         if (input.realityAssessment)
             fields.realityAssessment = input.realityAssessment;
+        // Add synthesis for convergence
+        if (input.synthesis)
+            fields.synthesis = input.synthesis;
         return fields;
     }
     /**

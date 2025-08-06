@@ -121,6 +121,7 @@ export class ConvergenceExecutor {
       const operationData = {
         ...input,
         sessionId,
+        synthesis: JSON.stringify(convergenceResult.synthesis),
       };
 
       return this.responseBuilder.buildExecutionResponse(

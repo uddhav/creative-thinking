@@ -219,7 +219,7 @@ export class ExecutionValidator {
      */
     initializeSession(input, ergodicityManager) {
         const pathMemory = ergodicityManager.getPathMemory();
-        return {
+        const sessionData = {
             technique: input.technique,
             problem: input.problem,
             history: [],
@@ -230,6 +230,15 @@ export class ExecutionValidator {
             pathMemory,
             ergodicityManager,
         };
+        // Add planId in parallelMetadata if provided
+        if (input.planId) {
+            sessionData.parallelMetadata = {
+                planId: input.planId,
+                techniques: [input.technique],
+                canExecuteIndependently: true,
+            };
+        }
+        return sessionData;
     }
 }
 //# sourceMappingURL=ExecutionValidator.js.map
