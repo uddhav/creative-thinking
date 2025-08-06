@@ -5,6 +5,7 @@
 import { ParallelismValidator } from '../layers/discovery/ParallelismValidator.js';
 import { workflowGuard } from '../core/WorkflowGuard.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
+import { ParallelExecutionContext } from '../layers/execution/ParallelExecutionContext.js';
 /**
  * Handles parallel tool calls following Anthropic's pattern
  */
@@ -80,18 +81,81 @@ export class ParallelToolCallHandler {
      */
     async processParallelExecutions(calls) {
         try {
-            // Execute all calls in parallel
-            const results = await Promise.all(calls.map(call => this.lateralServer.executeThinkingStep(call.arguments)));
-            // Combine results into a single response
-            const combinedContent = results.map((result, index) => ({
-                type: 'text',
-                text: JSON.stringify({
-                    toolIndex: index,
-                    technique: calls[index].arguments.technique,
-                    step: calls[index].arguments.currentStep,
-                    result: JSON.parse(result.content[0].text),
-                }, null, 2),
+            // Check memory pressure before parallel execution
+            // Note: We access sessionManager and visualFormatter through the server
+            // These are private properties on the server, so we need type assertions
+            const serverWithInternals = this.lateralServer;
+            const parallelContext = ParallelExecutionContext.getInstance(serverWithInternals.sessionManager, serverWithInternals.visualFormatter);
+            const memoryCheck = parallelContext.checkMemoryPressure();
+            if (!memoryCheck.canProceed) {
+                // Fall back to sequential execution due to memory pressure
+                if (memoryCheck.warning) {
+                    console.error(`[ParallelToolCallHandler] ${memoryCheck.warning}`);
+                }
+                return this.processSequentialCalls(calls);
+            }
+            if (memoryCheck.warning) {
+                console.error(`[ParallelToolCallHandler] Warning: ${memoryCheck.warning}`);
+            }
+            // Execute all calls in parallel with error isolation
+            const results = await Promise.allSettled(calls.map(async (call) => {
+                try {
+                    return await this.lateralServer.executeThinkingStep(call.arguments);
+                }
+                catch (error) {
+                    // Return error response in expected format
+                    return {
+                        isError: true,
+                        content: [
+                            {
+                                type: 'text',
+                                text: JSON.stringify({
+                                    error: {
+                                        message: error instanceof Error ? error.message : 'Unknown error',
+                                        technique: call.arguments.technique,
+                                        step: call.arguments.currentStep,
+                                    },
+                                }),
+                            },
+                        ],
+                    };
+                }
             }));
+            // Process results, handling both successes and failures
+            const combinedContent = results.map((result, index) => {
+                const call = calls[index];
+                if (result.status === 'fulfilled') {
+                    const response = result.value;
+                    return {
+                        type: 'text',
+                        text: JSON.stringify({
+                            toolIndex: index,
+                            technique: call.arguments.technique,
+                            step: call.arguments.currentStep,
+                            status: 'success',
+                            result: response.isError
+                                ? { error: JSON.parse(response.content[0].text) }
+                                : JSON.parse(response.content[0].text),
+                        }, null, 2),
+                    };
+                }
+                else {
+                    // Handle rejected promises
+                    return {
+                        type: 'text',
+                        text: JSON.stringify({
+                            toolIndex: index,
+                            technique: call.arguments.technique,
+                            step: call.arguments.currentStep,
+                            status: 'error',
+                            error: {
+                                message: result.reason instanceof Error ? result.reason.message : 'Execution failed',
+                                reason: String(result.reason),
+                            },
+                        }, null, 2),
+                    };
+                }
+            });
             return {
                 content: combinedContent,
             };
@@ -187,21 +251,51 @@ export class ParallelToolCallHandler {
     validateParallelExecutions(calls) {
         const errors = [];
         const warnings = [];
+        // Validate required parameters for each call
+        for (let i = 0; i < calls.length; i++) {
+            const args = calls[i].arguments;
+            if (!args.technique || !args.problem || !args.currentStep || !args.totalSteps) {
+                errors.push(`Call ${i + 1}: Missing required parameters (technique, problem, currentStep, totalSteps)`);
+            }
+            // Validate step ranges
+            const currentStep = args.currentStep;
+            const totalSteps = args.totalSteps;
+            if (currentStep < 1 || currentStep > totalSteps) {
+                errors.push(`Call ${i + 1}: Invalid step ${currentStep} for technique ${String(args.technique)} (must be 1-${totalSteps})`);
+            }
+        }
         // Extract execution details
         const executions = calls.map(call => ({
             planId: call.arguments.planId,
+            sessionId: call.arguments.sessionId,
             technique: call.arguments.technique,
             currentStep: call.arguments.currentStep,
+            totalSteps: call.arguments.totalSteps,
         }));
-        // Check all have same planId
+        // Check consistency of plan IDs
         const planIds = new Set(executions.map(e => e.planId));
-        if (planIds.size > 1) {
-            errors.push('All parallel executions must have the same planId');
+        if (planIds.size > 1 && !planIds.has(undefined)) {
+            errors.push('All parallel executions must have the same planId or no planId');
         }
-        // Check for duplicate techniques at same step
-        const techniqueSteps = new Set(executions.map(e => `${e.technique}-${e.currentStep}`));
-        if (techniqueSteps.size !== executions.length) {
-            errors.push('Duplicate technique-step combinations detected in parallel calls');
+        // Check consistency of session IDs for same technique
+        const techniqueGroups = new Map();
+        for (const exec of executions) {
+            if (!techniqueGroups.has(exec.technique)) {
+                techniqueGroups.set(exec.technique, []);
+            }
+            techniqueGroups.get(exec.technique)?.push(exec);
+        }
+        for (const [technique, group] of techniqueGroups) {
+            const sessionIds = new Set(group.map(e => e.sessionId));
+            if (sessionIds.size > 1 && !sessionIds.has(undefined)) {
+                errors.push(`Technique ${technique}: All parallel steps must use the same sessionId`);
+            }
+            // Check for duplicate steps within same technique
+            const steps = group.map(e => e.currentStep);
+            const uniqueSteps = new Set(steps);
+            if (uniqueSteps.size !== steps.length) {
+                errors.push(`Technique ${technique}: Duplicate step numbers detected in parallel calls`);
+            }
         }
         // Check technique dependencies using ParallelismValidator
         const techniques = [...new Set(executions.map(e => e.technique))];
