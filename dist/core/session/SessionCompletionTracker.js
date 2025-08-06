@@ -105,34 +105,104 @@ export class SessionCompletionTracker {
      */
     calculateTechniqueStatuses(session, plan) {
         const statuses = [];
-        let currentStepIndex = 0;
+        // Optimize: Only create Map for multi-technique workflows
+        const isMultiTechnique = plan.workflow.length > 1;
+        const historyByTechnique = isMultiTechnique
+            ? this.groupHistoryByTechnique(session.history)
+            : null;
+        let globalStepOffset = 0;
         for (const workflow of plan.workflow) {
             const techniqueSteps = workflow.steps.length;
-            const techniqueHistory = session.history.filter(h => h.technique === workflow.technique &&
-                h.currentStep > currentStepIndex &&
-                h.currentStep <= currentStepIndex + techniqueSteps);
-            const completedSteps = techniqueHistory.length;
-            const skippedSteps = [];
-            // Find skipped steps
-            for (let i = 1; i <= techniqueSteps; i++) {
-                const stepCompleted = techniqueHistory.some(h => h.currentStep === currentStepIndex + i);
-                if (!stepCompleted && completedSteps > 0) {
-                    skippedSteps.push(i);
-                }
-            }
+            // Get the history entries for this technique
+            const techniqueHistory = isMultiTechnique
+                ? historyByTechnique?.get(workflow.technique) || []
+                : session.history.filter(h => h.technique === workflow.technique);
+            // Count completed steps and track step numbers
+            const { completedStepsForTechnique, completedStepNumbers } = this.countTechniqueCompletedSteps(techniqueHistory, techniqueSteps, plan, globalStepOffset);
+            // Find skipped steps (technique-local numbering)
+            const skippedSteps = this.findSkippedSteps(techniqueSteps, completedStepNumbers, completedStepsForTechnique);
             // Identify critical skipped steps
             const criticalSkipped = this.identifyCriticalSkippedSteps(workflow.technique, skippedSteps, session.problem);
             statuses.push({
                 technique: workflow.technique,
                 totalSteps: techniqueSteps,
-                completedSteps,
-                completionPercentage: techniqueSteps > 0 ? completedSteps / techniqueSteps : 0,
+                completedSteps: completedStepsForTechnique,
+                completionPercentage: techniqueSteps > 0 ? completedStepsForTechnique / techniqueSteps : 0,
                 skippedSteps,
                 criticalStepsSkipped: criticalSkipped,
             });
-            currentStepIndex += techniqueSteps;
+            globalStepOffset += techniqueSteps;
         }
         return statuses;
+    }
+    /**
+     * Group history entries by technique (only when needed for performance)
+     */
+    groupHistoryByTechnique(history) {
+        const historyByTechnique = new Map();
+        for (const entry of history) {
+            let techniqueArray = historyByTechnique.get(entry.technique);
+            if (!techniqueArray) {
+                techniqueArray = [];
+                historyByTechnique.set(entry.technique, techniqueArray);
+            }
+            techniqueArray.push(entry);
+        }
+        return historyByTechnique;
+    }
+    /**
+     * Count completed steps for a technique with proper validation
+     */
+    countTechniqueCompletedSteps(techniqueHistory, techniqueSteps, plan, globalStepOffset) {
+        let completedStepsForTechnique = 0;
+        const completedStepNumbers = new Set();
+        // Define reasonable bounds for step validation
+        const MAX_REASONABLE_STEP = 1000;
+        for (const entry of techniqueHistory) {
+            // Validate step is within reasonable bounds
+            if (entry.currentStep < 1 || entry.currentStep > MAX_REASONABLE_STEP) {
+                continue; // Skip invalid step numbers
+            }
+            if (plan.workflow.length === 1 || plan.executionMode === 'parallel') {
+                // Single technique or parallel execution - steps are technique-local
+                if (this.isValidStepForTechnique(entry.currentStep, 1, techniqueSteps)) {
+                    completedStepsForTechnique++;
+                    completedStepNumbers.add(entry.currentStep);
+                }
+            }
+            else {
+                // Sequential multi-technique - check if step is in the global range
+                const expectedStepMin = globalStepOffset + 1;
+                const expectedStepMax = globalStepOffset + techniqueSteps;
+                if (this.isValidStepForTechnique(entry.currentStep, expectedStepMin, expectedStepMax)) {
+                    completedStepsForTechnique++;
+                    // Convert to technique-local step number for tracking
+                    completedStepNumbers.add(entry.currentStep - globalStepOffset);
+                }
+            }
+        }
+        return { completedStepsForTechnique, completedStepNumbers };
+    }
+    /**
+     * Check if a step number is valid for a technique
+     */
+    isValidStepForTechnique(stepNumber, minStep, maxStep) {
+        return stepNumber >= minStep && stepNumber <= maxStep;
+    }
+    /**
+     * Find skipped steps in technique execution
+     */
+    findSkippedSteps(techniqueSteps, completedStepNumbers, completedStepsForTechnique) {
+        const skippedSteps = [];
+        // Only identify skipped steps if some steps were completed
+        if (completedStepsForTechnique > 0) {
+            for (let i = 1; i <= techniqueSteps; i++) {
+                if (!completedStepNumbers.has(i)) {
+                    skippedSteps.push(i);
+                }
+            }
+        }
+        return skippedSteps;
     }
     /**
      * Calculate overall progress
