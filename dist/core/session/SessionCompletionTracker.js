@@ -105,18 +105,52 @@ export class SessionCompletionTracker {
      */
     calculateTechniqueStatuses(session, plan) {
         const statuses = [];
-        let currentStepIndex = 0;
+        // Group history entries by technique
+        const historyByTechnique = new Map();
+        for (const entry of session.history) {
+            if (!historyByTechnique.has(entry.technique)) {
+                historyByTechnique.set(entry.technique, []);
+            }
+            const techniqueHistoryArray = historyByTechnique.get(entry.technique);
+            if (techniqueHistoryArray) {
+                techniqueHistoryArray.push(entry);
+            }
+        }
+        let globalStepOffset = 0;
         for (const workflow of plan.workflow) {
             const techniqueSteps = workflow.steps.length;
-            const techniqueHistory = session.history.filter(h => h.technique === workflow.technique &&
-                h.currentStep > currentStepIndex &&
-                h.currentStep <= currentStepIndex + techniqueSteps);
-            const completedSteps = techniqueHistory.length;
+            // Get the history entries for this technique
+            const techniqueHistory = historyByTechnique.get(workflow.technique) || [];
+            // For multi-technique plans, we need to check if steps are in the right range
+            // For single-technique or parallel execution, just count the entries
+            let completedStepsForTechnique = 0;
+            const completedStepNumbers = new Set();
+            for (const entry of techniqueHistory) {
+                // Check if this entry belongs to this technique's position in the workflow
+                // In parallel or single-technique execution, currentStep is technique-local (1, 2, 3...)
+                // In sequential multi-technique execution, currentStep might be global
+                if (plan.workflow.length === 1 || plan.executionMode === 'parallel') {
+                    // Single technique or parallel execution - steps are technique-local
+                    if (entry.currentStep >= 1 && entry.currentStep <= techniqueSteps) {
+                        completedStepsForTechnique++;
+                        completedStepNumbers.add(entry.currentStep);
+                    }
+                }
+                else {
+                    // Sequential multi-technique - check if step is in the global range
+                    const expectedStepMin = globalStepOffset + 1;
+                    const expectedStepMax = globalStepOffset + techniqueSteps;
+                    if (entry.currentStep >= expectedStepMin && entry.currentStep <= expectedStepMax) {
+                        completedStepsForTechnique++;
+                        // Convert to technique-local step number for tracking
+                        completedStepNumbers.add(entry.currentStep - globalStepOffset);
+                    }
+                }
+            }
             const skippedSteps = [];
-            // Find skipped steps
+            // Find skipped steps (technique-local numbering)
             for (let i = 1; i <= techniqueSteps; i++) {
-                const stepCompleted = techniqueHistory.some(h => h.currentStep === currentStepIndex + i);
-                if (!stepCompleted && completedSteps > 0) {
+                if (!completedStepNumbers.has(i) && completedStepsForTechnique > 0) {
                     skippedSteps.push(i);
                 }
             }
@@ -125,12 +159,12 @@ export class SessionCompletionTracker {
             statuses.push({
                 technique: workflow.technique,
                 totalSteps: techniqueSteps,
-                completedSteps,
-                completionPercentage: techniqueSteps > 0 ? completedSteps / techniqueSteps : 0,
+                completedSteps: completedStepsForTechnique,
+                completionPercentage: techniqueSteps > 0 ? completedStepsForTechnique / techniqueSteps : 0,
                 skippedSteps,
                 criticalStepsSkipped: criticalSkipped,
             });
-            currentStepIndex += techniqueSteps;
+            globalStepOffset += techniqueSteps;
         }
         return statuses;
     }
