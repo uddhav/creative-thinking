@@ -268,6 +268,8 @@ describe('Performance Integration Tests', () => {
         // Check for errors first
         if (resultData.error) {
           console.error(`Error at iteration ${i}:`, resultData.error);
+          console.error('Step input was:', stepInput);
+          console.error('Result data:', JSON.stringify(resultData, null, 2));
           throw new Error(`Test failed at iteration ${i}: ${resultData.error.message}`);
         }
 
