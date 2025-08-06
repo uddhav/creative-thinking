@@ -13,6 +13,10 @@ export class YesAndHandler extends BaseTechniqueHandler {
       totalSteps: 4,
       description: 'Build on ideas through positive addition',
       focus: 'Collaborative idea development without criticism',
+      parallelSteps: {
+        canParallelize: false,
+        description: 'Each addition builds on the previous one in a collaborative chain',
+      },
     };
   }
 

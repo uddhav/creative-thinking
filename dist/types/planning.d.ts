@@ -271,5 +271,11 @@ export interface PlanThinkingSessionOutput {
     parallelPlans?: ParallelPlan[];
     coordinationStrategy?: CoordinationStrategy;
     convergenceOptions?: ConvergenceOptions;
+    parallelGroupIds?: string[];
+    convergenceConfig?: {
+        enabled: boolean;
+        method: ConvergenceMethod;
+        timing: 'after_all' | 'after_groups';
+    };
 }
 //# sourceMappingURL=planning.d.ts.map

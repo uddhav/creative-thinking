@@ -7,6 +7,8 @@ import type { LateralThinkingServer } from '../index.js';
 export declare class RequestHandlers {
     private server;
     private lateralServer;
+    private parallelHandler;
+    private parallelConfig;
     constructor(server: Server, lateralServer: LateralThinkingServer);
     /**
      * Set up all request handlers
@@ -20,5 +22,13 @@ export declare class RequestHandlers {
      * Handle tool call requests
      */
     private setupCallToolHandler;
+    /**
+     * Validate required parameters for each tool
+     */
+    private validateRequiredParameters;
+    /**
+     * Get required parameters message for a tool
+     */
+    private getRequiredParametersMessage;
 }
 //# sourceMappingURL=RequestHandlers.d.ts.map

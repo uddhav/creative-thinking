@@ -92,6 +92,10 @@ export class ScamperHandler extends BaseTechniqueHandler {
             description: 'Systematic creative modification with path dependency awareness',
             focus: 'Transform through structured modifications',
             enhancedFocus: 'Now includes Parameterize and PDA (Path Dependency Analysis) for each action',
+            parallelSteps: {
+                canParallelize: true,
+                description: 'All SCAMPER transformations can be applied simultaneously to explore multiple modification paths',
+            },
         };
     }
     getStepInfo(step) {

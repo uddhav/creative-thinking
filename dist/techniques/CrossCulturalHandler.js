@@ -11,6 +11,10 @@ export class CrossCulturalHandler extends BaseTechniqueHandler {
             totalSteps: 5,
             description: 'Integrate diverse cultural perspectives respectfully',
             focus: 'Bridge cultural approaches without appropriation',
+            parallelSteps: {
+                canParallelize: false,
+                description: 'Cultural perspectives need sequential integration to avoid appropriation',
+            },
         };
     }
     getStepInfo(step) {

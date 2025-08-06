@@ -86,5 +86,9 @@ export declare class ResponseBuilder {
      * Build next step guidance from discovery output
      */
     private buildNextStepGuidance;
+    /**
+     * Build parallel execution groups for planning response
+     */
+    private buildParallelExecutionGroups;
 }
 //# sourceMappingURL=ResponseBuilder.d.ts.map

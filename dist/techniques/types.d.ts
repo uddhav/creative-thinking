@@ -8,6 +8,11 @@ export interface TechniqueInfo {
     description: string;
     focus?: string;
     enhancedFocus?: string;
+    parallelSteps?: {
+        canParallelize: boolean;
+        dependencies?: Array<[number, number]>;
+        description?: string;
+    };
 }
 export interface TechniqueHandler {
     getTechniqueInfo(): TechniqueInfo;

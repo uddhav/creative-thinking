@@ -11,6 +11,14 @@ export class DisneyMethodHandler extends BaseTechniqueHandler {
             totalSteps: 3,
             description: 'Transform ideas through Dreamer, Realist, and Critic perspectives',
             focus: 'Sequential implementation-focused creativity',
+            parallelSteps: {
+                canParallelize: false,
+                dependencies: [
+                    [1, 2],
+                    [2, 3],
+                ], // Dreamer → Realist → Critic
+                description: 'Must be executed sequentially: dreams inform reality checks, which inform critique',
+            },
         };
     }
     getStepInfo(step) {

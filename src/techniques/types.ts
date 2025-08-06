@@ -11,6 +11,11 @@ export interface TechniqueInfo {
   description: string;
   focus?: string;
   enhancedFocus?: string;
+  parallelSteps?: {
+    canParallelize: boolean;
+    dependencies?: Array<[number, number]>; // [from, to] step dependencies
+    description?: string; // Explanation of parallelization capability
+  };
 }
 
 export interface TechniqueHandler {

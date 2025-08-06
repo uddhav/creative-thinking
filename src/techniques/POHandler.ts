@@ -13,6 +13,16 @@ export class POHandler extends BaseTechniqueHandler {
       totalSteps: 4,
       description: 'Challenge assumptions through deliberate provocations',
       focus: 'Break thinking patterns with provocative statements',
+      parallelSteps: {
+        canParallelize: false,
+        dependencies: [
+          [1, 2],
+          [2, 3],
+          [3, 4],
+        ], // Provocation → Movement → Development → Implementation
+        description:
+          'Must be executed sequentially: movement requires provocation, development requires movement insights',
+      },
     };
   }
 

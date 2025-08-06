@@ -50,6 +50,16 @@ export class DesignThinkingHandler extends BaseTechniqueHandler {
             totalSteps: 5,
             description: 'Human-centered problem solving with embedded risk management',
             focus: 'Iterate through empathy, definition, ideation, prototyping, and testing',
+            parallelSteps: {
+                canParallelize: false,
+                dependencies: [
+                    [1, 2],
+                    [2, 3],
+                    [3, 4],
+                    [4, 5],
+                ], // Empathize → Define → Ideate → Prototype → Test
+                description: 'Must be executed sequentially: each stage builds on insights from the previous one',
+            },
         };
     }
     getStepInfo(step) {

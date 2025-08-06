@@ -11,6 +11,10 @@ export class TemporalWorkHandler extends BaseTechniqueHandler {
             totalSteps: 5,
             description: 'Design solutions considering time dynamics and flexibility',
             focus: 'Work with time as a design material',
+            parallelSteps: {
+                canParallelize: false,
+                description: 'Temporal analysis builds progressively through time landscapes',
+            },
         };
     }
     getStepInfo(step) {

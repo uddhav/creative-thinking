@@ -159,6 +159,10 @@ export class ExecutionResponseBuilder {
             currentTechnique: input.technique,
             techniqueIndex: techniqueIndex + 1,
             totalTechniques: plan?.techniques.length || 1,
+            // Add parallel execution info
+            executionMode: plan?.executionMode,
+            parallelGroup: plan?.parallelGroupIds?.[techniqueIndex],
+            canParallelize: handler.getTechniqueInfo().parallelSteps?.canParallelize,
         };
         this.addMemoryOutputs(parsedResponse, memoryOutputs);
         this.addTechniqueProgress(parsedResponse, techniqueProgress);
@@ -202,6 +206,31 @@ export class ExecutionResponseBuilder {
             sessionId,
         };
     }
+    /**
+     * Build parallel execution context for guidance
+     */
+    buildParallelExecutionContext(plan, currentTechnique) {
+        if (!plan || plan.executionMode !== 'parallel') {
+            return undefined;
+        }
+        // Check if plan has parallel groups
+        if (plan.parallelGroupIds && plan.parallelGroupIds.length > 0) {
+            const currentGroupIndex = plan.techniques.indexOf(currentTechnique);
+            if (currentGroupIndex >= 0 && plan.parallelGroupIds[currentGroupIndex]) {
+                const groupId = plan.parallelGroupIds[currentGroupIndex];
+                const sameGroupTechniques = plan.techniques.filter((t, i) => plan.parallelGroupIds?.[i] === groupId && t !== currentTechnique);
+                if (sameGroupTechniques.length > 0) {
+                    return `🔄 Parallel execution with: ${sameGroupTechniques.join(', ')}`;
+                }
+            }
+        }
+        // Check if there are other techniques that can run in parallel
+        const parallelTechniques = plan.techniques.filter(t => t !== currentTechnique);
+        if (parallelTechniques.length > 0) {
+            return `⚡ Running in parallel mode with ${parallelTechniques.length} other technique(s)`;
+        }
+        return undefined;
+    }
     generateNextStepGuidance(input, session, handler, techniqueLocalStep, techniqueIndex, plan) {
         if (!input.nextStepNeeded)
             return undefined;
@@ -210,14 +239,37 @@ export class ExecutionResponseBuilder {
         if (nextStep < 1 || nextStep > input.totalSteps) {
             return `Complete the ${handler.getTechniqueInfo().name} process`;
         }
+        // Add parallel execution context if applicable
+        const parallelContext = this.buildParallelExecutionContext(plan, input.technique);
+        if (parallelContext) {
+            return `${parallelContext} | Continue with next step`;
+        }
         // Check completion status and add assertive guidance if needed
         const completionMetadata = this.completionTracker.calculateCompletionMetadata(session, plan);
         const remainingSteps = input.totalSteps - input.currentStep;
-        // Add assertive guidance for low completion
-        if (completionMetadata.overallProgress < 0.3 && remainingSteps > 10) {
+        // CRITICAL: Detect and prevent step skipping
+        const expectedNextStep = input.currentStep + 1;
+        const lastExecutedStep = session.history[session.history.length - 1]?.currentStep || 0;
+        // Check if steps are being skipped
+        if (input.currentStep > 1 && lastExecutedStep + 1 !== input.currentStep) {
+            return (`❌ STEP SKIPPING DETECTED! You skipped from step ${lastExecutedStep} to ${input.currentStep}. ` +
+                `CRITICAL: You MUST execute step ${lastExecutedStep + 1} next. ` +
+                `Each step builds on previous insights. Skipping steps leads to incomplete analysis. ` +
+                `Execute step ${lastExecutedStep + 1} immediately.`);
+        }
+        // Add STRONG assertive guidance for low completion
+        if (completionMetadata.overallProgress < 0.5) {
             const percentage = Math.round(completionMetadata.overallProgress * 100);
-            return (`⚠️ Only ${percentage}% complete with ${remainingSteps} steps remaining. ` +
-                `Continue to avoid incomplete analysis. Next: ${this.getBaseGuidance(handler, techniqueLocalStep + 1, input)}`);
+            const skippedCount = completionMetadata.techniqueStatuses.reduce((sum, s) => sum + s.skippedSteps.length, 0);
+            if (skippedCount > 0) {
+                return (`⚠️ CRITICAL: ${skippedCount} steps have been skipped! Only ${percentage}% complete. ` +
+                    `YOU MUST EXECUTE ALL STEPS SEQUENTIALLY. ` +
+                    `Next step MUST be ${expectedNextStep}. Do not skip to a later step. ` +
+                    `${remainingSteps} steps remain and ALL must be completed.`);
+            }
+            return (`⚠️ MANDATORY: Only ${percentage}% complete with ${remainingSteps} steps remaining. ` +
+                `You MUST continue with step ${expectedNextStep}. ALL steps are required. ` +
+                `Next: ${this.getBaseGuidance(handler, techniqueLocalStep + 1, input)}`);
         }
         // Check if we're transitioning to a new technique
         const currentTechniqueSteps = plan?.workflow[techniqueIndex]?.steps.length || handler.getTechniqueInfo().totalSteps;

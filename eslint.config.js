@@ -19,7 +19,7 @@ export default [
   },
   // Configuration for CommonJS scripts
   {
-    files: ['scripts/*.cjs'],
+    files: ['scripts/*.cjs', 'test-*.cjs'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'commonjs',
@@ -32,10 +32,15 @@ export default [
         __dirname: 'readonly',
         __filename: 'readonly',
         Buffer: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
       },
     },
     rules: {
       'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      'no-console': 'off',
+      'no-undef': 'off',
+      'no-useless-escape': 'off',
     },
   },
   {

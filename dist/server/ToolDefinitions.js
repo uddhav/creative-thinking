@@ -4,13 +4,13 @@
  */
 export const DISCOVER_TECHNIQUES_TOOL = {
     name: 'discover_techniques',
-    description: 'STEP 1 of 3: Analyzes a problem and recommends appropriate lateral thinking techniques. This is the FIRST tool you must call when starting any creative thinking session. Returns recommendations and available techniques that can be used in the next step.',
+    description: 'STEP 1 of 3: Analyzes a problem and recommends appropriate lateral thinking techniques. This is the FIRST tool you must call when starting any creative thinking session. Returns recommendations and available techniques that can be used in the next step. MANDATORY PARAMETER: You MUST provide the "problem" parameter as a string describing the challenge to solve. DO NOT call this with an empty object {}. Example: {"problem": "How to improve team communication"}',
     inputSchema: {
         type: 'object',
         properties: {
             problem: {
                 type: 'string',
-                description: 'The problem or challenge to solve',
+                description: 'REQUIRED: The problem or challenge to solve. This parameter is MANDATORY and must be a non-empty string.',
             },
             context: {
                 type: 'string',
@@ -32,13 +32,13 @@ export const DISCOVER_TECHNIQUES_TOOL = {
 };
 export const PLAN_THINKING_SESSION_TOOL = {
     name: 'plan_thinking_session',
-    description: 'STEP 2 of 3: Creates a structured workflow for applying lateral thinking techniques. This tool MUST be called AFTER discover_techniques and BEFORE execute_thinking_step. Returns a planId that is REQUIRED for the execution step. Valid techniques: six_hats, po, random_entry, scamper, concept_extraction, yes_and, design_thinking, triz, neural_state, temporal_work, cross_cultural, collective_intel, disney_method, nine_windows, convergence (for synthesizing parallel results)',
+    description: 'STEP 2 of 3: Creates a structured workflow for applying lateral thinking techniques. This tool MUST be called AFTER discover_techniques and BEFORE execute_thinking_step. Returns a planId that is REQUIRED for the execution step. MANDATORY PARAMETERS: "problem" (string) and "techniques" (array of strings). Valid techniques: six_hats, po, random_entry, scamper, concept_extraction, yes_and, design_thinking, triz, neural_state, temporal_work, cross_cultural, collective_intel, disney_method, nine_windows, convergence. Example: {"problem": "How to reduce costs", "techniques": ["six_hats", "scamper"]}',
     inputSchema: {
         type: 'object',
         properties: {
             problem: {
                 type: 'string',
-                description: 'The problem to solve',
+                description: 'REQUIRED: The problem to solve. Must match the problem from discover_techniques.',
             },
             techniques: {
                 type: 'array',
@@ -62,7 +62,7 @@ export const PLAN_THINKING_SESSION_TOOL = {
                         'convergence',
                     ],
                 },
-                description: 'The techniques to include in the workflow',
+                description: 'REQUIRED: Array of technique names to execute. Each technique will have multiple steps that MUST ALL be completed.',
             },
             objectives: {
                 type: 'array',
@@ -98,18 +98,39 @@ export const PLAN_THINKING_SESSION_TOOL = {
 };
 export const EXECUTE_THINKING_STEP_TOOL = {
     name: 'execute_thinking_step',
-    description: 'STEP 3 of 3: Executes a single step in the lateral thinking process. WARNING: This tool REQUIRES a valid planId from plan_thinking_session. DO NOT call this tool directly - you MUST first call discover_techniques, then plan_thinking_session to get a planId. Attempting to use this tool without following the proper workflow (discover → plan → execute) will result in an error.',
+    description: 'STEP 3 of 3: Executes a single step in the lateral thinking process. CRITICAL: You MUST execute EVERY SINGLE STEP for EACH technique in the plan. DO NOT skip any steps - each step builds on previous insights. Steps must be executed sequentially (1, 2, 3, etc.) without gaps. WARNING: This tool REQUIRES a valid planId from plan_thinking_session. The workflow is: 1) discover_techniques, 2) plan_thinking_session (get planId), 3) execute_thinking_step repeatedly until ALL steps are complete. Set nextStepNeeded=true until the FINAL step of the FINAL technique. MANDATORY PARAMETERS: planId, technique, problem, currentStep, totalSteps, output, nextStepNeeded.',
     inputSchema: {
         type: 'object',
         properties: {
-            planId: { type: 'string' },
+            planId: {
+                type: 'string',
+                description: 'REQUIRED: The planId returned from plan_thinking_session. Must be provided.',
+            },
             sessionId: { type: 'string' },
-            technique: { type: 'string' },
-            problem: { type: 'string' },
-            currentStep: { type: 'number' },
-            totalSteps: { type: 'number' },
-            output: { type: 'string' },
-            nextStepNeeded: { type: 'boolean' },
+            technique: {
+                type: 'string',
+                description: 'REQUIRED: The current technique being executed from the plan.',
+            },
+            problem: {
+                type: 'string',
+                description: 'REQUIRED: The problem being solved. Must match previous calls.',
+            },
+            currentStep: {
+                type: 'number',
+                description: 'REQUIRED: Current step number (1-based). Must be sequential without gaps.',
+            },
+            totalSteps: {
+                type: 'number',
+                description: 'REQUIRED: Total number of steps for this technique.',
+            },
+            output: {
+                type: 'string',
+                description: 'REQUIRED: The thinking output for this step. Must contain substantive analysis.',
+            },
+            nextStepNeeded: {
+                type: 'boolean',
+                description: 'REQUIRED: Set to true unless this is the FINAL step of the FINAL technique. Critical for completion.',
+            },
             autoSave: {
                 type: 'boolean',
                 description: 'Whether to automatically save the session after this step',

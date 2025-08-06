@@ -13,6 +13,10 @@ export class RandomEntryHandler extends BaseTechniqueHandler {
       totalSteps: 3,
       description: 'Use random stimuli to trigger new associations',
       focus: 'Generate fresh perspectives through unrelated concepts',
+      parallelSteps: {
+        canParallelize: false,
+        description: 'Random stimulus must be generated before connections can be explored',
+      },
     };
   }
 

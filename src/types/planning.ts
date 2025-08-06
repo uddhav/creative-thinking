@@ -289,4 +289,14 @@ export interface PlanThinkingSessionOutput {
   parallelPlans?: ParallelPlan[];
   coordinationStrategy?: CoordinationStrategy;
   convergenceOptions?: ConvergenceOptions;
+
+  // Parallel execution group IDs for Anthropic-style parallel tool calls
+  parallelGroupIds?: string[];
+
+  // Convergence configuration for final synthesis
+  convergenceConfig?: {
+    enabled: boolean;
+    method: ConvergenceMethod;
+    timing: 'after_all' | 'after_groups';
+  };
 }
