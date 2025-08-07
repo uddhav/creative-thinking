@@ -119,6 +119,8 @@ these three tools.
 #### Support Systems
 
 - **Session Management** - Full state persistence with branching
+- **ExecutionGraphGenerator** - Creates DAGs for client-side parallel execution
+- **SessionEncoder** - Base64 encoding for session resilience
 - **Option Generation Engine** - Activates when flexibility < 0.4
 - **Early Warning System** - Multi-level alerts for creative constraints
 - **Ergodicity Tracking** - Path dependency and absorbing barrier detection
@@ -156,6 +158,49 @@ The Early Warning System detects approaching "absorbing barriers" - irreversible
 #### Escape Protocols
 
 Five levels of escape strategies, from Pattern Interruption to Strategic Pivot.
+
+### Parallel Execution Architecture
+
+The server uses a DAG-based approach for parallel execution:
+
+#### ExecutionGraphGenerator
+
+Converts workflow plans into executable DAGs:
+
+1. **Dependency Analysis**: Determines technique relationships
+   - Parallel: Six Hats, SCAMPER, Nine Windows (no inter-step dependencies)
+   - Sequential: Disney Method, Design Thinking, TRIZ, PO (strict ordering)
+   - Hybrid: Concept Extraction, Neural State (mixed dependencies)
+
+2. **Graph Generation**: Creates execution nodes with:
+   - Complete parameters for `execute_thinking_step`
+   - Dependency arrays indicating prerequisites
+   - Estimated duration and failure tolerance
+   - Unique IDs for tracking
+
+3. **Metadata Calculation**:
+   - Critical path (longest dependency chain)
+   - Maximum parallelism (most concurrent nodes)
+   - Parallelizable groups (nodes with same dependencies)
+
+#### SessionEncoder
+
+Enables session resilience through base64 encoding:
+
+1. **Encoding**: Converts session state to base64 tokens
+   - Includes planId, technique, step numbers, problem
+   - Optional: history length, last output
+   - Timestamp for 24-hour expiry
+
+2. **Decoding**: Restores sessions from encoded tokens
+   - Validates expiry and step numbers
+   - Creates minimal session if not in memory
+   - Transparent to clients
+
+3. **Benefits**:
+   - Survives server restarts
+   - No external storage needed
+   - Backward compatible with regular IDs
 
 ## Development Workflow
 

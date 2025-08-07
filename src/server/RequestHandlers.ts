@@ -86,13 +86,23 @@ export class RequestHandlers {
         args = params.arguments;
 
         if (!name || typeof name !== 'string') {
+          const errorMessage = 'Error: Tool name is required and must be a string';
+
+          console.error('[RequestHandler] Invalid tool name:', {
+            timestamp: new Date().toISOString(),
+            name,
+            nameType: typeof name,
+            message: errorMessage,
+          });
+
           return {
             content: [
               {
                 type: 'text',
-                text: 'Error: Tool name is required and must be a string',
+                text: errorMessage,
               },
             ],
+            isError: true,
           };
         }
       } catch (extractError) {
@@ -121,6 +131,12 @@ export class RequestHandlers {
         // Pre-validate required parameters
         const validationError = this.validateRequiredParameters(name, args);
         if (validationError) {
+          console.error('[RequestHandler] Validation error:', {
+            timestamp: new Date().toISOString(),
+            tool: name,
+            message: validationError,
+          });
+
           return {
             content: [
               {
@@ -128,6 +144,7 @@ export class RequestHandlers {
                 text: validationError,
               },
             ],
+            isError: true,
           };
         }
 
@@ -140,6 +157,15 @@ export class RequestHandlers {
           const violationError = workflowGuard.getViolationError(violation);
           // Since ErrorFactory returns CreativeThinkingError which implements EnhancedError
           const enhancedError = violationError as CreativeThinkingError;
+
+          console.error('[RequestHandler] Workflow violation detected:', {
+            timestamp: new Date().toISOString(),
+            tool: name,
+            violation: violation.type,
+            message: enhancedError.message,
+            code: enhancedError.code,
+          });
+
           return {
             content: [
               {
@@ -155,6 +181,7 @@ export class RequestHandlers {
                 ),
               },
             ],
+            isError: true,
           };
         }
 
