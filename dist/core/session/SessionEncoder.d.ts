@@ -14,6 +14,17 @@ export interface EncodedSessionData {
     objectives?: string[];
     constraints?: string[];
 }
+export interface EncodedSessionState {
+    sessionId: string;
+    planId: string;
+    technique: string;
+    currentStep: number;
+    totalSteps: number;
+    timestamp: number;
+    problem: string;
+    historyLength?: number;
+    lastOutput?: string;
+}
 export declare class SessionEncoder {
     /**
      * Encode session data to base64
@@ -55,5 +66,36 @@ export declare class SessionEncoder {
      * Merge encoded session with existing plan data
      */
     static mergeWithPlan(encodedSession: string, planData: Record<string, unknown>): Record<string, unknown>;
+    /**
+     * Encode session state to base64
+     */
+    static encodeSession(sessionState: EncodedSessionState): string;
+    /**
+     * Decode session state from base64
+     */
+    static decodeSession(encodedSession: string): EncodedSessionState | null;
+    /**
+     * Check if a sessionId is an encoded session
+     */
+    static isEncodedSessionId(sessionId: string): boolean;
+    /**
+     * Validate session state without memory lookup
+     */
+    static isValidSession(encodedSession: string): boolean;
+    /**
+     * Create encoded sessionId from current execution state
+     */
+    static createEncodedSessionId(originalSessionId: string, planId: string, problem: string, technique: string, currentStep: number, totalSteps: number, additionalData?: {
+        historyLength?: number;
+        lastOutput?: string;
+    }): string;
+    /**
+     * Extract original sessionId from encoded session or return as-is
+     */
+    static extractSessionId(sessionIdOrEncoded: string): string;
+    /**
+     * Validate decoded session state
+     */
+    private static validateSessionState;
 }
 //# sourceMappingURL=SessionEncoder.d.ts.map

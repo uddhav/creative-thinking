@@ -3,7 +3,11 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { SessionEncoder, type EncodedSessionData } from '../core/session/SessionEncoder.js';
+import {
+  SessionEncoder,
+  type EncodedSessionData,
+  type EncodedSessionState,
+} from '../core/session/SessionEncoder.js';
 
 describe('SessionEncoder', () => {
   beforeEach(() => {
@@ -219,6 +223,146 @@ describe('SessionEncoder', () => {
 
       const merged = SessionEncoder.mergeWithPlan('invalid-base64', existingPlan);
       expect(merged).toEqual(existingPlan);
+    });
+  });
+
+  describe('Session State Encoding', () => {
+    it('should encode session state to base64', () => {
+      const sessionState: EncodedSessionState = {
+        sessionId: 'session_original_123',
+        planId: 'plan_12345',
+        problem: 'Test problem',
+        technique: 'six_hats',
+        currentStep: 3,
+        totalSteps: 7,
+        timestamp: Date.now(),
+        historyLength: 2,
+        lastOutput: 'Previous step output',
+      };
+
+      const encoded = SessionEncoder.encodeSession(sessionState);
+
+      expect(encoded).toBeTypeOf('string');
+      expect(encoded.length).toBeGreaterThan(0);
+      // Should be valid base64
+      expect(() => Buffer.from(encoded, 'base64')).not.toThrow();
+    });
+
+    it('should decode session state from base64', () => {
+      const sessionState: EncodedSessionState = {
+        sessionId: 'session_original_123',
+        planId: 'plan_12345',
+        problem: 'Test problem',
+        technique: 'scamper',
+        currentStep: 5,
+        totalSteps: 8,
+        timestamp: Date.now(),
+      };
+
+      const encoded = SessionEncoder.encodeSession(sessionState);
+      const decoded = SessionEncoder.decodeSession(encoded);
+
+      expect(decoded).toEqual(sessionState);
+    });
+
+    it('should identify encoded sessionIds', () => {
+      const regularSessionId = 'session_12345';
+      const encodedSessionId = SessionEncoder.createEncodedSessionId(
+        'session_original',
+        'plan_123',
+        'Problem',
+        'six_hats',
+        1,
+        7
+      );
+
+      expect(SessionEncoder.isEncodedSessionId(regularSessionId)).toBe(false);
+      expect(SessionEncoder.isEncodedSessionId(encodedSessionId)).toBe(true);
+    });
+
+    it('should validate non-expired sessions as valid', () => {
+      const encodedSession = SessionEncoder.createEncodedSessionId(
+        'session_123',
+        'plan_456',
+        'Problem',
+        'triz',
+        2,
+        4
+      );
+
+      expect(SessionEncoder.isValidSession(encodedSession)).toBe(true);
+    });
+
+    it('should validate expired sessions as invalid', () => {
+      const sessionState: EncodedSessionState = {
+        sessionId: 'session_123',
+        planId: 'plan_456',
+        problem: 'Problem',
+        technique: 'po',
+        currentStep: 1,
+        totalSteps: 4,
+        timestamp: Date.now() - 25 * 60 * 60 * 1000, // 25 hours ago
+      };
+
+      const encoded = SessionEncoder.encodeSession(sessionState);
+      expect(SessionEncoder.isValidSession(encoded)).toBe(false);
+    });
+
+    it('should create encoded sessionId with all parameters', () => {
+      const encoded = SessionEncoder.createEncodedSessionId(
+        'session_orig_123',
+        'plan_456',
+        'Complex problem',
+        'design_thinking',
+        3,
+        5,
+        {
+          historyLength: 2,
+          lastOutput: 'Previous output',
+        }
+      );
+
+      expect(encoded).toBeTypeOf('string');
+
+      const decoded = SessionEncoder.decodeSession(encoded);
+      expect(decoded).not.toBeNull();
+      expect(decoded?.sessionId).toBe('session_orig_123');
+      expect(decoded?.planId).toBe('plan_456');
+      expect(decoded?.technique).toBe('design_thinking');
+      expect(decoded?.currentStep).toBe(3);
+      expect(decoded?.totalSteps).toBe(5);
+      expect(decoded?.historyLength).toBe(2);
+      expect(decoded?.lastOutput).toBe('Previous output');
+    });
+
+    it('should extract original sessionId from encoded session', () => {
+      const originalId = 'session_orig_456';
+      const encoded = SessionEncoder.createEncodedSessionId(
+        originalId,
+        'plan_789',
+        'Problem',
+        'scamper',
+        1,
+        8
+      );
+
+      expect(SessionEncoder.extractSessionId(encoded)).toBe(originalId);
+      expect(SessionEncoder.extractSessionId('session_regular_123')).toBe('session_regular_123');
+    });
+
+    it('should handle invalid step numbers in session validation', () => {
+      const sessionState: EncodedSessionState = {
+        sessionId: 'session_123',
+        planId: 'plan_456',
+        problem: 'Problem',
+        technique: 'six_hats',
+        currentStep: 10, // Invalid - greater than totalSteps
+        totalSteps: 7,
+        timestamp: Date.now(),
+      };
+
+      const encoded = SessionEncoder.encodeSession(sessionState);
+      expect(SessionEncoder.isValidSession(encoded)).toBe(false);
     });
   });
 });

@@ -42,7 +42,7 @@ export declare class ResponseBuilder {
     /**
      * Build an execution response
      */
-    buildExecutionResponse(sessionId: string, input: ThinkingOperationData, insights: string[], nextStepGuidance?: string, historyLength?: number, executionMetadata?: ExecutionMetadata): LateralThinkingResponse;
+    buildExecutionResponse(sessionId: string, input: ThinkingOperationData, insights: string[], nextStepGuidance?: string, historyLength?: number, executionMetadata?: ExecutionMetadata, encodeSessionId?: boolean, planId?: string): LateralThinkingResponse;
     /**
      * Build a session operation response
      */

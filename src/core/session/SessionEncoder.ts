@@ -17,6 +17,19 @@ export interface EncodedSessionData {
   constraints?: string[];
 }
 
+export interface EncodedSessionState {
+  sessionId: string; // Original session identifier
+  planId: string; // Reference to the plan (could be encoded)
+  technique: string; // Current technique
+  currentStep: number; // Current step in execution
+  totalSteps: number; // Total steps for technique
+  timestamp: number; // For expiry
+  problem: string; // Problem statement for validation
+  // Optional fields for richer context
+  historyLength?: number; // How many steps completed
+  lastOutput?: string; // Last output for context
+}
+
 export class SessionEncoder {
   /**
    * Encode session data to base64
@@ -217,5 +230,161 @@ export class SessionEncoder {
       objectives: decoded.objectives || (planData.objectives as string[]),
       constraints: decoded.constraints || (planData.constraints as string[]),
     };
+  }
+
+  /**
+   * Encode session state to base64
+   */
+  static encodeSession(sessionState: EncodedSessionState): string {
+    try {
+      const json = JSON.stringify(sessionState);
+      return Buffer.from(json).toString('base64');
+    } catch (error) {
+      console.error('[SessionEncoder] Failed to encode session state:', error);
+      throw new Error('Failed to encode session state');
+    }
+  }
+
+  /**
+   * Decode session state from base64
+   */
+  static decodeSession(encodedSession: string): EncodedSessionState | null {
+    try {
+      // Check if it's a base64 string
+      if (!this.isBase64(encodedSession)) {
+        return null;
+      }
+
+      const json = Buffer.from(encodedSession, 'base64').toString('utf-8');
+      const data = JSON.parse(json) as EncodedSessionState;
+
+      // Validate required fields
+      if (!this.validateSessionState(data)) {
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('[SessionEncoder] Failed to decode session state:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Check if a sessionId is an encoded session
+   */
+  static isEncodedSessionId(sessionId: string): boolean {
+    // Regular sessionIds start with "session_"
+    if (sessionId.startsWith('session_')) {
+      return false;
+    }
+
+    return this.isBase64(sessionId);
+  }
+
+  /**
+   * Validate session state without memory lookup
+   */
+  static isValidSession(encodedSession: string): boolean {
+    const decoded = this.decodeSession(encodedSession);
+
+    if (!decoded) {
+      return false;
+    }
+
+    // Check if session is not expired (24 hours)
+    const expiryTime = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+    const isNotExpired = decoded.timestamp > Date.now() - expiryTime;
+
+    // Check if step number is valid
+    const isStepValid = decoded.currentStep > 0 && decoded.currentStep <= decoded.totalSteps;
+
+    return isNotExpired && isStepValid;
+  }
+
+  /**
+   * Create encoded sessionId from current execution state
+   */
+  static createEncodedSessionId(
+    originalSessionId: string,
+    planId: string,
+    problem: string,
+    technique: string,
+    currentStep: number,
+    totalSteps: number,
+    additionalData?: {
+      historyLength?: number;
+      lastOutput?: string;
+    }
+  ): string {
+    const sessionState: EncodedSessionState = {
+      sessionId: originalSessionId,
+      planId,
+      problem,
+      technique,
+      currentStep,
+      totalSteps,
+      timestamp: Date.now(),
+      ...additionalData,
+    };
+
+    return this.encodeSession(sessionState);
+  }
+
+  /**
+   * Extract original sessionId from encoded session or return as-is
+   */
+  static extractSessionId(sessionIdOrEncoded: string): string {
+    if (this.isEncodedSessionId(sessionIdOrEncoded)) {
+      const decoded = this.decodeSession(sessionIdOrEncoded);
+      return decoded?.sessionId || sessionIdOrEncoded;
+    }
+    return sessionIdOrEncoded;
+  }
+
+  /**
+   * Validate decoded session state
+   */
+  private static validateSessionState(data: unknown): data is EncodedSessionState {
+    if (!data || typeof data !== 'object') {
+      return false;
+    }
+
+    // Check required fields
+    const requiredFields = [
+      'sessionId',
+      'planId',
+      'problem',
+      'technique',
+      'currentStep',
+      'totalSteps',
+      'timestamp',
+    ];
+    for (const field of requiredFields) {
+      if (!(field in data)) {
+        return false;
+      }
+    }
+
+    // Validate field types
+    const validData = data as EncodedSessionState;
+    if (
+      typeof validData.sessionId !== 'string' ||
+      typeof validData.planId !== 'string' ||
+      typeof validData.problem !== 'string' ||
+      typeof validData.technique !== 'string' ||
+      typeof validData.currentStep !== 'number' ||
+      typeof validData.totalSteps !== 'number' ||
+      typeof validData.timestamp !== 'number'
+    ) {
+      return false;
+    }
+
+    // Validate step numbers
+    if (validData.currentStep < 1 || validData.currentStep > validData.totalSteps) {
+      return false;
+    }
+
+    return true;
   }
 }

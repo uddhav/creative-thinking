@@ -12,6 +12,7 @@ import type {
 import type { DiscoverTechniquesOutput, PlanThinkingSessionOutput } from '../types/planning.js';
 import { CreativeThinkingError, ValidationError, ErrorCode } from '../errors/types.js';
 import { JsonOptimizer } from '../utils/JsonOptimizer.js';
+import { SessionEncoder } from './session/SessionEncoder.js';
 
 // Type for execution metadata
 export interface ExecutionMetadata {
@@ -266,10 +267,30 @@ export class ResponseBuilder {
     insights: string[],
     nextStepGuidance?: string,
     historyLength?: number,
-    executionMetadata?: ExecutionMetadata
+    executionMetadata?: ExecutionMetadata,
+    encodeSessionId: boolean = false,
+    planId?: string
   ): LateralThinkingResponse {
+    // Optionally encode the sessionId for resilience
+    let returnSessionId = sessionId;
+    if (encodeSessionId && planId) {
+      // Create encoded sessionId that can survive server restarts
+      returnSessionId = SessionEncoder.createEncodedSessionId(
+        sessionId,
+        planId,
+        input.problem,
+        input.technique,
+        input.currentStep,
+        input.totalSteps,
+        {
+          historyLength: historyLength || 0,
+          lastOutput: input.output,
+        }
+      );
+    }
+
     const response: Record<string, unknown> = {
-      sessionId,
+      sessionId: returnSessionId,
       technique: input.technique,
       problem: input.problem,
       currentStep: input.currentStep,

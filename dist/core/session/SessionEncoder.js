@@ -163,5 +163,130 @@ export class SessionEncoder {
             constraints: decoded.constraints || planData.constraints,
         };
     }
+    /**
+     * Encode session state to base64
+     */
+    static encodeSession(sessionState) {
+        try {
+            const json = JSON.stringify(sessionState);
+            return Buffer.from(json).toString('base64');
+        }
+        catch (error) {
+            console.error('[SessionEncoder] Failed to encode session state:', error);
+            throw new Error('Failed to encode session state');
+        }
+    }
+    /**
+     * Decode session state from base64
+     */
+    static decodeSession(encodedSession) {
+        try {
+            // Check if it's a base64 string
+            if (!this.isBase64(encodedSession)) {
+                return null;
+            }
+            const json = Buffer.from(encodedSession, 'base64').toString('utf-8');
+            const data = JSON.parse(json);
+            // Validate required fields
+            if (!this.validateSessionState(data)) {
+                return null;
+            }
+            return data;
+        }
+        catch (error) {
+            console.error('[SessionEncoder] Failed to decode session state:', error);
+            return null;
+        }
+    }
+    /**
+     * Check if a sessionId is an encoded session
+     */
+    static isEncodedSessionId(sessionId) {
+        // Regular sessionIds start with "session_"
+        if (sessionId.startsWith('session_')) {
+            return false;
+        }
+        return this.isBase64(sessionId);
+    }
+    /**
+     * Validate session state without memory lookup
+     */
+    static isValidSession(encodedSession) {
+        const decoded = this.decodeSession(encodedSession);
+        if (!decoded) {
+            return false;
+        }
+        // Check if session is not expired (24 hours)
+        const expiryTime = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+        const isNotExpired = decoded.timestamp > Date.now() - expiryTime;
+        // Check if step number is valid
+        const isStepValid = decoded.currentStep > 0 && decoded.currentStep <= decoded.totalSteps;
+        return isNotExpired && isStepValid;
+    }
+    /**
+     * Create encoded sessionId from current execution state
+     */
+    static createEncodedSessionId(originalSessionId, planId, problem, technique, currentStep, totalSteps, additionalData) {
+        const sessionState = {
+            sessionId: originalSessionId,
+            planId,
+            problem,
+            technique,
+            currentStep,
+            totalSteps,
+            timestamp: Date.now(),
+            ...additionalData,
+        };
+        return this.encodeSession(sessionState);
+    }
+    /**
+     * Extract original sessionId from encoded session or return as-is
+     */
+    static extractSessionId(sessionIdOrEncoded) {
+        if (this.isEncodedSessionId(sessionIdOrEncoded)) {
+            const decoded = this.decodeSession(sessionIdOrEncoded);
+            return decoded?.sessionId || sessionIdOrEncoded;
+        }
+        return sessionIdOrEncoded;
+    }
+    /**
+     * Validate decoded session state
+     */
+    static validateSessionState(data) {
+        if (!data || typeof data !== 'object') {
+            return false;
+        }
+        // Check required fields
+        const requiredFields = [
+            'sessionId',
+            'planId',
+            'problem',
+            'technique',
+            'currentStep',
+            'totalSteps',
+            'timestamp',
+        ];
+        for (const field of requiredFields) {
+            if (!(field in data)) {
+                return false;
+            }
+        }
+        // Validate field types
+        const validData = data;
+        if (typeof validData.sessionId !== 'string' ||
+            typeof validData.planId !== 'string' ||
+            typeof validData.problem !== 'string' ||
+            typeof validData.technique !== 'string' ||
+            typeof validData.currentStep !== 'number' ||
+            typeof validData.totalSteps !== 'number' ||
+            typeof validData.timestamp !== 'number') {
+            return false;
+        }
+        // Validate step numbers
+        if (validData.currentStep < 1 || validData.currentStep > validData.totalSteps) {
+            return false;
+        }
+        return true;
+    }
 }
 //# sourceMappingURL=SessionEncoder.js.map

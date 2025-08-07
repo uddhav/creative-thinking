@@ -145,40 +145,110 @@ export class ExecutionValidator {
     let sessionId = input.sessionId;
 
     if (sessionId) {
-      const existingSession = this.sessionManager.getSession(sessionId);
-      if (!existingSession) {
-        // Create new session with the user-provided ID
-        session = this.initializeSession(input, ergodicityManager);
-        try {
-          sessionId = this.sessionManager.createSession(session, sessionId);
-          console.error(`Created new session with user-provided ID: ${sessionId}`);
+      // Check if sessionId is base64 encoded
+      if (SessionEncoder.isEncodedSessionId(sessionId)) {
+        // Validate the encoded session
+        if (SessionEncoder.isValidSession(sessionId)) {
+          // Decode the session and create minimal session from it
+          const decodedSession = SessionEncoder.decodeSession(sessionId);
+          if (decodedSession) {
+            // Extract the original sessionId
+            const originalSessionId = decodedSession.sessionId;
 
-          // Track session start and technique start
-          this.telemetry.trackSessionStart(sessionId, input.problem.length).catch(console.error);
-          this.telemetry.trackTechniqueStart(sessionId, input.technique).catch(console.error);
-        } catch (error) {
-          // Handle session creation errors (e.g. invalid session ID format)
-          const message =
-            error instanceof Error ? error.message : 'The provided session ID format is invalid';
-          const enhancedError = ErrorFactory.invalidInput(
-            'sessionId',
-            'valid session ID format',
-            input.sessionId
-          );
+            // Check if we have this session in memory
+            const existingSession = this.sessionManager.getSession(originalSessionId);
+            if (existingSession) {
+              // Use existing session if found
+              session = existingSession;
+              sessionId = originalSessionId;
+            } else {
+              // Create minimal session from decoded state
+              session = this.initializeSession(input, ergodicityManager);
+              // Update session with decoded state
+              session.problem = decodedSession.problem;
+              session.technique = decodedSession.technique as LateralTechnique;
+              // Restore history length if provided
+              if (decodedSession.historyLength) {
+                // Create placeholder history entries
+                for (let i = 0; i < decodedSession.historyLength; i++) {
+                  session.history.push({
+                    currentStep: i + 1,
+                    totalSteps: decodedSession.totalSteps,
+                    technique: decodedSession.technique as LateralTechnique,
+                    problem: decodedSession.problem,
+                    output: decodedSession.lastOutput || `Step ${i + 1} output`,
+                    nextStepNeeded: i + 1 < decodedSession.totalSteps,
+                    timestamp: new Date().toISOString(),
+                  });
+                }
+              }
+
+              // Create session with original ID
+              sessionId = this.sessionManager.createSession(session, originalSessionId);
+              console.error(`Restored session from encoded state: ${originalSessionId}`);
+            }
+
+            // Track activity
+            if (input.currentStep === 1) {
+              this.telemetry.trackTechniqueStart(sessionId, input.technique).catch(console.error);
+            }
+          } else {
+            // Invalid encoded session
+            const enhancedError = ErrorFactory.sessionNotFound(sessionId);
+            return {
+              error: this.errorHandler.handleError(enhancedError, 'execution', {
+                sessionId: 'Invalid or expired encoded session',
+                suggestion: 'The encoded session may have expired. Please start a new session.',
+              }),
+            };
+          }
+        } else {
+          // Expired or invalid encoded session
+          const enhancedError = ErrorFactory.sessionNotFound(sessionId);
           return {
-            error: this.errorHandler.handleError(enhancedError, 'discovery', {
-              sessionId: input.sessionId,
-              errorType: 'invalid_format',
-              message,
+            error: this.errorHandler.handleError(enhancedError, 'execution', {
+              sessionId: 'Expired encoded session',
+              suggestion: 'The encoded session has expired. Please start a new session.',
             }),
           };
         }
       } else {
-        session = existingSession;
+        // Regular sessionId - existing logic
+        const existingSession = this.sessionManager.getSession(sessionId);
+        if (!existingSession) {
+          // Create new session with the user-provided ID
+          session = this.initializeSession(input, ergodicityManager);
+          try {
+            sessionId = this.sessionManager.createSession(session, sessionId);
+            console.error(`Created new session with user-provided ID: ${sessionId}`);
 
-        // Track technique start if this is the first step
-        if (input.currentStep === 1) {
-          this.telemetry.trackTechniqueStart(sessionId, input.technique).catch(console.error);
+            // Track session start and technique start
+            this.telemetry.trackSessionStart(sessionId, input.problem.length).catch(console.error);
+            this.telemetry.trackTechniqueStart(sessionId, input.technique).catch(console.error);
+          } catch (error) {
+            // Handle session creation errors (e.g. invalid session ID format)
+            const message =
+              error instanceof Error ? error.message : 'The provided session ID format is invalid';
+            const enhancedError = ErrorFactory.invalidInput(
+              'sessionId',
+              'valid session ID format',
+              input.sessionId
+            );
+            return {
+              error: this.errorHandler.handleError(enhancedError, 'discovery', {
+                sessionId: input.sessionId,
+                errorType: 'invalid_format',
+                message,
+              }),
+            };
+          }
+        } else {
+          session = existingSession;
+
+          // Track technique start if this is the first step
+          if (input.currentStep === 1) {
+            this.telemetry.trackTechniqueStart(sessionId, input.technique).catch(console.error);
+          }
         }
       }
     } else {
