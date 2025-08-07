@@ -350,43 +350,33 @@ export class ConvergenceExecutor {
      */
     extractThemesEfficiently(insights) {
         const themeCount = new Map();
-        // Process each insight with compromise NLP
-        for (const insight of insights) {
-            if (!insight || typeof insight !== 'string')
-                continue;
-            const doc = nlp(insight);
-            // Extract key terms using NLP
-            // Get nouns (topics/subjects)
-            const nouns = doc.nouns().out('array');
-            for (const noun of nouns) {
-                const normalized = noun.toLowerCase();
-                if (normalized.length > 3) {
-                    themeCount.set(normalized, (themeCount.get(normalized) || 0) + 2); // Weight nouns higher
-                }
+        // Filter valid insights and batch process
+        const validInsights = insights.filter(i => i && typeof i === 'string');
+        if (validInsights.length === 0)
+            return themeCount;
+        // Batch process all insights as a single document for better performance
+        // This avoids creating multiple NLP document instances
+        const combinedText = validInsights.join(' ');
+        const doc = nlp(combinedText);
+        // Helper function to update count with minimum length check
+        const updateCount = (term, weight, minLength = 3) => {
+            const normalized = term.toLowerCase().trim();
+            if (normalized.length > minLength) {
+                themeCount.set(normalized, (themeCount.get(normalized) || 0) + weight);
             }
-            // Get verbs (actions/processes)
-            const verbs = doc.verbs().out('array');
-            for (const verb of verbs) {
-                const normalized = verb.toLowerCase();
-                if (normalized.length > 3) {
-                    themeCount.set(normalized, (themeCount.get(normalized) || 0) + 1);
-                }
-            }
-            // Get adjectives (qualities/attributes)
-            const adjectives = doc.adjectives().out('array');
-            for (const adj of adjectives) {
-                const normalized = adj.toLowerCase();
-                if (normalized.length > 4) {
-                    themeCount.set(normalized, (themeCount.get(normalized) || 0) + 1);
-                }
-            }
-            // Extract named entities (organizations, people, places)
-            const topics = doc.topics().out('array');
-            for (const topic of topics) {
-                const normalized = topic.toLowerCase();
-                themeCount.set(normalized, (themeCount.get(normalized) || 0) + 3); // Weight named entities highest
-            }
-        }
+        };
+        // Extract all terms in a single pass for better performance
+        // Extract named entities first (highest weight)
+        const topics = doc.topics().out('array');
+        topics.forEach(topic => updateCount(topic, 3));
+        // Extract nouns (medium-high weight)
+        const nouns = doc.nouns().out('array');
+        nouns.forEach(noun => updateCount(noun, 2));
+        // Extract verbs and adjectives (lower weight)
+        const verbs = doc.verbs().out('array');
+        verbs.forEach(verb => updateCount(verb, 1));
+        const adjectives = doc.adjectives().out('array');
+        adjectives.forEach(adj => updateCount(adj, 1, 4)); // Adjectives need min 5 chars
         return themeCount;
     }
 }

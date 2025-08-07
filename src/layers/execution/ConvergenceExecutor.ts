@@ -481,47 +481,38 @@ export class ConvergenceExecutor {
   private extractThemesEfficiently(insights: string[]): Map<string, number> {
     const themeCount = new Map<string, number>();
 
-    // Process each insight with compromise NLP
-    for (const insight of insights) {
-      if (!insight || typeof insight !== 'string') continue;
+    // Filter valid insights and batch process
+    const validInsights = insights.filter(i => i && typeof i === 'string');
+    if (validInsights.length === 0) return themeCount;
 
-      const doc = nlp(insight);
+    // Batch process all insights as a single document for better performance
+    // This avoids creating multiple NLP document instances
+    const combinedText = validInsights.join(' ');
+    const doc = nlp(combinedText);
 
-      // Extract key terms using NLP
-      // Get nouns (topics/subjects)
-      const nouns = doc.nouns().out('array') as string[];
-      for (const noun of nouns) {
-        const normalized = noun.toLowerCase();
-        if (normalized.length > 3) {
-          themeCount.set(normalized, (themeCount.get(normalized) || 0) + 2); // Weight nouns higher
-        }
+    // Helper function to update count with minimum length check
+    const updateCount = (term: string, weight: number, minLength: number = 3): void => {
+      const normalized = term.toLowerCase().trim();
+      if (normalized.length > minLength) {
+        themeCount.set(normalized, (themeCount.get(normalized) || 0) + weight);
       }
+    };
 
-      // Get verbs (actions/processes)
-      const verbs = doc.verbs().out('array') as string[];
-      for (const verb of verbs) {
-        const normalized = verb.toLowerCase();
-        if (normalized.length > 3) {
-          themeCount.set(normalized, (themeCount.get(normalized) || 0) + 1);
-        }
-      }
+    // Extract all terms in a single pass for better performance
+    // Extract named entities first (highest weight)
+    const topics = doc.topics().out('array') as string[];
+    topics.forEach(topic => updateCount(topic, 3));
 
-      // Get adjectives (qualities/attributes)
-      const adjectives = doc.adjectives().out('array') as string[];
-      for (const adj of adjectives) {
-        const normalized = adj.toLowerCase();
-        if (normalized.length > 4) {
-          themeCount.set(normalized, (themeCount.get(normalized) || 0) + 1);
-        }
-      }
+    // Extract nouns (medium-high weight)
+    const nouns = doc.nouns().out('array') as string[];
+    nouns.forEach(noun => updateCount(noun, 2));
 
-      // Extract named entities (organizations, people, places)
-      const topics = doc.topics().out('array') as string[];
-      for (const topic of topics) {
-        const normalized = topic.toLowerCase();
-        themeCount.set(normalized, (themeCount.get(normalized) || 0) + 3); // Weight named entities highest
-      }
-    }
+    // Extract verbs and adjectives (lower weight)
+    const verbs = doc.verbs().out('array') as string[];
+    verbs.forEach(verb => updateCount(verb, 1));
+
+    const adjectives = doc.adjectives().out('array') as string[];
+    adjectives.forEach(adj => updateCount(adj, 1, 4)); // Adjectives need min 5 chars
 
     return themeCount;
   }
