@@ -7,8 +7,6 @@ import type { LateralThinkingServer } from '../index.js';
 export declare class RequestHandlers {
     private server;
     private lateralServer;
-    private parallelHandler;
-    private parallelConfig;
     constructor(server: Server, lateralServer: LateralThinkingServer);
     /**
      * Set up all request handlers
