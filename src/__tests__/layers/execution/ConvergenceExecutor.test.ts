@@ -279,7 +279,11 @@ describe('ConvergenceExecutor', () => {
       const mergeResult = await executor.executeConvergence(mergeInput, 'test-session');
       expect(mergeResult.isError).toBeUndefined();
       const content = JSON.parse(mergeResult.content[0].text);
-      expect(content.insights.some((i: string) => i.includes('Merged perspective'))).toBe(true);
+      // After merge, should contain all unique insights
+      expect(content.insights).toContain('Insight 1');
+      expect(content.insights).toContain('Insight 2');
+      expect(content.insights).toContain('Insight 3');
+      expect(content.insights).toContain('Insight 4');
 
       // Test select strategy
       const selectInput: ExecuteThinkingStepInput = {
@@ -290,7 +294,11 @@ describe('ConvergenceExecutor', () => {
       const selectResult = await executor.executeConvergence(selectInput, 'test-session');
       expect(selectResult.isError).toBeUndefined();
       const selectContent = JSON.parse(selectResult.content[0].text);
-      expect(selectContent.insights.some((i: string) => i.includes('high-confidence'))).toBe(true);
+      // Select strategy should return insights from highest confidence result (0.9)
+      expect(selectContent.insights).toContain('Insight 1');
+      expect(selectContent.insights).toContain('Insight 2');
+      // Should not contain insights from lower confidence result
+      expect(selectContent.insights).not.toContain('Insight 3');
 
       // Test hierarchical strategy
       const hierarchicalInput: ExecuteThinkingStepInput = {

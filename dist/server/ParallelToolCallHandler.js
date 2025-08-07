@@ -58,7 +58,7 @@ export class ParallelToolCallHandler {
     /**
      * Process parallel tool calls
      */
-    async processParallelToolCalls(calls, useAnthropicFormat = false) {
+    async processParallelToolCalls(calls) {
         // Normalize all calls to ensure they have IDs
         const normalizedCalls = calls.map(call => this.normalizeToolCall(call));
         // Check workflow violations first
@@ -99,31 +99,31 @@ export class ParallelToolCallHandler {
         // Check if all calls are execute_thinking_step
         const allExecute = normalizedCalls.every(call => call.name === 'execute_thinking_step');
         if (allExecute) {
-            return this.processParallelExecutions(normalizedCalls, useAnthropicFormat);
+            return this.processParallelExecutions(normalizedCalls);
         }
         else {
             // For mixed or non-execute calls, process sequentially for now
             // (discover and plan must be sequential)
-            return this.processSequentialCalls(normalizedCalls, useAnthropicFormat);
+            return this.processSequentialCalls(normalizedCalls);
         }
     }
     /**
      * Process parallel execute_thinking_step calls
      */
-    async processParallelExecutions(calls, useAnthropicFormat = false) {
+    async processParallelExecutions(calls) {
         try {
             // Check memory pressure before parallel execution
-            // Note: We access sessionManager and visualFormatter through the server
-            // These are private properties on the server, so we need type assertions
-            const serverWithInternals = this.lateralServer;
-            const parallelContext = ParallelExecutionContext.getInstance(serverWithInternals.sessionManager, serverWithInternals.visualFormatter);
+            // Access sessionManager and visualFormatter through public getters
+            const sessionManager = this.lateralServer.getSessionManager();
+            const visualFormatter = this.lateralServer.getVisualFormatter();
+            const parallelContext = ParallelExecutionContext.getInstance(sessionManager, visualFormatter);
             const memoryCheck = parallelContext.checkMemoryPressure();
             if (!memoryCheck.canProceed) {
                 // Fall back to sequential execution due to memory pressure
                 if (memoryCheck.warning) {
                     console.error(`[ParallelToolCallHandler] ${memoryCheck.warning}`);
                 }
-                return this.processSequentialCalls(calls, useAnthropicFormat);
+                return this.processSequentialCalls(calls);
             }
             if (memoryCheck.warning) {
                 console.error(`[ParallelToolCallHandler] Warning: ${memoryCheck.warning}`);
@@ -157,96 +157,42 @@ export class ParallelToolCallHandler {
                 }
             }));
             // Build response based on format preference
-            if (useAnthropicFormat) {
-                // Anthropic format: tool_result blocks
-                const toolResults = results.map((result, index) => {
-                    const call = calls[index];
-                    if (result.status === 'fulfilled') {
-                        const { call: originalCall, result: response } = result.value;
-                        if (response.isError) {
-                            // Error result
-                            const errorData = JSON.parse(response.content[0].text);
-                            return {
-                                type: 'tool_result',
-                                tool_use_id: originalCall.id ?? this.generateToolUseId(),
-                                is_error: true,
-                                error: {
-                                    message: errorData.error?.message ?? 'Unknown error',
-                                    code: errorData.error?.code,
-                                },
-                            };
-                        }
-                        else {
-                            // Success result
-                            return {
-                                type: 'tool_result',
-                                tool_use_id: originalCall.id ?? this.generateToolUseId(),
-                                output: JSON.parse(response.content[0].text),
-                            };
-                        }
+            // Always return standard MCP format responses
+            // The order of responses matches the order of requests for correlation
+            const combinedContent = results.map((result, index) => {
+                const call = calls[index];
+                if (result.status === 'fulfilled') {
+                    const { result: response } = result.value;
+                    // For standard tool responses, return the content directly
+                    // MCP expects the actual tool response, not wrapped in additional metadata
+                    if (response.isError) {
+                        // Return error response as-is
+                        return response.content[0];
                     }
                     else {
-                        // Handle rejected promises
-                        return {
-                            type: 'tool_result',
-                            tool_use_id: call.id ?? this.generateToolUseId(),
-                            is_error: true,
+                        // Return success response as-is
+                        return response.content[0];
+                    }
+                }
+                else {
+                    // Handle rejected promises
+                    return {
+                        type: 'text',
+                        text: JSON.stringify({
                             error: {
                                 message: result.reason instanceof Error ? result.reason.message : 'Execution failed',
-                            },
-                        };
-                    }
-                });
-                // Return in Anthropic format
-                return {
-                    content: toolResults.map(result => ({
-                        type: 'text',
-                        text: JSON.stringify(result, null, 2),
-                    })),
-                };
-            }
-            else {
-                // Legacy format: indexed results
-                const combinedContent = results.map((result, index) => {
-                    const call = calls[index];
-                    if (result.status === 'fulfilled') {
-                        const { call: originalCall, result: response } = result.value;
-                        return {
-                            type: 'text',
-                            text: JSON.stringify({
+                                reason: String(result.reason),
                                 toolIndex: index,
-                                toolId: originalCall.id,
-                                technique: originalCall.arguments.technique,
-                                step: originalCall.arguments.currentStep,
-                                status: 'success',
-                                result: response.isError
-                                    ? { error: JSON.parse(response.content[0].text) }
-                                    : JSON.parse(response.content[0].text),
-                            }, null, 2),
-                        };
-                    }
-                    else {
-                        // Handle rejected promises
-                        return {
-                            type: 'text',
-                            text: JSON.stringify({
-                                toolIndex: index,
-                                toolId: call.id,
                                 technique: call.arguments.technique,
                                 step: call.arguments.currentStep,
-                                status: 'error',
-                                error: {
-                                    message: result.reason instanceof Error ? result.reason.message : 'Execution failed',
-                                    reason: String(result.reason),
-                                },
-                            }, null, 2),
-                        };
-                    }
-                });
-                return {
-                    content: combinedContent,
-                };
-            }
+                            },
+                        }, null, 2),
+                    };
+                }
+            });
+            return {
+                content: combinedContent,
+            };
         }
         catch (error) {
             return {
@@ -266,8 +212,10 @@ export class ParallelToolCallHandler {
     /**
      * Process calls sequentially (for non-parallelizable operations)
      */
-    async processSequentialCalls(calls, useAnthropicFormat = false) {
-        const results = [];
+    async processSequentialCalls(calls) {
+        // Always return standard MCP format responses
+        // Process each call and collect responses in order
+        const responses = [];
         for (const call of calls) {
             try {
                 let result;
@@ -284,59 +232,26 @@ export class ParallelToolCallHandler {
                     default:
                         throw new ValidationError(ErrorCode.INVALID_INPUT, `Unknown tool: ${call.name}`, 'toolName');
                 }
-                results.push({ call, result: JSON.parse(result.content[0].text) });
+                // Return the tool's response content directly
+                responses.push(result.content[0]);
             }
             catch (error) {
-                results.push({
-                    call,
-                    result: null,
-                    error: error instanceof Error ? error.message : 'Unknown error',
+                // For errors, return an error response in standard format
+                responses.push({
+                    type: 'text',
+                    text: JSON.stringify({
+                        error: {
+                            message: error instanceof Error ? error.message : 'Unknown error',
+                            tool: call.name,
+                        },
+                    }, null, 2),
                 });
             }
         }
-        if (useAnthropicFormat) {
-            // Return as tool_result blocks
-            const toolResults = results.map(({ call, result, error }) => {
-                if (error) {
-                    return {
-                        type: 'tool_result',
-                        tool_use_id: call.id ?? this.generateToolUseId(),
-                        is_error: true,
-                        error: {
-                            message: error,
-                        },
-                    };
-                }
-                else {
-                    return {
-                        type: 'tool_result',
-                        tool_use_id: call.id ?? this.generateToolUseId(),
-                        output: result,
-                    };
-                }
-            });
-            return {
-                content: toolResults.map(result => ({
-                    type: 'text',
-                    text: JSON.stringify(result, null, 2),
-                })),
-            };
-        }
-        else {
-            // Legacy format
-            return {
-                content: [
-                    {
-                        type: 'text',
-                        text: JSON.stringify(results.map(({ call, result, error }) => ({
-                            toolId: call.id,
-                            name: call.name,
-                            ...(error ? { error } : { result }),
-                        })), null, 2),
-                    },
-                ],
-            };
-        }
+        // Return all responses in order
+        return {
+            content: responses,
+        };
     }
     /**
      * Validate parallel tool calls

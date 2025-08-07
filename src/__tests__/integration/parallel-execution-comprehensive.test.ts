@@ -526,19 +526,73 @@ describe('Parallel Execution Comprehensive Integration', () => {
         },
       ];
 
-      const convergenceInput: ExecuteThinkingStepInput = {
+      // Execute all 3 steps of convergence to get final insights
+      let response;
+
+      // Step 1: Collect and categorize
+      const step1Input: ExecuteThinkingStepInput = {
         technique: 'convergence',
         problem: 'Test problem',
         currentStep: 1,
         totalSteps: 3,
-        output: 'Merging results',
+        output: 'Collecting insights',
         nextStepNeeded: true,
         parallelResults,
         convergenceStrategy: 'merge',
       };
 
-      const response = await executeThinkingStep(
-        convergenceInput,
+      response = await executeThinkingStep(
+        step1Input,
+        sessionManager,
+        techniqueRegistry,
+        visualFormatter,
+        metricsCollector,
+        complexityAnalyzer,
+        ergodicityManager
+      );
+
+      // Extract sessionId from first response
+      const step1Data = JSON.parse(response.content[0].text);
+      const sessionId = step1Data.sessionId;
+
+      // Step 2: Identify patterns
+      const step2Input: ExecuteThinkingStepInput = {
+        technique: 'convergence',
+        problem: 'Test problem',
+        currentStep: 2,
+        totalSteps: 3,
+        output: 'Identifying patterns',
+        nextStepNeeded: true,
+        sessionId,
+        parallelResults,
+        convergenceStrategy: 'merge',
+      };
+
+      response = await executeThinkingStep(
+        step2Input,
+        sessionManager,
+        techniqueRegistry,
+        visualFormatter,
+        metricsCollector,
+        complexityAnalyzer,
+        ergodicityManager
+      );
+
+      // Step 3: Final synthesis - this should have the merged insights
+      const step3Input: ExecuteThinkingStepInput = {
+        technique: 'convergence',
+        problem: 'Test problem',
+        currentStep: 3,
+        totalSteps: 3,
+        output: 'Final synthesis',
+        nextStepNeeded: false,
+        sessionId,
+        parallelResults,
+        convergenceStrategy: 'merge',
+      };
+
+      response = await executeThinkingStep(
+        step3Input,
         sessionManager,
         techniqueRegistry,
         visualFormatter,
@@ -627,19 +681,73 @@ describe('Parallel Execution Comprehensive Integration', () => {
         },
       ];
 
-      const convergenceInput: ExecuteThinkingStepInput = {
+      // Execute all 3 steps of convergence to get final insights
+      let response;
+
+      // Step 1: Collect and categorize
+      const step1Input: ExecuteThinkingStepInput = {
         technique: 'convergence',
         problem: 'Test problem',
         currentStep: 1,
         totalSteps: 3,
-        output: 'Selecting best results',
+        output: 'Collecting insights',
         nextStepNeeded: true,
         parallelResults,
         convergenceStrategy: 'select',
       };
 
-      const response = await executeThinkingStep(
-        convergenceInput,
+      response = await executeThinkingStep(
+        step1Input,
+        sessionManager,
+        techniqueRegistry,
+        visualFormatter,
+        metricsCollector,
+        complexityAnalyzer,
+        ergodicityManager
+      );
+
+      // Extract sessionId from first response
+      const step1Data = JSON.parse(response.content[0].text);
+      const sessionId = step1Data.sessionId;
+
+      // Step 2: Identify patterns
+      const step2Input: ExecuteThinkingStepInput = {
+        technique: 'convergence',
+        problem: 'Test problem',
+        currentStep: 2,
+        totalSteps: 3,
+        output: 'Identifying patterns',
+        nextStepNeeded: true,
+        sessionId,
+        parallelResults,
+        convergenceStrategy: 'select',
+      };
+
+      response = await executeThinkingStep(
+        step2Input,
+        sessionManager,
+        techniqueRegistry,
+        visualFormatter,
+        metricsCollector,
+        complexityAnalyzer,
+        ergodicityManager
+      );
+
+      // Step 3: Final synthesis - this should have the selected insights
+      const step3Input: ExecuteThinkingStepInput = {
+        technique: 'convergence',
+        problem: 'Test problem',
+        currentStep: 3,
+        totalSteps: 3,
+        output: 'Final synthesis',
+        nextStepNeeded: false,
+        sessionId,
+        parallelResults,
+        convergenceStrategy: 'select',
+      };
+
+      response = await executeThinkingStep(
+        step3Input,
         sessionManager,
         techniqueRegistry,
         visualFormatter,

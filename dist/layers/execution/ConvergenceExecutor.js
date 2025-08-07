@@ -6,6 +6,7 @@ import { ResponseBuilder } from '../../core/ResponseBuilder.js';
 import { ErrorHandler } from '../../errors/ErrorHandler.js';
 import { ErrorFactory } from '../../errors/enhanced-errors.js';
 import { validateParallelResult } from './schemas/parallelResultSchema.js';
+import nlp from 'compromise';
 /**
  * Executes the convergence technique to synthesize results from parallel sessions
  */
@@ -206,17 +207,10 @@ export class ConvergenceExecutor {
     identifyPatternsAndResolveConflicts(results, strategy) {
         // Extract all insights
         const allInsights = results.flatMap(r => r.insights);
-        // Find common themes (simple pattern matching)
-        const themeCount = {};
-        const words = allInsights.join(' ').toLowerCase().split(/\s+/);
-        // Count significant words (length > 4)
-        for (const word of words) {
-            if (word.length > 4) {
-                themeCount[word] = (themeCount[word] || 0) + 1;
-            }
-        }
+        // Find common themes using optimized pattern matching
+        const themeCount = this.extractThemesEfficiently(allInsights);
         // Get top themes
-        const topThemes = Object.entries(themeCount)
+        const topThemes = Array.from(themeCount.entries())
             .sort((a, b) => b[1] - a[1])
             .slice(0, 5)
             .map(([theme]) => theme);
@@ -256,13 +250,15 @@ export class ConvergenceExecutor {
         if (strategy === 'merge') {
             // Merge all unique insights
             const uniqueInsights = new Set(results.flatMap(r => r.insights));
-            synthesizedInsights.push('Merged perspective combining all techniques:', ...Array.from(uniqueInsights).slice(0, 5) // Top 5 insights
-            );
+            synthesizedInsights.push(...Array.from(uniqueInsights));
         }
         else if (strategy === 'select') {
             // Select best insights based on confidence
             const sortedResults = results.sort((a, b) => (b.metrics?.confidence || 0) - (a.metrics?.confidence || 0));
-            synthesizedInsights.push('Selected high-confidence insights:', ...(sortedResults[0]?.insights.slice(0, 3) || []));
+            // Take all insights from the highest confidence result
+            if (sortedResults[0]) {
+                synthesizedInsights.push(...sortedResults[0].insights);
+            }
         }
         else {
             // Hierarchical - organize by importance
@@ -307,27 +303,81 @@ export class ConvergenceExecutor {
             return {};
         }
         if (typeof results === 'object' && !Array.isArray(results)) {
-            // Ensure it's a plain object and filter out non-serializable values
-            const normalized = {};
-            for (const [key, value] of Object.entries(results)) {
-                if (typeof key === 'string') {
-                    // Only include serializable values
-                    if (value === null ||
-                        value === undefined ||
-                        typeof value === 'string' ||
-                        typeof value === 'number' ||
-                        typeof value === 'boolean' ||
-                        Array.isArray(value) ||
-                        (typeof value === 'object' &&
-                            value !== null &&
-                            Object.prototype.toString.call(value) === '[object Object]')) {
-                        normalized[key] = value;
-                    }
-                }
-            }
-            return normalized;
+            return this.normalizeObjectValue(results);
         }
         return {};
+    }
+    /**
+     * Check if a value is serializable
+     */
+    isSerializableValue(value) {
+        // Primitive types are always serializable
+        if (value === null ||
+            value === undefined ||
+            typeof value === 'string' ||
+            typeof value === 'number' ||
+            typeof value === 'boolean') {
+            return true;
+        }
+        // Arrays are serializable if all elements are
+        if (Array.isArray(value)) {
+            return value.every(item => this.isSerializableValue(item));
+        }
+        // Plain objects are serializable
+        if (typeof value === 'object' && value !== null) {
+            // Check if it's a plain object (not a class instance)
+            if (Object.prototype.toString.call(value) === '[object Object]') {
+                // Recursively check all properties
+                return Object.values(value).every(v => this.isSerializableValue(v));
+            }
+        }
+        return false;
+    }
+    /**
+     * Normalize an object by filtering out non-serializable values
+     */
+    normalizeObjectValue(obj) {
+        const normalized = {};
+        for (const [key, value] of Object.entries(obj)) {
+            if (typeof key === 'string' && this.isSerializableValue(value)) {
+                normalized[key] = value;
+            }
+        }
+        return normalized;
+    }
+    /**
+     * Extract themes efficiently from insights using NLP
+     */
+    extractThemesEfficiently(insights) {
+        const themeCount = new Map();
+        // Filter valid insights and batch process
+        const validInsights = insights.filter(i => i && typeof i === 'string');
+        if (validInsights.length === 0)
+            return themeCount;
+        // Batch process all insights as a single document for better performance
+        // This avoids creating multiple NLP document instances
+        const combinedText = validInsights.join(' ');
+        const doc = nlp(combinedText);
+        // Helper function to update count with minimum length check
+        const updateCount = (term, weight, minLength = 3) => {
+            const normalized = term.toLowerCase().trim();
+            if (normalized.length > minLength) {
+                themeCount.set(normalized, (themeCount.get(normalized) || 0) + weight);
+            }
+        };
+        // Extract all terms in a single pass for better performance
+        // Extract named entities first (highest weight)
+        const topics = doc.topics().out('array');
+        topics.forEach(topic => updateCount(topic, 3));
+        // Extract nouns (medium-high weight)
+        const nouns = doc.nouns().out('array');
+        nouns.forEach(noun => updateCount(noun, 2));
+        // Extract verbs and adjectives (lower weight)
+        const verbs = doc.verbs().out('array');
+        verbs.forEach(verb => updateCount(verb, 1));
+        const adjectives = doc.adjectives().out('array');
+        adjectives.forEach(adj => updateCount(adj, 1, 4)); // Adjectives need min 5 chars
+        return themeCount;
     }
 }
 //# sourceMappingURL=ConvergenceExecutor.js.map

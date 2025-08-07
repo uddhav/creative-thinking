@@ -77,6 +77,15 @@ export class LateralThinkingServer {
     return this.sessionManager['config'];
   }
 
+  // Public getters for dependency injection
+  getSessionManager(): SessionManager {
+    return this.sessionManager;
+  }
+
+  getVisualFormatter(): VisualFormatter {
+    return this.visualFormatter;
+  }
+
   cleanupOldSessions(): void {
     this.sessionManager.cleanupOldSessions();
   }

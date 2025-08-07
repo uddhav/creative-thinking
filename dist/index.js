@@ -51,6 +51,13 @@ export class LateralThinkingServer {
         // Return the actual config object for testing
         return this.sessionManager['config'];
     }
+    // Public getters for dependency injection
+    getSessionManager() {
+        return this.sessionManager;
+    }
+    getVisualFormatter() {
+        return this.visualFormatter;
+    }
     cleanupOldSessions() {
         this.sessionManager.cleanupOldSessions();
     }

@@ -228,6 +228,7 @@ export class PlanningValidator extends BaseValidator {
       'collective_intel',
       'disney_method',
       'nine_windows',
+      'convergence' as LateralTechnique, // Special technique for synthesizing parallel results
     ];
     return validTechniques.includes(value as LateralTechnique);
   }
@@ -483,6 +484,27 @@ export class ExecutionValidator extends BaseValidator {
           this.validateNumber(data.suppressionDepth, 'suppressionDepth', errors, 0, 10);
         }
         break;
+
+      case 'convergence':
+        // Convergence is a special technique for synthesizing parallel results
+        // It requires parallelResults and convergenceStrategy
+        if (data.convergenceStrategy !== undefined) {
+          this.validateEnum(
+            data.convergenceStrategy,
+            ['merge', 'select', 'hierarchical'] as const,
+            'convergenceStrategy',
+            errors
+          );
+        }
+        if (data.parallelResults !== undefined) {
+          this.validateArray(
+            data.parallelResults,
+            'parallelResults',
+            errors,
+            (item: unknown) => typeof item === 'object' && item !== null
+          );
+        }
+        break;
     }
 
     // Validate risk/adversarial fields
@@ -522,6 +544,7 @@ export class ExecutionValidator extends BaseValidator {
       'collective_intel',
       'disney_method',
       'nine_windows',
+      'convergence' as LateralTechnique, // Special technique for synthesizing parallel results
     ];
     return validTechniques.includes(value as LateralTechnique);
   }
@@ -542,6 +565,7 @@ export class ExecutionValidator extends BaseValidator {
       'collective_intel',
       'disney_method',
       'nine_windows',
+      'convergence', // Special technique for synthesizing parallel results
     ];
   }
 }
@@ -700,6 +724,7 @@ export class SessionOperationValidator extends BaseValidator {
       'collective_intel',
       'disney_method',
       'nine_windows',
+      'convergence' as LateralTechnique, // Special technique for synthesizing parallel results
     ];
     return validTechniques.includes(value as LateralTechnique);
   }

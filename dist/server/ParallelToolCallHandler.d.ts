@@ -62,7 +62,7 @@ export declare class ParallelToolCallHandler {
     /**
      * Process parallel tool calls
      */
-    processParallelToolCalls(calls: ToolCall[], useAnthropicFormat?: boolean): Promise<LateralThinkingResponse>;
+    processParallelToolCalls(calls: ToolCall[]): Promise<LateralThinkingResponse>;
     /**
      * Process parallel execute_thinking_step calls
      */

@@ -3,6 +3,8 @@
  * Creative Thinking MCP Server
  * A modular implementation of lateral thinking techniques
  */
+import { SessionManager } from './core/SessionManager.js';
+import { VisualFormatter } from './utils/VisualFormatter.js';
 import type { SessionData } from './types/index.js';
 export * from './types/index.js';
 export * from './types/planning.js';
@@ -22,6 +24,8 @@ export declare class LateralThinkingServer {
     private sessionOperationsHandler;
     get sessions(): Map<string, SessionData>;
     get config(): import("./core/SessionManager.js").SessionConfig;
+    getSessionManager(): SessionManager;
+    getVisualFormatter(): VisualFormatter;
     cleanupOldSessions(): void;
     initializeSession(technique: string, problem: string): string;
     touchSession(sessionId: string): void;
