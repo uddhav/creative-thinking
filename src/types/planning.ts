@@ -3,6 +3,38 @@
  */
 
 import type { LateralTechnique } from './index.js';
+import type { ExecuteThinkingStepInput } from './index.js';
+
+/**
+ * Node in the execution graph representing a single execute_thinking_step call
+ */
+export interface ExecutionGraphNode {
+  id: string; // Unique node identifier (e.g., "node-1")
+  stepNumber: number; // Step sequence number
+  technique: LateralTechnique; // Technique name
+  parameters: ExecuteThinkingStepInput; // Complete execute_thinking_step parameters
+  dependencies: string[]; // Node IDs that must complete first
+  estimatedDuration?: number; // Optional time estimate in ms
+  canSkipIfFailed?: boolean; // Optional resilience flag
+}
+
+/**
+ * Execution graph for parallel execution
+ */
+export interface ExecutionGraph {
+  nodes: ExecutionGraphNode[];
+  metadata: {
+    totalNodes: number;
+    maxParallelism: number; // Max nodes that can run in parallel
+    criticalPath: string[]; // Node IDs forming the longest path
+    parallelizableGroups: string[][]; // Groups of nodes that can run in parallel
+  };
+  instructions: {
+    forInvoker: string; // Clear instructions for the invoker
+    executionStrategy: string; // Recommended execution approach
+    errorHandling: string; // How to handle node failures
+  };
+}
 
 /**
  * Execution mode for thinking sessions
@@ -247,6 +279,7 @@ export interface PlanThinkingSessionOutput {
   totalSteps: number;
   objectives?: string[];
   constraints?: string[];
+  executionGraph?: ExecutionGraph;
   integrationStrategy?: {
     approach: 'sequential' | 'parallel' | 'iterative';
     syncPoints?: number[];

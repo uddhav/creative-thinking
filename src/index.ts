@@ -7,7 +7,6 @@
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { createInterceptedStdin } from './server/RequestInterceptor.js';
 
 // Core modules
 import { SessionManager } from './core/SessionManager.js';
@@ -337,11 +336,9 @@ requestHandlers.setupHandlers();
 
 // Start server
 async function main() {
-  // Create transport with intercepted stdin to handle array format errors
-  const interceptedStdin = createInterceptedStdin();
-  const transport = new StdioServerTransport(interceptedStdin, process.stdout);
+  const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error('Creative Thinking MCP server running on stdio with request interception');
+  console.error('Creative Thinking MCP server running on stdio');
 }
 
 main().catch(error => {

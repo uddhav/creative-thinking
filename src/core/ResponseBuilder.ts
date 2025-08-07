@@ -193,6 +193,8 @@ export class ResponseBuilder {
       planningInsights: output.planningInsights,
       complexityAssessment: output.complexityAssessment,
       executionMode: output.executionMode,
+      // Add execution graph for DAG-based parallel execution
+      executionGraph: output.executionGraph,
       // Add parallel execution groups for Anthropic-style parallel tool calls
       parallelExecutionGroups,
       // Add execution guidance to help LLMs proceed

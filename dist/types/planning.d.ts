@@ -2,6 +2,36 @@
  * Planning layer type definitions
  */
 import type { LateralTechnique } from './index.js';
+import type { ExecuteThinkingStepInput } from './index.js';
+/**
+ * Node in the execution graph representing a single execute_thinking_step call
+ */
+export interface ExecutionGraphNode {
+    id: string;
+    stepNumber: number;
+    technique: LateralTechnique;
+    parameters: ExecuteThinkingStepInput;
+    dependencies: string[];
+    estimatedDuration?: number;
+    canSkipIfFailed?: boolean;
+}
+/**
+ * Execution graph for parallel execution
+ */
+export interface ExecutionGraph {
+    nodes: ExecutionGraphNode[];
+    metadata: {
+        totalNodes: number;
+        maxParallelism: number;
+        criticalPath: string[];
+        parallelizableGroups: string[][];
+    };
+    instructions: {
+        forInvoker: string;
+        executionStrategy: string;
+        errorHandling: string;
+    };
+}
 /**
  * Execution mode for thinking sessions
  * - sequential: Execute techniques one after another (default)
@@ -233,6 +263,7 @@ export interface PlanThinkingSessionOutput {
     totalSteps: number;
     objectives?: string[];
     constraints?: string[];
+    executionGraph?: ExecutionGraph;
     integrationStrategy?: {
         approach: 'sequential' | 'parallel' | 'iterative';
         syncPoints?: number[];

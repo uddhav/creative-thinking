@@ -7,6 +7,7 @@ import { TelemetryCollector } from '../../telemetry/TelemetryCollector.js';
 import { ErrorFactory } from '../../errors/enhanced-errors.js';
 import { ErrorHandler } from '../../errors/ErrorHandler.js';
 import { ConvergenceValidator } from '../../core/validators/ConvergenceValidator.js';
+import { SessionEncoder } from '../../core/session/SessionEncoder.js';
 export class ExecutionValidator {
     sessionManager;
     techniqueRegistry;
@@ -27,6 +28,39 @@ export class ExecutionValidator {
         if (!input.planId) {
             return { isValid: true }; // Plan is optional
         }
+        // Check if planId is a base64 encoded session
+        if (SessionEncoder.isEncodedSession(input.planId)) {
+            // Validate the encoded session
+            if (SessionEncoder.isValid(input.planId)) {
+                // Decode the session and create a minimal plan from it
+                const decodedSession = SessionEncoder.decode(input.planId);
+                if (decodedSession) {
+                    // Create a minimal plan from the decoded session
+                    const minimalPlan = {
+                        planId: decodedSession.planId,
+                        problem: decodedSession.problem,
+                        techniques: decodedSession.techniques || [decodedSession.technique],
+                        workflow: [],
+                        totalSteps: decodedSession.totalSteps,
+                        objectives: decodedSession.objectives,
+                        constraints: decodedSession.constraints,
+                        executionMode: 'sequential',
+                    };
+                    // Allow execution as the session is valid
+                    return { isValid: true, plan: minimalPlan };
+                }
+            }
+            // Invalid encoded session
+            const enhancedError = ErrorFactory.planNotFound(input.planId);
+            return {
+                isValid: false,
+                error: this.errorHandler.handleError(enhancedError, 'planning', {
+                    planId: 'Invalid or expired encoded session',
+                    suggestion: 'The encoded session may have expired. Please create a new plan.',
+                }),
+            };
+        }
+        // Regular planId - look up in memory
         const plan = this.sessionManager.getPlan(input.planId);
         if (!plan) {
             const enhancedError = ErrorFactory.planNotFound(input.planId);

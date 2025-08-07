@@ -66,23 +66,26 @@ describe('Parallel Execution Comprehensive Integration', () => {
       const planData = planResponse;
       expect(planData.planId).toBeDefined();
       expect(planData.executionMode).toBe('parallel');
-      expect(planData.parallelPlans).toBeDefined();
-      expect(planData.parallelPlans.length).toBeGreaterThan(0);
+      expect(planData.executionGraph).toBeDefined();
+      expect(planData.executionGraph.nodes.length).toBeGreaterThan(0);
 
       // Step 2: Execute parallel sessions
-      const group =
-        planData.parallelPlans.find((p: any) => p.technique !== 'convergence') ||
-        planData.parallelPlans[0];
+      // For DAG execution, we'll execute the first few nodes that have no dependencies
+      const independentNodes =
+        planData.executionGraph?.nodes.filter((n: any) => n.dependencies.length === 0) || [];
       const sessionPromises: Promise<any>[] = [];
 
-      // Execute each technique in parallel
-      const techniques = group.workflow
-        ? group.workflow.map((w: any) => ({
-            technique: w.technique,
-            estimatedSteps: w.steps.length,
-          }))
-        : [];
-      for (const technique of techniques) {
+      // Execute nodes with no dependencies in parallel (simulating client-side DAG execution)
+      const techniques = independentNodes.map((node: any) => ({
+        technique: node.technique,
+        estimatedSteps: node.parameters.totalSteps,
+      }));
+
+      for (const node of independentNodes) {
+        const technique = {
+          technique: node.technique,
+          estimatedSteps: node.parameters.totalSteps,
+        };
         const executePromise = (async () => {
           const results = [];
           let nextStepNeeded = true;
@@ -130,7 +133,7 @@ describe('Parallel Execution Comprehensive Integration', () => {
       const parallelResults = await Promise.all(sessionPromises);
 
       // Verify all sessions completed
-      expect(parallelResults.length).toBe(group.techniques.length);
+      expect(parallelResults.length).toBe(techniques.length);
       parallelResults.forEach(results => {
         expect(results.length).toBeGreaterThan(0);
       });
@@ -219,19 +222,9 @@ describe('Parallel Execution Comprehensive Integration', () => {
       // planThinkingSession returns PlanThinkingSessionOutput directly
       const planData = planResponse;
 
-      // Find a group with dependencies (if any)
-      interface ParallelPlanWithWorkflow {
-        workflow?: Array<{
-          dependencies?: string[];
-          technique: string;
-          steps: any[];
-        }>;
-      }
-
-      const groupWithDeps = planData.parallelPlans.find(
-        (p: ParallelPlanWithWorkflow) =>
-          p.workflow && p.workflow.some(w => w.dependencies && w.dependencies.length > 0)
-      ) as ParallelPlanWithWorkflow | undefined;
+      // With DAG, all nodes are part of the workflow
+      const allNodes = planData.executionGraph?.nodes || [];
+      const groupWithDeps = allNodes.length > 0 ? { workflow: allNodes } : undefined;
 
       if (groupWithDeps) {
         // Execute techniques respecting dependencies
@@ -269,23 +262,31 @@ describe('Parallel Execution Comprehensive Integration', () => {
           return response;
         };
 
-        // Start execution for all techniques
-        const techniques = groupWithDeps.workflow
-          ? groupWithDeps.workflow.map((w: any) => ({
-              technique: w.technique,
-              estimatedSteps: w.steps.length,
-              dependencies: w.dependencies,
-            }))
-          : [];
-        for (const technique of techniques) {
+        // Group nodes by technique
+        const techniqueGroups = new Map<string, any[]>();
+        for (const node of groupWithDeps.workflow) {
+          if (!techniqueGroups.has(node.technique)) {
+            techniqueGroups.set(node.technique, []);
+          }
+          techniqueGroups.get(node.technique)?.push(node);
+        }
+
+        // Execute each technique group
+        for (const [techniqueName, nodes] of techniqueGroups) {
+          const firstNode = nodes[0];
+          const technique = {
+            technique: techniqueName,
+            estimatedSteps: firstNode.parameters.totalSteps,
+            dependencies: firstNode.dependencies,
+          };
           const promise = executeWithDependencies(technique);
-          executing.set(technique.technique, promise);
+          executing.set(techniqueName, promise);
         }
 
         // Wait for all to complete
         await Promise.all(Array.from(executing.values()));
 
-        expect(completed.size).toBe(techniques.length);
+        expect(completed.size).toBe(techniqueGroups.size);
       }
     });
   });
@@ -362,7 +363,8 @@ describe('Parallel Execution Comprehensive Integration', () => {
 
       // planThinkingSession returns PlanThinkingSessionOutput directly
       const planData = planResponse;
-      const groupId = planData.parallelPlans[0].groupId || 'test-group';
+      // With DAG, we'll use the planId as the group identifier
+      const groupId = planData.planId || 'test-group';
 
       // Start group metrics
       metrics.startGroup(groupId, 2);
@@ -896,21 +898,24 @@ describe('Parallel Execution Comprehensive Integration', () => {
 
       // planThinkingSession returns PlanThinkingSessionOutput directly
       const planData = planResponse;
-      expect(planData.parallelPlans).toBeDefined();
+      expect(planData.executionGraph).toBeDefined();
+      expect(planData.executionGraph.nodes).toBeDefined();
 
-      // Execute all sessions in parallel
+      // Execute all independent nodes in parallel
       const promises = [];
-      for (const plan of planData.parallelPlans) {
-        if (plan.technique === 'convergence') continue;
+      const independentNodes =
+        planData.executionGraph?.nodes.filter((n: any) => n.dependencies.length === 0) || [];
+      for (const node of independentNodes) {
+        if (node.technique === 'convergence') continue;
 
-        // Each plan represents a technique to execute
+        // Each node represents a technique step to execute
         const promise = executeThinkingStep(
           {
             planId: planData.planId,
-            technique: plan.technique,
+            technique: node.technique,
             problem: planInput.problem,
             currentStep: 1,
-            totalSteps: plan.estimatedSteps || 4,
+            totalSteps: node.parameters.totalSteps || 4,
             output: 'Parallel execution',
             nextStepNeeded: true,
           },
