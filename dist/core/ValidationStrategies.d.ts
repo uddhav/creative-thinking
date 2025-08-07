@@ -16,9 +16,9 @@ export interface ValidationStrategy {
  */
 declare abstract class BaseValidator implements ValidationStrategy {
     abstract validate(input: unknown): ValidationResult;
-    protected validateString(value: unknown, fieldName: string, errors: string[]): value is string;
+    protected validateString(value: unknown, fieldName: string, errors: string[]): boolean;
     protected validateNumber(value: unknown, fieldName: string, errors: string[], min?: number, max?: number): value is number;
-    protected validateBoolean(value: unknown, fieldName: string, errors: string[]): value is boolean;
+    protected validateBoolean(value: unknown, fieldName: string, errors: string[]): boolean;
     protected validateEnum<T>(value: unknown, validValues: readonly T[], fieldName: string, errors: string[]): value is T;
     protected validateArray<T>(value: unknown, fieldName: string, errors: string[], itemValidator?: (item: unknown, index: number) => boolean): value is T[];
 }
