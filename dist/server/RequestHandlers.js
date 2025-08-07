@@ -8,6 +8,7 @@ import { ValidationError, ErrorCode } from '../errors/types.js';
 import { getAllTools } from './ToolDefinitions.js';
 import { ParallelToolCallHandler } from './ParallelToolCallHandler.js';
 import { loadParallelConfig, validateParallelConfig } from '../config/parallel.js';
+import { ObjectFieldValidator } from '../core/validators/ObjectFieldValidator.js';
 export class RequestHandlers {
     server;
     lateralServer;
@@ -214,6 +215,66 @@ export class RequestHandlers {
                         `⚠️ CRITICAL: You must execute ALL steps sequentially (1, 2, 3, etc.) ` +
                         `without skipping any. Each step builds on previous insights.\n\n` +
                         `Remember: nextStepNeeded should be true until the FINAL step.`);
+                }
+                // Validate object fields for specific techniques
+                const technique = params.technique;
+                // Nine Windows: validate currentCell
+                if (technique === 'nine_windows' && params.currentCell !== undefined) {
+                    const validation = ObjectFieldValidator.validateCurrentCell(params.currentCell);
+                    if (!validation.isValid) {
+                        return (`❌ ERROR: Invalid currentCell format!\n\n` +
+                            `${validation.error}\n\n` +
+                            `${validation.suggestion || ''}\n\n` +
+                            `CORRECT FORMAT:\n` +
+                            `currentCell: {\n` +
+                            `  "timeFrame": "past" | "present" | "future",\n` +
+                            `  "systemLevel": "sub-system" | "system" | "super-system"\n` +
+                            `}`);
+                    }
+                }
+                // Concept Extraction: validate pathImpact
+                if (technique === 'concept_extraction' && params.pathImpact !== undefined) {
+                    const validation = ObjectFieldValidator.validateIsObject(params.pathImpact, 'pathImpact');
+                    if (!validation.isValid) {
+                        return (`❌ ERROR: Invalid pathImpact format!\n\n` +
+                            `${validation.error}\n\n` +
+                            `${validation.suggestion || ''}\n\n` +
+                            `Note: pathImpact should be an object, not a string or other type.`);
+                    }
+                }
+                // Temporal Work: validate temporalLandscape
+                if (technique === 'temporal_work' && params.temporalLandscape !== undefined) {
+                    const validation = ObjectFieldValidator.validateIsObject(params.temporalLandscape, 'temporalLandscape');
+                    if (!validation.isValid) {
+                        return (`❌ ERROR: Invalid temporalLandscape format!\n\n` +
+                            `${validation.error}\n\n` +
+                            `${validation.suggestion || ''}\n\n` +
+                            `Note: temporalLandscape should be an object, not a string or other type.`);
+                    }
+                }
+                // Convergence: validate parallelResults
+                if (technique === 'convergence' && params.parallelResults !== undefined) {
+                    if (!Array.isArray(params.parallelResults)) {
+                        return (`❌ ERROR: parallelResults must be an array!\n\n` +
+                            `You provided: ${typeof params.parallelResults}\n\n` +
+                            `CORRECT FORMAT:\n` +
+                            `parallelResults: [{\n` +
+                            `  "planId": "...",\n` +
+                            `  "technique": "...",\n` +
+                            `  "results": { ... },\n` +
+                            `  "insights": [ ... ],\n` +
+                            `  "metrics": { ... }\n` +
+                            `}, ...]`);
+                    }
+                    // Validate each item in parallelResults
+                    for (let i = 0; i < params.parallelResults.length; i++) {
+                        const validation = ObjectFieldValidator.validateParallelResultItem(params.parallelResults[i], i);
+                        if (!validation.isValid) {
+                            return (`❌ ERROR: Invalid parallelResults item!\n\n` +
+                                `${validation.error}\n\n` +
+                                `${validation.suggestion || ''}`);
+                        }
+                    }
                 }
                 // Check for step skipping
                 if (params.currentStep > 1) {

@@ -6,6 +6,7 @@
 import type { LateralTechnique, ExecuteThinkingStepInput } from '../types/index.js';
 import type { DiscoverTechniquesInput, PlanThinkingSessionInput } from '../types/planning.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
+import { ObjectFieldValidator } from './validators/ObjectFieldValidator.js';
 
 export interface ValidationResult {
   valid: boolean;
@@ -485,6 +486,70 @@ export class ExecutionValidator extends BaseValidator {
         }
         break;
 
+      case 'nine_windows':
+        // Validate currentCell object structure
+        if (data.currentCell !== undefined) {
+          const validation = ObjectFieldValidator.validateCurrentCell(data.currentCell);
+          if (!validation.isValid) {
+            if (validation.error) {
+              errors.push(validation.error);
+            }
+            if (validation.suggestion) {
+              warnings.push(validation.suggestion);
+            }
+          }
+        }
+
+        // Validate nineWindowsMatrix array of objects
+        if (data.nineWindowsMatrix !== undefined) {
+          if (!Array.isArray(data.nineWindowsMatrix)) {
+            errors.push('nineWindowsMatrix must be an array');
+          } else {
+            data.nineWindowsMatrix.forEach((item: unknown, index: number) => {
+              const validation = ObjectFieldValidator.validateNineWindowsMatrixItem(item, index);
+              if (!validation.isValid) {
+                if (validation.error) {
+                  errors.push(validation.error);
+                }
+              }
+            });
+          }
+        }
+        break;
+
+      case 'concept_extraction':
+        // Validate pathImpact object
+        if (data.pathImpact !== undefined) {
+          const validation = ObjectFieldValidator.validateIsObject(data.pathImpact, 'pathImpact');
+          if (!validation.isValid) {
+            if (validation.error) {
+              errors.push(validation.error);
+            }
+            if (validation.suggestion) {
+              warnings.push(validation.suggestion);
+            }
+          }
+        }
+        break;
+
+      case 'temporal_work':
+        // Validate temporalLandscape object
+        if (data.temporalLandscape !== undefined) {
+          const validation = ObjectFieldValidator.validateIsObject(
+            data.temporalLandscape,
+            'temporalLandscape'
+          );
+          if (!validation.isValid) {
+            if (validation.error) {
+              errors.push(validation.error);
+            }
+            if (validation.suggestion) {
+              warnings.push(validation.suggestion);
+            }
+          }
+        }
+        break;
+
       case 'convergence':
         // Convergence is a special technique for synthesizing parallel results
         // It requires parallelResults and convergenceStrategy
@@ -497,12 +562,22 @@ export class ExecutionValidator extends BaseValidator {
           );
         }
         if (data.parallelResults !== undefined) {
-          this.validateArray(
-            data.parallelResults,
-            'parallelResults',
-            errors,
-            (item: unknown) => typeof item === 'object' && item !== null
-          );
+          if (!Array.isArray(data.parallelResults)) {
+            errors.push('parallelResults must be an array');
+          } else {
+            // Validate each parallel result item
+            data.parallelResults.forEach((item: unknown, index: number) => {
+              const validation = ObjectFieldValidator.validateParallelResultItem(item, index);
+              if (!validation.isValid) {
+                if (validation.error) {
+                  errors.push(validation.error);
+                }
+                if (validation.suggestion) {
+                  warnings.push(validation.suggestion);
+                }
+              }
+            });
+          }
         }
         break;
     }
