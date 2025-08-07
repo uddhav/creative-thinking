@@ -50,5 +50,17 @@ export declare class ConvergenceExecutor {
      * Validate and normalize results object
      */
     private validateAndNormalizeResults;
+    /**
+     * Check if a value is serializable
+     */
+    private isSerializableValue;
+    /**
+     * Normalize an object by filtering out non-serializable values
+     */
+    private normalizeObjectValue;
+    /**
+     * Extract themes efficiently from insights using NLP
+     */
+    private extractThemesEfficiently;
 }
 //# sourceMappingURL=ConvergenceExecutor.d.ts.map

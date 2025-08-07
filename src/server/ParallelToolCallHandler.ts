@@ -6,8 +6,6 @@
 import type { LateralThinkingServer } from '../index.js';
 import type { LateralTechnique, LateralThinkingResponse } from '../types/index.js';
 import type { PlanThinkingSessionOutput } from '../types/planning.js';
-import type { SessionManager } from '../core/SessionManager.js';
-import type { VisualFormatter } from '../utils/VisualFormatter.js';
 import { ParallelismValidator } from '../layers/discovery/ParallelismValidator.js';
 import { workflowGuard } from '../core/WorkflowGuard.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
@@ -195,17 +193,11 @@ export class ParallelToolCallHandler {
   private async processParallelExecutions(calls: ToolCall[]): Promise<LateralThinkingResponse> {
     try {
       // Check memory pressure before parallel execution
-      // Note: We access sessionManager and visualFormatter through the server
-      // These are private properties on the server, so we need type assertions
-      const serverWithInternals = this.lateralServer as unknown as {
-        sessionManager: SessionManager;
-        visualFormatter: VisualFormatter;
-      };
+      // Access sessionManager and visualFormatter through public getters
+      const sessionManager = this.lateralServer.getSessionManager();
+      const visualFormatter = this.lateralServer.getVisualFormatter();
 
-      const parallelContext = ParallelExecutionContext.getInstance(
-        serverWithInternals.sessionManager,
-        serverWithInternals.visualFormatter
-      );
+      const parallelContext = ParallelExecutionContext.getInstance(sessionManager, visualFormatter);
       const memoryCheck = parallelContext.checkMemoryPressure();
 
       if (!memoryCheck.canProceed) {

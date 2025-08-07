@@ -18,6 +18,7 @@ import { ErrorContextBuilder } from '../../core/ErrorContextBuilder.js';
 import { TelemetryCollector } from '../../telemetry/TelemetryCollector.js';
 import { ErrorFactory } from '../../errors/enhanced-errors.js';
 import { ErrorHandler } from '../../errors/ErrorHandler.js';
+import { ConvergenceValidator } from '../../core/validators/ConvergenceValidator.js';
 
 export interface ValidationResult {
   isValid: boolean;
@@ -36,6 +37,7 @@ export class ExecutionValidator {
   private errorBuilder = new ErrorContextBuilder();
   private telemetry = TelemetryCollector.getInstance();
   private errorHandler = new ErrorHandler();
+  private convergenceValidator = new ConvergenceValidator();
 
   constructor(
     private sessionManager: SessionManager,
@@ -275,48 +277,24 @@ export class ExecutionValidator {
    * Validate convergence technique usage
    */
   validateConvergenceTechnique(input: ExecuteThinkingStepInput): ValidationResult {
-    if (input.technique === 'convergence') {
-      // Convergence technique requires parallel results
-      if (!input.parallelResults) {
-        const enhancedError = ErrorFactory.missingParameter('parallelResults', 'convergence');
-        return {
-          isValid: false,
-          error: this.errorHandler.handleError(enhancedError, 'discovery', {
-            technique: input.technique,
-            hasParallelResults: false,
-          }),
-        };
-      }
+    // Use dedicated ConvergenceValidator for convergence-specific validation
+    const convergenceValidation = this.convergenceValidator.validateConvergence(input);
+    if (!convergenceValidation.isValid) {
+      return convergenceValidation;
+    }
 
-      // Ensure parallel results is not empty
-      if (input.parallelResults.length === 0) {
-        const enhancedError = ErrorFactory.invalidInput(
-          'parallelResults',
-          'non-empty array',
-          input.parallelResults
-        );
-        return {
-          isValid: false,
-          error: this.errorHandler.handleError(enhancedError, 'discovery', {
+    // Check for non-convergence techniques with parallel-specific fields
+    if (input.technique !== 'convergence' && input.parallelResults) {
+      return {
+        isValid: false,
+        error: this.errorBuilder.buildGenericError(
+          'Non-convergence techniques should not have parallel results',
+          {
             technique: input.technique,
-            parallelResultsCount: 0,
-          }),
-        };
-      }
-    } else {
-      // Non-convergence techniques should not have parallel-specific fields
-      if (input.parallelResults) {
-        return {
-          isValid: false,
-          error: this.errorBuilder.buildGenericError(
-            'Non-convergence techniques should not have parallel results',
-            {
-              technique: input.technique,
-              hasParallelResults: true,
-            }
-          ),
-        };
-      }
+            hasParallelResults: true,
+          }
+        ),
+      };
     }
 
     return { isValid: true };

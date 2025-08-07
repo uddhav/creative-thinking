@@ -113,10 +113,10 @@ export class ParallelToolCallHandler {
     async processParallelExecutions(calls) {
         try {
             // Check memory pressure before parallel execution
-            // Note: We access sessionManager and visualFormatter through the server
-            // These are private properties on the server, so we need type assertions
-            const serverWithInternals = this.lateralServer;
-            const parallelContext = ParallelExecutionContext.getInstance(serverWithInternals.sessionManager, serverWithInternals.visualFormatter);
+            // Access sessionManager and visualFormatter through public getters
+            const sessionManager = this.lateralServer.getSessionManager();
+            const visualFormatter = this.lateralServer.getVisualFormatter();
+            const parallelContext = ParallelExecutionContext.getInstance(sessionManager, visualFormatter);
             const memoryCheck = parallelContext.checkMemoryPressure();
             if (!memoryCheck.canProceed) {
                 // Fall back to sequential execution due to memory pressure

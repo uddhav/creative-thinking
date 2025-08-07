@@ -6,6 +6,7 @@ import { ResponseBuilder } from '../../core/ResponseBuilder.js';
 import { ErrorHandler } from '../../errors/ErrorHandler.js';
 import { ErrorFactory } from '../../errors/enhanced-errors.js';
 import { validateParallelResult } from './schemas/parallelResultSchema.js';
+import nlp from 'compromise';
 /**
  * Executes the convergence technique to synthesize results from parallel sessions
  */
@@ -206,17 +207,10 @@ export class ConvergenceExecutor {
     identifyPatternsAndResolveConflicts(results, strategy) {
         // Extract all insights
         const allInsights = results.flatMap(r => r.insights);
-        // Find common themes (simple pattern matching)
-        const themeCount = {};
-        const words = allInsights.join(' ').toLowerCase().split(/\s+/);
-        // Count significant words (length > 4)
-        for (const word of words) {
-            if (word.length > 4) {
-                themeCount[word] = (themeCount[word] || 0) + 1;
-            }
-        }
+        // Find common themes using optimized pattern matching
+        const themeCount = this.extractThemesEfficiently(allInsights);
         // Get top themes
-        const topThemes = Object.entries(themeCount)
+        const topThemes = Array.from(themeCount.entries())
             .sort((a, b) => b[1] - a[1])
             .slice(0, 5)
             .map(([theme]) => theme);
@@ -309,27 +303,91 @@ export class ConvergenceExecutor {
             return {};
         }
         if (typeof results === 'object' && !Array.isArray(results)) {
-            // Ensure it's a plain object and filter out non-serializable values
-            const normalized = {};
-            for (const [key, value] of Object.entries(results)) {
-                if (typeof key === 'string') {
-                    // Only include serializable values
-                    if (value === null ||
-                        value === undefined ||
-                        typeof value === 'string' ||
-                        typeof value === 'number' ||
-                        typeof value === 'boolean' ||
-                        Array.isArray(value) ||
-                        (typeof value === 'object' &&
-                            value !== null &&
-                            Object.prototype.toString.call(value) === '[object Object]')) {
-                        normalized[key] = value;
-                    }
-                }
-            }
-            return normalized;
+            return this.normalizeObjectValue(results);
         }
         return {};
+    }
+    /**
+     * Check if a value is serializable
+     */
+    isSerializableValue(value) {
+        // Primitive types are always serializable
+        if (value === null ||
+            value === undefined ||
+            typeof value === 'string' ||
+            typeof value === 'number' ||
+            typeof value === 'boolean') {
+            return true;
+        }
+        // Arrays are serializable if all elements are
+        if (Array.isArray(value)) {
+            return value.every(item => this.isSerializableValue(item));
+        }
+        // Plain objects are serializable
+        if (typeof value === 'object' && value !== null) {
+            // Check if it's a plain object (not a class instance)
+            if (Object.prototype.toString.call(value) === '[object Object]') {
+                // Recursively check all properties
+                return Object.values(value).every(v => this.isSerializableValue(v));
+            }
+        }
+        return false;
+    }
+    /**
+     * Normalize an object by filtering out non-serializable values
+     */
+    normalizeObjectValue(obj) {
+        const normalized = {};
+        for (const [key, value] of Object.entries(obj)) {
+            if (typeof key === 'string' && this.isSerializableValue(value)) {
+                normalized[key] = value;
+            }
+        }
+        return normalized;
+    }
+    /**
+     * Extract themes efficiently from insights using NLP
+     */
+    extractThemesEfficiently(insights) {
+        const themeCount = new Map();
+        // Process each insight with compromise NLP
+        for (const insight of insights) {
+            if (!insight || typeof insight !== 'string')
+                continue;
+            const doc = nlp(insight);
+            // Extract key terms using NLP
+            // Get nouns (topics/subjects)
+            const nouns = doc.nouns().out('array');
+            for (const noun of nouns) {
+                const normalized = noun.toLowerCase();
+                if (normalized.length > 3) {
+                    themeCount.set(normalized, (themeCount.get(normalized) || 0) + 2); // Weight nouns higher
+                }
+            }
+            // Get verbs (actions/processes)
+            const verbs = doc.verbs().out('array');
+            for (const verb of verbs) {
+                const normalized = verb.toLowerCase();
+                if (normalized.length > 3) {
+                    themeCount.set(normalized, (themeCount.get(normalized) || 0) + 1);
+                }
+            }
+            // Get adjectives (qualities/attributes)
+            const adjectives = doc.adjectives().out('array');
+            for (const adj of adjectives) {
+                const normalized = adj.toLowerCase();
+                if (normalized.length > 4) {
+                    themeCount.set(normalized, (themeCount.get(normalized) || 0) + 1);
+                }
+            }
+            // Extract named entities (organizations, people, places)
+            const topics = doc.topics().out('array');
+            for (const topic of topics) {
+                const normalized = topic.toLowerCase();
+                themeCount.set(normalized, (themeCount.get(normalized) || 0) + 3); // Weight named entities highest
+            }
+        }
+        return themeCount;
     }
 }
 //# sourceMappingURL=ConvergenceExecutor.js.map
