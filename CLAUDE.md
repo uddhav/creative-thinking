@@ -34,23 +34,24 @@ npm run format       # Run prettier to format all files
 - **Anthropic format is the standard**: Always use `tool_use`/`tool_result` format for parallel tool
   calls
 
-### Parallel Tool Call Format
+### MCP Protocol Limitations
 
-**IMPORTANT**: The Anthropic format is the only legitimate format for parallel tool calls.
+**CRITICAL**: The MCP (Model Context Protocol) has strict requirements that must be followed:
 
-```bash
-# This is the standard and should always be used
-export CREATIVE_THINKING_RESPONSE_FORMAT=anthropic
-```
+1. **NO PARALLEL TOOL CALLS AT SERVER LEVEL** - MCP expects single tool calls only
+   - Server receives: `{method: "tools/call", params: {name: string, arguments: object}}`
+   - NOT arrays like: `[{name: ..., arguments: ...}, ...]`
+2. **Error Message Delivery** - The server properly logs and returns error messages
+   - All errors are logged to stderr with timestamps and context
+   - Error responses include `isError: true` flag for client handling
+3. **Standard Compliance** - This server strictly follows MCP protocol
+   - No vendor-specific extensions or formats
+   - Single tool call per request only
+   - Parallel execution happens at client level, not server level
 
-The system uses Anthropic's `tool_use`/`tool_result` format with:
-
-- Automatic `tool_use_id` generation for request/response tracking
-- Proper error handling with `is_error` flag
-- Support for parallel execution with `Promise.allSettled`
-
-The legacy format exists only for backward compatibility and should not be used for new
-implementations.
+If you see "Claude's response was interrupted" errors, this typically means the client is sending
+array-formatted requests that violate MCP protocol. The server will reject these with a clear error
+message explaining the issue.
 
 ### Claude-Specific Instructions
 

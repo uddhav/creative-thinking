@@ -52,13 +52,30 @@ export class RequestHandlers {
             // MCP standard expects single tool calls only
             // Reject any array format as it's not part of the MCP protocol
             if (Array.isArray(request.params)) {
+                const errorMessage = 'Error: MCP protocol expects single tool calls. Received array format which is not supported. ' +
+                    'Please send individual tool call requests sequentially. ' +
+                    'The MCP protocol does not support parallel tool calls at the server level.';
+                // Log the error with full context for debugging
+                console.error('[RequestHandler] Array format rejected:', {
+                    timestamp: new Date().toISOString(),
+                    arrayLength: request.params.length,
+                    firstItem: request.params[0]
+                        ? JSON.stringify(request.params[0]).substring(0, 200)
+                        : 'empty',
+                    message: errorMessage,
+                });
+                // Send to stderr for visibility in MCP context
+                console.error(`\n⚠️  PROTOCOL VIOLATION DETECTED\n${'='.repeat(50)}\n${errorMessage}\n${'='.repeat(50)}\n`);
+                // Return error response
                 return {
                     content: [
                         {
                             type: 'text',
-                            text: 'Error: MCP protocol expects single tool calls. Received array format which is not supported. Please send individual tool call requests.',
+                            text: errorMessage,
                         },
                     ],
+                    // Add isError flag to help with client-side handling
+                    isError: true,
                 };
             }
             // Handle single tool call (MCP standard)
@@ -67,13 +84,21 @@ export class RequestHandlers {
             let args;
             try {
                 if (!request.params || typeof request.params !== 'object') {
+                    const errorMessage = 'Error: Invalid request format - params must be an object with name and arguments properties';
+                    console.error('[RequestHandler] Invalid params format:', {
+                        timestamp: new Date().toISOString(),
+                        paramsType: typeof request.params,
+                        params: request.params,
+                        message: errorMessage,
+                    });
                     return {
                         content: [
                             {
                                 type: 'text',
-                                text: 'Error: Invalid request format - params must be an object',
+                                text: errorMessage,
                             },
                         ],
+                        isError: true,
                     };
                 }
                 const params = request.params;
@@ -91,14 +116,22 @@ export class RequestHandlers {
                 }
             }
             catch (extractError) {
-                console.error('[ExecuteStep] Failed to extract parameters:', extractError);
+                const errorMessage = `Error: Failed to parse request parameters: ${extractError instanceof Error ? extractError.message : 'Unknown error'}`;
+                // Log detailed error information
+                console.error('[RequestHandler] Parameter extraction failed:', {
+                    timestamp: new Date().toISOString(),
+                    error: extractError,
+                    requestParams: JSON.stringify(request.params).substring(0, 500),
+                    message: errorMessage,
+                });
                 return {
                     content: [
                         {
                             type: 'text',
-                            text: `Error: Failed to parse request parameters: ${extractError instanceof Error ? extractError.message : 'Unknown error'}`,
+                            text: errorMessage,
                         },
                     ],
+                    isError: true,
                 };
             }
             try {
