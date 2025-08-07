@@ -10,6 +10,13 @@ export interface ObjectValidationResult {
   value?: Record<string, unknown>;
 }
 
+export interface ArrayValidationResult {
+  isValid: boolean;
+  error?: string;
+  recovery?: string;
+  value?: string[];
+}
+
 export class ObjectFieldValidator {
   /**
    * Validates that a field is a proper object (not string, array, null, etc.)
@@ -339,5 +346,181 @@ export class ObjectFieldValidator {
     }
 
     return { isValid: true, value: obj };
+  }
+
+  /**
+   * Validates that a field is an array of strings
+   */
+  static validateStringArray(value: unknown, fieldName: string): ArrayValidationResult {
+    // Check for null/undefined
+    if (value === null || value === undefined) {
+      return {
+        isValid: false,
+        error: `${fieldName} is null or undefined`,
+        recovery: `Ensure ${fieldName} is provided as an array of strings`,
+      };
+    }
+
+    // Check if it's actually an array
+    if (!Array.isArray(value)) {
+      // Check for common mistakes
+      if (typeof value === 'string') {
+        // Check if it's a JSON string that should be parsed
+        const trimmed = value.trim();
+        if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+          try {
+            const parsed = JSON.parse(trimmed) as unknown;
+            if (Array.isArray(parsed)) {
+              return {
+                isValid: false,
+                error: `${fieldName} was passed as a JSON string instead of an array`,
+                recovery: `Parse the JSON string before passing it to the API. Use JSON.parse() or send the actual array.`,
+              };
+            }
+          } catch (e) {
+            return {
+              isValid: false,
+              error: `${fieldName} contains invalid JSON array string: ${(e as Error).message}`,
+              recovery: `Fix the JSON syntax in ${fieldName} or send it as a proper array`,
+            };
+          }
+        }
+        return {
+          isValid: false,
+          error: `${fieldName} is a string but should be an array`,
+          recovery: `Convert ${fieldName} to an array. If it's a single value, wrap it in brackets: ["${value}"]`,
+        };
+      }
+
+      if (typeof value === 'object') {
+        return {
+          isValid: false,
+          error: `${fieldName} is an object but should be an array`,
+          recovery: `Convert ${fieldName} to an array format. Objects should be wrapped in an array: [${JSON.stringify(value)}]`,
+        };
+      }
+
+      return {
+        isValid: false,
+        error: `${fieldName} must be an array, got ${typeof value}`,
+        recovery: `Provide ${fieldName} as an array of strings`,
+      };
+    }
+
+    // Validate each element is a string
+    for (let i = 0; i < value.length; i++) {
+      const item = value[i] as unknown;
+      if (typeof item !== 'string') {
+        return {
+          isValid: false,
+          error: `${fieldName}[${i}] is not a string (got ${typeof item})`,
+          recovery: `Ensure all elements in ${fieldName} are strings. Convert ${fieldName}[${i}] to a string.`,
+        };
+      }
+    }
+
+    return { isValid: true, value: value as string[] };
+  }
+
+  /**
+   * Validates Disney Method specific array fields
+   */
+  static validateDisneyMethodArrays(params: Record<string, unknown>): ArrayValidationResult {
+    // Check dreamerVision
+    if (params.dreamerVision !== undefined) {
+      const validation = this.validateStringArray(params.dreamerVision, 'dreamerVision');
+      if (!validation.isValid) {
+        return validation;
+      }
+    }
+
+    // Check realistPlan
+    if (params.realistPlan !== undefined) {
+      const validation = this.validateStringArray(params.realistPlan, 'realistPlan');
+      if (!validation.isValid) {
+        return validation;
+      }
+    }
+
+    // Check criticRisks
+    if (params.criticRisks !== undefined) {
+      const validation = this.validateStringArray(params.criticRisks, 'criticRisks');
+      if (!validation.isValid) {
+        return validation;
+      }
+    }
+
+    return { isValid: true };
+  }
+
+  /**
+   * Generic method to validate any technique's array fields
+   */
+  static validateTechniqueArrayFields(
+    technique: string,
+    params: Record<string, unknown>
+  ): ArrayValidationResult {
+    // Map of technique to its array fields
+    const techniqueArrayFields: Record<string, string[]> = {
+      disney_method: ['dreamerVision', 'realistPlan', 'criticRisks'],
+      cross_cultural: [
+        'culturalFrameworks',
+        'bridgeBuilding',
+        'respectfulSynthesis',
+        'parallelPaths',
+      ],
+      collective_intel: [
+        'wisdomSources',
+        'emergentPatterns',
+        'synergyCombinations',
+        'collectiveInsights',
+      ],
+      design_thinking: [
+        'empathyInsights',
+        'ideaList',
+        'failureModesPredicted',
+        'stressTestResults',
+        'userFeedback',
+        'failureInsights',
+      ],
+      concept_extraction: ['extractedConcepts', 'abstractedPatterns', 'applications'],
+      yes_and: ['additions', 'evaluations'],
+      triz: ['inventivePrinciples', 'viaNegativaRemovals'],
+      neural_state: ['switchingRhythm', 'integrationInsights'],
+      temporal_work: [
+        'circadianAlignment',
+        'pressureTransformation',
+        'asyncSyncBalance',
+        'temporalEscapeRoutes',
+      ],
+      scamper: ['modifications', 'alternativeSuggestions'],
+      po: ['principles', 'connections'],
+      six_hats: [], // No specific array fields
+      nine_windows: ['interdependencies'],
+      random_entry: [], // No specific array fields
+    };
+
+    const arrayFields = techniqueArrayFields[technique] || [];
+
+    // Also check common array fields that apply to all techniques
+    const commonArrayFields = [
+      'risks',
+      'failureModes',
+      'mitigations',
+      'antifragileProperties',
+      'blackSwans',
+    ];
+    const allFields = [...arrayFields, ...commonArrayFields];
+
+    for (const field of allFields) {
+      if (params[field] !== undefined) {
+        const validation = this.validateStringArray(params[field], field);
+        if (!validation.isValid) {
+          return validation;
+        }
+      }
+    }
+
+    return { isValid: true };
   }
 }
