@@ -117,7 +117,7 @@ export class PlanningValidator extends BaseValidator {
         if (!this.validateArray(data.techniques, 'techniques', errors)) {
             return { valid: false, errors };
         }
-        if (data.techniques && data.techniques.length === 0) {
+        if (data.techniques && Array.isArray(data.techniques) && data.techniques.length === 0) {
             errors.push('at least one technique');
         }
         // Optional fields
@@ -196,7 +196,10 @@ export class ExecutionValidator extends BaseValidator {
             return { valid: false, errors };
         }
         if (!this.isValidTechnique(data.technique)) {
-            errors.push(`❌ INVALID TECHNIQUE: '${data.technique}' is not a valid technique. Valid techniques are: ${this.getValidTechniques().join(', ')}`);
+            // We know data.technique is a string at this point due to validateString check above
+            const techniqueValue = data.technique;
+            const techniqueStr = String(techniqueValue);
+            errors.push(`❌ INVALID TECHNIQUE: '${techniqueStr}' is not a valid technique. Valid techniques are: ${this.getValidTechniques().join(', ')}`);
         }
         if (!data.problem) {
             errors.push('Invalid problem');
@@ -245,7 +248,10 @@ export class ExecutionValidator extends BaseValidator {
     validateTechniqueSpecificFields(data, errors, warnings) {
         switch (data.technique) {
             case 'six_hats':
-                if (data.hatColor === undefined && data.currentStep >= 1 && data.currentStep <= 6) {
+                if (data.hatColor === undefined &&
+                    typeof data.currentStep === 'number' &&
+                    data.currentStep >= 1 &&
+                    data.currentStep <= 6) {
                     warnings.push('hatColor is recommended for six_hats technique to track thinking mode');
                 }
                 if (data.hatColor !== undefined) {
@@ -258,7 +264,9 @@ export class ExecutionValidator extends BaseValidator {
                 }
                 break;
             case 'po':
-                if (data.provocation === undefined && data.currentStep === 1) {
+                if (data.provocation === undefined &&
+                    typeof data.currentStep === 'number' &&
+                    data.currentStep === 1) {
                     warnings.push('provocation is recommended for the first step of PO technique');
                 }
                 if (data.provocation !== undefined) {
@@ -528,7 +536,9 @@ export class SessionOperationValidator extends BaseValidator {
             this.validateNumber(options.limit, 'listOptions.limit', errors, 1, 1000);
         }
         if (options.technique !== undefined && !this.isValidTechnique(options.technique)) {
-            errors.push(`Invalid technique in listOptions: ${options.technique}`);
+            const techniqueValue = options.technique;
+            const techniqueStr = String(techniqueValue);
+            errors.push(`Invalid technique in listOptions: ${techniqueStr}`);
         }
         if (options.status !== undefined) {
             this.validateEnum(options.status, ['active', 'completed', 'all'], 'listOptions.status', errors);

@@ -3,8 +3,6 @@
  * Handles input validation for different operation types
  */
 
-import type { LateralTechnique, ExecuteThinkingStepInput } from '../types/index.js';
-import type { DiscoverTechniquesInput, PlanThinkingSessionInput } from '../types/planning.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 import { ObjectFieldValidator } from './validators/ObjectFieldValidator.js';
 
@@ -25,7 +23,7 @@ export interface ValidationStrategy {
 abstract class BaseValidator implements ValidationStrategy {
   abstract validate(input: unknown): ValidationResult;
 
-  protected validateString(value: unknown, fieldName: string, errors: string[]): value is string {
+  protected validateString(value: unknown, fieldName: string, errors: string[]): boolean {
     if (typeof value !== 'string') {
       errors.push(`${fieldName} must be a string`);
       return false;
@@ -59,7 +57,7 @@ abstract class BaseValidator implements ValidationStrategy {
     return true;
   }
 
-  protected validateBoolean(value: unknown, fieldName: string, errors: string[]): value is boolean {
+  protected validateBoolean(value: unknown, fieldName: string, errors: string[]): boolean {
     if (typeof value !== 'boolean') {
       errors.push(`${fieldName} must be a boolean`);
       return false;
@@ -113,13 +111,14 @@ export class DiscoveryValidator extends BaseValidator {
       return { valid: false, errors: ['Input must be an object'] };
     }
 
-    const data = input as DiscoverTechniquesInput;
+    const data = input as Record<string, unknown>;
 
     // Required fields
     if (!data.problem) {
       errors.push('Problem description is required');
       return { valid: false, errors };
     }
+
     if (!this.validateString(data.problem, 'problem', errors)) {
       return { valid: false, errors };
     }
@@ -163,18 +162,18 @@ export class PlanningValidator extends BaseValidator {
       return { valid: false, errors: ['Input must be an object'] };
     }
 
-    const data = input as PlanThinkingSessionInput;
+    const data = input as Record<string, unknown>;
 
     // Required fields
     if (!this.validateString(data.problem, 'problem', errors)) {
       return { valid: false, errors };
     }
 
-    if (!this.validateArray<LateralTechnique>(data.techniques, 'techniques', errors)) {
+    if (!this.validateArray(data.techniques, 'techniques', errors)) {
       return { valid: false, errors };
     }
 
-    if (data.techniques && data.techniques.length === 0) {
+    if (data.techniques && Array.isArray(data.techniques) && data.techniques.length === 0) {
       errors.push('at least one technique');
     }
 
@@ -213,8 +212,8 @@ export class PlanningValidator extends BaseValidator {
     return { valid: errors.length === 0, errors, warnings };
   }
 
-  private isValidTechnique(value: string): boolean {
-    const validTechniques: LateralTechnique[] = [
+  private isValidTechnique(value: unknown): boolean {
+    const validTechniques = [
       'six_hats',
       'po',
       'random_entry',
@@ -229,10 +228,41 @@ export class PlanningValidator extends BaseValidator {
       'collective_intel',
       'disney_method',
       'nine_windows',
-      'convergence' as LateralTechnique, // Special technique for synthesizing parallel results
-    ];
-    return validTechniques.includes(value as LateralTechnique);
+      'convergence',
+    ] as const;
+    return validTechniques.includes(value as (typeof validTechniques)[number]);
   }
+}
+
+// Type definition for ExecuteThinkingStepInput
+interface ExecuteThinkingStepInput {
+  planId?: unknown;
+  technique?: unknown;
+  problem?: unknown;
+  currentStep?: unknown;
+  totalSteps?: unknown;
+  output?: unknown;
+  nextStepNeeded?: unknown;
+  isRevision?: unknown;
+  revisesStep?: unknown;
+  hatColor?: unknown;
+  provocation?: unknown;
+  principles?: unknown;
+  randomStimulus?: unknown;
+  connections?: unknown;
+  scamperAction?: unknown;
+  flexibilityScore?: unknown;
+  designStage?: unknown;
+  dominantNetwork?: unknown;
+  suppressionDepth?: unknown;
+  currentCell?: unknown;
+  nineWindowsMatrix?: unknown;
+  pathImpact?: unknown;
+  temporalLandscape?: unknown;
+  convergenceStrategy?: unknown;
+  parallelResults?: unknown;
+  risks?: unknown;
+  mitigations?: unknown;
 }
 
 /**
@@ -283,8 +313,13 @@ export class ExecutionValidator extends BaseValidator {
     }
 
     if (!this.isValidTechnique(data.technique)) {
+      // We know data.technique is a string at this point due to validateString check above
+      const techniqueValue = data.technique as unknown;
+      const techniqueStr = String(techniqueValue);
       errors.push(
-        `❌ INVALID TECHNIQUE: '${data.technique}' is not a valid technique. Valid techniques are: ${this.getValidTechniques().join(', ')}`
+        `❌ INVALID TECHNIQUE: '${techniqueStr}' is not a valid technique. Valid techniques are: ${this.getValidTechniques().join(
+          ', '
+        )}`
       );
     }
 
@@ -351,7 +386,12 @@ export class ExecutionValidator extends BaseValidator {
   ): void {
     switch (data.technique) {
       case 'six_hats':
-        if (data.hatColor === undefined && data.currentStep >= 1 && data.currentStep <= 6) {
+        if (
+          data.hatColor === undefined &&
+          typeof data.currentStep === 'number' &&
+          data.currentStep >= 1 &&
+          data.currentStep <= 6
+        ) {
           warnings.push('hatColor is recommended for six_hats technique to track thinking mode');
         }
         if (data.hatColor !== undefined) {
@@ -380,7 +420,11 @@ export class ExecutionValidator extends BaseValidator {
         break;
 
       case 'po':
-        if (data.provocation === undefined && data.currentStep === 1) {
+        if (
+          data.provocation === undefined &&
+          typeof data.currentStep === 'number' &&
+          data.currentStep === 1
+        ) {
           warnings.push('provocation is recommended for the first step of PO technique');
         }
         if (data.provocation !== undefined) {
@@ -585,14 +629,16 @@ export class ExecutionValidator extends BaseValidator {
     // Validate risk/adversarial fields
     if (
       data.risks !== undefined &&
-      data.risks.length > 0 &&
-      (!data.mitigations || data.mitigations.length === 0)
+      (data.risks as unknown[]).length > 0 &&
+      (!data.mitigations || (data.mitigations as unknown[]).length === 0)
     ) {
       warnings.push('Consider providing mitigations when risks are identified');
     }
+
     if (data.risks !== undefined) {
       this.validateArray<string>(data.risks, 'risks', errors, item => typeof item === 'string');
     }
+
     if (data.mitigations !== undefined) {
       this.validateArray<string>(
         data.mitigations,
@@ -603,8 +649,8 @@ export class ExecutionValidator extends BaseValidator {
     }
   }
 
-  private isValidTechnique(value: string): boolean {
-    const validTechniques: LateralTechnique[] = [
+  private isValidTechnique(value: unknown): boolean {
+    const validTechniques = [
       'six_hats',
       'po',
       'random_entry',
@@ -619,9 +665,9 @@ export class ExecutionValidator extends BaseValidator {
       'collective_intel',
       'disney_method',
       'nine_windows',
-      'convergence' as LateralTechnique, // Special technique for synthesizing parallel results
-    ];
-    return validTechniques.includes(value as LateralTechnique);
+      'convergence',
+    ] as const;
+    return validTechniques.includes(value as (typeof validTechniques)[number]);
   }
 
   private getValidTechniques(): string[] {
@@ -657,25 +703,7 @@ export class SessionOperationValidator extends BaseValidator {
       return { valid: false, errors: ['Input must be an object'] };
     }
 
-    const data = input as {
-      sessionOperation?: string;
-      saveOptions?: {
-        sessionName?: string;
-        tags?: string[];
-        asTemplate?: boolean;
-      };
-      loadOptions?: { sessionId?: string };
-      listOptions?: {
-        limit?: number;
-        technique?: string;
-        status?: string;
-      };
-      deleteOptions?: { sessionId?: string };
-      exportOptions?: {
-        sessionId?: string;
-        format?: string;
-      };
-    };
+    const data = input as Record<string, unknown>;
 
     if (
       !this.validateEnum(
@@ -692,36 +720,36 @@ export class SessionOperationValidator extends BaseValidator {
     switch (data.sessionOperation) {
       case 'save':
         if (data.saveOptions) {
-          this.validateSaveOptions(data.saveOptions, errors);
+          this.validateSaveOptions(data.saveOptions as Record<string, unknown>, errors);
         }
         break;
 
       case 'load':
-        if (!data.loadOptions || !data.loadOptions.sessionId) {
+        if (!data.loadOptions || !(data.loadOptions as Record<string, unknown>).sessionId) {
           errors.push('loadOptions.sessionId is required for load operation');
         }
         break;
 
       case 'list':
         if (data.listOptions) {
-          this.validateListOptions(data.listOptions, errors);
+          this.validateListOptions(data.listOptions as Record<string, unknown>, errors);
         }
         break;
 
       case 'delete':
-        if (!data.deleteOptions || !data.deleteOptions.sessionId) {
+        if (!data.deleteOptions || !(data.deleteOptions as Record<string, unknown>).sessionId) {
           errors.push('deleteOptions.sessionId is required for delete operation');
         }
         break;
 
       case 'export':
-        if (!data.exportOptions || !data.exportOptions.sessionId) {
+        if (!data.exportOptions || !(data.exportOptions as Record<string, unknown>).sessionId) {
           errors.push('exportOptions.sessionId is required for export operation');
         }
         if (
           data.exportOptions &&
           !this.validateEnum(
-            data.exportOptions.format,
+            (data.exportOptions as Record<string, unknown>).format,
             ['json', 'markdown', 'csv'] as const,
             'exportOptions.format',
             errors
@@ -736,11 +764,7 @@ export class SessionOperationValidator extends BaseValidator {
   }
 
   private validateSaveOptions(
-    options: {
-      sessionName?: string;
-      tags?: string[];
-      asTemplate?: boolean;
-    },
+    options: { sessionName?: unknown; tags?: unknown; asTemplate?: unknown },
     errors: string[]
   ): void {
     if (options.sessionName !== undefined) {
@@ -760,18 +784,16 @@ export class SessionOperationValidator extends BaseValidator {
   }
 
   private validateListOptions(
-    options: {
-      limit?: number;
-      technique?: string;
-      status?: string;
-    },
+    options: { limit?: unknown; technique?: unknown; status?: unknown },
     errors: string[]
   ): void {
     if (options.limit !== undefined) {
       this.validateNumber(options.limit, 'listOptions.limit', errors, 1, 1000);
     }
     if (options.technique !== undefined && !this.isValidTechnique(options.technique)) {
-      errors.push(`Invalid technique in listOptions: ${options.technique}`);
+      const techniqueValue = options.technique as unknown;
+      const techniqueStr = String(techniqueValue);
+      errors.push(`Invalid technique in listOptions: ${techniqueStr}`);
     }
     if (options.status !== undefined) {
       this.validateEnum(
@@ -783,8 +805,8 @@ export class SessionOperationValidator extends BaseValidator {
     }
   }
 
-  private isValidTechnique(value: string): boolean {
-    const validTechniques: LateralTechnique[] = [
+  private isValidTechnique(value: unknown): boolean {
+    const validTechniques = [
       'six_hats',
       'po',
       'random_entry',
@@ -799,9 +821,9 @@ export class SessionOperationValidator extends BaseValidator {
       'collective_intel',
       'disney_method',
       'nine_windows',
-      'convergence' as LateralTechnique, // Special technique for synthesizing parallel results
-    ];
-    return validTechniques.includes(value as LateralTechnique);
+      'convergence',
+    ] as const;
+    return validTechniques.includes(value as (typeof validTechniques)[number]);
   }
 }
 
