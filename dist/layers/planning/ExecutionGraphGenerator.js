@@ -145,13 +145,16 @@ export class ExecutionGraphGenerator {
     }
     /**
      * Get technique-specific parameters
+     * Made public for testing bounds checking
      */
     static getTechniqueSpecificParams(technique, currentStep, step) {
         switch (technique) {
             case 'six_hats': {
+                // Six Hats has 7 colors including purple (ergodicity extension)
                 const hatColors = ['blue', 'white', 'red', 'yellow', 'black', 'green', 'purple'];
+                const colorIndex = Math.min(Math.max(0, currentStep - 1), hatColors.length - 1);
                 return {
-                    hatColor: hatColors[currentStep - 1],
+                    hatColor: hatColors[colorIndex],
                 };
             }
             case 'scamper': {
@@ -165,20 +168,23 @@ export class ExecutionGraphGenerator {
                     'reverse',
                     'parameterize',
                 ];
+                const actionIndex = Math.min(Math.max(0, currentStep - 1), scamperActions.length - 1);
                 return {
-                    scamperAction: scamperActions[currentStep - 1],
+                    scamperAction: scamperActions[actionIndex],
                 };
             }
             case 'design_thinking': {
                 const designStages = ['empathize', 'define', 'ideate', 'prototype', 'test'];
+                const stageIndex = Math.min(Math.max(0, currentStep - 1), designStages.length - 1);
                 return {
-                    designStage: designStages[currentStep - 1],
+                    designStage: designStages[stageIndex],
                 };
             }
             case 'disney_method': {
                 const disneyRoles = ['dreamer', 'realist', 'critic'];
+                const roleIndex = Math.min(Math.max(0, currentStep - 1), disneyRoles.length - 1);
                 return {
-                    disneyRole: disneyRoles[currentStep - 1],
+                    disneyRole: disneyRoles[roleIndex],
                 };
             }
             case 'nine_windows': {
@@ -193,7 +199,8 @@ export class ExecutionGraphGenerator {
                     { systemLevel: 'super-system', timeFrame: 'present' },
                     { systemLevel: 'super-system', timeFrame: 'future' },
                 ];
-                const cell = nineWindowsCells[currentStep - 1];
+                const cellIndex = Math.min(Math.max(0, currentStep - 1), nineWindowsCells.length - 1);
+                const cell = nineWindowsCells[cellIndex];
                 return {
                     currentCell: cell,
                 };
@@ -234,30 +241,24 @@ export class ExecutionGraphGenerator {
     }
     /**
      * Find groups of nodes that can execute in parallel
+     * Optimized from O(n²) to O(n) using Map for grouping
      */
     static findParallelizableGroups(nodes) {
-        const groups = [];
-        const processed = new Set();
+        // Group nodes by their dependency signature
+        const depGroups = new Map();
         for (const node of nodes) {
-            if (processed.has(node.id))
-                continue;
-            // Find all nodes that can run in parallel with this node
-            const group = [node.id];
-            processed.add(node.id);
-            for (const other of nodes) {
-                if (processed.has(other.id))
-                    continue;
-                // Nodes can run in parallel if they have the same dependencies
-                if (this.arraysEqual(node.dependencies, other.dependencies)) {
-                    group.push(other.id);
-                    processed.add(other.id);
-                }
+            // Create a consistent key from dependencies
+            const depKey = JSON.stringify(node.dependencies.sort());
+            if (!depGroups.has(depKey)) {
+                depGroups.set(depKey, []);
             }
-            if (group.length > 0) {
-                groups.push(group);
+            const group = depGroups.get(depKey);
+            if (group) {
+                group.push(node.id);
             }
         }
-        return groups;
+        // Return groups with at least one node
+        return Array.from(depGroups.values()).filter(group => group.length > 0);
     }
     /**
      * Find the critical path through the graph

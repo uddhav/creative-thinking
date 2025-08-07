@@ -91,7 +91,7 @@ describe('SessionEncoder', () => {
         technique: 'six_hats',
         currentStep: 3,
         totalSteps: 7,
-        timestamp: Date.now() - 25 * 60 * 60 * 1000, // 25 hours ago
+        timestamp: Date.now() - 31 * 24 * 60 * 60 * 1000, // 31 days ago (more than 30 days)
       };
 
       const encoded = SessionEncoder.encode(sessionData);
@@ -301,7 +301,7 @@ describe('SessionEncoder', () => {
         technique: 'po',
         currentStep: 1,
         totalSteps: 4,
-        timestamp: Date.now() - 25 * 60 * 60 * 1000, // 25 hours ago
+        timestamp: Date.now() - 31 * 24 * 60 * 60 * 1000, // 31 days ago (more than 30 days)
       };
 
       const encoded = SessionEncoder.encodeSession(sessionState);

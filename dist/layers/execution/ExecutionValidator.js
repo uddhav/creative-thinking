@@ -50,13 +50,42 @@ export class ExecutionValidator {
                     return { isValid: true, plan: minimalPlan };
                 }
             }
-            // Invalid encoded session
+            // Check why it's invalid for better error messages
+            const decoded = SessionEncoder.decode(input.planId);
             const enhancedError = ErrorFactory.planNotFound(input.planId);
+            if (decoded) {
+                const age = Date.now() - decoded.timestamp;
+                const expiryTime = 30 * 24 * 60 * 60 * 1000; // 30 days
+                if (age > expiryTime) {
+                    // Session expired
+                    const daysAgo = Math.floor(age / (24 * 60 * 60 * 1000));
+                    return {
+                        isValid: false,
+                        error: this.errorHandler.handleError(enhancedError, 'planning', {
+                            planId: input.planId.substring(0, 20) + '...',
+                            message: `Session expired ${daysAgo} days ago (sessions expire after 30 days)`,
+                            suggestion: 'Please create a new plan to continue.',
+                        }),
+                    };
+                }
+                else if (decoded.currentStep > decoded.totalSteps) {
+                    // Invalid step
+                    return {
+                        isValid: false,
+                        error: this.errorHandler.handleError(enhancedError, 'planning', {
+                            planId: input.planId.substring(0, 20) + '...',
+                            message: `Invalid step ${decoded.currentStep} (max: ${decoded.totalSteps})`,
+                            suggestion: 'Session data may be corrupted. Please create a new plan.',
+                        }),
+                    };
+                }
+            }
+            // Corrupted or invalid format
             return {
                 isValid: false,
                 error: this.errorHandler.handleError(enhancedError, 'planning', {
-                    planId: 'Invalid or expired encoded session',
-                    suggestion: 'The encoded session may have expired. Please create a new plan.',
+                    message: 'Invalid session data format',
+                    suggestion: 'The session data appears corrupted. Please create a new plan.',
                 }),
             };
         }

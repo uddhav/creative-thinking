@@ -26,6 +26,10 @@ export interface EncodedSessionState {
     lastOutput?: string;
 }
 export declare class SessionEncoder {
+    private static readonly MAX_SESSION_SIZE;
+    private static readonly EXPIRY_TIME;
+    private static encodedSessions;
+    private static metrics;
     /**
      * Encode session data to base64
      */
@@ -34,6 +38,21 @@ export declare class SessionEncoder {
      * Decode and validate base64 session
      */
     static decode(encodedSession: string): EncodedSessionData | null;
+    /**
+     * Cleanup expired sessions from memory
+     */
+    private static cleanupExpired;
+    /**
+     * Get metrics for monitoring
+     */
+    static getMetrics(): {
+        activeSessions: number;
+        encodeCalls: number;
+        decodeCalls: number;
+        largestSession: number;
+        cleanupRuns: number;
+        sessionsCleanedUp: number;
+    };
     /**
      * Check if a planId is an encoded session
      */

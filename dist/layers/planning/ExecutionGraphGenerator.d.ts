@@ -2,6 +2,7 @@
  * ExecutionGraphGenerator - Generates DAG for client-side parallel execution
  */
 import type { ExecutionGraph, TechniqueWorkflow } from '../../types/planning.js';
+import type { ExecuteThinkingStepInput, LateralTechnique } from '../../types/index.js';
 export declare class ExecutionGraphGenerator {
     /**
      * Generate execution graph from workflow
@@ -25,14 +26,20 @@ export declare class ExecutionGraphGenerator {
     private static buildParameters;
     /**
      * Get technique-specific parameters
+     * Made public for testing bounds checking
      */
-    private static getTechniqueSpecificParams;
+    static getTechniqueSpecificParams(technique: LateralTechnique, currentStep: number, step: {
+        description?: string;
+        stimulus?: string;
+        contradiction?: string;
+    }): Partial<ExecuteThinkingStepInput>;
     /**
      * Calculate metadata for the execution graph
      */
     private static calculateMetadata;
     /**
      * Find groups of nodes that can execute in parallel
+     * Optimized from O(n²) to O(n) using Map for grouping
      */
     private static findParallelizableGroups;
     /**

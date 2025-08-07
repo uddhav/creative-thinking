@@ -203,17 +203,20 @@ export class ExecutionGraphGenerator {
 
   /**
    * Get technique-specific parameters
+   * Made public for testing bounds checking
    */
-  private static getTechniqueSpecificParams(
+  static getTechniqueSpecificParams(
     technique: LateralTechnique,
     currentStep: number,
     step: { description?: string; stimulus?: string; contradiction?: string }
   ): Partial<ExecuteThinkingStepInput> {
     switch (technique) {
       case 'six_hats': {
+        // Six Hats has 7 colors including purple (ergodicity extension)
         const hatColors = ['blue', 'white', 'red', 'yellow', 'black', 'green', 'purple'] as const;
+        const colorIndex = Math.min(Math.max(0, currentStep - 1), hatColors.length - 1);
         return {
-          hatColor: hatColors[currentStep - 1],
+          hatColor: hatColors[colorIndex],
         };
       }
 
@@ -228,22 +231,25 @@ export class ExecutionGraphGenerator {
           'reverse',
           'parameterize',
         ] as const;
+        const actionIndex = Math.min(Math.max(0, currentStep - 1), scamperActions.length - 1);
         return {
-          scamperAction: scamperActions[currentStep - 1],
+          scamperAction: scamperActions[actionIndex],
         };
       }
 
       case 'design_thinking': {
         const designStages = ['empathize', 'define', 'ideate', 'prototype', 'test'] as const;
+        const stageIndex = Math.min(Math.max(0, currentStep - 1), designStages.length - 1);
         return {
-          designStage: designStages[currentStep - 1],
+          designStage: designStages[stageIndex],
         };
       }
 
       case 'disney_method': {
         const disneyRoles = ['dreamer', 'realist', 'critic'] as const;
+        const roleIndex = Math.min(Math.max(0, currentStep - 1), disneyRoles.length - 1);
         return {
-          disneyRole: disneyRoles[currentStep - 1],
+          disneyRole: disneyRoles[roleIndex],
         };
       }
 
@@ -259,7 +265,8 @@ export class ExecutionGraphGenerator {
           { systemLevel: 'super-system' as const, timeFrame: 'present' as const },
           { systemLevel: 'super-system' as const, timeFrame: 'future' as const },
         ];
-        const cell = nineWindowsCells[currentStep - 1];
+        const cellIndex = Math.min(Math.max(0, currentStep - 1), nineWindowsCells.length - 1);
+        const cell = nineWindowsCells[cellIndex];
         return {
           currentCell: cell,
         };
@@ -309,34 +316,27 @@ export class ExecutionGraphGenerator {
 
   /**
    * Find groups of nodes that can execute in parallel
+   * Optimized from O(n²) to O(n) using Map for grouping
    */
   private static findParallelizableGroups(nodes: ExecutionGraphNode[]): string[][] {
-    const groups: string[][] = [];
-    const processed = new Set<string>();
+    // Group nodes by their dependency signature
+    const depGroups = new Map<string, string[]>();
 
     for (const node of nodes) {
-      if (processed.has(node.id)) continue;
+      // Create a consistent key from dependencies
+      const depKey = JSON.stringify(node.dependencies.sort());
 
-      // Find all nodes that can run in parallel with this node
-      const group = [node.id];
-      processed.add(node.id);
-
-      for (const other of nodes) {
-        if (processed.has(other.id)) continue;
-
-        // Nodes can run in parallel if they have the same dependencies
-        if (this.arraysEqual(node.dependencies, other.dependencies)) {
-          group.push(other.id);
-          processed.add(other.id);
-        }
+      if (!depGroups.has(depKey)) {
+        depGroups.set(depKey, []);
       }
-
-      if (group.length > 0) {
-        groups.push(group);
+      const group = depGroups.get(depKey);
+      if (group) {
+        group.push(node.id);
       }
     }
 
-    return groups;
+    // Return groups with at least one node
+    return Array.from(depGroups.values()).filter(group => group.length > 0);
   }
 
   /**

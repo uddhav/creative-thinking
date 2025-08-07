@@ -3,17 +3,41 @@
  * Allows sessions to be portable and resilient to server memory loss
  */
 export class SessionEncoder {
+    static MAX_SESSION_SIZE = 1024 * 1024; // 1MB
+    static EXPIRY_TIME = 30 * 24 * 60 * 60 * 1000; // 30 days
+    static encodedSessions = new Map(); // track with timestamps
+    // Metrics for monitoring
+    static metrics = {
+        encodeCalls: 0,
+        decodeCalls: 0,
+        largestSession: 0,
+        cleanupRuns: 0,
+        sessionsCleanedUp: 0,
+    };
     /**
      * Encode session data to base64
      */
     static encode(sessionData) {
         try {
             const json = JSON.stringify(sessionData);
-            return Buffer.from(json).toString('base64');
+            // Check size limit
+            if (json.length > this.MAX_SESSION_SIZE) {
+                throw new Error(`Session data too large: ${json.length} bytes (max: ${this.MAX_SESSION_SIZE})`);
+            }
+            const encoded = Buffer.from(json).toString('base64');
+            // Track session and update metrics
+            this.encodedSessions.set(encoded, Date.now());
+            this.metrics.encodeCalls++;
+            this.metrics.largestSession = Math.max(this.metrics.largestSession, json.length);
+            // Cleanup expired sessions periodically
+            if (this.metrics.encodeCalls % 100 === 0) {
+                this.cleanupExpired();
+            }
+            return encoded;
         }
         catch (error) {
             console.error('[SessionEncoder] Failed to encode session:', error);
-            throw new Error('Failed to encode session data');
+            throw error instanceof Error ? error : new Error('Failed to encode session data');
         }
     }
     /**
@@ -21,6 +45,8 @@ export class SessionEncoder {
      */
     static decode(encodedSession) {
         try {
+            // Update metrics
+            this.metrics.decodeCalls++;
             // Check if it's a base64 string
             if (!this.isBase64(encodedSession)) {
                 return null;
@@ -37,6 +63,33 @@ export class SessionEncoder {
             console.error('[SessionEncoder] Failed to decode session:', error);
             return null;
         }
+    }
+    /**
+     * Cleanup expired sessions from memory
+     */
+    static cleanupExpired() {
+        const now = Date.now();
+        let cleanedCount = 0;
+        for (const [key, timestamp] of this.encodedSessions) {
+            if (now - timestamp > this.EXPIRY_TIME) {
+                this.encodedSessions.delete(key);
+                cleanedCount++;
+            }
+        }
+        if (cleanedCount > 0) {
+            this.metrics.cleanupRuns++;
+            this.metrics.sessionsCleanedUp += cleanedCount;
+            console.error(`[SessionEncoder] Cleaned up ${cleanedCount} expired sessions`);
+        }
+    }
+    /**
+     * Get metrics for monitoring
+     */
+    static getMetrics() {
+        return {
+            ...this.metrics,
+            activeSessions: this.encodedSessions.size,
+        };
     }
     /**
      * Check if a planId is an encoded session
@@ -56,9 +109,8 @@ export class SessionEncoder {
         if (!decoded) {
             return false;
         }
-        // Check if session is not expired (24 hours)
-        const expiryTime = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
-        const isNotExpired = decoded.timestamp > Date.now() - expiryTime;
+        // Check if session is not expired (30 days)
+        const isNotExpired = decoded.timestamp > Date.now() - this.EXPIRY_TIME;
         // Check if step number is valid
         const isStepValid = decoded.currentStep > 0 && decoded.currentStep <= decoded.totalSteps;
         return isNotExpired && isStepValid;
@@ -216,9 +268,8 @@ export class SessionEncoder {
         if (!decoded) {
             return false;
         }
-        // Check if session is not expired (24 hours)
-        const expiryTime = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
-        const isNotExpired = decoded.timestamp > Date.now() - expiryTime;
+        // Check if session is not expired (30 days)
+        const isNotExpired = decoded.timestamp > Date.now() - this.EXPIRY_TIME;
         // Check if step number is valid
         const isStepValid = decoded.currentStep > 0 && decoded.currentStep <= decoded.totalSteps;
         return isNotExpired && isStepValid;
