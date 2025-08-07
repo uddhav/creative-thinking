@@ -74,6 +74,17 @@ export class RequestHandlers {
                     content: result.content,
                 };
             }
+            // Ensure params is not an array before destructuring
+            if (Array.isArray(request.params)) {
+                return {
+                    content: [
+                        {
+                            type: 'text',
+                            text: 'Error: Parallel tool calls detected but parallel processing is not enabled. Please enable parallel processing or send single tool calls.',
+                        },
+                    ],
+                };
+            }
             // Handle single tool call (backward compatibility)
             const { name, arguments: args } = request.params;
             try {
