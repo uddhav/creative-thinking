@@ -42,8 +42,8 @@ export class RequestHandlers {
                     console.error('[ExecuteStep] Request received for execute_thinking_step');
                 }
             }
-            // Array format is now handled by RequestInterceptor before reaching here
-            // The interceptor returns proper JSON-RPC error responses for arrays
+            // Array format validation is handled by validateRequiredParameters and ObjectFieldValidator
+            // These validators ensure proper JSON-RPC error responses for invalid formats
             // Handle single tool call (MCP standard)
             // Safely extract parameters to prevent crashes with malformed data
             let name;

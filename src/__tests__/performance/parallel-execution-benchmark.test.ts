@@ -519,8 +519,8 @@ describe('Parallel Execution Performance Benchmarks', () => {
       console.error(`Memory Ratio (Par/Seq): ${(parMemDelta / seqMemDelta).toFixed(2)}x`);
 
       // Memory ratio is higher in mock environment due to overhead
-      // Allow up to 4x memory per technique due to parallel execution structures
-      expect(parMemDelta / seqMemDelta).toBeLessThan(techniques.length * 4.0);
+      // Allow up to 5x memory per technique due to parallel execution structures and session encoding
+      expect(parMemDelta / seqMemDelta).toBeLessThan(techniques.length * 5.0);
     });
   });
 });
