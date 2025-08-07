@@ -56,6 +56,13 @@ export class RequestHandlers {
      */
     setupCallToolHandler() {
         this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
+            // Early logging to catch requests before any processing
+            if (request.params && typeof request.params === 'object' && 'name' in request.params) {
+                const toolName = request.params.name;
+                if (toolName === 'execute_thinking_step') {
+                    console.error('[ExecuteStep] Request received for execute_thinking_step');
+                }
+            }
             // Debug logging for test mode
             if (process.env.NODE_ENV === 'test') {
                 console.error('Received request params type:', Array.isArray(request.params) ? 'array' : 'object');
@@ -91,7 +98,45 @@ export class RequestHandlers {
                 }
             }
             // Handle single tool call (backward compatibility)
-            const { name, arguments: args } = request.params;
+            // Safely extract parameters to prevent crashes with malformed data
+            let name;
+            let args;
+            try {
+                if (!request.params || typeof request.params !== 'object') {
+                    return {
+                        content: [
+                            {
+                                type: 'text',
+                                text: 'Error: Invalid request format - params must be an object',
+                            },
+                        ],
+                    };
+                }
+                const params = request.params;
+                name = params.name;
+                args = params.arguments;
+                if (!name || typeof name !== 'string') {
+                    return {
+                        content: [
+                            {
+                                type: 'text',
+                                text: 'Error: Tool name is required and must be a string',
+                            },
+                        ],
+                    };
+                }
+            }
+            catch (extractError) {
+                console.error('[ExecuteStep] Failed to extract parameters:', extractError);
+                return {
+                    content: [
+                        {
+                            type: 'text',
+                            text: `Error: Failed to parse request parameters: ${extractError instanceof Error ? extractError.message : 'Unknown error'}`,
+                        },
+                    ],
+                };
+            }
             try {
                 // Pre-validate required parameters
                 const validationError = this.validateRequiredParameters(name, args);
@@ -267,6 +312,15 @@ export class RequestHandlers {
                             `${validation.suggestion || ''}\n\n` +
                             `Note: temporalLandscape should be an object, not a string or other type.`);
                     }
+                }
+                // Validate array fields for all techniques
+                const arrayValidation = ObjectFieldValidator.validateTechniqueArrayFields(technique, params);
+                if (!arrayValidation.isValid) {
+                    return (`❌ ERROR: Invalid array field format!\n\n` +
+                        `${arrayValidation.error}\n\n` +
+                        `${arrayValidation.recovery || ''}\n\n` +
+                        `IMPORTANT: Array fields must be actual JavaScript arrays, not JSON strings.\n` +
+                        `Example: dreamerVision: ["idea1", "idea2"], NOT dreamerVision: '["idea1", "idea2"]'`);
                 }
                 // Convergence: validate parallelResults
                 if (technique === 'convergence' && params.parallelResults !== undefined) {

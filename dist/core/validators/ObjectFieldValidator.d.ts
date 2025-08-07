@@ -8,6 +8,12 @@ export interface ObjectValidationResult {
     suggestion?: string;
     value?: Record<string, unknown>;
 }
+export interface ArrayValidationResult {
+    isValid: boolean;
+    error?: string;
+    recovery?: string;
+    value?: string[];
+}
 export declare class ObjectFieldValidator {
     /**
      * Validates that a field is a proper object (not string, array, null, etc.)
@@ -33,5 +39,17 @@ export declare class ObjectFieldValidator {
      * Validate parallelResults item structure
      */
     static validateParallelResultItem(value: unknown, index: number): ObjectValidationResult;
+    /**
+     * Validates that a field is an array of strings
+     */
+    static validateStringArray(value: unknown, fieldName: string): ArrayValidationResult;
+    /**
+     * Validates Disney Method specific array fields
+     */
+    static validateDisneyMethodArrays(params: Record<string, unknown>): ArrayValidationResult;
+    /**
+     * Generic method to validate any technique's array fields
+     */
+    static validateTechniqueArrayFields(technique: string, params: Record<string, unknown>): ArrayValidationResult;
 }
 //# sourceMappingURL=ObjectFieldValidator.d.ts.map
