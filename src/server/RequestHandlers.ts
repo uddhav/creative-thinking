@@ -10,7 +10,7 @@ import { workflowGuard } from '../core/WorkflowGuard.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 import { getAllTools } from './ToolDefinitions.js';
 import type { CreativeThinkingError } from '../errors/enhanced-errors.js';
-import { ParallelToolCallHandler } from './ParallelToolCallHandler.js';
+import { ParallelToolCallHandler, type ToolCall } from './ParallelToolCallHandler.js';
 import { loadParallelConfig, validateParallelConfig } from '../config/parallel.js';
 import { ObjectFieldValidator } from '../core/validators/ObjectFieldValidator.js';
 
@@ -81,27 +81,33 @@ export class RequestHandlers {
       }
 
       // Check if this is a parallel tool call (array format)
-      if (this.parallelConfig.enabled && this.parallelHandler.isParallelRequest(request.params)) {
-        // Handle parallel tool calls
-        if (process.env.NODE_ENV === 'test') {
-          console.error('Processing as parallel tool calls');
-        }
-        const result = await this.parallelHandler.processParallelToolCalls(request.params);
-        return {
-          content: result.content,
-        };
-      }
+      // The isParallelRequest method already checks Array.isArray internally
+      const isParallelRequest = this.parallelHandler.isParallelRequest(request.params);
 
-      // Ensure params is not an array before destructuring
-      if (Array.isArray(request.params)) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: 'Error: Parallel tool calls detected but parallel processing is not enabled. Please enable parallel processing or send single tool calls.',
-            },
-          ],
-        };
+      if (isParallelRequest) {
+        // Handle parallel tool calls if enabled
+        if (this.parallelConfig.enabled) {
+          if (process.env.NODE_ENV === 'test') {
+            console.error('Processing as parallel tool calls');
+          }
+          // TypeScript now knows request.params is ToolCall[] due to the type guard
+          const result = await this.parallelHandler.processParallelToolCalls(
+            request.params as unknown as ToolCall[]
+          );
+          return {
+            content: result.content,
+          };
+        } else {
+          // Parallel calls detected but not enabled
+          return {
+            content: [
+              {
+                type: 'text',
+                text: 'Error: Parallel tool calls detected but parallel processing is not enabled. Please enable parallel processing or send single tool calls.',
+              },
+            ],
+          };
+        }
       }
 
       // Handle single tool call (backward compatibility)
