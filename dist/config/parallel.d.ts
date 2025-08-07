@@ -1,68 +1,59 @@
 /**
- * Parallel Tool Call Configuration
- * Centralized configuration for Anthropic-style parallel tool calls
+ * Internal Execution Configuration
+ * Configuration for internal execution behavior of the creative thinking server
  */
-export interface ParallelToolCallConfig {
+export interface ExecutionConfig {
     /**
-     * Whether parallel tool calls are enabled
-     * @default true
+     * Maximum concurrent internal operations
+     * @default 5
      */
-    enabled: boolean;
+    maxConcurrentOperations: number;
     /**
-     * Maximum number of parallel tool calls allowed
-     * @default 10
-     */
-    maxParallelCalls: number;
-    /**
-     * Timeout for parallel tool calls in milliseconds
+     * Timeout for internal operations in milliseconds
      * @default 30000 (30 seconds)
      */
-    parallelTimeoutMs: number;
+    operationTimeoutMs: number;
     /**
-     * Strategy for synchronizing parallel executions
+     * Strategy for synchronizing internal operations
      * - 'checkpoint': Sync at predefined checkpoints
      * - 'immediate': Sync after each step
-     * - 'batch': Sync after all parallel calls complete
+     * - 'batch': Sync after all operations complete
      * @default 'checkpoint'
      */
     syncStrategy: 'checkpoint' | 'immediate' | 'batch';
     /**
-     * Whether to enforce strict workflow validation for parallel calls
+     * Whether to enforce strict workflow validation
      * @default true
      */
     enforceWorkflowValidation: boolean;
     /**
-     * Whether to automatically group techniques that can run in parallel
+     * Whether to automatically group techniques that can run together
      * @default true
      */
-    autoGroupParallelTechniques: boolean;
+    autoGroupTechniques: boolean;
     /**
-     * Maximum techniques per parallel group
+     * Maximum techniques per group
      * @default 5
      */
     maxTechniquesPerGroup: number;
-    /**
-     * Response format for parallel tool calls
-     * - 'anthropic': Anthropic's tool_result format with tool_use_id (the only legitimate format)
-     * - 'legacy': Original indexed format with toolIndex (deprecated, for backward compatibility only)
-     * @default 'anthropic'
-     */
-    responseFormat: 'legacy' | 'anthropic';
 }
 /**
- * Default configuration for parallel tool calls
+ * Default configuration for internal execution
  */
-export declare const defaultParallelConfig: ParallelToolCallConfig;
+export declare const defaultExecutionConfig: ExecutionConfig;
 /**
- * Load parallel configuration from environment variables
+ * Load execution configuration from environment variables
  */
-export declare function loadParallelConfig(): ParallelToolCallConfig;
+export declare function loadParallelConfig(): ExecutionConfig;
 /**
- * Validate parallel configuration
+ * Validate execution configuration
  */
-export declare function validateParallelConfig(config: ParallelToolCallConfig): string[];
+export declare function validateParallelConfig(config: ExecutionConfig): string[];
 /**
  * Get a human-readable summary of the configuration
  */
-export declare function getParallelConfigSummary(config: ParallelToolCallConfig): string;
+export declare function getExecutionConfigSummary(config: ExecutionConfig): string;
+export type ParallelToolCallConfig = ExecutionConfig;
+export declare const defaultParallelConfig: ExecutionConfig;
+export declare const getParallelConfigSummary: typeof getExecutionConfigSummary;
 //# sourceMappingURL=parallel.d.ts.map

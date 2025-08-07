@@ -1,54 +1,48 @@
 /**
- * Parallel Tool Call Configuration
- * Centralized configuration for Anthropic-style parallel tool calls
+ * Internal Execution Configuration
+ * Configuration for internal execution behavior of the creative thinking server
  */
 /**
- * Default configuration for parallel tool calls
+ * Default configuration for internal execution
  */
-export const defaultParallelConfig = {
-    enabled: true,
-    maxParallelCalls: 10,
-    parallelTimeoutMs: 30000,
+export const defaultExecutionConfig = {
+    maxConcurrentOperations: 5,
+    operationTimeoutMs: 30000,
     syncStrategy: 'checkpoint',
     enforceWorkflowValidation: true,
-    autoGroupParallelTechniques: true,
+    autoGroupTechniques: true,
     maxTechniquesPerGroup: 5,
-    responseFormat: 'anthropic',
 };
 /**
- * Load parallel configuration from environment variables
+ * Load execution configuration from environment variables
  */
 export function loadParallelConfig() {
-    const config = { ...defaultParallelConfig };
+    const config = { ...defaultExecutionConfig };
     // Load from environment variables
-    if (process.env.CREATIVE_THINKING_PARALLEL_TOOLS_ENABLED !== undefined) {
-        config.enabled = process.env.CREATIVE_THINKING_PARALLEL_TOOLS_ENABLED !== 'false';
-    }
-    if (process.env.CREATIVE_THINKING_MAX_PARALLEL_CALLS) {
-        const maxCalls = parseInt(process.env.CREATIVE_THINKING_MAX_PARALLEL_CALLS, 10);
-        if (!isNaN(maxCalls) && maxCalls > 0) {
-            config.maxParallelCalls = maxCalls;
+    if (process.env.CREATIVE_THINKING_MAX_CONCURRENT_OPS) {
+        const maxOps = parseInt(process.env.CREATIVE_THINKING_MAX_CONCURRENT_OPS, 10);
+        if (!isNaN(maxOps) && maxOps > 0) {
+            config.maxConcurrentOperations = maxOps;
         }
     }
-    if (process.env.CREATIVE_THINKING_PARALLEL_TIMEOUT_MS) {
-        const timeout = parseInt(process.env.CREATIVE_THINKING_PARALLEL_TIMEOUT_MS, 10);
+    if (process.env.CREATIVE_THINKING_OPERATION_TIMEOUT_MS) {
+        const timeout = parseInt(process.env.CREATIVE_THINKING_OPERATION_TIMEOUT_MS, 10);
         if (!isNaN(timeout) && timeout > 0) {
-            config.parallelTimeoutMs = timeout;
+            config.operationTimeoutMs = timeout;
         }
     }
-    if (process.env.CREATIVE_THINKING_PARALLEL_SYNC_STRATEGY) {
-        const strategy = process.env.CREATIVE_THINKING_PARALLEL_SYNC_STRATEGY;
+    if (process.env.CREATIVE_THINKING_SYNC_STRATEGY) {
+        const strategy = process.env.CREATIVE_THINKING_SYNC_STRATEGY;
         if (strategy === 'checkpoint' || strategy === 'immediate' || strategy === 'batch') {
             config.syncStrategy = strategy;
         }
     }
-    if (process.env.CREATIVE_THINKING_PARALLEL_WORKFLOW_VALIDATION !== undefined) {
+    if (process.env.CREATIVE_THINKING_WORKFLOW_VALIDATION !== undefined) {
         config.enforceWorkflowValidation =
-            process.env.CREATIVE_THINKING_PARALLEL_WORKFLOW_VALIDATION !== 'false';
+            process.env.CREATIVE_THINKING_WORKFLOW_VALIDATION !== 'false';
     }
-    if (process.env.CREATIVE_THINKING_PARALLEL_AUTO_GROUP !== undefined) {
-        config.autoGroupParallelTechniques =
-            process.env.CREATIVE_THINKING_PARALLEL_AUTO_GROUP !== 'false';
+    if (process.env.CREATIVE_THINKING_AUTO_GROUP !== undefined) {
+        config.autoGroupTechniques = process.env.CREATIVE_THINKING_AUTO_GROUP !== 'false';
     }
     if (process.env.CREATIVE_THINKING_MAX_TECHNIQUES_PER_GROUP) {
         const maxPerGroup = parseInt(process.env.CREATIVE_THINKING_MAX_TECHNIQUES_PER_GROUP, 10);
@@ -56,24 +50,18 @@ export function loadParallelConfig() {
             config.maxTechniquesPerGroup = maxPerGroup;
         }
     }
-    if (process.env.CREATIVE_THINKING_RESPONSE_FORMAT) {
-        const format = process.env.CREATIVE_THINKING_RESPONSE_FORMAT.toLowerCase();
-        if (format === 'legacy' || format === 'anthropic') {
-            config.responseFormat = format;
-        }
-    }
     return config;
 }
 /**
- * Validate parallel configuration
+ * Validate execution configuration
  */
 export function validateParallelConfig(config) {
     const errors = [];
-    if (config.maxParallelCalls < 1 || config.maxParallelCalls > 100) {
-        errors.push('maxParallelCalls must be between 1 and 100');
+    if (config.maxConcurrentOperations < 1 || config.maxConcurrentOperations > 20) {
+        errors.push('maxConcurrentOperations must be between 1 and 20');
     }
-    if (config.parallelTimeoutMs < 1000 || config.parallelTimeoutMs > 600000) {
-        errors.push('parallelTimeoutMs must be between 1000 (1s) and 600000 (10min)');
+    if (config.operationTimeoutMs < 1000 || config.operationTimeoutMs > 600000) {
+        errors.push('operationTimeoutMs must be between 1000 (1s) and 600000 (10min)');
     }
     if (config.maxTechniquesPerGroup < 1 || config.maxTechniquesPerGroup > 20) {
         errors.push('maxTechniquesPerGroup must be between 1 and 20');
@@ -83,14 +71,15 @@ export function validateParallelConfig(config) {
 /**
  * Get a human-readable summary of the configuration
  */
-export function getParallelConfigSummary(config) {
-    return `Parallel Tool Calls Configuration:
-  - Enabled: ${config.enabled}
-  - Max Parallel Calls: ${config.maxParallelCalls}
-  - Timeout: ${config.parallelTimeoutMs}ms
+export function getExecutionConfigSummary(config) {
+    return `Internal Execution Configuration:
+  - Max Concurrent Operations: ${config.maxConcurrentOperations}
+  - Timeout: ${config.operationTimeoutMs}ms
   - Sync Strategy: ${config.syncStrategy}
   - Workflow Validation: ${config.enforceWorkflowValidation}
-  - Auto-group Techniques: ${config.autoGroupParallelTechniques}
+  - Auto-group Techniques: ${config.autoGroupTechniques}
   - Max Techniques per Group: ${config.maxTechniquesPerGroup}`;
 }
+export const defaultParallelConfig = defaultExecutionConfig;
+export const getParallelConfigSummary = getExecutionConfigSummary;
 //# sourceMappingURL=parallel.js.map

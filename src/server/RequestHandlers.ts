@@ -10,41 +10,14 @@ import { workflowGuard } from '../core/WorkflowGuard.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 import { getAllTools } from './ToolDefinitions.js';
 import type { CreativeThinkingError } from '../errors/enhanced-errors.js';
-import { ParallelToolCallHandler, type ToolCall } from './ParallelToolCallHandler.js';
-import { loadParallelConfig, validateParallelConfig } from '../config/parallel.js';
 import { ObjectFieldValidator } from '../core/validators/ObjectFieldValidator.js';
 
 export class RequestHandlers {
-  private parallelHandler: ParallelToolCallHandler;
-  private parallelConfig = loadParallelConfig();
-
   constructor(
     private server: Server,
     private lateralServer: LateralThinkingServer
   ) {
-    // Validate configuration on startup
-    const configErrors = validateParallelConfig(this.parallelConfig);
-    if (configErrors.length > 0) {
-      console.error('[ParallelConfig] Configuration errors:', configErrors);
-      // Use defaults if validation fails
-      this.parallelConfig = loadParallelConfig();
-    }
-
-    // Initialize parallel handler with configuration
-    this.parallelHandler = new ParallelToolCallHandler(
-      lateralServer,
-      this.parallelConfig.maxParallelCalls
-    );
-
-    // Log configuration if in development
-    if (process.env.NODE_ENV === 'development') {
-      console.error('[ParallelConfig] Loaded configuration:', {
-        enabled: this.parallelConfig.enabled,
-        maxCalls: this.parallelConfig.maxParallelCalls,
-        timeout: this.parallelConfig.parallelTimeoutMs,
-        syncStrategy: this.parallelConfig.syncStrategy,
-      });
-    }
+    // Simple constructor - no parallel handling needed
   }
 
   /**
@@ -88,37 +61,20 @@ export class RequestHandlers {
         }
       }
 
-      // Check if this is a parallel tool call (array format)
-      // The isParallelRequest method already checks Array.isArray internally
-      const isParallelRequest = this.parallelHandler.isParallelRequest(request.params);
-
-      if (isParallelRequest) {
-        // Handle parallel tool calls if enabled
-        if (this.parallelConfig.enabled) {
-          if (process.env.NODE_ENV === 'test') {
-            console.error('Processing as parallel tool calls');
-          }
-          // TypeScript now knows request.params is ToolCall[] due to the type guard
-          const result = await this.parallelHandler.processParallelToolCalls(
-            request.params as unknown as ToolCall[]
-          );
-          return {
-            content: result.content,
-          };
-        } else {
-          // Parallel calls detected but not enabled
-          return {
-            content: [
-              {
-                type: 'text',
-                text: 'Error: Parallel tool calls detected but parallel processing is not enabled. Please enable parallel processing or send single tool calls.',
-              },
-            ],
-          };
-        }
+      // MCP standard expects single tool calls only
+      // Reject any array format as it's not part of the MCP protocol
+      if (Array.isArray(request.params)) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: 'Error: MCP protocol expects single tool calls. Received array format which is not supported. Please send individual tool call requests.',
+            },
+          ],
+        };
       }
 
-      // Handle single tool call (backward compatibility)
+      // Handle single tool call (MCP standard)
       // Safely extract parameters to prevent crashes with malformed data
       let name: string;
       let args: unknown;
