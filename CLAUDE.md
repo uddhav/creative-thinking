@@ -41,17 +41,25 @@ npm run format       # Run prettier to format all files
 1. **NO PARALLEL TOOL CALLS AT SERVER LEVEL** - MCP expects single tool calls only
    - Server receives: `{method: "tools/call", params: {name: string, arguments: object}}`
    - NOT arrays like: `[{name: ..., arguments: ...}, ...]`
-2. **Error Message Delivery** - The server properly logs and returns error messages
-   - All errors are logged to stderr with timestamps and context
-   - Error responses include `isError: true` flag for client handling
-3. **Standard Compliance** - This server strictly follows MCP protocol
+
+2. **Request Interception** - The server uses a RequestInterceptor to handle protocol violations
+   - Array-formatted requests are intercepted before reaching the MCP SDK
+   - Proper JSON-RPC error responses are returned (code -32602: Invalid params)
+   - This prevents silent connection termination
+
+3. **Error Message Delivery** - The server properly logs and returns error messages
+   - Protocol violations are intercepted and return JSON-RPC errors
+   - Application errors are logged to stderr with timestamps and context
+   - Error responses include detailed explanations and solutions
+
+4. **Standard Compliance** - This server strictly follows MCP protocol
    - No vendor-specific extensions or formats
    - Single tool call per request only
    - Parallel execution happens at client level, not server level
 
-If you see "Claude's response was interrupted" errors, this typically means the client is sending
-array-formatted requests that violate MCP protocol. The server will reject these with a clear error
-message explaining the issue.
+If you see "Claude's response was interrupted" errors, this was previously caused by the MCP SDK
+silently rejecting array-formatted requests. This is now fixed with the RequestInterceptor that
+returns proper error messages before the SDK validation.
 
 ### Claude-Specific Instructions
 

@@ -42,42 +42,8 @@ export class RequestHandlers {
                     console.error('[ExecuteStep] Request received for execute_thinking_step');
                 }
             }
-            // Debug logging for test mode
-            if (process.env.NODE_ENV === 'test') {
-                console.error('Received request params type:', Array.isArray(request.params) ? 'array' : 'object');
-                if (Array.isArray(request.params)) {
-                    console.error('Array length:', request.params.length);
-                }
-            }
-            // MCP standard expects single tool calls only
-            // Reject any array format as it's not part of the MCP protocol
-            if (Array.isArray(request.params)) {
-                const errorMessage = 'Error: MCP protocol expects single tool calls. Received array format which is not supported. ' +
-                    'Please send individual tool call requests sequentially. ' +
-                    'The MCP protocol does not support parallel tool calls at the server level.';
-                // Log the error with full context for debugging
-                console.error('[RequestHandler] Array format rejected:', {
-                    timestamp: new Date().toISOString(),
-                    arrayLength: request.params.length,
-                    firstItem: request.params[0]
-                        ? JSON.stringify(request.params[0]).substring(0, 200)
-                        : 'empty',
-                    message: errorMessage,
-                });
-                // Send to stderr for visibility in MCP context
-                console.error(`\n⚠️  PROTOCOL VIOLATION DETECTED\n${'='.repeat(50)}\n${errorMessage}\n${'='.repeat(50)}\n`);
-                // Return error response
-                return {
-                    content: [
-                        {
-                            type: 'text',
-                            text: errorMessage,
-                        },
-                    ],
-                    // Add isError flag to help with client-side handling
-                    isError: true,
-                };
-            }
+            // Array format is now handled by RequestInterceptor before reaching here
+            // The interceptor returns proper JSON-RPC error responses for arrays
             // Handle single tool call (MCP standard)
             // Safely extract parameters to prevent crashes with malformed data
             let name;
