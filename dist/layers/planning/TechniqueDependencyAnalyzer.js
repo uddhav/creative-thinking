@@ -124,7 +124,6 @@ export class TechniqueDependencyAnalyzer {
     static HARD_DEPENDENCIES = {
         triz: ['design_thinking'], // TRIZ benefits from problem definition
         yes_and: ['concept_extraction'], // Builds on extracted concepts
-        convergence: [DEPENDENCY_MARKERS.ALL_TECHNIQUES], // Special marker - depends on all techniques
     };
     /**
      * Define soft dependencies (beneficial but not required)
@@ -147,20 +146,7 @@ export class TechniqueDependencyAnalyzer {
      * Techniques that should not run in parallel (mutual exclusion)
      */
     static MUTUAL_EXCLUSIONS = [
-        ['convergence', 'six_hats'], // Convergence should run alone
-        ['convergence', 'po'],
-        ['convergence', 'random_entry'],
-        ['convergence', 'scamper'],
-        ['convergence', 'concept_extraction'],
-        ['convergence', 'yes_and'],
-        ['convergence', 'design_thinking'],
-        ['convergence', 'triz'],
-        ['convergence', 'neural_state'],
-        ['convergence', 'temporal_work'],
-        ['convergence', 'cross_cultural'],
-        ['convergence', 'collective_intel'],
-        ['convergence', 'disney_method'],
-        ['convergence', 'nine_windows'],
+    // Currently no mutual exclusions since convergence was removed
     ];
     /**
      * Analyze dependencies between techniques
@@ -215,10 +201,6 @@ export class TechniqueDependencyAnalyzer {
         const deps2 = TechniqueDependencyAnalyzer.HARD_DEPENDENCIES[tech2] || [];
         // If either depends on the other, they can't run in parallel
         if (deps1.includes(tech2) || deps2.includes(tech1)) {
-            return false;
-        }
-        // Special case: convergence can't run in parallel with anything
-        if (tech1 === 'convergence' || tech2 === 'convergence') {
             return false;
         }
         return true;

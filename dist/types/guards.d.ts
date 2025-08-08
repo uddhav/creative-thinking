@@ -13,16 +13,18 @@ export declare function isExecutionMode(value: unknown): value is ExecutionMode;
 export declare function isConvergenceMethod(value: unknown): value is ConvergenceMethod;
 /**
  * Check if a technique supports parallel execution
+ * @deprecated Parallel execution has been removed
  */
-export declare function supportsParallelExecution(technique: LateralTechnique): boolean;
+export declare function supportsParallelExecution(): boolean;
 /**
  * Check if techniques can be executed in parallel together
  */
 export declare function canExecuteInParallel(techniques: LateralTechnique[]): boolean;
 /**
  * Check if a value is the convergence technique
+ * @deprecated Convergence technique has been removed
  */
-export declare function isConvergenceTechnique(technique: LateralTechnique): technique is 'convergence';
+export declare function isConvergenceTechnique(): boolean;
 /**
  * Validate max parallelism value
  */

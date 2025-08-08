@@ -23,11 +23,11 @@ export function isConvergenceMethod(value: unknown): value is ConvergenceMethod 
 
 /**
  * Check if a technique supports parallel execution
+ * @deprecated Parallel execution has been removed
  */
-export function supportsParallelExecution(technique: LateralTechnique): boolean {
-  // Most techniques can run in parallel except convergence (which needs results from others)
-  const nonParallelTechniques: LateralTechnique[] = ['convergence'];
-  return !nonParallelTechniques.includes(technique);
+export function supportsParallelExecution(): boolean {
+  // All techniques can run independently now
+  return true;
 }
 
 /**
@@ -40,9 +40,10 @@ export function canExecuteInParallel(techniques: LateralTechnique[]): boolean {
 
 /**
  * Check if a value is the convergence technique
+ * @deprecated Convergence technique has been removed
  */
-export function isConvergenceTechnique(technique: LateralTechnique): technique is 'convergence' {
-  return technique === 'convergence';
+export function isConvergenceTechnique(): boolean {
+  return false; // Convergence is no longer supported
 }
 
 /**

@@ -5,8 +5,7 @@ import type { PathMemory } from '../ergodicity/index.js';
 import type { ErgodicityManager } from '../ergodicity/index.js';
 import type { EarlyWarningState, EscapeProtocol } from '../ergodicity/earlyWarning/types.js';
 import type { DomainAssessment, RiskDiscovery, RuinScenario, ValidationResult } from '../core/RuinRiskDiscovery.js';
-import type { ConvergenceOptions } from './planning.js';
-export type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 'concept_extraction' | 'yes_and' | 'design_thinking' | 'triz' | 'neural_state' | 'temporal_work' | 'cross_cultural' | 'collective_intel' | 'disney_method' | 'nine_windows' | 'convergence';
+export type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 'concept_extraction' | 'yes_and' | 'design_thinking' | 'triz' | 'neural_state' | 'temporal_work' | 'cross_cultural' | 'collective_intel' | 'disney_method' | 'nine_windows';
 export type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green' | 'purple';
 export type ScamperAction = 'substitute' | 'combine' | 'adapt' | 'modify' | 'put_to_other_use' | 'eliminate' | 'reverse' | 'parameterize';
 export type DesignThinkingStage = 'empathize' | 'define' | 'ideate' | 'prototype' | 'test';
@@ -61,6 +60,8 @@ export interface SessionData {
     startTime?: number;
     endTime?: number;
     lastActivityTime: number;
+    planId?: string;
+    totalSteps?: number;
     metrics?: {
         creativityScore?: number;
         risksCaught?: number;
@@ -88,52 +89,6 @@ export interface SessionData {
         consecutiveLowConfidence: number;
         totalAssessments: number;
     };
-    /**
-     * Link to the parallel execution group this session belongs to
-     */
-    parallelGroupId?: string;
-    /**
-     * Whether this is a convergence session that synthesizes parallel results
-     */
-    isConvergenceSession?: boolean;
-    /**
-     * Session IDs that must complete before this session can proceed
-     */
-    dependsOn?: string[];
-    /**
-     * Metadata for parallel execution
-     */
-    parallelMetadata?: {
-        planId: string;
-        techniques: LateralTechnique[];
-        canExecuteIndependently: boolean;
-    };
-}
-/**
- * Group of sessions executing in parallel
- * Manages coordination, status tracking, and convergence
- * @example
- * ```typescript
- * const group: ParallelSessionGroup = {
- *   groupId: 'group_123',
- *   sessionIds: ['session_1', 'session_2', 'session_3'],
- *   parentProblem: 'How to improve user retention?',
- *   executionMode: 'parallel',
- *   status: 'active',
- *   startTime: Date.now(),
- *   completedSessions: ['session_1']
- * };
- * ```
- */
-export interface ParallelSessionGroup {
-    groupId: string;
-    sessionIds: string[];
-    parentProblem: string;
-    executionMode: 'sequential' | 'parallel' | 'auto';
-    status: 'active' | 'converging' | 'completed' | 'failed';
-    convergenceOptions?: ConvergenceOptions;
-    startTime: number;
-    completedSessions: string[];
 }
 export interface ExecuteThinkingStepInput {
     planId: string;
@@ -419,5 +374,4 @@ export interface Tool {
     };
 }
 export * from './handoff.js';
-export * from './parallel-config.js';
 //# sourceMappingURL=index.d.ts.map

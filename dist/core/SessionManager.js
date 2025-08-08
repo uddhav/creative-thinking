@@ -11,7 +11,6 @@ import { SessionPersistence } from './session/SessionPersistence.js';
 import { SessionMetrics } from './session/SessionMetrics.js';
 import { PlanManager } from './session/PlanManager.js';
 import { SessionIndex } from './session/SessionIndex.js';
-import { ParallelGroupManager } from './session/ParallelGroupManager.js';
 import { SkipDetector, } from './session/SkipDetector.js';
 // Constants for memory management
 const MEMORY_THRESHOLD_FOR_GC = 0.8; // Trigger garbage collection when heap usage exceeds 80%
@@ -25,9 +24,8 @@ export class SessionManager {
     sessionMetrics;
     planManager;
     skipDetector;
-    // Parallel execution components (lazy initialized)
+    // Session index (lazy initialized)
     sessionIndex = null;
-    parallelGroupManager = null;
     config = {
         maxSessions: parseInt(process.env.MAX_SESSIONS || '100', 10),
         maxSessionSize: parseInt(process.env.MAX_SESSION_SIZE || String(1024 * 1024), 10), // 1MB default
@@ -61,18 +59,6 @@ export class SessionManager {
             this.sessionIndex = new SessionIndex();
         }
         return this.sessionIndex;
-    }
-    getParallelGroupManager() {
-        if (!this.parallelGroupManager) {
-            this.parallelGroupManager = new ParallelGroupManager(this.getSessionIndex());
-        }
-        return this.parallelGroupManager;
-    }
-    /**
-     * Set the parallel execution context for metrics and monitoring
-     */
-    setParallelContext(context) {
-        this.getParallelGroupManager().setParallelContext(context);
     }
     /**
      * Update session activity time
@@ -249,70 +235,22 @@ export class SessionManager {
     /**
      * Create a parallel session group from plans
      */
-    createParallelSessionGroup(problem, plans, convergenceOptions) {
-        const { groupId, sessionIds } = this.getParallelGroupManager().createParallelSessionGroup(problem, plans, convergenceOptions, this.sessions);
-        console.error(`[SessionManager] Created parallel group ${groupId} with ${sessionIds.length} sessions`);
-        return groupId;
-    }
     /**
-     * Get parallel results for a group
-     */
-    async getParallelResults(groupId) {
-        return Promise.resolve(this.getParallelGroupManager().getParallelResults(groupId, this.sessions));
-    }
-    /**
-     * Mark a session as complete (handles parallel dependencies)
+     * Mark a session as complete
      */
     markSessionComplete(sessionId) {
         const session = this.sessions.get(sessionId);
         if (!session) {
             throw ErrorFactory.sessionNotFound(sessionId);
         }
-        // Handle parallel group completion
-        if (session.parallelGroupId) {
-            this.getParallelGroupManager().markSessionComplete(sessionId, this.sessions);
-        }
-        else {
-            // Regular session completion
-            session.endTime = Date.now();
-        }
+        // Regular session completion
+        session.endTime = Date.now();
     }
     /**
-     * Check if a session can start based on dependencies
+     * Get all sessions (simplified replacement for group functionality)
      */
-    canSessionStart(sessionId) {
-        const session = this.sessions.get(sessionId);
-        if (!session || !session.parallelGroupId) {
-            return true; // No dependencies for non-parallel sessions
-        }
-        return this.getParallelGroupManager().canSessionStart(sessionId, session.parallelGroupId);
-    }
-    /**
-     * Get parallel group information
-     */
-    getParallelGroup(groupId) {
-        return this.getParallelGroupManager().getGroup(groupId);
-    }
-    /**
-     * Get all active parallel groups
-     */
-    getActiveParallelGroups() {
-        return this.getParallelGroupManager().getActiveGroups();
-    }
-    /**
-     * Update parallel group status
-     */
-    updateParallelGroupStatus(groupId, status) {
-        this.getParallelGroupManager().updateGroupStatus(groupId, status);
-    }
-    /**
-     * Get sessions in a parallel group
-     */
-    getSessionsInGroup(groupId) {
-        const sessionIds = this.getSessionIndex().getSessionsInGroup(groupId);
-        return sessionIds
-            .map(id => this.sessions.get(id))
-            .filter((session) => session !== undefined);
+    getAllSessions() {
+        return this.sessions;
     }
     /**
      * Get sessions by technique
@@ -324,33 +262,15 @@ export class SessionManager {
             .filter((session) => session !== undefined);
     }
     /**
-     * Detect circular dependencies
+     * Get simplified session statistics
      */
-    detectCircularDependencies() {
-        return this.getSessionIndex().detectCircularDependencies();
-    }
-    /**
-     * Get dependency statistics
-     */
-    getDependencyStats() {
-        const circular = this.getSessionIndex().detectCircularDependencies();
-        const orphaned = this.getSessionIndex()
-            .getSessionsByStatus('pending')
-            .filter(id => {
-            const session = this.sessions.get(id);
-            return session && !session.parallelGroupId;
-        });
+    getSessionStats() {
+        const stats = this.getSessionIndex().getStats();
         return {
-            totalDependencies: this.getSessionIndex().getStats().totalDependencies,
-            circularDependencies: circular,
-            orphanedSessions: orphaned,
+            totalSessions: stats.totalSessions,
+            completedSessions: stats.statusDistribution['completed'] || 0,
+            activeSessions: (stats.statusDistribution['running'] || 0) + (stats.statusDistribution['pending'] || 0),
         };
-    }
-    /**
-     * Clean up old parallel groups
-     */
-    cleanupOldParallelGroups() {
-        return this.getParallelGroupManager().cleanupOldGroups(this.config.sessionTTL);
     }
     // ============= Skip Detection Methods =============
     /**

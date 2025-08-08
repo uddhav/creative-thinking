@@ -38,6 +38,10 @@ export declare class ExecutionGraphGenerator {
      */
     private static calculateMetadata;
     /**
+     * Calculate sequential time multiplier based on parallelization potential
+     */
+    private static calculateSequentialTimeMultiplier;
+    /**
      * Find groups of nodes that can execute in parallel
      * Optimized from O(n²) to O(n) using Map for grouping
      */
@@ -55,16 +59,16 @@ export declare class ExecutionGraphGenerator {
      */
     private static generateInstructions;
     /**
-     * Estimate duration for a technique step
+     * Identify sync points between techniques
      */
-    private static estimateDuration;
+    private static identifySyncPoints;
+    /**
+     * Generate description of parallelization benefits
+     */
+    private static generateParallelizationBenefits;
     /**
      * Determine if a step can be skipped if it fails
      */
     private static canSkipIfFailed;
-    /**
-     * Check if two arrays are equal
-     */
-    private static arraysEqual;
 }
 //# sourceMappingURL=ExecutionGraphGenerator.d.ts.map

@@ -377,39 +377,6 @@ export class RequestHandlers {
           );
         }
 
-        // Convergence: validate parallelResults
-        if (technique === 'convergence' && params.parallelResults !== undefined) {
-          if (!Array.isArray(params.parallelResults)) {
-            return (
-              `❌ ERROR: parallelResults must be an array!\n\n` +
-              `You provided: ${typeof params.parallelResults}\n\n` +
-              `CORRECT FORMAT:\n` +
-              `parallelResults: [{\n` +
-              `  "planId": "...",\n` +
-              `  "technique": "...",\n` +
-              `  "results": { ... },\n` +
-              `  "insights": [ ... ],\n` +
-              `  "metrics": { ... }\n` +
-              `}, ...]`
-            );
-          }
-
-          // Validate each item in parallelResults
-          for (let i = 0; i < params.parallelResults.length; i++) {
-            const validation = ObjectFieldValidator.validateParallelResultItem(
-              params.parallelResults[i],
-              i
-            );
-            if (!validation.isValid) {
-              return (
-                `❌ ERROR: Invalid parallelResults item!\n\n` +
-                `${validation.error}\n\n` +
-                `${validation.suggestion || ''}`
-              );
-            }
-          }
-        }
-
         // Check for step skipping
         if ((params.currentStep as number) > 1) {
           // This is a follow-up step, we should warn about completeness

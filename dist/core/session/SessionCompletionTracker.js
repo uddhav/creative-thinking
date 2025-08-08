@@ -437,7 +437,6 @@ export class SessionCompletionTracker {
             collective_intel: 5,
             disney_method: 3,
             nine_windows: 9,
-            convergence: 3,
         };
         return stepCounts[technique] || 5;
     }

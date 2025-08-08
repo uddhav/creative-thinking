@@ -6,17 +6,20 @@ import type { ExecuteThinkingStepInput } from './index.js';
 /**
  * Node in the execution graph representing a single execute_thinking_step call
  */
+export interface NodeDependency {
+    nodeId: string;
+    type: 'hard' | 'soft';
+}
 export interface ExecutionGraphNode {
     id: string;
     stepNumber: number;
     technique: LateralTechnique;
     parameters: ExecuteThinkingStepInput;
-    dependencies: string[];
-    estimatedDuration?: number;
+    dependencies: NodeDependency[];
     canSkipIfFailed?: boolean;
 }
 /**
- * Execution graph for parallel execution
+ * Execution graph for client-controlled execution (sequential or parallel)
  */
 export interface ExecutionGraph {
     nodes: ExecutionGraphNode[];
@@ -25,10 +28,14 @@ export interface ExecutionGraph {
         maxParallelism: number;
         criticalPath: string[];
         parallelizableGroups: string[][];
+        sequentialTimeMultiplier: string;
     };
     instructions: {
-        forInvoker: string;
-        executionStrategy: string;
+        recommendedStrategy: 'sequential' | 'parallel' | 'hybrid';
+        syncPoints: string[];
+        sequentialTimeMultiplier: string;
+        parallelizationBenefits: string;
+        executionGuidance: string;
         errorHandling: string;
     };
 }
@@ -41,11 +48,9 @@ export interface ExecutionGraph {
 export type ExecutionMode = 'sequential' | 'parallel' | 'auto';
 /**
  * Method for converging results from parallel executions
- * - execute_thinking_step: Use the special 'convergence' technique
- * - llm_handoff: Return structured data for LLM synthesis
- * - none: Return raw parallel results without convergence
+ * @deprecated No longer used - parallel execution has been removed
  */
-export type ConvergenceMethod = 'execute_thinking_step' | 'llm_handoff' | 'none';
+export type ConvergenceMethod = 'llm_handoff' | 'none';
 /**
  * Strategy for parallelizing execution
  * - technique: Each technique runs in parallel
@@ -150,42 +155,6 @@ export interface ThinkingStep {
     };
 }
 /**
- * Configuration for converging results from parallel executions
- * @example
- * ```typescript
- * const options: ConvergenceOptions = {
- *   method: 'execute_thinking_step',
- *   convergencePlan: {
- *     planId: 'plan_conv_123',
- *     technique: 'convergence',
- *     estimatedSteps: 3,
- *     requiresAllPlans: true
- *   }
- * };
- * ```
- */
-export interface ConvergenceOptions {
-    method: ConvergenceMethod;
-    convergencePlan?: {
-        planId: string;
-        technique: 'convergence';
-        estimatedSteps: number;
-        requiresAllPlans: boolean;
-        metadata?: {
-            synthesisStrategy?: 'merge' | 'select' | 'hierarchical';
-            conflictResolution?: 'vote' | 'weighted' | 'manual';
-            minSessionsRequired?: number;
-            minTechniquesRequired?: number;
-        };
-    };
-    llmHandoff?: {
-        promptTemplate?: string;
-        includeFullHistory: boolean;
-        summaryDepth: 'high' | 'medium' | 'low';
-        structuredFormat: 'json' | 'markdown' | 'narrative';
-    };
-}
-/**
  * Strategy for coordinating parallel executions
  * Defines sync points, shared context, and error handling
  * @example
@@ -253,7 +222,6 @@ export interface PlanThinkingSessionInput {
     executionMode?: ExecutionMode;
     maxParallelism?: number;
     parallelizationStrategy?: ParallelizationStrategy;
-    convergenceOptions?: ConvergenceOptions;
 }
 export interface PlanThinkingSessionOutput {
     planId: string;
@@ -298,12 +266,6 @@ export interface PlanThinkingSessionOutput {
     executionMode: ExecutionMode;
     parallelPlans?: ParallelPlan[];
     coordinationStrategy?: CoordinationStrategy;
-    convergenceOptions?: ConvergenceOptions;
     parallelGroupIds?: string[];
-    convergenceConfig?: {
-        enabled: boolean;
-        method: ConvergenceMethod;
-        timing: 'after_all' | 'after_groups';
-    };
 }
 //# sourceMappingURL=planning.d.ts.map

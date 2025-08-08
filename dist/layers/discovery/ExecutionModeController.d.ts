@@ -1,11 +1,9 @@
 /**
- * Execution Mode Controller
- * Central controller for execution mode decisions
+ * Execution Mode Controller - Simplified for sequential execution only
+ * Always returns sequential execution mode
  */
 import type { LateralTechnique } from '../../types/index.js';
-import type { DiscoverTechniquesInput, ExecutionMode, ConvergenceOptions } from '../../types/planning.js';
-import type { ParallelismDetector } from './ParallelismDetector.js';
-import type { ParallelismValidator } from './ParallelismValidator.js';
+import type { DiscoverTechniquesInput, ExecutionMode } from '../../types/planning.js';
 /**
  * Decision result for execution mode
  */
@@ -13,51 +11,22 @@ export interface ExecutionModeDecision {
     mode: ExecutionMode;
     reason: string;
     warnings?: string[];
-    confidence: number;
-    convergenceOptions?: ConvergenceOptions;
 }
 /**
- * Analysis result for execution mode
- */
-export interface ExecutionModeAnalysis {
-    mode: ExecutionMode;
-    confidence: number;
-    reason: string;
-    warnings?: string[];
-    detectedKeywords?: string[];
-    validationResult?: {
-        isValid: boolean;
-        errors: string[];
-        warnings: string[];
-        recommendations: string[];
-    };
-}
-/**
- * Controller for determining execution mode based on various inputs
+ * Simplified execution mode controller that always selects sequential mode
  */
 export declare class ExecutionModeController {
-    private detector;
-    private validator;
-    constructor(detector: ParallelismDetector, validator: ParallelismValidator);
+    constructor();
     /**
-     * Determine the execution mode for a set of techniques
+     * Determine execution mode (always returns sequential)
      */
     determineExecutionMode(input: DiscoverTechniquesInput, recommendedTechniques: LateralTechnique[]): ExecutionModeDecision;
     /**
-     * Validate an explicitly requested execution mode
+     * Validate execution mode (always valid for sequential)
      */
-    private validateExplicitMode;
-    /**
-     * Determine if auto mode should select parallel execution
-     */
-    private shouldAutoSelectParallel;
-    /**
-     * Determine convergence options for parallel execution
-     */
-    private determineConvergence;
-    /**
-     * Get execution mode analysis (detailed information for debugging)
-     */
-    analyzeExecutionMode(input: DiscoverTechniquesInput, recommendedTechniques: LateralTechnique[]): ExecutionModeAnalysis;
+    validateExecutionMode(mode: ExecutionMode): {
+        isValid: boolean;
+        error?: string;
+    };
 }
 //# sourceMappingURL=ExecutionModeController.d.ts.map

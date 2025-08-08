@@ -32,7 +32,6 @@ export declare class ExecutionValidator {
     private errorBuilder;
     private telemetry;
     private errorHandler;
-    private convergenceValidator;
     constructor(sessionManager: SessionManager, techniqueRegistry: TechniqueRegistry, visualFormatter: VisualFormatter);
     /**
      * Validate plan exists and technique matches
@@ -70,10 +69,6 @@ export declare class ExecutionValidator {
         } | null;
         normalizedStep: number;
     };
-    /**
-     * Validate convergence technique usage
-     */
-    validateConvergenceTechnique(input: ExecuteThinkingStepInput): ValidationResult;
     /**
      * Initialize a new session
      */
