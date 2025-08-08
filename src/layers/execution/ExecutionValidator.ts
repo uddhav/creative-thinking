@@ -317,21 +317,13 @@ export class ExecutionValidator {
           techniqueIndex = i;
           break;
         }
-        // Only accumulate steps for sequential execution
-        if (plan.executionMode !== 'parallel') {
-          stepsBeforeThisTechnique += plan.workflow[i].steps.length;
-        }
+        // Always accumulate steps for consistent behavior
+        stepsBeforeThisTechnique += plan.workflow[i].steps.length;
       }
 
-      // In parallel mode, each technique uses its own local step numbering
-      // In sequential mode, convert cumulative step to local step
-      if (plan.executionMode === 'parallel') {
-        // Techniques run independently with their own step numbering (1-N)
-        techniqueLocalStep = input.currentStep;
-      } else {
-        // Sequential execution uses cumulative step numbering
-        techniqueLocalStep = input.currentStep - stepsBeforeThisTechnique;
-      }
+      // Always use sequential step numbering for consistency
+      // This ensures identical responses regardless of executionMode
+      techniqueLocalStep = input.currentStep - stepsBeforeThisTechnique;
     }
 
     return { techniqueLocalStep, techniqueIndex, stepsBeforeThisTechnique };

@@ -310,8 +310,6 @@ export class ExecutionResponseBuilder {
       currentTechnique: input.technique,
       techniqueIndex: techniqueIndex + 1,
       totalTechniques: plan?.techniques.length || 1,
-      // Add execution info
-      executionMode: plan?.executionMode,
     };
 
     this.addMemoryOutputs(parsedResponse, memoryOutputs);
@@ -513,7 +511,6 @@ export class ExecutionResponseBuilder {
       currentTechnique: string;
       techniqueIndex: number;
       totalTechniques: number;
-      executionMode?: string;
     }
   ): void {
     parsedResponse.techniqueProgress = techniqueProgress;

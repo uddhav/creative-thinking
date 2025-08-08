@@ -65,7 +65,7 @@ describe('SessionCompletionTracker', () => {
     });
 
     describe('parallel execution', () => {
-      it('should handle parallel execution with technique-local steps', () => {
+      it('should handle parallel execution with sequential step numbering', () => {
         const session: SessionData = {
           technique: 'six_hats' as LateralTechnique,
           problem: 'test problem',
@@ -97,7 +97,7 @@ describe('SessionCompletionTracker', () => {
             {
               technique: 'scamper',
               problem: 'test',
-              currentStep: 1,
+              currentStep: 8, // Sequential numbering: after six_hats (7 steps)
               totalSteps: 8,
               output: 'scamper step 1',
               nextStepNeeded: true,
@@ -105,7 +105,7 @@ describe('SessionCompletionTracker', () => {
             {
               technique: 'scamper',
               problem: 'test',
-              currentStep: 2,
+              currentStep: 9, // Sequential numbering: after six_hats (7 steps)
               totalSteps: 8,
               output: 'scamper step 2',
               nextStepNeeded: true,

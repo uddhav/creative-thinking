@@ -188,15 +188,16 @@ export class SessionCompletionTracker {
             if (entry.currentStep < 1 || entry.currentStep > MAX_REASONABLE_STEP) {
                 continue; // Skip invalid step numbers
             }
-            if (plan.workflow.length === 1 || plan.executionMode === 'parallel') {
-                // Single technique or parallel execution - steps are technique-local
+            if (plan.workflow.length === 1) {
+                // Single technique - steps are technique-local
                 if (this.isValidStepForTechnique(entry.currentStep, 1, techniqueSteps)) {
                     completedStepsForTechnique++;
                     completedStepNumbers.add(entry.currentStep);
                 }
             }
             else {
-                // Sequential multi-technique - check if step is in the global range
+                // Multi-technique - always use sequential numbering for consistency
+                // This ensures identical behavior regardless of executionMode
                 const expectedStepMin = globalStepOffset + 1;
                 const expectedStepMax = globalStepOffset + techniqueSteps;
                 if (this.isValidStepForTechnique(entry.currentStep, expectedStepMin, expectedStepMax)) {
