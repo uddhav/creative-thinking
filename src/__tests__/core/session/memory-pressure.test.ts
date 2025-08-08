@@ -106,12 +106,12 @@ describe('Memory Pressure and Session Management', () => {
       expect(SessionEncoder.isValid(encoded)).toBe(true);
     });
 
-    it('should track cleanup metrics', () => {
+    it('should track session creation metrics', () => {
       const initialMetrics = SessionEncoder.getMetrics();
-      const initialCleanupRuns = initialMetrics.cleanupRuns;
+      const initialCount = initialMetrics.totalSessionsCreated;
 
-      // Encode 100 sessions to trigger cleanup
-      for (let i = 0; i < 100; i++) {
+      // Encode multiple sessions
+      for (let i = 0; i < 10; i++) {
         const data: EncodedSessionData = {
           planId: `plan-${i}`,
           problem: `problem ${i}`,
@@ -124,8 +124,7 @@ describe('Memory Pressure and Session Management', () => {
       }
 
       const finalMetrics = SessionEncoder.getMetrics();
-      // Cleanup runs every 100 encodes
-      expect(finalMetrics.cleanupRuns).toBeGreaterThanOrEqual(initialCleanupRuns);
+      expect(finalMetrics.totalSessionsCreated).toBe(initialCount + 10);
       expect(finalMetrics.activeSessions).toBeGreaterThan(0);
     });
   });

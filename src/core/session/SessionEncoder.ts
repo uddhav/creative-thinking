@@ -33,7 +33,8 @@ export interface EncodedSessionState {
 export class SessionEncoder {
   private static readonly MAX_SESSION_SIZE = 1024 * 1024; // 1MB
   private static readonly EXPIRY_TIME = 30 * 24 * 60 * 60 * 1000; // 30 days
-  private static encodedSessions = new Map<string, number>(); // track with timestamps
+  // Only track count, not actual sessions to avoid memory leak
+  private static activeSessionCount = 0;
 
   // Metrics for monitoring
   private static metrics = {
@@ -41,7 +42,7 @@ export class SessionEncoder {
     decodeCalls: 0,
     largestSession: 0,
     cleanupRuns: 0,
-    sessionsCleanedUp: 0,
+    totalSessionsCreated: 0,
   };
   /**
    * Encode session data to base64
@@ -59,15 +60,11 @@ export class SessionEncoder {
 
       const encoded = Buffer.from(json).toString('base64');
 
-      // Track session and update metrics
-      this.encodedSessions.set(encoded, Date.now());
+      // Update metrics (don't store the actual session to avoid memory leak)
+      this.activeSessionCount++;
       this.metrics.encodeCalls++;
+      this.metrics.totalSessionsCreated++;
       this.metrics.largestSession = Math.max(this.metrics.largestSession, json.length);
-
-      // Cleanup expired sessions periodically
-      if (this.metrics.encodeCalls % 100 === 0) {
-        this.cleanupExpired();
-      }
 
       return encoded;
     } catch (error) {
@@ -105,33 +102,12 @@ export class SessionEncoder {
   }
 
   /**
-   * Cleanup expired sessions from memory
-   */
-  private static cleanupExpired(): void {
-    const now = Date.now();
-    let cleanedCount = 0;
-
-    for (const [key, timestamp] of this.encodedSessions) {
-      if (now - timestamp > this.EXPIRY_TIME) {
-        this.encodedSessions.delete(key);
-        cleanedCount++;
-      }
-    }
-
-    if (cleanedCount > 0) {
-      this.metrics.cleanupRuns++;
-      this.metrics.sessionsCleanedUp += cleanedCount;
-      console.error(`[SessionEncoder] Cleaned up ${cleanedCount} expired sessions`);
-    }
-  }
-
-  /**
    * Get metrics for monitoring
    */
   static getMetrics() {
     return {
       ...this.metrics,
-      activeSessions: this.encodedSessions.size,
+      activeSessions: this.activeSessionCount,
     };
   }
 
