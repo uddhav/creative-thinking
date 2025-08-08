@@ -108,7 +108,7 @@ export class ExecutionGraphGenerator {
                 // Step 4 has soft dependency on 2-3 for better synthesis
                 return [
                     { nodeId: `node-${startNodeId + 2}`, type: 'soft' },
-                    { nodeId: `node-${startNodeId + 3}`, type: 'hard' }
+                    { nodeId: `node-${startNodeId + 3}`, type: 'hard' },
                 ];
             case 'neural_state':
                 // Steps 2-3 can be parallel after step 1, step 4 depends on all
@@ -119,7 +119,7 @@ export class ExecutionGraphGenerator {
                 if (stepIndex === 3)
                     return [
                         { nodeId: `node-${startNodeId + 2}`, type: 'hard' },
-                        { nodeId: `node-${startNodeId + 3}`, type: 'hard' }
+                        { nodeId: `node-${startNodeId + 3}`, type: 'hard' },
                     ];
                 return [];
             case 'temporal_work':
@@ -131,7 +131,7 @@ export class ExecutionGraphGenerator {
                 if (stepIndex === 2)
                     return [
                         { nodeId: `node-${startNodeId + 1}`, type: 'soft' },
-                        { nodeId: `node-${startNodeId + 2}`, type: 'soft' }
+                        { nodeId: `node-${startNodeId + 2}`, type: 'soft' },
                     ];
                 // Steps 4-5 need the temporal context from earlier steps
                 return [{ nodeId: `node-${startNodeId + 3}`, type: 'hard' }];
