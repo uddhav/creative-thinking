@@ -291,10 +291,14 @@ export class ExecutionGraphGenerator {
         const depGroups = new Map();
         for (const node of nodes) {
             // Create a consistent key from hard dependencies only
-            const hardDeps = node.dependencies
-                .filter(dep => dep.type === 'hard')
-                .map(dep => dep.nodeId)
-                .sort();
+            // Optimized: build array in single pass without intermediate filter/map
+            const hardDeps = [];
+            for (const dep of node.dependencies) {
+                if (dep.type === 'hard') {
+                    hardDeps.push(dep.nodeId);
+                }
+            }
+            hardDeps.sort();
             const depKey = JSON.stringify(hardDeps);
             if (!depGroups.has(depKey)) {
                 depGroups.set(depKey, []);
@@ -315,21 +319,27 @@ export class ExecutionGraphGenerator {
             return [];
         // Build adjacency list (considering only hard dependencies for critical path)
         const graph = new Map();
+        const startNodes = [];
         for (const node of nodes) {
             if (!graph.has(node.id)) {
                 graph.set(node.id, []);
             }
-            // Only consider hard dependencies for critical path
-            const hardDeps = node.dependencies.filter(dep => dep.type === 'hard');
-            for (const dep of hardDeps) {
-                if (!graph.has(dep.nodeId)) {
-                    graph.set(dep.nodeId, []);
+            // Check for hard dependencies in a single pass
+            let hasHardDeps = false;
+            for (const dep of node.dependencies) {
+                if (dep.type === 'hard') {
+                    hasHardDeps = true;
+                    if (!graph.has(dep.nodeId)) {
+                        graph.set(dep.nodeId, []);
+                    }
+                    graph.get(dep.nodeId)?.push(node.id);
                 }
-                graph.get(dep.nodeId)?.push(node.id);
+            }
+            // Track start nodes while iterating
+            if (!hasHardDeps) {
+                startNodes.push(node);
             }
         }
-        // Find nodes with no hard dependencies (starting points)
-        const startNodes = nodes.filter(n => n.dependencies.filter(d => d.type === 'hard').length === 0);
         if (startNodes.length === 0)
             return [];
         // Find longest path from each start node
