@@ -4,6 +4,7 @@
  */
 import { CreativeThinkingError, ValidationError, ErrorCode } from '../errors/types.js';
 import { JsonOptimizer } from '../utils/JsonOptimizer.js';
+import { SessionEncoder } from './session/SessionEncoder.js';
 export class ResponseBuilder {
     // Performance optimization: Cache for expensive session metric calculations
     metricsCache = new Map();
@@ -136,6 +137,8 @@ export class ResponseBuilder {
             planningInsights: output.planningInsights,
             complexityAssessment: output.complexityAssessment,
             executionMode: output.executionMode,
+            // Add execution graph for DAG-based parallel execution
+            executionGraph: output.executionGraph,
             // Add parallel execution groups for Anthropic-style parallel tool calls
             parallelExecutionGroups,
             // Add execution guidance to help LLMs proceed
@@ -191,9 +194,18 @@ export class ResponseBuilder {
     /**
      * Build an execution response
      */
-    buildExecutionResponse(sessionId, input, insights, nextStepGuidance, historyLength, executionMetadata) {
+    buildExecutionResponse(sessionId, input, insights, nextStepGuidance, historyLength, executionMetadata, encodeSessionId = false, planId) {
+        // Optionally encode the sessionId for resilience
+        let returnSessionId = sessionId;
+        if (encodeSessionId && planId) {
+            // Create encoded sessionId that can survive server restarts
+            returnSessionId = SessionEncoder.createEncodedSessionId(sessionId, planId, input.problem, input.technique, input.currentStep, input.totalSteps, {
+                historyLength: historyLength || 0,
+                lastOutput: input.output,
+            });
+        }
         const response = {
-            sessionId,
+            sessionId: returnSessionId,
             technique: input.technique,
             problem: input.problem,
             currentStep: input.currentStep,

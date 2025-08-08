@@ -1,6 +1,8 @@
 /**
  * Factory for creating persistence adapters
  */
+import { homedir } from 'os';
+import { join } from 'path';
 import { PersistenceError, PersistenceErrorCode } from './types.js';
 import { FilesystemAdapter } from './filesystem-adapter.js';
 /**
@@ -36,7 +38,7 @@ export function getDefaultConfig(adapter) {
             return {
                 adapter: 'filesystem',
                 options: {
-                    path: process.env.PERSISTENCE_PATH || '.creative-thinking',
+                    path: process.env.PERSISTENCE_PATH || join(homedir(), '.creative-thinking'),
                     autoSave: true,
                     saveInterval: 60000, // 1 minute
                     compression: false,

@@ -78,19 +78,20 @@ npm run build
 node dist/index.js
 ```
 
-## Parallel Execution
+## Parallel Execution via DAG Generation
 
-The Creative Thinking server supports parallel execution of techniques, allowing multiple thinking
-methods to be applied simultaneously for improved performance and diverse perspectives.
+The Creative Thinking server generates Directed Acyclic Graphs (DAGs) that enable client-side
+parallel execution of techniques, allowing multiple thinking methods to be applied simultaneously
+for improved performance and diverse perspectives.
 
 ### How It Works
 
-When you create a plan with `executionMode: 'parallel'`, the server:
+When you create a plan, the server:
 
-1. Analyzes technique dependencies
-2. Groups techniques that can run concurrently
-3. Provides guidance for parallel execution
-4. Tracks progress across all parallel techniques
+1. Analyzes technique dependencies and characteristics
+2. Generates an execution graph with complete parameters for each step
+3. Identifies which nodes can run in parallel based on dependencies
+4. Returns the DAG for client-side execution control
 
 ### Benefits
 
@@ -107,18 +108,53 @@ const discovery = await discoverTechniques({
   problem: 'How to improve team collaboration',
 });
 
-// Step 2: Plan with parallel execution
+// Step 2: Plan and receive DAG
 const plan = await planThinkingSession({
   problem: 'How to improve team collaboration',
-  techniques: ['six_hats', 'scamper', 'random_entry'],
-  executionMode: 'parallel', // Enable parallel execution
+  techniques: ['six_hats', 'scamper'],
+  executionMode: 'parallel', // Request parallel-capable DAG
 });
 
-// Step 3: Execute techniques in parallel
-// The plan will indicate which techniques can run simultaneously
-// Example response shows parallel groups:
-// Group 1: six_hats, scamper, random_entry (can run in parallel)
-// Group 2: convergence (runs after all parallel techniques complete)
+// Step 3: Plan returns an execution graph
+// plan.executionGraph contains:
+// - nodes: Array of execution nodes with parameters
+// - metadata: Analysis of parallelism opportunities
+// - instructions: Guidance for execution
+
+// Step 4: Client executes based on dependencies
+// Nodes with empty dependencies can run immediately
+// Nodes with dependencies wait for those to complete
+const parallelNodes = plan.executionGraph.nodes.filter(node => node.dependencies.length === 0);
+
+// Execute parallel nodes concurrently
+const results = await Promise.all(parallelNodes.map(node => executeThinkingStep(node.parameters)));
+```
+
+### DAG Structure
+
+The execution graph returned by `plan_thinking_session` includes:
+
+```typescript
+{
+  executionGraph: {
+    nodes: [{
+      id: "node-1",
+      stepNumber: 1,
+      technique: "six_hats",
+      parameters: { /* complete params for execute_thinking_step */ },
+      dependencies: [],  // Empty = can run immediately
+      estimatedDuration: 3000,
+      canSkipIfFailed: true
+    }],
+    metadata: {
+      totalNodes: 15,
+      maxParallelism: 6,
+      criticalPath: ["node-1", "node-7"],
+      parallelizableGroups: [["node-1", "node-2"], ["node-7", "node-8"]]
+    },
+    instructions: { /* execution guidance */ }
+  }
+}
 ```
 
 ### Technique Compatibility
@@ -136,6 +172,45 @@ const plan = await planThinkingSession({
 - **Design Thinking** - Empathize → Define → Ideate → Prototype → Test
 - **TRIZ** - Problem → Contradiction → Principles → Solution
 - **PO** - Provocation → Movement → Development → Implementation
+
+## Session Resilience
+
+The server supports base64 encoded sessions that can survive server restarts and memory loss:
+
+### How It Works
+
+- **Session Encoding**: Both `planId` and `sessionId` can be base64 encoded tokens
+- **State Preservation**: Encoded sessions contain all necessary state to resume
+- **Transparent Handling**: Clients see opaque tokens - encoding is handled internally
+- **24-Hour Expiry**: Encoded sessions remain valid for 24 hours from creation
+
+### Benefits
+
+- **Server Restart Resilience**: Sessions survive server crashes or restarts
+- **Stateless Operation**: No external storage required
+- **Backward Compatible**: Regular IDs still work alongside encoded ones
+- **Memory Efficient**: Server doesn't need to maintain all session state
+
+### Example
+
+```javascript
+// Server returns encoded sessionId when needed
+const result = await executeThinkingStep({
+  planId: 'eyJwbGFuSWQiOiJwbGFuXzEyMyIsInByb2JsZW0iOi...', // Encoded plan
+  technique: 'six_hats',
+  problem: 'How to improve team collaboration',
+  currentStep: 1,
+  totalSteps: 6,
+  output: 'Initial thoughts...',
+});
+
+// result.sessionId might be encoded for resilience
+// Client uses it as-is without knowing it's encoded
+const nextResult = await executeThinkingStep({
+  sessionId: result.sessionId, // Transparently handled
+  // ... other parameters
+});
+```
 
 ## Core Features
 

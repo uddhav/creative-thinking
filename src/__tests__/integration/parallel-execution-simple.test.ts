@@ -45,8 +45,9 @@ describe('Parallel Execution Simple Integration', () => {
       expect(plan).toBeDefined();
       expect(plan.planId).toBeDefined();
       expect(plan.executionMode).toBe('parallel');
-      expect(plan.parallelPlans).toBeDefined();
-      expect(Array.isArray(plan.parallelPlans)).toBe(true);
+      expect(plan.executionGraph).toBeDefined();
+      expect(plan.executionGraph.nodes).toBeDefined();
+      expect(Array.isArray(plan.executionGraph.nodes)).toBe(true);
     });
   });
 

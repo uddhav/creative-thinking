@@ -261,13 +261,17 @@ export class ExecutionResponseBuilder {
 
     // Build base response
     const operationData = this.createOperationData(input, sessionId);
+    // Enable session encoding for resilience (encode if we have a plan)
+    const shouldEncodeSession = !!plan;
     const response = this.responseBuilder.buildExecutionResponse(
       sessionId,
       operationData,
       currentInsights,
       nextStepGuidance,
       session.history.length,
-      executionMetadata
+      executionMetadata,
+      shouldEncodeSession,
+      plan?.planId || input.planId
     );
 
     return { response, currentInsights };

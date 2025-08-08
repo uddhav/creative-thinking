@@ -13,9 +13,7 @@ import type { LateralTechnique } from '../types/index.js';
 import type { SessionManager } from '../core/SessionManager.js';
 import type { TechniqueRegistry } from '../techniques/TechniqueRegistry.js';
 import type { TechniqueHandler } from '../techniques/types.js';
-import { ParallelPlanGenerator } from './planning/ParallelPlanGenerator.js';
-import { ParallelismDetector } from './discovery/ParallelismDetector.js';
-import { ParallelismValidator } from './discovery/ParallelismValidator.js';
+import { ExecutionGraphGenerator } from './planning/ExecutionGraphGenerator.js';
 
 interface ScamperHandlerType extends TechniqueHandler {
   getAction(step: number): string;
@@ -44,45 +42,7 @@ export function planThinkingSession(
     constraints,
     timeframe = 'thorough',
     executionMode = 'sequential',
-    maxParallelism,
-    convergenceOptions,
   } = input;
-
-  // Check if parallel execution is requested or should be considered
-  if (executionMode === 'parallel' || executionMode === 'auto') {
-    // Use ParallelPlanGenerator for parallel planning
-    const parallelGenerator = new ParallelPlanGenerator(techniqueRegistry);
-
-    // For 'auto' mode, detect if parallel is beneficial
-    let finalExecutionMode: 'parallel' | 'sequential' =
-      executionMode === 'auto' ? 'sequential' : executionMode;
-    if (executionMode === 'auto') {
-      const detector = new ParallelismDetector();
-      const validator = new ParallelismValidator();
-
-      const detection = detector.detectExecutionMode(problem);
-      const validation = validator.validateParallelRequest(techniques, maxParallelism);
-
-      // Use parallel if confidence is high and validation passes
-      finalExecutionMode =
-        detection.confidence > 0.7 && validation.isValid ? 'parallel' : 'sequential';
-    }
-
-    // Generate parallel plans if appropriate
-    if (finalExecutionMode === 'parallel') {
-      const parallelPlan = parallelGenerator.generateParallelPlans(
-        input,
-        'parallel',
-        convergenceOptions
-      );
-
-      // Save plan
-      sessionManager.savePlan(parallelPlan.planId, parallelPlan);
-      return parallelPlan;
-    }
-  }
-
-  // Continue with sequential planning
   // Generate unique plan ID
   const planId = `plan_${randomUUID()}`;
 
@@ -128,6 +88,9 @@ export function planThinkingSession(
   // Generate complexity assessment
   const complexityAssessment = assessComplexity(techniques, constraints, totalSteps);
 
+  // Generate execution graph for client-side parallel execution
+  const executionGraph = ExecutionGraphGenerator.generateExecutionGraph(planId, problem, workflow);
+
   // Save plan
   const plan: PlanThinkingSessionOutput = {
     planId,
@@ -145,6 +108,7 @@ export function planThinkingSession(
     planningInsights,
     complexityAssessment,
     executionMode,
+    executionGraph,
   };
 
   sessionManager.savePlan(planId, plan);

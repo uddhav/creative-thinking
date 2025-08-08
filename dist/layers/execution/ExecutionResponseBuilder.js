@@ -137,7 +137,9 @@ export class ExecutionResponseBuilder {
         const executionMetadata = this.generateExecutionMetadata(input, session, currentInsights, session.pathMemory, currentFlexibility);
         // Build base response
         const operationData = this.createOperationData(input, sessionId);
-        const response = this.responseBuilder.buildExecutionResponse(sessionId, operationData, currentInsights, nextStepGuidance, session.history.length, executionMetadata);
+        // Enable session encoding for resilience (encode if we have a plan)
+        const shouldEncodeSession = !!plan;
+        const response = this.responseBuilder.buildExecutionResponse(sessionId, operationData, currentInsights, nextStepGuidance, session.history.length, executionMetadata, shouldEncodeSession, plan?.planId || input.planId);
         return { response, currentInsights };
     }
     /**

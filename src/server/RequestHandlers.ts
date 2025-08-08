@@ -50,29 +50,8 @@ export class RequestHandlers {
         }
       }
 
-      // Debug logging for test mode
-      if (process.env.NODE_ENV === 'test') {
-        console.error(
-          'Received request params type:',
-          Array.isArray(request.params) ? 'array' : 'object'
-        );
-        if (Array.isArray(request.params)) {
-          console.error('Array length:', request.params.length);
-        }
-      }
-
-      // MCP standard expects single tool calls only
-      // Reject any array format as it's not part of the MCP protocol
-      if (Array.isArray(request.params)) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: 'Error: MCP protocol expects single tool calls. Received array format which is not supported. Please send individual tool call requests.',
-            },
-          ],
-        };
-      }
+      // Array format validation is handled by validateRequiredParameters and ObjectFieldValidator
+      // These validators ensure proper JSON-RPC error responses for invalid formats
 
       // Handle single tool call (MCP standard)
       // Safely extract parameters to prevent crashes with malformed data
@@ -81,13 +60,24 @@ export class RequestHandlers {
 
       try {
         if (!request.params || typeof request.params !== 'object') {
+          const errorMessage =
+            'Error: Invalid request format - params must be an object with name and arguments properties';
+
+          console.error('[RequestHandler] Invalid params format:', {
+            timestamp: new Date().toISOString(),
+            paramsType: typeof request.params,
+            params: request.params,
+            message: errorMessage,
+          });
+
           return {
             content: [
               {
                 type: 'text',
-                text: 'Error: Invalid request format - params must be an object',
+                text: errorMessage,
               },
             ],
+            isError: true,
           };
         }
 
@@ -96,24 +86,44 @@ export class RequestHandlers {
         args = params.arguments;
 
         if (!name || typeof name !== 'string') {
+          const errorMessage = 'Error: Tool name is required and must be a string';
+
+          console.error('[RequestHandler] Invalid tool name:', {
+            timestamp: new Date().toISOString(),
+            name,
+            nameType: typeof name,
+            message: errorMessage,
+          });
+
           return {
             content: [
               {
                 type: 'text',
-                text: 'Error: Tool name is required and must be a string',
+                text: errorMessage,
               },
             ],
+            isError: true,
           };
         }
       } catch (extractError) {
-        console.error('[ExecuteStep] Failed to extract parameters:', extractError);
+        const errorMessage = `Error: Failed to parse request parameters: ${extractError instanceof Error ? extractError.message : 'Unknown error'}`;
+
+        // Log detailed error information
+        console.error('[RequestHandler] Parameter extraction failed:', {
+          timestamp: new Date().toISOString(),
+          error: extractError,
+          requestParams: JSON.stringify(request.params).substring(0, 500),
+          message: errorMessage,
+        });
+
         return {
           content: [
             {
               type: 'text',
-              text: `Error: Failed to parse request parameters: ${extractError instanceof Error ? extractError.message : 'Unknown error'}`,
+              text: errorMessage,
             },
           ],
+          isError: true,
         };
       }
 
@@ -121,6 +131,12 @@ export class RequestHandlers {
         // Pre-validate required parameters
         const validationError = this.validateRequiredParameters(name, args);
         if (validationError) {
+          console.error('[RequestHandler] Validation error:', {
+            timestamp: new Date().toISOString(),
+            tool: name,
+            message: validationError,
+          });
+
           return {
             content: [
               {
@@ -128,6 +144,7 @@ export class RequestHandlers {
                 text: validationError,
               },
             ],
+            isError: true,
           };
         }
 
@@ -140,6 +157,15 @@ export class RequestHandlers {
           const violationError = workflowGuard.getViolationError(violation);
           // Since ErrorFactory returns CreativeThinkingError which implements EnhancedError
           const enhancedError = violationError as CreativeThinkingError;
+
+          console.error('[RequestHandler] Workflow violation detected:', {
+            timestamp: new Date().toISOString(),
+            tool: name,
+            violation: violation.type,
+            message: enhancedError.message,
+            code: enhancedError.code,
+          });
+
           return {
             content: [
               {
@@ -155,6 +181,7 @@ export class RequestHandlers {
                 ),
               },
             ],
+            isError: true,
           };
         }
 

@@ -124,9 +124,10 @@ describe('Layered Tools Architecture', () => {
       expect(result.isError).toBeFalsy();
       const text = result.content[0]?.text || '';
       expect(text).toContain('workflow');
-      // Should create 7 steps for Six Hats (now includes Purple Hat)
-      const stepMatches = text.match(/"stepNumber":\s*\d+/g) || [];
-      expect(stepMatches.length).toBe(7);
+      // Check for workflow steps (not execution graph nodes)
+      const parsedContent = JSON.parse(text);
+      const workflowSteps = parsedContent.workflow || [];
+      expect(workflowSteps.length).toBe(7); // 7 steps for Six Hats (now includes Purple Hat)
     });
 
     it('should combine multiple techniques in workflow', () => {
@@ -141,8 +142,9 @@ describe('Layered Tools Architecture', () => {
       expect(result.isError).toBeFalsy();
       const text = result.content[0]?.text || '';
       // Design Thinking (5 steps) + SCAMPER (8 steps) = 13 total
-      const stepMatches = text.match(/"stepNumber":\s*\d+/g) || [];
-      expect(stepMatches.length).toBe(13);
+      const parsedContent = JSON.parse(text);
+      const workflowSteps = parsedContent.workflow || [];
+      expect(workflowSteps.length).toBe(13);
     });
 
     it('should include risk considerations for appropriate steps', () => {
