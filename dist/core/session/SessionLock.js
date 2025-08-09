@@ -1,39 +1,53 @@
 /**
  * SessionLock - Provides async mutex functionality for session-level locking
  * Ensures thread-safe access to session data during concurrent requests
+ * Supports technique-specific locking for parallel execution
  */
 export class SessionLock {
     locks = new Map();
     lockQueues = new Map();
     /**
-     * Acquire a lock for a specific session
+     * Generate a lock key based on sessionId and optional technique
+     * @param sessionId The session ID
+     * @param technique Optional technique for technique-specific locking
+     * @returns The lock key
+     */
+    getLockKey(sessionId, technique) {
+        // If technique is provided, create a technique-specific lock key
+        // This allows different techniques to run in parallel for the same plan
+        return technique ? `${sessionId}:${technique}` : sessionId;
+    }
+    /**
+     * Acquire a lock for a specific session or session-technique combination
      * @param sessionId The session to lock
+     * @param technique Optional technique for technique-specific locking
      * @returns A release function that must be called to release the lock
      */
-    async acquireLock(sessionId) {
+    async acquireLock(sessionId, technique) {
+        const lockKey = this.getLockKey(sessionId, technique);
         // Wait for any existing lock to be released
-        while (this.locks.has(sessionId)) {
-            await this.locks.get(sessionId);
+        while (this.locks.has(lockKey)) {
+            await this.locks.get(lockKey);
         }
         // Create new lock
         let releaseLock;
         const lockPromise = new Promise(resolve => {
             releaseLock = resolve;
         });
-        this.locks.set(sessionId, lockPromise);
+        this.locks.set(lockKey, lockPromise);
         // Return release function
         return () => {
-            this.locks.delete(sessionId);
+            this.locks.delete(lockKey);
             releaseLock();
             // Process any queued requests
-            const queue = this.lockQueues.get(sessionId);
+            const queue = this.lockQueues.get(lockKey);
             if (queue && queue.length > 0) {
                 const next = queue.shift();
                 if (next) {
                     next();
                 }
                 if (queue.length === 0) {
-                    this.lockQueues.delete(sessionId);
+                    this.lockQueues.delete(lockKey);
                 }
             }
         };
@@ -42,10 +56,11 @@ export class SessionLock {
      * Execute a function with a lock held for the specified session
      * @param sessionId The session to lock
      * @param fn The async function to execute while holding the lock
+     * @param technique Optional technique for technique-specific locking
      * @returns The result of the function
      */
-    async withLock(sessionId, fn) {
-        const release = await this.acquireLock(sessionId);
+    async withLock(sessionId, fn, technique) {
+        const release = await this.acquireLock(sessionId, technique);
         try {
             return await fn();
         }
@@ -56,10 +71,12 @@ export class SessionLock {
     /**
      * Check if a session is currently locked
      * @param sessionId The session to check
+     * @param technique Optional technique to check for technique-specific lock
      * @returns true if the session is locked
      */
-    isLocked(sessionId) {
-        return this.locks.has(sessionId);
+    isLocked(sessionId, technique) {
+        const lockKey = this.getLockKey(sessionId, technique);
+        return this.locks.has(lockKey);
     }
     /**
      * Get the number of active locks

@@ -86,8 +86,9 @@ export async function executeThinkingStep(
       throw ErrorFactory.sessionNotFound(input.sessionId || 'unknown');
     }
 
-    // Acquire session lock for the entire operation
-    const releaseLock = await sessionLock.acquireLock(sessionId);
+    // Acquire technique-specific lock for parallel execution
+    // This allows different techniques to execute in parallel for the same plan
+    const releaseLock = await sessionLock.acquireLock(sessionId, input.technique);
 
     try {
       // Get technique handler

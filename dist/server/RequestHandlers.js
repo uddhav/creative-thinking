@@ -12,6 +12,11 @@ export class RequestHandlers {
     lateralServer;
     activeRequests = 0;
     requestLog = [];
+    // Batch collection for parallel execution
+    batchCollector = new Map();
+    // Configuration
+    BATCH_COLLECTION_WINDOW = parseInt(process.env.MCP_BATCH_WINDOW || '10'); // ms
+    MAX_PARALLEL_EXECUTIONS = parseInt(process.env.MCP_MAX_PARALLEL || '11');
     constructor(server, lateralServer) {
         this.server = server;
         this.lateralServer = lateralServer;
@@ -65,180 +70,18 @@ export class RequestHandlers {
             }
             // Array format validation is handled by validateRequiredParameters and ObjectFieldValidator
             // These validators ensure proper JSON-RPC error responses for invalid formats
-            // Handle single tool call (MCP standard)
-            // Safely extract parameters to prevent crashes with malformed data
-            let name;
-            let args;
-            try {
-                if (!request.params || typeof request.params !== 'object') {
-                    const errorMessage = 'Error: Invalid request format - params must be an object with name and arguments properties';
-                    console.error('[RequestHandler] Invalid params format:', {
-                        timestamp: new Date().toISOString(),
-                        paramsType: typeof request.params,
-                        params: request.params,
-                        message: errorMessage,
-                    });
-                    return {
-                        content: [
-                            {
-                                type: 'text',
-                                text: errorMessage,
-                            },
-                        ],
-                        isError: true,
-                    };
-                }
-                const params = request.params;
-                name = params.name;
-                args = params.arguments;
-                if (!name || typeof name !== 'string') {
-                    const errorMessage = 'Error: Tool name is required and must be a string';
-                    console.error('[RequestHandler] Invalid tool name:', {
-                        timestamp: new Date().toISOString(),
-                        name,
-                        nameType: typeof name,
-                        message: errorMessage,
-                    });
-                    return {
-                        content: [
-                            {
-                                type: 'text',
-                                text: errorMessage,
-                            },
-                        ],
-                        isError: true,
-                    };
+            // Check if this is execute_thinking_step that could be part of a batch
+            const toolName = request.params?.name;
+            if (toolName === 'execute_thinking_step') {
+                const args = request.params?.arguments;
+                const planId = args?.planId;
+                // If we have a planId, this could be part of a batch
+                if (planId) {
+                    return await this.handlePotentialBatchCall(request, planId);
                 }
             }
-            catch (extractError) {
-                const errorMessage = `Error: Failed to parse request parameters: ${extractError instanceof Error ? extractError.message : 'Unknown error'}`;
-                // Log detailed error information
-                console.error('[RequestHandler] Parameter extraction failed:', {
-                    timestamp: new Date().toISOString(),
-                    error: extractError,
-                    requestParams: JSON.stringify(request.params).substring(0, 500),
-                    message: errorMessage,
-                });
-                return {
-                    content: [
-                        {
-                            type: 'text',
-                            text: errorMessage,
-                        },
-                    ],
-                    isError: true,
-                };
-            }
-            try {
-                // Pre-validate required parameters
-                const validationError = this.validateRequiredParameters(name, args);
-                if (validationError) {
-                    console.error('[RequestHandler] Validation error:', {
-                        timestamp: new Date().toISOString(),
-                        tool: name,
-                        message: validationError,
-                    });
-                    return {
-                        content: [
-                            {
-                                type: 'text',
-                                text: validationError,
-                            },
-                        ],
-                        isError: true,
-                    };
-                }
-                // Record the tool call for workflow tracking
-                workflowGuard.recordCall(name, args);
-                // Check for workflow violations before executing
-                const violation = workflowGuard.checkWorkflowViolation(name, args);
-                if (violation) {
-                    const violationError = workflowGuard.getViolationError(violation);
-                    // Since ErrorFactory returns CreativeThinkingError which implements EnhancedError
-                    const enhancedError = violationError;
-                    console.error('[RequestHandler] Workflow violation detected:', {
-                        timestamp: new Date().toISOString(),
-                        tool: name,
-                        violation: violation.type,
-                        message: enhancedError.message,
-                        code: enhancedError.code,
-                    });
-                    return {
-                        content: [
-                            {
-                                type: 'text',
-                                text: JSON.stringify({
-                                    error: enhancedError.message,
-                                    code: enhancedError.code,
-                                    recovery: enhancedError.recovery,
-                                }, null, 2),
-                            },
-                        ],
-                        isError: true,
-                    };
-                }
-                let result;
-                switch (name) {
-                    case 'discover_techniques':
-                        result = this.lateralServer.discoverTechniques(args);
-                        break;
-                    case 'plan_thinking_session':
-                        result = this.lateralServer.planThinkingSession(args);
-                        break;
-                    case 'execute_thinking_step':
-                        result = await this.lateralServer.executeThinkingStep(args);
-                        break;
-                    default:
-                        throw new ValidationError(ErrorCode.INVALID_INPUT, `Unknown tool: ${name}`, 'toolName', {
-                            providedTool: name,
-                        });
-                }
-                // Ensure we always return a properly formatted response
-                // MCP expects the content array directly
-                const response = {
-                    content: result.content,
-                };
-                // Validate response structure before sending
-                if (!response.content || !Array.isArray(response.content)) {
-                    console.error('[RequestHandler] Warning: Invalid response structure:', {
-                        hasContent: !!response.content,
-                        isArray: Array.isArray(response.content),
-                        contentType: typeof response.content,
-                    });
-                    // Fix the response structure
-                    response.content = [
-                        {
-                            type: 'text',
-                            text: JSON.stringify(result),
-                        },
-                    ];
-                }
-                return response;
-            }
-            catch (error) {
-                console.error('[RequestHandler] Error handling request:', {
-                    error: error instanceof Error ? error.message : String(error),
-                    stack: error instanceof Error ? error.stack : undefined,
-                    timestamp: new Date().toISOString(),
-                });
-                // Always return a valid response structure even on error
-                return {
-                    content: [
-                        {
-                            type: 'text',
-                            text: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
-                        },
-                    ],
-                    isError: true,
-                };
-            }
-            finally {
-                this.activeRequests--;
-                console.error('[RequestHandler] Request completed:', {
-                    activeRequests: this.activeRequests,
-                    timestamp: new Date().toISOString(),
-                });
-            }
+            // Process as a single call
+            return await this.processSingleCall(request);
         });
     }
     /**
@@ -368,6 +211,268 @@ export class RequestHandlers {
             }
         }
         return null; // No validation errors
+    }
+    /**
+     * Handle a call that might be part of a batch
+     */
+    async handlePotentialBatchCall(request, planId) {
+        return new Promise((resolve, reject) => {
+            if (!this.batchCollector.has(planId)) {
+                // Start collecting for this planId
+                const timeout = setTimeout(() => {
+                    void this.processBatch(planId);
+                }, this.BATCH_COLLECTION_WINDOW);
+                this.batchCollector.set(planId, {
+                    calls: [],
+                    timeout,
+                });
+            }
+            // Add this call to the batch
+            const batch = this.batchCollector.get(planId);
+            if (!batch)
+                return reject(new Error('Batch collector not found'));
+            batch.calls.push({ request, resolve, reject });
+            // If we've hit the max parallel executions, process immediately
+            if (batch.calls.length >= this.MAX_PARALLEL_EXECUTIONS) {
+                clearTimeout(batch.timeout);
+                void this.processBatch(planId);
+            }
+        });
+    }
+    /**
+     * Process a batch of calls in parallel
+     */
+    async processBatch(planId) {
+        const batch = this.batchCollector.get(planId);
+        if (!batch || batch.calls.length === 0)
+            return;
+        this.batchCollector.delete(planId);
+        clearTimeout(batch.timeout);
+        const startTime = Date.now();
+        const callCount = batch.calls.length;
+        console.error('[RequestHandler] Processing batch:', {
+            planId,
+            callCount,
+            timestamp: new Date().toISOString(),
+        });
+        // Track individual execution times for comparison
+        // const _sequentialEstimate = callCount * 500; // Estimate 500ms per call if sequential
+        // Process all calls in parallel with timing using Promise.allSettled for robustness
+        const timingPromises = batch.calls.map(async ({ request }, index) => {
+            const callStart = Date.now();
+            try {
+                const result = await this.processSingleCall(request);
+                const callDuration = Date.now() - callStart;
+                return { result, duration: callDuration, index, success: true };
+            }
+            catch (error) {
+                const callDuration = Date.now() - callStart;
+                return {
+                    error,
+                    duration: callDuration,
+                    index,
+                    success: false,
+                    errorMessage: error instanceof Error ? error.message : String(error),
+                };
+            }
+        });
+        // Use Promise.allSettled to handle both successes and failures gracefully
+        const settlements = await Promise.allSettled(timingPromises);
+        const successfulResults = [];
+        const failedResults = [];
+        const allDurations = [];
+        settlements.forEach((settlement, index) => {
+            if (settlement.status === 'fulfilled') {
+                const result = settlement.value;
+                allDurations.push(result.duration);
+                if (result.success) {
+                    successfulResults.push({
+                        index,
+                        result: result.result,
+                        duration: result.duration,
+                    });
+                }
+                else {
+                    // This was a caught error within processSingleCall
+                    failedResults.push({
+                        index,
+                        error: result.error,
+                        errorMessage: result.errorMessage || 'Unknown error',
+                        duration: result.duration,
+                    });
+                }
+            }
+            else {
+                // This should rarely happen as we catch errors above
+                failedResults.push({
+                    index,
+                    error: settlement.reason,
+                    errorMessage: 'Unexpected promise rejection',
+                    duration: 0,
+                });
+            }
+        });
+        const totalDuration = Date.now() - startTime;
+        const successCount = successfulResults.length;
+        const failureCount = failedResults.length;
+        // Calculate metrics
+        const maxIndividualDuration = allDurations.length > 0 ? Math.max(...allDurations) : 0;
+        const avgIndividualDuration = allDurations.length > 0 ? allDurations.reduce((a, b) => a + b, 0) / allDurations.length : 0;
+        const theoreticalSequentialTime = allDurations.reduce((a, b) => a + b, 0);
+        const actualSpeedup = theoreticalSequentialTime > 0 ? theoreticalSequentialTime / totalDuration : 0;
+        // Log performance metrics with success/failure breakdown
+        console.error('[RequestHandler] Batch completed - Performance Metrics:', {
+            planId,
+            callCount,
+            successCount,
+            failureCount,
+            successRate: `${((successCount / callCount) * 100).toFixed(1)}%`,
+            totalDuration,
+            maxIndividualDuration,
+            avgIndividualDuration,
+            theoreticalSequentialTime,
+            actualSpeedup: `${actualSpeedup.toFixed(2)}x`,
+            efficiency: `${((actualSpeedup / callCount) * 100).toFixed(1)}%`,
+            timeSaved: `${theoreticalSequentialTime - totalDuration}ms`,
+        });
+        // Log failures if any occurred
+        if (failureCount > 0) {
+            console.error('[RequestHandler] Failed calls in batch:', {
+                planId,
+                failures: failedResults.map(f => ({
+                    index: f.index,
+                    errorMessage: f.errorMessage,
+                    duration: f.duration,
+                })),
+            });
+        }
+        // Resolve/reject promises based on their individual results
+        batch.calls.forEach(({ resolve, reject }, index) => {
+            const successResult = successfulResults.find(r => r.index === index);
+            if (successResult) {
+                resolve(successResult.result);
+            }
+            else {
+                const failResult = failedResults.find(r => r.index === index);
+                if (failResult) {
+                    // Instead of rejecting, we could also resolve with an error response
+                    // This depends on how we want to handle failures
+                    const errorResponse = {
+                        content: [
+                            {
+                                type: 'text',
+                                text: `Error processing request: ${failResult.errorMessage}`,
+                            },
+                        ],
+                        isError: true,
+                    };
+                    resolve(errorResponse);
+                }
+                else {
+                    // This shouldn't happen, but handle it just in case
+                    reject(new Error('Result not found for request'));
+                }
+            }
+        });
+    }
+    /**
+     * Process a single tool call
+     */
+    async processSingleCall(request) {
+        this.activeRequests++;
+        const requestTimestamp = new Date().toISOString();
+        try {
+            // Extract parameters
+            const params = request.params;
+            const name = params.name;
+            const args = params.arguments;
+            // Pre-validate required parameters
+            const validationError = this.validateRequiredParameters(name, args);
+            if (validationError) {
+                console.error('[RequestHandler] Validation error:', {
+                    timestamp: requestTimestamp,
+                    tool: name,
+                    message: validationError,
+                });
+                return {
+                    content: [
+                        {
+                            type: 'text',
+                            text: validationError,
+                        },
+                    ],
+                    isError: true,
+                };
+            }
+            // Record the tool call for workflow tracking
+            workflowGuard.recordCall(name, args);
+            // Check for workflow violations before executing
+            const violation = workflowGuard.checkWorkflowViolation(name, args);
+            if (violation) {
+                const violationError = workflowGuard.getViolationError(violation);
+                const enhancedError = violationError;
+                console.error('[RequestHandler] Workflow violation detected:', {
+                    timestamp: requestTimestamp,
+                    tool: name,
+                    violation: violation.type,
+                    message: enhancedError.message,
+                    code: enhancedError.code,
+                });
+                return {
+                    content: [
+                        {
+                            type: 'text',
+                            text: JSON.stringify({
+                                error: enhancedError.message,
+                                code: enhancedError.code,
+                                recovery: enhancedError.recovery,
+                            }, null, 2),
+                        },
+                    ],
+                    isError: true,
+                };
+            }
+            // Execute the tool
+            let result;
+            switch (name) {
+                case 'discover_techniques':
+                    result = this.lateralServer.discoverTechniques(args);
+                    break;
+                case 'plan_thinking_session':
+                    result = this.lateralServer.planThinkingSession(args);
+                    break;
+                case 'execute_thinking_step':
+                    result = await this.lateralServer.executeThinkingStep(args);
+                    break;
+                default:
+                    throw new ValidationError(ErrorCode.INVALID_INPUT, `Unknown tool: ${name}`, 'toolName', {
+                        providedTool: name,
+                    });
+            }
+            // Ensure we always return a properly formatted response
+            const response = {
+                content: result.content,
+            };
+            // Validate response structure before sending
+            if (!response.content || !Array.isArray(response.content)) {
+                console.error('[RequestHandler] Warning: Invalid response structure:', {
+                    hasContent: !!response.content,
+                    isArray: Array.isArray(response.content),
+                    contentType: typeof response.content,
+                });
+                // Fix the response structure
+                response.content = [
+                    {
+                        type: 'text',
+                        text: JSON.stringify(result),
+                    },
+                ];
+            }
+            return response;
+        }
+        finally {
+            this.activeRequests--;
+        }
     }
     /**
      * Get required parameters message for a tool

@@ -9,6 +9,9 @@ export declare class RequestHandlers {
     private lateralServer;
     private activeRequests;
     private requestLog;
+    private batchCollector;
+    private readonly BATCH_COLLECTION_WINDOW;
+    private readonly MAX_PARALLEL_EXECUTIONS;
     constructor(server: Server, lateralServer: LateralThinkingServer);
     getActiveRequests(): number;
     /**
@@ -27,6 +30,18 @@ export declare class RequestHandlers {
      * Validate required parameters for each tool
      */
     private validateRequiredParameters;
+    /**
+     * Handle a call that might be part of a batch
+     */
+    private handlePotentialBatchCall;
+    /**
+     * Process a batch of calls in parallel
+     */
+    private processBatch;
+    /**
+     * Process a single tool call
+     */
+    private processSingleCall;
     /**
      * Get required parameters message for a tool
      */
