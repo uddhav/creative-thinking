@@ -287,6 +287,22 @@ function getExpectedOutputForStep(technique, step) {
             8: 'Future system scenarios',
             9: 'Future environmental changes',
         },
+        quantum_superposition: {
+            1: 'Multiple contradictory solution states generated',
+            2: 'Interference patterns mapped',
+            3: 'State entanglements identified',
+            4: 'Probability amplitudes evolved',
+            5: 'Measurement context defined',
+            6: 'Optimal state collapsed with preserved insights',
+        },
+        temporal_creativity: {
+            1: 'Decision history excavated with patterns',
+            2: 'Current state and constraints mapped',
+            3: 'Future paths projected across timelines',
+            4: 'Temporal options created',
+            5: 'Strategy refined with lessons',
+            6: 'Insights integrated preserving flexibility',
+        },
     };
     return outputs[technique]?.[step] || 'Insights and ideas related to the step focus';
 }

@@ -167,6 +167,10 @@ Each technique follows its specific sequential process:
 - **Design Thinking** - Empathize → Define → Ideate → Prototype → Test (5 steps)
 - **TRIZ** - Identify → Remove → Apply → Minimize (4 steps)
 - **PO** - Provocation → Exploration → Verification → Solution (4 steps)
+- **Quantum Superposition** - Generate → Interfere → Entangle → Evolve → Measure → Collapse (6
+  steps)
+- **Temporal Creativity** - Archaeological Analysis → Present Synthesis → Future Projection → Option
+  Creation → Refinement → Integration (6 steps)
 
 ## Session Resilience
 
@@ -221,9 +225,13 @@ const nextResult = await executeThinkingStep({
 - **Validation Strategy**: Comprehensive input validation using strategy pattern
 - **Persistence Architecture**: Adapter pattern supporting filesystem and memory backends
 
-### Fourteen Enhanced Thinking Techniques
+### Sixteen Enhanced Thinking Techniques
 
 Each technique integrates creative generation with systematic verification:
+
+**Note**: The discovery layer includes a wildcard technique selection feature (17.5% probability by
+default, configurable via `WILDCARD_PROBABILITY` environment variable) that randomly includes an
+additional technique to prevent algorithmic pigeonholing and encourage unexpected insights.
 
 - **Six Thinking Hats Plus** - Multi-perspective analysis with meta-uncertainty awareness
 - **Provocative Operation (PO)** - Pattern-breaking through systematic verification
@@ -239,6 +247,22 @@ Each technique integrates creative generation with systematic verification:
 - **Collective Intelligence** - Wisdom aggregation from diverse knowledge sources
 - **Disney Method** - Three-role creative process (Dreamer → Realist → Critic)
 - **Nine Windows** - Systematic 3×3 analysis across time and system levels
+- **Quantum Superposition** - Maintains multiple contradictory solutions until optimal collapse
+- **Temporal Creativity** - Advanced temporal thinking with path memory integration
+
+### MCP Prompts Support (NEW)
+
+The server exposes pre-configured prompts for common lateral thinking scenarios:
+
+- **problem-discovery**: Discover the best techniques for your specific problem
+- **creative-brainstorming**: Generate creative solutions using multiple perspectives
+- **risk-analysis**: Analyze potential risks and black swan events
+- **complete-session**: Run a complete guided lateral thinking session
+- **quantum-thinking**: Explore contradictory solutions simultaneously
+- **temporal-creativity**: Apply temporal thinking with path memory tracking
+
+These prompts provide structured conversation starters that guide users through effective use of the
+server's capabilities.
 
 ### Memory-Aware Outputs (NEW)
 
@@ -840,6 +864,25 @@ Systematic 3×3 matrix analysis:
 - Identifies system-level constraints
 - Maps flexibility across scales
 - Historical patterns and cultural knowledge
+
+### Quantum Superposition
+
+Six-step process for maintaining multiple solution states simultaneously:
+
+1. **State Generation** - Create 3-5 mutually exclusive solution states
+2. **Interference Mapping** - Identify constructive and destructive interference patterns
+3. **Entanglement Analysis** - Map dependencies between solution states
+4. **Amplitude Evolution** - Adjust probability amplitudes based on emerging constraints
+5. **Measurement Context** - Define criteria that will force state collapse
+6. **State Collapse** - Collapse to optimal solution while preserving insights from non-chosen
+   states
+
+**Key Benefits**:
+
+- Avoids premature commitment to single solutions
+- Maintains maximum flexibility until decision point
+- Preserves insights from all explored possibilities
+- Optimal for situations with high uncertainty
 
 ## Example Workflow
 

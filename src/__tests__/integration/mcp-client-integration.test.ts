@@ -212,7 +212,7 @@ describe('MCP Client Integration', () => {
     });
   });
 
-  describe('All 14 Techniques', () => {
+  describe('All 16 Techniques', () => {
     const techniques = [
       'six_hats',
       'po',
@@ -228,6 +228,8 @@ describe('MCP Client Integration', () => {
       'collective_intel',
       'disney_method',
       'nine_windows',
+      'quantum_superposition',
+      'temporal_creativity',
     ];
 
     it.each(techniques)('should support %s technique', async technique => {

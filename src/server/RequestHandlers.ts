@@ -4,13 +4,19 @@
  */
 
 import type { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+  ListPromptsRequestSchema,
+  GetPromptRequestSchema,
+} from '@modelcontextprotocol/sdk/types.js';
 import type { LateralThinkingServer } from '../index.js';
 import { workflowGuard } from '../core/WorkflowGuard.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 import { getAllTools } from './ToolDefinitions.js';
 import type { CreativeThinkingError } from '../errors/enhanced-errors.js';
 import { ObjectFieldValidator } from '../core/validators/ObjectFieldValidator.js';
+import { PromptsHandler } from './PromptsHandler.js';
 
 export class RequestHandlers {
   private activeRequests = 0;
@@ -33,12 +39,18 @@ export class RequestHandlers {
   private readonly BATCH_COLLECTION_WINDOW = parseInt(process.env.MCP_BATCH_WINDOW || '10'); // ms
   private readonly MAX_PARALLEL_EXECUTIONS = parseInt(process.env.MCP_MAX_PARALLEL || '11');
 
+  // Prompts handler
+  private promptsHandler: PromptsHandler;
+
   constructor(
     private server: Server,
     private lateralServer: LateralThinkingServer
   ) {
     // Set up WorkflowGuard with SessionManager for plan validation
     workflowGuard.setSessionManager(this.lateralServer.getSessionManager());
+
+    // Initialize prompts handler
+    this.promptsHandler = new PromptsHandler();
   }
 
   public getActiveRequests(): number {
@@ -51,6 +63,8 @@ export class RequestHandlers {
   setupHandlers(): void {
     this.setupListToolsHandler();
     this.setupCallToolHandler();
+    this.setupListPromptsHandler();
+    this.setupGetPromptHandler();
   }
 
   /**
@@ -60,6 +74,31 @@ export class RequestHandlers {
     this.server.setRequestHandler(ListToolsRequestSchema, () => ({
       tools: getAllTools(),
     }));
+  }
+
+  /**
+   * Handle prompts listing requests
+   */
+  private setupListPromptsHandler(): void {
+    this.server.setRequestHandler(ListPromptsRequestSchema, () => ({
+      prompts: this.promptsHandler.getPrompts(),
+    }));
+  }
+
+  /**
+   * Handle get prompt requests
+   */
+  private setupGetPromptHandler(): void {
+    this.server.setRequestHandler(GetPromptRequestSchema, request => {
+      const promptName = request.params.name;
+      const promptData = this.promptsHandler.getPrompt(promptName);
+
+      if (!promptData) {
+        throw new Error(`Unknown prompt: ${promptName}`);
+      }
+
+      return promptData;
+    });
   }
 
   /**

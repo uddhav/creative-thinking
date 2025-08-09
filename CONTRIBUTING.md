@@ -99,7 +99,7 @@ these three tools.
 
 ### Key Components
 
-#### Thinking Techniques (14 total)
+#### Thinking Techniques (16 total)
 
 - **Six Hats** - Sequential thinking with different perspectives (6 steps)
 - **PO** - Provocative operation for creative disruption (4 steps)
@@ -115,6 +115,8 @@ these three tools.
 - **Collective Intelligence** - Harness group wisdom (5 steps)
 - **Disney Method** - Three roles for creative planning (3 steps)
 - **Nine Windows** - Systematic innovation matrix (9 steps)
+- **Quantum Superposition** - Multiple contradictory states until collapse (6 steps)
+- **Temporal Creativity** - Path memory with temporal analysis (6 steps)
 
 #### Support Systems
 

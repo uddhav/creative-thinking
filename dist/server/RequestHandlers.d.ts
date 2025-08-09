@@ -12,6 +12,7 @@ export declare class RequestHandlers {
     private batchCollector;
     private readonly BATCH_COLLECTION_WINDOW;
     private readonly MAX_PARALLEL_EXECUTIONS;
+    private promptsHandler;
     constructor(server: Server, lateralServer: LateralThinkingServer);
     getActiveRequests(): number;
     /**
@@ -22,6 +23,14 @@ export declare class RequestHandlers {
      * Handle tool listing requests
      */
     private setupListToolsHandler;
+    /**
+     * Handle prompts listing requests
+     */
+    private setupListPromptsHandler;
+    /**
+     * Handle get prompt requests
+     */
+    private setupGetPromptHandler;
     /**
      * Handle tool call requests
      */

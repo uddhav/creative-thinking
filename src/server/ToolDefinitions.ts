@@ -67,6 +67,8 @@ export const PLAN_THINKING_SESSION_TOOL: Tool = {
             'collective_intel',
             'disney_method',
             'nine_windows',
+            'quantum_superposition',
+            'temporal_creativity',
           ],
         },
         description:
@@ -250,6 +252,63 @@ export const EXECUTE_THINKING_STEP_TOOL: Tool = {
         },
       },
       interdependencies: { type: 'array', items: { type: 'string' } },
+      // Quantum Superposition specific
+      solutionStates: { type: 'array', items: { type: 'string' } },
+      interferencePatterns: {
+        type: 'object',
+        properties: {
+          constructive: { type: 'array', items: { type: 'string' } },
+          destructive: { type: 'array', items: { type: 'string' } },
+          hybrid: { type: 'array', items: { type: 'string' } },
+        },
+      },
+      entanglements: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            states: { type: 'array', items: { type: 'string' } },
+            dependency: { type: 'string' },
+          },
+        },
+      },
+      amplitudes: { type: 'object' },
+      measurementCriteria: { type: 'array', items: { type: 'string' } },
+      chosenState: { type: 'string' },
+      preservedInsights: { type: 'array', items: { type: 'string' } },
+      // Temporal Creativity specific
+      pathHistory: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            decision: { type: 'string' },
+            impact: { type: 'string' },
+            constraintsCreated: { type: 'array', items: { type: 'string' } },
+            optionsClosed: { type: 'array', items: { type: 'string' } },
+          },
+        },
+      },
+      decisionPatterns: { type: 'array', items: { type: 'string' } },
+      currentConstraints: { type: 'array', items: { type: 'string' } },
+      activeOptions: { type: 'array', items: { type: 'string' } },
+      timelineProjections: {
+        type: 'object',
+        properties: {
+          bestCase: { type: 'array', items: { type: 'string' } },
+          probableCase: { type: 'array', items: { type: 'string' } },
+          worstCase: { type: 'array', items: { type: 'string' } },
+          blackSwanScenarios: { type: 'array', items: { type: 'string' } },
+          antifragileDesign: { type: 'array', items: { type: 'string' } },
+        },
+      },
+      delayOptions: { type: 'array', items: { type: 'string' } },
+      accelerationOptions: { type: 'array', items: { type: 'string' } },
+      parallelTimelines: { type: 'array', items: { type: 'string' } },
+      lessonIntegration: { type: 'array', items: { type: 'string' } },
+      strategyEvolution: { type: 'string' },
+      synthesisStrategy: { type: 'string' },
+      preservedOptions: { type: 'array', items: { type: 'string' } },
       // Risk/Adversarial fields (unified framework)
       risks: { type: 'array', items: { type: 'string' } },
       failureModes: { type: 'array', items: { type: 'string' } },

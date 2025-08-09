@@ -310,6 +310,8 @@ export class PathMemoryManager {
             collective_intel: 'cognitive',
             disney_method: 'creative',
             nine_windows: 'technical',
+            quantum_superposition: 'creative',
+            temporal_creativity: 'resource',
         };
         return techniqueConstraintMap[event.technique] || 'creative';
     }

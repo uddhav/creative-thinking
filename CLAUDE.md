@@ -6,7 +6,7 @@ repository.
 ## Project Overview
 
 This is a **Creative Thinking MCP Server** implementing a three-layer tool architecture for
-structured problem-solving. The server provides fourteen enhanced thinking techniques through a
+structured problem-solving. The server provides sixteen enhanced thinking techniques through a
 unified framework that combines generative creativity with systematic risk assessment.
 
 ## Quick Reference
@@ -29,7 +29,7 @@ npm run format       # Run prettier to format all files
 - **Three tools only**: `discover_techniques`, `plan_thinking_session`, `execute_thinking_step`
 - **Three-layer architecture**: Discovery → Planning → Execution
 - **MCP Protocol**: stdout for JSON-RPC only, stderr for visual output
-- **14 thinking techniques** with specific step counts
+- **16 thinking techniques** with specific step counts
 - **Unified framework**: All techniques support risk/adversarial fields
 - **Sequential execution**: Server executes techniques step-by-step for depth and coherence
 - **Session resilience**: Base64 encoding allows sessions to survive server restarts
@@ -85,6 +85,10 @@ When working with this codebase:
   synergy → synthesize insight)
 - Disney Method: 3 steps (dreamer → realist → critic)
 - Nine Windows: 9 steps (3×3 matrix: past/present/future × sub-system/system/super-system)
+- Quantum Superposition: 6 steps (state generation → interference mapping → entanglement analysis →
+  amplitude evolution → measurement context → state collapse)
+- Temporal Creativity: 6 steps (archaeological analysis → present synthesis → future projection →
+  option creation → cyclical refinement → path integration)
 
 ### PR Integration Checklist
 

@@ -7,6 +7,39 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **MCP Prompts Support** - Pre-configured conversation starters for guided lateral thinking
+  - 6 prompt templates for common scenarios (problem-discovery, creative-brainstorming,
+    risk-analysis, etc.)
+  - Exposed via standard MCP prompts protocol (ListPrompts/GetPrompt)
+  - Each prompt provides structured arguments and conversation flow
+- **Wildcard Technique Selection** - Prevents algorithmic pigeonholing in discovery
+  - 17.5% probability of including an additional random technique (configurable via
+    WILDCARD_PROBABILITY)
+  - Marked with isWildcard flag in recommendations
+  - Encourages exploration of unexpected approaches
+- **Part VII Advanced Techniques** - Implemented first two techniques from SPECIFICATIONS.md Part
+  VII
+  - **Quantum Superposition** (#154) - Maintains multiple contradictory solution states
+    simultaneously
+    - 6-step process: State Generation → Interference Mapping → Entanglement Analysis → Amplitude
+      Evolution → Measurement Context → State Collapse
+    - Preserves insights from non-chosen states
+    - Comprehensive tests (15 tests passing)
+  - **Temporal Creativity with Path Memory** (#155) - Advanced temporal thinking with decision
+    tracking
+    - 6-step process: Archaeological Path Analysis → Present State Synthesis → Future Path
+      Projection → Temporal Option Creation → Cyclical Refinement → Path Integration
+    - Path memory system tracks constraints created and options closed
+    - Projects future flexibility with decay modeling
+    - Comprehensive tests (21 tests passing)
+
+### Changed
+
+- **Total Techniques** - Increased from 14 to 16 enhanced thinking techniques
+- **Documentation** - Updated all documentation to reflect new technique count
+
 ### Removed
 
 - **Parallel Execution Architecture** - Simplified to sequential-only execution

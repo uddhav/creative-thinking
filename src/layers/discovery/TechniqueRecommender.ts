@@ -7,6 +7,8 @@ import type { LateralTechnique } from '../../types/index.js';
 import type { TechniqueRegistry } from '../../techniques/TechniqueRegistry.js';
 
 export class TechniqueRecommender {
+  // Wildcard inclusion probability (15-20% chance)
+  private readonly WILDCARD_PROBABILITY = parseFloat(process.env.WILDCARD_PROBABILITY || '0.175');
   /**
    * Recommend techniques based on problem category and other factors
    */
@@ -16,11 +18,17 @@ export class TechniqueRecommender {
     constraints: string[] | undefined,
     complexity: 'low' | 'medium' | 'high',
     techniqueRegistry: TechniqueRegistry
-  ): Array<{ technique: LateralTechnique; reasoning: string; effectiveness: number }> {
+  ): Array<{
+    technique: LateralTechnique;
+    reasoning: string;
+    effectiveness: number;
+    isWildcard?: boolean;
+  }> {
     const recommendations: Array<{
       technique: LateralTechnique;
       reasoning: string;
       effectiveness: number;
+      isWildcard?: boolean;
     }> = [];
 
     // Category-based recommendations
@@ -45,6 +53,12 @@ export class TechniqueRecommender {
           effectiveness: 0.85,
         });
         recommendations.push({
+          technique: 'quantum_superposition',
+          reasoning:
+            'Maintains multiple contradictory technical solutions until optimal conditions emerge',
+          effectiveness: 0.9,
+        });
+        recommendations.push({
           technique: 'scamper',
           reasoning: 'Structured modifications for technical improvements',
           effectiveness: 0.75,
@@ -61,6 +75,12 @@ export class TechniqueRecommender {
           technique: 'po',
           reasoning: 'Provocations challenge creative boundaries',
           effectiveness: 0.85,
+        });
+        recommendations.push({
+          technique: 'quantum_superposition',
+          reasoning:
+            'Explores multiple creative possibilities simultaneously without premature commitment',
+          effectiveness: 0.88,
         });
         break;
 
@@ -97,9 +117,14 @@ export class TechniqueRecommender {
 
       case 'temporal':
         recommendations.push({
+          technique: 'temporal_creativity',
+          reasoning: 'Advanced temporal thinking with path memory integration',
+          effectiveness: 0.98,
+        });
+        recommendations.push({
           technique: 'temporal_work',
-          reasoning: 'Specialized for time management and kairos-chronos integration',
-          effectiveness: 0.95,
+          reasoning: 'Time management and kairos-chronos integration',
+          effectiveness: 0.85,
         });
         recommendations.push({
           technique: 'scamper',
@@ -199,7 +224,23 @@ export class TechniqueRecommender {
         };
       });
 
-    return validatedRecommendations.slice(0, 3); // Top 3 recommendations
+    // Get top 3 recommendations
+    const topRecommendations = validatedRecommendations.slice(0, 3);
+
+    // Add wildcard technique to prevent pigeonholing
+    const wildcardRecommendation = this.selectWildcardTechnique(
+      topRecommendations.map(r => r.technique),
+      techniqueRegistry
+    );
+
+    if (wildcardRecommendation) {
+      topRecommendations.push({
+        ...wildcardRecommendation,
+        isWildcard: true,
+      });
+    }
+
+    return topRecommendations;
   }
 
   /**
@@ -210,6 +251,7 @@ export class TechniqueRecommender {
       technique: LateralTechnique;
       reasoning: string;
       effectiveness: number;
+      isWildcard?: boolean;
     }>,
     outcome: string
   ): void {
@@ -279,5 +321,69 @@ export class TechniqueRecommender {
         }
         break;
     }
+  }
+
+  /**
+   * Select a wildcard technique to prevent algorithmic pigeonholing
+   */
+  private selectWildcardTechnique(
+    excludeTechniques: LateralTechnique[],
+    techniqueRegistry: TechniqueRegistry
+  ): { technique: LateralTechnique; reasoning: string; effectiveness: number } | null {
+    // Check if we should include a wildcard (probability check)
+    if (Math.random() > this.WILDCARD_PROBABILITY) {
+      return null;
+    }
+
+    // All available techniques
+    const allTechniques: LateralTechnique[] = [
+      'six_hats',
+      'po',
+      'random_entry',
+      'scamper',
+      'concept_extraction',
+      'yes_and',
+      'design_thinking',
+      'triz',
+      'neural_state',
+      'temporal_work',
+      'cross_cultural',
+      'collective_intel',
+      'disney_method',
+      'nine_windows',
+      'quantum_superposition',
+      'temporal_creativity',
+    ];
+
+    // Filter out already recommended techniques
+    const availableTechniques = allTechniques.filter(
+      t => !excludeTechniques.includes(t) && techniqueRegistry.isValidTechnique(t)
+    );
+
+    if (availableTechniques.length === 0) {
+      return null;
+    }
+
+    // Randomly select a wildcard technique
+    const wildcardTechnique =
+      availableTechniques[Math.floor(Math.random() * availableTechniques.length)];
+    const info = techniqueRegistry.getTechniqueInfo(wildcardTechnique);
+
+    // Generate wildcard reasoning
+    const wildcardReasons = [
+      'Consider this alternative approach for unexpected insights',
+      'Wildcard technique to explore unconventional solutions',
+      'Alternative perspective to prevent solution fixation',
+      'Complementary technique for comprehensive exploration',
+      'Unexpected angle to challenge assumptions',
+    ];
+
+    const reasoning = wildcardReasons[Math.floor(Math.random() * wildcardReasons.length)];
+
+    return {
+      technique: wildcardTechnique,
+      reasoning: `${reasoning} (${info.totalSteps} steps)`,
+      effectiveness: 0.65, // Moderate effectiveness as it's exploratory
+    };
   }
 }

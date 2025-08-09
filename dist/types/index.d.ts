@@ -5,7 +5,7 @@ import type { PathMemory } from '../ergodicity/index.js';
 import type { ErgodicityManager } from '../ergodicity/index.js';
 import type { EarlyWarningState, EscapeProtocol } from '../ergodicity/earlyWarning/types.js';
 import type { DomainAssessment, RiskDiscovery, RuinScenario, ValidationResult } from '../core/RuinRiskDiscovery.js';
-export type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 'concept_extraction' | 'yes_and' | 'design_thinking' | 'triz' | 'neural_state' | 'temporal_work' | 'cross_cultural' | 'collective_intel' | 'disney_method' | 'nine_windows';
+export type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 'concept_extraction' | 'yes_and' | 'design_thinking' | 'triz' | 'neural_state' | 'temporal_work' | 'cross_cultural' | 'collective_intel' | 'disney_method' | 'nine_windows' | 'quantum_superposition' | 'temporal_creativity';
 export type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green' | 'purple';
 export type ScamperAction = 'substitute' | 'combine' | 'adapt' | 'modify' | 'put_to_other_use' | 'eliminate' | 'reverse' | 'parameterize';
 export type DesignThinkingStage = 'empathize' | 'define' | 'ideate' | 'prototype' | 'test';
@@ -173,6 +173,43 @@ export interface ExecuteThinkingStepInput {
         systemLevel: 'sub-system' | 'system' | 'super-system';
     };
     interdependencies?: string[];
+    solutionStates?: string[];
+    interferencePatterns?: {
+        constructive?: string[];
+        destructive?: string[];
+        hybrid?: string[];
+    };
+    entanglements?: Array<{
+        states: string[];
+        dependency: string;
+    }>;
+    amplitudes?: Record<string, number>;
+    measurementCriteria?: string[];
+    chosenState?: string;
+    preservedInsights?: string[];
+    pathHistory?: Array<{
+        decision: string;
+        impact: string;
+        constraintsCreated?: string[];
+        optionsClosed?: string[];
+    }>;
+    decisionPatterns?: string[];
+    currentConstraints?: string[];
+    activeOptions?: string[];
+    timelineProjections?: {
+        bestCase?: string[];
+        probableCase?: string[];
+        worstCase?: string[];
+        blackSwanScenarios?: string[];
+        antifragileDesign?: string[];
+    };
+    delayOptions?: string[];
+    accelerationOptions?: string[];
+    parallelTimelines?: string[];
+    lessonIntegration?: string[];
+    strategyEvolution?: string;
+    synthesisStrategy?: string;
+    preservedOptions?: string[];
     realityAssessment?: RealityAssessment;
     ergodicityCheck?: {
         prompt: string;
@@ -286,6 +323,43 @@ export interface ThinkingOperationData {
         systemLevel: 'sub-system' | 'system' | 'super-system';
     };
     interdependencies?: string[];
+    solutionStates?: string[];
+    interferencePatterns?: {
+        constructive?: string[];
+        destructive?: string[];
+        hybrid?: string[];
+    };
+    entanglements?: Array<{
+        states: string[];
+        dependency: string;
+    }>;
+    amplitudes?: Record<string, number>;
+    measurementCriteria?: string[];
+    chosenState?: string;
+    preservedInsights?: string[];
+    pathHistory?: Array<{
+        decision: string;
+        impact: string;
+        constraintsCreated?: string[];
+        optionsClosed?: string[];
+    }>;
+    decisionPatterns?: string[];
+    currentConstraints?: string[];
+    activeOptions?: string[];
+    timelineProjections?: {
+        bestCase?: string[];
+        probableCase?: string[];
+        worstCase?: string[];
+        blackSwanScenarios?: string[];
+        antifragileDesign?: string[];
+    };
+    delayOptions?: string[];
+    accelerationOptions?: string[];
+    parallelTimelines?: string[];
+    lessonIntegration?: string[];
+    strategyEvolution?: string;
+    synthesisStrategy?: string;
+    preservedOptions?: string[];
     realityAssessment?: RealityAssessment;
     ergodicityCheck?: {
         prompt: string;
