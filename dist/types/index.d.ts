@@ -186,24 +186,6 @@ export interface ExecuteThinkingStepInput {
         survivalConstraints: string[];
     };
     /**
-     * Results from parallel technique executions (convergence technique only)
-     * Contains the outputs from all parallel plans that need to be synthesized
-     */
-    parallelResults?: Array<{
-        planId: string;
-        technique: LateralTechnique;
-        results: unknown;
-        insights: string[];
-        metrics?: Record<string, number>;
-    }>;
-    /**
-     * Strategy for synthesizing parallel results (convergence technique only)
-     * - merge: Combine all results into a unified output
-     * - select: Choose the best result based on criteria
-     * - hierarchical: Organize results in a hierarchical structure
-     */
-    convergenceStrategy?: 'merge' | 'select' | 'hierarchical';
-    /**
      * Completion tracking metadata
      * Tracks progress through planned workflow and identifies gaps
      */
@@ -373,5 +355,4 @@ export interface Tool {
         additionalProperties?: boolean;
     };
 }
-export * from './handoff.js';
 //# sourceMappingURL=index.d.ts.map

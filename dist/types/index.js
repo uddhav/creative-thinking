@@ -1,6 +1,5 @@
 /**
  * Core type definitions for the Creative Thinking MCP Server
  */
-// Export handoff types
-export * from './handoff.js';
+export {};
 //# sourceMappingURL=index.js.map

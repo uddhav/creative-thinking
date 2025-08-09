@@ -259,8 +259,6 @@ interface ExecuteThinkingStepInput {
   nineWindowsMatrix?: unknown;
   pathImpact?: unknown;
   temporalLandscape?: unknown;
-  convergenceStrategy?: unknown;
-  parallelResults?: unknown;
   risks?: unknown;
   mitigations?: unknown;
 }

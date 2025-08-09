@@ -253,26 +253,6 @@ export const EXECUTE_THINKING_STEP_TOOL = {
             branchId: { type: 'string' },
             flexibilityScore: { type: 'number', minimum: 0, maximum: 1 },
             alternativeSuggestions: { type: 'array', items: { type: 'string' } },
-            // Convergence technique specific
-            parallelResults: {
-                type: 'array',
-                items: {
-                    type: 'object',
-                    properties: {
-                        planId: { type: 'string' },
-                        technique: { type: 'string' },
-                        results: { type: 'object' },
-                        insights: { type: 'array', items: { type: 'string' } },
-                        metrics: { type: 'object' },
-                    },
-                },
-                description: 'Results from parallel technique executions to synthesize (convergence technique only)',
-            },
-            convergenceStrategy: {
-                type: 'string',
-                enum: ['merge', 'select', 'hierarchical'],
-                description: 'How to synthesize parallel results: merge (combine all), select (choose best), hierarchical (organize by importance)',
-            },
         },
         required: [
             'planId',
