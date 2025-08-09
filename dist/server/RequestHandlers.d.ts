@@ -7,7 +7,10 @@ import type { LateralThinkingServer } from '../index.js';
 export declare class RequestHandlers {
     private server;
     private lateralServer;
+    private activeRequests;
+    private requestLog;
     constructor(server: Server, lateralServer: LateralThinkingServer);
+    getActiveRequests(): number;
     /**
      * Set up all request handlers
      */

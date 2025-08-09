@@ -214,6 +214,8 @@ export class LateralThinkingServer {
         this.sessionManager.destroy();
     }
 }
+// Track active requests for proper shutdown
+const activeRequests = 0;
 // Initialize MCP server
 const server = new Server({
     name: 'creative-thinking',
@@ -228,16 +230,39 @@ const lateralServer = new LateralThinkingServer();
 // Set up request handlers
 const requestHandlers = new RequestHandlers(server, lateralServer);
 requestHandlers.setupHandlers();
+// Function to get total active requests
+function getActiveRequests() {
+    return requestHandlers.getActiveRequests() + activeRequests;
+}
 // Graceful shutdown handling
 let isShuttingDown = false;
 let transport = null;
+let shutdownTimeout = null;
 async function gracefulShutdown(signal) {
     if (isShuttingDown) {
         console.error(`[Server] Already shutting down, ignoring ${signal}`);
         return;
     }
     isShuttingDown = true;
+    const totalActiveRequests = getActiveRequests();
     console.error(`[Server] Received ${signal}, starting graceful shutdown...`);
+    console.error(`[Server] Active requests: ${totalActiveRequests}`);
+    // Set a timeout for forceful shutdown
+    shutdownTimeout = setTimeout(() => {
+        console.error('[Server] Shutdown timeout reached, forcing exit');
+        process.exit(1);
+    }, 5000); // 5 second timeout
+    // Wait for active requests to complete (up to 2 seconds)
+    const waitStart = Date.now();
+    let currentActive = getActiveRequests();
+    while (currentActive > 0 && Date.now() - waitStart < 2000) {
+        console.error(`[Server] Waiting for ${currentActive} active requests...`);
+        await new Promise(resolve => setTimeout(resolve, 100));
+        currentActive = getActiveRequests();
+    }
+    if (currentActive > 0) {
+        console.error(`[Server] Warning: ${currentActive} requests still active after 2s`);
+    }
     try {
         const stdoutWithHandle = process.stdout;
         const stderrWithHandle = process.stderr;
@@ -294,13 +319,31 @@ async function gracefulShutdown(signal) {
         // Add a small delay to ensure all data is transmitted
         // This helps prevent the incomplete_stream error in Claude Desktop
         await new Promise(resolve => setTimeout(resolve, 100));
-        process.exit(0);
+        // Clear the shutdown timeout
+        if (shutdownTimeout) {
+            clearTimeout(shutdownTimeout);
+        }
+        // Use process.exitCode instead of process.exit() for cleaner shutdown
+        process.exitCode = 0;
+        // Force exit after another delay if process doesn't exit naturally
+        setTimeout(() => {
+            console.error('[Server] Forcing exit after grace period');
+            process.exit(0);
+        }, 500);
     }
     catch (error) {
         console.error('[Server] Error during graceful shutdown:', error);
         // Still add a small delay even on error to help with stream flushing
         await new Promise(resolve => setTimeout(resolve, 50));
-        process.exit(1);
+        // Clear the shutdown timeout
+        if (shutdownTimeout) {
+            clearTimeout(shutdownTimeout);
+        }
+        process.exitCode = 1;
+        // Force exit after delay
+        setTimeout(() => {
+            process.exit(1);
+        }, 500);
     }
 }
 // Register signal handlers for graceful shutdown
@@ -310,11 +353,15 @@ process.on('SIGHUP', () => void gracefulShutdown('SIGHUP'));
 // Handle uncaught errors
 process.on('uncaughtException', error => {
     console.error('[Server] Uncaught exception:', error);
-    void gracefulShutdown('uncaughtException').then(() => process.exit(1));
+    void gracefulShutdown('uncaughtException').then(() => {
+        process.exitCode = 1;
+    });
 });
 process.on('unhandledRejection', (reason, promise) => {
     console.error('[Server] Unhandled rejection at:', promise, 'reason:', reason);
-    void gracefulShutdown('unhandledRejection').then(() => process.exit(1));
+    void gracefulShutdown('unhandledRejection').then(() => {
+        process.exitCode = 1;
+    });
 });
 // Start server
 async function main() {
@@ -335,6 +382,8 @@ async function main() {
         };
         await server.connect(transport);
         console.error('Creative Thinking MCP server running on stdio');
+        console.error('[Server] Debug mode:', process.env.DEBUG_MCP === 'true' ? 'ENABLED' : 'disabled');
+        console.error('[Server] To enable debug logging, set DEBUG_MCP=true');
     }
     catch (error) {
         console.error('[Server] Failed to start server:', error);
@@ -344,7 +393,9 @@ async function main() {
 main().catch(error => {
     console.error('[Server] Fatal error:', error);
     if (!isShuttingDown) {
-        void gracefulShutdown('fatal-error').then(() => process.exit(1));
+        void gracefulShutdown('fatal-error').then(() => {
+            process.exitCode = 1;
+        });
     }
 });
 //# sourceMappingURL=index.js.map

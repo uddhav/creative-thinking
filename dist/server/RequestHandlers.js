@@ -10,11 +10,16 @@ import { ObjectFieldValidator } from '../core/validators/ObjectFieldValidator.js
 export class RequestHandlers {
     server;
     lateralServer;
+    activeRequests = 0;
+    requestLog = [];
     constructor(server, lateralServer) {
         this.server = server;
         this.lateralServer = lateralServer;
         // Set up WorkflowGuard with SessionManager for plan validation
         workflowGuard.setSessionManager(this.lateralServer.getSessionManager());
+    }
+    getActiveRequests() {
+        return this.activeRequests;
     }
     /**
      * Set up all request handlers
@@ -36,11 +41,26 @@ export class RequestHandlers {
      */
     setupCallToolHandler() {
         this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
+            this.activeRequests++;
+            const requestTimestamp = new Date().toISOString();
+            // Log all incoming requests
+            console.error('[RequestHandler] Incoming tool call:', {
+                method: request.method || 'tools/call',
+                activeRequests: this.activeRequests,
+                timestamp: requestTimestamp,
+            });
             // Early logging to catch requests before any processing
             if (request.params && typeof request.params === 'object' && 'name' in request.params) {
                 const toolName = request.params.name;
-                if (toolName === 'execute_thinking_step') {
-                    console.error('[ExecuteStep] Request received for execute_thinking_step');
+                console.error('[RequestHandler] Tool name:', toolName);
+                // Add to request log
+                this.requestLog.push({
+                    timestamp: requestTimestamp,
+                    method: `tools/call:${String(toolName)}`,
+                });
+                // Keep only last 100 requests in log
+                if (this.requestLog.length > 100) {
+                    this.requestLog.shift();
                 }
             }
             // Array format validation is handled by validateRequiredParameters and ObjectFieldValidator
@@ -173,12 +193,35 @@ export class RequestHandlers {
                             providedTool: name,
                         });
                 }
+                // Ensure we always return a properly formatted response
                 // MCP expects the content array directly
-                return {
+                const response = {
                     content: result.content,
                 };
+                // Validate response structure before sending
+                if (!response.content || !Array.isArray(response.content)) {
+                    console.error('[RequestHandler] Warning: Invalid response structure:', {
+                        hasContent: !!response.content,
+                        isArray: Array.isArray(response.content),
+                        contentType: typeof response.content,
+                    });
+                    // Fix the response structure
+                    response.content = [
+                        {
+                            type: 'text',
+                            text: JSON.stringify(result),
+                        },
+                    ];
+                }
+                return response;
             }
             catch (error) {
+                console.error('[RequestHandler] Error handling request:', {
+                    error: error instanceof Error ? error.message : String(error),
+                    stack: error instanceof Error ? error.stack : undefined,
+                    timestamp: new Date().toISOString(),
+                });
+                // Always return a valid response structure even on error
                 return {
                     content: [
                         {
@@ -186,7 +229,15 @@ export class RequestHandlers {
                             text: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
                         },
                     ],
+                    isError: true,
                 };
+            }
+            finally {
+                this.activeRequests--;
+                console.error('[RequestHandler] Request completed:', {
+                    activeRequests: this.activeRequests,
+                    timestamp: new Date().toISOString(),
+                });
             }
         });
     }

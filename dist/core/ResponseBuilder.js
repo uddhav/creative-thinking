@@ -22,8 +22,51 @@ export class ResponseBuilder {
      * Build a success response with formatted content
      */
     buildSuccessResponse(content) {
-        // Use optimizer for all responses
-        return this.jsonOptimizer.buildOptimizedResponse(content);
+        try {
+            // Use optimizer for all responses
+            const response = this.jsonOptimizer.buildOptimizedResponse(content);
+            // Validate response structure
+            if (!response.content || !Array.isArray(response.content)) {
+                console.error('[ResponseBuilder] Invalid response structure detected:', {
+                    hasContent: !!response.content,
+                    contentType: typeof response.content,
+                });
+                // Return a safe fallback response
+                return {
+                    content: [
+                        {
+                            type: 'text',
+                            text: JSON.stringify(content),
+                        },
+                    ],
+                };
+            }
+            // Ensure all content items have required fields
+            for (let i = 0; i < response.content.length; i++) {
+                const item = response.content[i];
+                if (!item || typeof item !== 'object' || !('type' in item)) {
+                    console.error(`[ResponseBuilder] Invalid content item at index ${i}:`, item);
+                    // Replace with valid item
+                    response.content[i] = {
+                        type: 'text',
+                        text: String(item),
+                    };
+                }
+            }
+            return response;
+        }
+        catch (error) {
+            console.error('[ResponseBuilder] Error building response:', error);
+            // Return a safe fallback response
+            return {
+                content: [
+                    {
+                        type: 'text',
+                        text: JSON.stringify(content),
+                    },
+                ],
+            };
+        }
     }
     /**
      * Build an error response
