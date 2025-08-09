@@ -27,7 +27,9 @@ export type LateralTechnique =
   | 'cross_cultural'
   | 'collective_intel'
   | 'disney_method'
-  | 'nine_windows';
+  | 'nine_windows'
+  | 'quantum_superposition'
+  | 'temporal_creativity';
 
 export type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green' | 'purple';
 export type ScamperAction =
@@ -248,6 +250,47 @@ export interface ExecuteThinkingStepInput {
   };
   interdependencies?: string[];
 
+  // Quantum Superposition specific
+  solutionStates?: string[];
+  interferencePatterns?: {
+    constructive?: string[];
+    destructive?: string[];
+    hybrid?: string[];
+  };
+  entanglements?: Array<{
+    states: string[];
+    dependency: string;
+  }>;
+  amplitudes?: Record<string, number>;
+  measurementCriteria?: string[];
+  chosenState?: string;
+  preservedInsights?: string[];
+
+  // Temporal Creativity specific
+  pathHistory?: Array<{
+    decision: string;
+    impact: string;
+    constraintsCreated?: string[];
+    optionsClosed?: string[];
+  }>;
+  decisionPatterns?: string[];
+  currentConstraints?: string[];
+  activeOptions?: string[];
+  timelineProjections?: {
+    bestCase?: string[];
+    probableCase?: string[];
+    worstCase?: string[];
+    blackSwanScenarios?: string[];
+    antifragileDesign?: string[];
+  };
+  delayOptions?: string[];
+  accelerationOptions?: string[];
+  parallelTimelines?: string[];
+  lessonIntegration?: string[];
+  strategyEvolution?: string;
+  synthesisStrategy?: string;
+  preservedOptions?: string[];
+
   // Reality assessment
   realityAssessment?: RealityAssessment;
 
@@ -395,6 +438,47 @@ export interface ThinkingOperationData {
     systemLevel: 'sub-system' | 'system' | 'super-system';
   };
   interdependencies?: string[];
+
+  // Quantum Superposition specific
+  solutionStates?: string[];
+  interferencePatterns?: {
+    constructive?: string[];
+    destructive?: string[];
+    hybrid?: string[];
+  };
+  entanglements?: Array<{
+    states: string[];
+    dependency: string;
+  }>;
+  amplitudes?: Record<string, number>;
+  measurementCriteria?: string[];
+  chosenState?: string;
+  preservedInsights?: string[];
+
+  // Temporal Creativity specific
+  pathHistory?: Array<{
+    decision: string;
+    impact: string;
+    constraintsCreated?: string[];
+    optionsClosed?: string[];
+  }>;
+  decisionPatterns?: string[];
+  currentConstraints?: string[];
+  activeOptions?: string[];
+  timelineProjections?: {
+    bestCase?: string[];
+    probableCase?: string[];
+    worstCase?: string[];
+    blackSwanScenarios?: string[];
+    antifragileDesign?: string[];
+  };
+  delayOptions?: string[];
+  accelerationOptions?: string[];
+  parallelTimelines?: string[];
+  lessonIntegration?: string[];
+  strategyEvolution?: string;
+  synthesisStrategy?: string;
+  preservedOptions?: string[];
 
   // Reality assessment
   realityAssessment?: RealityAssessment;

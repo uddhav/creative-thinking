@@ -367,6 +367,16 @@ export class ErgodicityManager {
                 typicalCommitment: 0.3,
                 riskProfile: 'Low - Analysis without action commitment',
             },
+            quantum_superposition: {
+                typicalReversibility: 0.95,
+                typicalCommitment: 0.1,
+                riskProfile: 'Very Low - Maintains all options until collapse',
+            },
+            temporal_creativity: {
+                typicalReversibility: 0.85,
+                typicalCommitment: 0.2,
+                riskProfile: 'Low - Actively preserves flexibility through time',
+            },
         };
         return profiles[technique];
     }

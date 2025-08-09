@@ -99,7 +99,7 @@ these three tools.
 
 ### Key Components
 
-#### Thinking Techniques (14 total)
+#### Thinking Techniques (16 total)
 
 - **Six Hats** - Sequential thinking with different perspectives (6 steps)
 - **PO** - Provocative operation for creative disruption (4 steps)
@@ -115,6 +115,8 @@ these three tools.
 - **Collective Intelligence** - Harness group wisdom (5 steps)
 - **Disney Method** - Three roles for creative planning (3 steps)
 - **Nine Windows** - Systematic innovation matrix (9 steps)
+- **Quantum Superposition** - Multiple contradictory states until collapse (6 steps)
+- **Temporal Creativity** - Path memory with temporal analysis (6 steps)
 
 #### Support Systems
 
@@ -417,6 +419,34 @@ TELEMETRY_PRIVACY_MODE=balanced  # strict, balanced, minimal
 - No personal information or content
 
 ### Performance Optimization Patterns
+
+#### Dynamic Recommendation System
+
+The recommendation system dynamically adjusts the number of techniques based on problem complexity:
+
+**Complexity-Based Limits**:
+
+- **Low complexity**: 2-3 base techniques + 1 wildcard
+- **Medium complexity**: 3-5 base techniques + 1 wildcard
+- **High complexity**: 5-7 base techniques + 2 wildcards
+
+**Performance Optimizations**:
+
+- **Technique info caching**: Avoids repeated registry lookups
+- **Early wildcard exit**: Skip computation when not needed (17.5% probability)
+- **Set-based exclusions**: O(1) lookup instead of O(n) array filtering
+- **Lazy evaluation**: Only fetch technique info when actually needed
+
+**Configuration**:
+
+- `WILDCARD_PROBABILITY`: Default 0.175 (17.5% chance)
+- `MAX_TECHNIQUE_RECOMMENDATIONS`: Override max recommendations
+
+**Rationale**:
+
+- 17.5% wildcard probability = ~1 in 6 chance, prevents algorithmic pigeonholing
+- Dynamic limits utilize parallel execution capabilities
+- Not artificially limited to 3 techniques anymore
 
 #### Batch Operations
 

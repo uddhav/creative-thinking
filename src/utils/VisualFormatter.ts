@@ -291,6 +291,8 @@ export class VisualFormatter {
       collective_intel: '🧬',
       disney_method: '🎬',
       nine_windows: '🪟',
+      quantum_superposition: '⚛️',
+      temporal_creativity: '⏳',
     };
     return emojis[technique] || '❓';
   }
@@ -314,6 +316,8 @@ export class VisualFormatter {
       collective_intel: 'Collective Intelligence',
       disney_method: 'Disney Method',
       nine_windows: 'Nine Windows',
+      quantum_superposition: 'Quantum Superposition',
+      temporal_creativity: 'Temporal Creativity',
     };
     return names[technique] || technique;
   }

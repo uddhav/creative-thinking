@@ -71,6 +71,7 @@ export interface TechniqueRecommendation {
   reasoning: string;
   effectiveness: number;
   alternativeUses?: string[];
+  isWildcard?: boolean;
 }
 
 export interface DiscoverTechniquesInput {

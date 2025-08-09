@@ -6,6 +6,9 @@ import { ProblemAnalyzer } from './discovery/ProblemAnalyzer.js';
 import { TechniqueRecommender } from './discovery/TechniqueRecommender.js';
 import { WorkflowBuilder } from './discovery/WorkflowBuilder.js';
 import { MemoryContextGenerator } from './discovery/MemoryContextGenerator.js';
+// Create singleton instance for proper caching across requests
+// This ensures the techniqueInfoCache is reused, improving performance
+const techniqueRecommender = new TechniqueRecommender();
 export function discoverTechniques(input, techniqueRegistry, complexityAnalyzer) {
     const { problem, context, preferredOutcome, constraints, currentFlexibility } = input;
     // Analyze problem complexity
@@ -13,7 +16,6 @@ export function discoverTechniques(input, techniqueRegistry, complexityAnalyzer)
     const complexityAssessment = complexityAnalyzer.analyze(fullText);
     // Initialize analyzers
     const problemAnalyzer = new ProblemAnalyzer();
-    const techniqueRecommender = new TechniqueRecommender();
     const workflowBuilder = new WorkflowBuilder();
     const memoryContextGenerator = new MemoryContextGenerator();
     // Categorize the problem
