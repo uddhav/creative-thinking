@@ -2,13 +2,20 @@
  * ProblemAnalyzer - Handles problem categorization and analysis
  * Extracted from discoverTechniques to improve maintainability
  */
+import nlp from 'compromise';
 export class ProblemAnalyzer {
     /**
-     * Categorize the problem based on keywords and context
+     * Categorize the problem based on NLP analysis and patterns
      */
     categorizeProblem(problem, context) {
-        const fullText = `${problem} ${context || ''}`.toLowerCase();
-        // Check for temporal first since it's more specific
+        const fullText = `${problem} ${context || ''}`;
+        const doc = nlp(fullText);
+        const lower = fullText.toLowerCase();
+        // Check for paradoxes and contradictions using NLP
+        if (this.detectParadoxicalPattern(doc, lower)) {
+            return 'paradoxical';
+        }
+        // Check for temporal since it's specific
         if (fullText.includes('time') ||
             fullText.includes('deadline') ||
             fullText.includes('schedule') ||
@@ -100,6 +107,49 @@ export class ProblemAnalyzer {
             return 'strategic';
         }
         return 'general';
+    }
+    /**
+     * Detect paradoxical patterns using NLP
+     */
+    detectParadoxicalPattern(doc, text) {
+        // Direct paradox keywords - but not if it's about time conflicts
+        const paradoxKeywords = [
+            'paradox',
+            'contradict',
+            'incompatible',
+            'mutually exclusive',
+            'trade-off',
+            'opposing',
+            'dilemma',
+            'tension',
+        ];
+        // Skip "conflicting" if it's about deadlines/schedules or requirements
+        const hasConflicting = text.includes('conflicting') &&
+            !text.includes('deadline') &&
+            !text.includes('schedule') &&
+            !text.includes('time') &&
+            !text.includes('requirements');
+        if (paradoxKeywords.some(k => text.includes(k)) || hasConflicting) {
+            return true;
+        }
+        // Pattern: "both X and Y" or "X but Y" indicating contradiction
+        const hasBothBut = doc.has('both') && (doc.has('but') || doc.has('yet'));
+        const hasEitherOr = doc.has('either') && doc.has('or');
+        const hasOnOneHand = text.includes('on one hand') || text.includes('on the one hand');
+        if (hasBothBut || hasEitherOr || hasOnOneHand) {
+            return true;
+        }
+        // Pattern: conflicting verbs/requirements - but only if not about time
+        const conflictingVerbs = doc.verbs().out('array');
+        const hasConflictingActions = conflictingVerbs.some(v => ['reconcile', 'harmonize', 'juggle'].includes(v.toLowerCase()));
+        // "Balance" is too generic - only consider it paradoxical with specific context
+        const hasBalanceParadox = text.includes('balance') && (text.includes('opposing') || text.includes('contradictory'));
+        // Pattern: opposition words
+        const hasOpposition = doc.has('versus') ||
+            doc.has('vs') ||
+            text.includes('at odds') ||
+            text.includes('in conflict');
+        return hasConflictingActions || hasOpposition || hasBalanceParadox;
     }
     /**
      * Check if the problem has time constraints

@@ -4,9 +4,13 @@
  */
 export declare class ProblemAnalyzer {
     /**
-     * Categorize the problem based on keywords and context
+     * Categorize the problem based on NLP analysis and patterns
      */
     categorizeProblem(problem: string, context?: string): string;
+    /**
+     * Detect paradoxical patterns using NLP
+     */
+    private detectParadoxicalPattern;
     /**
      * Check if the problem has time constraints
      */

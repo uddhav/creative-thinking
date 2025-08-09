@@ -15,7 +15,7 @@ import type { LateralTechnique, SessionData } from '../index.js';
 import type { EarlyWarningState, EscapeProtocol, EarlyWarningConfig } from './earlyWarning/types.js';
 import type { EscapeAnalysis, EscapeAttemptResult, EscapeProtocol as EscapeVelocityProtocol } from './escapeProtocols/types.js';
 import { EscapeLevel } from './escapeProtocols/types.js';
-import type { Option, OptionGenerationResult, OptionGenerationStrategy } from './optionGeneration/types.js';
+import type { Option, OptionGenerationResult } from './optionGeneration/types.js';
 /**
  * Main ergodicity manager that coordinates path tracking and metrics
  */
@@ -138,10 +138,6 @@ export declare class ErgodicityManager {
      */
     generateOptions(sessionData: SessionData, targetCount?: number): OptionGenerationResult;
     /**
-     * Generate options using specific strategies
-     */
-    generateOptionsWithStrategies(sessionData: SessionData, strategies: OptionGenerationStrategy[], targetCount?: number): OptionGenerationResult;
-    /**
      * Check if option generation is recommended
      */
     shouldGenerateOptions(): boolean;
@@ -153,7 +149,7 @@ export declare class ErgodicityManager {
      * Get available option generation strategies
      */
     getAvailableOptionStrategies(): {
-        name: OptionGenerationStrategy;
+        name: import("./optionGeneration/types.js").OptionGenerationStrategy;
         description: string;
         typicalGain: {
             min: number;

@@ -187,10 +187,14 @@ describe('OptionGenerationEngine', () => {
     });
   });
 
-  describe('generateOptionsWithStrategies', () => {
-    it('should use only specified strategies', () => {
+  describe('generateOptions with preferred strategies', () => {
+    it('should use only specified strategies when provided in context', () => {
       const strategies: OptionGenerationStrategy[] = ['decomposition', 'temporal'];
-      const result = engine.generateOptionsWithStrategies(mockContext, strategies, 10);
+      const contextWithStrategies = {
+        ...mockContext,
+        preferredStrategies: strategies,
+      };
+      const result = engine.generateOptions(contextWithStrategies, 10);
 
       // Check that only specified strategies were used
       result.strategiesUsed.forEach(strategy => {
@@ -200,10 +204,16 @@ describe('OptionGenerationEngine', () => {
 
     it('should handle unknown strategy names gracefully', () => {
       const strategies = ['unknown_strategy' as OptionGenerationStrategy];
-      const result = engine.generateOptionsWithStrategies(mockContext, strategies, 10);
+      const contextWithStrategies = {
+        ...mockContext,
+        preferredStrategies: strategies,
+      };
+      const result = engine.generateOptions(contextWithStrategies, 10);
 
+      // When only unknown strategies are specified, should return empty result
       expect(result.options).toEqual([]);
       expect(result.strategiesUsed).toEqual([]);
+      expect(result.topRecommendation).toBeNull();
     });
   });
 

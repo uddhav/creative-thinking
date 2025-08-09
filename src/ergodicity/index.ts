@@ -58,7 +58,6 @@ import type {
   Option,
   OptionGenerationContext,
   OptionGenerationResult,
-  OptionGenerationStrategy,
 } from './optionGeneration/types.js';
 import type { SessionState, LateralThinkingInput } from '../persistence/types.js';
 
@@ -515,6 +514,11 @@ export class ErgodicityManager {
         typicalCommitment: 0.2,
         riskProfile: 'Low - Actively preserves flexibility through time',
       },
+      paradoxical_problem: {
+        typicalReversibility: 0.7,
+        typicalCommitment: 0.5,
+        riskProfile: 'Medium - Path synthesis creates commitments',
+      },
     };
 
     return profiles[technique];
@@ -526,23 +530,6 @@ export class ErgodicityManager {
   generateOptions(sessionData: SessionData, targetCount: number = 10): OptionGenerationResult {
     const context = this.createOptionGenerationContext(sessionData);
     return this.optionGenerationEngine.generateOptions(context, targetCount);
-  }
-
-  /**
-   * Generate options using specific strategies
-   */
-  generateOptionsWithStrategies(
-    sessionData: SessionData,
-    strategies: OptionGenerationStrategy[],
-    targetCount: number = 10
-  ): OptionGenerationResult {
-    const context = this.createOptionGenerationContext(sessionData);
-    // Use generateOptions with preferred strategies in context
-    const filteredContext = {
-      ...context,
-      preferredStrategies: strategies,
-    };
-    return this.optionGenerationEngine.generateOptions(filteredContext, targetCount);
   }
 
   /**

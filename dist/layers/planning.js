@@ -108,6 +108,7 @@ function getRequiredInputs(technique) {
         temporal_work: ['Time constraints', 'Flexibility needs'],
         cross_cultural: ['Cultural contexts', 'Respect guidelines'],
         collective_intel: ['Knowledge sources', 'Integration goals'],
+        paradoxical_problem: ['Contradictory requirements', 'Path histories'],
     };
     return inputs[technique] || ['Problem statement'];
 }
@@ -130,6 +131,11 @@ function getExpectedOutputs(technique) {
             'Multi-dimensional understanding',
             'System evolution insights',
             'Path dependencies mapped',
+        ],
+        paradoxical_problem: [
+            'Transcendent resolution',
+            'Path-aware synthesis',
+            'Validated non-ergodic solution',
         ],
     };
     return outputs[technique] || ['Solution options'];
@@ -302,6 +308,12 @@ function getExpectedOutputForStep(technique, step) {
             5: 'Strategy refined with lessons',
             6: 'Insights integrated preserving flexibility',
         },
+        paradoxical_problem: {
+            1: 'Paradox identified with path origins traced',
+            2: 'Parallel solutions developed independently',
+            3: 'Transcendent synthesis achieved',
+            4: 'Resolution validated across contexts',
+        },
     };
     return outputs[technique]?.[step] || 'Insights and ideas related to the step focus';
 }
@@ -364,6 +376,21 @@ function getRisksForStep(technique, step) {
     if (technique === 'cross_cultural' && step === 3) {
         return ['Maintain authenticity', 'Avoid cultural appropriation'];
     }
+    if (technique === 'paradoxical_problem') {
+        switch (step) {
+            case 1:
+                return [
+                    'Misidentifying surface paradox instead of root contradiction',
+                    'Assuming ergodic conditions',
+                ];
+            case 2:
+                return ['Premature integration attempts', 'Path incompatibility overlooked'];
+            case 3:
+                return ['False synthesis that just hides the paradox', 'Creating new contradictions'];
+            case 4:
+                return ['Insufficient context testing', 'Edge cases breaking resolution'];
+        }
+    }
     return undefined;
 }
 function getSuccessCriteriaForStep(technique, step) {
@@ -398,6 +425,7 @@ function generateTechniqueRationale(techniques, problem, constraints) {
         temporal_work: 'time-aware design with flexibility',
         cross_cultural: 'culturally adaptive solutions',
         collective_intel: 'wisdom synthesis from multiple sources',
+        paradoxical_problem: 'transcending contradictions through path analysis',
     };
     const reasons = techniques.map(t => techniqueReasons[t] || 'creative exploration').join(', ');
     const constraintText = constraints && constraints.length > 0

@@ -18,6 +18,7 @@ import { DisneyMethodHandler } from './DisneyMethodHandler.js';
 import { NineWindowsHandler } from './NineWindowsHandler.js';
 import { QuantumSuperpositionHandler } from './QuantumSuperpositionHandler.js';
 import { TemporalCreativityHandler } from './TemporalCreativityHandler.js';
+import { ParadoxicalProblemHandler } from './ParadoxicalProblemHandler.js';
 // Removed unused imports - GenericHandler and ConvergenceHandler
 export class TechniqueRegistry {
     handlers;
@@ -42,6 +43,7 @@ export class TechniqueRegistry {
         this.handlers.set('nine_windows', new NineWindowsHandler());
         this.handlers.set('quantum_superposition', new QuantumSuperpositionHandler());
         this.handlers.set('temporal_creativity', new TemporalCreativityHandler());
+        this.handlers.set('paradoxical_problem', new ParadoxicalProblemHandler());
     }
     getHandler(technique) {
         const handler = this.handlers.get(technique);

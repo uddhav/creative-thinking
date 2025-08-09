@@ -293,6 +293,7 @@ export class VisualFormatter {
       nine_windows: '🪟',
       quantum_superposition: '⚛️',
       temporal_creativity: '⏳',
+      paradoxical_problem: '⚖️',
     };
     return emojis[technique] || '❓';
   }
@@ -318,6 +319,7 @@ export class VisualFormatter {
       nine_windows: 'Nine Windows',
       quantum_superposition: 'Quantum Superposition',
       temporal_creativity: 'Temporal Creativity',
+      paradoxical_problem: 'Paradoxical Problem Solving',
     };
     return names[technique] || technique;
   }

@@ -377,6 +377,11 @@ export class ErgodicityManager {
                 typicalCommitment: 0.2,
                 riskProfile: 'Low - Actively preserves flexibility through time',
             },
+            paradoxical_problem: {
+                typicalReversibility: 0.7,
+                typicalCommitment: 0.5,
+                riskProfile: 'Medium - Path synthesis creates commitments',
+            },
         };
         return profiles[technique];
     }
@@ -386,18 +391,6 @@ export class ErgodicityManager {
     generateOptions(sessionData, targetCount = 10) {
         const context = this.createOptionGenerationContext(sessionData);
         return this.optionGenerationEngine.generateOptions(context, targetCount);
-    }
-    /**
-     * Generate options using specific strategies
-     */
-    generateOptionsWithStrategies(sessionData, strategies, targetCount = 10) {
-        const context = this.createOptionGenerationContext(sessionData);
-        // Use generateOptions with preferred strategies in context
-        const filteredContext = {
-            ...context,
-            preferredStrategies: strategies,
-        };
-        return this.optionGenerationEngine.generateOptions(filteredContext, targetCount);
     }
     /**
      * Check if option generation is recommended
