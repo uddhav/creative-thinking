@@ -348,6 +348,32 @@ async function gracefulShutdown(signal: string) {
   console.error(`[Server] Received ${signal}, starting graceful shutdown...`);
 
   try {
+    // Set stdio streams to blocking mode to ensure proper flushing
+    // This is a workaround for Node.js not flushing stdio on exit
+    interface StreamWithHandle extends NodeJS.WriteStream {
+      _handle?: {
+        setBlocking?: (blocking: boolean) => void;
+      };
+    }
+
+    const stdoutWithHandle = process.stdout as StreamWithHandle;
+    const stderrWithHandle = process.stderr as StreamWithHandle;
+
+    if (stdoutWithHandle.isTTY && stdoutWithHandle._handle?.setBlocking) {
+      try {
+        stdoutWithHandle._handle.setBlocking(true);
+      } catch {
+        // Ignore errors if setBlocking is not available
+      }
+    }
+    if (stderrWithHandle.isTTY && stderrWithHandle._handle?.setBlocking) {
+      try {
+        stderrWithHandle._handle.setBlocking(true);
+      } catch {
+        // Ignore errors if setBlocking is not available
+      }
+    }
+
     // Destroy the lateral thinking server to clean up resources
     lateralServer.destroy();
     console.error('[Server] Cleaned up server resources');
@@ -362,10 +388,39 @@ async function gracefulShutdown(signal: string) {
     await server.close();
     console.error('[Server] Closed MCP server');
 
+    // Explicitly flush stdio streams
+    await new Promise<void>(resolve => {
+      if (process.stdout && !process.stdout.writableEnded) {
+        process.stdout.end(() => {
+          console.error('[Server] Stdout flushed');
+          resolve();
+        });
+      } else {
+        resolve();
+      }
+    });
+
+    await new Promise<void>(resolve => {
+      if (process.stderr && !process.stderr.writableEnded) {
+        process.stderr.end(() => {
+          resolve();
+        });
+      } else {
+        resolve();
+      }
+    });
+
     console.error('[Server] Graceful shutdown complete');
+
+    // Add a small delay to ensure all data is transmitted
+    // This helps prevent the incomplete_stream error in Claude Desktop
+    await new Promise(resolve => setTimeout(resolve, 100));
+
     process.exit(0);
   } catch (error) {
     console.error('[Server] Error during graceful shutdown:', error);
+    // Still add a small delay even on error to help with stream flushing
+    await new Promise(resolve => setTimeout(resolve, 50));
     process.exit(1);
   }
 }
