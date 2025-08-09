@@ -50,11 +50,6 @@ export interface ExecutionGraph {
  */
 export type ExecutionMode = 'sequential' | 'parallel' | 'auto';
 /**
- * Method for converging results from parallel executions
- * @deprecated No longer used - parallel execution has been removed
- */
-export type ConvergenceMethod = 'llm_handoff' | 'none';
-/**
  * Client-side strategy for parallelizing execution
  * - technique: Each technique runs in parallel
  * - step: Steps within techniques run in parallel

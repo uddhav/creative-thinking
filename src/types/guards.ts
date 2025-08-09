@@ -3,7 +3,7 @@
  */
 
 import type { LateralTechnique } from './index.js';
-import type { ExecutionMode, ConvergenceMethod } from './planning.js';
+import type { ExecutionMode } from './planning.js';
 
 /**
  * Check if a value is a valid ExecutionMode
@@ -14,37 +14,12 @@ export function isExecutionMode(value: unknown): value is ExecutionMode {
 }
 
 /**
- * Check if a value is a valid ConvergenceMethod
- */
-export function isConvergenceMethod(value: unknown): value is ConvergenceMethod {
-  return (
-    typeof value === 'string' && ['execute_thinking_step', 'llm_handoff', 'none'].includes(value)
-  );
-}
-
-/**
- * Check if a technique supports parallel execution
- * @deprecated Parallel execution has been removed
- */
-export function supportsParallelExecution(): boolean {
-  // All techniques can run independently now
-  return true;
-}
-
-/**
  * Check if techniques can be executed in parallel together
+ * All techniques can now run independently for client-side parallel execution
  */
 export function canExecuteInParallel(techniques: LateralTechnique[]): boolean {
-  // All techniques must support parallel execution
-  return techniques.every(supportsParallelExecution);
-}
-
-/**
- * Check if a value is the convergence technique
- * @deprecated Convergence technique has been removed
- */
-export function isConvergenceTechnique(): boolean {
-  return false; // Convergence is no longer supported
+  // All techniques can run independently in the client's execution model
+  return techniques.length > 0;
 }
 
 /**

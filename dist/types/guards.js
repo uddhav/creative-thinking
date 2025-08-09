@@ -9,32 +9,12 @@ export function isExecutionMode(value) {
     return typeof value === 'string' && ['sequential', 'parallel', 'auto'].includes(value);
 }
 /**
- * Check if a value is a valid ConvergenceMethod
- */
-export function isConvergenceMethod(value) {
-    return (typeof value === 'string' && ['execute_thinking_step', 'llm_handoff', 'none'].includes(value));
-}
-/**
- * Check if a technique supports parallel execution
- * @deprecated Parallel execution has been removed
- */
-export function supportsParallelExecution() {
-    // All techniques can run independently now
-    return true;
-}
-/**
  * Check if techniques can be executed in parallel together
+ * All techniques can now run independently for client-side parallel execution
  */
 export function canExecuteInParallel(techniques) {
-    // All techniques must support parallel execution
-    return techniques.every(supportsParallelExecution);
-}
-/**
- * Check if a value is the convergence technique
- * @deprecated Convergence technique has been removed
- */
-export function isConvergenceTechnique() {
-    return false; // Convergence is no longer supported
+    // All techniques can run independently in the client's execution model
+    return techniques.length > 0;
 }
 /**
  * Validate max parallelism value
