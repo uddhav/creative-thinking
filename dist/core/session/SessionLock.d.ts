@@ -30,9 +30,14 @@ export declare class SessionLock {
      */
     getActiveLockCount(): number;
     /**
-     * Clear all locks (use with caution - mainly for testing)
+     * Clear all locks (use with caution - mainly for testing and shutdown)
      */
     clearAllLocks(): void;
+    /**
+     * Destroy the session lock instance and clean up resources
+     * Used during server shutdown
+     */
+    destroy(): void;
 }
 export declare function getSessionLock(): SessionLock;
 export declare function resetSessionLock(): void;

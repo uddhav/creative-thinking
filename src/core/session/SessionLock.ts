@@ -78,14 +78,33 @@ export class SessionLock {
   }
 
   /**
-   * Clear all locks (use with caution - mainly for testing)
+   * Clear all locks (use with caution - mainly for testing and shutdown)
    */
   clearAllLocks(): void {
-    // Resolve all pending locks
+    // Resolve all pending lock promises to unblock any waiting operations
+    for (const [sessionId] of this.locks.entries()) {
+      // Force resolve the lock promise
+      const queue = this.lockQueues.get(sessionId);
+      if (queue && queue.length > 0) {
+        // Resolve all queued callbacks
+        queue.forEach(callback => callback());
+      }
+    }
+
+    // Clear all locks
     this.locks.clear();
 
     // Clear all queues
     this.lockQueues.clear();
+  }
+
+  /**
+   * Destroy the session lock instance and clean up resources
+   * Used during server shutdown
+   */
+  destroy(): void {
+    console.error(`[SessionLock] Destroying, clearing ${this.locks.size} active locks`);
+    this.clearAllLocks();
   }
 }
 

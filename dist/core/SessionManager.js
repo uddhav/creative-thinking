@@ -83,9 +83,29 @@ export class SessionManager {
      * Clean up resources on shutdown
      */
     destroy() {
+        console.error('[SessionManager] Starting cleanup...');
+        // Stop the cleanup interval first
         this.sessionCleaner.stopCleanup();
+        console.error('[SessionManager] Stopped cleanup interval');
+        // Clear all session locks
+        this.sessionLock.clearAllLocks();
+        console.error('[SessionManager] Cleared all session locks');
+        // Clear all sessions
+        const sessionCount = this.sessions.size;
         this.sessions.clear();
+        console.error(`[SessionManager] Cleared ${sessionCount} sessions`);
+        // Clear all plans
+        const planCount = this.planManager.getPlanCount();
         this.planManager.clearAllPlans();
+        console.error(`[SessionManager] Cleared ${planCount} plans`);
+        // Clear current session ID
+        this.currentSessionId = null;
+        // Clear session index if initialized
+        if (this.sessionIndex) {
+            this.sessionIndex = null;
+            console.error('[SessionManager] Cleared session index');
+        }
+        console.error('[SessionManager] Cleanup complete');
     }
     /**
      * Exposed for testing - triggers cleanup manually

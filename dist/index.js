@@ -228,14 +228,78 @@ const lateralServer = new LateralThinkingServer();
 // Set up request handlers
 const requestHandlers = new RequestHandlers(server, lateralServer);
 requestHandlers.setupHandlers();
+// Graceful shutdown handling
+let isShuttingDown = false;
+let transport = null;
+async function gracefulShutdown(signal) {
+    if (isShuttingDown) {
+        console.error(`[Server] Already shutting down, ignoring ${signal}`);
+        return;
+    }
+    isShuttingDown = true;
+    console.error(`[Server] Received ${signal}, starting graceful shutdown...`);
+    try {
+        // Destroy the lateral thinking server to clean up resources
+        lateralServer.destroy();
+        console.error('[Server] Cleaned up server resources');
+        // Close the transport connection if it exists
+        if (transport) {
+            await transport.close();
+            console.error('[Server] Closed transport connection');
+        }
+        // Disconnect the MCP server
+        await server.close();
+        console.error('[Server] Closed MCP server');
+        console.error('[Server] Graceful shutdown complete');
+        process.exit(0);
+    }
+    catch (error) {
+        console.error('[Server] Error during graceful shutdown:', error);
+        process.exit(1);
+    }
+}
+// Register signal handlers for graceful shutdown
+process.on('SIGINT', () => void gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => void gracefulShutdown('SIGTERM'));
+process.on('SIGHUP', () => void gracefulShutdown('SIGHUP'));
+// Handle uncaught errors
+process.on('uncaughtException', error => {
+    console.error('[Server] Uncaught exception:', error);
+    void gracefulShutdown('uncaughtException').then(() => process.exit(1));
+});
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('[Server] Unhandled rejection at:', promise, 'reason:', reason);
+    void gracefulShutdown('unhandledRejection').then(() => process.exit(1));
+});
 // Start server
 async function main() {
-    const transport = new StdioServerTransport();
-    await server.connect(transport);
-    console.error('Creative Thinking MCP server running on stdio');
+    try {
+        transport = new StdioServerTransport();
+        // Handle transport events
+        transport.onclose = () => {
+            console.error('[Server] Transport closed');
+            if (!isShuttingDown) {
+                void gracefulShutdown('transport-close');
+            }
+        };
+        transport.onerror = error => {
+            console.error('[Server] Transport error:', error);
+            if (!isShuttingDown) {
+                void gracefulShutdown('transport-error');
+            }
+        };
+        await server.connect(transport);
+        console.error('Creative Thinking MCP server running on stdio');
+    }
+    catch (error) {
+        console.error('[Server] Failed to start server:', error);
+        process.exit(1);
+    }
 }
 main().catch(error => {
-    console.error('Fatal error:', error);
-    process.exit(1);
+    console.error('[Server] Fatal error:', error);
+    if (!isShuttingDown) {
+        void gracefulShutdown('fatal-error').then(() => process.exit(1));
+    }
 });
 //# sourceMappingURL=index.js.map
