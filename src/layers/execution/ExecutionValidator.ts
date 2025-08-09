@@ -290,7 +290,8 @@ export class ExecutionValidator {
     }
 
     // Update session activity
-    this.sessionManager.touchSession(sessionId);
+    // Note: Don't await touchSession here to avoid deadlock since we'll lock in executeThinkingStep
+    this.sessionManager.touchSession(sessionId).catch(console.error);
 
     return { session, sessionId };
   }

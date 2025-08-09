@@ -12,12 +12,14 @@ import { SessionMetrics } from './session/SessionMetrics.js';
 import { PlanManager } from './session/PlanManager.js';
 import { SessionIndex } from './session/SessionIndex.js';
 import { SkipDetector, } from './session/SkipDetector.js';
+import { getSessionLock } from './session/SessionLock.js';
 // Constants for memory management
 const MEMORY_THRESHOLD_FOR_GC = 0.8; // Trigger garbage collection when heap usage exceeds 80%
 export class SessionManager {
     sessions = new Map();
     currentSessionId = null;
     memoryManager;
+    sessionLock;
     // Extracted components
     sessionCleaner;
     sessionPersistence;
@@ -41,11 +43,16 @@ export class SessionManager {
                 console.error('[Memory Usage] Triggering garbage collection...');
             },
         });
+        // Initialize session lock for concurrent access control
+        this.sessionLock = getSessionLock();
         // Initialize core components only
         this.planManager = new PlanManager();
         this.skipDetector = new SkipDetector();
         // Parallel components will be initialized on first use (lazy initialization)
-        this.sessionCleaner = new SessionCleaner(this.sessions, this.planManager.getAllPlans(), this.config, this.memoryManager, this.touchSession.bind(this));
+        this.sessionCleaner = new SessionCleaner(this.sessions, this.planManager.getAllPlans(), this.config, this.memoryManager, (sessionId) => {
+            // Non-blocking touch for cleanup - don't wait for lock
+            this.touchSession(sessionId).catch(console.error);
+        });
         this.sessionPersistence = new SessionPersistence();
         this.sessionMetrics = new SessionMetrics(this.sessions, this.planManager.getAllPlans(), this.config);
         this.sessionCleaner.startCleanup();
@@ -63,11 +70,14 @@ export class SessionManager {
     /**
      * Update session activity time
      */
-    touchSession(sessionId) {
-        const session = this.sessions.get(sessionId);
-        if (session) {
-            session.lastActivityTime = Date.now();
-        }
+    async touchSession(sessionId) {
+        return this.sessionLock.withLock(sessionId, () => {
+            const session = this.sessions.get(sessionId);
+            if (session) {
+                session.lastActivityTime = Date.now();
+            }
+            return Promise.resolve();
+        });
     }
     /**
      * Clean up resources on shutdown
@@ -131,12 +141,15 @@ export class SessionManager {
     /**
      * Update session data
      */
-    updateSession(sessionId, data) {
-        const session = this.sessions.get(sessionId);
-        if (session) {
-            Object.assign(session, data);
-            this.touchSession(sessionId);
-        }
+    async updateSession(sessionId, data) {
+        return this.sessionLock.withLock(sessionId, () => {
+            const session = this.sessions.get(sessionId);
+            if (session) {
+                Object.assign(session, data);
+                session.lastActivityTime = Date.now();
+            }
+            return Promise.resolve();
+        });
     }
     /**
      * Delete a session
@@ -195,10 +208,12 @@ export class SessionManager {
     }
     async loadSessionFromPersistence(sessionId) {
         const session = await this.sessionPersistence.loadSession(sessionId);
-        // Add to in-memory sessions
-        this.sessions.set(sessionId, session);
-        this.touchSession(sessionId);
-        return session;
+        // Add to in-memory sessions with lock
+        return this.sessionLock.withLock(sessionId, () => {
+            this.sessions.set(sessionId, session);
+            session.lastActivityTime = Date.now();
+            return Promise.resolve(session);
+        });
     }
     async listPersistedSessions(options) {
         return this.sessionPersistence.listPersistedSessions(options);
@@ -324,6 +339,12 @@ export class SessionManager {
     hasHighRiskSkipPatterns(sessionId) {
         const analysis = this.analyzeSessionSkipPatterns(sessionId);
         return analysis ? analysis.riskScore > 0.7 : false;
+    }
+    /**
+     * Get the session lock instance for external use
+     */
+    getSessionLock() {
+        return this.sessionLock;
     }
 }
 //# sourceMappingURL=SessionManager.js.map

@@ -22,6 +22,7 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
     const responseBuilder = new ResponseBuilder();
     const errorContextBuilder = new ErrorContextBuilder();
     const errorHandler = new ErrorHandler();
+    const sessionLock = sessionManager.getSessionLock();
     // Initialize orchestrators
     const executionValidator = new ExecutionValidator(sessionManager, techniqueRegistry, visualFormatter);
     const riskAssessmentOrchestrator = new RiskAssessmentOrchestrator(visualFormatter);
@@ -36,7 +37,7 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
             return planValidation.error;
         }
         const plan = planValidation.plan;
-        // Get or create session
+        // Get or create session (this will determine the sessionId we need to lock)
         const sessionValidation = executionValidator.validateAndGetSession(input, ergodicityManager);
         if (sessionValidation.error) {
             return sessionValidation.error;
@@ -45,162 +46,170 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
         if (!session || !sessionId) {
             throw ErrorFactory.sessionNotFound(input.sessionId || 'unknown');
         }
-        // Get technique handler
-        const handler = techniqueRegistry.getHandler(input.technique);
-        // Calculate technique-local step
-        const { techniqueLocalStep: calculatedTechniqueLocalStep, techniqueIndex } = executionValidator.calculateTechniqueLocalStep(input, plan);
-        // Validate step and get step info
-        const stepValidation = executionValidator.validateStepAndGetInfo(input, calculatedTechniqueLocalStep, handler);
-        if (!stepValidation.isValid) {
-            // Handle invalid step gracefully with detailed context
-            const techniqueInfo = handler.getTechniqueInfo();
-            const errorContext = errorContextBuilder.buildStepErrorContext({
-                providedStep: input.currentStep,
-                validRange: `1-${techniqueInfo.totalSteps}`,
-                technique: input.technique,
-                techniqueLocalStep: calculatedTechniqueLocalStep,
-                globalStep: input.currentStep,
-                message: `Step ${input.currentStep} is outside valid range for ${techniqueInfo.name}`,
-            });
+        // Acquire session lock for the entire operation
+        const releaseLock = await sessionLock.acquireLock(sessionId);
+        try {
+            // Get technique handler
+            const handler = techniqueRegistry.getHandler(input.technique);
+            // Calculate technique-local step
+            const { techniqueLocalStep: calculatedTechniqueLocalStep, techniqueIndex } = executionValidator.calculateTechniqueLocalStep(input, plan);
+            // Validate step and get step info
+            const stepValidation = executionValidator.validateStepAndGetInfo(input, calculatedTechniqueLocalStep, handler);
+            if (!stepValidation.isValid) {
+                // Handle invalid step gracefully with detailed context
+                const techniqueInfo = handler.getTechniqueInfo();
+                const errorContext = errorContextBuilder.buildStepErrorContext({
+                    providedStep: input.currentStep,
+                    validRange: `1-${techniqueInfo.totalSteps}`,
+                    technique: input.technique,
+                    techniqueLocalStep: calculatedTechniqueLocalStep,
+                    globalStep: input.currentStep,
+                    message: `Step ${input.currentStep} is outside valid range for ${techniqueInfo.name}`,
+                });
+                const operationData = {
+                    ...input,
+                    sessionId,
+                };
+                let nextStepGuidance;
+                if (input.nextStepNeeded) {
+                    nextStepGuidance = `Complete the ${techniqueInfo.name} process`;
+                }
+                const minimalMetadata = {
+                    techniqueEffectiveness: 0.5,
+                    pathDependenciesCreated: [],
+                    flexibilityImpact: -0.05,
+                    errorContext,
+                };
+                return responseBuilder.buildExecutionResponse(sessionId, operationData, [], nextStepGuidance, session.history.length, minimalMetadata);
+            }
+            const { stepInfo, normalizedStep: techniqueLocalStep } = stepValidation;
+            // Check for ergodicity prompts
+            ergodicityOrchestrator.checkErgodicityPrompts(input, techniqueLocalStep);
+            // Perform comprehensive risk assessment
+            const riskAssessment = riskAssessmentOrchestrator.assessRisks(input, session);
+            if (riskAssessment.requiresIntervention && riskAssessment.interventionResponse) {
+                return riskAssessment.interventionResponse;
+            }
+            // Get mode indicator
+            const modeIndicator = visualFormatter.getModeIndicator(input.technique, techniqueLocalStep);
+            // Display visual output
+            const visualOutput = visualFormatter.formatOutput(input.technique, input.problem, techniqueLocalStep, input.totalSteps, stepInfo, modeIndicator, input, session, plan);
+            if (visualOutput && process.env.DISABLE_THOUGHT_LOGGING !== 'true') {
+                // Only log if thought logging is enabled
+                // IMPORTANT: Use stderr for visual output - stdout is reserved for JSON-RPC
+                process.stderr.write(visualOutput);
+            }
+            // Handle SCAMPER path impact
+            if (input.technique === 'scamper' && input.scamperAction) {
+                const scamperHandler = handler;
+                input.pathImpact = scamperHandler.analyzePathImpact(input.scamperAction, input.output, session.history);
+                // Build modification history from session (previous steps only)
+                input.modificationHistory = [];
+                // Include previous SCAMPER modifications from history
+                session.history.forEach(entry => {
+                    if (entry.technique === 'scamper' &&
+                        entry.scamperAction &&
+                        entry.pathImpact &&
+                        input.modificationHistory) {
+                        input.modificationHistory.push({
+                            action: entry.scamperAction,
+                            modification: entry.output,
+                            timestamp: entry.timestamp || new Date().toISOString(),
+                            impact: entry.pathImpact,
+                            cumulativeFlexibility: entry.flexibilityScore || entry.pathImpact.flexibilityRetention,
+                        });
+                    }
+                });
+                // Add flexibility score to the input
+                input.flexibilityScore = input.pathImpact.flexibilityRetention;
+                // Generate alternatives if flexibility is low
+                if (input.pathImpact.flexibilityRetention < 0.4) {
+                    input.alternativeSuggestions = scamperHandler.generateAlternatives(input.scamperAction, input.pathImpact.flexibilityRetention);
+                }
+            }
+            // Track ergodicity and generate options if needed
+            const { currentFlexibility, optionGenerationResult } = await ergodicityOrchestrator.trackErgodicityAndGenerateOptions(input, session, techniqueLocalStep, sessionId);
+            // Record step in history (exclude realityAssessment from operationData to avoid duplication)
+            const { realityAssessment: inputRealityAssessment, ...inputWithoutReality } = input;
+            // If there's a reality assessment from input, we should handle it separately
+            if (inputRealityAssessment) {
+                // Reality assessment is handled through realityResult and added to response separately
+                // This prevents duplication in the operation data
+            }
             const operationData = {
-                ...input,
+                ...inputWithoutReality,
                 sessionId,
             };
-            let nextStepGuidance;
-            if (input.nextStepNeeded) {
-                nextStepGuidance = `Complete the ${techniqueInfo.name} process`;
-            }
-            const minimalMetadata = {
-                techniqueEffectiveness: 0.5,
-                pathDependenciesCreated: [],
-                flexibilityImpact: -0.05,
-                errorContext,
-            };
-            return responseBuilder.buildExecutionResponse(sessionId, operationData, [], nextStepGuidance, session.history.length, minimalMetadata);
-        }
-        const { stepInfo, normalizedStep: techniqueLocalStep } = stepValidation;
-        // Check for ergodicity prompts
-        ergodicityOrchestrator.checkErgodicityPrompts(input, techniqueLocalStep);
-        // Perform comprehensive risk assessment
-        const riskAssessment = riskAssessmentOrchestrator.assessRisks(input, session);
-        if (riskAssessment.requiresIntervention && riskAssessment.interventionResponse) {
-            return riskAssessment.interventionResponse;
-        }
-        // Get mode indicator
-        const modeIndicator = visualFormatter.getModeIndicator(input.technique, techniqueLocalStep);
-        // Display visual output
-        const visualOutput = visualFormatter.formatOutput(input.technique, input.problem, techniqueLocalStep, input.totalSteps, stepInfo, modeIndicator, input, session, plan);
-        if (visualOutput && process.env.DISABLE_THOUGHT_LOGGING !== 'true') {
-            // Only log if thought logging is enabled
-            // IMPORTANT: Use stderr for visual output - stdout is reserved for JSON-RPC
-            process.stderr.write(visualOutput);
-        }
-        // Handle SCAMPER path impact
-        if (input.technique === 'scamper' && input.scamperAction) {
-            const scamperHandler = handler;
-            input.pathImpact = scamperHandler.analyzePathImpact(input.scamperAction, input.output, session.history);
-            // Build modification history from session (previous steps only)
-            input.modificationHistory = [];
-            // Include previous SCAMPER modifications from history
-            session.history.forEach(entry => {
-                if (entry.technique === 'scamper' &&
-                    entry.scamperAction &&
-                    entry.pathImpact &&
-                    input.modificationHistory) {
-                    input.modificationHistory.push({
-                        action: entry.scamperAction,
-                        modification: entry.output,
-                        timestamp: entry.timestamp || new Date().toISOString(),
-                        impact: entry.pathImpact,
-                        cumulativeFlexibility: entry.flexibilityScore || entry.pathImpact.flexibilityRetention,
-                    });
-                }
+            session.history.push({
+                ...operationData,
+                timestamp: new Date().toISOString(),
             });
-            // Add flexibility score to the input
-            input.flexibilityScore = input.pathImpact.flexibilityRetention;
-            // Generate alternatives if flexibility is low
-            if (input.pathImpact.flexibilityRetention < 0.4) {
-                input.alternativeSuggestions = scamperHandler.generateAlternatives(input.scamperAction, input.pathImpact.flexibilityRetention);
+            // Handle revisions and branches
+            if (input.isRevision && input.revisesStep !== undefined) {
+                // Performance monitoring for revision chains
+                const revisionCount = session.history.filter(h => h.isRevision).length;
+                if (revisionCount > 0 && revisionCount % 10 === 0) {
+                    // Log performance warning every 10 revisions
+                    const sessionDuration = Date.now() - (session.startTime || Date.now());
+                    const avgRevisionTime = sessionDuration / revisionCount;
+                    if (process.env.LOG_LEVEL === 'DEBUG' || process.env.NODE_ENV === 'development') {
+                        process.stderr.write(`[Performance] Deep revision chain detected: ${revisionCount} revisions, avg time: ${avgRevisionTime.toFixed(2)}ms\n`);
+                    }
+                }
+                if (!input.branchId) {
+                    input.branchId = `branch_${Date.now()}`;
+                }
+                if (!session.branches[input.branchId]) {
+                    session.branches[input.branchId] = [];
+                }
+                session.branches[input.branchId].push(operationData);
             }
-        }
-        // Track ergodicity and generate options if needed
-        const { currentFlexibility, optionGenerationResult } = await ergodicityOrchestrator.trackErgodicityAndGenerateOptions(input, session, techniqueLocalStep, sessionId);
-        // Record step in history (exclude realityAssessment from operationData to avoid duplication)
-        const { realityAssessment: inputRealityAssessment, ...inputWithoutReality } = input;
-        // If there's a reality assessment from input, we should handle it separately
-        if (inputRealityAssessment) {
-            // Reality assessment is handled through realityResult and added to response separately
-            // This prevents duplication in the operation data
-        }
-        const operationData = {
-            ...inputWithoutReality,
-            sessionId,
-        };
-        session.history.push({
-            ...operationData,
-            timestamp: new Date().toISOString(),
-        });
-        // Handle revisions and branches
-        if (input.isRevision && input.revisesStep !== undefined) {
-            // Performance monitoring for revision chains
-            const revisionCount = session.history.filter(h => h.isRevision).length;
-            if (revisionCount > 0 && revisionCount % 10 === 0) {
-                // Log performance warning every 10 revisions
-                const sessionDuration = Date.now() - (session.startTime || Date.now());
-                const avgRevisionTime = sessionDuration / revisionCount;
-                if (process.env.LOG_LEVEL === 'DEBUG' || process.env.NODE_ENV === 'development') {
-                    process.stderr.write(`[Performance] Deep revision chain detected: ${revisionCount} revisions, avg time: ${avgRevisionTime.toFixed(2)}ms\n`);
+            // Update metrics
+            metricsCollector.updateMetrics(session, operationData);
+            // Build comprehensive execution response
+            const response = executionResponseBuilder.buildResponse(input, session, sessionId, handler, techniqueLocalStep, techniqueIndex, plan, currentFlexibility, optionGenerationResult);
+            // Check completion gatekeeper before allowing termination
+            const completionCheck = completionGatekeeper.canProceedToNextStep(input, session, plan);
+            if (!completionCheck.allowed && completionCheck.response) {
+                // If gatekeeper blocks termination, return the blocking response
+                return completionCheck.response;
+            }
+            // Handle session completion
+            if (!input.nextStepNeeded) {
+                session.endTime = Date.now();
+                // Final summary
+                visualFormatter.formatSessionSummary(input.technique, input.problem, session.insights, session.metrics);
+            }
+            // Auto-save if enabled
+            if (input.autoSave) {
+                try {
+                    await monitorCriticalSectionAsync('session_autosave', () => sessionManager.saveSessionToPersistence(sessionId), { sessionId });
+                }
+                catch (error) {
+                    // Add auto-save failure to response with context
+                    const parsedResponse = JSON.parse(response.content[0].text);
+                    // Provide more context about the error
+                    if (error instanceof PersistenceError &&
+                        error.code === ErrorCode.PERSISTENCE_NOT_AVAILABLE) {
+                        parsedResponse.autoSaveStatus = 'disabled';
+                        parsedResponse.autoSaveMessage =
+                            'Persistence is not configured. Session data is stored in memory only.';
+                    }
+                    else {
+                        parsedResponse.autoSaveStatus = 'failed';
+                        parsedResponse.autoSaveError =
+                            error instanceof Error ? error.message : 'Auto-save failed';
+                    }
+                    response.content[0].text = JSON.stringify(parsedResponse, null, 2);
                 }
             }
-            if (!input.branchId) {
-                input.branchId = `branch_${Date.now()}`;
-            }
-            if (!session.branches[input.branchId]) {
-                session.branches[input.branchId] = [];
-            }
-            session.branches[input.branchId].push(operationData);
+            // Add performance summary if profiling is enabled
+            return addPerformanceSummary(response);
         }
-        // Update metrics
-        metricsCollector.updateMetrics(session, operationData);
-        // Build comprehensive execution response
-        const response = executionResponseBuilder.buildResponse(input, session, sessionId, handler, techniqueLocalStep, techniqueIndex, plan, currentFlexibility, optionGenerationResult);
-        // Check completion gatekeeper before allowing termination
-        const completionCheck = completionGatekeeper.canProceedToNextStep(input, session, plan);
-        if (!completionCheck.allowed && completionCheck.response) {
-            // If gatekeeper blocks termination, return the blocking response
-            return completionCheck.response;
+        finally {
+            // Always release the session lock
+            releaseLock();
         }
-        // Handle session completion
-        if (!input.nextStepNeeded) {
-            session.endTime = Date.now();
-            // Final summary
-            visualFormatter.formatSessionSummary(input.technique, input.problem, session.insights, session.metrics);
-        }
-        // Auto-save if enabled
-        if (input.autoSave) {
-            try {
-                await monitorCriticalSectionAsync('session_autosave', () => sessionManager.saveSessionToPersistence(sessionId), { sessionId });
-            }
-            catch (error) {
-                // Add auto-save failure to response with context
-                const parsedResponse = JSON.parse(response.content[0].text);
-                // Provide more context about the error
-                if (error instanceof PersistenceError &&
-                    error.code === ErrorCode.PERSISTENCE_NOT_AVAILABLE) {
-                    parsedResponse.autoSaveStatus = 'disabled';
-                    parsedResponse.autoSaveMessage =
-                        'Persistence is not configured. Session data is stored in memory only.';
-                }
-                else {
-                    parsedResponse.autoSaveStatus = 'failed';
-                    parsedResponse.autoSaveError =
-                        error instanceof Error ? error.message : 'Auto-save failed';
-                }
-                response.content[0].text = JSON.stringify(parsedResponse, null, 2);
-            }
-        }
-        // Add performance summary if profiling is enabled
-        return addPerformanceSummary(response);
     }
     catch (error) {
         // Use standard error handler

@@ -7,6 +7,7 @@ import type { PlanThinkingSessionOutput } from '../types/planning.js';
 import type { PersistenceAdapter } from '../persistence/adapter.js';
 import type { SessionState } from '../persistence/types.js';
 import { type SkipDetectionResult, type SkipPattern } from './session/SkipDetector.js';
+import { type SessionLock } from './session/SessionLock.js';
 export interface SessionConfig {
     maxSessions: number;
     maxSessionSize: number;
@@ -18,6 +19,7 @@ export declare class SessionManager {
     private sessions;
     private currentSessionId;
     private memoryManager;
+    private sessionLock;
     private sessionCleaner;
     private sessionPersistence;
     private sessionMetrics;
@@ -33,7 +35,7 @@ export declare class SessionManager {
     /**
      * Update session activity time
      */
-    touchSession(sessionId: string): void;
+    touchSession(sessionId: string): Promise<void>;
     /**
      * Clean up resources on shutdown
      */
@@ -57,7 +59,7 @@ export declare class SessionManager {
     /**
      * Update session data
      */
-    updateSession(sessionId: string, data: Partial<SessionData>): void;
+    updateSession(sessionId: string, data: Partial<SessionData>): Promise<void>;
     /**
      * Delete a session
      */
@@ -145,5 +147,9 @@ export declare class SessionManager {
      * Check if session has concerning skip patterns
      */
     hasHighRiskSkipPatterns(sessionId: string): boolean;
+    /**
+     * Get the session lock instance for external use
+     */
+    getSessionLock(): SessionLock;
 }
 //# sourceMappingURL=SessionManager.d.ts.map

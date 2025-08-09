@@ -21,6 +21,7 @@ import {
   type SkipDetectionResult,
   type SkipPattern,
 } from './session/SkipDetector.js';
+import { getSessionLock, type SessionLock } from './session/SessionLock.js';
 
 // Constants for memory management
 const MEMORY_THRESHOLD_FOR_GC = 0.8; // Trigger garbage collection when heap usage exceeds 80%
@@ -37,6 +38,7 @@ export class SessionManager {
   private sessions: Map<string, SessionData> = new Map();
   private currentSessionId: string | null = null;
   private memoryManager: MemoryManager;
+  private sessionLock: SessionLock;
 
   // Extracted components
   private sessionCleaner: SessionCleaner;
@@ -65,6 +67,9 @@ export class SessionManager {
       },
     });
 
+    // Initialize session lock for concurrent access control
+    this.sessionLock = getSessionLock();
+
     // Initialize core components only
     this.planManager = new PlanManager();
     this.skipDetector = new SkipDetector();
@@ -76,7 +81,10 @@ export class SessionManager {
       this.planManager.getAllPlans(),
       this.config,
       this.memoryManager,
-      this.touchSession.bind(this)
+      (sessionId: string) => {
+        // Non-blocking touch for cleanup - don't wait for lock
+        this.touchSession(sessionId).catch(console.error);
+      }
     );
     this.sessionPersistence = new SessionPersistence();
     this.sessionMetrics = new SessionMetrics(
@@ -102,11 +110,14 @@ export class SessionManager {
   /**
    * Update session activity time
    */
-  public touchSession(sessionId: string): void {
-    const session = this.sessions.get(sessionId);
-    if (session) {
-      session.lastActivityTime = Date.now();
-    }
+  public async touchSession(sessionId: string): Promise<void> {
+    return this.sessionLock.withLock(sessionId, () => {
+      const session = this.sessions.get(sessionId);
+      if (session) {
+        session.lastActivityTime = Date.now();
+      }
+      return Promise.resolve();
+    });
   }
 
   /**
@@ -191,12 +202,15 @@ export class SessionManager {
   /**
    * Update session data
    */
-  public updateSession(sessionId: string, data: Partial<SessionData>): void {
-    const session = this.sessions.get(sessionId);
-    if (session) {
-      Object.assign(session, data);
-      this.touchSession(sessionId);
-    }
+  public async updateSession(sessionId: string, data: Partial<SessionData>): Promise<void> {
+    return this.sessionLock.withLock(sessionId, () => {
+      const session = this.sessions.get(sessionId);
+      if (session) {
+        Object.assign(session, data);
+        session.lastActivityTime = Date.now();
+      }
+      return Promise.resolve();
+    });
   }
 
   /**
@@ -272,11 +286,12 @@ export class SessionManager {
   public async loadSessionFromPersistence(sessionId: string): Promise<SessionData> {
     const session = await this.sessionPersistence.loadSession(sessionId);
 
-    // Add to in-memory sessions
-    this.sessions.set(sessionId, session);
-    this.touchSession(sessionId);
-
-    return session;
+    // Add to in-memory sessions with lock
+    return this.sessionLock.withLock(sessionId, () => {
+      this.sessions.set(sessionId, session);
+      session.lastActivityTime = Date.now();
+      return Promise.resolve(session);
+    });
   }
 
   public async listPersistedSessions(options?: {
@@ -454,5 +469,12 @@ export class SessionManager {
   public hasHighRiskSkipPatterns(sessionId: string): boolean {
     const analysis = this.analyzeSessionSkipPatterns(sessionId);
     return analysis ? analysis.riskScore > 0.7 : false;
+  }
+
+  /**
+   * Get the session lock instance for external use
+   */
+  public getSessionLock(): SessionLock {
+    return this.sessionLock;
   }
 }

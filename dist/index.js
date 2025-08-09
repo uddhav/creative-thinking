@@ -75,7 +75,7 @@ export class LateralThinkingServer {
         return this.sessionManager.createSession(sessionData);
     }
     touchSession(sessionId) {
-        this.sessionManager.touchSession(sessionId);
+        void this.sessionManager.touchSession(sessionId);
     }
     evictOldestSessions() {
         // Eviction is handled internally by SessionManager

@@ -105,7 +105,7 @@ export class LateralThinkingServer {
   }
 
   touchSession(sessionId: string): void {
-    this.sessionManager.touchSession(sessionId);
+    void this.sessionManager.touchSession(sessionId);
   }
 
   evictOldestSessions(): void {
