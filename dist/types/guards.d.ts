@@ -1,10 +1,11 @@
 /**
- * Type guards for parallel execution types
+ * Type guards for execution types
  */
 import type { LateralTechnique } from './index.js';
 import type { ExecutionMode, ConvergenceMethod } from './planning.js';
 /**
  * Check if a value is a valid ExecutionMode
+ * Validates client-side execution mode preference
  */
 export declare function isExecutionMode(value: unknown): value is ExecutionMode;
 /**

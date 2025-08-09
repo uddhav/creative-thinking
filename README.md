@@ -102,13 +102,13 @@ The client decides how to execute based on the DAG:
 - **Parallel**: Execute independent nodes simultaneously for speed
 - **Hybrid**: Mix both strategies based on sync points
 
-#### Server Execution (Stateless)
+#### Server Processing (Stateless)
 
 Each `execute_thinking_step` call:
 
 - Is handled independently by the server
 - Maintains session context regardless of execution order
-- Processes steps as they arrive from the client
+- Processes steps atomically as they arrive from the client
 
 ### Key Benefits
 
