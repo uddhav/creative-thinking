@@ -35,14 +35,25 @@ describe('ExecutionModeController', () => {
       expect(result.mode).toBe('sequential');
     });
 
-    it('should add warning for many techniques', () => {
+    it('should add warning for excessive techniques', () => {
       const input = createInput();
-      const techniques: LateralTechnique[] = ['six_hats', 'po', 'random_entry', 'scamper'];
+      // 8 techniques - should trigger warning
+      const techniques: LateralTechnique[] = [
+        'six_hats',
+        'po',
+        'random_entry',
+        'scamper',
+        'design_thinking',
+        'triz',
+        'concept_extraction',
+        'yes_and',
+      ];
 
       const result = controller.determineExecutionMode(input, techniques);
       expect(result.mode).toBe('sequential');
       expect(result.warnings).toBeDefined();
-      expect(result.warnings?.[0]).toContain('4 techniques recommended');
+      expect(result.warnings?.[0]).toContain('8 techniques recommended');
+      expect(result.warnings?.[0]).toContain('consider if all are necessary');
     });
 
     it('should add warning for time constraints', () => {
@@ -109,17 +120,21 @@ describe('ExecutionModeController', () => {
       const input = createInput({
         constraints: ['time pressure'],
       });
+      // 8 techniques to trigger warning
       const techniques: LateralTechnique[] = [
         'six_hats',
         'po',
         'random_entry',
         'scamper',
         'design_thinking',
+        'triz',
+        'concept_extraction',
+        'yes_and',
       ];
 
       const result = controller.determineExecutionMode(input, techniques);
       expect(result.mode).toBe('sequential');
-      expect(result.warnings?.length).toBe(2);
+      expect(result.warnings?.length).toBe(2); // Both excessive techniques and time constraint warnings
     });
   });
 });

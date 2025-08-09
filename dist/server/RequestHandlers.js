@@ -2,7 +2,7 @@
  * RequestHandlers - MCP request handlers for the creative thinking server
  * Extracted from index.ts to improve maintainability
  */
-import { CallToolRequestSchema, ListToolsRequestSchema, ListPromptsRequestSchema, GetPromptRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import { CallToolRequestSchema, ListToolsRequestSchema, ListPromptsRequestSchema, GetPromptRequestSchema, } from '@modelcontextprotocol/sdk/types.js';
 import { workflowGuard } from '../core/WorkflowGuard.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 import { getAllTools } from './ToolDefinitions.js';

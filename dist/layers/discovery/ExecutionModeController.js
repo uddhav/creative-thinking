@@ -15,8 +15,8 @@ export class ExecutionModeController {
     determineExecutionMode(input, recommendedTechniques) {
         const warnings = [];
         // Add warnings based on input analysis
-        if (recommendedTechniques.length > 3) {
-            warnings.push(`${recommendedTechniques.length} techniques recommended - consider focusing on top 3 for better results`);
+        if (recommendedTechniques.length > 7) {
+            warnings.push(`${recommendedTechniques.length} techniques recommended - consider if all are necessary`);
         }
         if (input.constraints && input.constraints.some(c => c.toLowerCase().includes('time'))) {
             warnings.push('Time constraint detected - sequential execution may take longer');

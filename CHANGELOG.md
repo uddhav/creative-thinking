@@ -39,6 +39,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - **Total Techniques** - Increased from 14 to 16 enhanced thinking techniques
 - **Documentation** - Updated all documentation to reflect new technique count
+- **Dynamic Recommendation Limits** - No longer artificially limited to 3 recommendations
+  - Low complexity: 2-3 base techniques + 1 wildcard
+  - Medium complexity: 3-5 base techniques + 1 wildcard
+  - High complexity: 5-7 base techniques + 2 wildcards
+  - Configurable via MAX_TECHNIQUE_RECOMMENDATIONS environment variable
+- **Performance Optimizations** - Improved recommendation performance
+  - Technique info caching to avoid repeated registry lookups
+  - Early exit for wildcard selection (skip 82.5% of the time)
+  - Set-based exclusion checks for O(1) performance
+  - Lazy evaluation of technique information
 
 ### Removed
 

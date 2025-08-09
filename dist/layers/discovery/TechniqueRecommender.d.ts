@@ -6,6 +6,8 @@ import type { LateralTechnique } from '../../types/index.js';
 import type { TechniqueRegistry } from '../../techniques/TechniqueRegistry.js';
 export declare class TechniqueRecommender {
     private readonly WILDCARD_PROBABILITY;
+    private readonly RECOMMENDATION_LIMITS;
+    private techniqueInfoCache;
     /**
      * Recommend techniques based on problem category and other factors
      */

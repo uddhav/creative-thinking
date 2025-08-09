@@ -84,10 +84,13 @@ describe('Layered Tools Architecture', () => {
       expect(collabText.toLowerCase()).toContain('yes_and');
     });
 
-    it('should limit recommendations to top 3', () => {
+    it('should provide appropriate number of recommendations', () => {
+      // Test that we get an appropriate number of recommendations (not limited to 3)
       const input = {
         problem:
-          'Complex problem that could match many techniques: improve user experience, reduce technical debt, innovate product features, optimize performance',
+          'Complex multi-stakeholder system integration with conflicting requirements under time pressure',
+        context: 'Multiple teams, uncertain requirements, dynamic environment with high stakes',
+        preferredOutcome: 'systematic' as const,
       };
 
       const result = server.discoverTechniques(input) as ServerResponse;
@@ -96,7 +99,9 @@ describe('Layered Tools Architecture', () => {
       const text = result.content[0]?.text || '';
       // Count technique occurrences in the recommendations
       const techniqueMatches = text.match(/"technique":\s*"[^"]+"/g) || [];
-      expect(techniqueMatches.length).toBeLessThanOrEqual(3);
+      // Should get 2-9 recommendations depending on complexity (not artificially limited to 3)
+      expect(techniqueMatches.length).toBeGreaterThanOrEqual(2);
+      expect(techniqueMatches.length).toBeLessThanOrEqual(9);
     });
 
     it('should handle invalid input', () => {

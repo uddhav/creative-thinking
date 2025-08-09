@@ -80,7 +80,6 @@ describe('Wildcard Technique Selection', () => {
   });
 
   it('should have appropriate reasoning for wildcard techniques', () => {
-    const originalRandom = Math.random;
     let callCount = 0;
 
     vi.spyOn(Math, 'random').mockImplementation(() => {
@@ -172,12 +171,12 @@ describe('Wildcard Technique Selection', () => {
     }
   });
 
-  it('should return at most 4 recommendations (3 regular + 1 wildcard)', () => {
+  it('should return dynamic recommendations based on complexity', () => {
     // Force wildcard inclusion
-    const originalRandom = Math.random;
     vi.spyOn(Math, 'random').mockImplementation(() => 0.1);
 
-    const recommendations = recommender.recommendTechniques(
+    // High complexity should allow more recommendations
+    const highComplexityRecs = recommender.recommendTechniques(
       'strategic',
       'systematic',
       ['time constraint'],
@@ -185,12 +184,25 @@ describe('Wildcard Technique Selection', () => {
       registry
     );
 
-    // Should have at most 4 recommendations
-    expect(recommendations.length).toBeLessThanOrEqual(4);
+    // Should have 5-9 recommendations for high complexity (5-7 base + up to 2 wildcards)
+    expect(highComplexityRecs.length).toBeGreaterThanOrEqual(5);
+    expect(highComplexityRecs.length).toBeLessThanOrEqual(9);
 
-    // Count wildcards
-    const wildcardCount = recommendations.filter(r => r.isWildcard === true).length;
-    expect(wildcardCount).toBeLessThanOrEqual(1);
+    // Count wildcards - should be up to 2 for high complexity
+    const highWildcardCount = highComplexityRecs.filter(r => r.isWildcard === true).length;
+    expect(highWildcardCount).toBeLessThanOrEqual(2);
+
+    // Low complexity should have fewer recommendations
+    const lowComplexityRecs = recommender.recommendTechniques(
+      'strategic',
+      'systematic',
+      [],
+      'low',
+      registry
+    );
+
+    // Should have 2-4 recommendations for low complexity (2-3 base + up to 1 wildcard)
+    expect(lowComplexityRecs.length).toBeLessThanOrEqual(4);
 
     vi.restoreAllMocks();
   });

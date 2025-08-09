@@ -33,9 +33,9 @@ export class ExecutionModeController {
     const warnings: string[] = [];
 
     // Add warnings based on input analysis
-    if (recommendedTechniques.length > 3) {
+    if (recommendedTechniques.length > 7) {
       warnings.push(
-        `${recommendedTechniques.length} techniques recommended - consider focusing on top 3 for better results`
+        `${recommendedTechniques.length} techniques recommended - consider if all are necessary`
       );
     }
 

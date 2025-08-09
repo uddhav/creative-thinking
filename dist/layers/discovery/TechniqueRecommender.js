@@ -5,6 +5,14 @@
 export class TechniqueRecommender {
     // Wildcard inclusion probability (15-20% chance)
     WILDCARD_PROBABILITY = parseFloat(process.env.WILDCARD_PROBABILITY || '0.175');
+    // Dynamic recommendation limits based on complexity
+    RECOMMENDATION_LIMITS = {
+        low: { min: 2, max: 3, wildcard: 1 },
+        medium: { min: 3, max: 5, wildcard: 1 },
+        high: { min: 5, max: 7, wildcard: 2 },
+    };
+    // Cache for technique info to avoid repeated lookups
+    techniqueInfoCache = new Map();
     /**
      * Recommend techniques based on problem category and other factors
      */
@@ -175,26 +183,44 @@ export class TechniqueRecommender {
         }
         // Sort by effectiveness
         recommendations.sort((a, b) => b.effectiveness - a.effectiveness);
-        // Validate techniques exist and enhance with additional info
+        // Validate techniques exist and enhance with additional info (with caching)
         const validatedRecommendations = recommendations
             .filter(rec => techniqueRegistry.isValidTechnique(rec.technique))
             .map(rec => {
-            const info = techniqueRegistry.getTechniqueInfo(rec.technique);
+            // Use cache for technique info (performance optimization)
+            let info = this.techniqueInfoCache.get(rec.technique);
+            if (!info) {
+                info = techniqueRegistry.getTechniqueInfo(rec.technique);
+                this.techniqueInfoCache.set(rec.technique, info);
+            }
             return {
                 ...rec,
                 // Enhance reasoning with step count info
                 reasoning: `${rec.reasoning} (${info.totalSteps} steps)`,
             };
         });
-        // Get top 3 recommendations
-        const topRecommendations = validatedRecommendations.slice(0, 3);
-        // Add wildcard technique to prevent pigeonholing
-        const wildcardRecommendation = this.selectWildcardTechnique(topRecommendations.map(r => r.technique), techniqueRegistry);
-        if (wildcardRecommendation) {
-            topRecommendations.push({
-                ...wildcardRecommendation,
-                isWildcard: true,
-            });
+        // Get dynamic recommendation count based on complexity
+        const limits = this.RECOMMENDATION_LIMITS[complexity] || this.RECOMMENDATION_LIMITS.medium;
+        const maxRecommendations = parseInt(process.env.MAX_TECHNIQUE_RECOMMENDATIONS || String(limits.max));
+        const baseRecommendationCount = Math.min(validatedRecommendations.length, maxRecommendations);
+        // Get top recommendations based on dynamic limit
+        const topRecommendations = validatedRecommendations.slice(0, baseRecommendationCount);
+        // Early exit if wildcard not needed (performance optimization)
+        if (Math.random() > this.WILDCARD_PROBABILITY) {
+            return topRecommendations;
+        }
+        // Add wildcard technique(s) to prevent pigeonholing
+        const wildcardCount = limits.wildcard;
+        const excludeTechniques = new Set(topRecommendations.map(r => r.technique));
+        for (let i = 0; i < wildcardCount; i++) {
+            const wildcardRecommendation = this.selectWildcardTechnique(excludeTechniques, techniqueRegistry);
+            if (wildcardRecommendation) {
+                topRecommendations.push({
+                    ...wildcardRecommendation,
+                    isWildcard: true,
+                });
+                excludeTechniques.add(wildcardRecommendation.technique);
+            }
         }
         return topRecommendations;
     }
@@ -266,10 +292,6 @@ export class TechniqueRecommender {
      * Select a wildcard technique to prevent algorithmic pigeonholing
      */
     selectWildcardTechnique(excludeTechniques, techniqueRegistry) {
-        // Check if we should include a wildcard (probability check)
-        if (Math.random() > this.WILDCARD_PROBABILITY) {
-            return null;
-        }
         // All available techniques
         const allTechniques = [
             'six_hats',
@@ -289,14 +311,19 @@ export class TechniqueRecommender {
             'quantum_superposition',
             'temporal_creativity',
         ];
-        // Filter out already recommended techniques
-        const availableTechniques = allTechniques.filter(t => !excludeTechniques.includes(t) && techniqueRegistry.isValidTechnique(t));
+        // Filter out already recommended techniques (O(1) lookup with Set)
+        const availableTechniques = allTechniques.filter(t => !excludeTechniques.has(t) && techniqueRegistry.isValidTechnique(t));
         if (availableTechniques.length === 0) {
             return null;
         }
         // Randomly select a wildcard technique
         const wildcardTechnique = availableTechniques[Math.floor(Math.random() * availableTechniques.length)];
-        const info = techniqueRegistry.getTechniqueInfo(wildcardTechnique);
+        // Use cache for technique info (performance optimization)
+        let info = this.techniqueInfoCache.get(wildcardTechnique);
+        if (!info) {
+            info = techniqueRegistry.getTechniqueInfo(wildcardTechnique);
+            this.techniqueInfoCache.set(wildcardTechnique, info);
+        }
         // Generate wildcard reasoning
         const wildcardReasons = [
             'Consider this alternative approach for unexpected insights',

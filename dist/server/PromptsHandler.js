@@ -162,7 +162,7 @@ export class PromptsHandler {
                             role: 'assistant',
                             content: {
                                 type: 'text',
-                                text: 'I\'ll analyze your problem and recommend the most suitable lateral thinking techniques. Let me start by understanding your challenge better.',
+                                text: "I'll analyze your problem and recommend the most suitable lateral thinking techniques. Let me start by understanding your challenge better.",
                             },
                         },
                     ],
@@ -182,7 +182,7 @@ export class PromptsHandler {
                             role: 'assistant',
                             content: {
                                 type: 'text',
-                                text: 'I\'ll guide you through a creative brainstorming session using lateral thinking techniques. We\'ll explore multiple perspectives to generate innovative solutions.',
+                                text: "I'll guide you through a creative brainstorming session using lateral thinking techniques. We'll explore multiple perspectives to generate innovative solutions.",
                             },
                         },
                     ],
@@ -202,7 +202,7 @@ export class PromptsHandler {
                             role: 'assistant',
                             content: {
                                 type: 'text',
-                                text: 'I\'ll conduct a comprehensive risk analysis using lateral thinking to identify potential failure modes, black swan events, and mitigation strategies.',
+                                text: "I'll conduct a comprehensive risk analysis using lateral thinking to identify potential failure modes, black swan events, and mitigation strategies.",
                             },
                         },
                     ],
@@ -222,7 +222,7 @@ export class PromptsHandler {
                             role: 'assistant',
                             content: {
                                 type: 'text',
-                                text: 'I\'ll guide you through a complete lateral thinking session, from problem analysis to solution generation. We\'ll use multiple techniques systematically.',
+                                text: "I'll guide you through a complete lateral thinking session, from problem analysis to solution generation. We'll use multiple techniques systematically.",
                             },
                         },
                     ],
@@ -242,7 +242,7 @@ export class PromptsHandler {
                             role: 'assistant',
                             content: {
                                 type: 'text',
-                                text: 'I\'ll help you maintain multiple contradictory solutions in superposition, exploring how they interfere constructively and destructively before optimal collapse.',
+                                text: "I'll help you maintain multiple contradictory solutions in superposition, exploring how they interfere constructively and destructively before optimal collapse.",
                             },
                         },
                     ],
@@ -262,7 +262,7 @@ export class PromptsHandler {
                             role: 'assistant',
                             content: {
                                 type: 'text',
-                                text: 'I\'ll guide you through temporal creativity analysis, tracking how decisions create constraints and close options over time, while maintaining creative flexibility.',
+                                text: "I'll guide you through temporal creativity analysis, tracking how decisions create constraints and close options over time, while maintaining creative flexibility.",
                             },
                         },
                     ],
