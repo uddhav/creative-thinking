@@ -2,30 +2,17 @@
  * Type guards for execution types
  */
 import type { LateralTechnique } from './index.js';
-import type { ExecutionMode, ConvergenceMethod } from './planning.js';
+import type { ExecutionMode } from './planning.js';
 /**
  * Check if a value is a valid ExecutionMode
  * Validates client-side execution mode preference
  */
 export declare function isExecutionMode(value: unknown): value is ExecutionMode;
 /**
- * Check if a value is a valid ConvergenceMethod
- */
-export declare function isConvergenceMethod(value: unknown): value is ConvergenceMethod;
-/**
- * Check if a technique supports parallel execution
- * @deprecated Parallel execution has been removed
- */
-export declare function supportsParallelExecution(): boolean;
-/**
  * Check if techniques can be executed in parallel together
+ * All techniques can now run independently for client-side parallel execution
  */
 export declare function canExecuteInParallel(techniques: LateralTechnique[]): boolean;
-/**
- * Check if a value is the convergence technique
- * @deprecated Convergence technique has been removed
- */
-export declare function isConvergenceTechnique(): boolean;
 /**
  * Validate max parallelism value
  */

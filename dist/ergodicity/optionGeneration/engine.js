@@ -256,22 +256,43 @@ export class OptionGenerationEngine {
         };
     }
     /**
-     * Generate options using specific strategies
-     * @deprecated Use generateOptions with preferredStrategies in context
-     */
-    generateWithStrategies(context, strategies, targetCount = 10) {
-        // Filter context to use only specified strategies
-        const filteredContext = {
-            ...context,
-            preferredStrategies: strategies,
-        };
-        return this.generateOptions(filteredContext, targetCount);
-    }
-    /**
      * Generate options with specific strategies (alias for tests)
      */
     generateOptionsWithStrategies(context, strategies, targetCount = 10) {
-        return this.generateWithStrategies(context, strategies, targetCount);
+        const startTime = Date.now();
+        try {
+            // Validate context
+            this.validateContext(context);
+        }
+        catch (error) {
+            this.reportError('validation', error, 'Context validation failed');
+            return this.createEmptyResult(context);
+        }
+        const options = [];
+        const strategiesUsed = [];
+        // Limit target count
+        targetCount = Math.min(targetCount, 50); // RESOURCE_LIMITS.MAX_OPTIONS_TOTAL
+        // Generate options from specified strategies
+        for (const strategyName of strategies) {
+            if (options.length >= targetCount)
+                break;
+            const strategy = this.strategies.get(strategyName);
+            if (!strategy)
+                continue;
+            try {
+                const strategyOptions = strategy.generate(context);
+                const cleanedOptions = this.cleanOptions(strategyOptions);
+                options.push(...cleanedOptions.slice(0, targetCount - options.length));
+                strategiesUsed.push(strategyName);
+            }
+            catch (error) {
+                this.reportError('generation', error, `${strategyName} strategy failed`);
+            }
+        }
+        // Evaluate all options
+        const evaluations = this.evaluator.evaluateOptions(options, context);
+        const generationTime = Date.now() - startTime;
+        return this.createResult(options, evaluations, strategiesUsed, generationTime, context);
     }
     /**
      * Check if option generation is recommended

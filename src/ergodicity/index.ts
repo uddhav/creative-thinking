@@ -537,7 +537,12 @@ export class ErgodicityManager {
     targetCount: number = 10
   ): OptionGenerationResult {
     const context = this.createOptionGenerationContext(sessionData);
-    return this.optionGenerationEngine.generateWithStrategies(context, strategies, targetCount);
+    // Use generateOptions with preferred strategies in context
+    const filteredContext = {
+      ...context,
+      preferredStrategies: strategies,
+    };
+    return this.optionGenerationEngine.generateOptions(filteredContext, targetCount);
   }
 
   /**

@@ -65,11 +65,6 @@ export declare class OptionGenerationEngine {
      */
     private createEmptyResult;
     /**
-     * Generate options using specific strategies
-     * @deprecated Use generateOptions with preferredStrategies in context
-     */
-    generateWithStrategies(context: OptionGenerationContext, strategies: OptionGenerationStrategy[], targetCount?: number): OptionGenerationResult;
-    /**
      * Generate options with specific strategies (alias for tests)
      */
     generateOptionsWithStrategies(context: OptionGenerationContext, strategies: OptionGenerationStrategy[], targetCount?: number): OptionGenerationResult;
