@@ -11,6 +11,10 @@ import { TechniqueRecommender } from './discovery/TechniqueRecommender.js';
 import { WorkflowBuilder } from './discovery/WorkflowBuilder.js';
 import { MemoryContextGenerator } from './discovery/MemoryContextGenerator.js';
 
+// Create singleton instance for proper caching across requests
+// This ensures the techniqueInfoCache is reused, improving performance
+const techniqueRecommender = new TechniqueRecommender();
+
 export function discoverTechniques(
   input: DiscoverTechniquesInput,
   techniqueRegistry: TechniqueRegistry,
@@ -24,7 +28,6 @@ export function discoverTechniques(
 
   // Initialize analyzers
   const problemAnalyzer = new ProblemAnalyzer();
-  const techniqueRecommender = new TechniqueRecommender();
   const workflowBuilder = new WorkflowBuilder();
   const memoryContextGenerator = new MemoryContextGenerator();
 
