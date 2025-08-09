@@ -5,8 +5,9 @@
 import { ErrorFactory } from '../errors/enhanced-errors.js';
 export class WorkflowGuard {
     recentCalls = [];
-    CALL_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
+    CALL_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
     parallelCallGroups = new Map(); // Track parallel calls by planId
+    sessionManager = null;
     validTechniques = [
         'six_hats',
         'po',
@@ -23,6 +24,12 @@ export class WorkflowGuard {
         'disney_method',
         'nine_windows',
     ];
+    /**
+     * Set the SessionManager instance for plan validation
+     */
+    setSessionManager(sessionManager) {
+        this.sessionManager = sessionManager;
+    }
     /**
      * Record a tool call
      */
@@ -132,6 +139,28 @@ export class WorkflowGuard {
     }
     checkExecutionViolations(args) {
         const execArgs = args;
+        // Always check for invalid technique first
+        if (execArgs.technique && !this.validTechniques.includes(execArgs.technique)) {
+            return {
+                type: 'invalid_technique',
+                message: `Invalid technique '${execArgs.technique}'. This technique does not exist.`,
+                guidance: [
+                    'Use only techniques returned by discover_techniques',
+                    'Or choose from the list of valid techniques',
+                    'Custom or made-up techniques are not supported',
+                ],
+            };
+        }
+        // Check if a valid planId is provided and exists in SessionManager
+        if (execArgs.planId && this.sessionManager) {
+            const plan = this.sessionManager.getPlan(execArgs.planId);
+            if (plan) {
+                // Valid plan exists - this proves discovery and planning were done
+                // No workflow violation, proceed with execution
+                return null;
+            }
+        }
+        // If no valid planId exists, fall back to checking recent calls
         // Check for recent discovery call
         const hasDiscovery = this.recentCalls.some(call => call.toolName === 'discover_techniques');
         // Check for recent planning call
@@ -187,18 +216,6 @@ export class WorkflowGuard {
                     '2. Now call plan_thinking_session with your chosen techniques',
                     '3. Use the planId from the response in execute_thinking_step',
                     'The planId ensures your session is properly tracked and guided',
-                ],
-            };
-        }
-        // Check for invalid technique
-        if (execArgs.technique && !this.validTechniques.includes(execArgs.technique)) {
-            return {
-                type: 'invalid_technique',
-                message: `Invalid technique '${execArgs.technique}'. This technique does not exist.`,
-                guidance: [
-                    'Use only techniques returned by discover_techniques',
-                    'Or choose from the list of valid techniques',
-                    'Custom or made-up techniques are not supported',
                 ],
             };
         }

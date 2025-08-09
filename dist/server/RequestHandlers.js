@@ -13,7 +13,8 @@ export class RequestHandlers {
     constructor(server, lateralServer) {
         this.server = server;
         this.lateralServer = lateralServer;
-        // Simple constructor - no parallel handling needed
+        // Set up WorkflowGuard with SessionManager for plan validation
+        workflowGuard.setSessionManager(this.lateralServer.getSessionManager());
     }
     /**
      * Set up all request handlers
