@@ -45,10 +45,13 @@ export interface ExecutionGraph {
 }
 
 /**
- * Execution mode for thinking sessions
- * - sequential: Execute techniques one after another (default)
- * - parallel: Execute techniques simultaneously
- * - auto: Let the system decide based on problem analysis
+ * Client-side execution mode for thinking sessions
+ * Represents how clients can execute the DAG provided by the server:
+ * - sequential: Execute nodes in order for maximum coherence
+ * - parallel: Execute independent nodes simultaneously for speed
+ * - auto: Server recommendation based on problem analysis
+ *
+ * Note: The server processes steps independently regardless of client execution mode
  */
 export type ExecutionMode = 'sequential' | 'parallel' | 'auto';
 
@@ -59,10 +62,12 @@ export type ExecutionMode = 'sequential' | 'parallel' | 'auto';
 export type ConvergenceMethod = 'llm_handoff' | 'none';
 
 /**
- * Strategy for parallelizing execution
+ * Client-side strategy for parallelizing execution
  * - technique: Each technique runs in parallel
  * - step: Steps within techniques run in parallel
  * - hybrid: Combination of both strategies
+ *
+ * Used in DAG generation to suggest parallelization opportunities to clients
  */
 export type ParallelizationStrategy = 'technique' | 'step' | 'hybrid';
 
@@ -81,8 +86,8 @@ export interface DiscoverTechniquesInput {
   constraints?: string[];
   currentFlexibility?: number;
   sessionId?: string;
-  executionMode?: ExecutionMode; // Optional here - can be inferred from problem
-  maxParallelism?: number; // Maximum number of parallel branches (default: 3)
+  executionMode?: ExecutionMode; // Client execution preference - server provides compatible DAG
+  maxParallelism?: number; // Maximum parallel branches client can handle (default: 3)
 }
 
 export interface DiscoverTechniquesOutput {

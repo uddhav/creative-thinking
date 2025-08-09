@@ -131,7 +131,6 @@ function getExpectedOutputs(technique) {
             'System evolution insights',
             'Path dependencies mapped',
         ],
-        convergence: ['Synthesized recommendations', 'Unified action plan', 'Resolved conflicts'],
     };
     return outputs[technique] || ['Solution options'];
 }

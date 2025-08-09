@@ -161,29 +161,56 @@ The Early Warning System detects approaching "absorbing barriers" - irreversible
 
 Five levels of escape strategies, from Pattern Interruption to Strategic Pivot.
 
-### Sequential Execution Architecture
+### Client-Server Execution Architecture
 
-The server executes techniques in a structured, sequential manner:
+The server provides execution intelligence through DAG generation while clients control the actual
+execution strategy:
 
-#### Workflow Planning
+#### Server-Side: DAG Generation
 
-Each technique follows its specific methodology:
+The server analyzes problems and generates a Directed Acyclic Graph (DAG) that:
 
-1. **Step-by-Step Progression**: Each step builds on previous insights
-   - Six Hats: Blue → White → Red → Yellow → Black → Green
-   - Design Thinking: Empathize → Define → Ideate → Prototype → Test
-   - Disney Method: Dreamer → Realist → Critic
-   - TRIZ: Identify → Remove → Apply → Minimize
+1. **Identifies Dependencies**:
+   - Hard dependencies (must complete before proceeding)
+   - Soft dependencies (preferential but not required)
+   - Sync points between technique boundaries
 
-2. **Context Preservation**: Maintains state between steps
-   - Session history tracks all outputs
-   - Insights accumulate progressively
-   - Context flows through the entire process
+2. **Provides Execution Intelligence**:
+   - Recommends execution strategy (sequential/parallel/hybrid)
+   - Calculates time multipliers for different strategies
+   - Identifies parallelization opportunities
 
-3. **Quality Assurance**:
-   - Each step validated before proceeding
-   - Risk assessment at each stage
-   - Comprehensive insight extraction
+3. **Maintains Independence**:
+   - Each node contains complete parameters
+   - Steps can be executed in any order respecting dependencies
+   - Server processes steps atomically as they arrive
+
+#### Client-Side: Execution Control
+
+Clients decide how to execute the DAG:
+
+1. **Sequential Execution**:
+   - Simple, maximum coherence
+   - Execute nodes in order
+   - Best for complex reasoning chains
+
+2. **Parallel Execution**:
+   - Faster execution (3-10x speedup possible)
+   - Execute independent nodes simultaneously
+   - Client manages dependency resolution
+
+3. **Hybrid Strategy**:
+   - Mix sequential and parallel based on sync points
+   - Optimize for both speed and coherence
+
+#### Server Processing
+
+The server handles arriving steps independently:
+
+1. **Stateless Processing**: Each step processed without assuming order
+2. **Context Preservation**: SessionManager maintains state regardless of execution order
+3. **Atomic Operations**: No race conditions between parallel steps
+4. **Session Resilience**: Base64 encoding survives restarts
 
 #### SessionEncoder
 

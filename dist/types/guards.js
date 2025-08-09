@@ -1,8 +1,9 @@
 /**
- * Type guards for parallel execution types
+ * Type guards for execution types
  */
 /**
  * Check if a value is a valid ExecutionMode
+ * Validates client-side execution mode preference
  */
 export function isExecutionMode(value) {
     return typeof value === 'string' && ['sequential', 'parallel', 'auto'].includes(value);

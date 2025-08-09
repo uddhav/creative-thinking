@@ -31,7 +31,8 @@ npm run format       # Run prettier to format all files
 - **MCP Protocol**: stdout for JSON-RPC only, stderr for visual output
 - **16 thinking techniques** with specific step counts
 - **Unified framework**: All techniques support risk/adversarial fields
-- **Sequential execution**: Server executes techniques step-by-step for depth and coherence
+- **Client-controlled execution**: Server provides DAG, clients choose sequential or parallel
+  execution
 - **Session resilience**: Base64 encoding allows sessions to survive server restarts
 
 ### Client-Server Execution Architecture
@@ -43,15 +44,17 @@ The server provides execution intelligence while clients control strategy:
    - Dependencies marked as 'hard' (blocking) or 'soft' (preferential)
    - Sync points identified between technique boundaries
    - Time multipliers show relative performance (e.g., "5x" slower if sequential)
+   - Server recommends execution strategy but clients make final decision
 
-2. **Client-Controlled Execution** - Clients decide how to execute
-   - Can execute sequentially for simplicity and coherence
-   - Can execute in parallel based on dependency information
-   - Server handles each step independently as it arrives
+2. **Client-Controlled Execution** - Clients decide how to execute the DAG
+   - **Sequential**: Execute nodes in order for simplicity and coherence
+   - **Parallel**: Execute independent nodes simultaneously based on dependencies
+   - **Hybrid**: Mix strategies based on sync points and dependencies
+   - Parallel execution happens client-side; server processes arriving steps independently
 
-3. **Stateless Step Execution** - Each step is independent
+3. **Stateless Step Execution** - Server handles each step independently
    - SessionManager maintains context regardless of execution order
-   - No race conditions between parallel steps
+   - No race conditions as server processes steps atomically
    - Base64 encoded sessions can survive server restarts
    - 24-hour expiry window for encoded sessions
 
@@ -64,7 +67,7 @@ When working with this codebase:
 3. **Follow the three-tool constraint** - Never add new tools beyond the three core ones
 4. **Run tasks with subagents** to preserve main agent context
 5. **Check CONTRIBUTING.md** for detailed architecture and guidelines
-6. **Understand sequential flow** - Each step must complete before the next begins
+6. **Understand client-controlled flow** - Clients choose execution order based on DAG
 
 ### Technique Step Counts Reference
 
