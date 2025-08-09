@@ -47,7 +47,6 @@ export class ExecutionGraphGenerator {
                 technique,
                 parameters,
                 dependencies,
-                estimatedDuration: this.estimateDuration(technique),
                 canSkipIfFailed: this.canSkipIfFailed(technique),
             });
         }
@@ -79,21 +78,21 @@ export class ExecutionGraphGenerator {
             return [];
         }
         if (sequentialTechniques.includes(technique)) {
-            // Each step depends on the previous one
+            // Each step depends on the previous one (hard dependency)
             if (stepIndex === 0) {
                 return [];
             }
-            return [`node-${startNodeId + stepIndex}`];
+            return [{ nodeId: `node-${startNodeId + stepIndex}`, type: 'hard' }];
         }
         if (hybridTechniques.includes(technique)) {
             // Custom dependency patterns for hybrid techniques
             return this.getHybridDependencies(technique, stepIndex, startNodeId);
         }
-        // Default to sequential
+        // Default to sequential (hard dependency)
         if (stepIndex === 0) {
             return [];
         }
-        return [`node-${startNodeId + stepIndex}`];
+        return [{ nodeId: `node-${startNodeId + stepIndex}`, type: 'hard' }];
     }
     /**
      * Get dependencies for hybrid techniques
@@ -105,22 +104,42 @@ export class ExecutionGraphGenerator {
                 if (stepIndex === 0)
                     return [];
                 if (stepIndex === 1 || stepIndex === 2)
-                    return [`node-${startNodeId + 1}`];
-                return [`node-${startNodeId + stepIndex}`];
+                    return [{ nodeId: `node-${startNodeId + 1}`, type: 'hard' }];
+                // Step 4 has soft dependency on 2-3 for better synthesis
+                return [
+                    { nodeId: `node-${startNodeId + 2}`, type: 'soft' },
+                    { nodeId: `node-${startNodeId + 3}`, type: 'hard' },
+                ];
             case 'neural_state':
                 // Steps 2-3 can be parallel after step 1, step 4 depends on all
                 if (stepIndex === 0)
                     return [];
                 if (stepIndex === 1 || stepIndex === 2)
-                    return [`node-${startNodeId + 1}`];
+                    return [{ nodeId: `node-${startNodeId + 1}`, type: 'hard' }];
                 if (stepIndex === 3)
-                    return [`node-${startNodeId + 2}`, `node-${startNodeId + 3}`];
+                    return [
+                        { nodeId: `node-${startNodeId + 2}`, type: 'hard' },
+                        { nodeId: `node-${startNodeId + 3}`, type: 'hard' },
+                    ];
                 return [];
+            case 'temporal_work':
+                // First 3 steps can inform each other (soft deps), last 2 depend on them
+                if (stepIndex === 0)
+                    return [];
+                if (stepIndex === 1)
+                    return [{ nodeId: `node-${startNodeId + 1}`, type: 'soft' }];
+                if (stepIndex === 2)
+                    return [
+                        { nodeId: `node-${startNodeId + 1}`, type: 'soft' },
+                        { nodeId: `node-${startNodeId + 2}`, type: 'soft' },
+                    ];
+                // Steps 4-5 need the temporal context from earlier steps
+                return [{ nodeId: `node-${startNodeId + 3}`, type: 'hard' }];
             default:
                 // Default to sequential for other hybrid techniques
                 if (stepIndex === 0)
                     return [];
-                return [`node-${startNodeId + stepIndex}`];
+                return [{ nodeId: `node-${startNodeId + stepIndex}`, type: 'hard' }];
         }
     }
     /**
@@ -231,24 +250,56 @@ export class ExecutionGraphGenerator {
         // Calculate critical path
         const criticalPath = this.findCriticalPath(nodes);
         // Calculate max parallelism
-        const maxParallelism = Math.max(...parallelizableGroups.map(group => group.length));
+        const maxParallelism = Math.max(...parallelizableGroups.map(group => group.length), 1);
+        // Calculate sequential time multiplier
+        const sequentialTimeMultiplier = this.calculateSequentialTimeMultiplier(nodes, maxParallelism);
         return {
             totalNodes: nodes.length,
             maxParallelism,
             criticalPath,
             parallelizableGroups,
+            sequentialTimeMultiplier,
         };
+    }
+    /**
+     * Calculate sequential time multiplier based on parallelization potential
+     */
+    static calculateSequentialTimeMultiplier(nodes, maxParallelism) {
+        // If no parallelism is possible, sequential and parallel take the same time
+        if (maxParallelism <= 1) {
+            return '1x';
+        }
+        // Estimate based on the degree of parallelism
+        // Higher parallelism = greater time difference
+        if (maxParallelism >= 6) {
+            return '10x'; // Highly parallel - sequential is much slower
+        }
+        else if (maxParallelism >= 4) {
+            return '5x'; // Moderate parallelism
+        }
+        else if (maxParallelism >= 2) {
+            return '3x'; // Some parallelism
+        }
+        return '2x'; // Minimal parallelism
     }
     /**
      * Find groups of nodes that can execute in parallel
      * Optimized from O(n²) to O(n) using Map for grouping
      */
     static findParallelizableGroups(nodes) {
-        // Group nodes by their dependency signature
+        // Group nodes by their hard dependency signature (soft deps don't block parallel execution)
         const depGroups = new Map();
         for (const node of nodes) {
-            // Create a consistent key from dependencies
-            const depKey = JSON.stringify(node.dependencies.sort());
+            // Create a consistent key from hard dependencies only
+            // Optimized: build array in single pass without intermediate filter/map
+            const hardDeps = [];
+            for (const dep of node.dependencies) {
+                if (dep.type === 'hard') {
+                    hardDeps.push(dep.nodeId);
+                }
+            }
+            hardDeps.sort();
+            const depKey = JSON.stringify(hardDeps);
             if (!depGroups.has(depKey)) {
                 depGroups.set(depKey, []);
             }
@@ -266,21 +317,29 @@ export class ExecutionGraphGenerator {
     static findCriticalPath(nodes) {
         if (nodes.length === 0)
             return [];
-        // Build adjacency list
+        // Build adjacency list (considering only hard dependencies for critical path)
         const graph = new Map();
+        const startNodes = [];
         for (const node of nodes) {
             if (!graph.has(node.id)) {
                 graph.set(node.id, []);
             }
+            // Check for hard dependencies in a single pass
+            let hasHardDeps = false;
             for (const dep of node.dependencies) {
-                if (!graph.has(dep)) {
-                    graph.set(dep, []);
+                if (dep.type === 'hard') {
+                    hasHardDeps = true;
+                    if (!graph.has(dep.nodeId)) {
+                        graph.set(dep.nodeId, []);
+                    }
+                    graph.get(dep.nodeId)?.push(node.id);
                 }
-                graph.get(dep)?.push(node.id);
+            }
+            // Track start nodes while iterating
+            if (!hasHardDeps) {
+                startNodes.push(node);
             }
         }
-        // Find nodes with no dependencies (starting points)
-        const startNodes = nodes.filter(n => n.dependencies.length === 0);
         if (startNodes.length === 0)
             return [];
         // Find longest path from each start node
@@ -313,31 +372,73 @@ export class ExecutionGraphGenerator {
     /**
      * Generate instructions for the invoker
      */
-    static generateInstructions(_nodes, metadata) {
+    static generateInstructions(nodes, metadata) {
         const hasParallelNodes = metadata.maxParallelism > 1;
+        // Determine recommended strategy
+        let recommendedStrategy;
+        if (!hasParallelNodes) {
+            recommendedStrategy = 'sequential';
+        }
+        else if (metadata.maxParallelism >= 4) {
+            recommendedStrategy = 'parallel';
+        }
+        else {
+            recommendedStrategy = 'hybrid';
+        }
+        // Identify sync points (between technique boundaries)
+        const syncPoints = this.identifySyncPoints(nodes);
+        // Generate parallelization benefits description
+        const parallelizationBenefits = this.generateParallelizationBenefits(nodes, metadata);
+        // Generate execution guidance
+        const executionGuidance = hasParallelNodes
+            ? 'Nodes with empty dependencies can execute immediately. For nodes with dependencies, wait for hard dependencies to complete before starting. Soft dependencies are preferential - better results if completed first, but not blocking. Check the dependencies array for each node to determine execution order.'
+            : 'Execute nodes sequentially in the order provided. Each node depends on the previous one completing.';
         return {
-            forInvoker: `This is a Directed Acyclic Graph (DAG) for execution. Each node represents a call to execute_thinking_step with the provided parameters. ${hasParallelNodes
-                ? 'Nodes with no dependencies or the same dependencies can be executed in parallel by making concurrent execute_thinking_step calls. To execute in parallel: identify nodes with empty or satisfied dependencies, then call execute_thinking_step for each node simultaneously. Monitor completion and proceed to dependent nodes.'
-                : 'Execute nodes sequentially in the order provided, as each depends on the previous.'} The planId and all required parameters are pre-populated in each node. Simply use the parameters object from each node when calling execute_thinking_step.`,
-            executionStrategy: hasParallelNodes ? 'parallel-capable' : 'sequential',
+            recommendedStrategy,
+            syncPoints,
+            sequentialTimeMultiplier: metadata.sequentialTimeMultiplier,
+            parallelizationBenefits,
+            executionGuidance,
             errorHandling: 'continue-on-non-critical-failure',
         };
     }
     /**
-     * Estimate duration for a technique step
+     * Identify sync points between techniques
      */
-    static estimateDuration(technique) {
-        // Rough estimates in milliseconds
-        const estimates = {
-            six_hats: 3000,
-            scamper: 2500,
-            design_thinking: 4000,
-            nine_windows: 2000,
-            po: 3500,
-            random_entry: 2000,
-            triz: 4500,
-        };
-        return estimates[technique] || 3000;
+    static identifySyncPoints(nodes) {
+        const syncPoints = [];
+        let lastTechnique = null;
+        for (const node of nodes) {
+            if (lastTechnique && lastTechnique !== node.technique) {
+                // Sync point at technique boundary
+                syncPoints.push(node.id);
+            }
+            lastTechnique = node.technique;
+        }
+        return syncPoints;
+    }
+    /**
+     * Generate description of parallelization benefits
+     */
+    static generateParallelizationBenefits(nodes, metadata) {
+        if (metadata.maxParallelism <= 1) {
+            return 'Sequential execution ensures each step builds on previous insights for maximum coherence.';
+        }
+        const techniques = new Set(nodes.map(n => n.technique));
+        const techniqueCount = techniques.size;
+        if (techniques.has('six_hats')) {
+            return 'Running Six Hats perspectives in parallel provides diverse viewpoints simultaneously, reducing cognitive bias from sequential influence.';
+        }
+        else if (techniques.has('scamper')) {
+            return 'Parallel SCAMPER transformations allow exploring multiple modification approaches simultaneously, increasing creative output.';
+        }
+        else if (techniques.has('nine_windows')) {
+            return 'Examining all nine windows in parallel provides a comprehensive system view across time and scale simultaneously.';
+        }
+        else if (techniqueCount > 1) {
+            return `Running ${techniqueCount} techniques in parallel provides diverse problem-solving approaches simultaneously, reducing overall thinking time by approximately ${metadata.maxParallelism}x.`;
+        }
+        return 'Parallel execution enables exploring multiple perspectives simultaneously, reducing time and increasing diversity of insights.';
     }
     /**
      * Determine if a step can be skipped if it fails
@@ -346,16 +447,6 @@ export class ExecutionGraphGenerator {
         // For parallel techniques, individual steps can often be skipped
         const parallelTechniques = ['six_hats', 'scamper', 'nine_windows'];
         return parallelTechniques.includes(technique);
-    }
-    /**
-     * Check if two arrays are equal
-     */
-    static arraysEqual(a, b) {
-        if (a.length !== b.length)
-            return false;
-        const sortedA = [...a].sort();
-        const sortedB = [...b].sort();
-        return sortedA.every((val, idx) => val === sortedB[idx]);
     }
 }
 //# sourceMappingURL=ExecutionGraphGenerator.js.map

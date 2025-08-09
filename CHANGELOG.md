@@ -7,6 +7,23 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Removed
+
+- **Parallel Execution Architecture** - Simplified to sequential-only execution
+  - Removed 'convergence' technique (no longer needed without parallel execution)
+  - Removed all parallel execution components (ProgressCoordinator, SessionTimeoutMonitor, etc.)
+  - Removed ExecutionGraphGenerator DAG generation (simplified to sequential workflow)
+  - Removed parallel execution examples and test scripts
+  - Cleaned up all parallel-related documentation
+  - Simplified ExecutionModeController to always return sequential mode
+
+### Changed
+
+- **Execution Model** - Now exclusively sequential for depth and coherence
+  - Each technique step builds progressively on previous insights
+  - Context flows naturally through the entire thinking process
+  - Simplified architecture reduces complexity and maintenance burden
+
 ## [0.5.0] - TBD
 
 ### Added
@@ -25,19 +42,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   - Category labels (part-vii, performance, telemetry, platform)
   - Pinned roadmap issue (#162) for tracking
 - **Part VII Sub-Issues** - Created 8 issues for advanced techniques (#154-#161)
-- **Parallel Execution Foundation** (#141) - Core type system for parallel technique execution
-  - ExecutionMode type for controlling sequential/parallel/auto execution
-  - ConvergenceMethod for result synthesis strategies
-  - New 'convergence' technique for synthesizing parallel results
-  - Comprehensive interfaces for parallel coordination
-  - Type guards and error handling for parallel execution
 
 ### Changed
 
 - **README** - Added roadmap section with links to filtered GitHub views
 - **Documentation** - Updated with telemetry configuration and roadmap information
-- **BREAKING**: PlanThinkingSessionOutput now requires `executionMode` field to ensure LLMs are
-  aware of parallel execution capabilities
 
 ## [0.3.1] - 2025-08-01
 

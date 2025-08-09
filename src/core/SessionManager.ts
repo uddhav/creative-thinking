@@ -5,15 +5,9 @@
 
 import { randomUUID } from 'crypto';
 import type { SessionData, LateralTechnique } from '../types/index.js';
-import type {
-  PlanThinkingSessionOutput,
-  ParallelPlan,
-  ConvergenceOptions,
-} from '../types/planning.js';
+import type { PlanThinkingSessionOutput } from '../types/planning.js';
 import type { PersistenceAdapter } from '../persistence/adapter.js';
 import type { SessionState } from '../persistence/types.js';
-import type { ParallelSessionGroup, ParallelExecutionResult } from '../types/parallel-session.js';
-import type { ParallelExecutionContext } from '../layers/execution/ParallelExecutionContext.js';
 import { MemoryManager } from './MemoryManager.js';
 import { SessionError, ErrorCode } from '../errors/types.js';
 import { ErrorFactory } from '../errors/enhanced-errors.js';
@@ -22,12 +16,12 @@ import { SessionPersistence } from './session/SessionPersistence.js';
 import { SessionMetrics } from './session/SessionMetrics.js';
 import { PlanManager } from './session/PlanManager.js';
 import { SessionIndex } from './session/SessionIndex.js';
-import { ParallelGroupManager } from './session/ParallelGroupManager.js';
 import {
   SkipDetector,
   type SkipDetectionResult,
   type SkipPattern,
 } from './session/SkipDetector.js';
+import { getSessionLock, type SessionLock } from './session/SessionLock.js';
 
 // Constants for memory management
 const MEMORY_THRESHOLD_FOR_GC = 0.8; // Trigger garbage collection when heap usage exceeds 80%
@@ -44,6 +38,7 @@ export class SessionManager {
   private sessions: Map<string, SessionData> = new Map();
   private currentSessionId: string | null = null;
   private memoryManager: MemoryManager;
+  private sessionLock: SessionLock;
 
   // Extracted components
   private sessionCleaner: SessionCleaner;
@@ -52,9 +47,8 @@ export class SessionManager {
   private planManager: PlanManager;
   private skipDetector: SkipDetector;
 
-  // Parallel execution components (lazy initialized)
+  // Session index (lazy initialized)
   private sessionIndex: SessionIndex | null = null;
-  private parallelGroupManager: ParallelGroupManager | null = null;
 
   private config: SessionConfig = {
     maxSessions: parseInt(process.env.MAX_SESSIONS || '100', 10),
@@ -73,6 +67,9 @@ export class SessionManager {
       },
     });
 
+    // Initialize session lock for concurrent access control
+    this.sessionLock = getSessionLock();
+
     // Initialize core components only
     this.planManager = new PlanManager();
     this.skipDetector = new SkipDetector();
@@ -84,7 +81,10 @@ export class SessionManager {
       this.planManager.getAllPlans(),
       this.config,
       this.memoryManager,
-      this.touchSession.bind(this)
+      (sessionId: string) => {
+        // Non-blocking touch for cleanup - don't wait for lock
+        this.touchSession(sessionId).catch(console.error);
+      }
     );
     this.sessionPersistence = new SessionPersistence();
     this.sessionMetrics = new SessionMetrics(
@@ -107,37 +107,53 @@ export class SessionManager {
     return this.sessionIndex;
   }
 
-  private getParallelGroupManager(): ParallelGroupManager {
-    if (!this.parallelGroupManager) {
-      this.parallelGroupManager = new ParallelGroupManager(this.getSessionIndex());
-    }
-    return this.parallelGroupManager;
-  }
-
-  /**
-   * Set the parallel execution context for metrics and monitoring
-   */
-  public setParallelContext(context: unknown): void {
-    this.getParallelGroupManager().setParallelContext(context as ParallelExecutionContext);
-  }
-
   /**
    * Update session activity time
    */
-  public touchSession(sessionId: string): void {
-    const session = this.sessions.get(sessionId);
-    if (session) {
-      session.lastActivityTime = Date.now();
-    }
+  public async touchSession(sessionId: string): Promise<void> {
+    return this.sessionLock.withLock(sessionId, () => {
+      const session = this.sessions.get(sessionId);
+      if (session) {
+        session.lastActivityTime = Date.now();
+      }
+      return Promise.resolve();
+    });
   }
 
   /**
    * Clean up resources on shutdown
    */
   public destroy(): void {
+    console.error('[SessionManager] Starting cleanup...');
+
+    // Stop the cleanup interval first
     this.sessionCleaner.stopCleanup();
+    console.error('[SessionManager] Stopped cleanup interval');
+
+    // Clear all session locks
+    this.sessionLock.clearAllLocks();
+    console.error('[SessionManager] Cleared all session locks');
+
+    // Clear all sessions
+    const sessionCount = this.sessions.size;
     this.sessions.clear();
+    console.error(`[SessionManager] Cleared ${sessionCount} sessions`);
+
+    // Clear all plans
+    const planCount = this.planManager.getPlanCount();
     this.planManager.clearAllPlans();
+    console.error(`[SessionManager] Cleared ${planCount} plans`);
+
+    // Clear current session ID
+    this.currentSessionId = null;
+
+    // Clear session index if initialized
+    if (this.sessionIndex) {
+      this.sessionIndex = null;
+      console.error('[SessionManager] Cleared session index');
+    }
+
+    console.error('[SessionManager] Cleanup complete');
   }
 
   /**
@@ -213,12 +229,15 @@ export class SessionManager {
   /**
    * Update session data
    */
-  public updateSession(sessionId: string, data: Partial<SessionData>): void {
-    const session = this.sessions.get(sessionId);
-    if (session) {
-      Object.assign(session, data);
-      this.touchSession(sessionId);
-    }
+  public async updateSession(sessionId: string, data: Partial<SessionData>): Promise<void> {
+    return this.sessionLock.withLock(sessionId, () => {
+      const session = this.sessions.get(sessionId);
+      if (session) {
+        Object.assign(session, data);
+        session.lastActivityTime = Date.now();
+      }
+      return Promise.resolve();
+    });
   }
 
   /**
@@ -294,11 +313,12 @@ export class SessionManager {
   public async loadSessionFromPersistence(sessionId: string): Promise<SessionData> {
     const session = await this.sessionPersistence.loadSession(sessionId);
 
-    // Add to in-memory sessions
-    this.sessions.set(sessionId, session);
-    this.touchSession(sessionId);
-
-    return session;
+    // Add to in-memory sessions with lock
+    return this.sessionLock.withLock(sessionId, () => {
+      this.sessions.set(sessionId, session);
+      session.lastActivityTime = Date.now();
+      return Promise.resolve(session);
+    });
   }
 
   public async listPersistedSessions(options?: {
@@ -363,36 +383,8 @@ export class SessionManager {
   /**
    * Create a parallel session group from plans
    */
-  public createParallelSessionGroup(
-    problem: string,
-    plans: ParallelPlan[],
-    convergenceOptions?: ConvergenceOptions
-  ): string {
-    const { groupId, sessionIds } = this.getParallelGroupManager().createParallelSessionGroup(
-      problem,
-      plans,
-      convergenceOptions,
-      this.sessions
-    );
-
-    console.error(
-      `[SessionManager] Created parallel group ${groupId} with ${sessionIds.length} sessions`
-    );
-
-    return groupId;
-  }
-
   /**
-   * Get parallel results for a group
-   */
-  public async getParallelResults(groupId: string): Promise<ParallelExecutionResult[]> {
-    return Promise.resolve(
-      this.getParallelGroupManager().getParallelResults(groupId, this.sessions)
-    );
-  }
-
-  /**
-   * Mark a session as complete (handles parallel dependencies)
+   * Mark a session as complete
    */
   public markSessionComplete(sessionId: string): void {
     const session = this.sessions.get(sessionId);
@@ -400,56 +392,15 @@ export class SessionManager {
       throw ErrorFactory.sessionNotFound(sessionId);
     }
 
-    // Handle parallel group completion
-    if (session.parallelGroupId) {
-      this.getParallelGroupManager().markSessionComplete(sessionId, this.sessions);
-    } else {
-      // Regular session completion
-      session.endTime = Date.now();
-    }
+    // Regular session completion
+    session.endTime = Date.now();
   }
 
   /**
-   * Check if a session can start based on dependencies
+   * Get all sessions (simplified replacement for group functionality)
    */
-  public canSessionStart(sessionId: string): boolean {
-    const session = this.sessions.get(sessionId);
-    if (!session || !session.parallelGroupId) {
-      return true; // No dependencies for non-parallel sessions
-    }
-
-    return this.getParallelGroupManager().canSessionStart(sessionId, session.parallelGroupId);
-  }
-
-  /**
-   * Get parallel group information
-   */
-  public getParallelGroup(groupId: string): ParallelSessionGroup | undefined {
-    return this.getParallelGroupManager().getGroup(groupId);
-  }
-
-  /**
-   * Get all active parallel groups
-   */
-  public getActiveParallelGroups(): ParallelSessionGroup[] {
-    return this.getParallelGroupManager().getActiveGroups();
-  }
-
-  /**
-   * Update parallel group status
-   */
-  public updateParallelGroupStatus(groupId: string, status: ParallelSessionGroup['status']): void {
-    this.getParallelGroupManager().updateGroupStatus(groupId, status);
-  }
-
-  /**
-   * Get sessions in a parallel group
-   */
-  public getSessionsInGroup(groupId: string): SessionData[] {
-    const sessionIds = this.getSessionIndex().getSessionsInGroup(groupId);
-    return sessionIds
-      .map(id => this.sessions.get(id))
-      .filter((session): session is SessionData => session !== undefined);
+  public getAllSessions(): Map<string, SessionData> {
+    return this.sessions;
   }
 
   /**
@@ -463,40 +414,20 @@ export class SessionManager {
   }
 
   /**
-   * Detect circular dependencies
+   * Get simplified session statistics
    */
-  public detectCircularDependencies(): string[][] {
-    return this.getSessionIndex().detectCircularDependencies();
-  }
-
-  /**
-   * Get dependency statistics
-   */
-  public getDependencyStats(): {
-    totalDependencies: number;
-    circularDependencies: string[][];
-    orphanedSessions: string[];
+  public getSessionStats(): {
+    totalSessions: number;
+    completedSessions: number;
+    activeSessions: number;
   } {
-    const circular = this.getSessionIndex().detectCircularDependencies();
-    const orphaned = this.getSessionIndex()
-      .getSessionsByStatus('pending')
-      .filter(id => {
-        const session = this.sessions.get(id);
-        return session && !session.parallelGroupId;
-      });
-
+    const stats = this.getSessionIndex().getStats();
     return {
-      totalDependencies: this.getSessionIndex().getStats().totalDependencies,
-      circularDependencies: circular,
-      orphanedSessions: orphaned,
+      totalSessions: stats.totalSessions,
+      completedSessions: stats.statusDistribution['completed'] || 0,
+      activeSessions:
+        (stats.statusDistribution['running'] || 0) + (stats.statusDistribution['pending'] || 0),
     };
-  }
-
-  /**
-   * Clean up old parallel groups
-   */
-  public cleanupOldParallelGroups(): number {
-    return this.getParallelGroupManager().cleanupOldGroups(this.config.sessionTTL);
   }
 
   // ============= Skip Detection Methods =============
@@ -565,5 +496,12 @@ export class SessionManager {
   public hasHighRiskSkipPatterns(sessionId: string): boolean {
     const analysis = this.analyzeSessionSkipPatterns(sessionId);
     return analysis ? analysis.riskScore > 0.7 : false;
+  }
+
+  /**
+   * Get the session lock instance for external use
+   */
+  public getSessionLock(): SessionLock {
+    return this.sessionLock;
   }
 }

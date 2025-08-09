@@ -1,18 +1,14 @@
 /**
- * Tests for ExecutionModeController
+ * Tests for ExecutionModeController - Simplified for sequential-only mode
  */
 
 import { describe, it, expect } from 'vitest';
 import { ExecutionModeController } from '../../../layers/discovery/ExecutionModeController.js';
-import { ParallelismDetector } from '../../../layers/discovery/ParallelismDetector.js';
-import { ParallelismValidator } from '../../../layers/discovery/ParallelismValidator.js';
 import type { DiscoverTechniquesInput } from '../../../types/planning.js';
 import type { LateralTechnique } from '../../../types/index.js';
 
 describe('ExecutionModeController', () => {
-  const detector = new ParallelismDetector();
-  const validator = new ParallelismValidator();
-  const controller = new ExecutionModeController(detector, validator);
+  const controller = new ExecutionModeController();
 
   const createInput = (
     overrides: Partial<DiscoverTechniquesInput> = {}
@@ -22,168 +18,108 @@ describe('ExecutionModeController', () => {
   });
 
   describe('determineExecutionMode', () => {
-    it('should respect explicit sequential mode', () => {
-      const input = createInput({ executionMode: 'sequential' });
+    it('should always return sequential mode', () => {
+      const input = createInput();
       const techniques: LateralTechnique[] = ['six_hats', 'po'];
 
       const result = controller.determineExecutionMode(input, techniques);
       expect(result.mode).toBe('sequential');
-      expect(result.reason).toContain('Explicitly requested sequential');
-      expect(result.confidence).toBe(1.0);
+      expect(result.reason).toContain('Sequential execution is the only supported mode');
     });
 
-    it('should validate explicit parallel mode', () => {
+    it('should return sequential even when parallel is requested', () => {
       const input = createInput({ executionMode: 'parallel' });
       const techniques: LateralTechnique[] = ['six_hats', 'po', 'random_entry'];
 
       const result = controller.determineExecutionMode(input, techniques);
-      expect(result.mode).toBe('parallel');
-      expect(result.reason).toContain('Explicitly requested parallel');
-      expect(result.convergenceOptions).toBeDefined();
-    });
-
-    it('should fall back to sequential if parallel validation fails', () => {
-      const input = createInput({ executionMode: 'parallel' });
-      const techniques: LateralTechnique[] = ['six_hats']; // Only one technique
-
-      const result = controller.determineExecutionMode(input, techniques);
       expect(result.mode).toBe('sequential');
-      expect(result.reason).toContain('Cannot execute in parallel');
-      expect(result.warnings).toContain('Falling back to sequential execution');
     });
 
-    it('should detect parallel intent from problem text', () => {
-      const input = createInput({
-        problem: 'I want to explore multiple approaches simultaneously',
-      });
-      const techniques: LateralTechnique[] = ['six_hats', 'po', 'random_entry'];
-
-      const result = controller.determineExecutionMode(input, techniques);
-      expect(result.mode).toBe('parallel');
-      expect(result.reason).toContain('Detected parallel intent');
-    });
-
-    it('should default to sequential without parallel indicators', () => {
-      const input = createInput({ problem: 'Solve this step by step' });
-      const techniques: LateralTechnique[] = ['six_hats', 'po'];
-
-      const result = controller.determineExecutionMode(input, techniques);
-      expect(result.mode).toBe('sequential');
-      expect(result.reason).toContain('No parallel execution indicators');
-    });
-
-    it('should handle auto mode with many techniques', () => {
-      const input = createInput({ executionMode: 'auto' });
+    it('should add warning for many techniques', () => {
+      const input = createInput();
       const techniques: LateralTechnique[] = ['six_hats', 'po', 'random_entry', 'scamper'];
 
       const result = controller.determineExecutionMode(input, techniques);
-      expect(result.mode).toBe('parallel');
-      expect(result.reason).toContain('Auto-selected parallel mode');
+      expect(result.mode).toBe('sequential');
+      expect(result.warnings).toBeDefined();
+      expect(result.warnings?.[0]).toContain('4 techniques recommended');
     });
 
-    it('should select parallel for innovative outcome in auto mode', () => {
+    it('should add warning for time constraints', () => {
       const input = createInput({
-        executionMode: 'auto',
-        preferredOutcome: 'innovative',
+        constraints: ['time limit', 'need quick results'],
       });
       const techniques: LateralTechnique[] = ['six_hats', 'po'];
 
       const result = controller.determineExecutionMode(input, techniques);
-      expect(result.mode).toBe('parallel');
+      expect(result.mode).toBe('sequential');
+      expect(result.warnings).toBeDefined();
+      expect(result.warnings?.some(w => w.includes('Time constraint'))).toBe(true);
     });
 
-    it('should detect time pressure and suggest parallel', () => {
-      const input = createInput({
-        executionMode: 'auto',
-        constraints: ['Need quick results', 'Limited time available'],
-      });
+    it('should handle auto mode by returning sequential', () => {
+      const input = createInput({ executionMode: 'auto' });
       const techniques: LateralTechnique[] = ['six_hats', 'po'];
 
       const result = controller.determineExecutionMode(input, techniques);
-      expect(result.mode).toBe('parallel');
-    });
-
-    it('should include convergence options for parallel mode', () => {
-      const input = createInput({
-        problem: 'Explore in parallel then synthesize results',
-      });
-      const techniques: LateralTechnique[] = ['six_hats', 'po'];
-
-      const result = controller.determineExecutionMode(input, techniques);
-      expect(result.convergenceOptions).toBeDefined();
-      expect(result.convergenceOptions?.method).toBe('execute_thinking_step');
-    });
-
-    it('should detect LLM handoff convergence', () => {
-      const input = createInput({
-        problem: 'Explore in parallel then hand off to LLM for synthesis',
-      });
-      const techniques: LateralTechnique[] = ['six_hats', 'po'];
-
-      const result = controller.determineExecutionMode(input, techniques);
-      expect(result.convergenceOptions?.method).toBe('llm_handoff');
+      expect(result.mode).toBe('sequential');
     });
   });
 
-  describe('analyzeExecutionMode', () => {
-    it('should provide detailed analysis', () => {
-      const input = createInput({
-        problem: 'Use parallel creative thinking to explore options',
-      });
-      const techniques: LateralTechnique[] = ['six_hats', 'po'];
-
-      const analysis = controller.analyzeExecutionMode(input, techniques);
-      expect(analysis.mode).toBe('parallel');
-      expect(analysis.detectedKeywords).toContain('parallel creative thinking');
-      expect(analysis.validationResult).toBeDefined();
-      expect(analysis.validationResult?.isValid).toBe(true);
+  describe('validateExecutionMode', () => {
+    it('should validate sequential mode', () => {
+      const result = controller.validateExecutionMode('sequential');
+      expect(result.isValid).toBe(true);
+      expect(result.error).toBeUndefined();
     });
 
-    it('should include validation warnings in analysis', () => {
-      const input = createInput({
-        problem: 'Explore multiple approaches',
-        maxParallelism: 2,
-      });
-      const techniques: LateralTechnique[] = ['design_thinking', 'triz', 'six_hats'];
+    it('should reject parallel mode', () => {
+      const result = controller.validateExecutionMode('parallel');
+      expect(result.isValid).toBe(false);
+      expect(result.error).toContain('not supported');
+      expect(result.error).toContain('sequential');
+    });
 
-      const analysis = controller.analyzeExecutionMode(input, techniques);
-      expect(analysis.validationResult?.warnings.length).toBeGreaterThan(0);
+    it('should reject auto mode', () => {
+      const result = controller.validateExecutionMode('auto');
+      expect(result.isValid).toBe(false);
+      expect(result.error).toContain('not supported');
     });
   });
 
   describe('edge cases', () => {
     it('should handle empty techniques array', () => {
-      const input = createInput({ executionMode: 'parallel' });
+      const input = createInput();
       const techniques: LateralTechnique[] = [];
 
       const result = controller.determineExecutionMode(input, techniques);
       expect(result.mode).toBe('sequential');
-      expect(result.warnings).toBeDefined();
     });
 
-    it('should handle conflicting signals gracefully', () => {
-      const input = createInput({
-        problem: 'Use parallel approaches',
-        executionMode: 'sequential',
-      });
-      const techniques: LateralTechnique[] = ['six_hats', 'po'];
-
-      const result = controller.determineExecutionMode(input, techniques);
-      // Explicit mode should take precedence
-      expect(result.mode).toBe('sequential');
-      expect(result.reason).toContain('Explicitly requested');
-    });
-
-    it('should handle max parallelism constraints', () => {
-      const input = createInput({
-        executionMode: 'parallel',
-        maxParallelism: 2,
-      });
-      const techniques: LateralTechnique[] = ['six_hats', 'po', 'random_entry'];
+    it('should handle single technique', () => {
+      const input = createInput();
+      const techniques: LateralTechnique[] = ['six_hats'];
 
       const result = controller.determineExecutionMode(input, techniques);
       expect(result.mode).toBe('sequential');
-      expect(result.reason).toContain('exceeds maximum');
+      expect(result.warnings).toBeUndefined();
+    });
+
+    it('should handle many techniques with time constraint', () => {
+      const input = createInput({
+        constraints: ['time pressure'],
+      });
+      const techniques: LateralTechnique[] = [
+        'six_hats',
+        'po',
+        'random_entry',
+        'scamper',
+        'design_thinking',
+      ];
+
+      const result = controller.determineExecutionMode(input, techniques);
+      expect(result.mode).toBe('sequential');
+      expect(result.warnings?.length).toBe(2);
     });
   });
 });

@@ -2,6 +2,7 @@
  * WorkflowGuard - Enforces the three-tool workflow pattern
  * Tracks tool usage and provides helpful guidance when workflow is violated
  */
+import type { SessionManager } from './SessionManager.js';
 interface WorkflowViolation {
     type: 'skipped_discovery' | 'skipped_planning' | 'invalid_technique' | 'fabricated_planid' | 'parallel_without_plan' | 'parallel_inconsistent';
     message: string;
@@ -12,7 +13,12 @@ export declare class WorkflowGuard {
     private recentCalls;
     private readonly CALL_WINDOW_MS;
     private parallelCallGroups;
+    private sessionManager;
     private validTechniques;
+    /**
+     * Set the SessionManager instance for plan validation
+     */
+    setSessionManager(sessionManager: SessionManager): void;
     /**
      * Record a tool call
      */

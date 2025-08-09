@@ -6,7 +6,6 @@ import { ErrorContextBuilder } from '../../core/ErrorContextBuilder.js';
 import { TelemetryCollector } from '../../telemetry/TelemetryCollector.js';
 import { ErrorFactory } from '../../errors/enhanced-errors.js';
 import { ErrorHandler } from '../../errors/ErrorHandler.js';
-import { ConvergenceValidator } from '../../core/validators/ConvergenceValidator.js';
 import { SessionEncoder } from '../../core/session/SessionEncoder.js';
 export class ExecutionValidator {
     sessionManager;
@@ -15,7 +14,6 @@ export class ExecutionValidator {
     errorBuilder = new ErrorContextBuilder();
     telemetry = TelemetryCollector.getInstance();
     errorHandler = new ErrorHandler();
-    convergenceValidator = new ConvergenceValidator();
     constructor(sessionManager, techniqueRegistry, visualFormatter) {
         this.sessionManager = sessionManager;
         this.techniqueRegistry = techniqueRegistry;
@@ -101,8 +99,7 @@ export class ExecutionValidator {
             };
         }
         // Validate technique matches plan
-        // Special case: convergence technique is always allowed as it synthesizes parallel results
-        if (input.technique !== 'convergence' && !plan.techniques.includes(input.technique)) {
+        if (!plan.techniques.includes(input.technique)) {
             const planTechnique = plan.techniques[0]; // Use first technique as the expected one
             const enhancedError = ErrorFactory.techniqueMismatch(planTechnique, input.technique, input.planId);
             return {
@@ -236,7 +233,8 @@ export class ExecutionValidator {
             this.telemetry.trackTechniqueStart(sessionId, input.technique).catch(console.error);
         }
         // Update session activity
-        this.sessionManager.touchSession(sessionId);
+        // Note: Don't await touchSession here to avoid deadlock since we'll lock in executeThinkingStep
+        this.sessionManager.touchSession(sessionId).catch(console.error);
         return { session, sessionId };
     }
     /**
@@ -253,21 +251,12 @@ export class ExecutionValidator {
                     techniqueIndex = i;
                     break;
                 }
-                // Only accumulate steps for sequential execution
-                if (plan.executionMode !== 'parallel') {
-                    stepsBeforeThisTechnique += plan.workflow[i].steps.length;
-                }
+                // Always accumulate steps for consistent behavior
+                stepsBeforeThisTechnique += plan.workflow[i].steps.length;
             }
-            // In parallel mode, each technique uses its own local step numbering
-            // In sequential mode, convert cumulative step to local step
-            if (plan.executionMode === 'parallel') {
-                // Techniques run independently with their own step numbering (1-N)
-                techniqueLocalStep = input.currentStep;
-            }
-            else {
-                // Sequential execution uses cumulative step numbering
-                techniqueLocalStep = input.currentStep - stepsBeforeThisTechnique;
-            }
+            // Always use sequential step numbering for consistency
+            // This ensures identical responses regardless of executionMode
+            techniqueLocalStep = input.currentStep - stepsBeforeThisTechnique;
         }
         return { techniqueLocalStep, techniqueIndex, stepsBeforeThisTechnique };
     }
@@ -321,27 +310,6 @@ export class ExecutionValidator {
         };
     }
     /**
-     * Validate convergence technique usage
-     */
-    validateConvergenceTechnique(input) {
-        // Use dedicated ConvergenceValidator for convergence-specific validation
-        const convergenceValidation = this.convergenceValidator.validateConvergence(input);
-        if (!convergenceValidation.isValid) {
-            return convergenceValidation;
-        }
-        // Check for non-convergence techniques with parallel-specific fields
-        if (input.technique !== 'convergence' && input.parallelResults) {
-            return {
-                isValid: false,
-                error: this.errorBuilder.buildGenericError('Non-convergence techniques should not have parallel results', {
-                    technique: input.technique,
-                    hasParallelResults: true,
-                }),
-            };
-        }
-        return { isValid: true };
-    }
-    /**
      * Initialize a new session
      */
     initializeSession(input, ergodicityManager) {
@@ -357,13 +325,9 @@ export class ExecutionValidator {
             pathMemory,
             ergodicityManager,
         };
-        // Add planId in parallelMetadata if provided
+        // Add planId if provided
         if (input.planId) {
-            sessionData.parallelMetadata = {
-                planId: input.planId,
-                techniques: [input.technique],
-                canExecuteIndependently: true,
-            };
+            sessionData.planId = input.planId;
         }
         return sessionData;
     }

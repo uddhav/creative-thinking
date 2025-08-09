@@ -36,10 +36,6 @@ export declare class ObjectFieldValidator {
      */
     static validateNineWindowsMatrixItem(value: unknown, index: number): ObjectValidationResult;
     /**
-     * Validate parallelResults item structure
-     */
-    static validateParallelResultItem(value: unknown, index: number): ObjectValidationResult;
-    /**
      * Validates that a field is an array of strings
      */
     static validateStringArray(value: unknown, fieldName: string): ArrayValidationResult;

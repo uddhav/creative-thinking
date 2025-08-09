@@ -8,7 +8,6 @@ import type {
   SessionData,
   ThinkingOperationData,
   LateralThinkingResponse,
-  LateralTechnique,
 } from '../../types/index.js';
 import type { PlanThinkingSessionOutput } from '../../types/planning.js';
 import type { PathMemory } from '../../ergodicity/types.js';
@@ -311,10 +310,6 @@ export class ExecutionResponseBuilder {
       currentTechnique: input.technique,
       techniqueIndex: techniqueIndex + 1,
       totalTechniques: plan?.techniques.length || 1,
-      // Add parallel execution info
-      executionMode: plan?.executionMode,
-      parallelGroup: plan?.parallelGroupIds?.[techniqueIndex],
-      canParallelize: handler.getTechniqueInfo().parallelSteps?.canParallelize,
     };
 
     this.addMemoryOutputs(parsedResponse, memoryOutputs);
@@ -390,41 +385,6 @@ export class ExecutionResponseBuilder {
     };
   }
 
-  /**
-   * Build parallel execution context for guidance
-   */
-  private buildParallelExecutionContext(
-    plan: PlanThinkingSessionOutput | undefined,
-    currentTechnique: string
-  ): string | undefined {
-    if (!plan || plan.executionMode !== 'parallel') {
-      return undefined;
-    }
-
-    // Check if plan has parallel groups
-    if (plan.parallelGroupIds && plan.parallelGroupIds.length > 0) {
-      const currentGroupIndex = plan.techniques.indexOf(currentTechnique as LateralTechnique);
-      if (currentGroupIndex >= 0 && plan.parallelGroupIds[currentGroupIndex]) {
-        const groupId = plan.parallelGroupIds[currentGroupIndex];
-        const sameGroupTechniques = plan.techniques.filter(
-          (t, i) => plan.parallelGroupIds?.[i] === groupId && t !== currentTechnique
-        );
-
-        if (sameGroupTechniques.length > 0) {
-          return `🔄 Parallel execution with: ${sameGroupTechniques.join(', ')}`;
-        }
-      }
-    }
-
-    // Check if there are other techniques that can run in parallel
-    const parallelTechniques = plan.techniques.filter(t => t !== currentTechnique);
-    if (parallelTechniques.length > 0) {
-      return `⚡ Running in parallel mode with ${parallelTechniques.length} other technique(s)`;
-    }
-
-    return undefined;
-  }
-
   private generateNextStepGuidance(
     input: ExecuteThinkingStepInput,
     session: SessionData,
@@ -440,12 +400,6 @@ export class ExecutionResponseBuilder {
     // Ensure next step is valid
     if (nextStep < 1 || nextStep > input.totalSteps) {
       return `Complete the ${handler.getTechniqueInfo().name} process`;
-    }
-
-    // Add parallel execution context if applicable
-    const parallelContext = this.buildParallelExecutionContext(plan, input.technique);
-    if (parallelContext) {
-      return `${parallelContext} | Continue with next step`;
     }
 
     // Check completion status and add assertive guidance if needed
@@ -557,9 +511,6 @@ export class ExecutionResponseBuilder {
       currentTechnique: string;
       techniqueIndex: number;
       totalTechniques: number;
-      executionMode?: string;
-      parallelGroup?: string;
-      canParallelize?: boolean;
     }
   ): void {
     parsedResponse.techniqueProgress = techniqueProgress;
@@ -1001,9 +952,9 @@ export class ExecutionResponseBuilder {
       if (input.culturalFrameworks && input.culturalFrameworks.length > 2) {
         return 'These cultural patterns provide templates for diverse problem contexts';
       }
-      // Check for parallel paths implementation
+      // Check for implementation paths
       if (input.parallelPaths && input.parallelPaths.length > 0) {
-        return 'Parallel implementation patterns can be adapted across different contexts';
+        return 'Implementation patterns can be adapted across different contexts';
       }
     }
 

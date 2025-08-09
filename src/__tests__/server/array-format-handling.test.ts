@@ -79,18 +79,6 @@ describe('Array Format Error Handling', () => {
       expect(validation.suggestion).toContain('"key": "value"');
     });
 
-    it('should validate parallelResults array items', () => {
-      const invalidItem = {
-        planId: 123, // Should be string
-        technique: 'six_hats',
-      };
-
-      const validation = ObjectFieldValidator.validateParallelResultItem(invalidItem, 0);
-
-      expect(validation.isValid).toBe(false);
-      expect(validation.error).toContain('Missing or invalid planId');
-    });
-
     it('should validate all technique array fields', () => {
       const techniques = [
         {
@@ -165,36 +153,6 @@ describe('Array Format Error Handling', () => {
       expect(validation.isValid).toBe(false);
       expect(validation.error).toContain('alternativeSuggestions was passed as a JSON string');
       expect(validation.error).not.toContain('modifications'); // Should not complain about valid field
-    });
-
-    it('should validate convergence technique parallelResults structure', () => {
-      const params = {
-        technique: 'convergence',
-        parallelResults: [
-          {
-            planId: 'plan1',
-            technique: 'six_hats',
-            results: {},
-            insights: '["insight1"]', // Should be array, not string
-            metrics: {},
-          },
-        ],
-      };
-
-      // First check if parallelResults is array (it is)
-      const arrayValidation = ObjectFieldValidator.validateTechniqueArrayFields(
-        'convergence',
-        params
-      );
-      expect(arrayValidation.isValid).toBe(true); // parallelResults is array
-
-      // Then validate each item
-      const itemValidation = ObjectFieldValidator.validateParallelResultItem(
-        params.parallelResults[0],
-        0
-      );
-      expect(itemValidation.isValid).toBe(false);
-      expect(itemValidation.error).toContain('insights must be an array');
     });
 
     it('should validate nine_windows matrix item structure', () => {

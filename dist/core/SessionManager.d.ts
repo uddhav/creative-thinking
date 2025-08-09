@@ -3,11 +3,11 @@
  * Handles session lifecycle, persistence, and cleanup
  */
 import type { SessionData, LateralTechnique } from '../types/index.js';
-import type { PlanThinkingSessionOutput, ParallelPlan, ConvergenceOptions } from '../types/planning.js';
+import type { PlanThinkingSessionOutput } from '../types/planning.js';
 import type { PersistenceAdapter } from '../persistence/adapter.js';
 import type { SessionState } from '../persistence/types.js';
-import type { ParallelSessionGroup, ParallelExecutionResult } from '../types/parallel-session.js';
 import { type SkipDetectionResult, type SkipPattern } from './session/SkipDetector.js';
+import { type SessionLock } from './session/SessionLock.js';
 export interface SessionConfig {
     maxSessions: number;
     maxSessionSize: number;
@@ -19,28 +19,23 @@ export declare class SessionManager {
     private sessions;
     private currentSessionId;
     private memoryManager;
+    private sessionLock;
     private sessionCleaner;
     private sessionPersistence;
     private sessionMetrics;
     private planManager;
     private skipDetector;
     private sessionIndex;
-    private parallelGroupManager;
     private config;
     constructor();
     /**
      * Lazy initialization for parallel execution components
      */
     private getSessionIndex;
-    private getParallelGroupManager;
-    /**
-     * Set the parallel execution context for metrics and monitoring
-     */
-    setParallelContext(context: unknown): void;
     /**
      * Update session activity time
      */
-    touchSession(sessionId: string): void;
+    touchSession(sessionId: string): Promise<void>;
     /**
      * Clean up resources on shutdown
      */
@@ -64,7 +59,7 @@ export declare class SessionManager {
     /**
      * Update session data
      */
-    updateSession(sessionId: string, data: Partial<SessionData>): void;
+    updateSession(sessionId: string, data: Partial<SessionData>): Promise<void>;
     /**
      * Delete a session
      */
@@ -111,55 +106,26 @@ export declare class SessionManager {
     /**
      * Create a parallel session group from plans
      */
-    createParallelSessionGroup(problem: string, plans: ParallelPlan[], convergenceOptions?: ConvergenceOptions): string;
     /**
-     * Get parallel results for a group
-     */
-    getParallelResults(groupId: string): Promise<ParallelExecutionResult[]>;
-    /**
-     * Mark a session as complete (handles parallel dependencies)
+     * Mark a session as complete
      */
     markSessionComplete(sessionId: string): void;
     /**
-     * Check if a session can start based on dependencies
+     * Get all sessions (simplified replacement for group functionality)
      */
-    canSessionStart(sessionId: string): boolean;
-    /**
-     * Get parallel group information
-     */
-    getParallelGroup(groupId: string): ParallelSessionGroup | undefined;
-    /**
-     * Get all active parallel groups
-     */
-    getActiveParallelGroups(): ParallelSessionGroup[];
-    /**
-     * Update parallel group status
-     */
-    updateParallelGroupStatus(groupId: string, status: ParallelSessionGroup['status']): void;
-    /**
-     * Get sessions in a parallel group
-     */
-    getSessionsInGroup(groupId: string): SessionData[];
+    getAllSessions(): Map<string, SessionData>;
     /**
      * Get sessions by technique
      */
     getSessionsByTechnique(technique: SessionData['technique']): SessionData[];
     /**
-     * Detect circular dependencies
+     * Get simplified session statistics
      */
-    detectCircularDependencies(): string[][];
-    /**
-     * Get dependency statistics
-     */
-    getDependencyStats(): {
-        totalDependencies: number;
-        circularDependencies: string[][];
-        orphanedSessions: string[];
+    getSessionStats(): {
+        totalSessions: number;
+        completedSessions: number;
+        activeSessions: number;
     };
-    /**
-     * Clean up old parallel groups
-     */
-    cleanupOldParallelGroups(): number;
     /**
      * Analyze skip patterns for a specific session
      */
@@ -181,5 +147,9 @@ export declare class SessionManager {
      * Check if session has concerning skip patterns
      */
     hasHighRiskSkipPatterns(sessionId: string): boolean;
+    /**
+     * Get the session lock instance for external use
+     */
+    getSessionLock(): SessionLock;
 }
 //# sourceMappingURL=SessionManager.d.ts.map

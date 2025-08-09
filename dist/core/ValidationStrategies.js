@@ -392,32 +392,6 @@ export class ExecutionValidator extends BaseValidator {
                     }
                 }
                 break;
-            case 'convergence':
-                // Convergence is a special technique for synthesizing parallel results
-                // It requires parallelResults and convergenceStrategy
-                if (data.convergenceStrategy !== undefined) {
-                    this.validateEnum(data.convergenceStrategy, ['merge', 'select', 'hierarchical'], 'convergenceStrategy', errors);
-                }
-                if (data.parallelResults !== undefined) {
-                    if (!Array.isArray(data.parallelResults)) {
-                        errors.push('parallelResults must be an array');
-                    }
-                    else {
-                        // Validate each parallel result item
-                        data.parallelResults.forEach((item, index) => {
-                            const validation = ObjectFieldValidator.validateParallelResultItem(item, index);
-                            if (!validation.isValid) {
-                                if (validation.error) {
-                                    errors.push(validation.error);
-                                }
-                                if (validation.suggestion) {
-                                    warnings.push(validation.suggestion);
-                                }
-                            }
-                        });
-                    }
-                }
-                break;
         }
         // Validate risk/adversarial fields
         if (data.risks !== undefined &&

@@ -57,8 +57,54 @@ export class ResponseBuilder {
    * Build a success response with formatted content
    */
   public buildSuccessResponse(content: unknown): LateralThinkingResponse {
-    // Use optimizer for all responses
-    return this.jsonOptimizer.buildOptimizedResponse(content);
+    try {
+      // Use optimizer for all responses
+      const response = this.jsonOptimizer.buildOptimizedResponse(content);
+
+      // Validate response structure
+      if (!response.content || !Array.isArray(response.content)) {
+        console.error('[ResponseBuilder] Invalid response structure detected:', {
+          hasContent: !!response.content,
+          contentType: typeof response.content,
+        });
+
+        // Return a safe fallback response
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(content),
+            },
+          ],
+        };
+      }
+
+      // Ensure all content items have required fields
+      for (let i = 0; i < response.content.length; i++) {
+        const item = response.content[i];
+        if (!item || typeof item !== 'object' || !('type' in item)) {
+          console.error(`[ResponseBuilder] Invalid content item at index ${i}:`, item);
+          // Replace with valid item
+          response.content[i] = {
+            type: 'text',
+            text: String(item),
+          };
+        }
+      }
+
+      return response;
+    } catch (error) {
+      console.error('[ResponseBuilder] Error building response:', error);
+      // Return a safe fallback response
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(content),
+          },
+        ],
+      };
+    }
   }
 
   /**
@@ -178,10 +224,6 @@ export class ResponseBuilder {
       });
     });
 
-    // Build parallel execution groups if parallel mode is enabled
-    const parallelExecutionGroups =
-      output.executionMode === 'parallel' ? this.buildParallelExecutionGroups(output) : undefined;
-
     const transformedOutput: Record<string, unknown> = {
       planId: output.planId,
       workflow: flatWorkflow,
@@ -194,55 +236,35 @@ export class ResponseBuilder {
       planningInsights: output.planningInsights,
       complexityAssessment: output.complexityAssessment,
       executionMode: output.executionMode,
-      // Add execution graph for DAG-based parallel execution
+      // Add execution graph for DAG-based parallel execution documentation
       executionGraph: output.executionGraph,
-      // Add parallel execution groups for Anthropic-style parallel tool calls
-      parallelExecutionGroups,
       // Add execution guidance to help LLMs proceed
       nextSteps:
         output.techniques && output.techniques.length > 0 && output.problem
-          ? output.executionMode === 'parallel' && parallelExecutionGroups
-            ? {
-                instructions:
-                  'To execute this plan, use PARALLEL tool calls for techniques that can run concurrently.',
-                parallelCalls: parallelExecutionGroups[0]?.techniques.map(technique => ({
-                  tool: 'execute_thinking_step',
-                  parameters: {
-                    planId: output.planId,
-                    technique,
-                    problem: output.problem,
-                    currentStep: 1,
-                    totalSteps:
-                      output.workflow.find(w => w.technique === technique)?.steps.length || 0,
-                    output: `[Your thinking output for ${technique} step 1]`,
-                    nextStepNeeded: true,
-                  },
-                })),
-                guidance:
-                  'Execute techniques in parallel groups as indicated. Techniques in the same group should be called simultaneously in a single parallel tool call. Continue until all steps are complete.',
-                important:
-                  'Use Anthropic-style parallel tool calls for techniques in the same execution group. This significantly improves performance.',
-              }
-            : {
-                instructions:
-                  'To execute this plan, use the execute_thinking_step tool with the planId and follow the workflow steps.',
-                firstCall: {
-                  tool: 'execute_thinking_step',
-                  parameters: {
-                    planId: output.planId,
-                    technique: output.techniques[0],
-                    problem: output.problem,
-                    currentStep: 1,
-                    totalSteps: output.workflow[0]?.steps.length || 0,
-                    output: '[Your thinking output for step 1]',
-                    nextStepNeeded: true,
-                  },
+          ? {
+              instructions:
+                output.executionMode === 'parallel'
+                  ? 'To execute this plan, you may use parallel tool calls for techniques that can run concurrently. Check the executionGraph for parallelizable groups.'
+                  : 'To execute this plan, use the execute_thinking_step tool with the planId and follow the workflow steps.',
+              firstCall: {
+                tool: 'execute_thinking_step',
+                parameters: {
+                  planId: output.planId,
+                  technique: output.techniques[0],
+                  problem: output.problem,
+                  currentStep: 1,
+                  totalSteps: output.workflow[0]?.steps.length || 0,
+                  output: '[Your thinking output for step 1]',
+                  nextStepNeeded: true,
                 },
-                guidance:
-                  'Continue calling execute_thinking_step for each step, incrementing currentStep until nextStepNeeded is false. Note: currentStep uses cumulative numbering across all techniques (e.g., if six_hats has 7 steps, temporal_work starts at step 8).',
-                important:
-                  'Always use the planId returned from this response. Do not skip this step or create your own planId.',
-              }
+              },
+              guidance:
+                output.executionMode === 'parallel'
+                  ? 'For parallel execution, you can call execute_thinking_step multiple times in a single message for techniques that have no dependencies. The executionGraph shows which techniques can run in parallel.'
+                  : 'Continue calling execute_thinking_step for each step, incrementing currentStep until nextStepNeeded is false. Note: currentStep uses cumulative numbering across all techniques (e.g., if six_hats has 7 steps, temporal_work starts at step 8).',
+              important:
+                'Always use the planId returned from this response. Do not skip this step or create your own planId.',
+            }
           : undefined,
       workflowReminder: {
         currentStep: 2,
@@ -685,75 +707,5 @@ export class ResponseBuilder {
           ? `You can also plan with multiple techniques: ${selectedTechniques.join(', ')}. The planning tool will create an integrated workflow.`
           : undefined,
     };
-  }
-
-  /**
-   * Build parallel execution groups for planning response
-   */
-  private buildParallelExecutionGroups(output: PlanThinkingSessionOutput):
-    | Array<{
-        groupNumber: number;
-        techniques: LateralTechnique[];
-        canRunInParallel: boolean;
-        description: string;
-      }>
-    | undefined {
-    if (!output.parallelGroupIds || output.parallelGroupIds.length === 0) {
-      // Create groups based on technique dependencies
-      const groups: Array<{
-        groupNumber: number;
-        techniques: LateralTechnique[];
-        canRunInParallel: boolean;
-        description: string;
-      }> = [];
-
-      // Group 1: Techniques that can run in parallel
-      const parallelTechniques = output.techniques.filter(
-        t => !['disney_method', 'design_thinking', 'triz'].includes(t)
-      );
-
-      if (parallelTechniques.length > 0) {
-        groups.push({
-          groupNumber: 1,
-          techniques: parallelTechniques,
-          canRunInParallel: true,
-          description: 'These techniques can be executed simultaneously using parallel tool calls',
-        });
-      }
-
-      // Group 2: Sequential techniques
-      const sequentialTechniques = output.techniques.filter(t =>
-        ['disney_method', 'design_thinking', 'triz'].includes(t)
-      );
-
-      sequentialTechniques.forEach(technique => {
-        groups.push({
-          groupNumber: groups.length + 1,
-          techniques: [technique],
-          canRunInParallel: false,
-          description: `${technique} must be executed sequentially (steps depend on each other)`,
-        });
-      });
-
-      // Add convergence as final group if applicable
-      if (output.convergenceConfig) {
-        groups.push({
-          groupNumber: groups.length + 1,
-          techniques: ['convergence' as LateralTechnique],
-          canRunInParallel: false,
-          description: 'Final synthesis of all technique results',
-        });
-      }
-
-      return groups.length > 0 ? groups : undefined;
-    }
-
-    // Use existing parallel group IDs if available
-    return output.parallelGroupIds.map((groupId: string, index: number) => ({
-      groupNumber: index + 1,
-      techniques: output.techniques.filter((_, i) => output.parallelGroupIds?.[i] === groupId),
-      canRunInParallel: true,
-      description: `Parallel execution group ${groupId}`,
-    }));
   }
 }

@@ -11,23 +11,23 @@ import { SessionPersistence } from './session/SessionPersistence.js';
 import { SessionMetrics } from './session/SessionMetrics.js';
 import { PlanManager } from './session/PlanManager.js';
 import { SessionIndex } from './session/SessionIndex.js';
-import { ParallelGroupManager } from './session/ParallelGroupManager.js';
 import { SkipDetector, } from './session/SkipDetector.js';
+import { getSessionLock } from './session/SessionLock.js';
 // Constants for memory management
 const MEMORY_THRESHOLD_FOR_GC = 0.8; // Trigger garbage collection when heap usage exceeds 80%
 export class SessionManager {
     sessions = new Map();
     currentSessionId = null;
     memoryManager;
+    sessionLock;
     // Extracted components
     sessionCleaner;
     sessionPersistence;
     sessionMetrics;
     planManager;
     skipDetector;
-    // Parallel execution components (lazy initialized)
+    // Session index (lazy initialized)
     sessionIndex = null;
-    parallelGroupManager = null;
     config = {
         maxSessions: parseInt(process.env.MAX_SESSIONS || '100', 10),
         maxSessionSize: parseInt(process.env.MAX_SESSION_SIZE || String(1024 * 1024), 10), // 1MB default
@@ -43,11 +43,16 @@ export class SessionManager {
                 console.error('[Memory Usage] Triggering garbage collection...');
             },
         });
+        // Initialize session lock for concurrent access control
+        this.sessionLock = getSessionLock();
         // Initialize core components only
         this.planManager = new PlanManager();
         this.skipDetector = new SkipDetector();
         // Parallel components will be initialized on first use (lazy initialization)
-        this.sessionCleaner = new SessionCleaner(this.sessions, this.planManager.getAllPlans(), this.config, this.memoryManager, this.touchSession.bind(this));
+        this.sessionCleaner = new SessionCleaner(this.sessions, this.planManager.getAllPlans(), this.config, this.memoryManager, (sessionId) => {
+            // Non-blocking touch for cleanup - don't wait for lock
+            this.touchSession(sessionId).catch(console.error);
+        });
         this.sessionPersistence = new SessionPersistence();
         this.sessionMetrics = new SessionMetrics(this.sessions, this.planManager.getAllPlans(), this.config);
         this.sessionCleaner.startCleanup();
@@ -62,34 +67,45 @@ export class SessionManager {
         }
         return this.sessionIndex;
     }
-    getParallelGroupManager() {
-        if (!this.parallelGroupManager) {
-            this.parallelGroupManager = new ParallelGroupManager(this.getSessionIndex());
-        }
-        return this.parallelGroupManager;
-    }
-    /**
-     * Set the parallel execution context for metrics and monitoring
-     */
-    setParallelContext(context) {
-        this.getParallelGroupManager().setParallelContext(context);
-    }
     /**
      * Update session activity time
      */
-    touchSession(sessionId) {
-        const session = this.sessions.get(sessionId);
-        if (session) {
-            session.lastActivityTime = Date.now();
-        }
+    async touchSession(sessionId) {
+        return this.sessionLock.withLock(sessionId, () => {
+            const session = this.sessions.get(sessionId);
+            if (session) {
+                session.lastActivityTime = Date.now();
+            }
+            return Promise.resolve();
+        });
     }
     /**
      * Clean up resources on shutdown
      */
     destroy() {
+        console.error('[SessionManager] Starting cleanup...');
+        // Stop the cleanup interval first
         this.sessionCleaner.stopCleanup();
+        console.error('[SessionManager] Stopped cleanup interval');
+        // Clear all session locks
+        this.sessionLock.clearAllLocks();
+        console.error('[SessionManager] Cleared all session locks');
+        // Clear all sessions
+        const sessionCount = this.sessions.size;
         this.sessions.clear();
+        console.error(`[SessionManager] Cleared ${sessionCount} sessions`);
+        // Clear all plans
+        const planCount = this.planManager.getPlanCount();
         this.planManager.clearAllPlans();
+        console.error(`[SessionManager] Cleared ${planCount} plans`);
+        // Clear current session ID
+        this.currentSessionId = null;
+        // Clear session index if initialized
+        if (this.sessionIndex) {
+            this.sessionIndex = null;
+            console.error('[SessionManager] Cleared session index');
+        }
+        console.error('[SessionManager] Cleanup complete');
     }
     /**
      * Exposed for testing - triggers cleanup manually
@@ -145,12 +161,15 @@ export class SessionManager {
     /**
      * Update session data
      */
-    updateSession(sessionId, data) {
-        const session = this.sessions.get(sessionId);
-        if (session) {
-            Object.assign(session, data);
-            this.touchSession(sessionId);
-        }
+    async updateSession(sessionId, data) {
+        return this.sessionLock.withLock(sessionId, () => {
+            const session = this.sessions.get(sessionId);
+            if (session) {
+                Object.assign(session, data);
+                session.lastActivityTime = Date.now();
+            }
+            return Promise.resolve();
+        });
     }
     /**
      * Delete a session
@@ -209,10 +228,12 @@ export class SessionManager {
     }
     async loadSessionFromPersistence(sessionId) {
         const session = await this.sessionPersistence.loadSession(sessionId);
-        // Add to in-memory sessions
-        this.sessions.set(sessionId, session);
-        this.touchSession(sessionId);
-        return session;
+        // Add to in-memory sessions with lock
+        return this.sessionLock.withLock(sessionId, () => {
+            this.sessions.set(sessionId, session);
+            session.lastActivityTime = Date.now();
+            return Promise.resolve(session);
+        });
     }
     async listPersistedSessions(options) {
         return this.sessionPersistence.listPersistedSessions(options);
@@ -249,70 +270,22 @@ export class SessionManager {
     /**
      * Create a parallel session group from plans
      */
-    createParallelSessionGroup(problem, plans, convergenceOptions) {
-        const { groupId, sessionIds } = this.getParallelGroupManager().createParallelSessionGroup(problem, plans, convergenceOptions, this.sessions);
-        console.error(`[SessionManager] Created parallel group ${groupId} with ${sessionIds.length} sessions`);
-        return groupId;
-    }
     /**
-     * Get parallel results for a group
-     */
-    async getParallelResults(groupId) {
-        return Promise.resolve(this.getParallelGroupManager().getParallelResults(groupId, this.sessions));
-    }
-    /**
-     * Mark a session as complete (handles parallel dependencies)
+     * Mark a session as complete
      */
     markSessionComplete(sessionId) {
         const session = this.sessions.get(sessionId);
         if (!session) {
             throw ErrorFactory.sessionNotFound(sessionId);
         }
-        // Handle parallel group completion
-        if (session.parallelGroupId) {
-            this.getParallelGroupManager().markSessionComplete(sessionId, this.sessions);
-        }
-        else {
-            // Regular session completion
-            session.endTime = Date.now();
-        }
+        // Regular session completion
+        session.endTime = Date.now();
     }
     /**
-     * Check if a session can start based on dependencies
+     * Get all sessions (simplified replacement for group functionality)
      */
-    canSessionStart(sessionId) {
-        const session = this.sessions.get(sessionId);
-        if (!session || !session.parallelGroupId) {
-            return true; // No dependencies for non-parallel sessions
-        }
-        return this.getParallelGroupManager().canSessionStart(sessionId, session.parallelGroupId);
-    }
-    /**
-     * Get parallel group information
-     */
-    getParallelGroup(groupId) {
-        return this.getParallelGroupManager().getGroup(groupId);
-    }
-    /**
-     * Get all active parallel groups
-     */
-    getActiveParallelGroups() {
-        return this.getParallelGroupManager().getActiveGroups();
-    }
-    /**
-     * Update parallel group status
-     */
-    updateParallelGroupStatus(groupId, status) {
-        this.getParallelGroupManager().updateGroupStatus(groupId, status);
-    }
-    /**
-     * Get sessions in a parallel group
-     */
-    getSessionsInGroup(groupId) {
-        const sessionIds = this.getSessionIndex().getSessionsInGroup(groupId);
-        return sessionIds
-            .map(id => this.sessions.get(id))
-            .filter((session) => session !== undefined);
+    getAllSessions() {
+        return this.sessions;
     }
     /**
      * Get sessions by technique
@@ -324,33 +297,15 @@ export class SessionManager {
             .filter((session) => session !== undefined);
     }
     /**
-     * Detect circular dependencies
+     * Get simplified session statistics
      */
-    detectCircularDependencies() {
-        return this.getSessionIndex().detectCircularDependencies();
-    }
-    /**
-     * Get dependency statistics
-     */
-    getDependencyStats() {
-        const circular = this.getSessionIndex().detectCircularDependencies();
-        const orphaned = this.getSessionIndex()
-            .getSessionsByStatus('pending')
-            .filter(id => {
-            const session = this.sessions.get(id);
-            return session && !session.parallelGroupId;
-        });
+    getSessionStats() {
+        const stats = this.getSessionIndex().getStats();
         return {
-            totalDependencies: this.getSessionIndex().getStats().totalDependencies,
-            circularDependencies: circular,
-            orphanedSessions: orphaned,
+            totalSessions: stats.totalSessions,
+            completedSessions: stats.statusDistribution['completed'] || 0,
+            activeSessions: (stats.statusDistribution['running'] || 0) + (stats.statusDistribution['pending'] || 0),
         };
-    }
-    /**
-     * Clean up old parallel groups
-     */
-    cleanupOldParallelGroups() {
-        return this.getParallelGroupManager().cleanupOldGroups(this.config.sessionTTL);
     }
     // ============= Skip Detection Methods =============
     /**
@@ -404,6 +359,12 @@ export class SessionManager {
     hasHighRiskSkipPatterns(sessionId) {
         const analysis = this.analyzeSessionSkipPatterns(sessionId);
         return analysis ? analysis.riskScore > 0.7 : false;
+    }
+    /**
+     * Get the session lock instance for external use
+     */
+    getSessionLock() {
+        return this.sessionLock;
     }
 }
 //# sourceMappingURL=SessionManager.js.map

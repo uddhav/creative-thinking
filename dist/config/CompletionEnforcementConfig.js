@@ -163,7 +163,6 @@ export function validateEnforcementConfig(config) {
         'collective_intel',
         'disney_method',
         'nine_windows',
-        'convergence',
     ];
     for (const technique of config.criticalTechniques) {
         if (!validTechniques.includes(technique)) {

@@ -78,27 +78,44 @@ npm run build
 node dist/index.js
 ```
 
-## Parallel Execution via DAG Generation
+## Client-Server Execution Architecture
 
-The Creative Thinking server generates Directed Acyclic Graphs (DAGs) that enable client-side
-parallel execution of techniques, allowing multiple thinking methods to be applied simultaneously
-for improved performance and diverse perspectives.
+The Creative Thinking server provides intelligent execution planning while clients control the
+actual execution strategy (sequential or parallel).
 
 ### How It Works
 
-When you create a plan, the server:
+#### Planning Phase (Server)
 
-1. Analyzes technique dependencies and characteristics
-2. Generates an execution graph with complete parameters for each step
-3. Identifies which nodes can run in parallel based on dependencies
-4. Returns the DAG for client-side execution control
+When you call `plan_thinking_session`, the server:
 
-### Benefits
+1. Analyzes the problem and technique dependencies
+2. Generates a DAG (Directed Acyclic Graph) showing execution opportunities
+3. Identifies which steps can run in parallel (via dependency arrays)
+4. Provides recommendations and time multipliers
 
-- **Performance**: Reduce total thinking time by up to 70% for compatible techniques
-- **Diversity**: Apply multiple perspectives simultaneously
-- **Flexibility**: Mix parallel and sequential techniques based on dependencies
-- **Coordination**: Automatic sync points ensure coherent results
+#### Execution Phase (Client-Controlled)
+
+The client decides how to execute based on the DAG:
+
+- **Sequential**: Execute nodes in order for maximum coherence
+- **Parallel**: Execute independent nodes simultaneously for speed
+- **Hybrid**: Mix both strategies based on sync points
+
+#### Server Execution (Stateless)
+
+Each `execute_thinking_step` call:
+
+- Is handled independently by the server
+- Maintains session context regardless of execution order
+- Processes steps as they arrive from the client
+
+### Key Benefits
+
+- **Flexibility**: Clients choose execution strategy based on their needs
+- **Intelligence**: Server provides dependency analysis and recommendations
+- **Resilience**: Each step execution is independent and stateless
+- **Performance**: Parallel execution can reduce time by 3-10x for compatible techniques
 
 ### Example
 
@@ -108,70 +125,48 @@ const discovery = await discoverTechniques({
   problem: 'How to improve team collaboration',
 });
 
-// Step 2: Plan and receive DAG
+// Step 2: Plan the thinking session
 const plan = await planThinkingSession({
   problem: 'How to improve team collaboration',
   techniques: ['six_hats', 'scamper'],
-  executionMode: 'parallel', // Request parallel-capable DAG
 });
 
-// Step 3: Plan returns an execution graph
-// plan.executionGraph contains:
-// - nodes: Array of execution nodes with parameters
-// - metadata: Analysis of parallelism opportunities
-// - instructions: Guidance for execution
+// The plan includes an execution graph with dependency information
+// plan.executionGraph.instructions.recommendedStrategy: 'parallel' | 'sequential' | 'hybrid'
+// plan.executionGraph.instructions.sequentialTimeMultiplier: e.g., "5x"
+// plan.executionGraph.nodes: Array of nodes with dependencies
 
-// Step 4: Client executes based on dependencies
-// Nodes with empty dependencies can run immediately
-// Nodes with dependencies wait for those to complete
-const parallelNodes = plan.executionGraph.nodes.filter(node => node.dependencies.length === 0);
+// Step 3: Client chooses execution strategy
 
-// Execute parallel nodes concurrently
-const results = await Promise.all(parallelNodes.map(node => executeThinkingStep(node.parameters)));
-```
-
-### DAG Structure
-
-The execution graph returned by `plan_thinking_session` includes:
-
-```typescript
-{
-  executionGraph: {
-    nodes: [{
-      id: "node-1",
-      stepNumber: 1,
-      technique: "six_hats",
-      parameters: { /* complete params for execute_thinking_step */ },
-      dependencies: [],  // Empty = can run immediately
-      estimatedDuration: 3000,
-      canSkipIfFailed: true
-    }],
-    metadata: {
-      totalNodes: 15,
-      maxParallelism: 6,
-      criticalPath: ["node-1", "node-7"],
-      parallelizableGroups: [["node-1", "node-2"], ["node-7", "node-8"]]
-    },
-    instructions: { /* execution guidance */ }
-  }
+// Option A: Sequential execution (simple, maximum coherence)
+for (const node of plan.executionGraph.nodes) {
+  await executeThinkingStep(node.parameters);
 }
+
+// Option B: Parallel execution (faster, requires handling dependencies)
+const executeWithDependencies = async nodes => {
+  // Find nodes with no hard dependencies
+  const ready = nodes.filter(n => n.dependencies.filter(d => d.type === 'hard').length === 0);
+
+  // Execute ready nodes in parallel
+  await Promise.all(ready.map(n => executeThinkingStep(n.parameters)));
+
+  // Continue with remaining nodes
+  // (simplified - real implementation would track completion)
+};
 ```
 
-### Technique Compatibility
+### Technique Methodologies
 
-**Can Run in Parallel:**
+Each technique follows its specific sequential process:
 
-- **Six Thinking Hats** - All hats can be worn simultaneously
-- **SCAMPER** - All transformations can be applied at once
-- **Nine Windows** - All windows can be viewed simultaneously
-- **Random Entry** - Independent stimulus generation
-
-**Must Run Sequentially:**
-
-- **Disney Method** - Dreamer → Realist → Critic
-- **Design Thinking** - Empathize → Define → Ideate → Prototype → Test
-- **TRIZ** - Problem → Contradiction → Principles → Solution
-- **PO** - Provocation → Movement → Development → Implementation
+- **Six Thinking Hats** - Blue → White → Red → Yellow → Black → Green (6 steps)
+- **SCAMPER** - Substitute → Combine → Adapt → Modify → Put to other use → Eliminate → Reverse (7-8
+  steps)
+- **Disney Method** - Dreamer → Realist → Critic (3 steps)
+- **Design Thinking** - Empathize → Define → Ideate → Prototype → Test (5 steps)
+- **TRIZ** - Identify → Remove → Apply → Minimize (4 steps)
+- **PO** - Provocation → Exploration → Verification → Solution (4 steps)
 
 ## Session Resilience
 
@@ -340,7 +335,7 @@ create new possibilities through eight core strategies plus four advanced techni
 - **Recombination** - Mix existing elements in novel ways **Advanced Option Generation Techniques**
   (NEW):
 - **Constraint Relaxation** - Temporarily loosen non-critical constraints
-- **Parallel Universes** - Explore "what if" scenarios in parallel
+- **Alternative Universes** - Explore "what if" scenarios systematically
 - **Antifragile Design** - Create options that benefit from volatility
 - **Time Arbitrage** - Exploit temporal differences in constraints
 
@@ -454,7 +449,7 @@ user-friendly warnings.
 │ Alternative Approaches:                                                       │
 │  1. Step back and reconsider the core problem                               │
 │  2. Remove constraints rather than adding features                           │
-│  3. Explore parallel implementation paths                                    │
+│  3. Explore alternative implementation paths                                 │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -782,12 +777,12 @@ Four-step multi-perspective synthesis:
 1. **Explore** - Examine problem through multiple cultural frameworks
 2. **Bridge** - Build connections between diverse perspectives
 3. **Synthesize** - Create respectful integration of approaches
-4. **Parallel** - Develop culture-specific implementation paths
+4. **Adaptive** - Develop culture-specific implementation paths
 
 **Cultural Awareness Features**:
 
 - Multiple framework support (individualist, collectivist, hierarchical, etc.)
-- Parallel implementation patterns for different contexts
+- Adaptive implementation patterns for different contexts
 - Respectful synthesis approaches
 - Future relevance tracking for global solutions
 
@@ -941,21 +936,6 @@ The server supports environment variables for advanced features:
 - `DISABLE_THOUGHT_LOGGING=true` - Disable visual output logging
 - `PERSISTENCE_TYPE=filesystem|memory` - Choose storage type
 - `PERSISTENCE_PATH=/path/to/sessions` - Custom session storage location
-
-### Parallel Execution Configuration
-
-- `CREATIVE_THINKING_PARALLEL_TOOLS_ENABLED=true` - Enable/disable parallel tool calls (default:
-  true)
-- `CREATIVE_THINKING_MAX_PARALLEL_CALLS=10` - Maximum parallel calls allowed (default: 10)
-- `CREATIVE_THINKING_PARALLEL_TIMEOUT_MS=30000` - Timeout for parallel calls in milliseconds
-  (default: 30000)
-- `CREATIVE_THINKING_PARALLEL_SYNC_STRATEGY=checkpoint` - Sync strategy: checkpoint, immediate, or
-  batch (default: checkpoint)
-- `CREATIVE_THINKING_PARALLEL_WORKFLOW_VALIDATION=true` - Enforce workflow validation for parallel
-  calls (default: true)
-- `CREATIVE_THINKING_PARALLEL_AUTO_GROUP=true` - Auto-group techniques that can run in parallel
-  (default: true)
-- `CREATIVE_THINKING_MAX_TECHNIQUES_PER_GROUP=5` - Max techniques per parallel group (default: 5)
 
 ### Telemetry Configuration (Optional)
 
@@ -1338,7 +1318,7 @@ plans.
 ### Coming Soon
 
 - **v0.4.0** - Telemetry & Analytics (PR in review)
-- **v0.5.0** - Parallel Execution (Q1 2025)
+- **v0.5.0** - Enhanced Sequential Processing (Q1 2025)
 - **v0.6.0+** - Part VII Advanced Techniques (Q2-Q4 2025)
 
 ### Filter Issues By:

@@ -8,18 +8,22 @@ import type { ExecuteThinkingStepInput } from './index.js';
 /**
  * Node in the execution graph representing a single execute_thinking_step call
  */
+export interface NodeDependency {
+  nodeId: string; // Node ID that must complete first
+  type: 'hard' | 'soft'; // hard = blocking, soft = preferential
+}
+
 export interface ExecutionGraphNode {
   id: string; // Unique node identifier (e.g., "node-1")
   stepNumber: number; // Step sequence number
   technique: LateralTechnique; // Technique name
   parameters: ExecuteThinkingStepInput; // Complete execute_thinking_step parameters
-  dependencies: string[]; // Node IDs that must complete first
-  estimatedDuration?: number; // Optional time estimate in ms
+  dependencies: NodeDependency[]; // Dependencies with type classification
   canSkipIfFailed?: boolean; // Optional resilience flag
 }
 
 /**
- * Execution graph for parallel execution
+ * Execution graph for client-controlled execution (sequential or parallel)
  */
 export interface ExecutionGraph {
   nodes: ExecutionGraphNode[];
@@ -28,10 +32,14 @@ export interface ExecutionGraph {
     maxParallelism: number; // Max nodes that can run in parallel
     criticalPath: string[]; // Node IDs forming the longest path
     parallelizableGroups: string[][]; // Groups of nodes that can run in parallel
+    sequentialTimeMultiplier: string; // e.g., "5x" - how much longer sequential takes vs parallel
   };
   instructions: {
-    forInvoker: string; // Clear instructions for the invoker
-    executionStrategy: string; // Recommended execution approach
+    recommendedStrategy: 'sequential' | 'parallel' | 'hybrid'; // Recommended execution approach
+    syncPoints: string[]; // Node IDs where synchronization is beneficial
+    sequentialTimeMultiplier: string; // e.g., "5x" - relative time difference
+    parallelizationBenefits: string; // Why parallel execution might be beneficial
+    executionGuidance: string; // How to execute based on dependencies
     errorHandling: string; // How to handle node failures
   };
 }
@@ -46,11 +54,9 @@ export type ExecutionMode = 'sequential' | 'parallel' | 'auto';
 
 /**
  * Method for converging results from parallel executions
- * - execute_thinking_step: Use the special 'convergence' technique
- * - llm_handoff: Return structured data for LLM synthesis
- * - none: Return raw parallel results without convergence
+ * @deprecated No longer used - parallel execution has been removed
  */
-export type ConvergenceMethod = 'execute_thinking_step' | 'llm_handoff' | 'none';
+export type ConvergenceMethod = 'llm_handoff' | 'none';
 
 /**
  * Strategy for parallelizing execution
@@ -161,43 +167,6 @@ export interface ThinkingStep {
 }
 
 /**
- * Configuration for converging results from parallel executions
- * @example
- * ```typescript
- * const options: ConvergenceOptions = {
- *   method: 'execute_thinking_step',
- *   convergencePlan: {
- *     planId: 'plan_conv_123',
- *     technique: 'convergence',
- *     estimatedSteps: 3,
- *     requiresAllPlans: true
- *   }
- * };
- * ```
- */
-export interface ConvergenceOptions {
-  method: ConvergenceMethod;
-  convergencePlan?: {
-    planId: string;
-    technique: 'convergence';
-    estimatedSteps: number;
-    requiresAllPlans: boolean;
-    metadata?: {
-      synthesisStrategy?: 'merge' | 'select' | 'hierarchical';
-      conflictResolution?: 'vote' | 'weighted' | 'manual';
-      minSessionsRequired?: number; // Minimum sessions needed for convergence
-      minTechniquesRequired?: number; // Minimum unique techniques needed
-    };
-  };
-  llmHandoff?: {
-    promptTemplate?: string;
-    includeFullHistory: boolean;
-    summaryDepth: 'high' | 'medium' | 'low';
-    structuredFormat: 'json' | 'markdown' | 'narrative';
-  };
-}
-
-/**
  * Strategy for coordinating parallel executions
  * Defines sync points, shared context, and error handling
  * @example
@@ -268,7 +237,6 @@ export interface PlanThinkingSessionInput {
   executionMode?: ExecutionMode;
   maxParallelism?: number;
   parallelizationStrategy?: ParallelizationStrategy;
-  convergenceOptions?: ConvergenceOptions;
 }
 
 export interface PlanThinkingSessionOutput {
@@ -318,15 +286,7 @@ export interface PlanThinkingSessionOutput {
   // Additional fields populated when executionMode is 'parallel'
   parallelPlans?: ParallelPlan[];
   coordinationStrategy?: CoordinationStrategy;
-  convergenceOptions?: ConvergenceOptions;
 
   // Parallel execution group IDs for Anthropic-style parallel tool calls
   parallelGroupIds?: string[];
-
-  // Convergence configuration for final synthesis
-  convergenceConfig?: {
-    enabled: boolean;
-    method: ConvergenceMethod;
-    timing: 'after_all' | 'after_groups';
-  };
 }

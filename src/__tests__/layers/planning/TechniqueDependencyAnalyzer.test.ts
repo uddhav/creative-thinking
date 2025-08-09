@@ -33,14 +33,14 @@ describe('DependencyGraph', () => {
     });
 
     it('should handle multiple dependencies', () => {
-      graph.addEdge('convergence', 'six_hats');
-      graph.addEdge('convergence', 'po');
-      graph.addEdge('convergence', 'scamper');
+      graph.addEdge('design_thinking', 'six_hats');
+      graph.addEdge('design_thinking', 'po');
+      graph.addEdge('design_thinking', 'scamper');
 
-      expect(graph.getDependencies('convergence')).toHaveLength(3);
-      expect(graph.getDependencies('convergence')).toContain('six_hats');
-      expect(graph.getDependencies('convergence')).toContain('po');
-      expect(graph.getDependencies('convergence')).toContain('scamper');
+      expect(graph.getDependencies('design_thinking')).toHaveLength(3);
+      expect(graph.getDependencies('design_thinking')).toContain('six_hats');
+      expect(graph.getDependencies('design_thinking')).toContain('po');
+      expect(graph.getDependencies('design_thinking')).toContain('scamper');
     });
   });
 
@@ -138,16 +138,14 @@ describe('TechniqueDependencyAnalyzer', () => {
       expect(graph.getDependencies('six_hats')).toHaveLength(0);
     });
 
-    it('should handle convergence special case', () => {
-      const techniques: LateralTechnique[] = ['convergence', 'six_hats', 'po', 'scamper'];
+    it('should handle techniques with no dependencies', () => {
+      const techniques: LateralTechnique[] = ['six_hats', 'po', 'scamper'];
       const graph = analyzer.analyzeDependencies(techniques);
 
-      // Convergence depends on all other techniques
-      const convergenceDeps = graph.getDependencies('convergence');
-      expect(convergenceDeps).toHaveLength(3);
-      expect(convergenceDeps).toContain('six_hats');
-      expect(convergenceDeps).toContain('po');
-      expect(convergenceDeps).toContain('scamper');
+      // All techniques should have no dependencies
+      expect(graph.getDependencies('six_hats')).toHaveLength(0);
+      expect(graph.getDependencies('po')).toHaveLength(0);
+      expect(graph.getDependencies('scamper')).toHaveLength(0);
     });
 
     it('should not add dependencies for techniques not in the list', () => {
@@ -195,9 +193,9 @@ describe('TechniqueDependencyAnalyzer', () => {
       expect(analyzer.canRunInParallel('triz', 'design_thinking')).toBe(false);
       expect(analyzer.canRunInParallel('yes_and', 'concept_extraction')).toBe(false);
 
-      // Cannot run in parallel (convergence)
-      expect(analyzer.canRunInParallel('convergence', 'six_hats')).toBe(false);
-      expect(analyzer.canRunInParallel('po', 'convergence')).toBe(false);
+      // All techniques can run in parallel now
+      expect(analyzer.canRunInParallel('design_thinking', 'six_hats')).toBe(true);
+      expect(analyzer.canRunInParallel('po', 'scamper')).toBe(true);
     });
 
     it('should check bidirectional dependencies', () => {
@@ -215,8 +213,8 @@ describe('TechniqueDependencyAnalyzer', () => {
       // Invalid group - has dependencies
       expect(analyzer.canGroupRunTogether(['triz', 'design_thinking'])).toBe(false);
 
-      // Invalid group - contains convergence
-      expect(analyzer.canGroupRunTogether(['convergence', 'six_hats'])).toBe(false);
+      // All groups are valid now without convergence
+      expect(analyzer.canGroupRunTogether(['design_thinking', 'six_hats'])).toBe(true);
     });
   });
 
@@ -253,13 +251,13 @@ describe('TechniqueDependencyAnalyzer', () => {
       expect(yaGroup).not.toBe(ceGroup);
     });
 
-    it('should handle convergence correctly in grouping', () => {
-      const techniques: LateralTechnique[] = ['convergence', 'six_hats', 'po'];
-      const groups = analyzer.findOptimalGrouping(techniques, 2);
+    it('should handle all techniques as parallelizable', () => {
+      const techniques: LateralTechnique[] = ['disney_method', 'six_hats', 'po'];
+      const groups = analyzer.findOptimalGrouping(techniques, 3);
 
-      // Convergence should be in its own group
-      const convergenceGroup = groups.find(g => g.includes('convergence'));
-      expect(convergenceGroup).toHaveLength(1);
+      // All techniques can be in the same group
+      expect(groups).toHaveLength(1);
+      expect(groups[0]).toHaveLength(3);
     });
   });
 
@@ -279,8 +277,8 @@ describe('TechniqueDependencyAnalyzer', () => {
     });
 
     it('should filter out special markers', () => {
-      const convergenceDeps = analyzer.getAllDependencies('convergence');
-      expect(convergenceDeps.hard).not.toContain('*');
+      const designDeps = analyzer.getAllDependencies('design_thinking');
+      expect(designDeps.hard).toHaveLength(0);
     });
   });
 });
