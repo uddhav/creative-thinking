@@ -14,7 +14,6 @@ import type { VisualFormatter } from '../utils/VisualFormatter.js';
 import type { MetricsCollector } from '../core/MetricsCollector.js';
 import type { HybridComplexityAnalyzer } from '../complexity/analyzer.js';
 import type { ErgodicityManager } from '../ergodicity/index.js';
-import type { SharedContext } from '../types/parallel-session.js';
 // Most ergodicity imports are now handled by orchestrators
 import { ResponseBuilder } from '../core/ResponseBuilder.js';
 import type { ScamperHandler } from '../techniques/ScamperHandler.js';
@@ -35,9 +34,6 @@ import { ErgodicityOrchestrator } from './execution/ErgodicityOrchestrator.js';
 import { ExecutionResponseBuilder } from './execution/ExecutionResponseBuilder.js';
 import { EscalationPromptGenerator } from '../ergodicity/escalationPrompts.js';
 
-// Import parallel execution components
-import { ParallelExecutionContext } from './execution/ParallelExecutionContext.js';
-
 // Import completion tracking components
 import { CompletionGatekeeper } from './execution/CompletionGatekeeper.js';
 
@@ -53,6 +49,7 @@ export async function executeThinkingStep(
   const responseBuilder = new ResponseBuilder();
   const errorContextBuilder = new ErrorContextBuilder();
   const errorHandler = new ErrorHandler();
+  const sessionLock = sessionManager.getSessionLock();
 
   // Initialize orchestrators
   const executionValidator = new ExecutionValidator(
@@ -68,9 +65,6 @@ export async function executeThinkingStep(
     techniqueRegistry
   );
 
-  // Get parallel execution context (singleton)
-  const parallelContext = ParallelExecutionContext.getInstance(sessionManager, visualFormatter);
-
   // Initialize completion gatekeeper
   const completionGatekeeper = new CompletionGatekeeper();
 
@@ -82,29 +76,7 @@ export async function executeThinkingStep(
     }
     const plan = planValidation.plan;
 
-    // Validate convergence technique usage
-    const convergenceValidation = executionValidator.validateConvergenceTechnique(input);
-    if (!convergenceValidation.isValid && convergenceValidation.error) {
-      return convergenceValidation.error;
-    }
-
-    // Check if this is a convergence execution
-    if (input.technique === 'convergence') {
-      // For convergence, we still need to validate and get/create session
-      const sessionValidation = executionValidator.validateAndGetSession(input, ergodicityManager);
-      if (sessionValidation.error) {
-        return sessionValidation.error;
-      }
-      const { sessionId } = sessionValidation;
-      if (!sessionId) {
-        throw ErrorFactory.sessionNotFound(input.sessionId || 'unknown');
-      }
-
-      const convergenceExecutor = parallelContext.getConvergenceExecutor();
-      return convergenceExecutor.executeConvergence(input, sessionId);
-    }
-
-    // Get or create session
+    // Get or create session (this will determine the sessionId we need to lock)
     const sessionValidation = executionValidator.validateAndGetSession(input, ergodicityManager);
     if (sessionValidation.error) {
       return sessionValidation.error;
@@ -114,305 +86,199 @@ export async function executeThinkingStep(
       throw ErrorFactory.sessionNotFound(input.sessionId || 'unknown');
     }
 
-    // Start timeout monitoring and metrics tracking if this is a parallel session
-    if (plan && plan.executionMode === 'parallel' && session.parallelGroupId) {
-      // Start timeout monitoring for this session if it's the first step
-      if (input.currentStep === 1) {
-        const timeoutMonitor = parallelContext.getSessionTimeoutMonitor();
-        // Use thorough as default timeout for parallel sessions
-        const estimatedTime = 'thorough';
-        timeoutMonitor.startMonitoringSession(sessionId, session.parallelGroupId, estimatedTime);
+    // Acquire technique-specific lock for parallel execution
+    // This allows different techniques to execute in parallel for the same plan
+    const releaseLock = await sessionLock.acquireLock(sessionId, input.technique);
 
-        // Start metrics tracking
-        const metrics = parallelContext.getExecutionMetrics();
-        // Calculate wait time if session has dependencies
-        let waitTime = 0;
-        if (session.dependsOn && session.dependsOn.length > 0) {
-          waitTime = Date.now() - (session.startTime || Date.now());
+    try {
+      // Get technique handler
+      const handler = techniqueRegistry.getHandler(input.technique);
+
+      // Calculate technique-local step
+      const { techniqueLocalStep: calculatedTechniqueLocalStep, techniqueIndex } =
+        executionValidator.calculateTechniqueLocalStep(input, plan);
+
+      // Validate step and get step info
+      const stepValidation = executionValidator.validateStepAndGetInfo(
+        input,
+        calculatedTechniqueLocalStep,
+        handler
+      );
+      if (!stepValidation.isValid) {
+        // Handle invalid step gracefully with detailed context
+        const techniqueInfo = handler.getTechniqueInfo();
+        const errorContext = errorContextBuilder.buildStepErrorContext({
+          providedStep: input.currentStep,
+          validRange: `1-${techniqueInfo.totalSteps}`,
+          technique: input.technique,
+          techniqueLocalStep: calculatedTechniqueLocalStep,
+          globalStep: input.currentStep,
+          message: `Step ${input.currentStep} is outside valid range for ${techniqueInfo.name}`,
+        });
+
+        const operationData: ThinkingOperationData = {
+          ...input,
+          sessionId,
+        };
+
+        let nextStepGuidance: string | undefined;
+        if (input.nextStepNeeded) {
+          nextStepGuidance = `Complete the ${techniqueInfo.name} process`;
         }
-        metrics.startSession(session.parallelGroupId, sessionId, input.technique, waitTime);
-      }
-    }
 
-    // Check if session is part of a parallel group (only if needed)
-    const isParallelNeeded = parallelContext.isParallelExecutionNeeded(input.technique, sessionId);
-    let parallelExecutionInfo = {
-      groupId: null as string | null,
-      canProceed: true,
-      dependencies: [] as string[],
-      sharedContext: undefined as SharedContext | undefined,
-      waitingFor: [] as string[],
-    };
+        const minimalMetadata = {
+          techniqueEffectiveness: 0.5,
+          pathDependenciesCreated: [],
+          flexibilityImpact: -0.05,
+          errorContext,
+        };
 
-    if (isParallelNeeded || session.parallelGroupId) {
-      const parallelStepExecutor = parallelContext.getParallelStepExecutor();
-      parallelExecutionInfo = parallelStepExecutor.checkParallelExecutionContext(sessionId, input);
-    }
-
-    // If session can't proceed due to dependencies, return waiting response
-    if (parallelExecutionInfo.groupId && !parallelExecutionInfo.canProceed) {
-      // Report progress as waiting
-      const progressCoordinator = parallelContext.getProgressCoordinator();
-      void progressCoordinator.reportProgress({
-        groupId: parallelExecutionInfo.groupId,
-        sessionId,
-        technique: input.technique,
-        currentStep: input.currentStep,
-        totalSteps: input.totalSteps,
-        status: 'waiting',
-        timestamp: Date.now(),
-        metadata: {
-          dependencies: parallelExecutionInfo.dependencies,
-        },
-      });
-
-      const parallelStepExecutor = parallelContext.getParallelStepExecutor();
-      return parallelStepExecutor.executeWithCoordination(input, sessionId, () =>
-        Promise.resolve(
-          responseBuilder.buildExecutionResponse(
-            sessionId,
-            { ...input, sessionId },
-            [],
-            'Waiting for dependencies to complete',
-            session.history.length,
-            {
-              techniqueEffectiveness: 0.5,
-              pathDependenciesCreated: [],
-              flexibilityImpact: 0,
-            }
-          )
-        )
-      );
-    }
-
-    // Initialize shared context for parallel group if needed
-    if (parallelExecutionInfo.groupId && !parallelExecutionInfo.sharedContext) {
-      const sessionSynchronizer = parallelContext.getSessionSynchronizer();
-      sessionSynchronizer.initializeSharedContext(parallelExecutionInfo.groupId);
-    }
-
-    // Get technique handler
-    const handler = techniqueRegistry.getHandler(input.technique);
-
-    // Calculate technique-local step
-    const { techniqueLocalStep: calculatedTechniqueLocalStep, techniqueIndex } =
-      executionValidator.calculateTechniqueLocalStep(input, plan);
-
-    // Validate step and get step info
-    const stepValidation = executionValidator.validateStepAndGetInfo(
-      input,
-      calculatedTechniqueLocalStep,
-      handler
-    );
-    if (!stepValidation.isValid) {
-      // Handle invalid step gracefully with detailed context
-      const techniqueInfo = handler.getTechniqueInfo();
-      const errorContext = errorContextBuilder.buildStepErrorContext({
-        providedStep: input.currentStep,
-        validRange: `1-${techniqueInfo.totalSteps}`,
-        technique: input.technique,
-        techniqueLocalStep: calculatedTechniqueLocalStep,
-        globalStep: input.currentStep,
-        message: `Step ${input.currentStep} is outside valid range for ${techniqueInfo.name}`,
-      });
-
-      const operationData: ThinkingOperationData = {
-        ...input,
-        sessionId,
-      };
-
-      let nextStepGuidance: string | undefined;
-      if (input.nextStepNeeded) {
-        nextStepGuidance = `Complete the ${techniqueInfo.name} process`;
-      }
-
-      const minimalMetadata = {
-        techniqueEffectiveness: 0.5,
-        pathDependenciesCreated: [],
-        flexibilityImpact: -0.05,
-        errorContext,
-      };
-
-      return responseBuilder.buildExecutionResponse(
-        sessionId,
-        operationData,
-        [],
-        nextStepGuidance,
-        session.history.length,
-        minimalMetadata
-      );
-    }
-
-    const { stepInfo, normalizedStep: techniqueLocalStep } = stepValidation as {
-      stepInfo: { name: string; focus: string; emoji: string } | null;
-      normalizedStep: number;
-    };
-
-    // Check for ergodicity prompts
-    ergodicityOrchestrator.checkErgodicityPrompts(input, techniqueLocalStep);
-
-    // Perform comprehensive risk assessment
-    const riskAssessment = riskAssessmentOrchestrator.assessRisks(input, session);
-    if (riskAssessment.requiresIntervention && riskAssessment.interventionResponse) {
-      return riskAssessment.interventionResponse;
-    }
-
-    // Report progress for parallel execution
-    if (parallelExecutionInfo.groupId) {
-      const progressCoordinator = parallelContext.getProgressCoordinator();
-      void progressCoordinator.reportProgress({
-        groupId: parallelExecutionInfo.groupId,
-        sessionId,
-        technique: input.technique,
-        currentStep: input.currentStep,
-        totalSteps: input.totalSteps,
-        status: 'in_progress',
-        timestamp: Date.now(),
-      });
-    }
-
-    // Get mode indicator
-    const modeIndicator = visualFormatter.getModeIndicator(input.technique, techniqueLocalStep);
-
-    // Display visual output
-    const visualOutput = visualFormatter.formatOutput(
-      input.technique,
-      input.problem,
-      techniqueLocalStep,
-      input.totalSteps,
-      stepInfo,
-      modeIndicator,
-      input,
-      session,
-      plan
-    );
-
-    if (visualOutput && process.env.DISABLE_THOUGHT_LOGGING !== 'true') {
-      // Only log if thought logging is enabled
-      // IMPORTANT: Use stderr for visual output - stdout is reserved for JSON-RPC
-      process.stderr.write(visualOutput);
-    }
-
-    // Handle SCAMPER path impact
-    if (input.technique === 'scamper' && input.scamperAction) {
-      const scamperHandler = handler as ScamperHandler;
-      input.pathImpact = scamperHandler.analyzePathImpact(
-        input.scamperAction,
-        input.output,
-        session.history
-      );
-
-      // Build modification history from session (previous steps only)
-      input.modificationHistory = [];
-
-      // Include previous SCAMPER modifications from history
-      session.history.forEach(entry => {
-        if (
-          entry.technique === 'scamper' &&
-          entry.scamperAction &&
-          entry.pathImpact &&
-          input.modificationHistory
-        ) {
-          input.modificationHistory.push({
-            action: entry.scamperAction,
-            modification: entry.output,
-            timestamp: entry.timestamp || new Date().toISOString(),
-            impact: entry.pathImpact,
-            cumulativeFlexibility: entry.flexibilityScore || entry.pathImpact.flexibilityRetention,
-          });
-        }
-      });
-
-      // Add flexibility score to the input
-      input.flexibilityScore = input.pathImpact.flexibilityRetention;
-
-      // Generate alternatives if flexibility is low
-      if (input.pathImpact.flexibilityRetention < 0.4) {
-        input.alternativeSuggestions = scamperHandler.generateAlternatives(
-          input.scamperAction,
-          input.pathImpact.flexibilityRetention
+        return responseBuilder.buildExecutionResponse(
+          sessionId,
+          operationData,
+          [],
+          nextStepGuidance,
+          session.history.length,
+          minimalMetadata
         );
       }
-    }
 
-    // Track ergodicity and generate options if needed
-    const { currentFlexibility, optionGenerationResult } =
-      await ergodicityOrchestrator.trackErgodicityAndGenerateOptions(
+      const { stepInfo, normalizedStep: techniqueLocalStep } = stepValidation as {
+        stepInfo: { name: string; focus: string; emoji: string } | null;
+        normalizedStep: number;
+      };
+
+      // Check for ergodicity prompts
+      ergodicityOrchestrator.checkErgodicityPrompts(input, techniqueLocalStep);
+
+      // Perform comprehensive risk assessment
+      const riskAssessment = riskAssessmentOrchestrator.assessRisks(input, session);
+      if (riskAssessment.requiresIntervention && riskAssessment.interventionResponse) {
+        return riskAssessment.interventionResponse;
+      }
+
+      // Get mode indicator
+      const modeIndicator = visualFormatter.getModeIndicator(input.technique, techniqueLocalStep);
+
+      // Display visual output
+      const visualOutput = visualFormatter.formatOutput(
+        input.technique,
+        input.problem,
+        techniqueLocalStep,
+        input.totalSteps,
+        stepInfo,
+        modeIndicator,
         input,
         session,
-        techniqueLocalStep,
-        sessionId
+        plan
       );
 
-    // Record step in history (exclude realityAssessment from operationData to avoid duplication)
-    const { realityAssessment: inputRealityAssessment, ...inputWithoutReality } = input;
+      if (visualOutput && process.env.DISABLE_THOUGHT_LOGGING !== 'true') {
+        // Only log if thought logging is enabled
+        // IMPORTANT: Use stderr for visual output - stdout is reserved for JSON-RPC
+        process.stderr.write(visualOutput);
+      }
 
-    // If there's a reality assessment from input, we should handle it separately
-    if (inputRealityAssessment) {
-      // Reality assessment is handled through realityResult and added to response separately
-      // This prevents duplication in the operation data
-    }
+      // Handle SCAMPER path impact
+      if (input.technique === 'scamper' && input.scamperAction) {
+        const scamperHandler = handler as ScamperHandler;
+        input.pathImpact = scamperHandler.analyzePathImpact(
+          input.scamperAction,
+          input.output,
+          session.history
+        );
 
-    const operationData: ThinkingOperationData = {
-      ...inputWithoutReality,
-      sessionId,
-    };
-    session.history.push({
-      ...operationData,
-      timestamp: new Date().toISOString(),
-    });
+        // Build modification history from session (previous steps only)
+        input.modificationHistory = [];
 
-    // Handle revisions and branches
-    if (input.isRevision && input.revisesStep !== undefined) {
-      // Performance monitoring for revision chains
-      const revisionCount = session.history.filter(h => h.isRevision).length;
-      if (revisionCount > 0 && revisionCount % 10 === 0) {
-        // Log performance warning every 10 revisions
-        const sessionDuration = Date.now() - (session.startTime || Date.now());
-        const avgRevisionTime = sessionDuration / revisionCount;
+        // Include previous SCAMPER modifications from history
+        session.history.forEach(entry => {
+          if (
+            entry.technique === 'scamper' &&
+            entry.scamperAction &&
+            entry.pathImpact &&
+            input.modificationHistory
+          ) {
+            input.modificationHistory.push({
+              action: entry.scamperAction,
+              modification: entry.output,
+              timestamp: entry.timestamp || new Date().toISOString(),
+              impact: entry.pathImpact,
+              cumulativeFlexibility:
+                entry.flexibilityScore || entry.pathImpact.flexibilityRetention,
+            });
+          }
+        });
 
-        if (process.env.LOG_LEVEL === 'DEBUG' || process.env.NODE_ENV === 'development') {
-          process.stderr.write(
-            `[Performance] Deep revision chain detected: ${revisionCount} revisions, avg time: ${avgRevisionTime.toFixed(2)}ms\n`
+        // Add flexibility score to the input
+        input.flexibilityScore = input.pathImpact.flexibilityRetention;
+
+        // Generate alternatives if flexibility is low
+        if (input.pathImpact.flexibilityRetention < 0.4) {
+          input.alternativeSuggestions = scamperHandler.generateAlternatives(
+            input.scamperAction,
+            input.pathImpact.flexibilityRetention
           );
         }
       }
 
-      if (!input.branchId) {
-        input.branchId = `branch_${Date.now()}`;
+      // Track ergodicity and generate options if needed
+      const { currentFlexibility, optionGenerationResult } =
+        await ergodicityOrchestrator.trackErgodicityAndGenerateOptions(
+          input,
+          session,
+          techniqueLocalStep,
+          sessionId
+        );
+
+      // Record step in history (exclude realityAssessment from operationData to avoid duplication)
+      const { realityAssessment: inputRealityAssessment, ...inputWithoutReality } = input;
+
+      // If there's a reality assessment from input, we should handle it separately
+      if (inputRealityAssessment) {
+        // Reality assessment is handled through realityResult and added to response separately
+        // This prevents duplication in the operation data
       }
-      if (!session.branches[input.branchId]) {
-        session.branches[input.branchId] = [];
+
+      const operationData: ThinkingOperationData = {
+        ...inputWithoutReality,
+        sessionId,
+      };
+      session.history.push({
+        ...operationData,
+        timestamp: new Date().toISOString(),
+      });
+
+      // Handle revisions and branches
+      if (input.isRevision && input.revisesStep !== undefined) {
+        // Performance monitoring for revision chains
+        const revisionCount = session.history.filter(h => h.isRevision).length;
+        if (revisionCount > 0 && revisionCount % 10 === 0) {
+          // Log performance warning every 10 revisions
+          const sessionDuration = Date.now() - (session.startTime || Date.now());
+          const avgRevisionTime = sessionDuration / revisionCount;
+
+          if (process.env.LOG_LEVEL === 'DEBUG' || process.env.NODE_ENV === 'development') {
+            process.stderr.write(
+              `[Performance] Deep revision chain detected: ${revisionCount} revisions, avg time: ${avgRevisionTime.toFixed(2)}ms\n`
+            );
+          }
+        }
+
+        if (!input.branchId) {
+          input.branchId = `branch_${Date.now()}`;
+        }
+        if (!session.branches[input.branchId]) {
+          session.branches[input.branchId] = [];
+        }
+        session.branches[input.branchId].push(operationData);
       }
-      session.branches[input.branchId].push(operationData);
-    }
 
-    // Update metrics
-    metricsCollector.updateMetrics(session, operationData);
+      // Update metrics
+      metricsCollector.updateMetrics(session, operationData);
 
-    // Build comprehensive execution response
-    let response: LateralThinkingResponse;
-
-    // If in parallel group, execute with coordination
-    if (parallelExecutionInfo.groupId) {
-      const parallelStepExecutor = parallelContext.getParallelStepExecutor();
-      response = await parallelStepExecutor.executeWithCoordination(input, sessionId, () =>
-        Promise.resolve(
-          executionResponseBuilder.buildResponse(
-            input,
-            session,
-            sessionId,
-            handler,
-            techniqueLocalStep,
-            techniqueIndex,
-            plan,
-            currentFlexibility,
-            optionGenerationResult
-          )
-        )
-      );
-    } else {
-      response = executionResponseBuilder.buildResponse(
+      // Build comprehensive execution response
+      const response = executionResponseBuilder.buildResponse(
         input,
         session,
         sessionId,
@@ -423,112 +289,65 @@ export async function executeThinkingStep(
         currentFlexibility,
         optionGenerationResult
       );
-    }
 
-    // Check completion gatekeeper before allowing termination
-    const completionCheck = completionGatekeeper.canProceedToNextStep(input, session, plan);
-    if (!completionCheck.allowed && completionCheck.response) {
-      // If gatekeeper blocks termination, return the blocking response
-      return completionCheck.response;
-    }
-
-    // Handle session completion
-    if (!input.nextStepNeeded) {
-      session.endTime = Date.now();
-
-      // Report completion for parallel execution
-      if (parallelExecutionInfo.groupId) {
-        const progressCoordinator = parallelContext.getProgressCoordinator();
-        void progressCoordinator.reportProgress({
-          groupId: parallelExecutionInfo.groupId,
-          sessionId,
-          technique: input.technique,
-          currentStep: input.currentStep,
-          totalSteps: input.totalSteps,
-          status: 'completed',
-          timestamp: Date.now(),
-          metadata: {
-            insightsGenerated: session.insights.length,
-          },
-        });
+      // Check completion gatekeeper before allowing termination
+      const completionCheck = completionGatekeeper.canProceedToNextStep(input, session, plan);
+      if (!completionCheck.allowed && completionCheck.response) {
+        // If gatekeeper blocks termination, return the blocking response
+        return completionCheck.response;
       }
 
-      // Final summary
-      visualFormatter.formatSessionSummary(
-        input.technique,
-        input.problem,
-        session.insights,
-        session.metrics
-      );
-    }
+      // Handle session completion
+      if (!input.nextStepNeeded) {
+        session.endTime = Date.now();
 
-    // Auto-save if enabled
-    if (input.autoSave) {
-      try {
-        await monitorCriticalSectionAsync(
-          'session_autosave',
-          () => sessionManager.saveSessionToPersistence(sessionId),
-          { sessionId }
+        // Final summary
+        visualFormatter.formatSessionSummary(
+          input.technique,
+          input.problem,
+          session.insights,
+          session.metrics
         );
-      } catch (error) {
-        // Add auto-save failure to response with context
-        const parsedResponse = JSON.parse(response.content[0].text) as Record<string, unknown>;
-
-        // Provide more context about the error
-        if (
-          error instanceof PersistenceError &&
-          error.code === ErrorCode.PERSISTENCE_NOT_AVAILABLE
-        ) {
-          parsedResponse.autoSaveStatus = 'disabled';
-          parsedResponse.autoSaveMessage =
-            'Persistence is not configured. Session data is stored in memory only.';
-        } else {
-          parsedResponse.autoSaveStatus = 'failed';
-          parsedResponse.autoSaveError =
-            error instanceof Error ? error.message : 'Auto-save failed';
-        }
-
-        response.content[0].text = JSON.stringify(parsedResponse, null, 2);
       }
-    }
 
-    // Add performance summary if profiling is enabled
-    return addPerformanceSummary(response);
+      // Auto-save if enabled
+      if (input.autoSave) {
+        try {
+          await monitorCriticalSectionAsync(
+            'session_autosave',
+            () => sessionManager.saveSessionToPersistence(sessionId),
+            { sessionId }
+          );
+        } catch (error) {
+          // Add auto-save failure to response with context
+          const parsedResponse = JSON.parse(response.content[0].text) as Record<string, unknown>;
+
+          // Provide more context about the error
+          if (
+            error instanceof PersistenceError &&
+            error.code === ErrorCode.PERSISTENCE_NOT_AVAILABLE
+          ) {
+            parsedResponse.autoSaveStatus = 'disabled';
+            parsedResponse.autoSaveMessage =
+              'Persistence is not configured. Session data is stored in memory only.';
+          } else {
+            parsedResponse.autoSaveStatus = 'failed';
+            parsedResponse.autoSaveError =
+              error instanceof Error ? error.message : 'Auto-save failed';
+          }
+
+          response.content[0].text = JSON.stringify(parsedResponse, null, 2);
+        }
+      }
+
+      // Add performance summary if profiling is enabled
+      return addPerformanceSummary(response);
+    } finally {
+      // Always release the session lock
+      releaseLock();
+    }
   } catch (error) {
-    // Check if this is a parallel execution error
-    const sessionId = input.sessionId || '';
-    const session = sessionManager.getSession(sessionId);
-
-    if (session?.parallelGroupId) {
-      // Handle with parallel error handler
-      const parallelErrorContext = {
-        sessionId,
-        groupId: session.parallelGroupId,
-        technique: input.technique,
-        step: input.currentStep,
-        errorType: 'execution_error' as const,
-      };
-
-      // Report error to progress coordinator
-      const progressCoordinator = parallelContext.getProgressCoordinator();
-      void progressCoordinator.reportProgress({
-        groupId: session.parallelGroupId,
-        sessionId,
-        technique: input.technique,
-        currentStep: input.currentStep,
-        totalSteps: input.totalSteps,
-        status: 'failed',
-        timestamp: Date.now(),
-        metadata: {
-          errorMessage: error instanceof Error ? error.message : String(error),
-        },
-      });
-
-      const parallelErrorHandler = parallelContext.getParallelErrorHandler();
-      return parallelErrorHandler.handleParallelError(error, parallelErrorContext);
-    }
-
-    // Use standard error handler for non-parallel execution
+    // Use standard error handler
     return errorHandler.handleError(error, 'execution', {
       technique: input.technique,
       step: input.currentStep,

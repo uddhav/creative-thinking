@@ -101,7 +101,7 @@ these three tools.
 
 #### Thinking Techniques (14 total)
 
-- **Six Hats** - Parallel thinking with different perspectives (6 steps)
+- **Six Hats** - Sequential thinking with different perspectives (6 steps)
 - **PO** - Provocative operation for creative disruption (4 steps)
 - **Random Entry** - Lateral connection from random stimuli (3 steps)
 - **SCAMPER** - Systematic transformation checklist (8 steps)
@@ -119,7 +119,7 @@ these three tools.
 #### Support Systems
 
 - **Session Management** - Full state persistence with branching
-- **ExecutionGraphGenerator** - Creates DAGs for client-side parallel execution
+- **ExecutionGraphGenerator** - Creates execution plans for techniques
 - **SessionEncoder** - Base64 encoding for session resilience
 - **Option Generation Engine** - Activates when flexibility < 0.4
 - **Early Warning System** - Multi-level alerts for creative constraints
@@ -159,29 +159,29 @@ The Early Warning System detects approaching "absorbing barriers" - irreversible
 
 Five levels of escape strategies, from Pattern Interruption to Strategic Pivot.
 
-### Parallel Execution Architecture
+### Sequential Execution Architecture
 
-The server uses a DAG-based approach for parallel execution:
+The server executes techniques in a structured, sequential manner:
 
-#### ExecutionGraphGenerator
+#### Workflow Planning
 
-Converts workflow plans into executable DAGs:
+Each technique follows its specific methodology:
 
-1. **Dependency Analysis**: Determines technique relationships
-   - Parallel: Six Hats, SCAMPER, Nine Windows (no inter-step dependencies)
-   - Sequential: Disney Method, Design Thinking, TRIZ, PO (strict ordering)
-   - Hybrid: Concept Extraction, Neural State (mixed dependencies)
+1. **Step-by-Step Progression**: Each step builds on previous insights
+   - Six Hats: Blue → White → Red → Yellow → Black → Green
+   - Design Thinking: Empathize → Define → Ideate → Prototype → Test
+   - Disney Method: Dreamer → Realist → Critic
+   - TRIZ: Identify → Remove → Apply → Minimize
 
-2. **Graph Generation**: Creates execution nodes with:
-   - Complete parameters for `execute_thinking_step`
-   - Dependency arrays indicating prerequisites
-   - Estimated duration and failure tolerance
-   - Unique IDs for tracking
+2. **Context Preservation**: Maintains state between steps
+   - Session history tracks all outputs
+   - Insights accumulate progressively
+   - Context flows through the entire process
 
-3. **Metadata Calculation**:
-   - Critical path (longest dependency chain)
-   - Maximum parallelism (most concurrent nodes)
-   - Parallelizable groups (nodes with same dependencies)
+3. **Quality Assurance**:
+   - Each step validated before proceeding
+   - Risk assessment at each stage
+   - Comprehensive insight extraction
 
 #### SessionEncoder
 
@@ -238,155 +238,20 @@ When adding a new thinking technique:
 6. Add comprehensive tests
 7. Update documentation
 
-## Parallel Execution
-
-### Overview
-
-Parallel execution allows multiple thinking techniques to run simultaneously, providing **2-3x
-performance improvement** while maintaining the quality of insights. This is particularly useful
-when exploring complex problems that benefit from multiple perspectives.
-
-### Key Features
-
-- **Automatic parallelism detection**: The system identifies techniques that can run in parallel
-- **Smart dependency management**: Techniques with dependencies execute in the correct order
-- **Real-time progress tracking**: Monitor the status of all parallel sessions
-- **Convergence synthesis**: Automatically combine insights from parallel sessions
-- **Timeout protection**: Prevents runaway sessions with configurable timeouts
-- **Performance metrics**: Track efficiency and optimization opportunities
-- **Anthropic-style parallel tool calls**: Support for native parallel tool call format
-
-### Architecture Components
-
-1. **ParallelismDetector**: Identifies which techniques can run in parallel
-2. **ParallelPlanGenerator**: Creates execution plans with parallel groups
-3. **SessionSynchronizer**: Manages shared context between parallel sessions
-4. **ProgressCoordinator**: Tracks and reports progress across sessions
-5. **SessionTimeoutMonitor**: Prevents runaway sessions
-6. **ConvergenceExecutor**: Synthesizes results from parallel sessions
-7. **ParallelExecutionMetrics**: Collects performance data
-
-### Implementation Details
-
-#### Enabling Parallel Execution
-
-Set the `executionMode` to `'parallel'` when planning a thinking session:
-
-```typescript
-const input: PlanThinkingSessionInput = {
-  problem: 'How can we improve customer satisfaction?',
-  techniques: ['six_hats', 'scamper', 'po'],
-  executionMode: 'parallel', // Enable parallel execution
-  timeframe: 'thorough',
-};
-```
-
-#### Convergence Strategies
-
-- **merge**: Combine all insights from parallel sessions
-- **select**: Choose the best insights based on quality metrics
-- **hierarchical**: Organize insights by importance and relevance
-
-#### Timeout Configuration
-
-- **quick**: 30 seconds per session
-- **thorough**: 5 minutes per session
-- **comprehensive**: 15 minutes per session
-
-### Performance Benchmarks
-
-| Techniques | Sequential Time | Parallel Time | Speedup | Efficiency |
-| ---------- | --------------- | ------------- | ------- | ---------- |
-| 2          | 217ms           | 131ms         | 1.66x   | 82.8%      |
-| 3          | 466ms           | 267ms         | 1.75x   | 58.2%      |
-| 4          | 681ms           | 261ms         | 2.61x   | 65.2%      |
-| 5          | 841ms           | 263ms         | 3.20x   | 63.9%      |
-| 6          | 962ms           | 258ms         | 3.72x   | 62.1%      |
-
-### Best Practices
-
-1. **Choose independent techniques**: Techniques that don't depend on each other work best in
-   parallel
-2. **Set reasonable timeframes**: Use "quick" for rapid ideation, "thorough" for detailed analysis
-3. **Handle failures gracefully**: Use Promise.allSettled() to allow partial success
-4. **Monitor metrics**: Use execution metrics to identify bottlenecks
-5. **Use appropriate convergence strategies**: Choose based on your synthesis needs
-
-### Adding Parallel Support to New Techniques
-
-When creating a new technique handler, you must specify its parallelization capability in the
-`getTechniqueInfo()` method:
-
-```typescript
-// In your technique handler
-getTechniqueInfo(): TechniqueInfo {
-  return {
-    name: 'Your Technique',
-    emoji: '🎯',
-    totalSteps: 5,
-    description: 'Description',
-    focus: 'Focus area',
-    parallelSteps: {
-      canParallelize: true,  // or false if steps must be sequential
-      dependencies: [[1, 2], [2, 3]], // Optional: step dependencies
-      description: 'Explanation of parallelization capability'
-    }
-  };
-}
-```
-
-#### Guidelines for Determining Parallelization
-
-**Can Parallelize (true):**
-
-- Steps are independent and can be executed in any order
-- Each step explores a different perspective (e.g., Six Hats)
-- Steps apply different transformations (e.g., SCAMPER)
-- Steps examine different dimensions (e.g., Nine Windows)
-
-**Cannot Parallelize (false):**
-
-- Each step builds on the previous one (e.g., Design Thinking)
-- Steps follow a logical progression (e.g., Disney Method)
-- Later steps require insights from earlier ones (e.g., TRIZ)
-
-#### Testing Parallel Execution
-
-```bash
-# Run parallel execution tests
-npm run test:parallel
-
-# Test with demo script
-node test-parallel-demo.cjs
-
-# Enable debug logging
-NODE_ENV=development npm start
-```
-
-### Example Usage
-
-See the [examples directory](examples/parallel-execution/) for complete working examples:
-
-- [Basic parallel execution](examples/parallel-execution/basic.ts)
-- [Advanced convergence strategies](examples/parallel-execution/convergence.ts)
-- [Progress monitoring](examples/parallel-execution/monitoring.ts)
-- [Error handling](examples/parallel-execution/error-handling.ts)
-
 ## Error Handling
 
 ### Error Code Ranges
 
-| Range     | Category      | Description                               |
-| --------- | ------------- | ----------------------------------------- |
-| E100-E199 | Validation    | Input validation and parameter errors     |
-| E200-E299 | Workflow      | Workflow sequence and process errors      |
-| E300-E399 | State         | Session and state management errors       |
-| E400-E499 | System        | System-level and infrastructure errors    |
-| E500-E599 | Permission    | Access control and rate limiting          |
-| E600-E699 | Configuration | Configuration and setup errors            |
-| E700-E799 | Technique     | Technique execution errors                |
-| E800-E899 | Convergence   | Parallel execution and convergence errors |
-| E999      | Unknown       | Unhandled or unexpected errors            |
+| Range     | Category      | Description                            |
+| --------- | ------------- | -------------------------------------- |
+| E100-E199 | Validation    | Input validation and parameter errors  |
+| E200-E299 | Workflow      | Workflow sequence and process errors   |
+| E300-E399 | State         | Session and state management errors    |
+| E400-E499 | System        | System-level and infrastructure errors |
+| E500-E599 | Permission    | Access control and rate limiting       |
+| E600-E699 | Configuration | Configuration and setup errors         |
+| E700-E799 | Technique     | Technique execution errors             |
+| E999      | Unknown       | Unhandled or unexpected errors         |
 
 ### Error Classes & Usage
 

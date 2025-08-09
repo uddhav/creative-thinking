@@ -19,8 +19,7 @@ import { CrossCulturalHandler } from './CrossCulturalHandler.js';
 import { CollectiveIntelHandler } from './CollectiveIntelHandler.js';
 import { DisneyMethodHandler } from './DisneyMethodHandler.js';
 import { NineWindowsHandler } from './NineWindowsHandler.js';
-import { ConvergenceHandler } from './ConvergenceHandler.js';
-// Removed unused import - GenericHandler
+// Removed unused imports - GenericHandler and ConvergenceHandler
 
 export class TechniqueRegistry {
   private handlers: Map<LateralTechnique, TechniqueHandler>;
@@ -45,7 +44,6 @@ export class TechniqueRegistry {
     this.handlers.set('collective_intel', new CollectiveIntelHandler());
     this.handlers.set('disney_method', new DisneyMethodHandler());
     this.handlers.set('nine_windows', new NineWindowsHandler());
-    this.handlers.set('convergence', new ConvergenceHandler());
   }
 
   getHandler(technique: string): TechniqueHandler {

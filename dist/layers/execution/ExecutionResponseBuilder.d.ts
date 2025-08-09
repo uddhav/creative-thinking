@@ -45,10 +45,6 @@ export declare class ExecutionResponseBuilder {
     private enhanceWithAnalysisAndOptions;
     private extractInsights;
     private createOperationData;
-    /**
-     * Build parallel execution context for guidance
-     */
-    private buildParallelExecutionContext;
     private generateNextStepGuidance;
     private getBaseGuidance;
     private generateExecutionMetadata;

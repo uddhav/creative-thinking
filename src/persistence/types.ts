@@ -17,8 +17,7 @@ export type LateralTechnique =
   | 'cross_cultural'
   | 'collective_intel'
   | 'disney_method'
-  | 'nine_windows'
-  | 'convergence';
+  | 'nine_windows';
 
 /**
  * Represents input data for a lateral thinking step

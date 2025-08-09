@@ -75,7 +75,7 @@ export class LateralThinkingServer {
         return this.sessionManager.createSession(sessionData);
     }
     touchSession(sessionId) {
-        this.sessionManager.touchSession(sessionId);
+        void this.sessionManager.touchSession(sessionId);
     }
     evictOldestSessions() {
         // Eviction is handled internally by SessionManager
@@ -214,6 +214,8 @@ export class LateralThinkingServer {
         this.sessionManager.destroy();
     }
 }
+// Track active requests for proper shutdown
+const activeRequests = 0;
 // Initialize MCP server
 const server = new Server({
     name: 'creative-thinking',
@@ -228,14 +230,172 @@ const lateralServer = new LateralThinkingServer();
 // Set up request handlers
 const requestHandlers = new RequestHandlers(server, lateralServer);
 requestHandlers.setupHandlers();
+// Function to get total active requests
+function getActiveRequests() {
+    return requestHandlers.getActiveRequests() + activeRequests;
+}
+// Graceful shutdown handling
+let isShuttingDown = false;
+let transport = null;
+let shutdownTimeout = null;
+async function gracefulShutdown(signal) {
+    if (isShuttingDown) {
+        console.error(`[Server] Already shutting down, ignoring ${signal}`);
+        return;
+    }
+    isShuttingDown = true;
+    const totalActiveRequests = getActiveRequests();
+    console.error(`[Server] Received ${signal}, starting graceful shutdown...`);
+    console.error(`[Server] Active requests: ${totalActiveRequests}`);
+    // Set a timeout for forceful shutdown
+    shutdownTimeout = setTimeout(() => {
+        console.error('[Server] Shutdown timeout reached, forcing exit');
+        process.exit(1);
+    }, 5000); // 5 second timeout
+    // Wait for active requests to complete (up to 2 seconds)
+    const waitStart = Date.now();
+    let currentActive = getActiveRequests();
+    while (currentActive > 0 && Date.now() - waitStart < 2000) {
+        console.error(`[Server] Waiting for ${currentActive} active requests...`);
+        await new Promise(resolve => setTimeout(resolve, 100));
+        currentActive = getActiveRequests();
+    }
+    if (currentActive > 0) {
+        console.error(`[Server] Warning: ${currentActive} requests still active after 2s`);
+    }
+    try {
+        const stdoutWithHandle = process.stdout;
+        const stderrWithHandle = process.stderr;
+        if (stdoutWithHandle.isTTY && stdoutWithHandle._handle?.setBlocking) {
+            try {
+                stdoutWithHandle._handle.setBlocking(true);
+            }
+            catch {
+                // Ignore errors if setBlocking is not available
+            }
+        }
+        if (stderrWithHandle.isTTY && stderrWithHandle._handle?.setBlocking) {
+            try {
+                stderrWithHandle._handle.setBlocking(true);
+            }
+            catch {
+                // Ignore errors if setBlocking is not available
+            }
+        }
+        // Destroy the lateral thinking server to clean up resources
+        lateralServer.destroy();
+        console.error('[Server] Cleaned up server resources');
+        // Close the transport connection if it exists
+        if (transport) {
+            await transport.close();
+            console.error('[Server] Closed transport connection');
+        }
+        // Disconnect the MCP server
+        await server.close();
+        console.error('[Server] Closed MCP server');
+        // Explicitly flush stdio streams
+        await new Promise(resolve => {
+            if (process.stdout && !process.stdout.writableEnded) {
+                process.stdout.end(() => {
+                    console.error('[Server] Stdout flushed');
+                    resolve();
+                });
+            }
+            else {
+                resolve();
+            }
+        });
+        await new Promise(resolve => {
+            if (process.stderr && !process.stderr.writableEnded) {
+                process.stderr.end(() => {
+                    resolve();
+                });
+            }
+            else {
+                resolve();
+            }
+        });
+        console.error('[Server] Graceful shutdown complete');
+        // Add a small delay to ensure all data is transmitted
+        // This helps prevent the incomplete_stream error in Claude Desktop
+        await new Promise(resolve => setTimeout(resolve, 100));
+        // Clear the shutdown timeout
+        if (shutdownTimeout) {
+            clearTimeout(shutdownTimeout);
+        }
+        // Use process.exitCode instead of process.exit() for cleaner shutdown
+        process.exitCode = 0;
+        // Force exit after another delay if process doesn't exit naturally
+        setTimeout(() => {
+            console.error('[Server] Forcing exit after grace period');
+            process.exit(0);
+        }, 500);
+    }
+    catch (error) {
+        console.error('[Server] Error during graceful shutdown:', error);
+        // Still add a small delay even on error to help with stream flushing
+        await new Promise(resolve => setTimeout(resolve, 50));
+        // Clear the shutdown timeout
+        if (shutdownTimeout) {
+            clearTimeout(shutdownTimeout);
+        }
+        process.exitCode = 1;
+        // Force exit after delay
+        setTimeout(() => {
+            process.exit(1);
+        }, 500);
+    }
+}
+// Register signal handlers for graceful shutdown
+process.on('SIGINT', () => void gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => void gracefulShutdown('SIGTERM'));
+process.on('SIGHUP', () => void gracefulShutdown('SIGHUP'));
+// Handle uncaught errors
+process.on('uncaughtException', error => {
+    console.error('[Server] Uncaught exception:', error);
+    void gracefulShutdown('uncaughtException').then(() => {
+        process.exitCode = 1;
+    });
+});
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('[Server] Unhandled rejection at:', promise, 'reason:', reason);
+    void gracefulShutdown('unhandledRejection').then(() => {
+        process.exitCode = 1;
+    });
+});
 // Start server
 async function main() {
-    const transport = new StdioServerTransport();
-    await server.connect(transport);
-    console.error('Creative Thinking MCP server running on stdio');
+    try {
+        transport = new StdioServerTransport();
+        // Handle transport events
+        transport.onclose = () => {
+            console.error('[Server] Transport closed');
+            if (!isShuttingDown) {
+                void gracefulShutdown('transport-close');
+            }
+        };
+        transport.onerror = error => {
+            console.error('[Server] Transport error:', error);
+            if (!isShuttingDown) {
+                void gracefulShutdown('transport-error');
+            }
+        };
+        await server.connect(transport);
+        console.error('Creative Thinking MCP server running on stdio');
+        console.error('[Server] Debug mode:', process.env.DEBUG_MCP === 'true' ? 'ENABLED' : 'disabled');
+        console.error('[Server] To enable debug logging, set DEBUG_MCP=true');
+    }
+    catch (error) {
+        console.error('[Server] Failed to start server:', error);
+        process.exit(1);
+    }
 }
 main().catch(error => {
-    console.error('Fatal error:', error);
-    process.exit(1);
+    console.error('[Server] Fatal error:', error);
+    if (!isShuttingDown) {
+        void gracefulShutdown('fatal-error').then(() => {
+            process.exitCode = 1;
+        });
+    }
 });
 //# sourceMappingURL=index.js.map

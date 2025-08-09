@@ -191,7 +191,6 @@ export function validateEnforcementConfig(config: CompletionGatekeeperConfig): {
     'collective_intel',
     'disney_method',
     'nine_windows',
-    'convergence',
   ];
 
   for (const technique of config.criticalTechniques) {

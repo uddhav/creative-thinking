@@ -259,8 +259,6 @@ interface ExecuteThinkingStepInput {
   nineWindowsMatrix?: unknown;
   pathImpact?: unknown;
   temporalLandscape?: unknown;
-  convergenceStrategy?: unknown;
-  parallelResults?: unknown;
   risks?: unknown;
   mitigations?: unknown;
 }
@@ -590,37 +588,6 @@ export class ExecutionValidator extends BaseValidator {
             if (validation.suggestion) {
               warnings.push(validation.suggestion);
             }
-          }
-        }
-        break;
-
-      case 'convergence':
-        // Convergence is a special technique for synthesizing parallel results
-        // It requires parallelResults and convergenceStrategy
-        if (data.convergenceStrategy !== undefined) {
-          this.validateEnum(
-            data.convergenceStrategy,
-            ['merge', 'select', 'hierarchical'] as const,
-            'convergenceStrategy',
-            errors
-          );
-        }
-        if (data.parallelResults !== undefined) {
-          if (!Array.isArray(data.parallelResults)) {
-            errors.push('parallelResults must be an array');
-          } else {
-            // Validate each parallel result item
-            data.parallelResults.forEach((item: unknown, index: number) => {
-              const validation = ObjectFieldValidator.validateParallelResultItem(item, index);
-              if (!validation.isValid) {
-                if (validation.error) {
-                  errors.push(validation.error);
-                }
-                if (validation.suggestion) {
-                  warnings.push(validation.suggestion);
-                }
-              }
-            });
           }
         }
         break;

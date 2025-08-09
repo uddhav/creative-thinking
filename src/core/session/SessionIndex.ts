@@ -1,44 +1,17 @@
 /**
  * SessionIndex - Provides fast lookups for sessions and their relationships
- * Maintains multiple indexes for efficient querying of parallel sessions
  */
 
 import type { LateralTechnique } from '../../types/index.js';
 import type { SessionData } from '../../types/index.js';
-import type { ParallelSessionGroup, IndexEntry } from '../../types/parallel-session.js';
 
 /**
- * Manages indexes for fast session lookups and dependency tracking
+ * Manages indexes for fast session lookups
  */
 export class SessionIndex {
   // Indexes for fast lookup
-  private groupToSessions: Map<string, Set<string>> = new Map();
-  private sessionToGroup: Map<string, string> = new Map();
   private techniqueToSessions: Map<LateralTechnique, Set<string>> = new Map();
-  private dependencyGraph: Map<string, Set<string>> = new Map();
-  private reverseDependencyGraph: Map<string, Set<string>> = new Map();
-  private sessionStatus: Map<string, IndexEntry['status']> = new Map();
-
-  /**
-   * Index a parallel group and its sessions
-   */
-  indexGroup(group: ParallelSessionGroup): void {
-    // Create group -> sessions index
-    this.groupToSessions.set(group.groupId, new Set(group.sessionIds));
-
-    // Create session -> group index
-    for (const sessionId of group.sessionIds) {
-      this.sessionToGroup.set(sessionId, group.groupId);
-    }
-
-    // Index techniques from group metadata
-    for (const technique of group.metadata.techniques) {
-      if (!this.techniqueToSessions.has(technique)) {
-        this.techniqueToSessions.set(technique, new Set());
-      }
-      // Note: Actual session-technique mapping happens in indexSession
-    }
-  }
+  private sessionStatus: Map<string, 'pending' | 'running' | 'completed' | 'failed'> = new Map();
 
   /**
    * Index an individual session
@@ -49,83 +22,8 @@ export class SessionIndex {
     techniqueSessions.add(sessionId);
     this.techniqueToSessions.set(session.technique, techniqueSessions);
 
-    // Index parallel metadata techniques if present
-    if (session.parallelMetadata) {
-      for (const tech of session.parallelMetadata.techniques) {
-        const techSessions = this.techniqueToSessions.get(tech) || new Set();
-        techSessions.add(sessionId);
-        this.techniqueToSessions.set(tech, techSessions);
-      }
-    }
-
     // Set initial status
     this.sessionStatus.set(sessionId, 'pending');
-
-    // Index dependencies if present
-    if (session.dependsOn && session.dependsOn.length > 0) {
-      this.addDependencies(sessionId, session.dependsOn);
-    }
-  }
-
-  /**
-   * Add dependencies between sessions
-   */
-  addDependencies(sessionId: string, dependencies: string[]): void {
-    // Create or update forward dependency graph
-    const sessionDeps = this.dependencyGraph.get(sessionId) || new Set();
-    this.dependencyGraph.set(sessionId, sessionDeps);
-
-    for (const dep of dependencies) {
-      sessionDeps.add(dep);
-
-      // Update reverse dependency graph
-      const reverseDeps = this.reverseDependencyGraph.get(dep) || new Set();
-      reverseDeps.add(sessionId);
-      this.reverseDependencyGraph.set(dep, reverseDeps);
-    }
-  }
-
-  /**
-   * Get all sessions that depend on a given session
-   */
-  getDependentSessions(sessionId: string): string[] {
-    return Array.from(this.reverseDependencyGraph.get(sessionId) || []);
-  }
-
-  /**
-   * Get all dependencies of a session
-   */
-  getDependencies(sessionId: string): string[] {
-    return Array.from(this.dependencyGraph.get(sessionId) || []);
-  }
-
-  /**
-   * Check if a session can start based on completed dependencies
-   */
-  canSessionStart(sessionId: string, completedSessions: Set<string>): boolean {
-    const dependencies = this.dependencyGraph.get(sessionId);
-    if (!dependencies || dependencies.size === 0) return true;
-
-    // Check if all dependencies are completed
-    for (const dep of dependencies) {
-      if (!completedSessions.has(dep)) return false;
-    }
-
-    return true;
-  }
-
-  /**
-   * Get all sessions in a group
-   */
-  getSessionsInGroup(groupId: string): string[] {
-    return Array.from(this.groupToSessions.get(groupId) || []);
-  }
-
-  /**
-   * Get the group ID for a session
-   */
-  getGroupForSession(sessionId: string): string | undefined {
-    return this.sessionToGroup.get(sessionId);
   }
 
   /**
@@ -138,21 +36,24 @@ export class SessionIndex {
   /**
    * Update session status
    */
-  updateSessionStatus(sessionId: string, status: IndexEntry['status']): void {
+  updateSessionStatus(
+    sessionId: string,
+    status: 'pending' | 'running' | 'completed' | 'failed'
+  ): void {
     this.sessionStatus.set(sessionId, status);
   }
 
   /**
    * Get session status
    */
-  getSessionStatus(sessionId: string): IndexEntry['status'] | undefined {
+  getSessionStatus(sessionId: string): 'pending' | 'running' | 'completed' | 'failed' | undefined {
     return this.sessionStatus.get(sessionId);
   }
 
   /**
    * Get all sessions with a specific status
    */
-  getSessionsByStatus(status: IndexEntry['status']): string[] {
+  getSessionsByStatus(status: 'pending' | 'running' | 'completed' | 'failed'): string[] {
     const sessions: string[] = [];
     for (const [sessionId, sessionStatus] of this.sessionStatus.entries()) {
       if (sessionStatus === status) {
@@ -163,159 +64,12 @@ export class SessionIndex {
   }
 
   /**
-   * Check for circular dependencies using Depth-First Search (DFS)
-   *
-   * Detects all cycles in the dependency graph using a modified DFS algorithm
-   * with recursion stack tracking. This is critical for preventing deadlocks
-   * in parallel execution.
-   *
-   * @returns Array of cycles, where each cycle is an array of session IDs
-   *
-   * @example
-   * // Given dependencies: A -> B -> C -> A
-   * const cycles = index.detectCircularDependencies();
-   * // Returns: [['A', 'B', 'C']]
-   *
-   * Algorithm:
-   * - Uses DFS with three states: unvisited, visiting (in recursion stack), visited
-   * - Time complexity: O(V + E) where V is sessions, E is dependencies
-   * - Space complexity: O(V) for visited sets and recursion stack
-   */
-  detectCircularDependencies(): string[][] {
-    const cycles: string[][] = [];
-    const visited = new Set<string>();
-    const recursionStack = new Set<string>();
-
-    const detectCycle = (sessionId: string, path: string[]): void => {
-      visited.add(sessionId);
-      recursionStack.add(sessionId);
-      path.push(sessionId);
-
-      const dependencies = this.dependencyGraph.get(sessionId) || [];
-      for (const dep of dependencies) {
-        if (!visited.has(dep)) {
-          detectCycle(dep, [...path]);
-        } else if (recursionStack.has(dep)) {
-          // Found a cycle - extract the cycle portion
-          const cycleStart = path.indexOf(dep);
-          cycles.push(path.slice(cycleStart));
-        }
-      }
-
-      recursionStack.delete(sessionId);
-    };
-
-    // Check all sessions
-    for (const sessionId of this.dependencyGraph.keys()) {
-      if (!visited.has(sessionId)) {
-        detectCycle(sessionId, []);
-      }
-    }
-
-    return cycles;
-  }
-
-  /**
-   * Get topologically sorted order of sessions using Kahn's algorithm
-   *
-   * Performs a topological sort on the dependency graph to determine a valid
-   * execution order that respects all dependencies. This is essential for
-   * parallel execution planning.
-   *
-   * @param sessionIds - List of session IDs to sort
-   * @returns Array of session IDs in valid execution order, or null if circular dependency exists
-   *
-   * @example
-   * // With dependencies: A -> B -> C, D -> C
-   * const order = index.getTopologicalOrder(['A', 'B', 'C', 'D']);
-   * // Returns: ['A', 'D', 'B', 'C'] or ['D', 'A', 'B', 'C']
-   *
-   * Algorithm (Kahn's algorithm):
-   * 1. Calculate in-degree (number of dependencies) for each session
-   * 2. Start with sessions that have no dependencies (in-degree = 0)
-   * 3. Process each session, reducing in-degree of dependent sessions
-   * 4. Add sessions to result as their in-degree reaches 0
-   *
-   * Complexity:
-   * - Time: O(V + E) where V is number of sessions, E is number of dependencies
-   * - Space: O(V) for in-degree map and queue
-   */
-  getTopologicalOrder(sessionIds: string[]): string[] | null {
-    const inDegree = new Map<string, number>();
-    const queue: string[] = [];
-    const result: string[] = [];
-
-    // Initialize in-degree for all sessions
-    for (const sessionId of sessionIds) {
-      inDegree.set(sessionId, 0);
-    }
-
-    // Calculate in-degrees
-    for (const sessionId of sessionIds) {
-      const deps = this.dependencyGraph.get(sessionId) || [];
-      for (const dep of deps) {
-        if (sessionIds.includes(dep)) {
-          // sessionId depends on dep, so sessionId's in-degree increases
-          inDegree.set(sessionId, (inDegree.get(sessionId) || 0) + 1);
-        }
-      }
-    }
-
-    // Find sessions with no dependencies
-    for (const [sessionId, degree] of inDegree.entries()) {
-      if (degree === 0) {
-        queue.push(sessionId);
-      }
-    }
-
-    // Process queue
-    while (queue.length > 0) {
-      const current = queue.shift();
-      if (!current) continue;
-      result.push(current);
-
-      // Update sessions that depend on the current session
-      // These are in the reverse dependency graph
-      const dependents = this.reverseDependencyGraph.get(current) || [];
-      for (const dependent of dependents) {
-        if (sessionIds.includes(dependent)) {
-          const newDegree = (inDegree.get(dependent) || 0) - 1;
-          inDegree.set(dependent, newDegree);
-          if (newDegree === 0) {
-            queue.push(dependent);
-          }
-        }
-      }
-    }
-
-    // Check if all sessions were processed (no cycles)
-    return result.length === sessionIds.length ? result : null;
-  }
-
-  /**
    * Remove a session from all indexes
    */
   removeSession(sessionId: string): void {
-    // Remove from group indexes
-    const groupId = this.sessionToGroup.get(sessionId);
-    if (groupId) {
-      const groupSessions = this.groupToSessions.get(groupId);
-      groupSessions?.delete(sessionId);
-      this.sessionToGroup.delete(sessionId);
-    }
-
     // Remove from technique indexes
     for (const sessions of this.techniqueToSessions.values()) {
       sessions.delete(sessionId);
-    }
-
-    // Remove from dependency graphs
-    this.dependencyGraph.delete(sessionId);
-    // Also remove from reverse dependency graph as a key
-    this.reverseDependencyGraph.delete(sessionId);
-    // Remove from all reverse dependency sets
-    for (const dependents of this.reverseDependencyGraph.values()) {
-      dependents.delete(sessionId);
     }
 
     // Remove from status
@@ -326,11 +80,7 @@ export class SessionIndex {
    * Clear all indexes
    */
   clear(): void {
-    this.groupToSessions.clear();
-    this.sessionToGroup.clear();
     this.techniqueToSessions.clear();
-    this.dependencyGraph.clear();
-    this.reverseDependencyGraph.clear();
     this.sessionStatus.clear();
   }
 
@@ -338,9 +88,7 @@ export class SessionIndex {
    * Get index statistics
    */
   getStats(): {
-    totalGroups: number;
     totalSessions: number;
-    totalDependencies: number;
     techniqueDistribution: Record<LateralTechnique, number>;
     statusDistribution: Record<string, number>;
   } {
@@ -354,15 +102,16 @@ export class SessionIndex {
       statusDistribution[status] = (statusDistribution[status] || 0) + 1;
     }
 
-    let totalDependencies = 0;
-    for (const deps of this.dependencyGraph.values()) {
-      totalDependencies += deps.size;
+    // Count total unique sessions
+    const allSessions = new Set<string>();
+    for (const sessions of this.techniqueToSessions.values()) {
+      for (const sessionId of sessions) {
+        allSessions.add(sessionId);
+      }
     }
 
     return {
-      totalGroups: this.groupToSessions.size,
-      totalSessions: this.sessionToGroup.size,
-      totalDependencies,
+      totalSessions: allSessions.size,
       techniqueDistribution: techniqueDistribution as Record<LateralTechnique, number>,
       statusDistribution,
     };

@@ -115,7 +115,6 @@ export class ObjectFieldValidator {
             temporalLandscape: '{ "key": "value", ... }',
             results: '{ "output": "...", ... }',
             metrics: '{ "confidence": 0.8, "flexibility": 0.7, ... }',
-            parallelResults: '[{ "planId": "...", "technique": "...", "results": {...}, "insights": [...], "metrics": {...} }, ...]',
         };
         return formats[fieldName] || '{ ... }';
     }
@@ -250,53 +249,6 @@ export class ObjectFieldValidator {
                 isValid: false,
                 error: `${fieldName} validation failed: ${errors.join('; ')}`,
                 suggestion: 'Each matrix item needs: timeFrame, systemLevel, content, and optionally pathDependencies (array) and irreversible (boolean)',
-            };
-        }
-        return { isValid: true, value: obj };
-    }
-    /**
-     * Validate parallelResults item structure
-     */
-    static validateParallelResultItem(value, index) {
-        const fieldName = `parallelResults[${index}]`;
-        const baseValidation = this.validateIsObject(value, fieldName);
-        if (!baseValidation.isValid) {
-            return baseValidation;
-        }
-        const obj = baseValidation.value;
-        const errors = [];
-        // Required fields
-        if (typeof obj.planId !== 'string' || obj.planId.trim() === '') {
-            errors.push('Missing or invalid planId (must be non-empty string)');
-        }
-        if (typeof obj.technique !== 'string' || obj.technique.trim() === '') {
-            errors.push('Missing or invalid technique (must be non-empty string)');
-        }
-        // Validate nested objects
-        if (obj.results !== undefined) {
-            const resultsValidation = this.validateIsObject(obj.results, `${fieldName}.results`);
-            if (!resultsValidation.isValid) {
-                if (resultsValidation.error) {
-                    errors.push(resultsValidation.error);
-                }
-            }
-        }
-        if (obj.metrics !== undefined) {
-            const metricsValidation = this.validateIsObject(obj.metrics, `${fieldName}.metrics`);
-            if (!metricsValidation.isValid) {
-                if (metricsValidation.error) {
-                    errors.push(metricsValidation.error);
-                }
-            }
-        }
-        if (obj.insights !== undefined && !Array.isArray(obj.insights)) {
-            errors.push('insights must be an array if provided');
-        }
-        if (errors.length > 0) {
-            return {
-                isValid: false,
-                error: `${fieldName} validation failed: ${errors.join('; ')}`,
-                suggestion: 'Each parallel result needs: planId, technique, and optionally results (object), insights (array), metrics (object)',
             };
         }
         return { isValid: true, value: obj };
