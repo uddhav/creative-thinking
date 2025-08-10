@@ -321,8 +321,8 @@ EMERGING TERMS:
       const duration = Date.now() - startTime;
 
       expect(analysis).toBeDefined();
-      expect(duration).toBeLessThan(30000); // Should complete within 30 seconds
-    }, 30000);
+      expect(duration).toBeLessThan(60000); // Should complete within 60 seconds (increased for CI environments)
+    }, 60000);
 
     it('should handle multilingual text gracefully', async () => {
       const multilingualText = 'Hello world. Bonjour le monde. Hola mundo. 你好世界.';

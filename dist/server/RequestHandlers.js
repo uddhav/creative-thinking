@@ -270,7 +270,6 @@ export class RequestHandlers {
             return;
         this.batchCollector.delete(planId);
         clearTimeout(batch.timeout);
-        const startTime = Date.now();
         // Process all calls in parallel with timing using Promise.allSettled for robustness
         const timingPromises = batch.calls.map(async ({ request }, index) => {
             const callStart = Date.now();
@@ -326,7 +325,6 @@ export class RequestHandlers {
                 });
             }
         });
-        const totalDuration = Date.now() - startTime;
         // Resolve/reject promises based on their individual results
         batch.calls.forEach(({ resolve, reject }, index) => {
             const successResult = successfulResults.find(r => r.index === index);
