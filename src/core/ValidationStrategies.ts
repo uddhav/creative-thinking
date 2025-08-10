@@ -22,9 +22,11 @@ export interface ValidationStrategy {
  * Base validator with common validation methods
  */
 abstract class BaseValidator implements ValidationStrategy {
-  // Static caches for performance optimization
-  private static cachedTechniques: string[] | null = null;
-  private static techniqueSet: Set<string> | null = null;
+  // Eagerly initialized static caches for performance
+  // These are initialized once when the class is first loaded
+  private static readonly cachedTechniques: string[] =
+    TechniqueRegistry.getInstance().getAllTechniques();
+  private static readonly techniqueSet: Set<string> = new Set(BaseValidator.cachedTechniques);
 
   abstract validate(input: unknown): ValidationResult;
 
@@ -104,20 +106,13 @@ abstract class BaseValidator implements ValidationStrategy {
   }
 
   protected getValidTechniques(): string[] {
-    // Lazy initialization with caching
-    if (!BaseValidator.cachedTechniques) {
-      BaseValidator.cachedTechniques = TechniqueRegistry.getInstance().getAllTechniques();
-    }
+    // Direct return of pre-initialized cache - no checks needed
     return BaseValidator.cachedTechniques;
   }
 
   protected isValidTechnique(value: unknown): boolean {
     if (typeof value !== 'string') return false;
-
-    // Lazy initialization of Set for O(1) lookups
-    if (!BaseValidator.techniqueSet) {
-      BaseValidator.techniqueSet = new Set(this.getValidTechniques());
-    }
+    // Direct Set lookup - no initialization check needed
     return BaseValidator.techniqueSet.has(value);
   }
 }

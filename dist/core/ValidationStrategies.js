@@ -9,9 +9,10 @@ import { TechniqueRegistry } from '../techniques/TechniqueRegistry.js';
  * Base validator with common validation methods
  */
 class BaseValidator {
-    // Static caches for performance optimization
-    static cachedTechniques = null;
-    static techniqueSet = null;
+    // Eagerly initialized static caches for performance
+    // These are initialized once when the class is first loaded
+    static cachedTechniques = TechniqueRegistry.getInstance().getAllTechniques();
+    static techniqueSet = new Set(BaseValidator.cachedTechniques);
     validateString(value, fieldName, errors) {
         if (typeof value !== 'string') {
             errors.push(`${fieldName} must be a string`);
@@ -67,19 +68,13 @@ class BaseValidator {
         return true;
     }
     getValidTechniques() {
-        // Lazy initialization with caching
-        if (!BaseValidator.cachedTechniques) {
-            BaseValidator.cachedTechniques = TechniqueRegistry.getInstance().getAllTechniques();
-        }
+        // Direct return of pre-initialized cache - no checks needed
         return BaseValidator.cachedTechniques;
     }
     isValidTechnique(value) {
         if (typeof value !== 'string')
             return false;
-        // Lazy initialization of Set for O(1) lookups
-        if (!BaseValidator.techniqueSet) {
-            BaseValidator.techniqueSet = new Set(this.getValidTechniques());
-        }
+        // Direct Set lookup - no initialization check needed
         return BaseValidator.techniqueSet.has(value);
     }
 }

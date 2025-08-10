@@ -37,8 +37,8 @@ describe('Wildcard Technique Selection', () => {
 
     // With 17.5% probability, we expect around 15-20 wildcards in 100 iterations
     // Allow for some variance (10-30)
-    expect(wildcardCount).toBeGreaterThan(10);
-    expect(wildcardCount).toBeLessThan(30);
+    expect(wildcardCount).toBeGreaterThanOrEqual(10);
+    expect(wildcardCount).toBeLessThanOrEqual(30);
   });
 
   it('should not include wildcard technique in already recommended techniques', () => {

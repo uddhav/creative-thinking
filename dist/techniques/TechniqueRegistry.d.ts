@@ -7,7 +7,7 @@ import type { TechniqueHandler } from './types.js';
 export declare class TechniqueRegistry {
     private static instance;
     private handlers;
-    private cachedTechniques;
+    private readonly techniques;
     private constructor();
     static getInstance(): TechniqueRegistry;
     private registerHandlers;

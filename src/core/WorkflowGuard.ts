@@ -31,8 +31,11 @@ export class WorkflowGuard {
   private readonly CALL_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
   private parallelCallGroups: Map<string, ToolCall[]> = new Map(); // Track parallel calls by planId
   private sessionManager: SessionManager | null = null;
-  private techniqueRegistry = TechniqueRegistry.getInstance();
-  private validTechniqueSet: Set<string> | null = null;
+  private readonly techniqueRegistry = TechniqueRegistry.getInstance();
+  // Eagerly initialize the Set for O(1) lookups
+  private readonly validTechniqueSet: Set<string> = new Set(
+    this.techniqueRegistry.getAllTechniques()
+  );
 
   /**
    * Set the SessionManager instance for plan validation
@@ -181,10 +184,7 @@ export class WorkflowGuard {
     const execArgs = args as { planId?: string; technique?: string };
 
     // Always check for invalid technique first
-    // Lazy initialization of Set for O(1) lookups
-    if (!this.validTechniqueSet) {
-      this.validTechniqueSet = new Set(this.techniqueRegistry.getAllTechniques());
-    }
+    // Direct Set lookup - no initialization needed
     if (execArgs.technique && !this.validTechniqueSet.has(execArgs.technique)) {
       return {
         type: 'invalid_technique',

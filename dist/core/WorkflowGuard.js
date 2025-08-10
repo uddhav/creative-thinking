@@ -10,7 +10,8 @@ export class WorkflowGuard {
     parallelCallGroups = new Map(); // Track parallel calls by planId
     sessionManager = null;
     techniqueRegistry = TechniqueRegistry.getInstance();
-    validTechniqueSet = null;
+    // Eagerly initialize the Set for O(1) lookups
+    validTechniqueSet = new Set(this.techniqueRegistry.getAllTechniques());
     /**
      * Set the SessionManager instance for plan validation
      */
@@ -127,10 +128,7 @@ export class WorkflowGuard {
     checkExecutionViolations(args) {
         const execArgs = args;
         // Always check for invalid technique first
-        // Lazy initialization of Set for O(1) lookups
-        if (!this.validTechniqueSet) {
-            this.validTechniqueSet = new Set(this.techniqueRegistry.getAllTechniques());
-        }
+        // Direct Set lookup - no initialization needed
         if (execArgs.technique && !this.validTechniqueSet.has(execArgs.technique)) {
             return {
                 type: 'invalid_technique',

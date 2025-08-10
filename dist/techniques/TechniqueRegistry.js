@@ -23,10 +23,12 @@ import { ParadoxicalProblemHandler } from './ParadoxicalProblemHandler.js';
 export class TechniqueRegistry {
     static instance;
     handlers;
-    cachedTechniques = null;
+    techniques; // Eagerly initialized
     constructor() {
         this.handlers = new Map();
         this.registerHandlers();
+        // Cache techniques array once during construction
+        this.techniques = Array.from(this.handlers.keys());
     }
     static getInstance() {
         if (!this.instance) {
@@ -64,10 +66,8 @@ export class TechniqueRegistry {
         return handler;
     }
     getAllTechniques() {
-        if (!this.cachedTechniques) {
-            this.cachedTechniques = Array.from(this.handlers.keys());
-        }
-        return this.cachedTechniques;
+        // Direct return - no conditional checks
+        return this.techniques;
     }
     getTechniqueInfo(technique) {
         const handler = this.getHandler(technique);
