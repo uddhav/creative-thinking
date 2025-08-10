@@ -2,17 +2,19 @@
  * ProblemAnalyzer - Handles problem categorization and analysis
  * Extracted from discoverTechniques to improve maintainability
  */
-import nlp from 'compromise';
+import { NLPService } from '../../nlp/NLPService.js';
 export class ProblemAnalyzer {
+    nlpService;
+    constructor() {
+        this.nlpService = NLPService.getInstance();
+    }
     /**
      * Categorize the problem based on NLP analysis and patterns
      */
     categorizeProblem(problem, context) {
         const fullText = `${problem} ${context || ''}`;
-        const doc = nlp(fullText);
-        const lower = fullText.toLowerCase();
-        // Check for paradoxes and contradictions using NLP
-        if (this.detectParadoxicalPattern(doc, lower)) {
+        // Check for paradoxes and contradictions using proper NLP
+        if (this.detectParadoxicalPattern(fullText)) {
             return 'paradoxical';
         }
         // Check for temporal since it's specific
@@ -109,47 +111,24 @@ export class ProblemAnalyzer {
         return 'general';
     }
     /**
-     * Detect paradoxical patterns using NLP
+     * Detect paradoxical patterns using proper NLP semantic analysis
      */
-    detectParadoxicalPattern(doc, text) {
-        // Direct paradox keywords - but not if it's about time conflicts
-        const paradoxKeywords = [
-            'paradox',
-            'contradict',
-            'incompatible',
-            'mutually exclusive',
-            'trade-off',
-            'opposing',
-            'dilemma',
-            'tension',
-        ];
-        // Skip "conflicting" if it's about deadlines/schedules or requirements
-        const hasConflicting = text.includes('conflicting') &&
-            !text.includes('deadline') &&
-            !text.includes('schedule') &&
-            !text.includes('time') &&
-            !text.includes('requirements');
-        if (paradoxKeywords.some(k => text.includes(k)) || hasConflicting) {
-            return true;
+    detectParadoxicalPattern(text) {
+        // Use the NLP service for proper paradox detection
+        const paradoxResult = this.nlpService.detectParadox(text);
+        // Also check for specific time-exclusions
+        const lowerText = text.toLowerCase();
+        // Skip if it's purely about time conflicts (not true paradoxes)
+        if (paradoxResult.hasParadox) {
+            const isTimeConflict = (lowerText.includes('conflicting') && lowerText.includes('deadline')) ||
+                (lowerText.includes('conflicting') && lowerText.includes('schedule')) ||
+                (lowerText.includes('conflicting') && lowerText.includes('requirements'));
+            if (isTimeConflict) {
+                // Only consider it paradoxical if there are other strong patterns
+                return paradoxResult.patterns.filter(p => p.confidence > 0.7).length > 1;
+            }
         }
-        // Pattern: "both X and Y" or "X but Y" indicating contradiction
-        const hasBothBut = doc.has('both') && (doc.has('but') || doc.has('yet'));
-        const hasEitherOr = doc.has('either') && doc.has('or');
-        const hasOnOneHand = text.includes('on one hand') || text.includes('on the one hand');
-        if (hasBothBut || hasEitherOr || hasOnOneHand) {
-            return true;
-        }
-        // Pattern: conflicting verbs/requirements - but only if not about time
-        const conflictingVerbs = doc.verbs().out('array');
-        const hasConflictingActions = conflictingVerbs.some(v => ['reconcile', 'harmonize', 'juggle'].includes(v.toLowerCase()));
-        // "Balance" is too generic - only consider it paradoxical with specific context
-        const hasBalanceParadox = text.includes('balance') && (text.includes('opposing') || text.includes('contradictory'));
-        // Pattern: opposition words
-        const hasOpposition = doc.has('versus') ||
-            doc.has('vs') ||
-            text.includes('at odds') ||
-            text.includes('in conflict');
-        return hasConflictingActions || hasOpposition || hasBalanceParadox;
+        return paradoxResult.hasParadox;
     }
     /**
      * Check if the problem has time constraints
