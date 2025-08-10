@@ -1,19 +1,21 @@
 /**
  * Hybrid Complexity Analyzer using NLP and MCP Sampling
+ * Enhanced with comprehensive NLP analysis via NLPService
  */
 
-import nlp from 'compromise';
+import { getNLPService, type NLPService } from '../nlp/NLPService.js';
+import type { CompromiseDoc } from '../core/nlp-types.js';
 import { ComplexityCache } from './cache.js';
 import { COMPLEXITY_PATTERNS, COMPLEXITY_THRESHOLDS, NLP_THRESHOLDS } from './constants.js';
 import type { ComplexityAssessment, NLPAnalysisResult } from './types.js';
 
-// Type for compromise doc
-type NlpDoc = ReturnType<typeof nlp>;
-
 export class HybridComplexityAnalyzer {
   private cache = new ComplexityCache();
+  private nlpService: NLPService;
 
-  constructor() {}
+  constructor() {
+    this.nlpService = getNLPService();
+  }
 
   /**
    * Analyze text complexity using hybrid approach
@@ -50,27 +52,26 @@ export class HybridComplexityAnalyzer {
   }
 
   /**
-   * Perform local NLP analysis using Compromise
+   * Perform local NLP analysis using NLPService
    */
   private localNLPAnalysis(text: string): NLPAnalysisResult {
-    const doc = nlp(text);
+    // Use comprehensive NLP analysis
+    const analysis = this.nlpService.analyze(text);
 
     // Extract entities and basic metrics
-    const entities = (doc.topics().out('array') || []) as string[];
-    const sentences = doc.sentences();
-    const sentenceArray = (sentences.out('array') || []) as string[];
-    const wordCount = doc.wordCount();
-    const sentenceCount = sentenceArray.length || 1;
+    const entities = analysis.entities.topics;
+    const sentenceCount = analysis.metadata.sentenceCount || 1;
+    const wordCount = analysis.metadata.wordCount;
     const avgSentenceLength = wordCount / sentenceCount;
 
-    // Detect patterns
+    // Detect patterns using NLP analysis
     const detectedPatterns = {
-      multipleInteractingElements: this.detectInteractingElements(doc, entities),
-      conflictingRequirements: this.detectConflicts(doc),
-      highUncertainty: this.detectUncertainty(doc),
-      multipleStakeholders: this.detectMultipleStakeholders(doc),
-      systemComplexity: this.detectSystemComplexity(doc),
-      timePressure: this.detectTimePressure(doc),
+      multipleInteractingElements: this.detectInteractingElementsNLP(analysis),
+      conflictingRequirements: this.detectConflictsNLP(analysis),
+      highUncertainty: this.detectUncertaintyNLP(analysis),
+      multipleStakeholders: this.detectMultipleStakeholdersNLP(analysis),
+      systemComplexity: this.detectSystemComplexityNLP(analysis),
+      timePressure: this.detectTimePressureNLP(analysis),
     };
 
     // Calculate confidence based on text characteristics
@@ -108,9 +109,79 @@ export class HybridComplexityAnalyzer {
   }
 
   /**
-   * Detect interacting elements pattern
+   * Detect interacting elements pattern using NLP analysis
    */
-  private detectInteractingElements(doc: NlpDoc, entities: string[]): boolean {
+  private detectInteractingElementsNLP(analysis: ReturnType<NLPService['analyze']>): boolean {
+    const entities = [
+      ...analysis.entities.topics,
+      ...analysis.entities.people,
+      ...analysis.entities.organizations,
+    ];
+
+    // Multiple entities suggest interaction
+    if (entities.length >= 3) {
+      return true;
+    }
+
+    // Check relationships for interactions
+    const relationships = analysis.relationships;
+    if (relationships.relationships.length >= 2) {
+      return true;
+    }
+
+    // Check for dependency relationships
+    if (relationships.dependencies.length >= 2) {
+      return true;
+    }
+
+    // Check for "multiple" keyword in topics or keywords (word boundary check)
+    // Need to ensure we don't match "multiples"
+    const hasMultiple = analysis.topics.keywords.some(k => {
+      const lower = k.toLowerCase();
+      // Check for exact word or as part of a phrase
+      return (
+        lower === 'multiple' ||
+        lower.includes('multiple ') || // "multiple systems"
+        lower.includes(' multiple') || // "has multiple"
+        (lower.includes('multiple') && !lower.includes('multiples'))
+      ); // multiple but not multiples
+    });
+
+    // Check for interaction keywords in text
+    const hasInteractionKeywords = analysis.topics.keywords.some(k => {
+      const lower = k.toLowerCase();
+      return (
+        lower.includes('interact') ||
+        lower.includes('connect') ||
+        lower.includes('integrate') ||
+        lower.includes('communicat') ||
+        lower.includes('coordinat') ||
+        lower.includes('collaborat') ||
+        lower.includes('depend')
+      );
+    });
+
+    // Check for interaction verbs in relationships
+    const hasInteractionVerbs = relationships.relationships.some(r =>
+      ['interact', 'connect', 'integrate', 'communicate', 'coordinate', 'collaborate'].includes(
+        r.verb.toLowerCase()
+      )
+    );
+
+    if (
+      hasMultiple &&
+      (hasInteractionKeywords || hasInteractionVerbs || relationships.relationships.length > 0)
+    ) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Legacy method for backward compatibility
+   */
+  private detectInteractingElements(doc: CompromiseDoc, entities: string[]): boolean {
     const hasMultipleEntities = entities.length >= 2;
 
     // Check for interaction keywords
@@ -126,23 +197,115 @@ export class HybridComplexityAnalyzer {
   }
 
   /**
-   * Detect conflicts pattern
+   * Detect conflicts pattern using NLP analysis
    */
-  private detectConflicts(doc: NlpDoc): boolean {
+  private detectConflictsNLP(analysis: ReturnType<NLPService['analyze']>): boolean {
+    // Check for contradictions and paradoxes
+    if (analysis.contradictions.hasContradiction || analysis.paradoxes.hasParadox) {
+      return true;
+    }
+
+    // Check for conflicting goals in paradox analysis
+    if (analysis.paradoxes.conflictingGoals.length > 0) {
+      return true;
+    }
+
+    // Check sentiment for mixed emotions (potential conflicts)
+    if (analysis.sentiment.overall === 'mixed') {
+      return true;
+    }
+
+    // Check for conflict-related keywords in topics
+    const conflictKeywords = ['conflict', 'opposing', 'contradiction', 'incompatible'];
+    if (
+      analysis.topics.keywords.some(k => conflictKeywords.some(ck => k.toLowerCase().includes(ck)))
+    ) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Legacy method for backward compatibility
+   */
+  private detectConflicts(doc: CompromiseDoc): boolean {
     return COMPLEXITY_PATTERNS.CONFLICT.keywords.some(k => doc.has(k));
   }
 
   /**
-   * Detect uncertainty pattern
+   * Detect uncertainty pattern using NLP analysis
    */
-  private detectUncertainty(doc: NlpDoc): boolean {
+  private detectUncertaintyNLP(analysis: ReturnType<NLPService['analyze']>): boolean {
+    // Check readability - complex text often indicates uncertainty
+    if (
+      analysis.readability.clarity === 'complex' ||
+      analysis.readability.clarity === 'very_complex'
+    ) {
+      return true;
+    }
+
+    // Check for questions indicating uncertainty
+    if (analysis.intent.questionType && analysis.intent.questionType !== 'yes_no') {
+      return true;
+    }
+
+    // Low confidence in NLP analysis itself suggests uncertainty
+    if (analysis.metadata.confidence < 0.5) {
+      return true;
+    }
+
+    // Check sentiment subjectivity - high subjectivity can indicate uncertainty
+    if (analysis.sentiment.subjectivity > 0.7) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Legacy method for backward compatibility
+   */
+  private detectUncertainty(doc: CompromiseDoc): boolean {
     return COMPLEXITY_PATTERNS.UNCERTAINTY.keywords.some(k => doc.has(k));
   }
 
   /**
-   * Detect multiple stakeholders
+   * Detect multiple stakeholders using NLP analysis
    */
-  private detectMultipleStakeholders(doc: NlpDoc): boolean {
+  private detectMultipleStakeholdersNLP(analysis: ReturnType<NLPService['analyze']>): boolean {
+    // Check for multiple people entities
+    if (analysis.entities.people.length >= 2) {
+      return true;
+    }
+
+    // Check for multiple organizations
+    if (analysis.entities.organizations.length >= 2) {
+      return true;
+    }
+
+    // Check if topics include people category
+    if (analysis.topics.categories.includes('people')) {
+      return true;
+    }
+
+    // Check for stakeholder-related keywords
+    const stakeholderKeywords = ['stakeholder', 'diverse', 'multiple', 'different needs'];
+    if (
+      analysis.topics.keywords.some(k =>
+        stakeholderKeywords.some(sk => k.toLowerCase().includes(sk))
+      )
+    ) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Legacy method for backward compatibility
+   */
+  private detectMultipleStakeholders(doc: CompromiseDoc): boolean {
     const hasStakeholderTerms = COMPLEXITY_PATTERNS.STAKEHOLDER.keywords.some(k => doc.has(k));
 
     const hasMultipleContext = COMPLEXITY_PATTERNS.STAKEHOLDER.requiresContext.some(k =>
@@ -153,16 +316,73 @@ export class HybridComplexityAnalyzer {
   }
 
   /**
-   * Detect system complexity
+   * Detect system complexity using NLP analysis
    */
-  private detectSystemComplexity(doc: NlpDoc): boolean {
+  private detectSystemComplexityNLP(analysis: ReturnType<NLPService['analyze']>): boolean {
+    // Complex relationships indicate system complexity
+    if (analysis.relationships.relationships.length >= 3) {
+      return true;
+    }
+
+    // Multiple dependencies suggest complex system
+    if (analysis.relationships.dependencies.length >= 3) {
+      return true;
+    }
+
+    // High word count and sentence complexity
+    if (analysis.metadata.wordCount > 100 && analysis.readability.avgSentenceLength > 20) {
+      return true;
+    }
+
+    // Many different types of entities
+    const entityTypes = [
+      analysis.entities.people.length > 0,
+      analysis.entities.places.length > 0,
+      analysis.entities.organizations.length > 0,
+      analysis.entities.dates.length > 0,
+      analysis.entities.money.length > 0,
+    ].filter(Boolean).length;
+
+    if (entityTypes >= 3) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Legacy method for backward compatibility
+   */
+  private detectSystemComplexity(doc: CompromiseDoc): boolean {
     return COMPLEXITY_PATTERNS.SYSTEM.keywords.some(k => doc.has(k));
   }
 
   /**
-   * Detect time pressure
+   * Detect time pressure using NLP analysis
    */
-  private detectTimePressure(doc: NlpDoc): boolean {
+  private detectTimePressureNLP(analysis: ReturnType<NLPService['analyze']>): boolean {
+    // Check temporal analysis for urgency
+    if (analysis.temporal.urgency === 'immediate' || analysis.temporal.urgency === 'high') {
+      return true;
+    }
+
+    // Check for deadlines
+    if (analysis.temporal.hasDeadline) {
+      return true;
+    }
+
+    // Multiple temporal expressions suggest time constraints
+    if (analysis.temporal.expressions.length >= 2) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Legacy method for backward compatibility
+   */
+  private detectTimePressure(doc: CompromiseDoc): boolean {
     return COMPLEXITY_PATTERNS.TIME_PRESSURE.keywords.some(k => doc.has(k));
   }
 

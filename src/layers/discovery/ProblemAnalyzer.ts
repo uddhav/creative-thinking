@@ -1,34 +1,46 @@
 /**
  * ProblemAnalyzer - Handles problem categorization and analysis
  * Extracted from discoverTechniques to improve maintainability
+ * Enhanced with comprehensive NLP analysis using NLPService
  */
 
-import nlp from 'compromise';
-
-type NlpDoc = ReturnType<typeof nlp>;
+import { getNLPService, type NLPService } from '../../nlp/NLPService.js';
 
 export class ProblemAnalyzer {
+  private nlpService: NLPService;
+
+  constructor() {
+    this.nlpService = getNLPService();
+  }
   /**
    * Categorize the problem based on NLP analysis and patterns
    */
   categorizeProblem(problem: string, context?: string): string {
     const fullText = `${problem} ${context || ''}`;
-    const doc = nlp(fullText);
-    const lower = fullText.toLowerCase();
 
-    // Check for paradoxes and contradictions using NLP
-    if (this.detectParadoxicalPattern(doc, lower)) {
+    // Use NLPService for comprehensive analysis
+    const nlpAnalysis = this.nlpService.analyze(fullText);
+
+    // Check for paradoxes and contradictions using enhanced NLP
+    if (this.detectParadoxicalPattern(fullText)) {
       return 'paradoxical';
     }
 
-    // Check for temporal since it's specific
+    // Use temporal analysis for time-related problems (check early, before creative)
+    if (nlpAnalysis.temporal.hasDeadline || nlpAnalysis.temporal.urgency !== 'none') {
+      return 'temporal';
+    }
+
+    // Additional temporal checks (already covered by NLP analysis above)
+    if (nlpAnalysis.temporal.expressions.length > 2) {
+      return 'temporal';
+    }
+
+    // Check for explicit deadline/time keywords
     if (
-      fullText.includes('time') ||
-      fullText.includes('deadline') ||
-      fullText.includes('schedule') ||
-      fullText.includes('temporal') ||
-      fullText.includes('timing') ||
-      fullText.includes('calendar')
+      fullText.toLowerCase().includes('deadline') ||
+      fullText.toLowerCase().includes('time pressure') ||
+      fullText.toLowerCase().includes('limited time')
     ) {
       return 'temporal';
     }
@@ -69,28 +81,35 @@ export class ProblemAnalyzer {
       return 'systems';
     }
 
-    // Check for organizational/cultural keywords before user-centered (to prioritize cross-cultural work)
+    // Check for organizational/cultural using NLP analysis
+    if (nlpAnalysis.entities.people.length > 2 || this.needsCollaboration(problem, context)) {
+      return 'organizational';
+    }
+
+    // Check for organizational keywords with NLP topics
+    const orgKeywords = [
+      'team',
+      'collaboration',
+      'stakeholder',
+      'collective',
+      'culture',
+      'diverse',
+      'crowdsourc',
+      'collaborat',
+      'consensus',
+      'together',
+      'perspectives',
+      'swarm',
+      'wisdom of crowds',
+      'bring together',
+      'multiple perspectives',
+    ];
     if (
-      fullText.includes('team') ||
-      fullText.includes('collaboration') ||
-      fullText.includes('communication') ||
-      fullText.includes('stakeholder') ||
-      fullText.includes('collective') ||
-      fullText.includes('consensus') ||
-      fullText.includes('crowd') ||
-      fullText.includes('together') ||
-      fullText.includes('perspectives') ||
-      fullText.includes('synthesize') ||
-      fullText.includes('wisdom') ||
-      fullText.includes('swarm') ||
-      fullText.includes('bring') ||
-      fullText.includes('multiple') ||
-      fullText.includes('emergent') ||
-      fullText.includes('global') ||
-      fullText.includes('culture') ||
-      fullText.includes('diverse') ||
-      fullText.includes('inclusive') ||
-      fullText.includes('multicultural')
+      orgKeywords.some(
+        keyword =>
+          fullText.toLowerCase().includes(keyword) ||
+          nlpAnalysis.topics.keywords.some(k => k.toLowerCase().includes(keyword))
+      )
     ) {
       return 'organizational';
     }
@@ -139,10 +158,33 @@ export class ProblemAnalyzer {
   }
 
   /**
-   * Detect paradoxical patterns using NLP
+   * Detect paradoxical patterns using enhanced NLP
    */
-  private detectParadoxicalPattern(doc: NlpDoc, text: string): boolean {
-    // Direct paradox keywords - but not if it's about time conflicts
+  private detectParadoxicalPattern(text: string): boolean {
+    const lower = text.toLowerCase();
+
+    // Use NLPService for comprehensive paradox detection
+    const paradoxAnalysis = this.nlpService.detectParadoxes(text);
+    const contradictionAnalysis = this.nlpService.detectContradictions(text);
+
+    // If NLPService detects paradoxes or contradictions, return true
+    if (paradoxAnalysis.hasParadox || contradictionAnalysis.hasContradiction) {
+      // But exclude time-related conflicts
+      if (lower.includes('deadline') || lower.includes('schedule')) {
+        // Check if it's specifically about time conflicts
+        const temporal = this.nlpService.extractTemporalExpressions(text);
+        if (temporal.expressions.length > 0 && !lower.includes('paradox')) {
+          return false; // It's a time conflict, not a paradox
+        }
+      }
+      // Exclude "conflicting requirements" which is not necessarily paradoxical
+      if (lower.includes('conflicting') && lower.includes('requirements')) {
+        return false;
+      }
+      return true;
+    }
+
+    // Additional paradox keywords that might not be caught by NLPService
     const paradoxKeywords = [
       'paradox',
       'contradict',
@@ -156,49 +198,72 @@ export class ProblemAnalyzer {
 
     // Skip "conflicting" if it's about deadlines/schedules or requirements
     const hasConflicting =
-      text.includes('conflicting') &&
-      !text.includes('deadline') &&
-      !text.includes('schedule') &&
-      !text.includes('time') &&
-      !text.includes('requirements');
+      lower.includes('conflicting') &&
+      !lower.includes('deadline') &&
+      !lower.includes('schedule') &&
+      !lower.includes('time') &&
+      !lower.includes('requirements');
 
-    if (paradoxKeywords.some(k => text.includes(k)) || hasConflicting) {
+    if (paradoxKeywords.some(k => lower.includes(k)) || hasConflicting) {
       return true;
     }
 
-    // Pattern: "both X and Y" or "X but Y" indicating contradiction
-    const hasBothBut = doc.has('both') && (doc.has('but') || doc.has('yet'));
-    const hasEitherOr = doc.has('either') && doc.has('or');
-    const hasOnOneHand = text.includes('on one hand') || text.includes('on the one hand');
+    // Check for structural patterns using NLP relationships
+    const relationships = this.nlpService.extractRelationships(text);
 
-    if (hasBothBut || hasEitherOr || hasOnOneHand) {
-      return true;
-    }
-
-    // Pattern: conflicting verbs/requirements - but only if not about time
-    const conflictingVerbs = doc.verbs().out('array') as string[];
-    const hasConflictingActions = conflictingVerbs.some(v =>
-      ['reconcile', 'harmonize', 'juggle'].includes(v.toLowerCase())
+    // Look for opposing relationships
+    const hasOpposingRelationships = relationships.dependencies.some(
+      dep =>
+        dep.type === 'conditional' &&
+        (dep.dependency.includes('but') || dep.dependency.includes('however'))
     );
+
+    if (hasOpposingRelationships) {
+      return true;
+    }
+
+    // Pattern: "on one hand" or similar
+    const hasOnOneHand = lower.includes('on one hand') || lower.includes('on the one hand');
+    if (hasOnOneHand) {
+      return true;
+    }
 
     // "Balance" is too generic - only consider it paradoxical with specific context
     const hasBalanceParadox =
-      text.includes('balance') && (text.includes('opposing') || text.includes('contradictory'));
+      lower.includes('balance') && (lower.includes('opposing') || lower.includes('contradictory'));
 
     // Pattern: opposition words
     const hasOpposition =
-      doc.has('versus') ||
-      doc.has('vs') ||
-      text.includes('at odds') ||
-      text.includes('in conflict');
+      lower.includes('versus') ||
+      lower.includes('vs') ||
+      lower.includes('at odds') ||
+      lower.includes('in conflict');
 
-    return hasConflictingActions || hasOpposition || hasBalanceParadox;
+    return hasBalanceParadox || hasOpposition;
   }
 
   /**
-   * Check if the problem has time constraints
+   * Check if the problem has time constraints using NLP
    */
   hasTimeConstraint(problem: string, constraints?: string[]): boolean {
+    // Use NLPService for temporal analysis
+    const temporal = this.nlpService.extractTemporalExpressions(problem);
+
+    // Check if there are deadlines or urgent time expressions
+    if (temporal.hasDeadline || temporal.urgency !== 'none') {
+      return true;
+    }
+
+    // Also check constraints if provided
+    if (constraints) {
+      const constraintText = constraints.join(' ');
+      const constraintTemporal = this.nlpService.extractTemporalExpressions(constraintText);
+      if (constraintTemporal.hasDeadline || constraintTemporal.urgency !== 'none') {
+        return true;
+      }
+    }
+
+    // Fallback to keyword matching for edge cases
     const timeWords = ['deadline', 'urgent', 'asap', 'quickly', 'time-sensitive'];
     const problemHasTime = timeWords.some(word => problem.toLowerCase().includes(word));
     const constraintsHaveTime =
@@ -208,11 +273,48 @@ export class ProblemAnalyzer {
   }
 
   /**
-   * Check if the problem needs collaboration
+   * Check if the problem needs collaboration using NLP
    */
   needsCollaboration(problem: string, context?: string): boolean {
-    const collabWords = ['team', 'stakeholder', 'collaboration', 'together', 'group'];
-    const fullText = `${problem} ${context || ''}`.toLowerCase();
-    return collabWords.some(word => fullText.includes(word));
+    const fullText = `${problem} ${context || ''}`;
+
+    // Use NLPService to extract entities and topics
+    const entities = this.nlpService.extractEntities(fullText);
+    const topics = this.nlpService.extractTopics(fullText);
+
+    // Check if there are multiple people mentioned
+    if (entities.people.length > 1) {
+      return true;
+    }
+
+    // Check if topics include collaboration-related categories
+    if (topics.categories.includes('people')) {
+      return true;
+    }
+
+    // Use intent classification to check for collaborative intent
+    const intent = this.nlpService.classifyIntent(fullText);
+    if (intent.intents.some(i => i.intent === 'request_help' || i.intent === 'express_agreement')) {
+      return true;
+    }
+
+    // Fallback to keyword matching
+    const collabWords = [
+      'team',
+      'stakeholder',
+      'collaboration',
+      'together',
+      'group',
+      'collective',
+      'consensus',
+      'crowdsourc',
+      'collaborat',
+      'perspectives',
+      'swarm',
+      'emergent',
+      'bring together',
+    ];
+    const lower = fullText.toLowerCase();
+    return collabWords.some(word => lower.includes(word));
   }
 }
