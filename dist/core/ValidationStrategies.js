@@ -9,6 +9,9 @@ import { TechniqueRegistry } from '../techniques/TechniqueRegistry.js';
  * Base validator with common validation methods
  */
 class BaseValidator {
+    // Static caches for performance optimization
+    static cachedTechniques = null;
+    static techniqueSet = null;
     validateString(value, fieldName, errors) {
         if (typeof value !== 'string') {
             errors.push(`${fieldName} must be a string`);
@@ -64,14 +67,20 @@ class BaseValidator {
         return true;
     }
     getValidTechniques() {
-        // Get techniques from the registry (single source of truth)
-        return TechniqueRegistry.getInstance().getAllTechniques();
+        // Lazy initialization with caching
+        if (!BaseValidator.cachedTechniques) {
+            BaseValidator.cachedTechniques = TechniqueRegistry.getInstance().getAllTechniques();
+        }
+        return BaseValidator.cachedTechniques;
     }
     isValidTechnique(value) {
         if (typeof value !== 'string')
             return false;
-        const validTechniques = this.getValidTechniques();
-        return validTechniques.includes(value);
+        // Lazy initialization of Set for O(1) lookups
+        if (!BaseValidator.techniqueSet) {
+            BaseValidator.techniqueSet = new Set(this.getValidTechniques());
+        }
+        return BaseValidator.techniqueSet.has(value);
     }
 }
 /**

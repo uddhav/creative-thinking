@@ -15,6 +15,7 @@ export declare class WorkflowGuard {
     private parallelCallGroups;
     private sessionManager;
     private techniqueRegistry;
+    private validTechniqueSet;
     /**
      * Set the SessionManager instance for plan validation
      */

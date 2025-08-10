@@ -10,6 +10,7 @@ export class WorkflowGuard {
     parallelCallGroups = new Map(); // Track parallel calls by planId
     sessionManager = null;
     techniqueRegistry = TechniqueRegistry.getInstance();
+    validTechniqueSet = null;
     /**
      * Set the SessionManager instance for plan validation
      */
@@ -126,8 +127,11 @@ export class WorkflowGuard {
     checkExecutionViolations(args) {
         const execArgs = args;
         // Always check for invalid technique first
-        const validTechniques = this.techniqueRegistry.getAllTechniques();
-        if (execArgs.technique && !validTechniques.includes(execArgs.technique)) {
+        // Lazy initialization of Set for O(1) lookups
+        if (!this.validTechniqueSet) {
+            this.validTechniqueSet = new Set(this.techniqueRegistry.getAllTechniques());
+        }
+        if (execArgs.technique && !this.validTechniqueSet.has(execArgs.technique)) {
             return {
                 type: 'invalid_technique',
                 message: `Invalid technique '${execArgs.technique}'. This technique does not exist.`,

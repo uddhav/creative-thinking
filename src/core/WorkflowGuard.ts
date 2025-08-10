@@ -6,7 +6,6 @@
 import { ErrorFactory } from '../errors/enhanced-errors.js';
 import type { SessionManager } from './SessionManager.js';
 import { TechniqueRegistry } from '../techniques/TechniqueRegistry.js';
-import type { LateralTechnique } from '../types/index.js';
 
 interface ToolCall {
   toolName: string;
@@ -33,6 +32,7 @@ export class WorkflowGuard {
   private parallelCallGroups: Map<string, ToolCall[]> = new Map(); // Track parallel calls by planId
   private sessionManager: SessionManager | null = null;
   private techniqueRegistry = TechniqueRegistry.getInstance();
+  private validTechniqueSet: Set<string> | null = null;
 
   /**
    * Set the SessionManager instance for plan validation
@@ -181,8 +181,11 @@ export class WorkflowGuard {
     const execArgs = args as { planId?: string; technique?: string };
 
     // Always check for invalid technique first
-    const validTechniques = this.techniqueRegistry.getAllTechniques();
-    if (execArgs.technique && !validTechniques.includes(execArgs.technique as LateralTechnique)) {
+    // Lazy initialization of Set for O(1) lookups
+    if (!this.validTechniqueSet) {
+      this.validTechniqueSet = new Set(this.techniqueRegistry.getAllTechniques());
+    }
+    if (execArgs.technique && !this.validTechniqueSet.has(execArgs.technique)) {
       return {
         type: 'invalid_technique',
         message: `Invalid technique '${execArgs.technique}'. This technique does not exist.`,
