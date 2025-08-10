@@ -3,14 +3,12 @@
  * Extracted from discoverTechniques to improve maintainability
  */
 export declare class ProblemAnalyzer {
-    private nlpService;
-    constructor();
     /**
      * Categorize the problem based on NLP analysis and patterns
      */
     categorizeProblem(problem: string, context?: string): string;
     /**
-     * Detect paradoxical patterns using proper NLP semantic analysis
+     * Detect paradoxical patterns using NLP
      */
     private detectParadoxicalPattern;
     /**

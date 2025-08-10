@@ -2,18 +2,18 @@
  * Hybrid Complexity Analyzer using NLP and MCP Sampling
  */
 
+import nlp from 'compromise';
 import { ComplexityCache } from './cache.js';
-import { COMPLEXITY_THRESHOLDS, NLP_THRESHOLDS } from './constants.js';
+import { COMPLEXITY_PATTERNS, COMPLEXITY_THRESHOLDS, NLP_THRESHOLDS } from './constants.js';
 import type { ComplexityAssessment, NLPAnalysisResult } from './types.js';
-import { NLPService } from '../nlp/NLPService.js';
+
+// Type for compromise doc
+type NlpDoc = ReturnType<typeof nlp>;
 
 export class HybridComplexityAnalyzer {
   private cache = new ComplexityCache();
-  private nlpService: NLPService;
 
-  constructor() {
-    this.nlpService = NLPService.getInstance();
-  }
+  constructor() {}
 
   /**
    * Analyze text complexity using hybrid approach
@@ -50,47 +50,120 @@ export class HybridComplexityAnalyzer {
   }
 
   /**
-   * Perform local NLP analysis using centralized NLP Service
+   * Perform local NLP analysis using Compromise
    */
   private localNLPAnalysis(text: string): NLPAnalysisResult {
-    // Use the centralized NLP service for analysis
-    const semanticAnalysis = this.nlpService.analyzeText(text);
-    const complexityResult = this.nlpService.detectComplexity(text);
+    const doc = nlp(text);
 
-    // Map semantic analysis to our expected format
+    // Extract entities and basic metrics
+    const entities = (doc.topics().out('array') || []) as string[];
+    const sentences = doc.sentences();
+    const sentenceArray = (sentences.out('array') || []) as string[];
+    const wordCount = doc.wordCount();
+    const sentenceCount = sentenceArray.length || 1;
+    const avgSentenceLength = wordCount / sentenceCount;
+
+    // Detect patterns
     const detectedPatterns = {
-      multipleInteractingElements:
-        semanticAnalysis.entities.length >= 2 && semanticAnalysis.relationships.length > 0,
-      conflictingRequirements: semanticAnalysis.contradictionPatterns.length > 0,
-      highUncertainty:
-        semanticAnalysis.questions.length > 0 ||
-        complexityResult.factors.includes('uncertainty/questions'),
-      multipleStakeholders:
-        semanticAnalysis.people.length > 1 || semanticAnalysis.organizations.length > 1,
-      systemComplexity:
-        complexityResult.factors.includes('complex sentence structure') ||
-        complexityResult.factors.includes('multiple relationships'),
-      timePressure:
-        semanticAnalysis.temporalExpressions.length > 0 &&
-        semanticAnalysis.emotionalTone.includes('urgent'),
+      multipleInteractingElements: this.detectInteractingElements(doc, entities),
+      conflictingRequirements: this.detectConflicts(doc),
+      highUncertainty: this.detectUncertainty(doc),
+      multipleStakeholders: this.detectMultipleStakeholders(doc),
+      systemComplexity: this.detectSystemComplexity(doc),
+      timePressure: this.detectTimePressure(doc),
     };
 
-    // Calculate confidence based on complexity score and semantic richness
-    let confidence = complexityResult.score > 0 ? 0.5 + complexityResult.score * 0.5 : 0.5;
+    // Calculate confidence based on text characteristics
+    let confidence = 1.0;
 
-    // Boost confidence if we have rich semantic data
-    if (semanticAnalysis.entities.length > 3 && semanticAnalysis.relationships.length > 2) {
+    // Reduce confidence for very short text
+    if (wordCount < NLP_THRESHOLDS.WORD_COUNT.MIN) {
+      confidence *= 0.6;
+    }
+
+    // Reduce confidence for very long sentences (harder to parse)
+    if (avgSentenceLength > NLP_THRESHOLDS.SENTENCE_LENGTH.COMPLEX) {
+      confidence *= 0.8;
+    }
+
+    // Reduce confidence if no clear patterns detected
+    const patternCount = Object.values(detectedPatterns).filter(Boolean).length;
+    if (patternCount === 0 && wordCount > 20) {
+      confidence *= 0.7;
+    }
+
+    // Boost confidence if multiple patterns detected clearly
+    if (patternCount >= 3) {
       confidence = Math.min(confidence * 1.2, 1.0);
     }
 
     return {
-      entities: semanticAnalysis.entities,
-      sentenceCount: semanticAnalysis.sentenceCount,
-      avgSentenceLength: semanticAnalysis.avgSentenceLength,
-      wordCount: semanticAnalysis.wordCount,
+      entities,
+      sentenceCount,
+      avgSentenceLength,
+      wordCount,
       detectedPatterns,
       confidence,
     };
+  }
+
+  /**
+   * Detect interacting elements pattern
+   */
+  private detectInteractingElements(doc: NlpDoc, entities: string[]): boolean {
+    const hasMultipleEntities = entities.length >= 2;
+
+    // Check for interaction keywords
+    const hasInteractionVerbs = COMPLEXITY_PATTERNS.INTERACTION.keywords.some(k => doc.has(k));
+
+    // Check for 'multiple' as a whole word
+    const hasMultipleContext = doc.has('multiple');
+
+    // More flexible: require either entities + interactions OR multiple + interactions
+    return (
+      (hasMultipleEntities && hasInteractionVerbs) || (hasMultipleContext && hasInteractionVerbs)
+    );
+  }
+
+  /**
+   * Detect conflicts pattern
+   */
+  private detectConflicts(doc: NlpDoc): boolean {
+    return COMPLEXITY_PATTERNS.CONFLICT.keywords.some(k => doc.has(k));
+  }
+
+  /**
+   * Detect uncertainty pattern
+   */
+  private detectUncertainty(doc: NlpDoc): boolean {
+    return COMPLEXITY_PATTERNS.UNCERTAINTY.keywords.some(k => doc.has(k));
+  }
+
+  /**
+   * Detect multiple stakeholders
+   */
+  private detectMultipleStakeholders(doc: NlpDoc): boolean {
+    const hasStakeholderTerms = COMPLEXITY_PATTERNS.STAKEHOLDER.keywords.some(k => doc.has(k));
+
+    const hasMultipleContext = COMPLEXITY_PATTERNS.STAKEHOLDER.requiresContext.some(k =>
+      doc.has(k)
+    );
+
+    return hasStakeholderTerms && hasMultipleContext;
+  }
+
+  /**
+   * Detect system complexity
+   */
+  private detectSystemComplexity(doc: NlpDoc): boolean {
+    return COMPLEXITY_PATTERNS.SYSTEM.keywords.some(k => doc.has(k));
+  }
+
+  /**
+   * Detect time pressure
+   */
+  private detectTimePressure(doc: NlpDoc): boolean {
+    return COMPLEXITY_PATTERNS.TIME_PRESSURE.keywords.some(k => doc.has(k));
   }
 
   /**

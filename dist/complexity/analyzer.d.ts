@@ -4,16 +4,39 @@
 import type { ComplexityAssessment } from './types.js';
 export declare class HybridComplexityAnalyzer {
     private cache;
-    private nlpService;
     constructor();
     /**
      * Analyze text complexity using hybrid approach
      */
     analyze(text: string, useCache?: boolean): ComplexityAssessment;
     /**
-     * Perform local NLP analysis using centralized NLP Service
+     * Perform local NLP analysis using Compromise
      */
     private localNLPAnalysis;
+    /**
+     * Detect interacting elements pattern
+     */
+    private detectInteractingElements;
+    /**
+     * Detect conflicts pattern
+     */
+    private detectConflicts;
+    /**
+     * Detect uncertainty pattern
+     */
+    private detectUncertainty;
+    /**
+     * Detect multiple stakeholders
+     */
+    private detectMultipleStakeholders;
+    /**
+     * Detect system complexity
+     */
+    private detectSystemComplexity;
+    /**
+     * Detect time pressure
+     */
+    private detectTimePressure;
     /**
      * Convert NLP result to complexity assessment
      */
