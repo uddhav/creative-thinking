@@ -55,5 +55,10 @@ export declare class RequestHandlers {
      * Get required parameters message for a tool
      */
     private getRequiredParametersMessage;
+    /**
+     * Set up sampling-related handlers
+     * Note: MCP Sampling uses custom methods that are not part of the standard schemas
+     */
+    private setupSamplingHandlers;
 }
 //# sourceMappingURL=RequestHandlers.d.ts.map

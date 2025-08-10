@@ -224,6 +224,7 @@ const nextResult = await executeThinkingStep({
 - **Export System**: Multi-format support (JSON, CSV, Markdown) with full session fidelity
 - **Validation Strategy**: Comprehensive input validation using strategy pattern
 - **Persistence Architecture**: Adapter pattern supporting filesystem and memory backends
+- **MCP Sampling Integration**: AI-powered enhancement with graceful degradation when unavailable
 
 ### Sixteen Enhanced Thinking Techniques
 
@@ -263,6 +264,65 @@ The server exposes pre-configured prompts for common lateral thinking scenarios:
 
 These prompts provide structured conversation starters that guide users through effective use of the
 server's capabilities.
+
+### MCP Sampling Integration (AI Enhancement)
+
+The server supports MCP Sampling protocol for AI-powered enhancement of creative thinking
+capabilities. When a compatible MCP client provides sampling support, the server can request LLM
+completions to enhance various features.
+
+**Key Features:**
+
+- **Automatic Detection**: Server detects client sampling capabilities during handshake
+- **Graceful Degradation**: Features work without AI, providing basic functionality
+- **Privacy-First**: All sampling is done through the client - server never accesses external APIs
+- **Intelligent Routing**: Different features use appropriate model preferences
+
+**Enhanced Features with AI:**
+
+1. **Risk Generation** - Comprehensive risk assessment with severity and mitigation strategies
+2. **Idea Enhancement** - Transform basic ideas into detailed, actionable proposals
+3. **Smart Summaries** - Intelligent synthesis of creative sessions with key insights
+4. **Technique Recommendations** - AI-powered analysis of problem-technique fit
+5. **Natural Language Processing** - Advanced text analysis for complexity and patterns
+
+**Configuration:**
+
+MCP Sampling is automatically enabled when:
+
+1. Your MCP client supports the sampling protocol
+2. Client sends capability notification during connection
+3. No additional configuration needed - it just works!
+
+**Example Flow:**
+
+```javascript
+// 1. Client connects and sends capabilities
+// Client -> Server: sampling capability notification
+
+// 2. Server detects AI is available
+// Features automatically upgrade to enhanced versions
+
+// 3. During execution, server requests AI assistance
+const riskAssessment = await generateRisks(solution);
+// If AI available: Detailed multi-dimensional risk analysis
+// If AI unavailable: Basic risk templates
+
+// 4. Results seamlessly integrate into workflow
+// User sees enhanced output without knowing if AI was used
+```
+
+**Fallback Behavior:**
+
+When AI is not available, the server provides:
+
+- Template-based risk assessments
+- Rule-based idea enhancement
+- Statistical summaries
+- Heuristic technique recommendations
+- Pattern-matching NLP
+
+This ensures the server remains fully functional regardless of AI availability.
 
 ### Memory-Aware Outputs (NEW)
 
@@ -980,6 +1040,13 @@ The server supports environment variables for advanced features:
 - `PERSISTENCE_TYPE=filesystem|memory` - Choose storage type
 - `PERSISTENCE_PATH=/path/to/sessions` - Custom session storage location
 
+### MCP Sampling Configuration
+
+- `SAMPLING_TIMEOUT=30000` - Timeout for AI requests in milliseconds (default: 30s)
+- `SAMPLING_MAX_RETRIES=3` - Maximum retry attempts for failed requests
+- `SAMPLING_RETRY_DELAY=1000` - Initial retry delay in milliseconds
+- `SAMPLING_RATE_LIMIT=10` - Maximum requests per minute (default: 10)
+
 ### Telemetry Configuration (Optional)
 
 - `TELEMETRY_ENABLED=true` - Enable anonymous usage analytics (opt-in)
@@ -1360,9 +1427,10 @@ plans.
 
 ### Coming Soon
 
-- **v0.4.0** - Telemetry & Analytics (PR in review)
-- **v0.5.0** - Enhanced Sequential Processing (Q1 2025)
-- **v0.6.0+** - Part VII Advanced Techniques (Q2-Q4 2025)
+- **v0.4.0** - MCP Sampling Integration (Complete - Testing phase)
+- **v0.5.0** - Telemetry & Analytics (PR in review)
+- **v0.6.0** - Enhanced Sequential Processing (Q1 2025)
+- **v0.7.0+** - Part VII Advanced Techniques (Q2-Q4 2025)
 
 ### Filter Issues By:
 

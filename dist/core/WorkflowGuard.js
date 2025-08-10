@@ -23,6 +23,9 @@ export class WorkflowGuard {
         'collective_intel',
         'disney_method',
         'nine_windows',
+        'quantum_superposition',
+        'temporal_creativity',
+        'paradoxical_problem',
     ];
     /**
      * Set the SessionManager instance for plan validation

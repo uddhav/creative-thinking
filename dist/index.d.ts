@@ -8,6 +8,7 @@ import { VisualFormatter } from './utils/VisualFormatter.js';
 import type { SessionData } from './types/index.js';
 export * from './types/index.js';
 export * from './types/planning.js';
+import { SamplingHandler } from './server/SamplingHandler.js';
 /**
  * Main server class that orchestrates all components
  */
@@ -22,10 +23,12 @@ export declare class LateralThinkingServer {
     private neuralOptimizationEnabled;
     private culturalFrameworksEnabled;
     private sessionOperationsHandler;
+    private samplingHandler;
     get sessions(): Map<string, SessionData>;
     get config(): import("./core/SessionManager.js").SessionConfig;
     getSessionManager(): SessionManager;
     getVisualFormatter(): VisualFormatter;
+    getSamplingHandler(): SamplingHandler;
     cleanupOldSessions(): void;
     initializeSession(technique: string, problem: string): string;
     touchSession(sessionId: string): void;
