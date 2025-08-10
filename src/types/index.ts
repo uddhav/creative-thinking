@@ -29,7 +29,8 @@ export type LateralTechnique =
   | 'disney_method'
   | 'nine_windows'
   | 'quantum_superposition'
-  | 'temporal_creativity';
+  | 'temporal_creativity'
+  | 'paradoxical_problem';
 
 export type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green' | 'purple';
 export type ScamperAction =

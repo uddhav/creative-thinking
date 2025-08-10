@@ -312,6 +312,7 @@ export class PathMemoryManager {
             nine_windows: 'technical',
             quantum_superposition: 'creative',
             temporal_creativity: 'resource',
+            paradoxical_problem: 'cognitive',
         };
         return techniqueConstraintMap[event.technique] || 'creative';
     }

@@ -19,7 +19,8 @@ export type LateralTechnique =
   | 'disney_method'
   | 'nine_windows'
   | 'quantum_superposition'
-  | 'temporal_creativity';
+  | 'temporal_creativity'
+  | 'paradoxical_problem';
 
 /**
  * Represents input data for a lateral thinking step

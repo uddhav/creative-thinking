@@ -128,6 +128,24 @@ export class TechniqueRecommender {
         });
         break;
 
+      case 'paradoxical':
+        recommendations.push({
+          technique: 'paradoxical_problem',
+          reasoning: 'Transcends contradictions through path-dependent analysis',
+          effectiveness: 0.95,
+        });
+        recommendations.push({
+          technique: 'quantum_superposition',
+          reasoning: 'Maintains contradictory states until optimal collapse',
+          effectiveness: 0.9,
+        });
+        recommendations.push({
+          technique: 'triz',
+          reasoning: 'Systematic contradiction resolution',
+          effectiveness: 0.85,
+        });
+        break;
+
       case 'temporal':
         recommendations.push({
           technique: 'temporal_creativity',

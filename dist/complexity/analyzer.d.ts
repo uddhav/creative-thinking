@@ -1,40 +1,66 @@
 /**
  * Hybrid Complexity Analyzer using NLP and MCP Sampling
+ * Enhanced with comprehensive NLP analysis via NLPService
  */
 import type { ComplexityAssessment } from './types.js';
 export declare class HybridComplexityAnalyzer {
     private cache;
+    private nlpService;
     constructor();
     /**
      * Analyze text complexity using hybrid approach
      */
     analyze(text: string, useCache?: boolean): ComplexityAssessment;
     /**
-     * Perform local NLP analysis using Compromise
+     * Perform local NLP analysis using NLPService
      */
     private localNLPAnalysis;
     /**
-     * Detect interacting elements pattern
+     * Detect interacting elements pattern using NLP analysis
+     */
+    private detectInteractingElementsNLP;
+    /**
+     * Legacy method for backward compatibility
      */
     private detectInteractingElements;
     /**
-     * Detect conflicts pattern
+     * Detect conflicts pattern using NLP analysis
+     */
+    private detectConflictsNLP;
+    /**
+     * Legacy method for backward compatibility
      */
     private detectConflicts;
     /**
-     * Detect uncertainty pattern
+     * Detect uncertainty pattern using NLP analysis
+     */
+    private detectUncertaintyNLP;
+    /**
+     * Legacy method for backward compatibility
      */
     private detectUncertainty;
     /**
-     * Detect multiple stakeholders
+     * Detect multiple stakeholders using NLP analysis
+     */
+    private detectMultipleStakeholdersNLP;
+    /**
+     * Legacy method for backward compatibility
      */
     private detectMultipleStakeholders;
     /**
-     * Detect system complexity
+     * Detect system complexity using NLP analysis
+     */
+    private detectSystemComplexityNLP;
+    /**
+     * Legacy method for backward compatibility
      */
     private detectSystemComplexity;
     /**
-     * Detect time pressure
+     * Detect time pressure using NLP analysis
+     */
+    private detectTimePressureNLP;
+    /**
+     * Legacy method for backward compatibility
      */
     private detectTimePressure;
     /**

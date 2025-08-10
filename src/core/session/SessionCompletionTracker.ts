@@ -603,6 +603,7 @@ export class SessionCompletionTracker {
       nine_windows: 9,
       quantum_superposition: 6,
       temporal_creativity: 6,
+      paradoxical_problem: 4,
     };
 
     return stepCounts[technique] || 5;
