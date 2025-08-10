@@ -4,10 +4,15 @@
  */
 import { ValidationError, ErrorCode } from '../errors/types.js';
 import { ObjectFieldValidator } from './validators/ObjectFieldValidator.js';
+import { TechniqueRegistry } from '../techniques/TechniqueRegistry.js';
 /**
  * Base validator with common validation methods
  */
 class BaseValidator {
+    techniqueRegistry;
+    constructor() {
+        this.techniqueRegistry = new TechniqueRegistry();
+    }
     validateString(value, fieldName, errors) {
         if (typeof value !== 'string') {
             errors.push(`${fieldName} must be a string`);
@@ -61,6 +66,18 @@ class BaseValidator {
             });
         }
         return true;
+    }
+    getValidTechniques() {
+        // Get techniques from the registry (single source of truth)
+        const registeredTechniques = this.techniqueRegistry.getAllTechniques();
+        // Add convergence as it's a special technique for synthesizing parallel results
+        return [...registeredTechniques, 'convergence'];
+    }
+    isValidTechnique(value) {
+        if (typeof value !== 'string')
+            return false;
+        const validTechniques = this.getValidTechniques();
+        return validTechniques.includes(value);
     }
 }
 /**
@@ -134,26 +151,6 @@ export class PlanningValidator extends BaseValidator {
             this.validateBoolean(data.includeOptions, 'includeOptions', errors);
         }
         return { valid: errors.length === 0, errors, warnings };
-    }
-    isValidTechnique(value) {
-        const validTechniques = [
-            'six_hats',
-            'po',
-            'random_entry',
-            'scamper',
-            'concept_extraction',
-            'yes_and',
-            'design_thinking',
-            'triz',
-            'neural_state',
-            'temporal_work',
-            'cross_cultural',
-            'collective_intel',
-            'disney_method',
-            'nine_windows',
-            'convergence',
-        ];
-        return validTechniques.includes(value);
     }
 }
 /**
@@ -406,45 +403,6 @@ export class ExecutionValidator extends BaseValidator {
             this.validateArray(data.mitigations, 'mitigations', errors, item => typeof item === 'string');
         }
     }
-    isValidTechnique(value) {
-        const validTechniques = [
-            'six_hats',
-            'po',
-            'random_entry',
-            'scamper',
-            'concept_extraction',
-            'yes_and',
-            'design_thinking',
-            'triz',
-            'neural_state',
-            'temporal_work',
-            'cross_cultural',
-            'collective_intel',
-            'disney_method',
-            'nine_windows',
-            'convergence',
-        ];
-        return validTechniques.includes(value);
-    }
-    getValidTechniques() {
-        return [
-            'six_hats',
-            'po',
-            'random_entry',
-            'scamper',
-            'concept_extraction',
-            'yes_and',
-            'design_thinking',
-            'triz',
-            'neural_state',
-            'temporal_work',
-            'cross_cultural',
-            'collective_intel',
-            'disney_method',
-            'nine_windows',
-            'convergence', // Special technique for synthesizing parallel results
-        ];
-    }
 }
 /**
  * Validator for session operations
@@ -517,26 +475,6 @@ export class SessionOperationValidator extends BaseValidator {
         if (options.status !== undefined) {
             this.validateEnum(options.status, ['active', 'completed', 'all'], 'listOptions.status', errors);
         }
-    }
-    isValidTechnique(value) {
-        const validTechniques = [
-            'six_hats',
-            'po',
-            'random_entry',
-            'scamper',
-            'concept_extraction',
-            'yes_and',
-            'design_thinking',
-            'triz',
-            'neural_state',
-            'temporal_work',
-            'cross_cultural',
-            'collective_intel',
-            'disney_method',
-            'nine_windows',
-            'convergence',
-        ];
-        return validTechniques.includes(value);
     }
 }
 /**

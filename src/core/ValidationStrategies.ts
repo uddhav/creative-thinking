@@ -5,6 +5,7 @@
 
 import { ValidationError, ErrorCode } from '../errors/types.js';
 import { ObjectFieldValidator } from './validators/ObjectFieldValidator.js';
+import { TechniqueRegistry } from '../techniques/TechniqueRegistry.js';
 
 export interface ValidationResult {
   valid: boolean;
@@ -21,6 +22,12 @@ export interface ValidationStrategy {
  * Base validator with common validation methods
  */
 abstract class BaseValidator implements ValidationStrategy {
+  protected techniqueRegistry: TechniqueRegistry;
+
+  constructor() {
+    this.techniqueRegistry = new TechniqueRegistry();
+  }
+
   abstract validate(input: unknown): ValidationResult;
 
   protected validateString(value: unknown, fieldName: string, errors: string[]): boolean {
@@ -96,6 +103,19 @@ abstract class BaseValidator implements ValidationStrategy {
       });
     }
     return true;
+  }
+
+  protected getValidTechniques(): string[] {
+    // Get techniques from the registry (single source of truth)
+    const registeredTechniques = this.techniqueRegistry.getAllTechniques();
+    // Add convergence as it's a special technique for synthesizing parallel results
+    return [...registeredTechniques, 'convergence'];
+  }
+
+  protected isValidTechnique(value: unknown): boolean {
+    if (typeof value !== 'string') return false;
+    const validTechniques = this.getValidTechniques();
+    return validTechniques.includes(value);
   }
 }
 
@@ -210,27 +230,6 @@ export class PlanningValidator extends BaseValidator {
     }
 
     return { valid: errors.length === 0, errors, warnings };
-  }
-
-  private isValidTechnique(value: unknown): boolean {
-    const validTechniques = [
-      'six_hats',
-      'po',
-      'random_entry',
-      'scamper',
-      'concept_extraction',
-      'yes_and',
-      'design_thinking',
-      'triz',
-      'neural_state',
-      'temporal_work',
-      'cross_cultural',
-      'collective_intel',
-      'disney_method',
-      'nine_windows',
-      'convergence',
-    ] as const;
-    return validTechniques.includes(value as (typeof validTechniques)[number]);
   }
 }
 
@@ -615,47 +614,6 @@ export class ExecutionValidator extends BaseValidator {
       );
     }
   }
-
-  private isValidTechnique(value: unknown): boolean {
-    const validTechniques = [
-      'six_hats',
-      'po',
-      'random_entry',
-      'scamper',
-      'concept_extraction',
-      'yes_and',
-      'design_thinking',
-      'triz',
-      'neural_state',
-      'temporal_work',
-      'cross_cultural',
-      'collective_intel',
-      'disney_method',
-      'nine_windows',
-      'convergence',
-    ] as const;
-    return validTechniques.includes(value as (typeof validTechniques)[number]);
-  }
-
-  private getValidTechniques(): string[] {
-    return [
-      'six_hats',
-      'po',
-      'random_entry',
-      'scamper',
-      'concept_extraction',
-      'yes_and',
-      'design_thinking',
-      'triz',
-      'neural_state',
-      'temporal_work',
-      'cross_cultural',
-      'collective_intel',
-      'disney_method',
-      'nine_windows',
-      'convergence', // Special technique for synthesizing parallel results
-    ];
-  }
 }
 
 /**
@@ -770,27 +728,6 @@ export class SessionOperationValidator extends BaseValidator {
         errors
       );
     }
-  }
-
-  private isValidTechnique(value: unknown): boolean {
-    const validTechniques = [
-      'six_hats',
-      'po',
-      'random_entry',
-      'scamper',
-      'concept_extraction',
-      'yes_and',
-      'design_thinking',
-      'triz',
-      'neural_state',
-      'temporal_work',
-      'cross_cultural',
-      'collective_intel',
-      'disney_method',
-      'nine_windows',
-      'convergence',
-    ] as const;
-    return validTechniques.includes(value as (typeof validTechniques)[number]);
   }
 }
 
