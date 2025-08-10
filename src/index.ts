@@ -51,6 +51,7 @@ export * from './types/planning.js';
 // Server modules
 import { RequestHandlers } from './server/RequestHandlers.js';
 import { SessionOperationsHandler } from './server/SessionOperationsHandler.js';
+import { SamplingHandler } from './server/SamplingHandler.js';
 
 /**
  * Main server class that orchestrates all components
@@ -66,6 +67,7 @@ export class LateralThinkingServer {
   private neuralOptimizationEnabled: boolean;
   private culturalFrameworksEnabled: boolean;
   private sessionOperationsHandler: SessionOperationsHandler;
+  private samplingHandler: SamplingHandler;
 
   // Expose for testing
   get sessions() {
@@ -84,6 +86,10 @@ export class LateralThinkingServer {
 
   getVisualFormatter(): VisualFormatter {
     return this.visualFormatter;
+  }
+
+  getSamplingHandler(): SamplingHandler {
+    return this.samplingHandler;
   }
 
   cleanupOldSessions(): void {
@@ -148,6 +154,9 @@ export class LateralThinkingServer {
       this.sessionManager,
       this.responseBuilder
     );
+
+    // Initialize sampling handler
+    this.samplingHandler = new SamplingHandler();
   }
 
   /**

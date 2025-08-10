@@ -39,6 +39,7 @@ export class RequestHandlers {
         this.setupCallToolHandler();
         this.setupListPromptsHandler();
         this.setupGetPromptHandler();
+        this.setupSamplingHandlers();
     }
     /**
      * Handle tool listing requests
@@ -528,6 +529,20 @@ export class RequestHandlers {
             default:
                 return 'Unknown tool';
         }
+    }
+    /**
+     * Set up sampling-related handlers
+     * Note: MCP Sampling uses custom methods that are not part of the standard schemas
+     */
+    setupSamplingHandlers() {
+        // For now, we'll handle sampling through the existing infrastructure
+        // When a client sends capability info, it will be processed through the tool calls
+        // In the future, we can add custom handlers for:
+        // - sampling/createRequest (server -> client)
+        // - sampling/createResponse (client -> server)
+        const samplingHandler = this.lateralServer.getSamplingHandler();
+        console.error('[RequestHandlers] Sampling handlers initialized');
+        console.error('[RequestHandlers] Sampling availability:', samplingHandler.isAvailable());
     }
 }
 //# sourceMappingURL=RequestHandlers.js.map
