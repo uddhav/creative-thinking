@@ -77,16 +77,9 @@ export class RequestHandlers {
         this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
             this.activeRequests++;
             const requestTimestamp = new Date().toISOString();
-            // Log all incoming requests
-            console.error('[RequestHandler] Incoming tool call:', {
-                method: request.method || 'tools/call',
-                activeRequests: this.activeRequests,
-                timestamp: requestTimestamp,
-            });
             // Early logging to catch requests before any processing
             if (request.params && typeof request.params === 'object' && 'name' in request.params) {
                 const toolName = request.params.name;
-                console.error('[RequestHandler] Tool name:', toolName);
                 // Add to request log
                 this.requestLog.push({
                     timestamp: requestTimestamp,
@@ -278,14 +271,6 @@ export class RequestHandlers {
         this.batchCollector.delete(planId);
         clearTimeout(batch.timeout);
         const startTime = Date.now();
-        const callCount = batch.calls.length;
-        console.error('[RequestHandler] Processing batch:', {
-            planId,
-            callCount,
-            timestamp: new Date().toISOString(),
-        });
-        // Track individual execution times for comparison
-        // const _sequentialEstimate = callCount * 500; // Estimate 500ms per call if sequential
         // Process all calls in parallel with timing using Promise.allSettled for robustness
         const timingPromises = batch.calls.map(async ({ request }, index) => {
             const callStart = Date.now();
@@ -342,39 +327,6 @@ export class RequestHandlers {
             }
         });
         const totalDuration = Date.now() - startTime;
-        const successCount = successfulResults.length;
-        const failureCount = failedResults.length;
-        // Calculate metrics
-        const maxIndividualDuration = allDurations.length > 0 ? Math.max(...allDurations) : 0;
-        const avgIndividualDuration = allDurations.length > 0 ? allDurations.reduce((a, b) => a + b, 0) / allDurations.length : 0;
-        const theoreticalSequentialTime = allDurations.reduce((a, b) => a + b, 0);
-        const actualSpeedup = theoreticalSequentialTime > 0 ? theoreticalSequentialTime / totalDuration : 0;
-        // Log performance metrics with success/failure breakdown
-        console.error('[RequestHandler] Batch completed - Performance Metrics:', {
-            planId,
-            callCount,
-            successCount,
-            failureCount,
-            successRate: `${((successCount / callCount) * 100).toFixed(1)}%`,
-            totalDuration,
-            maxIndividualDuration,
-            avgIndividualDuration,
-            theoreticalSequentialTime,
-            actualSpeedup: `${actualSpeedup.toFixed(2)}x`,
-            efficiency: `${((actualSpeedup / callCount) * 100).toFixed(1)}%`,
-            timeSaved: `${theoreticalSequentialTime - totalDuration}ms`,
-        });
-        // Log failures if any occurred
-        if (failureCount > 0) {
-            console.error('[RequestHandler] Failed calls in batch:', {
-                planId,
-                failures: failedResults.map(f => ({
-                    index: f.index,
-                    errorMessage: f.errorMessage,
-                    duration: f.duration,
-                })),
-            });
-        }
         // Resolve/reject promises based on their individual results
         batch.calls.forEach(({ resolve, reject }, index) => {
             const successResult = successfulResults.find(r => r.index === index);
@@ -409,7 +361,6 @@ export class RequestHandlers {
      */
     async processSingleCall(request) {
         this.activeRequests++;
-        const requestTimestamp = new Date().toISOString();
         try {
             // Extract parameters
             const params = request.params;
@@ -418,11 +369,6 @@ export class RequestHandlers {
             // Pre-validate required parameters
             const validationError = this.validateRequiredParameters(name, args);
             if (validationError) {
-                console.error('[RequestHandler] Validation error:', {
-                    timestamp: requestTimestamp,
-                    tool: name,
-                    message: validationError,
-                });
                 return {
                     content: [
                         {
@@ -440,13 +386,6 @@ export class RequestHandlers {
             if (violation) {
                 const violationError = workflowGuard.getViolationError(violation);
                 const enhancedError = violationError;
-                console.error('[RequestHandler] Workflow violation detected:', {
-                    timestamp: requestTimestamp,
-                    tool: name,
-                    violation: violation.type,
-                    message: enhancedError.message,
-                    code: enhancedError.code,
-                });
                 return {
                     content: [
                         {
@@ -484,11 +423,6 @@ export class RequestHandlers {
             };
             // Validate response structure before sending
             if (!response.content || !Array.isArray(response.content)) {
-                console.error('[RequestHandler] Warning: Invalid response structure:', {
-                    hasContent: !!response.content,
-                    isArray: Array.isArray(response.content),
-                    contentType: typeof response.content,
-                });
                 // Fix the response structure
                 response.content = [
                     {
@@ -540,9 +474,7 @@ export class RequestHandlers {
         // In the future, we can add custom handlers for:
         // - sampling/createRequest (server -> client)
         // - sampling/createResponse (client -> server)
-        const samplingHandler = this.lateralServer.getSamplingHandler();
-        console.error('[RequestHandlers] Sampling handlers initialized');
-        console.error('[RequestHandlers] Sampling availability:', samplingHandler.isAvailable());
+        // Sampling handler is initialized but no logging needed
     }
 }
 //# sourceMappingURL=RequestHandlers.js.map
