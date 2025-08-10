@@ -35,7 +35,7 @@ export class CompletionGatekeeper {
         return { allowed: true };
     }
     /**
-     * Check if synthesis/convergence is allowed
+     * Check if synthesis is allowed based on completion status
      */
     canProceedToSynthesis(session, plan) {
         const metadata = this.completionTracker.calculateCompletionMetadata(session, plan);

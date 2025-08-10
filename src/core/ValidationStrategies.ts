@@ -107,9 +107,7 @@ abstract class BaseValidator implements ValidationStrategy {
 
   protected getValidTechniques(): string[] {
     // Get techniques from the registry (single source of truth)
-    const registeredTechniques = this.techniqueRegistry.getAllTechniques();
-    // Add convergence as it's a special technique for synthesizing parallel results
-    return [...registeredTechniques, 'convergence'];
+    return this.techniqueRegistry.getAllTechniques();
   }
 
   protected isValidTechnique(value: unknown): boolean {

@@ -56,7 +56,7 @@ export class CompletionGatekeeper {
   }
 
   /**
-   * Check if synthesis/convergence is allowed
+   * Check if synthesis is allowed based on completion status
    */
   canProceedToSynthesis(
     session: SessionData,

@@ -69,9 +69,7 @@ class BaseValidator {
     }
     getValidTechniques() {
         // Get techniques from the registry (single source of truth)
-        const registeredTechniques = this.techniqueRegistry.getAllTechniques();
-        // Add convergence as it's a special technique for synthesizing parallel results
-        return [...registeredTechniques, 'convergence'];
+        return this.techniqueRegistry.getAllTechniques();
     }
     isValidTechnique(value) {
         if (typeof value !== 'string')
