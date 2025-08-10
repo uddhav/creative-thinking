@@ -22,10 +22,13 @@ export interface ValidationStrategy {
  * Base validator with common validation methods
  */
 abstract class BaseValidator implements ValidationStrategy {
-  protected techniqueRegistry: TechniqueRegistry;
+  private static techniqueRegistry: TechniqueRegistry;
 
-  constructor() {
-    this.techniqueRegistry = new TechniqueRegistry();
+  protected static getTechniqueRegistry(): TechniqueRegistry {
+    if (!this.techniqueRegistry) {
+      this.techniqueRegistry = new TechniqueRegistry();
+    }
+    return this.techniqueRegistry;
   }
 
   abstract validate(input: unknown): ValidationResult;
@@ -107,7 +110,7 @@ abstract class BaseValidator implements ValidationStrategy {
 
   protected getValidTechniques(): string[] {
     // Get techniques from the registry (single source of truth)
-    return this.techniqueRegistry.getAllTechniques();
+    return BaseValidator.getTechniqueRegistry().getAllTechniques();
   }
 
   protected isValidTechnique(value: unknown): boolean {

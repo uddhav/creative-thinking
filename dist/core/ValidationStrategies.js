@@ -9,9 +9,12 @@ import { TechniqueRegistry } from '../techniques/TechniqueRegistry.js';
  * Base validator with common validation methods
  */
 class BaseValidator {
-    techniqueRegistry;
-    constructor() {
-        this.techniqueRegistry = new TechniqueRegistry();
+    static techniqueRegistry;
+    static getTechniqueRegistry() {
+        if (!this.techniqueRegistry) {
+            this.techniqueRegistry = new TechniqueRegistry();
+        }
+        return this.techniqueRegistry;
     }
     validateString(value, fieldName, errors) {
         if (typeof value !== 'string') {
@@ -69,7 +72,7 @@ class BaseValidator {
     }
     getValidTechniques() {
         // Get techniques from the registry (single source of truth)
-        return this.techniqueRegistry.getAllTechniques();
+        return BaseValidator.getTechniqueRegistry().getAllTechniques();
     }
     isValidTechnique(value) {
         if (typeof value !== 'string')

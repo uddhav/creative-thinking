@@ -16,8 +16,8 @@ export interface ValidationStrategy {
  * Base validator with common validation methods
  */
 declare abstract class BaseValidator implements ValidationStrategy {
-    protected techniqueRegistry: TechniqueRegistry;
-    constructor();
+    private static techniqueRegistry;
+    protected static getTechniqueRegistry(): TechniqueRegistry;
     abstract validate(input: unknown): ValidationResult;
     protected validateString(value: unknown, fieldName: string, errors: string[]): boolean;
     protected validateNumber(value: unknown, fieldName: string, errors: string[], min?: number, max?: number): value is number;
