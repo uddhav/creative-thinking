@@ -11,9 +11,7 @@ import { TechniqueCache } from './techniqueCache.js';
 class BaseValidator {
     // Use module-level cache for optimal performance
     // All technique data is pre-initialized at module load time
-    static techniqueRegistry = TechniqueCache.getRegistry();
     static cachedTechniques = TechniqueCache.getAllTechniques();
-    static techniqueSet = new Set(BaseValidator.cachedTechniques);
     validateString(value, fieldName, errors) {
         if (typeof value !== 'string') {
             errors.push(`${fieldName} must be a string`);

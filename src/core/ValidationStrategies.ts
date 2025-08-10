@@ -24,11 +24,7 @@ export interface ValidationStrategy {
 abstract class BaseValidator implements ValidationStrategy {
   // Use module-level cache for optimal performance
   // All technique data is pre-initialized at module load time
-  private static readonly techniqueRegistry = TechniqueCache.getRegistry();
   private static readonly cachedTechniques = TechniqueCache.getAllTechniques();
-  private static readonly techniqueSet: ReadonlySet<string> = new Set(
-    BaseValidator.cachedTechniques
-  );
 
   abstract validate(input: unknown): ValidationResult;
 

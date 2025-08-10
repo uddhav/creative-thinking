@@ -9,8 +9,6 @@ export class WorkflowGuard {
     CALL_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
     parallelCallGroups = new Map(); // Track parallel calls by planId
     sessionManager = null;
-    // Use module-level cache for O(1) lookups
-    validTechniqueSet = new Set(TechniqueCache.getAllTechniques());
     /**
      * Set the SessionManager instance for plan validation
      */
@@ -127,8 +125,8 @@ export class WorkflowGuard {
     checkExecutionViolations(args) {
         const execArgs = args;
         // Always check for invalid technique first
-        // Direct Set lookup - no initialization needed
-        if (execArgs.technique && !this.validTechniqueSet.has(execArgs.technique)) {
+        // Use centralized cache for O(1) lookup
+        if (execArgs.technique && !TechniqueCache.isValidTechnique(execArgs.technique)) {
             return {
                 type: 'invalid_technique',
                 message: `Invalid technique '${execArgs.technique}'. This technique does not exist.`,
