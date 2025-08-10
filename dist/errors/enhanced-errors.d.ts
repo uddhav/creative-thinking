@@ -10,7 +10,7 @@ export type ErrorSeverity = 'low' | 'medium' | 'high' | 'critical';
 /**
  * Error categories for classification
  */
-export type ErrorCategory = 'workflow' | 'validation' | 'state' | 'system' | 'permission' | 'configuration' | 'technique' | 'convergence';
+export type ErrorCategory = 'workflow' | 'validation' | 'state' | 'system' | 'permission' | 'configuration' | 'technique';
 /**
  * Enhanced error interface with recovery information
  */
@@ -139,9 +139,6 @@ export declare const ErrorCodes: {
     readonly TECHNIQUE_DEPENDENCY_MISSING: "E702";
     readonly TECHNIQUE_NOT_FOUND: "E703";
     readonly TECHNIQUE_MISCONFIGURED: "E704";
-    readonly CONVERGENCE_FAILED: "E801";
-    readonly PARALLEL_TIMEOUT: "E802";
-    readonly DEPENDENCY_ERROR: "E803";
 };
 /**
  * Factory for creating common errors
@@ -179,10 +176,6 @@ export declare class ErrorFactory {
      * Create a memory error
      */
     static memoryError(operation: string, memoryUsageMB?: number): SystemError;
-    /**
-     * Create a convergence error
-     */
-    static convergenceError(reason: string, parallelPlans: string[]): CreativeThinkingError;
     /**
      * Create a missing field error
      */
@@ -267,18 +260,6 @@ export declare class ErrorFactory {
      * Create a technique dependency missing error
      */
     static techniqueDependencyMissing(technique: string, dependency: string): CreativeThinkingError;
-    /**
-     * Create a parallel execution error
-     */
-    static parallelExecutionError(failedPlans: string[], reason: string): CreativeThinkingError;
-    /**
-     * Create a convergence failure error
-     */
-    static convergenceFailure(totalPlans: number, completedPlans: number): CreativeThinkingError;
-    /**
-     * Create a convergence dependency not met error
-     */
-    static convergenceDependencyNotMet(planId: string, missingDependencies: string[]): CreativeThinkingError;
 }
 /**
  * Error recovery helper

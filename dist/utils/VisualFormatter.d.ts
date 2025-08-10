@@ -104,10 +104,6 @@ export declare class VisualFormatter {
         followUp?: string;
     }): string;
     /**
-     * Format convergence progress display
-     */
-    formatConvergenceProgress(currentStep: number, totalSteps: number, sessionCount: number, techniques: string[]): string;
-    /**
      * Format progress bar for session completion
      */
     private formatSessionProgressBar;

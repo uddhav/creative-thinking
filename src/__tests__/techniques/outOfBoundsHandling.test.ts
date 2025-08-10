@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { TechniqueRegistry } from '../../techniques/TechniqueRegistry.js';
 
 describe('Out-of-bounds step handling', () => {
-  const registry = new TechniqueRegistry();
+  const registry = TechniqueRegistry.getInstance();
   const techniques = [
     'six_hats',
     'scamper',

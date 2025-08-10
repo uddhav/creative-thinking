@@ -113,25 +113,6 @@ describe('Error Code Validation', () => {
         expect(codeNum).toBeLessThan(700);
       }
     });
-
-    it('should place convergence errors in E800-E899 range', () => {
-      const convergenceCodes = [
-        // Note: These are incorrectly placed in E600 range
-        ErrorCodes.CONVERGENCE_FAILED, // E601
-        ErrorCodes.PARALLEL_TIMEOUT, // E602
-        ErrorCodes.DEPENDENCY_ERROR, // E603
-      ];
-
-      // This test will fail to highlight the issue
-      for (const code of convergenceCodes) {
-        if (code) {
-          // Some might not be defined yet
-          const codeNum = parseInt(code.substring(1));
-          expect(codeNum).toBeGreaterThanOrEqual(800);
-          expect(codeNum).toBeLessThan(900);
-        }
-      }
-    });
   });
 
   describe('Error Code Mapping Consistency', () => {
@@ -199,11 +180,6 @@ describe('Error Code Validation', () => {
         E702: 'Technique dependency missing',
         E703: 'Technique not found',
         E704: 'Technique misconfigured',
-
-        // Convergence Errors (E800-E899)
-        E801: 'Parallel execution error',
-        E802: 'Convergence failure',
-        E803: 'Dependency not met',
 
         // Unknown Error
         E999: 'Unknown error',
@@ -317,7 +293,6 @@ describe('Error Code Validation', () => {
         permission: { min: 500, max: 599 },
         configuration: { min: 600, max: 699 },
         technique: { min: 700, max: 799 },
-        convergence: { min: 800, max: 899 },
       };
 
       // This would require access to the error factory methods

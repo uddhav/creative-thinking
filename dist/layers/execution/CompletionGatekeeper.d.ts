@@ -22,7 +22,7 @@ export declare class CompletionGatekeeper {
         response?: LateralThinkingResponse;
     };
     /**
-     * Check if synthesis/convergence is allowed
+     * Check if synthesis is allowed based on completion status
      */
     canProceedToSynthesis(session: SessionData, plan?: PlanThinkingSessionOutput): {
         allowed: boolean;

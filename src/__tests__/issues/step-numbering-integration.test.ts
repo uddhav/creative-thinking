@@ -24,7 +24,7 @@ describe('Step Numbering Full Workflow', () => {
 
   beforeEach(() => {
     sessionManager = new SessionManager();
-    techniqueRegistry = new TechniqueRegistry();
+    techniqueRegistry = TechniqueRegistry.getInstance();
     visualFormatter = new VisualFormatter(true); // Disable visual output
     metricsCollector = new MetricsCollector();
     complexityAnalyzer = new HybridComplexityAnalyzer();

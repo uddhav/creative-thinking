@@ -5,8 +5,11 @@
 import type { LateralTechnique } from '../types/index.js';
 import type { TechniqueHandler } from './types.js';
 export declare class TechniqueRegistry {
+    private static instance;
     private handlers;
-    constructor();
+    private readonly techniques;
+    private constructor();
+    static getInstance(): TechniqueRegistry;
     private registerHandlers;
     getHandler(technique: string): TechniqueHandler;
     getAllTechniques(): LateralTechnique[];

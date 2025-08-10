@@ -235,36 +235,6 @@ describe('Enhanced Error System', () => {
         expect(error.recovery).toContain("Execute 'design_thinking' first");
       });
     });
-
-    describe('Convergence Errors', () => {
-      it('should create parallel execution error', () => {
-        const error = ErrorFactory.parallelExecutionError(['plan1', 'plan2'], 'Timeout');
-
-        expect(error.code).toBe('E801');
-        expect(error.category).toBe('convergence');
-        expect(error.context?.failedPlans).toEqual(['plan1', 'plan2']);
-        expect(error.context?.reason).toBe('Timeout');
-      });
-
-      it('should create convergence failure error', () => {
-        const error = ErrorFactory.convergenceFailure(3, 2);
-
-        expect(error.code).toBe('E801');
-        expect(error.message).toContain('2 of 3');
-        expect(error.recovery).toContain('Retry failed plans');
-      });
-
-      it('should create dependency not met error', () => {
-        const error = ErrorFactory.convergenceDependencyNotMet('convergence_plan', [
-          'plan1',
-          'plan2',
-        ]);
-
-        expect(error.code).toBe('E803');
-        expect(error.message).toContain('convergence_plan');
-        expect(error.context?.missingDependencies).toEqual(['plan1', 'plan2']);
-      });
-    });
   });
 
   describe('ErrorRecovery', () => {

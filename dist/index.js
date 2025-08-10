@@ -102,7 +102,7 @@ export class LateralThinkingServer {
         // Initialize other components
         this.responseBuilder = new ResponseBuilder();
         this.metricsCollector = new MetricsCollector();
-        this.techniqueRegistry = new TechniqueRegistry();
+        this.techniqueRegistry = TechniqueRegistry.getInstance();
         const disableThoughtLogging = (process.env.DISABLE_THOUGHT_LOGGING || '').toLowerCase() === 'true';
         this.visualFormatter = new VisualFormatter(disableThoughtLogging);
         // Store feature flags for use by techniques

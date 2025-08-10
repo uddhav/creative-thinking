@@ -5,7 +5,7 @@
  */
 import { ResponseBuilder } from '../core/ResponseBuilder.js';
 import { CreativeThinkingError as EnhancedError, ErrorFactory, ErrorRecovery, } from './enhanced-errors.js';
-import { CreativeThinkingError, ValidationError, SessionError, PlanError, PersistenceError, ParallelExecutionError, ErrorCode, } from './types.js';
+import { CreativeThinkingError, ValidationError, SessionError, PlanError, PersistenceError, ErrorCode, } from './types.js';
 /**
  * Maps old error codes to enhanced error system
  */
@@ -112,9 +112,6 @@ export class ErrorHandler {
         }
         if (error instanceof PersistenceError) {
             return this.errorFactory.persistenceError(error.operation || 'unknown', error.message);
-        }
-        if (error instanceof ParallelExecutionError) {
-            return this.errorFactory.convergenceError(error.message, error.failedPlans || []);
         }
         // Default enhanced error
         return new EnhancedError({
@@ -454,31 +451,6 @@ export class ErrorHandler {
                 category: 'technique',
                 severity: 'medium',
                 recovery: ['Check response format', 'Review ergodicity documentation'],
-            },
-            // Parallel execution errors
-            [ErrorCode.PARALLEL_EXECUTION_NOT_SUPPORTED]: {
-                code: 'E801',
-                category: 'convergence',
-                severity: 'medium',
-                recovery: ['Use sequential mode', 'Check technique compatibility'],
-            },
-            [ErrorCode.MAX_PARALLELISM_EXCEEDED]: {
-                code: 'E801',
-                category: 'convergence',
-                severity: 'medium',
-                recovery: ['Reduce parallel plans', 'Increase parallelism limit'],
-            },
-            [ErrorCode.PARALLEL_SESSION_NOT_FOUND]: {
-                code: 'E301',
-                category: 'state',
-                severity: 'high',
-                recovery: ['Check parallel session ID', 'Ensure session was created'],
-            },
-            [ErrorCode.CONVERGENCE_DEPENDENCIES_NOT_MET]: {
-                code: 'E803',
-                category: 'convergence',
-                severity: 'high',
-                recovery: ['Complete dependencies first', 'Check dependency configuration'],
             },
         };
         return (mappings[code] || {

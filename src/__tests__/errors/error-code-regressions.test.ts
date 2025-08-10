@@ -43,26 +43,6 @@ describe('Error Code Regression Tests', () => {
       expect(ErrorCodes.INVALID_CONFIG).toBe('E602');
     });
 
-    it('should move convergence errors to E800 range', () => {
-      // Currently they use E601-E603, should be E801-E803
-      const convergenceErrors = {
-        CONVERGENCE_FAILED: ErrorCodes.CONVERGENCE_FAILED,
-        PARALLEL_TIMEOUT: ErrorCodes.PARALLEL_TIMEOUT,
-        DEPENDENCY_ERROR: ErrorCodes.DEPENDENCY_ERROR,
-      };
-
-      for (const [, code] of Object.entries(convergenceErrors)) {
-        const codeNum = parseInt(code.substring(1));
-        expect(codeNum).toBeGreaterThanOrEqual(800);
-        expect(codeNum).toBeLessThan(900);
-      }
-
-      // Specific expected codes
-      expect(ErrorCodes.CONVERGENCE_FAILED).toBe('E801');
-      expect(ErrorCodes.PARALLEL_TIMEOUT).toBe('E802');
-      expect(ErrorCodes.DEPENDENCY_ERROR).toBe('E803');
-    });
-
     it('should move workflow errors to E200 range', () => {
       // Currently some are in E001-E004, should be in E200 range
       const workflowErrors = {
@@ -145,11 +125,6 @@ describe('Error Code Regression Tests', () => {
 
         // Technique Errors (E700-E799)
         // Reserved for future use
-
-        // Convergence Errors (E800-E899)
-        CONVERGENCE_FAILED: 'E801',
-        PARALLEL_TIMEOUT: 'E802',
-        DEPENDENCY_ERROR: 'E803',
       };
 
       // This shows what the mapping SHOULD be

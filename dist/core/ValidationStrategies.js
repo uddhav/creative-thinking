@@ -4,10 +4,14 @@
  */
 import { ValidationError, ErrorCode } from '../errors/types.js';
 import { ObjectFieldValidator } from './validators/ObjectFieldValidator.js';
+import { TechniqueCache } from './techniqueCache.js';
 /**
  * Base validator with common validation methods
  */
 class BaseValidator {
+    // Use module-level cache for optimal performance
+    // All technique data is pre-initialized at module load time
+    static cachedTechniques = TechniqueCache.getAllTechniques();
     validateString(value, fieldName, errors) {
         if (typeof value !== 'string') {
             errors.push(`${fieldName} must be a string`);
@@ -61,6 +65,16 @@ class BaseValidator {
             });
         }
         return true;
+    }
+    getValidTechniques() {
+        // Direct return of pre-initialized cache - no checks needed
+        return BaseValidator.cachedTechniques;
+    }
+    isValidTechnique(value) {
+        if (typeof value !== 'string')
+            return false;
+        // Use module-level cache for O(1) lookup
+        return TechniqueCache.isValidTechnique(value);
     }
 }
 /**
@@ -134,26 +148,6 @@ export class PlanningValidator extends BaseValidator {
             this.validateBoolean(data.includeOptions, 'includeOptions', errors);
         }
         return { valid: errors.length === 0, errors, warnings };
-    }
-    isValidTechnique(value) {
-        const validTechniques = [
-            'six_hats',
-            'po',
-            'random_entry',
-            'scamper',
-            'concept_extraction',
-            'yes_and',
-            'design_thinking',
-            'triz',
-            'neural_state',
-            'temporal_work',
-            'cross_cultural',
-            'collective_intel',
-            'disney_method',
-            'nine_windows',
-            'convergence',
-        ];
-        return validTechniques.includes(value);
     }
 }
 /**
@@ -406,45 +400,6 @@ export class ExecutionValidator extends BaseValidator {
             this.validateArray(data.mitigations, 'mitigations', errors, item => typeof item === 'string');
         }
     }
-    isValidTechnique(value) {
-        const validTechniques = [
-            'six_hats',
-            'po',
-            'random_entry',
-            'scamper',
-            'concept_extraction',
-            'yes_and',
-            'design_thinking',
-            'triz',
-            'neural_state',
-            'temporal_work',
-            'cross_cultural',
-            'collective_intel',
-            'disney_method',
-            'nine_windows',
-            'convergence',
-        ];
-        return validTechniques.includes(value);
-    }
-    getValidTechniques() {
-        return [
-            'six_hats',
-            'po',
-            'random_entry',
-            'scamper',
-            'concept_extraction',
-            'yes_and',
-            'design_thinking',
-            'triz',
-            'neural_state',
-            'temporal_work',
-            'cross_cultural',
-            'collective_intel',
-            'disney_method',
-            'nine_windows',
-            'convergence', // Special technique for synthesizing parallel results
-        ];
-    }
 }
 /**
  * Validator for session operations
@@ -517,26 +472,6 @@ export class SessionOperationValidator extends BaseValidator {
         if (options.status !== undefined) {
             this.validateEnum(options.status, ['active', 'completed', 'all'], 'listOptions.status', errors);
         }
-    }
-    isValidTechnique(value) {
-        const validTechniques = [
-            'six_hats',
-            'po',
-            'random_entry',
-            'scamper',
-            'concept_extraction',
-            'yes_and',
-            'design_thinking',
-            'triz',
-            'neural_state',
-            'temporal_work',
-            'cross_cultural',
-            'collective_intel',
-            'disney_method',
-            'nine_windows',
-            'convergence',
-        ];
-        return validTechniques.includes(value);
     }
 }
 /**

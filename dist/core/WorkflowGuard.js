@@ -3,30 +3,12 @@
  * Tracks tool usage and provides helpful guidance when workflow is violated
  */
 import { ErrorFactory } from '../errors/enhanced-errors.js';
+import { TechniqueCache } from './techniqueCache.js';
 export class WorkflowGuard {
     recentCalls = [];
     CALL_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
     parallelCallGroups = new Map(); // Track parallel calls by planId
     sessionManager = null;
-    validTechniques = [
-        'six_hats',
-        'po',
-        'random_entry',
-        'scamper',
-        'concept_extraction',
-        'yes_and',
-        'design_thinking',
-        'triz',
-        'neural_state',
-        'temporal_work',
-        'cross_cultural',
-        'collective_intel',
-        'disney_method',
-        'nine_windows',
-        'quantum_superposition',
-        'temporal_creativity',
-        'paradoxical_problem',
-    ];
     /**
      * Set the SessionManager instance for plan validation
      */
@@ -143,7 +125,8 @@ export class WorkflowGuard {
     checkExecutionViolations(args) {
         const execArgs = args;
         // Always check for invalid technique first
-        if (execArgs.technique && !this.validTechniques.includes(execArgs.technique)) {
+        // Use centralized cache for O(1) lookup
+        if (execArgs.technique && !TechniqueCache.isValidTechnique(execArgs.technique)) {
             return {
                 type: 'invalid_technique',
                 message: `Invalid technique '${execArgs.technique}'. This technique does not exist.`,
@@ -235,8 +218,9 @@ export class WorkflowGuard {
         if (!discoveryCall)
             return [];
         // In a real implementation, this would parse the discovery response
-        // For now, return a sensible default based on validTechniques
-        return this.validTechniques.slice(0, 3);
+        // For now, return a sensible default based on technique cache
+        const validTechniques = TechniqueCache.getAllTechniques();
+        return validTechniques.slice(0, 3);
     }
 }
 // Singleton instance

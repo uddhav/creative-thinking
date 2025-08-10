@@ -179,10 +179,8 @@ export const ErrorCodes = {
     TECHNIQUE_DEPENDENCY_MISSING: 'E702',
     TECHNIQUE_NOT_FOUND: 'E703',
     TECHNIQUE_MISCONFIGURED: 'E704',
-    // Convergence errors (E800-E899)
-    CONVERGENCE_FAILED: 'E801',
-    PARALLEL_TIMEOUT: 'E802',
-    DEPENDENCY_ERROR: 'E803',
+    // Reserved for future use (E800-E899)
+    // Currently unused
 };
 /**
  * Factory for creating common errors
@@ -272,25 +270,6 @@ export class ErrorFactory {
             'Restart the server',
         ], { operation, memoryUsageMB }, true // retryable
         );
-    }
-    /**
-     * Create a convergence error
-     */
-    static convergenceError(reason, parallelPlans) {
-        return new CreativeThinkingError({
-            code: ErrorCodes.CONVERGENCE_FAILED,
-            message: `Convergence failed: ${reason}`,
-            category: 'convergence',
-            severity: 'high',
-            recovery: [
-                'Check if all parallel plans completed successfully',
-                'Retry with sequential execution mode',
-                'Review the convergence configuration',
-                'Check individual plan results for errors',
-            ],
-            context: { reason, parallelPlans },
-            // documentation: URL will be added when deployed
-        });
     }
     /**
      * Create a missing field error
@@ -563,59 +542,6 @@ export class ErrorFactory {
                 'Use a technique without dependencies',
             ],
             context: { technique, dependency },
-        });
-    }
-    /**
-     * Create a parallel execution error
-     */
-    static parallelExecutionError(failedPlans, reason) {
-        return new CreativeThinkingError({
-            code: ErrorCodes.CONVERGENCE_FAILED,
-            message: `Parallel execution failed for plans: ${failedPlans.join(', ')}`,
-            category: 'convergence',
-            severity: 'high',
-            recovery: [
-                'Retry failed plans individually',
-                'Use sequential execution mode',
-                'Check individual plan errors',
-                'Reduce parallelism level',
-            ],
-            context: { failedPlans, reason },
-        });
-    }
-    /**
-     * Create a convergence failure error
-     */
-    static convergenceFailure(totalPlans, completedPlans) {
-        return new CreativeThinkingError({
-            code: ErrorCodes.CONVERGENCE_FAILED,
-            message: `Convergence failed: Only ${completedPlans} of ${totalPlans} plans completed`,
-            category: 'convergence',
-            severity: 'high',
-            recovery: [
-                'Retry failed plans',
-                'Continue with partial results',
-                'Use sequential execution',
-                'Check plan dependencies',
-            ],
-            context: { totalPlans, completedPlans },
-        });
-    }
-    /**
-     * Create a convergence dependency not met error
-     */
-    static convergenceDependencyNotMet(planId, missingDependencies) {
-        return new CreativeThinkingError({
-            code: ErrorCodes.DEPENDENCY_ERROR,
-            message: `Convergence plan '${planId}' dependencies not met`,
-            category: 'convergence',
-            severity: 'high',
-            recovery: [
-                'Complete required dependencies first',
-                'Check dependency configuration',
-                'Use independent plans only',
-            ],
-            context: { planId, missingDependencies },
         });
     }
 }

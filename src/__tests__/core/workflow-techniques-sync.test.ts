@@ -6,12 +6,13 @@
 import { describe, it, expect } from 'vitest';
 import { WorkflowGuard } from '../../core/WorkflowGuard.js';
 import { TechniqueRegistry } from '../../techniques/TechniqueRegistry.js';
+import { ExecutionValidator } from '../../core/ValidationStrategies.js';
 import type { LateralTechnique } from '../../types/index.js';
 
 describe('WorkflowGuard Techniques Synchronization', () => {
   it('should have all techniques from TechniqueRegistry in validTechniques', () => {
     const workflowGuard = new WorkflowGuard();
-    const techniqueRegistry = new TechniqueRegistry();
+    const techniqueRegistry = TechniqueRegistry.getInstance();
 
     // Get all registered techniques from the registry
     const registeredTechniques = techniqueRegistry.getAllTechniques();
@@ -49,7 +50,7 @@ describe('WorkflowGuard Techniques Synchronization', () => {
     }
 
     // All registered techniques should be valid in WorkflowGuard
-    expect(validTechniques.sort()).toEqual(registeredTechniques.sort());
+    expect([...validTechniques].sort()).toEqual([...registeredTechniques].sort());
 
     // Also verify the count matches what we expect (17 techniques)
     expect(registeredTechniques.length).toBe(17);
@@ -62,7 +63,7 @@ describe('WorkflowGuard Techniques Synchronization', () => {
   });
 
   it('should validate all LateralTechnique type values are registered', () => {
-    const techniqueRegistry = new TechniqueRegistry();
+    const techniqueRegistry = TechniqueRegistry.getInstance();
 
     // List all techniques from the LateralTechnique type
     // This list must be manually maintained to match the type definition
@@ -93,7 +94,7 @@ describe('WorkflowGuard Techniques Synchronization', () => {
 
     // Registry should have exactly these techniques
     const registeredTechniques = techniqueRegistry.getAllTechniques();
-    expect(registeredTechniques.sort()).toEqual(lateralTechniqueValues.sort());
+    expect([...registeredTechniques].sort()).toEqual(lateralTechniqueValues.sort());
   });
 
   it('should reject truly invalid techniques', () => {
@@ -122,5 +123,56 @@ describe('WorkflowGuard Techniques Synchronization', () => {
     expect(violation).toBeDefined();
     expect(violation?.type).toBe('invalid_technique');
     expect(violation?.message).toContain("Invalid technique 'made_up_technique'");
+  });
+
+  it('should have ValidationStrategies in sync with TechniqueRegistry', () => {
+    const techniqueRegistry = TechniqueRegistry.getInstance();
+    const executionValidator = new ExecutionValidator();
+
+    // Get all registered techniques
+    const registeredTechniques = techniqueRegistry.getAllTechniques();
+
+    // Test that ValidationStrategies accepts all registered techniques
+    for (const technique of registeredTechniques) {
+      const input = {
+        planId: 'test_plan_123',
+        technique,
+        problem: 'Test problem',
+        currentStep: 1,
+        totalSteps: 3,
+        output: 'Test output',
+        nextStepNeeded: true,
+      };
+
+      const result = executionValidator.validate(input);
+
+      // Check that the technique doesn't cause an "INVALID TECHNIQUE" error
+      const hasInvalidTechniqueError = result.errors.some(
+        error => error.includes('INVALID TECHNIQUE') && error.includes(technique)
+      );
+
+      if (hasInvalidTechniqueError) {
+        console.error(`Technique ${technique} is incorrectly marked as invalid`);
+        console.error('Errors:', result.errors);
+      }
+
+      expect(hasInvalidTechniqueError).toBe(false);
+    }
+
+    // Test that an invalid technique is rejected
+    const invalidInput = {
+      planId: 'test_plan_123',
+      technique: 'completely_invalid_technique',
+      problem: 'Test problem',
+      currentStep: 1,
+      totalSteps: 3,
+      output: 'Test output',
+      nextStepNeeded: true,
+    };
+
+    const invalidResult = executionValidator.validate(invalidInput);
+    const hasInvalidError = invalidResult.errors.some(error => error.includes('INVALID TECHNIQUE'));
+
+    expect(hasInvalidError).toBe(true);
   });
 });

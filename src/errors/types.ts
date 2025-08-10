@@ -45,18 +45,6 @@ export enum ErrorCode {
   // Resource errors
   RESOURCE_LIMIT_EXCEEDED = 'RESOURCE_LIMIT_EXCEEDED',
   TIMEOUT_ERROR = 'TIMEOUT_ERROR',
-
-  /**
-   * Parallel execution errors
-   */
-  /** Requested parallel execution but feature not enabled/supported */
-  PARALLEL_EXECUTION_NOT_SUPPORTED = 'PARALLEL_EXECUTION_NOT_SUPPORTED',
-  /** Convergence attempted before all dependencies completed */
-  CONVERGENCE_DEPENDENCIES_NOT_MET = 'CONVERGENCE_DEPENDENCIES_NOT_MET',
-  /** Requested parallelism exceeds maximum allowed (10) */
-  MAX_PARALLELISM_EXCEEDED = 'MAX_PARALLELISM_EXCEEDED',
-  /** Referenced parallel session not found in group */
-  PARALLEL_SESSION_NOT_FOUND = 'PARALLEL_SESSION_NOT_FOUND',
 }
 
 /**
@@ -234,34 +222,4 @@ export function isErrorResponse(response: unknown): response is ErrorResponse {
     response.isError === true &&
     'error' in response
   );
-}
-
-/**
- * Parallel execution-related error
- * Used for errors during parallel technique execution or convergence
- * @example
- * ```typescript
- * throw new ParallelExecutionError(
- *   ErrorCode.CONVERGENCE_DEPENDENCIES_NOT_MET,
- *   'Cannot converge: 2 of 3 parallel plans still running',
- *   ['plan1', 'plan2'],
- *   [{ technique: 'six_hats', insights: ['partial'] }]
- * );
- * ```
- */
-export class ParallelExecutionError extends CreativeThinkingError {
-  constructor(
-    code:
-      | ErrorCode.PARALLEL_EXECUTION_NOT_SUPPORTED
-      | ErrorCode.MAX_PARALLELISM_EXCEEDED
-      | ErrorCode.CONVERGENCE_DEPENDENCIES_NOT_MET
-      | ErrorCode.PARALLEL_SESSION_NOT_FOUND,
-    message: string,
-    public readonly failedPlans?: string[],
-    public readonly partialResults?: unknown[],
-    details?: unknown
-  ) {
-    super(code, message, 'execution', details);
-    this.name = 'ParallelExecutionError';
-  }
 }
