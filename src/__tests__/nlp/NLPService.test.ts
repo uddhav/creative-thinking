@@ -551,17 +551,21 @@ describe('NLPService', () => {
       const text = 'Performance test text with some complexity.';
 
       // First call - no cache
-      const start1 = Date.now();
-      service.analyze(text);
-      const time1 = Date.now() - start1;
+      const result1 = service.analyze(text);
 
       // Second call - with cache
-      const start2 = Date.now();
-      service.analyze(text);
-      const time2 = Date.now() - start2;
+      const result2 = service.analyze(text);
 
-      // Cached call should be faster
-      expect(time2).toBeLessThanOrEqual(time1);
+      // Results should be identical except for processing time
+      expect(result2.entities).toEqual(result1.entities);
+      expect(result2.pos).toEqual(result1.pos);
+      expect(result2.contradictions).toEqual(result1.contradictions);
+      expect(result2.paradoxes).toEqual(result1.paradoxes);
+
+      // Cache should exist
+      const stats = service.getCacheStats();
+      expect(stats.size).toBeGreaterThan(0);
+      expect(stats.entries).toContain(text);
     });
   });
 });
