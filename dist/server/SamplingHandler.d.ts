@@ -20,10 +20,10 @@ export declare class SamplingHandler {
      * Handle sampling request creation
      * Called when a feature needs to request sampling from client
      */
-    createSamplingRequest(request: SamplingRequest, feature?: string): Promise<{
+    createSamplingRequest(request: SamplingRequest, feature?: string): {
         requestId: string;
         request: unknown;
-    }>;
+    };
     /**
      * Handle sampling response from client
      * Called when client sends back the LLM response

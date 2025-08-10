@@ -83,6 +83,8 @@ export class SamplingManager {
             console.error(`[SamplingManager] No pending request found for ID: ${requestId}`);
             return;
         }
+        // Clean up before resolving/rejecting
+        this.cleanupPendingRequest(requestId);
         // Check if it's an error
         if ('code' in result) {
             pending.reject(result);
@@ -178,13 +180,13 @@ export class SamplingManager {
      * Wait for response with timeout
      */
     async waitForResponse(responsePromise, request) {
-        const timeout = request.maxTokens
-            ? Math.max(this.DEFAULT_TIMEOUT, request.maxTokens * 10)
-            : this.DEFAULT_TIMEOUT;
-        return Promise.race([
-            responsePromise,
-            new Promise((_, reject) => setTimeout(() => reject(new Error(JSON.stringify(this.createError('timeout', 'Sampling request timed out')))), timeout)),
-        ]);
+        // The timeout is already handled in createPendingRequest
+        // No need for another timeout here
+        // Keep the request parameter for potential future use
+        if (request.maxTokens && request.maxTokens > 10000) {
+            console.error(`[SamplingManager] Large token request: ${request.maxTokens}`);
+        }
+        return responsePromise;
     }
     /**
      * Clean up pending request

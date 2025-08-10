@@ -239,26 +239,20 @@ Keep the summary actionable and focused on value.`;
     let currentContent: string[] = [];
 
     for (const line of lines) {
-      // Check for section headers
-      if (/^\d+\.\s+[A-Z][A-Z\s&]+/i.test(line)) {
+      // Check for section headers (uppercase text ending with colon)
+      if (/^[A-Z][A-Z\s&]+:/.test(line)) {
+        // Save previous section if exists
         if (currentSection) {
           sections[currentSection] = currentContent.join('\n').trim();
         }
-        currentSection = line
-          .replace(/^\d+\.\s+([A-Z\s&]+).*/, '$1')
-          .trim()
-          .toUpperCase();
-        currentContent = [];
-      } else if (/^[A-Z][A-Z\s&]+:/i.test(line)) {
-        if (currentSection) {
-          sections[currentSection] = currentContent.join('\n').trim();
-        }
+        // Extract section name (everything before the colon)
         currentSection = line
           .replace(/^([A-Z\s&]+):.*/, '$1')
           .trim()
           .toUpperCase();
         currentContent = [];
       } else if (currentSection) {
+        // Add line to current section content
         currentContent.push(line);
       }
     }
@@ -523,5 +517,42 @@ Keep the summary actionable and focused on value.`;
       default:
         return this.fallbackSummary(session);
     }
+  }
+
+  /**
+   * Generate summaries for multiple sessions in batch
+   */
+  async generateBatchSummaries(sessions: SessionData[]): Promise<SessionSummary[]> {
+    const summaries: SessionSummary[] = [];
+
+    // Process sessions in parallel with a limit
+    const batchSize = 3;
+    for (let i = 0; i < sessions.length; i += batchSize) {
+      const batch = sessions.slice(i, i + batchSize);
+      const batchPromises = batch.map(session => this.generateSummary(session));
+
+      try {
+        const batchResults = await Promise.allSettled(batchPromises);
+
+        for (const result of batchResults) {
+          if (result.status === 'fulfilled') {
+            summaries.push(result.value);
+          } else {
+            // Use fallback for failed summaries
+            const sessionIndex = summaries.length;
+            const fallbackSession = sessions[i + (sessionIndex % batchSize)];
+            summaries.push(this.fallbackSummary(fallbackSession));
+          }
+        }
+      } catch (error) {
+        console.error('[SmartSummaryGenerator] Batch processing error:', error);
+        // Add fallbacks for remaining sessions in batch
+        for (const session of batch) {
+          summaries.push(this.fallbackSummary(session));
+        }
+      }
+    }
+
+    return summaries;
   }
 }

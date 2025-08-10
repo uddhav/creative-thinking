@@ -5,7 +5,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { IdeaEnhancer } from '../../sampling/features/IdeaEnhancer.js';
 import { SamplingManager } from '../../sampling/SamplingManager.js';
-import type { SamplingResult, EnhancedIdea } from '../../sampling/types.js';
+import type { SamplingResult } from '../../sampling/types.js';
 
 describe('IdeaEnhancer', () => {
   let enhancer: IdeaEnhancer;

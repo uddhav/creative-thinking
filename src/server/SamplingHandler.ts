@@ -11,6 +11,12 @@ import type {
   SamplingError,
 } from '../sampling/types.js';
 
+// Type for global storage
+interface GlobalWithSampling {
+  __pendingSamplingRequest?: { id: string; [key: string]: unknown };
+  __pendingSamplingPromises?: Record<string, Promise<SamplingResult>>;
+}
+
 export class SamplingHandler {
   private samplingManager: SamplingManager;
 
@@ -43,28 +49,30 @@ export class SamplingHandler {
    * Handle sampling request creation
    * Called when a feature needs to request sampling from client
    */
-  async createSamplingRequest(
+  createSamplingRequest(
     request: SamplingRequest,
     feature?: string
-  ): Promise<{ requestId: string; request: unknown }> {
+  ): { requestId: string; request: unknown } {
     // Get the pending request that SamplingManager creates
     const requestPromise = this.samplingManager.requestSampling(request, feature);
 
     // Get the request payload that was stored
-    const samplingPayload = (globalThis as any).__pendingSamplingRequest;
+    const global = globalThis as unknown as GlobalWithSampling;
+    const samplingPayload = global.__pendingSamplingRequest;
 
     if (!samplingPayload) {
       throw new Error('Failed to create sampling request');
     }
 
     // Clear the global storage
-    delete (globalThis as any).__pendingSamplingRequest;
+    delete global.__pendingSamplingRequest;
 
     // Store the promise for later resolution
-    const requestId = samplingPayload.id as string;
-    (globalThis as any).__pendingSamplingPromises =
-      (globalThis as any).__pendingSamplingPromises || {};
-    (globalThis as any).__pendingSamplingPromises[requestId] = requestPromise;
+    const requestId = samplingPayload.id;
+    if (!global.__pendingSamplingPromises) {
+      global.__pendingSamplingPromises = {};
+    }
+    global.__pendingSamplingPromises[requestId] = requestPromise;
 
     return {
       requestId,
@@ -83,8 +91,9 @@ export class SamplingHandler {
     this.samplingManager.handleSamplingResponse(requestId, response);
 
     // Clean up stored promise
-    if ((globalThis as any).__pendingSamplingPromises) {
-      delete (globalThis as any).__pendingSamplingPromises[requestId];
+    const global = globalThis as unknown as GlobalWithSampling;
+    if (global.__pendingSamplingPromises) {
+      delete global.__pendingSamplingPromises[requestId];
     }
   }
 
@@ -109,9 +118,10 @@ export class SamplingHandler {
     this.samplingManager.destroy();
 
     // Clean up any stored promises
-    if ((globalThis as any).__pendingSamplingPromises) {
-      for (const requestId in (globalThis as any).__pendingSamplingPromises) {
-        delete (globalThis as any).__pendingSamplingPromises[requestId];
+    const global = globalThis as unknown as GlobalWithSampling;
+    if (global.__pendingSamplingPromises) {
+      for (const requestId in global.__pendingSamplingPromises) {
+        delete global.__pendingSamplingPromises[requestId];
       }
     }
   }

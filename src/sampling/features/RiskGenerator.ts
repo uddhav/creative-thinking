@@ -154,12 +154,15 @@ End with an OVERALL RISK ASSESSMENT: [low/medium/high/critical]`;
       const moderateRisks = this.extractRisks(sections['MODERATE RISKS'], 3, 2);
       const edgeCases = this.extractRisks(sections['EDGE CASES'], 5, 1);
 
-      // Combine all risks
-      assessment.risks = [...criticalRisks, ...majorRisks, ...moderateRisks, ...edgeCases];
+      // Combine all risks and limit to 10 total
+      assessment.risks = [...criticalRisks, ...majorRisks, ...moderateRisks, ...edgeCases].slice(
+        0,
+        10
+      );
 
       // Extract overall risk level
       const overallMatch = aiResponse.match(
-        /OVERALL RISK ASSESSMENT:\s*\[?(low|medium|high|critical)\]?/i
+        /OVERALL RISK (?:ASSESSMENT|LEVEL):\s*\[?(low|medium|high|critical)\]?/i
       );
       if (overallMatch) {
         assessment.overallRisk = overallMatch[1].toLowerCase() as typeof assessment.overallRisk;

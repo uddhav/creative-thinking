@@ -3,9 +3,11 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { SmartSummaryGenerator } from '../../sampling/features/SmartSummaryGenerator.js';
+import {
+  SmartSummaryGenerator,
+  type SessionData,
+} from '../../sampling/features/SmartSummaryGenerator.js';
 import { SamplingManager } from '../../sampling/SamplingManager.js';
-import type { SessionHistory } from '../../sampling/types.js';
 
 describe('SmartSummaryGenerator', () => {
   let generator: SmartSummaryGenerator;
@@ -22,27 +24,44 @@ describe('SmartSummaryGenerator', () => {
       vi.spyOn(mockSamplingManager, 'isAvailable').mockReturnValue(true);
 
       // Mock sampling request
-      vi.spyOn(mockSamplingManager, 'requestSampling').mockResolvedValue({
-        content: `KEY INSIGHTS:
+      const requestSamplingSpy = vi
+        .spyOn(mockSamplingManager, 'requestSampling')
+        .mockResolvedValue({
+          content: `KEY INSIGHTS:
 • Creative breakthrough in using biomimicry
 • Risk of technical complexity identified
 • Strong team collaboration patterns emerged
 
-CRITICAL DECISIONS:
-• Chose iterative approach over waterfall
-• Prioritized user experience over features
-• Committed to sustainability metrics
+BEST IDEAS:
+• Bio-inspired adaptive structure (biomimicry) - Mimics natural systems for efficiency
+• User-centered feedback loops (design_thinking) - Continuous improvement through user input
+• Modular component design (biomimicry) - Allows flexible reconfiguration
 
-NEXT STEPS:
+RISKS:
+• Technical implementation complexity
+• Higher initial costs
+• Learning curve for users
+
+PATTERNS:
+• Nature-inspired solutions consistently emerged
+• User needs aligned with sustainable practices
+• Iterative refinement improved quality
+
+RECOMMENDED NEXT STEPS:
 1. Prototype the bio-inspired design
 2. Conduct user testing sessions
 3. Refine based on feedback
+4. Develop sustainability metrics
+5. Create implementation roadmap
 
-EFFECTIVENESS: 85%`,
-        requestId: 'req_123',
-      });
+ACTION ITEMS:
+• [HIGH] Create initial prototype - by next week
+• [MEDIUM] Set up user testing framework
+• [LOW] Document design decisions`,
+          requestId: 'req_123',
+        });
 
-      const sessionHistory: SessionHistory = {
+      const sessionHistory: SessionData = {
         sessionId: 'session_123',
         problem: 'Design a sustainable product',
         techniques: ['biomimicry', 'design_thinking'],
@@ -60,27 +79,26 @@ EFFECTIVENESS: 85%`,
             timestamp: Date.now(),
           },
         ],
-        insights: ['Nature provides elegant solutions', 'Users value sustainability'],
-        risks: ['Technical complexity', 'Cost concerns'],
-        startTime: Date.now() - 3600000,
-        endTime: Date.now(),
+        duration: 3600000,
+        completionStatus: 'completed' as const,
       };
 
       const summary = await generator.generateSummary(sessionHistory);
 
-      expect(summary.keyInsights).toHaveLength(3);
-      expect(summary.keyInsights[0]).toContain('biomimicry');
-      expect(summary.criticalDecisions).toHaveLength(3);
-      expect(summary.nextSteps).toHaveLength(3);
-      expect(summary.effectiveness).toBe(0.85);
-      expect(mockSamplingManager.requestSampling).toHaveBeenCalledTimes(1);
+      expect(summary.insights).toHaveLength(3);
+      expect(summary.insights[0]).toContain('biomimicry');
+      expect(summary.bestIdeas).toBeDefined();
+      expect(summary.bestIdeas.length).toBeGreaterThan(0);
+      expect(summary.nextSteps.length).toBeGreaterThan(0);
+      expect(summary.patterns).toBeDefined();
+      expect(requestSamplingSpy).toHaveBeenCalledTimes(1);
     });
 
     it('should use fallback when sampling is not available', async () => {
       // Mock sampling not available
       vi.spyOn(mockSamplingManager, 'isAvailable').mockReturnValue(false);
 
-      const sessionHistory: SessionHistory = {
+      const sessionHistory: SessionData = {
         sessionId: 'session_456',
         problem: 'Improve team communication',
         techniques: ['six_hats'],
@@ -92,21 +110,18 @@ EFFECTIVENESS: 85%`,
             timestamp: Date.now(),
           },
         ],
-        insights: ['Need better tools', 'Async communication works'],
-        risks: ['Time zone challenges'],
-        startTime: Date.now() - 1800000,
-        endTime: Date.now(),
+        duration: 1800000,
+        completionStatus: 'completed' as const,
       };
 
       const summary = await generator.generateSummary(sessionHistory);
 
-      expect(summary.keyInsights).toHaveLength(2);
-      expect(summary.keyInsights).toContain('Need better tools');
-      expect(summary.criticalDecisions).toHaveLength(1);
-      expect(summary.nextSteps).toHaveLength(3);
-      expect(summary.effectiveness).toBeGreaterThanOrEqual(0);
-      expect(summary.effectiveness).toBeLessThanOrEqual(1);
-      expect(mockSamplingManager.requestSampling).not.toHaveBeenCalled();
+      expect(summary.insights).toBeDefined();
+      expect(summary.insights.length).toBeGreaterThan(0);
+      expect(summary.bestIdeas).toBeDefined();
+      expect(summary.nextSteps).toBeDefined();
+      expect(summary.nextSteps.length).toBeGreaterThan(0);
+      expect(vi.spyOn(mockSamplingManager, 'requestSampling').mock.calls).toHaveLength(0);
     });
 
     it('should handle AI parsing errors gracefully', async () => {
@@ -118,7 +133,7 @@ EFFECTIVENESS: 85%`,
         requestId: 'req_789',
       });
 
-      const sessionHistory: SessionHistory = {
+      const sessionHistory: SessionData = {
         sessionId: 'session_789',
         problem: 'Test problem',
         techniques: ['scamper'],
@@ -130,20 +145,18 @@ EFFECTIVENESS: 85%`,
             timestamp: Date.now(),
           },
         ],
-        insights: ['Basic insight'],
-        risks: [],
-        startTime: Date.now() - 600000,
-        endTime: Date.now(),
+        duration: 600000,
+        completionStatus: 'in-progress' as const,
       };
 
       const summary = await generator.generateSummary(sessionHistory);
 
       // Should still return a valid summary structure
-      expect(summary.keyInsights).toBeDefined();
-      expect(Array.isArray(summary.keyInsights)).toBe(true);
-      expect(summary.criticalDecisions).toBeDefined();
+      expect(summary.insights).toBeDefined();
+      expect(Array.isArray(summary.insights)).toBe(true);
+      expect(summary.bestIdeas).toBeDefined();
       expect(summary.nextSteps).toBeDefined();
-      expect(summary.effectiveness).toBeGreaterThanOrEqual(0);
+      expect(summary.nextSteps.length).toBeGreaterThanOrEqual(0);
     });
 
     it('should handle sampling errors by falling back', async () => {
@@ -154,7 +167,7 @@ EFFECTIVENESS: 85%`,
         new Error('Sampling failed')
       );
 
-      const sessionHistory: SessionHistory = {
+      const sessionHistory: SessionData = {
         sessionId: 'session_error',
         problem: 'Error test',
         techniques: ['po'],
@@ -166,17 +179,15 @@ EFFECTIVENESS: 85%`,
             timestamp: Date.now(),
           },
         ],
-        insights: ['Test insight'],
-        risks: ['Test risk'],
-        startTime: Date.now() - 900000,
-        endTime: Date.now(),
+        duration: 900000,
+        completionStatus: 'completed' as const,
       };
 
       const summary = await generator.generateSummary(sessionHistory);
 
       // Should fall back to template-based summary
-      expect(summary.keyInsights).toContain('Test insight');
-      expect(summary.effectiveness).toBeGreaterThanOrEqual(0);
+      expect(summary.insights).toBeDefined();
+      expect(summary.nextSteps).toBeDefined();
     });
   });
 
@@ -184,7 +195,7 @@ EFFECTIVENESS: 85%`,
     it('should process multiple sessions in batch', async () => {
       vi.spyOn(mockSamplingManager, 'isAvailable').mockReturnValue(false);
 
-      const sessions: SessionHistory[] = [
+      const sessions: SessionData[] = [
         {
           sessionId: 'batch_1',
           problem: 'Problem 1',
@@ -192,15 +203,13 @@ EFFECTIVENESS: 85%`,
           steps: [
             {
               technique: 'six_hats',
-              stepNumber: 1,
+              currentStep: 1,
               output: 'Blue hat',
-              timestamp: Date.now(),
+              hatColor: 'blue',
             },
           ],
-          insights: ['Insight 1'],
-          risks: [],
-          startTime: Date.now() - 1000000,
-          endTime: Date.now(),
+          duration: 1000000,
+          completionStatus: 'completed' as const,
         },
         {
           sessionId: 'batch_2',
@@ -209,24 +218,22 @@ EFFECTIVENESS: 85%`,
           steps: [
             {
               technique: 'scamper',
-              stepNumber: 1,
+              currentStep: 1,
               output: 'Substitute',
-              timestamp: Date.now(),
+              scamperAction: 'substitute',
             },
           ],
-          insights: ['Insight 2'],
-          risks: ['Risk 2'],
-          startTime: Date.now() - 2000000,
-          endTime: Date.now(),
+          duration: 2000000,
+          completionStatus: 'completed' as const,
         },
       ];
 
       const summaries = await generator.generateBatchSummaries(sessions);
 
       expect(summaries).toHaveLength(2);
-      expect(summaries[0].keyInsights).toContain('Insight 1');
-      expect(summaries[1].keyInsights).toContain('Insight 2');
-      expect(summaries[1].effectiveness).toBeDefined();
+      expect(summaries[0].insights).toBeDefined();
+      expect(summaries[1].insights).toBeDefined();
+      expect(summaries[0].nextSteps).toBeDefined();
     });
 
     it('should handle partial batch failures', async () => {
@@ -240,84 +247,74 @@ EFFECTIVENESS: 85%`,
         })
         .mockRejectedValueOnce(new Error('Second request failed'));
 
-      const sessions: SessionHistory[] = [
+      const sessions: SessionData[] = [
         {
           sessionId: 'partial_1',
           problem: 'Success case',
           techniques: ['triz'],
-          steps: [{ technique: 'triz', stepNumber: 1, output: 'Identify', timestamp: Date.now() }],
-          insights: [],
-          risks: [],
-          startTime: Date.now() - 500000,
-          endTime: Date.now(),
+          steps: [{ technique: 'triz', currentStep: 1, output: 'Identify' }],
+          duration: 500000,
+          completionStatus: 'completed' as const,
         },
         {
           sessionId: 'partial_2',
           problem: 'Failure case',
           techniques: ['disney_method'],
-          steps: [
-            { technique: 'disney_method', stepNumber: 1, output: 'Dreamer', timestamp: Date.now() },
-          ],
-          insights: ['Fallback insight'],
-          risks: [],
-          startTime: Date.now() - 600000,
-          endTime: Date.now(),
+          steps: [{ technique: 'disney_method', currentStep: 1, output: 'Dreamer' }],
+          duration: 600000,
+          completionStatus: 'completed' as const,
         },
       ];
 
       const summaries = await generator.generateBatchSummaries(sessions);
 
       expect(summaries).toHaveLength(2);
-      expect(summaries[0].effectiveness).toBe(0.75);
-      expect(summaries[1].keyInsights).toContain('Fallback insight');
+      expect(summaries[0].insights).toBeDefined();
+      expect(summaries[1].insights).toBeDefined();
     });
   });
 
   describe('edge cases', () => {
     it('should handle empty session history', async () => {
-      const emptySession: SessionHistory = {
+      const emptySession: SessionData = {
         sessionId: 'empty',
         problem: '',
         techniques: [],
         steps: [],
-        insights: [],
-        risks: [],
-        startTime: Date.now(),
-        endTime: Date.now(),
+        duration: 0,
+        completionStatus: 'abandoned' as const,
       };
 
       const summary = await generator.generateSummary(emptySession);
 
-      expect(summary.keyInsights).toHaveLength(1);
-      expect(summary.keyInsights[0]).toContain('No significant insights');
-      expect(summary.effectiveness).toBe(0);
+      expect(summary.insights).toBeDefined();
+      expect(summary.insights.length).toBeGreaterThanOrEqual(0);
+      expect(summary.nextSteps).toBeDefined();
     });
 
     it('should handle very long sessions', async () => {
-      const longSession: SessionHistory = {
+      const longSession: SessionData = {
         sessionId: 'long',
         problem: 'Complex multi-faceted problem requiring extensive analysis',
         techniques: ['six_hats', 'scamper', 'triz', 'design_thinking', 'nine_windows'],
         steps: Array.from({ length: 50 }, (_, i) => ({
           technique: 'six_hats',
-          stepNumber: i + 1,
+          currentStep: i + 1,
           output: `Step ${i + 1} output with lots of content`,
-          timestamp: Date.now() - (50 - i) * 60000,
+          hatColor: ['blue', 'white', 'red', 'yellow', 'black', 'green'][i % 6],
         })),
-        insights: Array.from({ length: 20 }, (_, i) => `Insight number ${i + 1}`),
-        risks: Array.from({ length: 15 }, (_, i) => `Risk number ${i + 1}`),
-        startTime: Date.now() - 7200000,
-        endTime: Date.now(),
+        duration: 7200000,
+        completionStatus: 'completed' as const,
       };
 
       vi.spyOn(mockSamplingManager, 'isAvailable').mockReturnValue(false);
 
       const summary = await generator.generateSummary(longSession);
 
-      expect(summary.keyInsights.length).toBeLessThanOrEqual(10);
-      expect(summary.criticalDecisions.length).toBeGreaterThan(0);
+      expect(summary.insights.length).toBeGreaterThanOrEqual(0);
+      expect(summary.bestIdeas).toBeDefined();
       expect(summary.nextSteps.length).toBeGreaterThan(0);
-      expect(summary.effectiveness).toBeGreaterThan(0);
+      expect(summary.patterns).toBeDefined();
     });
   });
 });

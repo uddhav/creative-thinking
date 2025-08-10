@@ -80,5 +80,9 @@ export declare class SmartSummaryGenerator {
      * Handle summary generation errors
      */
     private handleError;
+    /**
+     * Generate summaries for multiple sessions in batch
+     */
+    generateBatchSummaries(sessions: SessionData[]): Promise<SessionSummary[]>;
 }
 //# sourceMappingURL=SmartSummaryGenerator.d.ts.map
