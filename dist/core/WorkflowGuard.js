@@ -3,15 +3,14 @@
  * Tracks tool usage and provides helpful guidance when workflow is violated
  */
 import { ErrorFactory } from '../errors/enhanced-errors.js';
-import { TechniqueRegistry } from '../techniques/TechniqueRegistry.js';
+import { TechniqueCache } from './techniqueCache.js';
 export class WorkflowGuard {
     recentCalls = [];
     CALL_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
     parallelCallGroups = new Map(); // Track parallel calls by planId
     sessionManager = null;
-    techniqueRegistry = TechniqueRegistry.getInstance();
-    // Eagerly initialize the Set for O(1) lookups
-    validTechniqueSet = new Set(this.techniqueRegistry.getAllTechniques());
+    // Use module-level cache for O(1) lookups
+    validTechniqueSet = new Set(TechniqueCache.getAllTechniques());
     /**
      * Set the SessionManager instance for plan validation
      */
@@ -221,8 +220,8 @@ export class WorkflowGuard {
         if (!discoveryCall)
             return [];
         // In a real implementation, this would parse the discovery response
-        // For now, return a sensible default based on technique registry
-        const validTechniques = this.techniqueRegistry.getAllTechniques();
+        // For now, return a sensible default based on technique cache
+        const validTechniques = TechniqueCache.getAllTechniques();
         return validTechniques.slice(0, 3);
     }
 }

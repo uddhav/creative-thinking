@@ -15,6 +15,7 @@ export interface ValidationStrategy {
  * Base validator with common validation methods
  */
 declare abstract class BaseValidator implements ValidationStrategy {
+    private static readonly techniqueRegistry;
     private static readonly cachedTechniques;
     private static readonly techniqueSet;
     abstract validate(input: unknown): ValidationResult;
@@ -23,7 +24,7 @@ declare abstract class BaseValidator implements ValidationStrategy {
     protected validateBoolean(value: unknown, fieldName: string, errors: string[]): boolean;
     protected validateEnum<T>(value: unknown, validValues: readonly T[], fieldName: string, errors: string[]): value is T;
     protected validateArray<T>(value: unknown, fieldName: string, errors: string[], itemValidator?: (item: unknown, index: number) => boolean): value is T[];
-    protected getValidTechniques(): string[];
+    protected getValidTechniques(): readonly string[];
     protected isValidTechnique(value: unknown): boolean;
 }
 /**

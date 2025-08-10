@@ -4,14 +4,15 @@
  */
 import { ValidationError, ErrorCode } from '../errors/types.js';
 import { ObjectFieldValidator } from './validators/ObjectFieldValidator.js';
-import { TechniqueRegistry } from '../techniques/TechniqueRegistry.js';
+import { TechniqueCache } from './techniqueCache.js';
 /**
  * Base validator with common validation methods
  */
 class BaseValidator {
-    // Eagerly initialized static caches for performance
-    // These are initialized once when the class is first loaded
-    static cachedTechniques = TechniqueRegistry.getInstance().getAllTechniques();
+    // Use module-level cache for optimal performance
+    // All technique data is pre-initialized at module load time
+    static techniqueRegistry = TechniqueCache.getRegistry();
+    static cachedTechniques = TechniqueCache.getAllTechniques();
     static techniqueSet = new Set(BaseValidator.cachedTechniques);
     validateString(value, fieldName, errors) {
         if (typeof value !== 'string') {
@@ -74,8 +75,8 @@ class BaseValidator {
     isValidTechnique(value) {
         if (typeof value !== 'string')
             return false;
-        // Direct Set lookup - no initialization check needed
-        return BaseValidator.techniqueSet.has(value);
+        // Use module-level cache for O(1) lookup
+        return TechniqueCache.isValidTechnique(value);
     }
 }
 /**

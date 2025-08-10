@@ -5,7 +5,7 @@
 
 import { ErrorFactory } from '../errors/enhanced-errors.js';
 import type { SessionManager } from './SessionManager.js';
-import { TechniqueRegistry } from '../techniques/TechniqueRegistry.js';
+import { TechniqueCache } from './techniqueCache.js';
 
 interface ToolCall {
   toolName: string;
@@ -31,10 +31,9 @@ export class WorkflowGuard {
   private readonly CALL_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
   private parallelCallGroups: Map<string, ToolCall[]> = new Map(); // Track parallel calls by planId
   private sessionManager: SessionManager | null = null;
-  private readonly techniqueRegistry = TechniqueRegistry.getInstance();
-  // Eagerly initialize the Set for O(1) lookups
-  private readonly validTechniqueSet: Set<string> = new Set(
-    this.techniqueRegistry.getAllTechniques()
+  // Use module-level cache for O(1) lookups
+  private readonly validTechniqueSet: ReadonlySet<string> = new Set(
+    TechniqueCache.getAllTechniques()
   );
 
   /**
@@ -289,8 +288,8 @@ export class WorkflowGuard {
     if (!discoveryCall) return [];
 
     // In a real implementation, this would parse the discovery response
-    // For now, return a sensible default based on technique registry
-    const validTechniques = this.techniqueRegistry.getAllTechniques();
+    // For now, return a sensible default based on technique cache
+    const validTechniques = TechniqueCache.getAllTechniques();
     return validTechniques.slice(0, 3);
   }
 }

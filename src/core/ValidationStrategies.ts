@@ -5,7 +5,7 @@
 
 import { ValidationError, ErrorCode } from '../errors/types.js';
 import { ObjectFieldValidator } from './validators/ObjectFieldValidator.js';
-import { TechniqueRegistry } from '../techniques/TechniqueRegistry.js';
+import { TechniqueCache } from './techniqueCache.js';
 
 export interface ValidationResult {
   valid: boolean;
@@ -22,11 +22,13 @@ export interface ValidationStrategy {
  * Base validator with common validation methods
  */
 abstract class BaseValidator implements ValidationStrategy {
-  // Eagerly initialized static caches for performance
-  // These are initialized once when the class is first loaded
-  private static readonly cachedTechniques: string[] =
-    TechniqueRegistry.getInstance().getAllTechniques();
-  private static readonly techniqueSet: Set<string> = new Set(BaseValidator.cachedTechniques);
+  // Use module-level cache for optimal performance
+  // All technique data is pre-initialized at module load time
+  private static readonly techniqueRegistry = TechniqueCache.getRegistry();
+  private static readonly cachedTechniques = TechniqueCache.getAllTechniques();
+  private static readonly techniqueSet: ReadonlySet<string> = new Set(
+    BaseValidator.cachedTechniques
+  );
 
   abstract validate(input: unknown): ValidationResult;
 
@@ -105,15 +107,15 @@ abstract class BaseValidator implements ValidationStrategy {
     return true;
   }
 
-  protected getValidTechniques(): string[] {
+  protected getValidTechniques(): readonly string[] {
     // Direct return of pre-initialized cache - no checks needed
     return BaseValidator.cachedTechniques;
   }
 
   protected isValidTechnique(value: unknown): boolean {
     if (typeof value !== 'string') return false;
-    // Direct Set lookup - no initialization check needed
-    return BaseValidator.techniqueSet.has(value);
+    // Use module-level cache for O(1) lookup
+    return TechniqueCache.isValidTechnique(value);
   }
 }
 

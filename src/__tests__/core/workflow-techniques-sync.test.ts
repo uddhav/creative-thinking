@@ -50,7 +50,7 @@ describe('WorkflowGuard Techniques Synchronization', () => {
     }
 
     // All registered techniques should be valid in WorkflowGuard
-    expect(validTechniques.sort()).toEqual(registeredTechniques.sort());
+    expect([...validTechniques].sort()).toEqual([...registeredTechniques].sort());
 
     // Also verify the count matches what we expect (17 techniques)
     expect(registeredTechniques.length).toBe(17);
@@ -94,7 +94,7 @@ describe('WorkflowGuard Techniques Synchronization', () => {
 
     // Registry should have exactly these techniques
     const registeredTechniques = techniqueRegistry.getAllTechniques();
-    expect(registeredTechniques.sort()).toEqual(lateralTechniqueValues.sort());
+    expect([...registeredTechniques].sort()).toEqual(lateralTechniqueValues.sort());
   });
 
   it('should reject truly invalid techniques', () => {
