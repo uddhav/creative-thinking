@@ -41,7 +41,7 @@ describe('Error Recovery Integration Tests', () => {
       maxMemoryMB: 100,
       cleanupIntervalMs: 60000,
     });
-    techniqueRegistry = new TechniqueRegistry();
+    techniqueRegistry = TechniqueRegistry.getInstance();
     responseBuilder = new ResponseBuilder();
     metricsCollector = new MetricsCollector();
     visualFormatter = new VisualFormatter();

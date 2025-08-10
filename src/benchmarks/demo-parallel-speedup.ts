@@ -17,7 +17,7 @@ console.error('\n🚀 PARALLEL EXECUTION PERFORMANCE DEMONSTRATION\n');
 async function runDemo() {
   // Initialize dependencies
   const sessionManager = new SessionManager();
-  const techniqueRegistry = new TechniqueRegistry();
+  const techniqueRegistry = TechniqueRegistry.getInstance();
 
   const problem = 'How can we reduce plastic waste in oceans?';
   const techniques: LateralTechnique[] = ['six_hats', 'scamper', 'po'];

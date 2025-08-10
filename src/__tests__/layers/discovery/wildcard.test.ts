@@ -12,7 +12,7 @@ describe('Wildcard Technique Selection', () => {
 
   beforeEach(() => {
     recommender = new TechniqueRecommender();
-    registry = new TechniqueRegistry();
+    registry = TechniqueRegistry.getInstance();
   });
 
   it('should sometimes include a wildcard technique', () => {

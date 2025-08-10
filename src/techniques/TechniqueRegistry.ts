@@ -25,11 +25,20 @@ import { ParadoxicalProblemHandler } from './ParadoxicalProblemHandler.js';
 // Removed unused imports - GenericHandler and ConvergenceHandler
 
 export class TechniqueRegistry {
+  private static instance: TechniqueRegistry;
   private handlers: Map<LateralTechnique, TechniqueHandler>;
+  private cachedTechniques: LateralTechnique[] | null = null;
 
-  constructor() {
+  private constructor() {
     this.handlers = new Map();
     this.registerHandlers();
+  }
+
+  static getInstance(): TechniqueRegistry {
+    if (!this.instance) {
+      this.instance = new TechniqueRegistry();
+    }
+    return this.instance;
   }
 
   private registerHandlers(): void {
@@ -66,7 +75,10 @@ export class TechniqueRegistry {
   }
 
   getAllTechniques(): LateralTechnique[] {
-    return Array.from(this.handlers.keys());
+    if (!this.cachedTechniques) {
+      this.cachedTechniques = Array.from(this.handlers.keys());
+    }
+    return this.cachedTechniques;
   }
 
   getTechniqueInfo(technique: LateralTechnique) {

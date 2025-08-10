@@ -2,7 +2,6 @@
  * Validation Strategies
  * Handles input validation for different operation types
  */
-import { TechniqueRegistry } from '../techniques/TechniqueRegistry.js';
 export interface ValidationResult {
     valid: boolean;
     errors: string[];
@@ -16,8 +15,6 @@ export interface ValidationStrategy {
  * Base validator with common validation methods
  */
 declare abstract class BaseValidator implements ValidationStrategy {
-    private static techniqueRegistry;
-    protected static getTechniqueRegistry(): TechniqueRegistry;
     abstract validate(input: unknown): ValidationResult;
     protected validateString(value: unknown, fieldName: string, errors: string[]): boolean;
     protected validateNumber(value: unknown, fieldName: string, errors: string[], min?: number, max?: number): value is number;

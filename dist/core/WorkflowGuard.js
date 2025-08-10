@@ -9,10 +9,7 @@ export class WorkflowGuard {
     CALL_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
     parallelCallGroups = new Map(); // Track parallel calls by planId
     sessionManager = null;
-    techniqueRegistry;
-    constructor() {
-        this.techniqueRegistry = new TechniqueRegistry();
-    }
+    techniqueRegistry = TechniqueRegistry.getInstance();
     /**
      * Set the SessionManager instance for plan validation
      */

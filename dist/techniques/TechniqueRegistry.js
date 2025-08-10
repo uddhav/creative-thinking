@@ -21,10 +21,18 @@ import { TemporalCreativityHandler } from './TemporalCreativityHandler.js';
 import { ParadoxicalProblemHandler } from './ParadoxicalProblemHandler.js';
 // Removed unused imports - GenericHandler and ConvergenceHandler
 export class TechniqueRegistry {
+    static instance;
     handlers;
+    cachedTechniques = null;
     constructor() {
         this.handlers = new Map();
         this.registerHandlers();
+    }
+    static getInstance() {
+        if (!this.instance) {
+            this.instance = new TechniqueRegistry();
+        }
+        return this.instance;
     }
     registerHandlers() {
         this.handlers.set('six_hats', new SixHatsHandler());
@@ -56,7 +64,10 @@ export class TechniqueRegistry {
         return handler;
     }
     getAllTechniques() {
-        return Array.from(this.handlers.keys());
+        if (!this.cachedTechniques) {
+            this.cachedTechniques = Array.from(this.handlers.keys());
+        }
+        return this.cachedTechniques;
     }
     getTechniqueInfo(technique) {
         const handler = this.getHandler(technique);

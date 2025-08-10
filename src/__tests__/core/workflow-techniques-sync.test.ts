@@ -12,7 +12,7 @@ import type { LateralTechnique } from '../../types/index.js';
 describe('WorkflowGuard Techniques Synchronization', () => {
   it('should have all techniques from TechniqueRegistry in validTechniques', () => {
     const workflowGuard = new WorkflowGuard();
-    const techniqueRegistry = new TechniqueRegistry();
+    const techniqueRegistry = TechniqueRegistry.getInstance();
 
     // Get all registered techniques from the registry
     const registeredTechniques = techniqueRegistry.getAllTechniques();
@@ -63,7 +63,7 @@ describe('WorkflowGuard Techniques Synchronization', () => {
   });
 
   it('should validate all LateralTechnique type values are registered', () => {
-    const techniqueRegistry = new TechniqueRegistry();
+    const techniqueRegistry = TechniqueRegistry.getInstance();
 
     // List all techniques from the LateralTechnique type
     // This list must be manually maintained to match the type definition
@@ -126,7 +126,7 @@ describe('WorkflowGuard Techniques Synchronization', () => {
   });
 
   it('should have ValidationStrategies in sync with TechniqueRegistry', () => {
-    const techniqueRegistry = new TechniqueRegistry();
+    const techniqueRegistry = TechniqueRegistry.getInstance();
     const executionValidator = new ExecutionValidator();
 
     // Get all registered techniques

@@ -9,13 +9,6 @@ import { TechniqueRegistry } from '../techniques/TechniqueRegistry.js';
  * Base validator with common validation methods
  */
 class BaseValidator {
-    static techniqueRegistry;
-    static getTechniqueRegistry() {
-        if (!this.techniqueRegistry) {
-            this.techniqueRegistry = new TechniqueRegistry();
-        }
-        return this.techniqueRegistry;
-    }
     validateString(value, fieldName, errors) {
         if (typeof value !== 'string') {
             errors.push(`${fieldName} must be a string`);
@@ -72,7 +65,7 @@ class BaseValidator {
     }
     getValidTechniques() {
         // Get techniques from the registry (single source of truth)
-        return BaseValidator.getTechniqueRegistry().getAllTechniques();
+        return TechniqueRegistry.getInstance().getAllTechniques();
     }
     isValidTechnique(value) {
         if (typeof value !== 'string')
