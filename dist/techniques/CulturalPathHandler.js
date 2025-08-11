@@ -1,6 +1,15 @@
 /**
  * Cultural Path Navigation Strategies technique handler
- * Navigates solution paths through cultural and contextual landscapes
+ *
+ * Navigates solution pathways through cultural and contextual landscapes,
+ * focusing on path-dependent decision making in culturally complex environments.
+ *
+ * Different from cross_cultural technique:
+ * - cross_cultural: Integrates diverse cultural perspectives respectfully into solutions
+ * - cultural_path: Navigates through cultural contexts to find viable solution pathways
+ *
+ * This technique emphasizes the journey and navigation through cultural terrain,
+ * rather than just the integration of different perspectives.
  */
 import { BaseTechniqueHandler } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
@@ -42,9 +51,9 @@ export class CulturalPathHandler extends BaseTechniqueHandler {
             name: 'Cultural Path Navigation',
             emoji: '🗺️',
             totalSteps: 5,
-            description: 'Navigate solution paths through cultural and contextual landscapes',
-            focus: 'Cultural awareness and context-sensitive problem solving',
-            enhancedFocus: 'Develops solutions that respect cultural diversity while finding innovative paths through complex social and cultural terrain',
+            description: 'Navigate solution pathways through cultural contexts and social landscapes to find viable paths forward',
+            focus: 'Path-dependent navigation through cultural complexity',
+            enhancedFocus: 'Maps and navigates the cultural terrain to identify viable pathways, avoiding cultural obstacles while leveraging cultural enablers to reach solutions',
             parallelSteps: {
                 canParallelize: false,
                 description: 'Steps build sequentially from mapping to synthesis',
@@ -77,33 +86,33 @@ export class CulturalPathHandler extends BaseTechniqueHandler {
             const stepData = data;
             switch (step) {
                 case 1:
-                    // Validate cultural landscape mapping
-                    if (!stepData.culturalFactors && !stepData.pathConstraints) {
-                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 1 requires cultural factors or path constraints analysis', 'culturalFactors', { step, technique: 'cultural_path' });
+                    // Validate cultural landscape mapping - require both fields
+                    if (!stepData.culturalFactors || !stepData.pathConstraints) {
+                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 1 requires both cultural factors AND path constraints analysis', 'culturalFactors', { step, technique: 'cultural_path' });
                     }
                     break;
                 case 2:
-                    // Validate context sensitivity
-                    if (!stepData.contextAnalysis && !stepData.culturalVariations) {
-                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 2 requires context analysis or cultural variations', 'contextAnalysis', { step, technique: 'cultural_path' });
+                    // Validate context sensitivity - require both fields
+                    if (!stepData.contextAnalysis || !stepData.culturalVariations) {
+                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 2 requires both context analysis AND cultural variations', 'contextAnalysis', { step, technique: 'cultural_path' });
                     }
                     break;
                 case 3:
-                    // Validate bridge building
-                    if (!stepData.bridgeStrategies && !stepData.sharedValues) {
-                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 3 requires bridge strategies or shared values identification', 'bridgeStrategies', { step, technique: 'cultural_path' });
+                    // Validate bridge building - require both fields
+                    if (!stepData.bridgeStrategies || !stepData.sharedValues) {
+                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 3 requires both bridge strategies AND shared values identification', 'bridgeStrategies', { step, technique: 'cultural_path' });
                     }
                     break;
                 case 4:
-                    // Validate adaptive navigation
-                    if (!stepData.adaptiveStrategies && !stepData.pivotProtocols) {
-                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 4 requires adaptive strategies or pivot protocols', 'adaptiveStrategies', { step, technique: 'cultural_path' });
+                    // Validate adaptive navigation - require both fields
+                    if (!stepData.adaptiveStrategies || !stepData.pivotProtocols) {
+                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 4 requires both adaptive strategies AND pivot protocols', 'adaptiveStrategies', { step, technique: 'cultural_path' });
                     }
                     break;
                 case 5:
-                    // Validate cultural synthesis
-                    if (!stepData.culturalSynthesis && !stepData.integratedSolution) {
-                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 5 requires cultural synthesis or integrated solution', 'culturalSynthesis', { step, technique: 'cultural_path' });
+                    // Validate cultural synthesis - require both fields
+                    if (!stepData.culturalSynthesis || !stepData.integratedSolution) {
+                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 5 requires both cultural synthesis AND integrated solution', 'culturalSynthesis', { step, technique: 'cultural_path' });
                     }
                     break;
             }
