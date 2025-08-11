@@ -256,6 +256,11 @@ interface ExecuteThinkingStepInput {
   temporalLandscape?: unknown;
   risks?: unknown;
   mitigations?: unknown;
+  patternRecognition?: unknown;
+  learningHistory?: unknown;
+  strategyAdaptations?: unknown;
+  feedbackInsights?: unknown;
+  metaSynthesis?: unknown;
 }
 
 /**
@@ -584,6 +589,57 @@ export class ExecutionValidator extends BaseValidator {
               warnings.push(validation.suggestion);
             }
           }
+        }
+        break;
+
+      case 'meta_learning':
+        // Validate meta-learning specific fields
+        if (
+          data.patternRecognition === undefined &&
+          typeof data.currentStep === 'number' &&
+          data.currentStep === 1
+        ) {
+          warnings.push('patternRecognition is recommended for step 1 of Meta-Learning');
+        }
+        if (data.patternRecognition !== undefined) {
+          this.validateArray<string>(
+            data.patternRecognition,
+            'patternRecognition',
+            errors,
+            item => typeof item === 'string'
+          );
+        }
+        if (data.learningHistory !== undefined) {
+          this.validateArray<string>(
+            data.learningHistory,
+            'learningHistory',
+            errors,
+            item => typeof item === 'string'
+          );
+        }
+        if (data.strategyAdaptations !== undefined) {
+          this.validateArray<string>(
+            data.strategyAdaptations,
+            'strategyAdaptations',
+            errors,
+            item => typeof item === 'string'
+          );
+        }
+        if (data.feedbackInsights !== undefined) {
+          this.validateArray<string>(
+            data.feedbackInsights,
+            'feedbackInsights',
+            errors,
+            item => typeof item === 'string'
+          );
+        }
+        if (data.metaSynthesis !== undefined) {
+          this.validateArray<string>(
+            data.metaSynthesis,
+            'metaSynthesis',
+            errors,
+            item => typeof item === 'string'
+          );
         }
         break;
     }

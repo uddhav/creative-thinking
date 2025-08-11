@@ -22,6 +22,7 @@ import { NineWindowsHandler } from './NineWindowsHandler.js';
 import { QuantumSuperpositionHandler } from './QuantumSuperpositionHandler.js';
 import { TemporalCreativityHandler } from './TemporalCreativityHandler.js';
 import { ParadoxicalProblemHandler } from './ParadoxicalProblemHandler.js';
+import { MetaLearningHandler } from './MetaLearningHandler.js';
 // Removed unused imports - GenericHandler and ConvergenceHandler
 
 export class TechniqueRegistry {
@@ -61,6 +62,7 @@ export class TechniqueRegistry {
     this.handlers.set('quantum_superposition', new QuantumSuperpositionHandler());
     this.handlers.set('temporal_creativity', new TemporalCreativityHandler());
     this.handlers.set('paradoxical_problem', new ParadoxicalProblemHandler());
+    this.handlers.set('meta_learning', new MetaLearningHandler());
   }
 
   getHandler(technique: string): TechniqueHandler {

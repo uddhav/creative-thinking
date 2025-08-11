@@ -382,6 +382,11 @@ export class ErgodicityManager {
                 typicalCommitment: 0.5,
                 riskProfile: 'Medium - Path synthesis creates commitments',
             },
+            meta_learning: {
+                typicalReversibility: 0.9,
+                typicalCommitment: 0.2,
+                riskProfile: 'Low - Learning and adaptation are reversible',
+            },
         };
         return profiles[technique];
     }

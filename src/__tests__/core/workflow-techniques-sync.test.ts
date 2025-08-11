@@ -52,9 +52,9 @@ describe('WorkflowGuard Techniques Synchronization', () => {
     // All registered techniques should be valid in WorkflowGuard
     expect([...validTechniques].sort()).toEqual([...registeredTechniques].sort());
 
-    // Also verify the count matches what we expect (17 techniques)
-    expect(registeredTechniques.length).toBe(17);
-    expect(validTechniques.length).toBe(17);
+    // Also verify the count matches what we expect (18 techniques)
+    expect(registeredTechniques.length).toBe(18);
+    expect(validTechniques.length).toBe(18);
 
     // Explicitly check for the three techniques that were missing
     expect(validTechniques).toContain('quantum_superposition');
@@ -85,6 +85,7 @@ describe('WorkflowGuard Techniques Synchronization', () => {
       'quantum_superposition',
       'temporal_creativity',
       'paradoxical_problem',
+      'meta_learning',
     ];
 
     // All type values should be registered

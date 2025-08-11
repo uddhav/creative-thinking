@@ -20,7 +20,8 @@ export type LateralTechnique =
   | 'nine_windows'
   | 'quantum_superposition'
   | 'temporal_creativity'
-  | 'paradoxical_problem';
+  | 'paradoxical_problem'
+  | 'meta_learning';
 
 /**
  * Represents input data for a lateral thinking step

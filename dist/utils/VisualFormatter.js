@@ -212,6 +212,7 @@ export class VisualFormatter {
             quantum_superposition: '⚛️',
             temporal_creativity: '⏳',
             paradoxical_problem: '⚖️',
+            meta_learning: '🧠',
         };
         return emojis[technique] || '❓';
     }
@@ -237,6 +238,7 @@ export class VisualFormatter {
             quantum_superposition: 'Quantum Superposition',
             temporal_creativity: 'Temporal Creativity',
             paradoxical_problem: 'Paradoxical Problem Solving',
+            meta_learning: 'Meta-Learning from Path Integration',
         };
         return names[technique] || technique;
     }

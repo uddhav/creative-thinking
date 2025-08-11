@@ -441,6 +441,7 @@ export class SessionCompletionTracker {
             quantum_superposition: 6,
             temporal_creativity: 6,
             paradoxical_problem: 4,
+            meta_learning: 5,
         };
         return stepCounts[technique] || 5;
     }
