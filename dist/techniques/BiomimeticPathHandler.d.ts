@@ -7,6 +7,7 @@ interface BiomimeticStep {
     name: string;
     focus: string;
     emoji: string;
+    description?: string;
 }
 export declare class BiomimeticPathHandler extends BaseTechniqueHandler {
     private readonly steps;

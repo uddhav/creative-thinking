@@ -413,6 +413,21 @@ function getExpectedOutputForStep(technique: string, step: number): string {
       3: 'Transcendent synthesis achieved',
       4: 'Resolution validated across contexts',
     },
+    meta_learning: {
+      1: 'Successful patterns recognized across techniques',
+      2: 'Learning history accumulated with affinity matrix',
+      3: 'Strategy adaptations evolved from patterns',
+      4: 'Feedback insights integrated from all sources',
+      5: 'Meta-synthesis generated for improved integration',
+    },
+    biomimetic_path: {
+      1: 'Threat patterns identified with adaptive responses',
+      2: 'Solution mutations generated with fitness criteria',
+      3: 'Symbiotic relationships mapped with resource flows',
+      4: 'Swarm behaviors emerged with collective patterns',
+      5: 'Resilience mechanisms built with redundancy',
+      6: 'Integrated biological solution synthesized',
+    },
   };
 
   return outputs[technique]?.[step] || 'Insights and ideas related to the step focus';

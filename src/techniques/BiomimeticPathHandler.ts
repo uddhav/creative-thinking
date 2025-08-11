@@ -10,6 +10,7 @@ interface BiomimeticStep {
   name: string;
   focus: string;
   emoji: string;
+  description?: string;
 }
 
 export class BiomimeticPathHandler extends BaseTechniqueHandler {
@@ -18,31 +19,43 @@ export class BiomimeticPathHandler extends BaseTechniqueHandler {
       name: 'Immune Response',
       focus: 'Threat detection and adaptive response generation',
       emoji: '🦠',
+      description:
+        'Apply immune system principles to identify threats and generate diverse antibody-like solutions with memory patterns',
     },
     {
       name: 'Evolutionary Variation',
       focus: 'Mutation and selection pressure simulation',
       emoji: '🧬',
+      description:
+        'Generate solution mutations and apply selection pressures to evolve optimal traits through fitness testing',
     },
     {
       name: 'Ecosystem Dynamics',
       focus: 'Symbiotic relationships and resource competition',
       emoji: '🌿',
+      description:
+        'Map symbiotic relationships between components and balance resource flows for ecological stability',
     },
     {
       name: 'Swarm Intelligence',
       focus: 'Emergent collective behavior patterns',
       emoji: '🐜',
+      description:
+        'Design simple rules that lead to complex emergent behaviors through collective decision-making',
     },
     {
       name: 'Resilience Patterns',
       focus: 'Redundancy and modularity application',
       emoji: '🔄',
+      description:
+        'Build resilience through redundancy, modularity, and adaptive cycles for antifragile systems',
     },
     {
       name: 'Natural Synthesis',
       focus: 'Integration of biological solutions',
       emoji: '🌱',
+      description:
+        'Synthesize the best biological strategies into a unified, practical solution inspired by nature',
     },
   ];
 
