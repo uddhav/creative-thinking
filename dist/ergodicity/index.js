@@ -402,6 +402,11 @@ export class ErgodicityManager {
                 typicalCommitment: 0.4,
                 riskProfile: 'Low-Medium - Cultural navigation allows flexible adaptation',
             },
+            neuro_computational: {
+                typicalReversibility: 0.5,
+                typicalCommitment: 0.6,
+                riskProfile: 'Medium - Computational optimization creates dependencies',
+            },
         };
         return profiles[technique];
     }

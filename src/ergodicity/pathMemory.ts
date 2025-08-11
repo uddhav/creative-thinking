@@ -376,6 +376,7 @@ export class PathMemoryManager {
       biomimetic_path: 'technical',
       first_principles: 'cognitive',
       cultural_path: 'relational',
+      neuro_computational: 'cognitive',
     };
 
     return techniqueConstraintMap[event.technique] || 'creative';

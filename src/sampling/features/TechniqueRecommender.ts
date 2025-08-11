@@ -501,6 +501,11 @@ Focus on maximizing creative output and maintaining session flow.`;
         'Bridge diverse perspectives',
         'Create culturally-aware solutions',
       ],
+      neuro_computational: [
+        'Generate solutions through neural-computational synthesis',
+        'Optimize creative output through iterative cycles',
+        'Achieve convergence to optimal solutions',
+      ],
     };
 
     return (
