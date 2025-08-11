@@ -262,7 +262,7 @@ describe('Stress Tests - Extreme Loads', () => {
 
         // Assertions
         expect(duration).toBeLessThan(TIMEOUT_1000_STEPS);
-        expect(maxGrowth).toBeLessThan(50); // Max 50MB growth per 100 steps
+        expect(maxGrowth).toBeLessThan(65); // Max 65MB growth per 100 steps (adjusted for 18 techniques)
       },
       TIMEOUT_1000_STEPS
     );
