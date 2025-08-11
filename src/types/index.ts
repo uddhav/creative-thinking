@@ -33,7 +33,8 @@ export type LateralTechnique =
   | 'paradoxical_problem'
   | 'meta_learning'
   | 'biomimetic_path'
-  | 'first_principles';
+  | 'first_principles'
+  | 'cultural_path';
 
 export type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green' | 'purple';
 export type ScamperAction =

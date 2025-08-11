@@ -397,6 +397,11 @@ export class ErgodicityManager {
                 typicalCommitment: 0.5,
                 riskProfile: 'Medium - Fundamental redesign may require significant changes',
             },
+            cultural_path: {
+                typicalReversibility: 0.7,
+                typicalCommitment: 0.4,
+                riskProfile: 'Low-Medium - Cultural navigation allows flexible adaptation',
+            },
         };
         return profiles[technique];
     }

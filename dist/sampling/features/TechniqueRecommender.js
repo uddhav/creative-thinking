@@ -445,6 +445,11 @@ Focus on maximizing creative output and maintaining session flow.`;
                 'Build from fundamental truths',
                 'Create breakthrough innovations',
             ],
+            cultural_path: [
+                'Navigate cultural contexts sensitively',
+                'Bridge diverse perspectives',
+                'Create culturally-aware solutions',
+            ],
         };
         return (benefits[technique] || [
             'Explore new perspectives',
