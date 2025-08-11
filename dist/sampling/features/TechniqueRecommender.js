@@ -440,6 +440,11 @@ Focus on maximizing creative output and maintaining session flow.`;
                 'Leverage evolutionary strategies',
                 'Build resilient adaptive systems',
             ],
+            first_principles: [
+                'Strip away all assumptions',
+                'Build from fundamental truths',
+                'Create breakthrough innovations',
+            ],
         };
         return (benefits[technique] || [
             'Explore new perspectives',

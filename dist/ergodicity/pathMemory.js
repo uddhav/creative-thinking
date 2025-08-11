@@ -315,6 +315,7 @@ export class PathMemoryManager {
             paradoxical_problem: 'cognitive',
             meta_learning: 'cognitive',
             biomimetic_path: 'technical',
+            first_principles: 'cognitive',
         };
         return techniqueConstraintMap[event.technique] || 'creative';
     }
