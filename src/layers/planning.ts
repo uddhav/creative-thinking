@@ -493,6 +493,22 @@ function getRisksForStep(technique: string, step: number): string[] | undefined 
         return ['Insufficient context testing', 'Edge cases breaking resolution'];
     }
   }
+  if (technique === 'biomimetic_path') {
+    switch (step) {
+      case 1:
+        return ['Over-fitting to specific biological model', 'Missing relevant threat patterns'];
+      case 2:
+        return ['Excessive mutation disrupting stability', 'Selection criteria too narrow'];
+      case 3:
+        return ['Forcing unnatural symbiosis', 'Resource competition imbalance'];
+      case 4:
+        return ['Swarm rules too simplistic', 'Emergent behavior unpredictable'];
+      case 5:
+        return ['Redundancy creating inefficiency', 'Over-engineering resilience'];
+      case 6:
+        return ['Biological metaphor limiting practical implementation', 'Context mismatch'];
+    }
+  }
   return undefined;
 }
 

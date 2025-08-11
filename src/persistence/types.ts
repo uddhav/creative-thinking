@@ -21,7 +21,8 @@ export type LateralTechnique =
   | 'quantum_superposition'
   | 'temporal_creativity'
   | 'paradoxical_problem'
-  | 'meta_learning';
+  | 'meta_learning'
+  | 'biomimetic_path';
 
 /**
  * Represents input data for a lateral thinking step

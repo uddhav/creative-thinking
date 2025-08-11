@@ -112,6 +112,26 @@ export class TechniqueRecommender {
                     effectiveness: 0.85,
                 });
                 break;
+            case 'biological':
+            case 'biomimetic':
+            case 'evolutionary':
+            case 'adaptive':
+                recommendations.push({
+                    technique: 'biomimetic_path',
+                    reasoning: 'Applies evolutionary strategies and biological patterns to innovation',
+                    effectiveness: 0.92,
+                });
+                recommendations.push({
+                    technique: 'collective_intel',
+                    reasoning: 'Swarm intelligence and collective behavior patterns',
+                    effectiveness: 0.85,
+                });
+                recommendations.push({
+                    technique: 'meta_learning',
+                    reasoning: 'Adaptive learning from patterns',
+                    effectiveness: 0.88,
+                });
+                break;
             case 'temporal':
                 recommendations.push({
                     technique: 'temporal_creativity',

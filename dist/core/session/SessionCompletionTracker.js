@@ -442,6 +442,7 @@ export class SessionCompletionTracker {
             temporal_creativity: 6,
             paradoxical_problem: 4,
             meta_learning: 5,
+            biomimetic_path: 6,
         };
         return stepCounts[technique] || 5;
     }
