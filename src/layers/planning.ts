@@ -203,6 +203,18 @@ function getExpectedOutputs(technique: string): string[] {
       'Path-aware synthesis',
       'Validated non-ergodic solution',
     ],
+    quantum_superposition: [
+      'Quantum-inspired solution',
+      'Superposition insights',
+      'Collapsed optimal state',
+    ],
+    temporal_creativity: ['Time-aware innovation', 'Historical patterns', 'Future-proof design'],
+    meta_learning: ['Cross-technique synthesis', 'Pattern recognition', 'Strategic adaptation'],
+    biomimetic_path: [
+      'Adaptive biological solution',
+      'Evolutionary optimization',
+      'Nature-inspired resilience',
+    ],
   };
 
   return outputs[technique] || ['Solution options'];
