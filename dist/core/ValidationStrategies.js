@@ -386,6 +386,29 @@ export class ExecutionValidator extends BaseValidator {
                     }
                 }
                 break;
+            case 'meta_learning':
+                // Validate meta-learning specific fields
+                if (data.patternRecognition === undefined &&
+                    typeof data.currentStep === 'number' &&
+                    data.currentStep === 1) {
+                    warnings.push('patternRecognition is recommended for step 1 of Meta-Learning');
+                }
+                if (data.patternRecognition !== undefined) {
+                    this.validateArray(data.patternRecognition, 'patternRecognition', errors, item => typeof item === 'string');
+                }
+                if (data.learningHistory !== undefined) {
+                    this.validateArray(data.learningHistory, 'learningHistory', errors, item => typeof item === 'string');
+                }
+                if (data.strategyAdaptations !== undefined) {
+                    this.validateArray(data.strategyAdaptations, 'strategyAdaptations', errors, item => typeof item === 'string');
+                }
+                if (data.feedbackInsights !== undefined) {
+                    this.validateArray(data.feedbackInsights, 'feedbackInsights', errors, item => typeof item === 'string');
+                }
+                if (data.metaSynthesis !== undefined) {
+                    this.validateArray(data.metaSynthesis, 'metaSynthesis', errors, item => typeof item === 'string');
+                }
+                break;
         }
         // Validate risk/adversarial fields
         if (data.risks !== undefined &&

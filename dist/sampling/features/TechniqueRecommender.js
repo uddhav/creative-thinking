@@ -426,6 +426,11 @@ Focus on maximizing creative output and maintaining session flow.`;
                 'Find synthesis in opposition',
                 'Innovative paradox resolution',
             ],
+            meta_learning: [
+                'Learn from patterns across techniques',
+                'Self-improving integration strategies',
+                'Adaptive technique selection',
+            ],
         };
         return (benefits[technique] || [
             'Explore new perspectives',

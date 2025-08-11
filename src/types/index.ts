@@ -30,7 +30,8 @@ export type LateralTechnique =
   | 'nine_windows'
   | 'quantum_superposition'
   | 'temporal_creativity'
-  | 'paradoxical_problem';
+  | 'paradoxical_problem'
+  | 'meta_learning';
 
 export type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green' | 'purple';
 export type ScamperAction =
@@ -292,6 +293,13 @@ export interface ExecuteThinkingStepInput {
   synthesisStrategy?: string;
   preservedOptions?: string[];
 
+  // Meta-Learning specific
+  patternRecognition?: string[];
+  learningHistory?: string[];
+  strategyAdaptations?: string[];
+  feedbackInsights?: string[];
+  metaSynthesis?: string[];
+
   // Reality assessment
   realityAssessment?: RealityAssessment;
 
@@ -480,6 +488,13 @@ export interface ThinkingOperationData {
   strategyEvolution?: string;
   synthesisStrategy?: string;
   preservedOptions?: string[];
+
+  // Meta-Learning specific
+  patternRecognition?: string[];
+  learningHistory?: string[];
+  strategyAdaptations?: string[];
+  feedbackInsights?: string[];
+  metaSynthesis?: string[];
 
   // Reality assessment
   realityAssessment?: RealityAssessment;
