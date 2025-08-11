@@ -529,6 +529,11 @@ export class ErgodicityManager {
         typicalCommitment: 0.4,
         riskProfile: 'Medium - Biological patterns require implementation',
       },
+      first_principles: {
+        typicalReversibility: 0.6,
+        typicalCommitment: 0.5,
+        riskProfile: 'Medium - Fundamental redesign may require significant changes',
+      },
     };
 
     return profiles[technique];

@@ -215,6 +215,11 @@ function getExpectedOutputs(technique: string): string[] {
       'Evolutionary optimization',
       'Nature-inspired resilience',
     ],
+    first_principles: [
+      'Fundamental components identified',
+      'Core truths established',
+      'Assumption-free innovation',
+    ],
   };
 
   return outputs[technique] || ['Solution options'];
@@ -440,6 +445,13 @@ function getExpectedOutputForStep(technique: string, step: number): string {
       5: 'Resilience mechanisms built with redundancy',
       6: 'Integrated biological solution synthesized',
     },
+    first_principles: {
+      1: 'Problem deconstructed into fundamental components',
+      2: 'Fundamental truths and laws identified',
+      3: 'All assumptions challenged and eliminated',
+      4: 'Solution reconstructed from fundamentals only',
+      5: 'Revolutionary breakthrough synthesized',
+    },
   };
 
   return outputs[technique]?.[step] || 'Insights and ideas related to the step focus';
@@ -534,6 +546,20 @@ function getRisksForStep(technique: string, step: number): string[] | undefined 
         return ['Redundancy creating inefficiency', 'Over-engineering resilience'];
       case 6:
         return ['Biological metaphor limiting practical implementation', 'Context mismatch'];
+    }
+  }
+  if (technique === 'first_principles') {
+    switch (step) {
+      case 1:
+        return ['Over-decomposition losing system properties', 'Missing emergent behaviors'];
+      case 2:
+        return ['Mistaking assumptions for fundamentals', 'Missing domain-specific truths'];
+      case 3:
+        return ['Eliminating necessary constraints', 'Analysis paralysis from over-questioning'];
+      case 4:
+        return ['Over-simplification missing requirements', 'Ignoring practical constraints'];
+      case 5:
+        return ['Solution too radical for adoption', 'Missing implementation pathway'];
     }
   }
   return undefined;

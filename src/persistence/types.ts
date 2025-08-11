@@ -22,7 +22,8 @@ export type LateralTechnique =
   | 'temporal_creativity'
   | 'paradoxical_problem'
   | 'meta_learning'
-  | 'biomimetic_path';
+  | 'biomimetic_path'
+  | 'first_principles';
 
 /**
  * Represents input data for a lateral thinking step

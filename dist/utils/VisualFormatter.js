@@ -214,6 +214,7 @@ export class VisualFormatter {
             paradoxical_problem: '⚖️',
             meta_learning: '🧠',
             biomimetic_path: '🦠',
+            first_principles: '🔬',
         };
         return emojis[technique] || '❓';
     }
@@ -241,6 +242,7 @@ export class VisualFormatter {
             paradoxical_problem: 'Paradoxical Problem Solving',
             meta_learning: 'Meta-Learning from Path Integration',
             biomimetic_path: 'Biomimetic Path Management',
+            first_principles: 'First Principles Thinking',
         };
         return names[technique] || technique;
     }

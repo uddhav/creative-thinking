@@ -252,15 +252,84 @@ Enables session resilience through base64 encoding:
 
 ### Adding New Techniques
 
-When adding a new thinking technique:
+When adding a new thinking technique, follow this comprehensive checklist:
 
-1. Update `LateralTechnique` type
-2. Add matching logic in `discoverTechniques()`
-3. Implement workflow generation in `planThinkingSession()`
-4. Ensure proper step handling in `executeThinkingStep()`
-5. Include unified framework fields (risks, mitigations, etc.)
-6. Add comprehensive tests
-7. Update documentation
+#### 1. Core Type Definitions (2 files)
+
+- [ ] `src/types/index.ts`: Add to `LateralTechnique` type union
+- [ ] `src/persistence/types.ts`: Add to `TechniqueType` type union
+
+#### 2. Technique Handler Implementation (2 files)
+
+- [ ] `src/techniques/[TechniqueName]Handler.ts`: Create handler extending `BaseTechniqueHandler`
+  - Implement `getTechniqueInfo()` with name, emoji, totalSteps, description, focus, enhancedFocus,
+    parallelSteps
+  - Implement `getStepInfo(step)` returning step name, focus, emoji, and optional description
+  - Implement `getStepGuidance(step, problem)` with detailed guidance for each step
+  - Implement `validateStep(step, data)` with technique-specific validation
+  - Implement `getPromptContext(step)` with capabilities and context
+- [ ] `src/techniques/TechniqueRegistry.ts`: Import and register the handler
+
+#### 3. Planning Layer Integration (`src/layers/planning.ts`)
+
+- [ ] Add to `getExpectedOutputs()` function with 3 expected outputs
+- [ ] Add to `getExpectedOutputForStep()` function with step-by-step outputs
+- [ ] Add to `getRisksForStep()` function (optional, technique-specific risks)
+- [ ] Add to `getSuccessCriteriaForStep()` function (optional)
+
+#### 4. Session Tracking (`src/core/session/SessionCompletionTracker.ts`)
+
+- [ ] Add to `techniqueStepCounts` Record with correct step count
+
+#### 5. Ergodicity Integration (2 files)
+
+- [ ] `src/ergodicity/index.ts`: Add to `TECHNIQUE_STEP_MAP` constant
+- [ ] `src/ergodicity/pathMemory.ts`: Add to `TECHNIQUE_STEPS` constant
+
+#### 6. Visual Formatting (`src/utils/VisualFormatter.ts`)
+
+- [ ] Add to `techniqueEmojis` mapping with appropriate emoji
+
+#### 7. Recommendation Systems (2 files)
+
+- [ ] `src/layers/discovery/TechniqueRecommender.ts`: Add recommendation logic
+- [ ] `src/sampling/features/TechniqueRecommender.ts`: Add to sampling logic
+
+#### 8. Test Coverage (3+ files)
+
+- [ ] `src/__tests__/techniques/[TechniqueName]Handler.test.ts`: Create comprehensive unit tests
+  - Test `getTechniqueInfo()` returns correct metadata
+  - Test `getStepInfo()` for all steps
+  - Test `getStepGuidance()` generates appropriate guidance
+  - Test `validateStep()` accepts valid data and rejects invalid data
+  - Test `getPromptContext()` returns proper context
+  - Test error handling for invalid steps
+- [ ] `src/__tests__/core/workflow-techniques-sync.test.ts`: Update technique count
+- [ ] `src/__tests__/sampling/IdeaEnhancer.test.ts`: Update if needed
+
+#### 9. Documentation Updates (4 files)
+
+- [ ] `README.md`: Update technique count and add to technique list
+- [ ] `CHANGELOG.md`: Add entry for new technique
+- [ ] `CLAUDE.md`: Update technique counts and step reference
+- [ ] `CONTRIBUTING.md`: Update if adding new patterns
+
+#### 10. Build and Distribution
+
+- [ ] Run `npm run build` to update all dist/ files
+- [ ] Run `npm run test:run` to ensure all tests pass
+- [ ] Run `npm run lint` to check code style
+- [ ] Ensure all dist/ files are committed with source changes
+
+#### Integration Checklist
+
+- [ ] Technique appears in discovery tool recommendations
+- [ ] Planning tool generates correct workflow
+- [ ] Execution tool handles all steps properly
+- [ ] Session persistence works correctly
+- [ ] Visual formatting displays correctly
+- [ ] Error messages are clear and actionable
+- [ ] MCP protocol compliance verified
 
 ## Error Handling
 
