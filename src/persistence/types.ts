@@ -23,7 +23,8 @@ export type LateralTechnique =
   | 'paradoxical_problem'
   | 'meta_learning'
   | 'biomimetic_path'
-  | 'first_principles';
+  | 'first_principles'
+  | 'cultural_path';
 
 /**
  * Represents input data for a lateral thinking step

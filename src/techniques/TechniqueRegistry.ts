@@ -25,6 +25,7 @@ import { ParadoxicalProblemHandler } from './ParadoxicalProblemHandler.js';
 import { MetaLearningHandler } from './MetaLearningHandler.js';
 import { BiomimeticPathHandler } from './BiomimeticPathHandler.js';
 import { FirstPrinciplesHandler } from './FirstPrinciplesHandler.js';
+import { CulturalPathHandler } from './CulturalPathHandler.js';
 // Removed unused imports - GenericHandler and ConvergenceHandler
 
 export class TechniqueRegistry {
@@ -67,6 +68,7 @@ export class TechniqueRegistry {
     this.handlers.set('meta_learning', new MetaLearningHandler());
     this.handlers.set('biomimetic_path', new BiomimeticPathHandler());
     this.handlers.set('first_principles', new FirstPrinciplesHandler());
+    this.handlers.set('cultural_path', new CulturalPathHandler());
   }
 
   getHandler(technique: string): TechniqueHandler {

@@ -154,6 +154,13 @@ function getExpectedOutputs(technique) {
             'Core truths established',
             'Assumption-free innovation',
         ],
+        cultural_path: [
+            'Cultural landscape mapped',
+            'Context sensitivity analyzed',
+            'Cross-cultural bridges built',
+            'Adaptive navigation strategies',
+            'Cultural synthesis achieved',
+        ],
     };
     return outputs[technique] || ['Solution options'];
 }
@@ -352,6 +359,13 @@ function getExpectedOutputForStep(technique, step) {
             3: 'All assumptions challenged and eliminated',
             4: 'Solution reconstructed from fundamentals only',
             5: 'Revolutionary breakthrough synthesized',
+        },
+        cultural_path: {
+            1: 'Cultural landscape and path dependencies mapped',
+            2: 'Context sensitivity and cultural variations analyzed',
+            3: 'Cross-cultural bridges and shared values identified',
+            4: 'Adaptive navigation strategies developed',
+            5: 'Cultural wisdom synthesized into innovative solution',
         },
     };
     return outputs[technique]?.[step] || 'Insights and ideas related to the step focus';
