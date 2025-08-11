@@ -99,7 +99,7 @@ these three tools.
 
 ### Key Components
 
-#### Thinking Techniques (16 total)
+#### Thinking Techniques (19 total)
 
 - **Six Hats** - Sequential thinking with different perspectives (6 steps)
 - **PO** - Provocative operation for creative disruption (4 steps)
@@ -117,6 +117,9 @@ these three tools.
 - **Nine Windows** - Systematic innovation matrix (9 steps)
 - **Quantum Superposition** - Multiple contradictory states until collapse (6 steps)
 - **Temporal Creativity** - Path memory with temporal analysis (6 steps)
+- **Paradoxical Problem Solving** - Breakthrough through contradiction (5 steps)
+- **Meta-Learning** - Self-improving pattern recognition (5 steps)
+- **Biomimetic Path Management** - Biological solutions and evolution (6 steps)
 
 #### Support Systems
 
@@ -185,23 +188,15 @@ The server analyzes problems and generates a Directed Acyclic Graph (DAG) that:
    - Steps can be executed in any order respecting dependencies
    - Server processes steps atomically as they arrive
 
-#### Client-Side: Execution Control
+#### Sequential Execution Model
 
-Clients decide how to execute the DAG:
+The server implements sequential-only execution:
 
 1. **Sequential Execution**:
-   - Simple, maximum coherence
-   - Execute nodes in order
-   - Best for complex reasoning chains
-
-2. **Parallel Execution**:
-   - Faster execution (3-10x speedup possible)
-   - Execute independent nodes simultaneously
-   - Client manages dependency resolution
-
-3. **Hybrid Strategy**:
-   - Mix sequential and parallel based on sync points
-   - Optimize for both speed and coherence
+   - Maximum coherence and depth
+   - Each step builds on previous insights
+   - Natural flow of creative thinking
+   - Full exploration of each technique
 
 #### Server Processing
 
@@ -472,7 +467,7 @@ The recommendation system dynamically adjusts the number of techniques based on 
 **Rationale**:
 
 - 17.5% wildcard probability = ~1 in 6 chance, prevents algorithmic pigeonholing
-- Dynamic limits utilize parallel execution capabilities
+- Dynamic limits adapt to problem complexity
 - Not artificially limited to 3 techniques anymore
 
 #### Batch Operations

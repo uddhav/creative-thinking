@@ -6,7 +6,7 @@ repository.
 ## Project Overview
 
 This is a **Creative Thinking MCP Server** implementing a three-layer tool architecture for
-structured problem-solving. The server provides sixteen enhanced thinking techniques through a
+structured problem-solving. The server provides nineteen enhanced thinking techniques through a
 unified framework that combines generative creativity with systematic risk assessment.
 
 ## Quick Reference
@@ -29,32 +29,30 @@ npm run format       # Run prettier to format all files
 - **Three tools only**: `discover_techniques`, `plan_thinking_session`, `execute_thinking_step`
 - **Three-layer architecture**: Discovery → Planning → Execution
 - **MCP Protocol**: stdout for JSON-RPC only, stderr for visual output
-- **16 thinking techniques** with specific step counts
+- **19 thinking techniques** with specific step counts
 - **Unified framework**: All techniques support risk/adversarial fields
-- **Client-controlled execution**: Server provides DAG, clients choose sequential or parallel
-  execution
+- **Sequential execution**: Server implements sequential-only execution for maximum coherence
 - **Session resilience**: Base64 encoding allows sessions to survive server restarts
 
-### Client-Server Execution Architecture
+### Sequential Execution Architecture
 
-The server provides execution intelligence while clients control strategy:
+The server implements a sequential execution model:
 
-1. **DAG Generation (Planning Phase)** - Server analyzes and provides execution graph
-   - Each node includes complete parameters for `execute_thinking_step`
-   - Dependencies marked as 'hard' (blocking) or 'soft' (preferential)
-   - Sync points identified between technique boundaries
-   - Time multipliers show relative performance (e.g., "5x" slower if sequential)
-   - Server recommends execution strategy but clients make final decision
+1. **Planning Phase** - Server creates structured workflows
+   - Analyzes problem and selects appropriate techniques
+   - Creates clear step progression through techniques
+   - Provides guidance for each step in sequence
+   - Maintains context throughout thinking process
 
-2. **Client-Controlled Execution** - Clients decide how to execute the DAG
-   - **Sequential**: Execute nodes in order for simplicity and coherence
-   - **Parallel**: Execute independent nodes simultaneously based on dependencies
-   - **Hybrid**: Mix strategies based on sync points and dependencies
-   - Parallel execution happens client-side; server processes arriving steps independently
+2. **Sequential Execution** - Steps build progressively
+   - Each step builds on previous insights
+   - Natural flow of creative thinking
+   - Full exploration of each technique
+   - Path dependencies tracked throughout
 
-3. **Stateless Step Execution** - Server handles each step independently
-   - SessionManager maintains context regardless of execution order
-   - No race conditions as server processes steps atomically
+3. **Stateless Step Processing** - Server handles each step
+   - SessionManager maintains full context
+   - Session state preserved between steps
    - Base64 encoded sessions can survive server restarts
    - 24-hour expiry window for encoded sessions
 
@@ -67,7 +65,7 @@ When working with this codebase:
 3. **Follow the three-tool constraint** - Never add new tools beyond the three core ones
 4. **Run tasks with subagents** to preserve main agent context
 5. **Check CONTRIBUTING.md** for detailed architecture and guidelines
-6. **Understand client-controlled flow** - Clients choose execution order based on DAG
+6. **Understand sequential flow** - Steps execute in order for maximum coherence
 
 ### Technique Step Counts Reference
 
@@ -92,6 +90,12 @@ When working with this codebase:
   amplitude evolution → measurement context → state collapse)
 - Temporal Creativity: 6 steps (archaeological analysis → present synthesis → future projection →
   option creation → cyclical refinement → path integration)
+- Paradoxical Problem Solving: 5 steps (identify contradiction → explore paradox → synthesize unity
+  → generate novel solutions → transcend paradox)
+- Meta-Learning: 5 steps (pattern recognition → learning accumulation → strategy evolution →
+  feedback integration → meta-synthesis)
+- Biomimetic Path Management: 6 steps (immune response → evolutionary variation → ecosystem dynamics
+  → swarm intelligence → resilience patterns → natural synthesis)
 
 ### PR Integration Checklist
 

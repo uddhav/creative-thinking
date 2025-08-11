@@ -37,6 +37,7 @@ export class TechniqueRecommender {
     'quantum_superposition',
     'temporal_creativity',
     'paradoxical_problem',
+    'biomimetic_path',
   ];
 
   constructor(private samplingManager: SamplingManager) {}
@@ -340,6 +341,9 @@ Focus on maximizing creative output and maintaining session flow.`;
       '9_windows': 'nine_windows',
       quantum: 'quantum_superposition',
       paradox: 'paradoxical_problem',
+      bio: 'biomimetic_path',
+      biomimetic: 'biomimetic_path',
+      evolutionary: 'biomimetic_path',
     };
 
     return mappings[normalized] || normalized;
@@ -481,6 +485,11 @@ Focus on maximizing creative output and maintaining session flow.`;
         'Learn from patterns across techniques',
         'Self-improving integration strategies',
         'Adaptive technique selection',
+      ],
+      biomimetic_path: [
+        'Apply nature-tested solutions',
+        'Leverage evolutionary strategies',
+        'Build resilient adaptive systems',
       ],
     };
 

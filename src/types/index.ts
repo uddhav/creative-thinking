@@ -31,7 +31,8 @@ export type LateralTechnique =
   | 'quantum_superposition'
   | 'temporal_creativity'
   | 'paradoxical_problem'
-  | 'meta_learning';
+  | 'meta_learning'
+  | 'biomimetic_path';
 
 export type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green' | 'purple';
 export type ScamperAction =

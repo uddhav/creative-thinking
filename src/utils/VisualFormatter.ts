@@ -295,6 +295,7 @@ export class VisualFormatter {
       temporal_creativity: '⏳',
       paradoxical_problem: '⚖️',
       meta_learning: '🧠',
+      biomimetic_path: '🦠',
     };
     return emojis[technique] || '❓';
   }
@@ -322,6 +323,7 @@ export class VisualFormatter {
       temporal_creativity: 'Temporal Creativity',
       paradoxical_problem: 'Paradoxical Problem Solving',
       meta_learning: 'Meta-Learning from Path Integration',
+      biomimetic_path: 'Biomimetic Path Management',
     };
     return names[technique] || technique;
   }

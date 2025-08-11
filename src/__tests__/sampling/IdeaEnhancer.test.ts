@@ -206,6 +206,7 @@ ADDITIONAL FEATURES:
         'quantum_superposition',
         'temporal_creativity',
         'paradoxical_problem',
+        'biomimetic_path',
       ];
 
       techniques.forEach(technique => {

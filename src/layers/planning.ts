@@ -203,6 +203,18 @@ function getExpectedOutputs(technique: string): string[] {
       'Path-aware synthesis',
       'Validated non-ergodic solution',
     ],
+    quantum_superposition: [
+      'Quantum-inspired solution',
+      'Superposition insights',
+      'Collapsed optimal state',
+    ],
+    temporal_creativity: ['Time-aware innovation', 'Historical patterns', 'Future-proof design'],
+    meta_learning: ['Cross-technique synthesis', 'Pattern recognition', 'Strategic adaptation'],
+    biomimetic_path: [
+      'Adaptive biological solution',
+      'Evolutionary optimization',
+      'Nature-inspired resilience',
+    ],
   };
 
   return outputs[technique] || ['Solution options'];
@@ -413,6 +425,21 @@ function getExpectedOutputForStep(technique: string, step: number): string {
       3: 'Transcendent synthesis achieved',
       4: 'Resolution validated across contexts',
     },
+    meta_learning: {
+      1: 'Successful patterns recognized across techniques',
+      2: 'Learning history accumulated with affinity matrix',
+      3: 'Strategy adaptations evolved from patterns',
+      4: 'Feedback insights integrated from all sources',
+      5: 'Meta-synthesis generated for improved integration',
+    },
+    biomimetic_path: {
+      1: 'Threat patterns identified with adaptive responses',
+      2: 'Solution mutations generated with fitness criteria',
+      3: 'Symbiotic relationships mapped with resource flows',
+      4: 'Swarm behaviors emerged with collective patterns',
+      5: 'Resilience mechanisms built with redundancy',
+      6: 'Integrated biological solution synthesized',
+    },
   };
 
   return outputs[technique]?.[step] || 'Insights and ideas related to the step focus';
@@ -491,6 +518,22 @@ function getRisksForStep(technique: string, step: number): string[] | undefined 
         return ['False synthesis that just hides the paradox', 'Creating new contradictions'];
       case 4:
         return ['Insufficient context testing', 'Edge cases breaking resolution'];
+    }
+  }
+  if (technique === 'biomimetic_path') {
+    switch (step) {
+      case 1:
+        return ['Over-fitting to specific biological model', 'Missing relevant threat patterns'];
+      case 2:
+        return ['Excessive mutation disrupting stability', 'Selection criteria too narrow'];
+      case 3:
+        return ['Forcing unnatural symbiosis', 'Resource competition imbalance'];
+      case 4:
+        return ['Swarm rules too simplistic', 'Emergent behavior unpredictable'];
+      case 5:
+        return ['Redundancy creating inefficiency', 'Over-engineering resilience'];
+      case 6:
+        return ['Biological metaphor limiting practical implementation', 'Context mismatch'];
     }
   }
   return undefined;

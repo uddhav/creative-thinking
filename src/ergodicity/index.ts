@@ -524,6 +524,11 @@ export class ErgodicityManager {
         typicalCommitment: 0.2,
         riskProfile: 'Low - Learning and adaptation are reversible',
       },
+      biomimetic_path: {
+        typicalReversibility: 0.7,
+        typicalCommitment: 0.4,
+        riskProfile: 'Medium - Biological patterns require implementation',
+      },
     };
 
     return profiles[technique];

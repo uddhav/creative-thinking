@@ -9,6 +9,38 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Part VII Advanced Techniques (Continued)** - Implemented three more techniques from Part VII
+  - **Paradoxical Problem Solving** (#156) - Finds breakthrough solutions through contradiction
+    exploration
+    - 5-step process: Identify Contradiction → Explore Paradox → Synthesize Unity → Generate Novel
+      Solutions → Transcend Paradox
+    - Leverages cognitive dissonance for creative breakthroughs
+    - Comprehensive tests and validation
+  - **Meta-Learning from Path Integration** (#157) - Self-improving system that learns from
+    technique patterns
+    - 5-step process: Pattern Recognition → Learning Accumulation → Strategy Evolution → Feedback
+      Integration → Meta-Synthesis
+    - Builds affinity matrix of technique combinations
+    - Adapts technique selection based on accumulated knowledge
+    - Comprehensive tests with validation for each step
+  - **Biomimetic Path Management** (#158) - Applies biological solutions and evolutionary strategies
+    - 6-step process: Immune Response → Evolutionary Variation → Ecosystem Dynamics → Swarm
+      Intelligence → Resilience Patterns → Natural Synthesis
+    - Nature-inspired problem solving through evolutionary patterns
+    - Leverages billions of years of evolutionary problem-solving
+
+### Changed
+
+- **Total Techniques** - Increased from 16 to 19 enhanced thinking techniques
+- **Memory Growth Threshold** - Adjusted stress test memory limit from 50MB to 70MB to account for
+  19 techniques
+- **Documentation** - Updated all documentation to reflect 19 techniques and removed parallel
+  execution references
+
+## [0.6.0] - 2025-08-11
+
+### Added
+
 - **MCP Prompts Support** - Pre-configured conversation starters for guided lateral thinking
   - 6 prompt templates for common scenarios (problem-discovery, creative-brainstorming,
     risk-analysis, etc.)
@@ -60,7 +92,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   - Cleaned up all parallel-related documentation
   - Simplified ExecutionModeController to always return sequential mode
 
-### Changed
+### Fixed
 
 - **Execution Model** - Now exclusively sequential for depth and coherence
   - Each technique step builds progressively on previous insights

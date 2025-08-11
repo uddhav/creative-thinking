@@ -1,8 +1,8 @@
 # Creative Thinking MCP Server
 
 A Model Context Protocol (MCP) server that provides structured creative thinking techniques for
-problem-solving and ideation. This server implements a unified framework combining generative
-creativity with systematic risk assessment.
+problem-solving and ideation. This server implements nineteen enhanced thinking techniques through a
+unified framework combining generative creativity with systematic risk assessment.
 
 > **Note**: This repository is a public fork of work originally developed with Munshy, Personal
 > Secretary.
@@ -78,44 +78,37 @@ npm run build
 node dist/index.js
 ```
 
-## Client-Server Execution Architecture
+## Sequential Execution Architecture
 
-The Creative Thinking server provides intelligent execution planning while clients control the
-actual execution strategy (sequential or parallel).
+The Creative Thinking server implements a sequential execution model that ensures maximum coherence
+and depth in the creative thinking process.
 
 ### How It Works
 
-#### Planning Phase (Server)
+#### Planning Phase
 
 When you call `plan_thinking_session`, the server:
 
-1. Analyzes the problem and technique dependencies
-2. Generates a DAG (Directed Acyclic Graph) showing execution opportunities
-3. Identifies which steps can run in parallel (via dependency arrays)
-4. Provides recommendations and time multipliers
+1. Analyzes the problem and selects appropriate techniques
+2. Creates a structured workflow with clear step progression
+3. Provides guidance for each step in the sequence
+4. Maintains context throughout the thinking process
 
-#### Execution Phase (Client-Controlled)
-
-The client decides how to execute based on the DAG:
-
-- **Sequential**: Execute nodes in order for maximum coherence
-- **Parallel**: Execute independent nodes simultaneously for speed
-- **Hybrid**: Mix both strategies based on sync points
-
-#### Server Processing (Stateless)
+#### Execution Phase
 
 Each `execute_thinking_step` call:
 
-- Is handled independently by the server
-- Maintains session context regardless of execution order
-- Processes steps atomically as they arrive from the client
+- Builds progressively on previous insights
+- Maintains full session context and state
+- Ensures natural flow of creative thinking
+- Tracks path dependencies and flexibility
 
 ### Key Benefits
 
-- **Flexibility**: Clients choose execution strategy based on their needs
-- **Intelligence**: Server provides dependency analysis and recommendations
-- **Resilience**: Each step execution is independent and stateless
-- **Performance**: Parallel execution can reduce time by 3-10x for compatible techniques
+- **Coherence**: Each step builds naturally on previous insights
+- **Depth**: Full exploration of each technique before moving forward
+- **Simplicity**: Straightforward execution model
+- **Context**: Rich contextual flow throughout the process
 
 ### Example
 
@@ -131,29 +124,24 @@ const plan = await planThinkingSession({
   techniques: ['six_hats', 'scamper'],
 });
 
-// The plan includes an execution graph with dependency information
-// plan.executionGraph.instructions.recommendedStrategy: 'parallel' | 'sequential' | 'hybrid'
-// plan.executionGraph.instructions.sequentialTimeMultiplier: e.g., "5x"
-// plan.executionGraph.nodes: Array of nodes with dependencies
+// Step 3: Execute the thinking steps sequentially
+let sessionId;
+for (let i = 0; i < plan.totalSteps; i++) {
+  const result = await executeThinkingStep({
+    planId: plan.planId,
+    technique: plan.currentTechnique,
+    problem: 'How to improve team collaboration',
+    currentStep: i + 1,
+    totalSteps: plan.techniqueSteps,
+    output: 'Your thinking for this step...',
+    nextStepNeeded: i < plan.totalSteps - 1,
+    sessionId,
+  });
 
-// Step 3: Client chooses execution strategy
-
-// Option A: Sequential execution (simple, maximum coherence)
-for (const node of plan.executionGraph.nodes) {
-  await executeThinkingStep(node.parameters);
+  if (i === 0) {
+    sessionId = result.sessionId;
+  }
 }
-
-// Option B: Parallel execution (faster, requires handling dependencies)
-const executeWithDependencies = async nodes => {
-  // Find nodes with no hard dependencies
-  const ready = nodes.filter(n => n.dependencies.filter(d => d.type === 'hard').length === 0);
-
-  // Execute ready nodes in parallel
-  await Promise.all(ready.map(n => executeThinkingStep(n.parameters)));
-
-  // Continue with remaining nodes
-  // (simplified - real implementation would track completion)
-};
 ```
 
 ### Technique Methodologies
@@ -171,6 +159,10 @@ Each technique follows its specific sequential process:
   steps)
 - **Temporal Creativity** - Archaeological Analysis → Present Synthesis → Future Projection → Option
   Creation → Refinement → Integration (6 steps)
+- **Paradoxical Problem Solving** - Identify Contradiction → Explore Paradox → Synthesize Unity →
+  Generate Novel Solutions → Transcend Paradox (5 steps)
+- **Meta-Learning** - Pattern Recognition → Learning Accumulation → Strategy Evolution → Feedback
+  Integration → Meta-Synthesis (5 steps)
 
 ## Session Resilience
 
@@ -226,7 +218,7 @@ const nextResult = await executeThinkingStep({
 - **Persistence Architecture**: Adapter pattern supporting filesystem and memory backends
 - **MCP Sampling Integration**: AI-powered enhancement with graceful degradation when unavailable
 
-### Sixteen Enhanced Thinking Techniques
+### Nineteen Enhanced Thinking Techniques
 
 Each technique integrates creative generation with systematic verification:
 
@@ -250,6 +242,11 @@ additional technique to prevent algorithmic pigeonholing and encourage unexpecte
 - **Nine Windows** - Systematic 3×3 analysis across time and system levels
 - **Quantum Superposition** - Maintains multiple contradictory solutions until optimal collapse
 - **Temporal Creativity** - Advanced temporal thinking with path memory integration
+- **Paradoxical Problem Solving** - Finds breakthrough solutions through contradiction exploration
+- **Meta-Learning from Path Integration** - Self-improving system that learns from technique
+  patterns
+- **Biomimetic Path Management** - Applies biological solutions and evolutionary strategies to
+  innovation
 
 ### MCP Prompts Support (NEW)
 
@@ -1425,12 +1422,18 @@ The project roadmap is tracked through GitHub issues with priority and timeline 
 [2025 Roadmap & Prioritization](https://github.com/uddhav/creative-thinking/issues/162) for detailed
 plans.
 
+### Recent Releases
+
+- **v0.4.0** - MCP Sampling Integration ✅
+- **v0.5.0** - Telemetry & Analytics ✅
+- **v0.6.0** - Part VII Techniques (4 of 8 complete) ✅
+
 ### Coming Soon
 
-- **v0.4.0** - MCP Sampling Integration (Complete - Testing phase)
-- **v0.5.0** - Telemetry & Analytics (PR in review)
-- **v0.6.0** - Enhanced Sequential Processing (Q1 2025)
-- **v0.7.0+** - Part VII Advanced Techniques (Q2-Q4 2025)
+- **v0.7.0** - Biomimetic Path Management (#158) - Q3 2025
+- **v0.8.0** - Cultural Path Navigation (#159) - Q3 2025
+- **v0.9.0** - Neuro-Computational Synthesis (#160) - Q4 2025
+- **v1.0.0** - Cultural Creativity Orchestration (#161) - Q4 2025
 
 ### Filter Issues By:
 
