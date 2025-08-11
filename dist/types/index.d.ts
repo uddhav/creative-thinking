@@ -5,7 +5,7 @@ import type { PathMemory } from '../ergodicity/index.js';
 import type { ErgodicityManager } from '../ergodicity/index.js';
 import type { EarlyWarningState, EscapeProtocol } from '../ergodicity/earlyWarning/types.js';
 import type { DomainAssessment, RiskDiscovery, RuinScenario, ValidationResult } from '../core/RuinRiskDiscovery.js';
-export type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 'concept_extraction' | 'yes_and' | 'design_thinking' | 'triz' | 'neural_state' | 'temporal_work' | 'cross_cultural' | 'collective_intel' | 'disney_method' | 'nine_windows' | 'quantum_superposition' | 'temporal_creativity' | 'paradoxical_problem' | 'meta_learning' | 'biomimetic_path' | 'first_principles' | 'cultural_path' | 'neuro_computational';
+export type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 'concept_extraction' | 'yes_and' | 'design_thinking' | 'triz' | 'neural_state' | 'temporal_work' | 'cross_cultural' | 'collective_intel' | 'disney_method' | 'nine_windows' | 'quantum_superposition' | 'temporal_creativity' | 'paradoxical_problem' | 'meta_learning' | 'biomimetic_path' | 'first_principles' | 'cultural_path' | 'neuro_computational' | 'cultural_creativity';
 export type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green' | 'purple';
 export type ScamperAction = 'substitute' | 'combine' | 'adapt' | 'modify' | 'put_to_other_use' | 'eliminate' | 'reverse' | 'parameterize';
 export type DesignThinkingStage = 'empathize' | 'define' | 'ideate' | 'prototype' | 'test';
@@ -216,6 +216,14 @@ export interface ExecuteThinkingStepInput {
     feedbackInsights?: string[];
     metaSynthesis?: string[];
     realityAssessment?: RealityAssessment;
+    culturalContexts?: string[];
+    powerDynamics?: string[];
+    naturalConnections?: string[];
+    frictionZones?: string[];
+    translationProtocols?: string[];
+    trustMechanisms?: string[];
+    attributionMap?: Record<string, string>;
+    authenticityMeasures?: string[];
     ergodicityCheck?: {
         prompt: string;
         followUp?: string;
@@ -371,6 +379,14 @@ export interface ThinkingOperationData {
     feedbackInsights?: string[];
     metaSynthesis?: string[];
     realityAssessment?: RealityAssessment;
+    culturalContexts?: string[];
+    powerDynamics?: string[];
+    naturalConnections?: string[];
+    frictionZones?: string[];
+    translationProtocols?: string[];
+    trustMechanisms?: string[];
+    attributionMap?: Record<string, string>;
+    authenticityMeasures?: string[];
     ergodicityCheck?: {
         prompt: string;
         followUp?: string;

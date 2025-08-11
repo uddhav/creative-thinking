@@ -65,6 +65,11 @@ export class TechniqueRecommender {
                     reasoning: 'Explores multiple creative possibilities simultaneously without premature commitment',
                     effectiveness: 0.88,
                 });
+                recommendations.push({
+                    technique: 'cultural_creativity',
+                    reasoning: 'Synthesizes creative solutions from diverse cultural perspectives',
+                    effectiveness: 0.82,
+                });
                 break;
             case 'process':
                 recommendations.push({
@@ -92,6 +97,30 @@ export class TechniqueRecommender {
                 recommendations.push({
                     technique: 'cross_cultural',
                     reasoning: 'Integrates diverse cultural frameworks respectfully',
+                    effectiveness: 0.85,
+                });
+                recommendations.push({
+                    technique: 'cultural_creativity',
+                    reasoning: 'Orchestrates creative synthesis across cultural boundaries',
+                    effectiveness: 0.78,
+                });
+                break;
+            case 'cultural':
+            case 'cross_cultural':
+            case 'multicultural':
+                recommendations.push({
+                    technique: 'cultural_creativity',
+                    reasoning: 'Primary technique for orchestrating cross-cultural creative synthesis',
+                    effectiveness: 0.95,
+                });
+                recommendations.push({
+                    technique: 'cross_cultural',
+                    reasoning: 'Foundational cultural integration and respectful bridge-building',
+                    effectiveness: 0.9,
+                });
+                recommendations.push({
+                    technique: 'collective_intel',
+                    reasoning: 'Harnesses diverse cultural wisdom sources',
                     effectiveness: 0.85,
                 });
                 break;

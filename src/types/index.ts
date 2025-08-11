@@ -35,7 +35,8 @@ export type LateralTechnique =
   | 'biomimetic_path'
   | 'first_principles'
   | 'cultural_path'
-  | 'neuro_computational';
+  | 'neuro_computational'
+  | 'cultural_creativity';
 
 export type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green' | 'purple';
 export type ScamperAction =
@@ -307,6 +308,16 @@ export interface ExecuteThinkingStepInput {
   // Reality assessment
   realityAssessment?: RealityAssessment;
 
+  // Cultural Creativity specific
+  culturalContexts?: string[];
+  powerDynamics?: string[];
+  naturalConnections?: string[];
+  frictionZones?: string[];
+  translationProtocols?: string[];
+  trustMechanisms?: string[];
+  attributionMap?: Record<string, string>;
+  authenticityMeasures?: string[];
+
   // Ergodicity awareness fields
   ergodicityCheck?: {
     prompt: string;
@@ -502,6 +513,16 @@ export interface ThinkingOperationData {
 
   // Reality assessment
   realityAssessment?: RealityAssessment;
+
+  // Cultural Creativity specific
+  culturalContexts?: string[];
+  powerDynamics?: string[];
+  naturalConnections?: string[];
+  frictionZones?: string[];
+  translationProtocols?: string[];
+  trustMechanisms?: string[];
+  attributionMap?: Record<string, string>;
+  authenticityMeasures?: string[];
 
   // Ergodicity awareness fields
   ergodicityCheck?: {

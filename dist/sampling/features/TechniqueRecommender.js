@@ -450,6 +450,12 @@ Focus on maximizing creative output and maintaining session flow.`;
                 'Bridge diverse perspectives',
                 'Create culturally-aware solutions',
             ],
+            cultural_creativity: [
+                'Orchestrate cross-cultural creative synthesis',
+                'Integrate diverse cultural perspectives into innovative solutions',
+                'Bridge creative divides across cultural boundaries',
+                'Generate inclusive creative outcomes',
+            ],
             neuro_computational: [
                 'Generate solutions through neural-computational synthesis',
                 'Optimize creative output through iterative cycles',
