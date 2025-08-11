@@ -23,6 +23,7 @@ import { MetaLearningHandler } from './MetaLearningHandler.js';
 import { BiomimeticPathHandler } from './BiomimeticPathHandler.js';
 import { FirstPrinciplesHandler } from './FirstPrinciplesHandler.js';
 import { CulturalPathHandler } from './CulturalPathHandler.js';
+import { NeuroComputationalHandler } from './NeuroComputationalHandler.js';
 // Removed unused imports - GenericHandler and ConvergenceHandler
 export class TechniqueRegistry {
     static instance;
@@ -62,6 +63,7 @@ export class TechniqueRegistry {
         this.handlers.set('biomimetic_path', new BiomimeticPathHandler());
         this.handlers.set('first_principles', new FirstPrinciplesHandler());
         this.handlers.set('cultural_path', new CulturalPathHandler());
+        this.handlers.set('neuro_computational', new NeuroComputationalHandler());
     }
     getHandler(technique) {
         const handler = this.handlers.get(technique);

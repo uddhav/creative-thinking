@@ -32,7 +32,7 @@ export const DISCOVER_TECHNIQUES_TOOL = {
 };
 export const PLAN_THINKING_SESSION_TOOL = {
     name: 'plan_thinking_session',
-    description: 'STEP 2 of 3: Creates a structured workflow for applying lateral thinking techniques. This tool MUST be called AFTER discover_techniques and BEFORE execute_thinking_step. Returns a planId that is REQUIRED for the execution step. MANDATORY PARAMETERS: "problem" (string) and "techniques" (array of strings). Valid techniques: six_hats, po, random_entry, scamper, concept_extraction, yes_and, design_thinking, triz, neural_state, temporal_work, cross_cultural, collective_intel, disney_method, nine_windows. Example: {"problem": "How to reduce costs", "techniques": ["six_hats", "scamper"]}',
+    description: 'STEP 2 of 3: Creates a structured workflow for applying lateral thinking techniques. This tool MUST be called AFTER discover_techniques and BEFORE execute_thinking_step. Returns a planId that is REQUIRED for the execution step. MANDATORY PARAMETERS: "problem" (string) and "techniques" (array of strings). Valid techniques: six_hats, po, random_entry, scamper, concept_extraction, yes_and, design_thinking, triz, neural_state, temporal_work, cross_cultural, collective_intel, disney_method, nine_windows, quantum_superposition, temporal_creativity, paradoxical_problem, meta_learning, biomimetic_path, first_principles, cultural_path, neuro_computational. Example: {"problem": "How to reduce costs", "techniques": ["six_hats", "scamper"]}',
     inputSchema: {
         type: 'object',
         properties: {
@@ -61,6 +61,12 @@ export const PLAN_THINKING_SESSION_TOOL = {
                         'nine_windows',
                         'quantum_superposition',
                         'temporal_creativity',
+                        'paradoxical_problem',
+                        'meta_learning',
+                        'biomimetic_path',
+                        'first_principles',
+                        'cultural_path',
+                        'neuro_computational',
                     ],
                 },
                 description: 'REQUIRED: Array of technique names to execute. Each technique will have multiple steps that MUST ALL be completed.',
@@ -295,6 +301,27 @@ export const EXECUTE_THINKING_STEP_TOOL = {
             strategyEvolution: { type: 'string' },
             synthesisStrategy: { type: 'string' },
             preservedOptions: { type: 'array', items: { type: 'string' } },
+            // Neuro-Computational specific
+            neuralMappings: { type: 'array', items: { type: 'string' } },
+            patternGenerations: { type: 'array', items: { type: 'string' } },
+            interferenceAnalysis: {
+                type: 'object',
+                properties: {
+                    constructive: { type: 'array', items: { type: 'string' } },
+                    destructive: { type: 'array', items: { type: 'string' } },
+                },
+            },
+            computationalModels: { type: 'array', items: { type: 'string' } },
+            optimizationCycles: { type: 'number' },
+            convergenceMetrics: {
+                type: 'object',
+                properties: {
+                    coherence: { type: 'number' },
+                    novelty: { type: 'number' },
+                    utility: { type: 'number' },
+                },
+            },
+            finalSynthesis: { type: 'string' },
             // Risk/Adversarial fields (unified framework)
             risks: { type: 'array', items: { type: 'string' } },
             failureModes: { type: 'array', items: { type: 'string' } },

@@ -34,7 +34,8 @@ export type LateralTechnique =
   | 'meta_learning'
   | 'biomimetic_path'
   | 'first_principles'
-  | 'cultural_path';
+  | 'cultural_path'
+  | 'neuro_computational';
 
 export type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green' | 'purple';
 export type ScamperAction =
@@ -514,6 +515,22 @@ export interface ThinkingOperationData {
     prompt: string;
     survivalConstraints: string[];
   };
+
+  // Neuro-Computational specific
+  neuralMappings?: string[];
+  patternGenerations?: string[];
+  interferenceAnalysis?: {
+    constructive: string[];
+    destructive: string[];
+  };
+  computationalModels?: string[];
+  optimizationCycles?: number;
+  convergenceMetrics?: {
+    coherence: number;
+    novelty: number;
+    utility: number;
+  };
+  finalSynthesis?: string;
 }
 
 export interface SessionOperationData {

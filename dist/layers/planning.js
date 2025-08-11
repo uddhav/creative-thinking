@@ -109,6 +109,7 @@ function getRequiredInputs(technique) {
         cross_cultural: ['Cultural contexts', 'Respect guidelines'],
         collective_intel: ['Knowledge sources', 'Integration goals'],
         paradoxical_problem: ['Contradictory requirements', 'Path histories'],
+        neuro_computational: ['Problem complexity', 'Computational resources'],
     };
     return inputs[technique] || ['Problem statement'];
 }
@@ -160,6 +161,12 @@ function getExpectedOutputs(technique) {
             'Cross-cultural bridges built',
             'Adaptive navigation strategies',
             'Cultural synthesis achieved',
+        ],
+        neuro_computational: [
+            'Neural-computational hybrid solution',
+            'Pattern synthesis insights',
+            'Optimized creative output',
+            'Convergence metrics achieved',
         ],
     };
     return outputs[technique] || ['Solution options'];
@@ -367,6 +374,14 @@ function getExpectedOutputForStep(technique, step) {
             4: 'Adaptive navigation strategies developed',
             5: 'Cultural wisdom synthesized into innovative solution',
         },
+        neuro_computational: {
+            1: 'Neural representations mapped with cognitive components',
+            2: 'Diverse solution patterns generated through parallel processing',
+            3: 'Interference patterns analyzed for constructive/destructive effects',
+            4: 'Computational models synthesized from neural patterns',
+            5: 'Optimization cycles completed with convergence metrics',
+            6: 'Optimal creative solution converged with preserved insights',
+        },
     };
     return outputs[technique]?.[step] || 'Insights and ideas related to the step focus';
 }
@@ -509,6 +524,7 @@ function generateTechniqueRationale(techniques, problem, constraints) {
         cross_cultural: 'culturally adaptive solutions',
         collective_intel: 'wisdom synthesis from multiple sources',
         paradoxical_problem: 'transcending contradictions through path analysis',
+        neuro_computational: 'hybrid neural-computational creativity generation',
     };
     const reasons = techniques.map(t => techniqueReasons[t] || 'creative exploration').join(', ');
     const constraintText = constraints && constraints.length > 0
