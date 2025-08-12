@@ -228,17 +228,17 @@ function getExpectedOutputs(technique: string): string[] {
       'Adaptive navigation strategies',
       'Cultural synthesis achieved',
     ],
-    cultural_creativity: [
-      'Cross-cultural creative synthesis',
-      'Diverse perspective integration',
-      'Cultural bridge innovations',
-      'Inclusive creative solutions',
-    ],
     neuro_computational: [
       'Neural-computational hybrid solution',
       'Pattern synthesis insights',
       'Optimized creative output',
       'Convergence metrics achieved',
+    ],
+    cultural_creativity: [
+      'Cross-cultural creative synthesis',
+      'Diverse perspective integration',
+      'Cultural bridge innovations',
+      'Inclusive creative solutions',
     ],
   };
 

@@ -298,8 +298,8 @@ export class VisualFormatter {
       biomimetic_path: '🦠',
       first_principles: '🔬',
       cultural_path: '🗺️',
-      cultural_creativity: '🌐',
       neuro_computational: '⚛️',
+      cultural_creativity: '🌐',
     };
     return emojis[technique] || '❓';
   }
@@ -330,8 +330,8 @@ export class VisualFormatter {
       biomimetic_path: 'Biomimetic Path Management',
       first_principles: 'First Principles Thinking',
       cultural_path: 'Cultural Path Navigation',
-      cultural_creativity: 'Cultural Creativity Orchestration',
       neuro_computational: 'Neuro-Computational Synthesis',
+      cultural_creativity: 'Cultural Creativity Orchestration',
     };
     return names[technique] || technique;
   }

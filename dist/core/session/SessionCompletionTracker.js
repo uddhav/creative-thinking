@@ -445,8 +445,8 @@ export class SessionCompletionTracker {
             biomimetic_path: 6,
             first_principles: 5,
             cultural_path: 5,
-            cultural_creativity: 4,
             neuro_computational: 6,
+            cultural_creativity: 4,
         };
         return stepCounts[technique] || 5;
     }
