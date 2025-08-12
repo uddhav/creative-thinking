@@ -318,6 +318,7 @@ export class PathMemoryManager {
             first_principles: 'cognitive',
             cultural_path: 'relational',
             neuro_computational: 'cognitive',
+            cultural_creativity: 'relational',
         };
         return techniqueConstraintMap[event.technique] || 'creative';
     }

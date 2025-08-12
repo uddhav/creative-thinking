@@ -37,7 +37,12 @@ export class TechniqueRecommender {
     'quantum_superposition',
     'temporal_creativity',
     'paradoxical_problem',
+    'meta_learning',
     'biomimetic_path',
+    'first_principles',
+    'cultural_path',
+    'neuro_computational',
+    'cultural_creativity',
   ];
 
   constructor(private samplingManager: SamplingManager) {}
@@ -505,6 +510,12 @@ Focus on maximizing creative output and maintaining session flow.`;
         'Generate solutions through neural-computational synthesis',
         'Optimize creative output through iterative cycles',
         'Achieve convergence to optimal solutions',
+      ],
+      cultural_creativity: [
+        'Orchestrate cross-cultural creative synthesis',
+        'Integrate diverse cultural perspectives into innovative solutions',
+        'Bridge creative divides across cultural boundaries',
+        'Generate inclusive creative outcomes',
       ],
     };
 

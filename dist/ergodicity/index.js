@@ -407,6 +407,11 @@ export class ErgodicityManager {
                 typicalCommitment: 0.6,
                 riskProfile: 'Medium - Computational optimization creates dependencies',
             },
+            cultural_creativity: {
+                typicalReversibility: 0.8,
+                typicalCommitment: 0.3,
+                riskProfile: 'Low - Cultural creativity encourages diverse perspectives',
+            },
         };
         return profiles[technique];
     }

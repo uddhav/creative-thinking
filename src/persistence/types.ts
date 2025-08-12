@@ -25,7 +25,8 @@ export type LateralTechnique =
   | 'biomimetic_path'
   | 'first_principles'
   | 'cultural_path'
-  | 'neuro_computational';
+  | 'neuro_computational'
+  | 'cultural_creativity';
 
 /**
  * Represents input data for a lateral thinking step

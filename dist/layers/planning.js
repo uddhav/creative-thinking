@@ -168,6 +168,12 @@ function getExpectedOutputs(technique) {
             'Optimized creative output',
             'Convergence metrics achieved',
         ],
+        cultural_creativity: [
+            'Cross-cultural creative synthesis',
+            'Diverse perspective integration',
+            'Cultural bridge innovations',
+            'Inclusive creative solutions',
+        ],
     };
     return outputs[technique] || ['Solution options'];
 }
