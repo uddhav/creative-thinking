@@ -13,15 +13,17 @@ export class ExecutionResponseBuilder {
     complexityAnalyzer;
     escalationGenerator;
     techniqueRegistry;
+    sessionManager;
     responseBuilder = new ResponseBuilder();
     memoryAnalyzer = new MemoryAnalyzer();
     jsonOptimizer;
     telemetry = TelemetryCollector.getInstance();
     completionTracker = new SessionCompletionTracker();
-    constructor(complexityAnalyzer, escalationGenerator, techniqueRegistry) {
+    constructor(complexityAnalyzer, escalationGenerator, techniqueRegistry, sessionManager) {
         this.complexityAnalyzer = complexityAnalyzer;
         this.escalationGenerator = escalationGenerator;
         this.techniqueRegistry = techniqueRegistry;
+        this.sessionManager = sessionManager;
         this.jsonOptimizer = new JsonOptimizer({
             maxArrayLength: 50, // Limit array sizes for history, path memory
             maxStringLength: 800, // Reasonable string length
@@ -122,6 +124,20 @@ export class ExecutionResponseBuilder {
         }
         if (executionMetadata) {
             responseData.executionMetadata = executionMetadata;
+        }
+        // Add reflexivity data for supported techniques (TRIZ and Cultural Path pilot)
+        // Only show reflexivity data if there have been action steps
+        if (this.sessionManager &&
+            (input.technique === 'triz' || input.technique === 'cultural_path')) {
+            const reflexivityData = this.sessionManager.getSessionReflexivity(sessionId);
+            // Only include reflexivity if there have been action steps (actionSteps > 0)
+            if (reflexivityData && reflexivityData.summary && reflexivityData.summary.actionSteps > 0) {
+                responseData.reflexivity = {
+                    summary: reflexivityData.summary,
+                    currentConstraints: reflexivityData.realityState?.pathsForeclosed || [],
+                    activeExpectations: reflexivityData.realityState?.stakeholderExpectations || [],
+                };
+            }
         }
         return { responseData, currentInsights };
     }

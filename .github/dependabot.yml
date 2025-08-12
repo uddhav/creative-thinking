@@ -1,49 +1,84 @@
 version: 2
 updates:
-  # Enable version updates for npm
+  # Maintain dependencies for npm
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"
-      time: "04:00"
+      time: "09:00"
+      timezone: "America/New_York"
     open-pull-requests-limit: 10
+    target-branch: "develop"
     reviewers:
       - "uddhav"
     labels:
       - "dependencies"
       - "npm"
-    commit-message:
-      prefix: "chore"
-      include: "scope"
     groups:
+      production:
+        patterns:
+          - "@modelcontextprotocol/*"
+          - "chalk"
+          - "compromise"
+          - "yargs"
+          - "zod"
+        update-types:
+          - "minor"
+          - "patch"
       development:
         patterns:
           - "@types/*"
-          - "vitest*"
+          - "@typescript-eslint/*"
+          - "@vitest/*"
+          - "vitest"
+          - "typescript"
           - "eslint*"
           - "prettier*"
         update-types:
           - "minor"
           - "patch"
-      production:
+      commitlint:
         patterns:
-          - "*"
-        exclude-patterns:
-          - "@types/*"
-          - "vitest*"
-          - "eslint*"
-          - "prettier*"
+          - "@commitlint/*"
+          - "commitizen"
+          - "cz-*"
+          - "husky"
+          - "lint-staged"
+          - "standard-version"
         update-types:
+          - "minor"
           - "patch"
+      semantic-release:
+        patterns:
+          - "@semantic-release/*"
+          - "semantic-release"
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      # Ignore major version updates for critical dependencies
+      - dependency-name: "@modelcontextprotocol/sdk"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
+    commit-message:
+      prefix: "chore"
+      prefix-development: "chore"
+      include: "scope"
 
-  # Enable version updates for GitHub Actions
+  # Maintain GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"
-      time: "04:00"
+      time: "09:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 5
+    target-branch: "develop"
     reviewers:
       - "uddhav"
     labels:

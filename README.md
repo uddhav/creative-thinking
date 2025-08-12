@@ -1,8 +1,9 @@
 # Creative Thinking MCP Server
 
 A Model Context Protocol (MCP) server that provides structured creative thinking techniques for
-problem-solving and ideation. This server implements nineteen enhanced thinking techniques through a
-unified framework combining generative creativity with systematic risk assessment.
+problem-solving and ideation. This server implements twenty-three enhanced thinking techniques
+through a unified framework combining generative creativity with systematic risk assessment and
+post-action reflexivity tracking.
 
 > **Note**: This repository is a public fork of work originally developed with Munshy, Personal
 > Secretary.
@@ -218,9 +219,10 @@ const nextResult = await executeThinkingStep({
 - **Persistence Architecture**: Adapter pattern supporting filesystem and memory backends
 - **MCP Sampling Integration**: AI-powered enhancement with graceful degradation when unavailable
 
-### Nineteen Enhanced Thinking Techniques
+### Twenty-Three Enhanced Thinking Techniques
 
-Each technique integrates creative generation with systematic verification:
+Each technique integrates creative generation with systematic verification and post-action
+reflexivity tracking:
 
 **Note**: The discovery layer includes a wildcard technique selection feature (17.5% probability by
 default, configurable via `WILDCARD_PROBABILITY` environment variable) that randomly includes an
@@ -247,6 +249,14 @@ additional technique to prevent algorithmic pigeonholing and encourage unexpecte
   patterns
 - **Biomimetic Path Management** - Applies biological solutions and evolutionary strategies to
   innovation
+- **First Principles Thinking** - Breaks complex problems down to fundamental truths and rebuilds
+  solutions
+- **Cultural Path Navigation** - Navigates through cultural contexts to find viable solution
+  pathways
+- **Cultural Creativity Orchestration** - Multi-cultural synthesis without appropriation through
+  respectful integration
+- **Neuro-Computational Synthesis** - Hybrid neural-computational models for enhanced creative
+  problem solving
 
 ### MCP Prompts Support (NEW)
 

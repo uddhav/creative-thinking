@@ -62,7 +62,8 @@ export async function executeThinkingStep(
   const executionResponseBuilder = new ExecutionResponseBuilder(
     complexityAnalyzer,
     new EscalationPromptGenerator(),
-    techniqueRegistry
+    techniqueRegistry,
+    sessionManager
   );
 
   // Initialize completion gatekeeper
@@ -248,6 +249,24 @@ export async function executeThinkingStep(
         ...operationData,
         timestamp: new Date().toISOString(),
       });
+
+      // Track reflexivity for supported techniques (TRIZ and Cultural Path pilot)
+      if (input.technique === 'triz' || input.technique === 'cultural_path') {
+        const stepDetails = handler.getStepInfo(techniqueLocalStep);
+
+        // Only track if the handler provides reflexivity data
+        if ('type' in stepDetails) {
+          const reflexiveEffects =
+            'reflexiveEffects' in stepDetails ? stepDetails.reflexiveEffects : undefined;
+          sessionManager.trackReflexivity(
+            sessionId,
+            input.technique,
+            techniqueLocalStep,
+            stepDetails.type,
+            reflexiveEffects
+          );
+        }
+      }
 
       // Handle revisions and branches
       if (input.isRevision && input.revisesStep !== undefined) {

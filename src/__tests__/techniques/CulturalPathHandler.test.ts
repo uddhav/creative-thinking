@@ -39,7 +39,8 @@ describe('CulturalPathHandler', () => {
       expect(step1.name).toBe('Cultural Landscape Mapping');
       expect(step1.focus).toBe('Map cultural contexts and path dependencies');
       expect(step1.emoji).toBe('🗺️');
-      expect(step1.description).toContain('Identify cultural contexts, values, traditions');
+      // Description field removed for reflexivity implementation
+      expect(step1.type).toBe('thinking');
     });
 
     it('should return correct info for step 2 - Context Sensitivity Analysis', () => {
@@ -47,7 +48,7 @@ describe('CulturalPathHandler', () => {
       expect(step2.name).toBe('Context Sensitivity Analysis');
       expect(step2.focus).toBe('Assess cultural constraints and opportunities');
       expect(step2.emoji).toBe('🎭');
-      expect(step2.description).toContain('Analyze how different cultural contexts');
+      expect(step2.type).toBe('thinking');
     });
 
     it('should return correct info for step 3 - Cross-Cultural Bridge Building', () => {
@@ -55,7 +56,8 @@ describe('CulturalPathHandler', () => {
       expect(step3.name).toBe('Cross-Cultural Bridge Building');
       expect(step3.focus).toBe('Create paths that connect diverse perspectives');
       expect(step3.emoji).toBe('🌉');
-      expect(step3.description).toContain('Design solutions that bridge cultural differences');
+      expect(step3.type).toBe('action');
+      expect(step3.reflexiveEffects).toBeDefined();
     });
 
     it('should return correct info for step 4 - Adaptive Path Navigation', () => {
@@ -63,7 +65,8 @@ describe('CulturalPathHandler', () => {
       expect(step4.name).toBe('Adaptive Path Navigation');
       expect(step4.focus).toBe('Navigate flexibly through cultural terrain');
       expect(step4.emoji).toBe('🧭');
-      expect(step4.description).toContain('Develop adaptive strategies');
+      expect(step4.type).toBe('action');
+      expect(step4.reflexiveEffects).toBeDefined();
     });
 
     it('should return correct info for step 5 - Cultural Synthesis', () => {
@@ -71,7 +74,8 @@ describe('CulturalPathHandler', () => {
       expect(step5.name).toBe('Cultural Synthesis');
       expect(step5.focus).toBe('Integrate diverse cultural wisdom');
       expect(step5.emoji).toBe('🌍');
-      expect(step5.description).toContain('Synthesize insights from multiple cultural paths');
+      expect(step5.type).toBe('action');
+      expect(step5.reflexiveEffects).toBeDefined();
     });
 
     it('should throw error for invalid step numbers', () => {

@@ -270,18 +270,55 @@ When adding a new thinking technique, follow this comprehensive checklist:
   - Implement `getPromptContext(step)` with capabilities and context
 - [ ] `src/techniques/TechniqueRegistry.ts`: Import and register the handler
 
-#### 3. Planning Layer Integration (`src/layers/planning.ts`)
+#### 3. Reflexivity Design (IMPORTANT: New requirement)
+
+When designing technique steps, you MUST distinguish between THINKING and ACTION steps:
+
+**THINKING Steps** (no reflexivity):
+
+- Analyzing, evaluating, brainstorming
+- No external commitments or implementations
+- Easily reversible, no lasting effects
+- Examples: "Analyze current state", "Generate ideas", "Evaluate options"
+
+**ACTION Steps** (trigger reflexivity):
+
+- Implementing, communicating, building, allocating
+- Create real-world changes that affect future options
+- Consider reversibility: high/medium/low
+- Examples: "Share findings with team", "Implement solution", "Allocate resources"
+
+For each ACTION step, define `ReflexiveEffects`:
+
+```typescript
+reflexiveEffects: {
+  triggers: string[];        // What actions trigger reflexivity
+  realityChanges: string[];  // How reality changes post-action
+  futureConstraints: string[]; // What must be considered going forward
+  reversibility: 'high' | 'medium' | 'low'; // How easily can this be undone
+}
+```
+
+Consider the technique's overall reflexivity profile:
+
+- **Relationship reflexivity**: Changes stakeholder dynamics
+- **Path reflexivity**: Forecloses future options
+- **Structural reflexivity**: Alters system architecture
+- **Behavioral reflexivity**: Changes work patterns
+- **Technical reflexivity**: Creates tool/method dependencies
+
+#### 4. Planning Layer Integration (`src/layers/planning.ts`)
 
 - [ ] Add to `getExpectedOutputs()` function with 3 expected outputs
 - [ ] Add to `getExpectedOutputForStep()` function with step-by-step outputs
 - [ ] Add to `getRisksForStep()` function (optional, technique-specific risks)
 - [ ] Add to `getSuccessCriteriaForStep()` function (optional)
 
-#### 4. Session Tracking (`src/core/session/SessionCompletionTracker.ts`)
+#### 5. Session Tracking (`src/core/session/SessionCompletionTracker.ts`)
 
 - [ ] Add to `techniqueStepCounts` Record with correct step count
 
-#### 5. Ergodicity Integration (2 files)
+#### 6. Ergodicity Integration (2 files)
 
 - [ ] `src/ergodicity/index.ts`: Add to `TECHNIQUE_STEP_MAP` constant
 - [ ] `src/ergodicity/pathMemory.ts`: Add to `TECHNIQUE_STEPS` constant

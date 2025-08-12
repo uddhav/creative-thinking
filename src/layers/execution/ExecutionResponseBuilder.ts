@@ -25,6 +25,7 @@ import type { HybridComplexityAnalyzer } from '../../complexity/analyzer.js';
 import { monitorCriticalSection } from '../../utils/PerformanceIntegration.js';
 import { TelemetryCollector } from '../../telemetry/TelemetryCollector.js';
 import { SessionCompletionTracker } from '../../core/session/SessionCompletionTracker.js';
+import type { SessionManager } from '../../core/SessionManager.js';
 
 interface ComplexitySuggestion {
   complexityNote: string;
@@ -41,7 +42,8 @@ export class ExecutionResponseBuilder {
   constructor(
     private complexityAnalyzer: HybridComplexityAnalyzer,
     private escalationGenerator: EscalationPromptGenerator,
-    private techniqueRegistry?: TechniqueRegistry
+    private techniqueRegistry?: TechniqueRegistry,
+    private sessionManager?: SessionManager
   ) {
     this.jsonOptimizer = new JsonOptimizer({
       maxArrayLength: 50, // Limit array sizes for history, path memory
@@ -218,6 +220,23 @@ export class ExecutionResponseBuilder {
     }
     if (executionMetadata) {
       responseData.executionMetadata = executionMetadata;
+    }
+
+    // Add reflexivity data for supported techniques (TRIZ and Cultural Path pilot)
+    // Only show reflexivity data if there have been action steps
+    if (
+      this.sessionManager &&
+      (input.technique === 'triz' || input.technique === 'cultural_path')
+    ) {
+      const reflexivityData = this.sessionManager.getSessionReflexivity(sessionId);
+      // Only include reflexivity if there have been action steps (actionSteps > 0)
+      if (reflexivityData && reflexivityData.summary && reflexivityData.summary.actionSteps > 0) {
+        responseData.reflexivity = {
+          summary: reflexivityData.summary,
+          currentConstraints: reflexivityData.realityState?.pathsForeclosed || [],
+          activeExpectations: reflexivityData.realityState?.stakeholderExpectations || [],
+        };
+      }
     }
 
     return { responseData, currentInsights };

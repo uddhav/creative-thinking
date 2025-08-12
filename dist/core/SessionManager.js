@@ -13,6 +13,7 @@ import { PlanManager } from './session/PlanManager.js';
 import { SessionIndex } from './session/SessionIndex.js';
 import { SkipDetector, } from './session/SkipDetector.js';
 import { getSessionLock } from './session/SessionLock.js';
+import { ReflexivityTracker } from './ReflexivityTracker.js';
 // Constants for memory management
 const MEMORY_THRESHOLD_FOR_GC = 0.8; // Trigger garbage collection when heap usage exceeds 80%
 export class SessionManager {
@@ -20,6 +21,7 @@ export class SessionManager {
     currentSessionId = null;
     memoryManager;
     sessionLock;
+    reflexivityTracker;
     // Extracted components
     sessionCleaner;
     sessionPersistence;
@@ -45,6 +47,8 @@ export class SessionManager {
         });
         // Initialize session lock for concurrent access control
         this.sessionLock = getSessionLock();
+        // Initialize reflexivity tracker
+        this.reflexivityTracker = new ReflexivityTracker();
         // Initialize core components only
         this.planManager = new PlanManager();
         this.skipDetector = new SkipDetector();
@@ -365,6 +369,30 @@ export class SessionManager {
      */
     getSessionLock() {
         return this.sessionLock;
+    }
+    /**
+     * Get reflexivity data for a session
+     */
+    getSessionReflexivity(sessionId) {
+        const session = this.sessions.get(sessionId);
+        if (!session) {
+            return null;
+        }
+        return {
+            realityState: this.reflexivityTracker.getRealityState(sessionId),
+            actionHistory: this.reflexivityTracker.getActionHistory(sessionId),
+            summary: this.reflexivityTracker.getSessionSummary(sessionId),
+        };
+    }
+    /**
+     * Track reflexivity for a step execution
+     */
+    trackReflexivity(sessionId, technique, stepNumber, stepType, reflexiveEffects) {
+        if (stepType) {
+            // Use technique and step as action description
+            const actionDescription = `${technique} step ${stepNumber}`;
+            this.reflexivityTracker.trackStep(sessionId, technique, stepNumber, stepType, actionDescription, reflexiveEffects);
+        }
     }
 }
 //# sourceMappingURL=SessionManager.js.map

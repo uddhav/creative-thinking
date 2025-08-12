@@ -22,6 +22,8 @@ import {
   type SkipPattern,
 } from './session/SkipDetector.js';
 import { getSessionLock, type SessionLock } from './session/SessionLock.js';
+import { ReflexivityTracker } from './ReflexivityTracker.js';
+import type { ReflexiveEffects } from '../techniques/types.js';
 
 // Constants for memory management
 const MEMORY_THRESHOLD_FOR_GC = 0.8; // Trigger garbage collection when heap usage exceeds 80%
@@ -39,6 +41,7 @@ export class SessionManager {
   private currentSessionId: string | null = null;
   private memoryManager: MemoryManager;
   private sessionLock: SessionLock;
+  private reflexivityTracker: ReflexivityTracker;
 
   // Extracted components
   private sessionCleaner: SessionCleaner;
@@ -69,6 +72,9 @@ export class SessionManager {
 
     // Initialize session lock for concurrent access control
     this.sessionLock = getSessionLock();
+
+    // Initialize reflexivity tracker
+    this.reflexivityTracker = new ReflexivityTracker();
 
     // Initialize core components only
     this.planManager = new PlanManager();
@@ -503,5 +509,49 @@ export class SessionManager {
    */
   public getSessionLock(): SessionLock {
     return this.sessionLock;
+  }
+
+  /**
+   * Get reflexivity data for a session
+   */
+  public getSessionReflexivity(sessionId: string): {
+    realityState: ReturnType<ReflexivityTracker['getRealityState']>;
+    actionHistory: ReturnType<ReflexivityTracker['getActionHistory']>;
+    summary: ReturnType<ReflexivityTracker['getSessionSummary']>;
+  } | null {
+    const session = this.sessions.get(sessionId);
+    if (!session) {
+      return null;
+    }
+
+    return {
+      realityState: this.reflexivityTracker.getRealityState(sessionId),
+      actionHistory: this.reflexivityTracker.getActionHistory(sessionId),
+      summary: this.reflexivityTracker.getSessionSummary(sessionId),
+    };
+  }
+
+  /**
+   * Track reflexivity for a step execution
+   */
+  public trackReflexivity(
+    sessionId: string,
+    technique: string,
+    stepNumber: number,
+    stepType?: 'thinking' | 'action',
+    reflexiveEffects?: ReflexiveEffects
+  ): void {
+    if (stepType) {
+      // Use technique and step as action description
+      const actionDescription = `${technique} step ${stepNumber}`;
+      this.reflexivityTracker.trackStep(
+        sessionId,
+        technique,
+        stepNumber,
+        stepType,
+        actionDescription,
+        reflexiveEffects
+      );
+    }
   }
 }
