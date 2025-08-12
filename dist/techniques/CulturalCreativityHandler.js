@@ -76,36 +76,114 @@ export class CulturalCreativityHandler extends BaseTechniqueHandler {
             return false;
         }
         // Add specific validation for cultural creativity fields
-        if (typeof data === 'object' && data !== null) {
-            const stepData = data;
-            switch (step) {
-                case 1:
-                    // Validate cultural mapping - require both contexts and dynamics
-                    if (!stepData.culturalContexts || !stepData.powerDynamics) {
-                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 1 requires both cultural contexts AND power dynamics analysis', 'culturalMapping', { step, technique: 'cultural_creativity' });
-                    }
-                    break;
-                case 2:
-                    // Validate touchpoint identification - require connections and friction zones
-                    if (!stepData.naturalConnections || !stepData.frictionZones) {
-                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 2 requires both natural connections AND friction zones identification', 'touchpointIdentification', { step, technique: 'cultural_creativity' });
-                    }
-                    break;
-                case 3:
-                    // Validate bridge building - require protocols and trust mechanisms
-                    if (!stepData.translationProtocols || !stepData.trustMechanisms) {
-                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 3 requires both translation protocols AND trust mechanisms', 'bridgeBuilding', { step, technique: 'cultural_creativity' });
-                    }
-                    break;
-                case 4:
-                    // Validate synthesis - require attribution and authenticity measures
-                    if (!stepData.attributionMap || !stepData.authenticityMeasures) {
-                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 4 requires both attribution map AND authenticity measures', 'synthesis', { step, technique: 'cultural_creativity' });
-                    }
-                    break;
-            }
+        if (!this.isValidStepData(data)) {
+            return true; // No additional validation needed if no data object
+        }
+        const stepData = data;
+        switch (step) {
+            case 1:
+                this.validateCulturalMapping(stepData);
+                break;
+            case 2:
+                this.validateTouchpointIdentification(stepData);
+                break;
+            case 3:
+                this.validateBridgeBuilding(stepData);
+                break;
+            case 4:
+                this.validateAuthenticSynthesis(stepData);
+                break;
         }
         return true;
+    }
+    /**
+     * Type guard to check if data is a valid step data object
+     */
+    isValidStepData(data) {
+        return typeof data === 'object' && data !== null;
+    }
+    /**
+     * Validate cultural mapping step data
+     * Expected format: { culturalContexts: string[], powerDynamics: { [key: string]: string } }
+     */
+    validateCulturalMapping(stepData) {
+        if (!stepData.culturalContexts || !stepData.powerDynamics) {
+            throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 1 requires both cultural contexts AND power dynamics analysis. ' +
+                'Expected format: { culturalContexts: string[], powerDynamics: { [culture: string]: string } }', 'culturalMapping', {
+                step: 1,
+                technique: 'cultural_creativity',
+                expectedFields: ['culturalContexts', 'powerDynamics'],
+                example: {
+                    culturalContexts: ['Western analytical', 'Eastern holistic'],
+                    powerDynamics: { dominant: 'tech culture', marginalized: 'indigenous knowledge' },
+                },
+            });
+        }
+    }
+    /**
+     * Validate touchpoint identification step data
+     * Expected format: { naturalConnections: string[], frictionZones: string[] }
+     */
+    validateTouchpointIdentification(stepData) {
+        if (!stepData.naturalConnections || !stepData.frictionZones) {
+            throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 2 requires both natural connections AND friction zones identification. ' +
+                'Expected format: { naturalConnections: string[], frictionZones: string[] }', 'touchpointIdentification', {
+                step: 2,
+                technique: 'cultural_creativity',
+                expectedFields: ['naturalConnections', 'frictionZones'],
+                example: {
+                    naturalConnections: ['shared value of innovation', 'common sustainability goals'],
+                    frictionZones: ['different time orientations', 'conflicting decision-making styles'],
+                },
+            });
+        }
+    }
+    /**
+     * Validate bridge building step data
+     * Expected format: { translationProtocols: object, trustMechanisms: string[] }
+     */
+    validateBridgeBuilding(stepData) {
+        if (!stepData.translationProtocols || !stepData.trustMechanisms) {
+            throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 3 requires both translation protocols AND trust mechanisms. ' +
+                'Expected format: { translationProtocols: object, trustMechanisms: string[] }', 'bridgeBuilding', {
+                step: 3,
+                technique: 'cultural_creativity',
+                expectedFields: ['translationProtocols', 'trustMechanisms'],
+                example: {
+                    translationProtocols: {
+                        concept1: 'translated meaning',
+                        concept2: 'cultural equivalent',
+                    },
+                    trustMechanisms: [
+                        'reciprocal sharing',
+                        'transparent attribution',
+                        'continuous feedback',
+                    ],
+                },
+            });
+        }
+    }
+    /**
+     * Validate authentic synthesis step data
+     * Expected format: { attributionMap: object, authenticityMeasures: string[] }
+     */
+    validateAuthenticSynthesis(stepData) {
+        if (!stepData.attributionMap || !stepData.authenticityMeasures) {
+            throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 4 requires both attribution map AND authenticity measures. ' +
+                'Expected format: { attributionMap: object, authenticityMeasures: string[] }', 'synthesis', {
+                step: 4,
+                technique: 'cultural_creativity',
+                expectedFields: ['attributionMap', 'authenticityMeasures'],
+                example: {
+                    attributionMap: { element1: 'source culture A', element2: 'source culture B' },
+                    authenticityMeasures: [
+                        'community validation',
+                        'cultural expert review',
+                        'source acknowledgment',
+                    ],
+                },
+            });
+        }
     }
     getPromptContext(step) {
         const stepInfo = this.getStepInfo(step);

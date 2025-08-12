@@ -25,6 +25,30 @@ export declare class CulturalCreativityHandler extends BaseTechniqueHandler {
     getStepInfo(step: number): CulturalCreativityStep;
     getStepGuidance(step: number, problem: string): string;
     validateStep(step: number, data: unknown): boolean;
+    /**
+     * Type guard to check if data is a valid step data object
+     */
+    private isValidStepData;
+    /**
+     * Validate cultural mapping step data
+     * Expected format: { culturalContexts: string[], powerDynamics: { [key: string]: string } }
+     */
+    private validateCulturalMapping;
+    /**
+     * Validate touchpoint identification step data
+     * Expected format: { naturalConnections: string[], frictionZones: string[] }
+     */
+    private validateTouchpointIdentification;
+    /**
+     * Validate bridge building step data
+     * Expected format: { translationProtocols: object, trustMechanisms: string[] }
+     */
+    private validateBridgeBuilding;
+    /**
+     * Validate authentic synthesis step data
+     * Expected format: { attributionMap: object, authenticityMeasures: string[] }
+     */
+    private validateAuthenticSynthesis;
     getPromptContext(step: number): Record<string, unknown>;
 }
 export {};
