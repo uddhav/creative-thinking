@@ -537,6 +537,17 @@ export interface ThinkingOperationData {
     survivalConstraints: string[];
   };
 
+  // Paradoxical Problem specific
+  paradox?: string;
+  contradictions?: string[]; // Note: contradiction (singular) already exists for TRIZ
+  solutionA?: string;
+  solutionB?: string;
+  metaPath?: string;
+  bridge?: string;
+  validation?: string;
+  pathContexts?: string[];
+  resolutionVerified?: boolean;
+
   // Neuro-Computational specific
   neuralMappings?: string[];
   patternGenerations?: string[];

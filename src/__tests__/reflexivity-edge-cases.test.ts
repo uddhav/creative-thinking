@@ -6,12 +6,14 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ReflexivityTracker } from '../core/ReflexivityTracker.js';
 import type { ReflexiveEffects } from '../techniques/types.js';
+import { getNLPService } from '../nlp/NLPService.js';
 
 describe('ReflexivityTracker Edge Cases', () => {
   let tracker: ReflexivityTracker;
 
   beforeEach(() => {
-    tracker = new ReflexivityTracker();
+    const nlpService = getNLPService();
+    tracker = new ReflexivityTracker(nlpService);
   });
 
   afterEach(() => {
@@ -98,7 +100,7 @@ describe('ReflexivityTracker Edge Cases', () => {
       }
 
       // Should still be able to assess future actions
-      const assessment = tracker.assessFutureAction(sessionId, 'New action');
+      const assessment = tracker.assessFutureActionSync(sessionId, 'New action');
       expect(assessment).toBeDefined();
       expect(assessment.currentConstraints.length).toBeGreaterThan(0);
     });
@@ -119,7 +121,7 @@ describe('ReflexivityTracker Edge Cases', () => {
       expect(state).toBeDefined();
 
       // Assessment should use lazy evaluation
-      const assessment = tracker.assessFutureAction(sessionId, 'test action');
+      const assessment = tracker.assessFutureActionSync(sessionId, 'test action');
       expect(assessment).toBeDefined();
       // With lazy evaluation, constraints should only be concatenated if needed
       expect(assessment.currentConstraints).toBeDefined();
@@ -187,7 +189,7 @@ describe('ReflexivityTracker Edge Cases', () => {
       ];
 
       testCases.forEach(action => {
-        const assessment = tracker.assessFutureAction('test', action);
+        const assessment = tracker.assessFutureActionSync('test', action);
         expect(assessment.reversibilityAssessment).toBe('low');
         expect(assessment.likelyEffects).toContain('Permanent removal of capabilities');
       });
@@ -203,7 +205,7 @@ describe('ReflexivityTracker Edge Cases', () => {
       ];
 
       testCases.forEach(action => {
-        const assessment = tracker.assessFutureAction('test', action);
+        const assessment = tracker.assessFutureActionSync('test', action);
         expect(assessment.reversibilityAssessment).toBe('low');
         expect(assessment.likelyEffects).toContain('Creates stakeholder expectations');
       });
@@ -219,14 +221,14 @@ describe('ReflexivityTracker Edge Cases', () => {
       ];
 
       testCases.forEach(action => {
-        const assessment = tracker.assessFutureAction('test', action);
+        const assessment = tracker.assessFutureActionSync('test', action);
         expect(assessment.reversibilityAssessment).toBe('high');
         expect(assessment.likelyEffects).toContain('Learning without commitment');
       });
     });
 
     it('should handle mixed patterns', () => {
-      const assessment = tracker.assessFutureAction('test', 'test and then eliminate');
+      const assessment = tracker.assessFutureActionSync('test', 'test and then eliminate');
       // Both patterns are identified - 'test' makes it high, 'eliminate' would make it low
       // Since both patterns match, the last matching pattern determines reversibility
       expect(assessment.reversibilityAssessment).toBe('high');

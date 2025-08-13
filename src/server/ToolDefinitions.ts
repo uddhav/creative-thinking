@@ -258,6 +258,17 @@ export const EXECUTE_THINKING_STEP_TOOL: Tool = {
         },
       },
       interdependencies: { type: 'array', items: { type: 'string' } },
+      // Paradoxical Problem specific
+      paradox: { type: 'string' },
+      // contradiction: already defined for TRIZ
+      contradictions: { type: 'array', items: { type: 'string' } },
+      solutionA: { type: 'string' },
+      solutionB: { type: 'string' },
+      metaPath: { type: 'string' },
+      bridge: { type: 'string' },
+      validation: { type: 'string' },
+      pathContexts: { type: 'array', items: { type: 'string' } },
+      resolutionVerified: { type: 'boolean' },
       // Quantum Superposition specific
       solutionStates: { type: 'array', items: { type: 'string' } },
       interferencePatterns: {

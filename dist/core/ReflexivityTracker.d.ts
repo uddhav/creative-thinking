@@ -3,6 +3,7 @@
  * Tracks post-action reflexive effects during creative thinking execution
  */
 import type { StepType, ReflexiveEffects } from '../techniques/types.js';
+import type { NLPService } from '../nlp/NLPService.js';
 /**
  * Represents the state of reality after actions have been taken
  */
@@ -36,7 +37,10 @@ export declare class ReflexivityTracker {
     private actionHistory;
     private sessionTimestamps;
     private cleanupTimer;
-    constructor();
+    private nlpService;
+    private actionAnalysisCache;
+    private readonly cacheTimeout;
+    constructor(nlpService: NLPService);
     /**
      * Start periodic cleanup of old sessions
      */
@@ -74,14 +78,31 @@ export declare class ReflexivityTracker {
      */
     getActionHistory(sessionId: string): ActionRecord[];
     /**
-     * Get reflexivity assessment for future actions
+     * Get reflexivity assessment for future actions using NLP analysis
      */
-    assessFutureAction(sessionId: string, proposedAction: string): {
+    assessFutureAction(sessionId: string, proposedAction: string): Promise<{
+        currentConstraints: string[];
+        likelyEffects: string[];
+        reversibilityAssessment: 'high' | 'medium' | 'low';
+        recommendation: string;
+    }>;
+    /**
+     * Synchronous version for backward compatibility (uses local NLP only)
+     */
+    assessFutureActionSync(sessionId: string, proposedAction: string): {
         currentConstraints: string[];
         likelyEffects: string[];
         reversibilityAssessment: 'high' | 'medium' | 'low';
         recommendation: string;
     };
+    /**
+     * Build assessment from action analysis
+     */
+    private buildAssessment;
+    /**
+     * Clean old entries from action analysis cache
+     */
+    private cleanActionCache;
     /**
      * Generate recommendation based on current state
      */

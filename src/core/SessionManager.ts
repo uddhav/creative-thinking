@@ -24,6 +24,9 @@ import {
 import { getSessionLock, type SessionLock } from './session/SessionLock.js';
 import { ReflexivityTracker } from './ReflexivityTracker.js';
 import type { ReflexiveEffects } from '../techniques/types.js';
+import { getNLPService } from '../nlp/NLPService.js';
+import type { NLPService } from '../nlp/NLPService.js';
+import type { SamplingManager } from '../sampling/SamplingManager.js';
 
 // Constants for memory management
 const MEMORY_THRESHOLD_FOR_GC = 0.8; // Trigger garbage collection when heap usage exceeds 80%
@@ -42,6 +45,7 @@ export class SessionManager {
   private memoryManager: MemoryManager;
   private sessionLock: SessionLock;
   private reflexivityTracker: ReflexivityTracker;
+  private nlpService: NLPService;
 
   // Extracted components
   private sessionCleaner: SessionCleaner;
@@ -61,7 +65,7 @@ export class SessionManager {
     enableMemoryMonitoring: process.env.ENABLE_MEMORY_MONITORING === 'true',
   };
 
-  constructor() {
+  constructor(samplingManager?: SamplingManager) {
     this.memoryManager = MemoryManager.getInstance({
       gcThreshold: MEMORY_THRESHOLD_FOR_GC,
       enableGC: true,
@@ -73,8 +77,11 @@ export class SessionManager {
     // Initialize session lock for concurrent access control
     this.sessionLock = getSessionLock();
 
-    // Initialize reflexivity tracker
-    this.reflexivityTracker = new ReflexivityTracker();
+    // Initialize NLP service with optional sampling manager
+    this.nlpService = getNLPService(samplingManager);
+
+    // Initialize reflexivity tracker with NLP service
+    this.reflexivityTracker = new ReflexivityTracker(this.nlpService);
 
     // Initialize core components only
     this.planManager = new PlanManager();

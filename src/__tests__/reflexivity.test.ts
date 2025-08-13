@@ -5,13 +5,15 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 import { ReflexivityTracker } from '../core/ReflexivityTracker.js';
 import type { ReflexiveEffects } from '../techniques/types.js';
+import { getNLPService } from '../nlp/NLPService.js';
 
 describe('ReflexivityTracker', () => {
   let tracker: ReflexivityTracker;
   const sessionId = 'test-session-123';
 
   beforeEach(() => {
-    tracker = new ReflexivityTracker();
+    const nlpService = getNLPService();
+    tracker = new ReflexivityTracker(nlpService);
   });
 
   describe('Step Tracking', () => {
@@ -107,7 +109,7 @@ describe('ReflexivityTracker', () => {
     });
 
     it('should assess high reversibility for experimental actions', () => {
-      const assessment = tracker.assessFutureAction(sessionId, 'Run a small test with subset');
+      const assessment = tracker.assessFutureActionSync(sessionId, 'Run a small test with subset');
 
       expect(assessment.reversibilityAssessment).toBe('high');
       expect(assessment.likelyEffects).toContain('Learning without commitment');
@@ -115,7 +117,10 @@ describe('ReflexivityTracker', () => {
     });
 
     it('should assess low reversibility for elimination actions', () => {
-      const assessment = tracker.assessFutureAction(sessionId, 'Eliminate the old system entirely');
+      const assessment = tracker.assessFutureActionSync(
+        sessionId,
+        'Eliminate the old system entirely'
+      );
 
       expect(assessment.reversibilityAssessment).toBe('low');
       expect(assessment.likelyEffects).toContain('Permanent removal of capabilities');
@@ -123,7 +128,7 @@ describe('ReflexivityTracker', () => {
     });
 
     it('should warn about communication actions creating expectations', () => {
-      const assessment = tracker.assessFutureAction(
+      const assessment = tracker.assessFutureActionSync(
         sessionId,
         'Communicate new strategy to all teams'
       );

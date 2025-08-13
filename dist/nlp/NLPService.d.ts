@@ -11,6 +11,7 @@
  *
  * Designed to be extensible for future MCP Sampling integration.
  */
+import type { SamplingManager } from '../sampling/SamplingManager.js';
 /**
  * Entity types that can be extracted
  */
@@ -181,6 +182,96 @@ export interface NGramAnalysis {
     }>;
 }
 /**
+ * Enhanced sentiment analysis with nuanced emotions
+ */
+export interface EnhancedSentiment {
+    basicSentiment: {
+        polarity: 'positive' | 'negative' | 'neutral' | 'mixed';
+        score: number;
+    };
+    emotions: {
+        joy: number;
+        sadness: number;
+        anger: number;
+        fear: number;
+        surprise: number;
+        disgust: number;
+        trust: number;
+        anticipation: number;
+    };
+    tone: {
+        formal: number;
+        casual: number;
+        professional: number;
+        academic: number;
+        creative: number;
+    };
+    confidence: number;
+}
+/**
+ * Enhanced intent with context understanding
+ */
+export interface EnhancedIntent {
+    primaryIntent: string;
+    secondaryIntents: string[];
+    contextualFactors: {
+        urgency: 'low' | 'medium' | 'high';
+        formality: 'informal' | 'neutral' | 'formal';
+        emotionalState: string;
+        domainContext: string;
+    };
+    suggestedResponses: string[];
+    confidence: number;
+}
+/**
+ * Deep semantic understanding
+ */
+export interface SemanticUnderstanding {
+    mainTheme: string;
+    subThemes: string[];
+    implicitMeanings: string[];
+    culturalReferences: string[];
+    metaphors: Array<{
+        expression: string;
+        literalMeaning: string;
+        intendedMeaning: string;
+    }>;
+    ironySarcasm: {
+        detected: boolean;
+        instances: string[];
+        confidence: number;
+    };
+}
+/**
+ * Complex reasoning detection
+ */
+export interface ReasoningAnalysis {
+    argumentStructure: {
+        claims: string[];
+        evidence: string[];
+        conclusions: string[];
+        assumptions: string[];
+    };
+    logicalFallacies: Array<{
+        type: string;
+        description: string;
+        example: string;
+    }>;
+    reasoningType: 'deductive' | 'inductive' | 'abductive' | 'analogical' | 'mixed';
+    strengthOfArgument: number;
+}
+/**
+ * Action analysis for reflexivity tracking
+ */
+export interface ActionAnalysis {
+    actionType: string;
+    reversibility: 'high' | 'medium' | 'low';
+    likelyEffects: string[];
+    stakeholderImpact: string[];
+    temporalScope: 'immediate' | 'short-term' | 'long-term' | 'permanent';
+    confidence: number;
+}
+/**
  * Comprehensive analysis combining all features
  */
 export interface ComprehensiveAnalysis {
@@ -194,6 +285,16 @@ export interface ComprehensiveAnalysis {
     intent: IntentClassification;
     temporal: TemporalAnalysis;
     readability: ReadabilityMetrics;
+    enhanced?: {
+        sentiment: EnhancedSentiment;
+        intent: EnhancedIntent;
+        semantic: SemanticUnderstanding;
+        reasoning: ReasoningAnalysis;
+        summary: string;
+        keyInsights: string[];
+        questions: string[];
+        suggestions: string[];
+    };
     metadata: {
         wordCount: number;
         sentenceCount: number;
@@ -203,13 +304,14 @@ export interface ComprehensiveAnalysis {
     };
 }
 /**
- * Main NLP Service class
+ * Main NLP Service class - Unified service with local and AI-enhanced capabilities
  */
 export declare class NLPService {
     private cache;
     private readonly cacheTimeout;
     private readonly maxCacheSize;
-    constructor();
+    samplingManager: SamplingManager | null;
+    constructor(samplingManager?: SamplingManager);
     /**
      * Warm up the NLP engine to avoid first-use initialization overhead
      */
@@ -310,10 +412,60 @@ export declare class NLPService {
         maxSize: number;
         entries: string[];
     };
+    /**
+     * Perform enhanced analysis with optional AI augmentation
+     */
+    analyzeAsync(text: string, options?: {
+        includeReasoning?: boolean;
+        includeSemantic?: boolean;
+        includeQuestions?: boolean;
+        domain?: string;
+    }): Promise<ComprehensiveAnalysis>;
+    /**
+     * Analyze action semantics for reflexivity tracking
+     */
+    analyzeActionSemantics(actionText: string): Promise<ActionAnalysis>;
+    /**
+     * Classify action reversibility with context
+     */
+    classifyActionReversibility(actionText: string, context?: string): Promise<'high' | 'medium' | 'low'>;
+    /**
+     * Predict action effects
+     */
+    predictActionEffects(actionText: string, context?: string): Promise<string[]>;
+    private analyzeActionLocal;
+    private parseActionAnalysis;
+    private enhanceSentiment;
+    private enhanceIntent;
+    private analyzeSemantics;
+    private analyzeReasoning;
+    private generateInsights;
+    private generateQuestions;
+    private generateSummary;
+    private generateSuggestions;
+    private parseSentimentResponse;
+    private validateEmotions;
+    private validateTone;
+    private parseIntentResponse;
+    private parseSemanticResponse;
+    private parseReasoningResponse;
+    private parseListResponse;
+    private resolvePromise;
+    private fallbackSentiment;
+    private fallbackIntent;
+    private fallbackSemantic;
+    private fallbackReasoning;
+    private defaultEmotions;
+    private defaultTone;
 }
 /**
  * Get singleton instance of NLPService
+ * @param samplingManager Optional sampling manager for AI enhancement
  */
-export declare function getNLPService(): NLPService;
+export declare function getNLPService(samplingManager?: SamplingManager): NLPService;
+/**
+ * Reset the singleton instance (mainly for testing)
+ */
+export declare function resetNLPService(): void;
 export declare const nlpService: NLPService;
 //# sourceMappingURL=NLPService.d.ts.map

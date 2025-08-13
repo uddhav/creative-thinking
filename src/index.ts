@@ -125,8 +125,11 @@ export class LateralThinkingServer {
   }
 
   constructor() {
-    // Create core components
-    const sessionManager = new SessionManager();
+    // Initialize sampling handler first
+    this.samplingHandler = new SamplingHandler();
+
+    // Create core components with sampling support
+    const sessionManager = new SessionManager(this.samplingHandler.getSamplingManager());
     const complexityAnalyzer = new HybridComplexityAnalyzer();
     const ergodicityManager = new ErgodicityManager();
 
@@ -154,9 +157,6 @@ export class LateralThinkingServer {
       this.sessionManager,
       this.responseBuilder
     );
-
-    // Initialize sampling handler
-    this.samplingHandler = new SamplingHandler();
   }
 
   /**

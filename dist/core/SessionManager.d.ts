@@ -10,6 +10,7 @@ import { type SkipDetectionResult, type SkipPattern } from './session/SkipDetect
 import { type SessionLock } from './session/SessionLock.js';
 import { ReflexivityTracker } from './ReflexivityTracker.js';
 import type { ReflexiveEffects } from '../techniques/types.js';
+import type { SamplingManager } from '../sampling/SamplingManager.js';
 export interface SessionConfig {
     maxSessions: number;
     maxSessionSize: number;
@@ -23,6 +24,7 @@ export declare class SessionManager {
     private memoryManager;
     private sessionLock;
     private reflexivityTracker;
+    private nlpService;
     private sessionCleaner;
     private sessionPersistence;
     private sessionMetrics;
@@ -30,7 +32,7 @@ export declare class SessionManager {
     private skipDetector;
     private sessionIndex;
     private config;
-    constructor();
+    constructor(samplingManager?: SamplingManager);
     /**
      * Lazy initialization for parallel execution components
      */

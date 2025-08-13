@@ -88,11 +88,11 @@ export class ParadoxicalProblemHandler extends BaseTechniqueHandler {
 
       switch (step) {
         case 1:
-          // Validate paradox identification
-          if (!stepData.paradox && !stepData.contradictions) {
+          // Validate paradox identification - accept multiple field variations
+          if (!stepData.paradox && !stepData.contradictions && !stepData.contradiction) {
             throw new ValidationError(
               ErrorCode.MISSING_REQUIRED_FIELD,
-              'Step 1 requires identifying the paradox or contradictions',
+              'Step 1 requires identifying the paradox or contradictions (fields: paradox, contradiction, or contradictions)',
               'paradox',
               { step, technique: 'paradoxical_problem' }
             );
@@ -104,7 +104,7 @@ export class ParadoxicalProblemHandler extends BaseTechniqueHandler {
           if (!stepData.solutionA && !stepData.solutionB && !stepData.parallelPaths) {
             throw new ValidationError(
               ErrorCode.MISSING_REQUIRED_FIELD,
-              'Step 2 requires developing parallel solution paths',
+              'Step 2 requires developing parallel solution paths (fields: solutionA, solutionB, or parallelPaths)',
               'parallelPaths',
               { step, technique: 'paradoxical_problem' }
             );
@@ -116,7 +116,7 @@ export class ParadoxicalProblemHandler extends BaseTechniqueHandler {
           if (!stepData.synthesis && !stepData.metaPath && !stepData.bridge) {
             throw new ValidationError(
               ErrorCode.MISSING_REQUIRED_FIELD,
-              'Step 3 requires creating a transcendent synthesis',
+              'Step 3 requires creating a transcendent synthesis (fields: synthesis, metaPath, or bridge)',
               'synthesis',
               { step, technique: 'paradoxical_problem' }
             );
@@ -124,11 +124,16 @@ export class ParadoxicalProblemHandler extends BaseTechniqueHandler {
           break;
 
         case 4:
-          // Validate non-ergodic validation
-          if (!stepData.validation && !stepData.pathContexts && !stepData.resolutionVerified) {
+          // Validate non-ergodic validation - accept finalSynthesis as well
+          if (
+            !stepData.validation &&
+            !stepData.pathContexts &&
+            !stepData.resolutionVerified &&
+            !stepData.finalSynthesis
+          ) {
             throw new ValidationError(
               ErrorCode.MISSING_REQUIRED_FIELD,
-              'Step 4 requires validating the resolution across path contexts',
+              'Step 4 requires validating the resolution across path contexts (fields: validation, pathContexts, resolutionVerified, or finalSynthesis)',
               'validation',
               { step, technique: 'paradoxical_problem' }
             );

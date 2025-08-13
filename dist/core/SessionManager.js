@@ -14,6 +14,7 @@ import { SessionIndex } from './session/SessionIndex.js';
 import { SkipDetector, } from './session/SkipDetector.js';
 import { getSessionLock } from './session/SessionLock.js';
 import { ReflexivityTracker } from './ReflexivityTracker.js';
+import { getNLPService } from '../nlp/NLPService.js';
 // Constants for memory management
 const MEMORY_THRESHOLD_FOR_GC = 0.8; // Trigger garbage collection when heap usage exceeds 80%
 export class SessionManager {
@@ -22,6 +23,7 @@ export class SessionManager {
     memoryManager;
     sessionLock;
     reflexivityTracker;
+    nlpService;
     // Extracted components
     sessionCleaner;
     sessionPersistence;
@@ -37,7 +39,7 @@ export class SessionManager {
         cleanupInterval: parseInt(process.env.CLEANUP_INTERVAL || String(60 * 60 * 1000), 10), // 1 hour
         enableMemoryMonitoring: process.env.ENABLE_MEMORY_MONITORING === 'true',
     };
-    constructor() {
+    constructor(samplingManager) {
         this.memoryManager = MemoryManager.getInstance({
             gcThreshold: MEMORY_THRESHOLD_FOR_GC,
             enableGC: true,
@@ -47,8 +49,10 @@ export class SessionManager {
         });
         // Initialize session lock for concurrent access control
         this.sessionLock = getSessionLock();
-        // Initialize reflexivity tracker
-        this.reflexivityTracker = new ReflexivityTracker();
+        // Initialize NLP service with optional sampling manager
+        this.nlpService = getNLPService(samplingManager);
+        // Initialize reflexivity tracker with NLP service
+        this.reflexivityTracker = new ReflexivityTracker(this.nlpService);
         // Initialize core components only
         this.planManager = new PlanManager();
         this.skipDetector = new SkipDetector();

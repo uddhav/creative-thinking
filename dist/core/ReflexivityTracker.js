@@ -30,7 +30,11 @@ export class ReflexivityTracker {
     actionHistory = new Map();
     sessionTimestamps = new Map();
     cleanupTimer = null;
-    constructor() {
+    nlpService;
+    actionAnalysisCache = new Map();
+    cacheTimeout = 5 * 60 * 1000; // 5 minutes
+    constructor(nlpService) {
+        this.nlpService = nlpService;
         this.startCleanupTimer();
     }
     /**
@@ -250,10 +254,33 @@ export class ReflexivityTracker {
         return this.actionHistory.get(sessionId) || [];
     }
     /**
-     * Get reflexivity assessment for future actions
+     * Get reflexivity assessment for future actions using NLP analysis
      */
-    assessFutureAction(sessionId, proposedAction) {
-        // Always assess based on action keywords first
+    async assessFutureAction(sessionId, proposedAction) {
+        // Check cache first
+        const cacheKey = `${sessionId}:${proposedAction}`;
+        const cached = this.actionAnalysisCache.get(cacheKey);
+        if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
+            return this.buildAssessment(sessionId, cached);
+        }
+        // Use NLP service for semantic analysis
+        const actionAnalysis = await this.nlpService.analyzeActionSemantics(proposedAction);
+        // Cache the analysis
+        this.actionAnalysisCache.set(cacheKey, {
+            ...actionAnalysis,
+            timestamp: Date.now(),
+        });
+        // Clean old cache entries periodically
+        if (this.actionAnalysisCache.size > 100) {
+            this.cleanActionCache();
+        }
+        return this.buildAssessment(sessionId, actionAnalysis);
+    }
+    /**
+     * Synchronous version for backward compatibility (uses local NLP only)
+     */
+    assessFutureActionSync(sessionId, proposedAction) {
+        // Use local analysis patterns as fallback
         let reversibilityAssessment = 'medium';
         const likelyEffects = [];
         if (ACTION_PATTERNS.elimination.test(proposedAction)) {
@@ -270,7 +297,6 @@ export class ReflexivityTracker {
         }
         const state = this.getRealityState(sessionId);
         if (!state) {
-            // No prior actions, but we've already assessed the proposed action
             if (likelyEffects.length === 0) {
                 likelyEffects.push('No prior actions to assess');
             }
@@ -281,13 +307,10 @@ export class ReflexivityTracker {
                 recommendation: 'Proceed with awareness that this is the first action',
             };
         }
-        // Lazy evaluation of constraints - only concatenate when needed for the return value
-        const getConstraintCount = () => state.pathsForeclosed.length +
+        const constraintCount = state.pathsForeclosed.length +
             state.stakeholderExpectations.length +
             state.technicalDependencies.length;
-        const constraintCount = getConstraintCount();
         const recommendation = this.generateRecommendation(constraintCount, reversibilityAssessment);
-        // Only concatenate arrays if we need to return them
         const currentConstraints = constraintCount > 0
             ? [
                 ...state.pathsForeclosed,
@@ -301,6 +324,50 @@ export class ReflexivityTracker {
             reversibilityAssessment,
             recommendation,
         };
+    }
+    /**
+     * Build assessment from action analysis
+     */
+    buildAssessment(sessionId, actionAnalysis) {
+        const state = this.getRealityState(sessionId);
+        if (!state) {
+            return {
+                currentConstraints: [],
+                likelyEffects: actionAnalysis.likelyEffects,
+                reversibilityAssessment: actionAnalysis.reversibility,
+                recommendation: 'Proceed with awareness that this is the first action',
+            };
+        }
+        const constraintCount = state.pathsForeclosed.length +
+            state.stakeholderExpectations.length +
+            state.technicalDependencies.length;
+        const recommendation = this.generateRecommendation(constraintCount, actionAnalysis.reversibility);
+        const currentConstraints = constraintCount > 0
+            ? [
+                ...state.pathsForeclosed,
+                ...state.stakeholderExpectations,
+                ...state.technicalDependencies,
+            ]
+            : [];
+        return {
+            currentConstraints,
+            likelyEffects: actionAnalysis.likelyEffects,
+            reversibilityAssessment: actionAnalysis.reversibility,
+            recommendation,
+        };
+    }
+    /**
+     * Clean old entries from action analysis cache
+     */
+    cleanActionCache() {
+        const now = Date.now();
+        const entriesToDelete = [];
+        this.actionAnalysisCache.forEach((value, key) => {
+            if (now - value.timestamp > this.cacheTimeout) {
+                entriesToDelete.push(key);
+            }
+        });
+        entriesToDelete.forEach(key => this.actionAnalysisCache.delete(key));
     }
     /**
      * Generate recommendation based on current state
@@ -326,6 +393,14 @@ export class ReflexivityTracker {
         this.realityStates.delete(sessionId);
         this.actionHistory.delete(sessionId);
         this.sessionTimestamps.delete(sessionId);
+        // Clear cached action analyses for this session
+        const keysToDelete = [];
+        this.actionAnalysisCache.forEach((_, key) => {
+            if (key.startsWith(`${sessionId}:`)) {
+                keysToDelete.push(key);
+            }
+        });
+        keysToDelete.forEach(key => this.actionAnalysisCache.delete(key));
     }
     /**
      * Get reflexivity summary for a session
