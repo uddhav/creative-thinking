@@ -53,19 +53,32 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
             // Get technique handler
             const handler = techniqueRegistry.getHandler(input.technique);
             // Calculate technique-local step
-            const { techniqueLocalStep: calculatedTechniqueLocalStep, techniqueIndex } = executionValidator.calculateTechniqueLocalStep(input, plan);
+            const { techniqueLocalStep: calculatedTechniqueLocalStep, techniqueIndex, originalStep, wasNormalized, } = executionValidator.calculateTechniqueLocalStep(input, plan);
             // Validate step and get step info
             const stepValidation = executionValidator.validateStepAndGetInfo(input, calculatedTechniqueLocalStep, handler);
-            if (!stepValidation.isValid) {
+            // Check if we need to handle invalid step - either validation failed or step was normalized
+            if (!stepValidation.isValid || wasNormalized) {
                 // Handle invalid step gracefully with detailed context
                 const techniqueInfo = handler.getTechniqueInfo();
+                // Provide more detailed error message based on the scenario
+                // Use originalStep from calculateTechniqueLocalStep for accurate checking
+                let errorMessage = '';
+                if (originalStep < 1) {
+                    errorMessage = `Step ${originalStep} is invalid. Steps must be positive integers starting from 1.`;
+                }
+                else if (originalStep > input.totalSteps) {
+                    errorMessage = `Step ${originalStep} exceeds total steps (${input.totalSteps}) for the plan.`;
+                }
+                else {
+                    errorMessage = `Step ${originalStep} is invalid for ${techniqueInfo.name}. Valid range is 1-${techniqueInfo.totalSteps} (technique-local) or ${techniqueIndex * techniqueInfo.totalSteps + 1}-${(techniqueIndex + 1) * techniqueInfo.totalSteps} (global).`;
+                }
                 const errorContext = errorContextBuilder.buildStepErrorContext({
                     providedStep: input.currentStep,
                     validRange: `1-${techniqueInfo.totalSteps}`,
                     technique: input.technique,
                     techniqueLocalStep: calculatedTechniqueLocalStep,
                     globalStep: input.currentStep,
-                    message: `Step ${input.currentStep} is outside valid range for ${techniqueInfo.name}`,
+                    message: errorMessage,
                 });
                 const operationData = {
                     ...input,

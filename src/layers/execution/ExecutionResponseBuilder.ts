@@ -208,6 +208,7 @@ export class ExecutionResponseBuilder {
       problem: operationData.problem,
       currentStep: operationData.currentStep,
       totalSteps: operationData.totalSteps,
+      output: operationData.output, // Include the output field
       nextStepNeeded: operationData.nextStepNeeded,
       insights: currentInsights,
       ...this.extractTechniqueSpecificFields(operationData),

@@ -210,9 +210,10 @@ describe('Performance Integration Tests', () => {
       // All should succeed
       expect(results.every(r => !r.isError)).toBe(true);
 
-      // Each should have unique sessionId
+      // With the bug fix, all executions with the same planId share the same session
       const sessionIds = results.map(r => safeJsonParse(r.content[0].text).sessionId);
-      expect(new Set(sessionIds).size).toBe(100);
+      expect(new Set(sessionIds).size).toBe(1);
+      expect(sessionIds[0]).toBe(`session_${plan.planId}`);
 
       // Performance check
       expect(duration).toBeLessThan(TIMEOUT_100_CONCURRENT); // 5 seconds for 100 executions (configurable)

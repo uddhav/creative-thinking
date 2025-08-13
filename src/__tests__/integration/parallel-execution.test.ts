@@ -98,9 +98,11 @@ describe('Parallel Execution Integration', () => {
       return parsed.sessionId;
     });
 
-    // Each technique should have its own session
+    // With the bug fix, all techniques in the same plan share the same session
     const uniqueSessionIds = new Set(sessionIds);
-    expect(uniqueSessionIds.size).toBe(3);
+    expect(uniqueSessionIds.size).toBe(1);
+    // They should all use the plan-derived session ID
+    expect(sessionIds[0]).toBe(`session_${plan.planId}`);
 
     // Parallel execution completed in ${parallelDuration}ms
 
