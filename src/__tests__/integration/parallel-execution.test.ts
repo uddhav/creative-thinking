@@ -35,8 +35,6 @@ describe('Parallel Execution Integration', () => {
     expect(plan.planId).toBeDefined();
 
     // Execute first step of each technique in parallel
-    const startTime = Date.now();
-
     const parallelResults = await client.callToolsInParallel([
       {
         name: 'execute_thinking_step',
@@ -78,9 +76,6 @@ describe('Parallel Execution Integration', () => {
         },
       },
     ]);
-
-    // Parallel execution timing (kept for debugging but not used in assertions)
-    const _parallelDuration = Date.now() - startTime;
 
     // All should succeed
     expect(parallelResults).toHaveLength(3);
