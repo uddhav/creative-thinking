@@ -159,6 +159,10 @@ export class SessionManager {
       console.error('[SessionManager] Cleared session index');
     }
 
+    // Clean up reflexivity tracker
+    this.reflexivityTracker.destroy();
+    console.error('[SessionManager] Destroyed reflexivity tracker');
+
     console.error('[SessionManager] Cleanup complete');
   }
 

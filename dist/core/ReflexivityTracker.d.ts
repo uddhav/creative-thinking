@@ -34,6 +34,21 @@ export interface ActionRecord {
 export declare class ReflexivityTracker {
     private realityStates;
     private actionHistory;
+    private sessionTimestamps;
+    private cleanupTimer;
+    constructor();
+    /**
+     * Start periodic cleanup of old sessions
+     */
+    private startCleanupTimer;
+    /**
+     * Clean up sessions older than TTL
+     */
+    private cleanupOldSessions;
+    /**
+     * Stop the cleanup timer
+     */
+    destroy(): void;
     /**
      * Get or initialize reality state for a session
      */

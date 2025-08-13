@@ -6,6 +6,32 @@
 import type { StepType, ReflexiveEffects } from '../techniques/types.js';
 
 /**
+ * Configuration constants for reflexivity tracking
+ */
+const REFLEXIVITY_CONFIG = {
+  // Memory management
+  MAX_TRACKED_SESSIONS: parseInt(process.env.MAX_REFLEXIVITY_SESSIONS || '100', 10),
+  SESSION_TTL: parseInt(process.env.REFLEXIVITY_SESSION_TTL || String(24 * 60 * 60 * 1000), 10), // 24 hours
+  CLEANUP_INTERVAL: parseInt(
+    process.env.REFLEXIVITY_CLEANUP_INTERVAL || String(60 * 60 * 1000),
+    10
+  ), // 1 hour
+
+  // Constraint thresholds
+  WARNING_CONSTRAINT_THRESHOLD: 5,
+  CAUTION_CONSTRAINT_THRESHOLD: 10,
+} as const;
+
+/**
+ * Action keyword patterns for efficient matching
+ */
+const ACTION_PATTERNS = {
+  elimination: /\b(eliminat|remov|delet|discard|abandon)/i,
+  communication: /\b(communicat|announc|declar|publish|broadcast)/i,
+  experimentation: /\b(test|experiment|trial|pilot|prototype)/i,
+} as const;
+
+/**
  * Represents the state of reality after actions have been taken
  */
 export interface RealityState {
@@ -38,6 +64,69 @@ export interface ActionRecord {
 export class ReflexivityTracker {
   private realityStates: Map<string, RealityState> = new Map();
   private actionHistory: Map<string, ActionRecord[]> = new Map();
+  private sessionTimestamps: Map<string, number> = new Map();
+  private cleanupTimer: NodeJS.Timeout | null = null;
+
+  constructor() {
+    this.startCleanupTimer();
+  }
+
+  /**
+   * Start periodic cleanup of old sessions
+   */
+  private startCleanupTimer(): void {
+    if (this.cleanupTimer) {
+      clearInterval(this.cleanupTimer);
+    }
+    this.cleanupTimer = setInterval(() => {
+      this.cleanupOldSessions();
+    }, REFLEXIVITY_CONFIG.CLEANUP_INTERVAL);
+  }
+
+  /**
+   * Clean up sessions older than TTL
+   */
+  private cleanupOldSessions(): void {
+    const now = Date.now();
+    const ttl = REFLEXIVITY_CONFIG.SESSION_TTL;
+    const sessionsToDelete: string[] = [];
+
+    this.sessionTimestamps.forEach((timestamp, sessionId) => {
+      if (now - timestamp > ttl) {
+        sessionsToDelete.push(sessionId);
+      }
+    });
+
+    sessionsToDelete.forEach(sessionId => {
+      this.clearSession(sessionId);
+    });
+
+    // Enforce max sessions limit
+    if (this.realityStates.size > REFLEXIVITY_CONFIG.MAX_TRACKED_SESSIONS) {
+      const sortedSessions = Array.from(this.sessionTimestamps.entries()).sort(
+        (a, b) => a[1] - b[1]
+      );
+
+      const toRemove = sortedSessions.slice(
+        0,
+        this.realityStates.size - REFLEXIVITY_CONFIG.MAX_TRACKED_SESSIONS
+      );
+
+      toRemove.forEach(([sessionId]) => {
+        this.clearSession(sessionId);
+      });
+    }
+  }
+
+  /**
+   * Stop the cleanup timer
+   */
+  public destroy(): void {
+    if (this.cleanupTimer) {
+      clearInterval(this.cleanupTimer);
+      this.cleanupTimer = null;
+    }
+  }
 
   /**
    * Get or initialize reality state for a session
@@ -94,7 +183,7 @@ export class ReflexivityTracker {
       this.updateRealityState(sessionId, changes);
     }
 
-    // Store action record
+    // Store action record and update timestamp
     if (!this.actionHistory.has(sessionId)) {
       this.actionHistory.set(sessionId, []);
     }
@@ -102,6 +191,9 @@ export class ReflexivityTracker {
     if (history) {
       history.push(record);
     }
+
+    // Update session timestamp for cleanup tracking
+    this.sessionTimestamps.set(sessionId, Date.now());
 
     return record;
   }
@@ -123,15 +215,15 @@ export class ReflexivityTracker {
     const existingConstraints = currentState.pathsForeclosed.length;
     const existingExpectations = currentState.stakeholderExpectations.length;
 
-    // Check for overconstrained environment (future enhancement point)
-    if (existingConstraints > 5 || existingExpectations > 5) {
-      // Future: Could trigger warnings about overconstrained solution space
-      // For now, we just track this for potential future use
-      const isOverconstrained = true;
-      if (isOverconstrained) {
-        // This flag could be used to adjust reflexivity assessment
-        // or provide warnings to the user in future versions
-      }
+    // Check for overconstrained environment
+    // This information is used in assessFutureAction to provide appropriate warnings
+    // Future enhancement: Could trigger real-time warnings during execution
+    if (
+      existingConstraints > REFLEXIVITY_CONFIG.WARNING_CONSTRAINT_THRESHOLD ||
+      existingExpectations > REFLEXIVITY_CONFIG.WARNING_CONSTRAINT_THRESHOLD
+    ) {
+      // Currently just noted for future use in warning systems
+      // The actual warning logic is in assessFutureAction
     }
 
     // Map reflexive effects to reality state changes
@@ -201,29 +293,28 @@ export class ReflexivityTracker {
   private updateRealityState(sessionId: string, changes: Partial<RealityState>): void {
     const state = this.getOrInitRealityState(sessionId);
 
-    // Merge changes into state
+    // Type-safe helper to check if a key is an array property
+    const isArrayProperty = (key: string): key is keyof Omit<RealityState, 'lastModified'> => {
+      return [
+        'stakeholderExpectations',
+        'resourceCommitments',
+        'relationshipDynamics',
+        'technicalDependencies',
+        'pathsForeclosed',
+        'optionsCreated',
+      ].includes(key);
+    };
+
+    // Merge changes into state with proper type checking
     Object.entries(changes).forEach(([key, value]) => {
-      if (Array.isArray(value)) {
-        const stateKey = key as keyof RealityState;
+      if (Array.isArray(value) && isArrayProperty(key)) {
         // Initialize array if it doesn't exist
-        if (!state[stateKey]) {
-          // Type-safe initialization for array properties
-          if (
-            stateKey === 'stakeholderExpectations' ||
-            stateKey === 'resourceCommitments' ||
-            stateKey === 'relationshipDynamics' ||
-            stateKey === 'technicalDependencies' ||
-            stateKey === 'pathsForeclosed' ||
-            stateKey === 'optionsCreated'
-          ) {
-            state[stateKey] = [];
-          }
+        if (!state[key]) {
+          state[key] = [];
         }
-        // Add new values if the state property is an array
-        const stateValue = state[stateKey];
-        if (Array.isArray(stateValue)) {
-          stateValue.push(...value);
-        }
+        // Add new values - state[key] is definitely an array after initialization
+        const stateArray = state[key];
+        stateArray.push(...value);
       }
     });
 
@@ -256,44 +347,55 @@ export class ReflexivityTracker {
     reversibilityAssessment: 'high' | 'medium' | 'low';
     recommendation: string;
   } {
-    const state = this.getRealityState(sessionId);
-    if (!state) {
-      return {
-        currentConstraints: [],
-        likelyEffects: ['No prior actions to assess'],
-        reversibilityAssessment: 'high',
-        recommendation: 'Proceed with awareness that this is the first action',
-      };
-    }
-
-    const currentConstraints = [
-      ...state.pathsForeclosed,
-      ...state.stakeholderExpectations,
-      ...state.technicalDependencies,
-    ];
-
-    // Assess based on action keywords (case-insensitive)
+    // Always assess based on action keywords first
     let reversibilityAssessment: 'high' | 'medium' | 'low' = 'medium';
     const likelyEffects: string[] = [];
-    const lowerAction = proposedAction.toLowerCase();
 
-    if (lowerAction.includes('eliminat') || lowerAction.includes('remov')) {
+    if (ACTION_PATTERNS.elimination.test(proposedAction)) {
       reversibilityAssessment = 'low';
       likelyEffects.push('Permanent removal of capabilities');
     }
-    if (lowerAction.includes('communicat') || lowerAction.includes('announc')) {
+    if (ACTION_PATTERNS.communication.test(proposedAction)) {
       reversibilityAssessment = 'low';
       likelyEffects.push('Creates stakeholder expectations');
     }
-    if (lowerAction.includes('test') || lowerAction.includes('experiment')) {
+    if (ACTION_PATTERNS.experimentation.test(proposedAction)) {
       reversibilityAssessment = 'high';
       likelyEffects.push('Learning without commitment');
     }
 
-    const recommendation = this.generateRecommendation(
-      currentConstraints.length,
-      reversibilityAssessment
-    );
+    const state = this.getRealityState(sessionId);
+    if (!state) {
+      // No prior actions, but we've already assessed the proposed action
+      if (likelyEffects.length === 0) {
+        likelyEffects.push('No prior actions to assess');
+      }
+      return {
+        currentConstraints: [],
+        likelyEffects,
+        reversibilityAssessment,
+        recommendation: 'Proceed with awareness that this is the first action',
+      };
+    }
+
+    // Lazy evaluation of constraints - only concatenate when needed for the return value
+    const getConstraintCount = () =>
+      state.pathsForeclosed.length +
+      state.stakeholderExpectations.length +
+      state.technicalDependencies.length;
+
+    const constraintCount = getConstraintCount();
+    const recommendation = this.generateRecommendation(constraintCount, reversibilityAssessment);
+
+    // Only concatenate arrays if we need to return them
+    const currentConstraints =
+      constraintCount > 0
+        ? [
+            ...state.pathsForeclosed,
+            ...state.stakeholderExpectations,
+            ...state.technicalDependencies,
+          ]
+        : [];
 
     return {
       currentConstraints,
@@ -310,10 +412,16 @@ export class ReflexivityTracker {
     constraintCount: number,
     reversibility: 'high' | 'medium' | 'low'
   ): string {
-    if (constraintCount > 10 && reversibility === 'low') {
+    if (
+      constraintCount > REFLEXIVITY_CONFIG.CAUTION_CONSTRAINT_THRESHOLD &&
+      reversibility === 'low'
+    ) {
       return 'Caution: Many existing constraints and low reversibility. Consider more flexible approach.';
     }
-    if (constraintCount > 5 && reversibility === 'medium') {
+    if (
+      constraintCount > REFLEXIVITY_CONFIG.WARNING_CONSTRAINT_THRESHOLD &&
+      reversibility === 'medium'
+    ) {
       return 'Awareness: Moderate constraints exist. Design with exit strategies.';
     }
     if (reversibility === 'high') {
@@ -328,6 +436,7 @@ export class ReflexivityTracker {
   public clearSession(sessionId: string): void {
     this.realityStates.delete(sessionId);
     this.actionHistory.delete(sessionId);
+    this.sessionTimestamps.delete(sessionId);
   }
 
   /**
