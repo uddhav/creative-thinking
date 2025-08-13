@@ -57,8 +57,8 @@ export class ExecutionResponseBuilder {
         if (input.risks && input.risks.length > 0) {
             this.telemetry.trackRisk(sessionId, input.technique, input.risks.length).catch(console.error);
         }
-        // Monitor memory usage periodically (every 10 steps)
-        if (session.history.length % 10 === 0 && this.sessionManager) {
+        // Monitor memory usage periodically (every 10 steps, but not on the first step)
+        if (session.history.length > 0 && session.history.length % 10 === 0 && this.sessionManager) {
             // Access reflexivity tracker through SessionManager internals
             // Type-safe access pattern for internal APIs
             const sessionManagerInternal = this.sessionManager;
