@@ -104,6 +104,10 @@ export declare class ReflexivityTracker {
      */
     private cleanActionCache;
     /**
+     * Lazily iterate over all constraints without creating arrays
+     */
+    private getConstraintsIterator;
+    /**
      * Generate recommendation based on current state
      */
     private generateRecommendation;

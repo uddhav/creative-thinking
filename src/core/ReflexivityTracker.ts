@@ -475,14 +475,9 @@ export class ReflexivityTracker {
       actionAnalysis.reversibility
     );
 
+    // Use lazy evaluation to avoid unnecessary array creation
     const currentConstraints =
-      constraintCount > 0
-        ? [
-            ...state.pathsForeclosed,
-            ...state.stakeholderExpectations,
-            ...state.technicalDependencies,
-          ]
-        : [];
+      constraintCount > 0 ? Array.from(this.getConstraintsIterator(state)) : [];
 
     return {
       currentConstraints,
@@ -506,6 +501,15 @@ export class ReflexivityTracker {
     });
 
     entriesToDelete.forEach(key => this.actionAnalysisCache.delete(key));
+  }
+
+  /**
+   * Lazily iterate over all constraints without creating arrays
+   */
+  private *getConstraintsIterator(state: RealityState): Generator<string> {
+    yield* state.pathsForeclosed;
+    yield* state.stakeholderExpectations;
+    yield* state.technicalDependencies;
   }
 
   /**
