@@ -9,16 +9,18 @@ import type { TechniqueRegistry } from '../../techniques/TechniqueRegistry.js';
 import type { TechniqueHandler } from '../../techniques/types.js';
 import type { EscalationPromptGenerator } from '../../ergodicity/escalationPrompts.js';
 import type { HybridComplexityAnalyzer } from '../../complexity/analyzer.js';
+import type { SessionManager } from '../../core/SessionManager.js';
 export declare class ExecutionResponseBuilder {
     private complexityAnalyzer;
     private escalationGenerator;
     private techniqueRegistry?;
+    private sessionManager?;
     private responseBuilder;
     private memoryAnalyzer;
     private jsonOptimizer;
     private telemetry;
     private completionTracker;
-    constructor(complexityAnalyzer: HybridComplexityAnalyzer, escalationGenerator: EscalationPromptGenerator, techniqueRegistry?: TechniqueRegistry | undefined);
+    constructor(complexityAnalyzer: HybridComplexityAnalyzer, escalationGenerator: EscalationPromptGenerator, techniqueRegistry?: TechniqueRegistry | undefined, sessionManager?: SessionManager | undefined);
     /**
      * Build comprehensive execution response
      */

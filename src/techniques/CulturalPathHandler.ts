@@ -12,52 +12,82 @@
  * rather than just the integration of different perspectives.
  */
 
-import { BaseTechniqueHandler, type TechniqueInfo } from './types.js';
+import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 
-interface CulturalPathStep {
-  name: string;
-  focus: string;
-  emoji: string;
-  description?: string;
-}
-
 export class CulturalPathHandler extends BaseTechniqueHandler {
-  private readonly steps: CulturalPathStep[] = [
+  private readonly steps: StepInfo[] = [
     {
       name: 'Cultural Landscape Mapping',
       focus: 'Map cultural contexts and path dependencies',
       emoji: '🗺️',
-      description:
-        'Identify cultural contexts, values, traditions, and social dynamics that shape available solution paths',
+      type: 'thinking',
     },
     {
       name: 'Context Sensitivity Analysis',
       focus: 'Assess cultural constraints and opportunities',
       emoji: '🎭',
-      description:
-        'Analyze how different cultural contexts enable or constrain certain paths and solutions',
+      type: 'thinking',
     },
     {
       name: 'Cross-Cultural Bridge Building',
       focus: 'Create paths that connect diverse perspectives',
       emoji: '🌉',
-      description:
-        'Design solutions that bridge cultural differences while respecting unique values and practices',
+      type: 'action',
+      reflexiveEffects: {
+        triggers: ['Building cultural bridges', 'Establishing connections'],
+        realityChanges: [
+          'New relationships formed between cultural groups',
+          'Shared expectations created',
+          'Cultural boundaries become more permeable',
+        ],
+        futureConstraints: [
+          'Must maintain established bridges',
+          'Cannot ignore connected communities',
+          'Bridge commitments require ongoing maintenance',
+        ],
+        reversibility: 'medium',
+      },
     },
     {
       name: 'Adaptive Path Navigation',
       focus: 'Navigate flexibly through cultural terrain',
       emoji: '🧭',
-      description:
-        'Develop adaptive strategies that can shift based on cultural feedback and contextual changes',
+      type: 'action',
+      reflexiveEffects: {
+        triggers: ['Choosing navigation path', 'Making directional decisions'],
+        realityChanges: [
+          'Path choices foreclose alternatives',
+          'Cultural stakeholders remember your journey',
+          'Trust builds or erodes based on navigation',
+        ],
+        futureConstraints: [
+          'Cannot revisit rejected paths easily',
+          'Must honor path commitments made',
+          'Navigation history constrains future options',
+        ],
+        reversibility: 'low',
+      },
     },
     {
       name: 'Cultural Synthesis',
       focus: 'Integrate diverse cultural wisdom',
       emoji: '🌍',
-      description:
-        'Synthesize insights from multiple cultural paths into innovative, culturally-aware solutions',
+      type: 'action',
+      reflexiveEffects: {
+        triggers: ['Synthesizing cultural elements', 'Creating new combinations'],
+        realityChanges: [
+          'New cultural hybrid emerges',
+          'Original cultures influenced by synthesis',
+          'Precedent set for future integration',
+        ],
+        futureConstraints: [
+          'Must support synthesized approach',
+          'Cannot easily separate merged elements',
+          'Cultural fusion creates new expectations',
+        ],
+        reversibility: 'low',
+      },
     },
   ];
 
@@ -75,10 +105,15 @@ export class CulturalPathHandler extends BaseTechniqueHandler {
         canParallelize: false,
         description: 'Steps build sequentially from mapping to synthesis',
       },
+      reflexivityProfile: {
+        primaryCommitmentType: 'path',
+        overallReversibility: 'medium',
+        riskLevel: 'medium',
+      },
     };
   }
 
-  getStepInfo(step: number): CulturalPathStep {
+  getStepInfo(step: number): StepInfo {
     const stepInfo = this.steps[step - 1];
     if (!stepInfo) {
       throw new ValidationError(

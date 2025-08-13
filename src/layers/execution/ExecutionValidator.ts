@@ -280,13 +280,38 @@ export class ExecutionValidator {
         }
       }
     } else {
-      // Create new session with auto-generated ID
-      session = this.initializeSession(input, ergodicityManager);
-      sessionId = this.sessionManager.createSession(session);
+      // When no sessionId is provided but planId exists, derive sessionId from planId
+      // This ensures parallel execution shares the same session
+      if (input.planId) {
+        // Use plan-derived sessionId for consistency across parallel calls
+        sessionId = `session_${input.planId}`;
 
-      // Track session start and technique start
-      this.telemetry.trackSessionStart(sessionId, input.problem.length).catch(console.error);
-      this.telemetry.trackTechniqueStart(sessionId, input.technique).catch(console.error);
+        // Check if this session already exists
+        const existingSession = this.sessionManager.getSession(sessionId);
+        if (existingSession) {
+          session = existingSession;
+          // Track technique start for this parallel execution
+          if (input.currentStep === 1) {
+            this.telemetry.trackTechniqueStart(sessionId, input.technique).catch(console.error);
+          }
+        } else {
+          // Create new session with plan-derived ID
+          session = this.initializeSession(input, ergodicityManager);
+          sessionId = this.sessionManager.createSession(session, sessionId);
+
+          // Track session start and technique start
+          this.telemetry.trackSessionStart(sessionId, input.problem.length).catch(console.error);
+          this.telemetry.trackTechniqueStart(sessionId, input.technique).catch(console.error);
+        }
+      } else {
+        // Create new session with auto-generated ID (no planId provided)
+        session = this.initializeSession(input, ergodicityManager);
+        sessionId = this.sessionManager.createSession(session);
+
+        // Track session start and technique start
+        this.telemetry.trackSessionStart(sessionId, input.problem.length).catch(console.error);
+        this.telemetry.trackTechniqueStart(sessionId, input.technique).catch(console.error);
+      }
     }
 
     // Update session activity
@@ -306,28 +331,89 @@ export class ExecutionValidator {
     techniqueLocalStep: number;
     techniqueIndex: number;
     stepsBeforeThisTechnique: number;
+    originalStep: number;
+    wasNormalized: boolean;
   } {
+    const originalStep = input.currentStep;
     let techniqueLocalStep = input.currentStep;
     let techniqueIndex = 0;
     let stepsBeforeThisTechnique = 0;
+    let wasNormalized = false;
 
     if (input.planId && plan) {
-      // Find which technique we're on
+      // Find which technique we're on and calculate total steps
+      let totalPlanSteps = 0;
+      let foundTechnique = false;
+
       for (let i = 0; i < plan.workflow.length; i++) {
         if (plan.workflow[i].technique === input.technique) {
           techniqueIndex = i;
-          break;
+          foundTechnique = true;
+        } else if (!foundTechnique) {
+          // Accumulate steps before finding our technique
+          stepsBeforeThisTechnique += plan.workflow[i].steps.length;
         }
-        // Always accumulate steps for consistent behavior
-        stepsBeforeThisTechnique += plan.workflow[i].steps.length;
+        totalPlanSteps += plan.workflow[i].steps.length;
       }
 
-      // Always use sequential step numbering for consistency
-      // This ensures identical responses regardless of executionMode
-      techniqueLocalStep = input.currentStep - stepsBeforeThisTechnique;
+      // Determine if input.currentStep is global or technique-local
+      // Global steps are in range 1 to totalPlanSteps
+      // Technique-local steps are in range 1 to technique's step count
+      const currentTechniqueSteps = plan.workflow[techniqueIndex]?.steps.length || 0;
+
+      // Check if this could be a global step number
+      // A step is global if it falls within the global range for this technique
+      const globalStartForTechnique = stepsBeforeThisTechnique + 1;
+      const globalEndForTechnique = stepsBeforeThisTechnique + currentTechniqueSteps;
+
+      if (
+        input.currentStep >= globalStartForTechnique &&
+        input.currentStep <= globalEndForTechnique &&
+        input.currentStep <= totalPlanSteps
+      ) {
+        // This is a global step number for this technique
+        techniqueLocalStep = input.currentStep - stepsBeforeThisTechnique;
+      } else if (input.currentStep >= 1 && input.currentStep <= currentTechniqueSteps) {
+        // This is a technique-local step number
+        // Only treat as local if it's not in the global range
+        // (avoids ambiguity when local and global ranges overlap)
+        techniqueLocalStep = input.currentStep;
+      } else if (input.currentStep > totalPlanSteps) {
+        // Step number exceeds total plan steps
+        console.error(`Step ${input.currentStep} exceeds total plan steps ${totalPlanSteps}`);
+        techniqueLocalStep = Math.max(1, Math.min(input.currentStep, currentTechniqueSteps));
+        wasNormalized = true;
+      } else {
+        // Step is outside this technique's range
+        if (input.currentStep < globalStartForTechnique) {
+          console.error(
+            `Step ${input.currentStep} is before technique ${input.technique} which starts at global step ${globalStartForTechnique}`
+          );
+          techniqueLocalStep = 1;
+          wasNormalized = true;
+        } else {
+          console.error(
+            `Step ${input.currentStep} is after technique ${input.technique} which ends at global step ${globalEndForTechnique}`
+          );
+          techniqueLocalStep = currentTechniqueSteps;
+          wasNormalized = true;
+        }
+      }
     }
 
-    return { techniqueLocalStep, techniqueIndex, stepsBeforeThisTechnique };
+    // Ensure techniqueLocalStep is never negative
+    if (techniqueLocalStep < 1) {
+      techniqueLocalStep = Math.max(1, techniqueLocalStep);
+      wasNormalized = true;
+    }
+
+    return {
+      techniqueLocalStep,
+      techniqueIndex,
+      stepsBeforeThisTechnique,
+      originalStep,
+      wasNormalized,
+    };
   }
 
   /**
@@ -342,11 +428,34 @@ export class ExecutionValidator {
     stepInfo?: { name: string; focus: string; emoji: string } | null;
     normalizedStep: number;
   } {
-    // Store original step for error reporting
+    // Store original step for error reporting before normalization
     const originalLocalStep = techniqueLocalStep;
+    let wasNormalized = false;
 
-    // Check if the original step is invalid
-    const isOriginalStepInvalid = !handler.validateStep(originalLocalStep, input);
+    // Get technique info for validation
+    const techniqueInfo = handler.getTechniqueInfo();
+    const maxSteps = techniqueInfo.totalSteps;
+
+    // Add validation to prevent negative step numbers
+    if (techniqueLocalStep < 1) {
+      console.error(
+        `Invalid technique-local step ${techniqueLocalStep} for ${input.technique}. Step must be >= 1. Using step 1 as fallback.`
+      );
+      techniqueLocalStep = 1;
+      wasNormalized = true;
+    }
+
+    // Check if step is out of bounds
+    if (techniqueLocalStep > maxSteps) {
+      console.error(
+        `Step ${techniqueLocalStep} exceeds maximum steps (${maxSteps}) for ${input.technique}. Using last step as fallback.`
+      );
+      techniqueLocalStep = maxSteps;
+      wasNormalized = true;
+    }
+
+    // Check if the original step is invalid (including negative or out of bounds)
+    const isOriginalStepInvalid = wasNormalized || !handler.validateStep(originalLocalStep, input);
 
     if (isOriginalStepInvalid) {
       // Handle invalid step - visual formatter expects this

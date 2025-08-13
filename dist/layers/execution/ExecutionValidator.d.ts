@@ -56,6 +56,8 @@ export declare class ExecutionValidator {
         techniqueLocalStep: number;
         techniqueIndex: number;
         stepsBeforeThisTechnique: number;
+        originalStep: number;
+        wasNormalized: boolean;
     };
     /**
      * Validate step and get step info

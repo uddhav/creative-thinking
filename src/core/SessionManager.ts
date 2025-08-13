@@ -22,6 +22,11 @@ import {
   type SkipPattern,
 } from './session/SkipDetector.js';
 import { getSessionLock, type SessionLock } from './session/SessionLock.js';
+import { ReflexivityTracker } from './ReflexivityTracker.js';
+import type { ReflexiveEffects } from '../techniques/types.js';
+import { getNLPService } from '../nlp/NLPService.js';
+import type { NLPService } from '../nlp/NLPService.js';
+import type { SamplingManager } from '../sampling/SamplingManager.js';
 
 // Constants for memory management
 const MEMORY_THRESHOLD_FOR_GC = 0.8; // Trigger garbage collection when heap usage exceeds 80%
@@ -39,6 +44,8 @@ export class SessionManager {
   private currentSessionId: string | null = null;
   private memoryManager: MemoryManager;
   private sessionLock: SessionLock;
+  private reflexivityTracker: ReflexivityTracker;
+  private nlpService: NLPService;
 
   // Extracted components
   private sessionCleaner: SessionCleaner;
@@ -58,7 +65,7 @@ export class SessionManager {
     enableMemoryMonitoring: process.env.ENABLE_MEMORY_MONITORING === 'true',
   };
 
-  constructor() {
+  constructor(samplingManager?: SamplingManager) {
     this.memoryManager = MemoryManager.getInstance({
       gcThreshold: MEMORY_THRESHOLD_FOR_GC,
       enableGC: true,
@@ -69,6 +76,12 @@ export class SessionManager {
 
     // Initialize session lock for concurrent access control
     this.sessionLock = getSessionLock();
+
+    // Initialize NLP service with optional sampling manager
+    this.nlpService = getNLPService(samplingManager);
+
+    // Initialize reflexivity tracker with NLP service
+    this.reflexivityTracker = new ReflexivityTracker(this.nlpService);
 
     // Initialize core components only
     this.planManager = new PlanManager();
@@ -152,6 +165,10 @@ export class SessionManager {
       this.sessionIndex = null;
       console.error('[SessionManager] Cleared session index');
     }
+
+    // Clean up reflexivity tracker
+    this.reflexivityTracker.destroy();
+    console.error('[SessionManager] Destroyed reflexivity tracker');
 
     console.error('[SessionManager] Cleanup complete');
   }
@@ -503,5 +520,49 @@ export class SessionManager {
    */
   public getSessionLock(): SessionLock {
     return this.sessionLock;
+  }
+
+  /**
+   * Get reflexivity data for a session
+   */
+  public getSessionReflexivity(sessionId: string): {
+    realityState: ReturnType<ReflexivityTracker['getRealityState']>;
+    actionHistory: ReturnType<ReflexivityTracker['getActionHistory']>;
+    summary: ReturnType<ReflexivityTracker['getSessionSummary']>;
+  } | null {
+    const session = this.sessions.get(sessionId);
+    if (!session) {
+      return null;
+    }
+
+    return {
+      realityState: this.reflexivityTracker.getRealityState(sessionId),
+      actionHistory: this.reflexivityTracker.getActionHistory(sessionId),
+      summary: this.reflexivityTracker.getSessionSummary(sessionId),
+    };
+  }
+
+  /**
+   * Track reflexivity for a step execution
+   */
+  public trackReflexivity(
+    sessionId: string,
+    technique: string,
+    stepNumber: number,
+    stepType?: 'thinking' | 'action',
+    reflexiveEffects?: ReflexiveEffects
+  ): void {
+    if (stepType) {
+      // Use technique and step as action description
+      const actionDescription = `${technique} step ${stepNumber}`;
+      this.reflexivityTracker.trackStep(
+        sessionId,
+        technique,
+        stepNumber,
+        stepType,
+        actionDescription,
+        reflexiveEffects
+      );
+    }
   }
 }

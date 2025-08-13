@@ -11,20 +11,13 @@
  * This technique emphasizes the journey and navigation through cultural terrain,
  * rather than just the integration of different perspectives.
  */
-import { BaseTechniqueHandler, type TechniqueInfo } from './types.js';
-interface CulturalPathStep {
-    name: string;
-    focus: string;
-    emoji: string;
-    description?: string;
-}
+import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
 export declare class CulturalPathHandler extends BaseTechniqueHandler {
     private readonly steps;
     getTechniqueInfo(): TechniqueInfo;
-    getStepInfo(step: number): CulturalPathStep;
+    getStepInfo(step: number): StepInfo;
     getStepGuidance(step: number, problem: string): string;
     validateStep(step: number, data: unknown): boolean;
     getPromptContext(step: number): Record<string, unknown>;
 }
-export {};
 //# sourceMappingURL=CulturalPathHandler.d.ts.map

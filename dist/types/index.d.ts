@@ -398,6 +398,15 @@ export interface ThinkingOperationData {
         prompt: string;
         survivalConstraints: string[];
     };
+    paradox?: string;
+    contradictions?: string[];
+    solutionA?: string;
+    solutionB?: string;
+    metaPath?: string;
+    bridge?: string;
+    validation?: string;
+    pathContexts?: string[];
+    resolutionVerified?: boolean;
     neuralMappings?: string[];
     patternGenerations?: string[];
     interferenceAnalysis?: {

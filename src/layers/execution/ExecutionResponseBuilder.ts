@@ -25,6 +25,7 @@ import type { HybridComplexityAnalyzer } from '../../complexity/analyzer.js';
 import { monitorCriticalSection } from '../../utils/PerformanceIntegration.js';
 import { TelemetryCollector } from '../../telemetry/TelemetryCollector.js';
 import { SessionCompletionTracker } from '../../core/session/SessionCompletionTracker.js';
+import type { SessionManager } from '../../core/SessionManager.js';
 
 interface ComplexitySuggestion {
   complexityNote: string;
@@ -41,7 +42,8 @@ export class ExecutionResponseBuilder {
   constructor(
     private complexityAnalyzer: HybridComplexityAnalyzer,
     private escalationGenerator: EscalationPromptGenerator,
-    private techniqueRegistry?: TechniqueRegistry
+    private techniqueRegistry?: TechniqueRegistry,
+    private sessionManager?: SessionManager
   ) {
     this.jsonOptimizer = new JsonOptimizer({
       maxArrayLength: 50, // Limit array sizes for history, path memory
@@ -98,6 +100,47 @@ export class ExecutionResponseBuilder {
     // Track risks if identified
     if (input.risks && input.risks.length > 0) {
       this.telemetry.trackRisk(sessionId, input.technique, input.risks.length).catch(console.error);
+    }
+
+    // Monitor memory usage periodically (every 10 steps, but not on the first step)
+    if (session.history.length > 0 && session.history.length % 10 === 0 && this.sessionManager) {
+      // Access reflexivity tracker through SessionManager internals
+      // Type-safe access pattern for internal APIs
+      const sessionManagerInternal = this.sessionManager as unknown as {
+        reflexivityTracker?: {
+          getMemoryStats?: () => {
+            estimatedMemoryBytes: number;
+            sessionCount: number;
+            totalActions: number;
+            totalConstraints: number;
+          };
+        };
+      };
+
+      const reflexivityTracker = sessionManagerInternal.reflexivityTracker;
+      if (reflexivityTracker?.getMemoryStats) {
+        const memStats = reflexivityTracker.getMemoryStats();
+
+        // Warn if memory usage is high
+        const MB = 1024 * 1024;
+        if (memStats.estimatedMemoryBytes > 10 * MB) {
+          console.warn(
+            `[Memory Warning] High memory usage detected: ${(memStats.estimatedMemoryBytes / MB).toFixed(2)}MB across ${memStats.sessionCount} sessions`
+          );
+        }
+
+        // Log memory stats for monitoring (telemetry doesn't have trackMemoryUsage yet)
+        // Using console.error for DEBUG logging as it's allowed by lint rules
+        if (process.env.LOG_LEVEL === 'DEBUG') {
+          console.error('[Memory Stats]', {
+            sessionId,
+            estimatedBytes: memStats.estimatedMemoryBytes,
+            sessionCount: memStats.sessionCount,
+            totalActions: memStats.totalActions,
+            totalConstraints: memStats.totalConstraints,
+          });
+        }
+      }
     }
 
     // Enhance response object directly (no parsing needed)
@@ -206,6 +249,7 @@ export class ExecutionResponseBuilder {
       problem: operationData.problem,
       currentStep: operationData.currentStep,
       totalSteps: operationData.totalSteps,
+      output: operationData.output, // Include the output field
       nextStepNeeded: operationData.nextStepNeeded,
       insights: currentInsights,
       ...this.extractTechniqueSpecificFields(operationData),
@@ -218,6 +262,23 @@ export class ExecutionResponseBuilder {
     }
     if (executionMetadata) {
       responseData.executionMetadata = executionMetadata;
+    }
+
+    // Add reflexivity data for supported techniques (TRIZ and Cultural Path pilot)
+    // Only show reflexivity data if there have been action steps
+    if (
+      this.sessionManager &&
+      (input.technique === 'triz' || input.technique === 'cultural_path')
+    ) {
+      const reflexivityData = this.sessionManager.getSessionReflexivity(sessionId);
+      // Only include reflexivity if there have been action steps (actionSteps > 0)
+      if (reflexivityData && reflexivityData.summary && reflexivityData.summary.actionSteps > 0) {
+        responseData.reflexivity = {
+          summary: reflexivityData.summary,
+          currentConstraints: reflexivityData.realityState?.pathsForeclosed || [],
+          activeExpectations: reflexivityData.realityState?.stakeholderExpectations || [],
+        };
+      }
     }
 
     return { responseData, currentInsights };

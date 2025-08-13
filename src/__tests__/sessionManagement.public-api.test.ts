@@ -84,9 +84,10 @@ describe('Session Management - Public API', () => {
 
       const step2Response = JSON.parse(step2Result.content[0].text);
 
-      // Should have created a new session with a different ID
+      // With the bug fix, session is derived from planId when not provided
+      // So it should reuse the same session ID pattern
       expect(step2Response.sessionId).toBeDefined();
-      expect(step2Response.sessionId).not.toBe(sessionId);
+      expect(step2Response.sessionId).toBe(`session_${planData.planId}`);
 
       // Now try to access the old session directly - it should recreate with the same ID
       const step3Result = await server.executeThinkingStep({
@@ -102,9 +103,9 @@ describe('Session Management - Public API', () => {
       });
 
       const step3Response = JSON.parse(step3Result.content[0].text);
-      // It will recreate the session with the same ID but fresh history
+      // With plan-derived sessionId, the session is preserved
       expect(step3Response.sessionId).toBe(sessionId);
-      expect(step3Response.historyLength).toBe(1); // Fresh session
+      expect(step3Response.historyLength).toBe(2); // Session preserved from step 1
     });
 
     it('should keep sessions alive when accessed', async () => {

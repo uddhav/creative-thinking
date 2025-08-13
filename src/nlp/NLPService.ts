@@ -19,6 +19,7 @@ import type {
   CompromiseTerm,
   CompromiseSentence,
 } from '../core/nlp-types.js';
+import type { SamplingManager } from '../sampling/SamplingManager.js';
 
 // Type assertion for the nlp library
 const nlpTyped = nlp as CompromiseLibrary;
@@ -204,6 +205,101 @@ export interface NGramAnalysis {
 }
 
 /**
+ * Enhanced sentiment analysis with nuanced emotions
+ */
+export interface EnhancedSentiment {
+  basicSentiment: {
+    polarity: 'positive' | 'negative' | 'neutral' | 'mixed';
+    score: number;
+  };
+  emotions: {
+    joy: number;
+    sadness: number;
+    anger: number;
+    fear: number;
+    surprise: number;
+    disgust: number;
+    trust: number;
+    anticipation: number;
+  };
+  tone: {
+    formal: number;
+    casual: number;
+    professional: number;
+    academic: number;
+    creative: number;
+  };
+  confidence: number;
+}
+
+/**
+ * Enhanced intent with context understanding
+ */
+export interface EnhancedIntent {
+  primaryIntent: string;
+  secondaryIntents: string[];
+  contextualFactors: {
+    urgency: 'low' | 'medium' | 'high';
+    formality: 'informal' | 'neutral' | 'formal';
+    emotionalState: string;
+    domainContext: string;
+  };
+  suggestedResponses: string[];
+  confidence: number;
+}
+
+/**
+ * Deep semantic understanding
+ */
+export interface SemanticUnderstanding {
+  mainTheme: string;
+  subThemes: string[];
+  implicitMeanings: string[];
+  culturalReferences: string[];
+  metaphors: Array<{
+    expression: string;
+    literalMeaning: string;
+    intendedMeaning: string;
+  }>;
+  ironySarcasm: {
+    detected: boolean;
+    instances: string[];
+    confidence: number;
+  };
+}
+
+/**
+ * Complex reasoning detection
+ */
+export interface ReasoningAnalysis {
+  argumentStructure: {
+    claims: string[];
+    evidence: string[];
+    conclusions: string[];
+    assumptions: string[];
+  };
+  logicalFallacies: Array<{
+    type: string;
+    description: string;
+    example: string;
+  }>;
+  reasoningType: 'deductive' | 'inductive' | 'abductive' | 'analogical' | 'mixed';
+  strengthOfArgument: number;
+}
+
+/**
+ * Action analysis for reflexivity tracking
+ */
+export interface ActionAnalysis {
+  actionType: string;
+  reversibility: 'high' | 'medium' | 'low';
+  likelyEffects: string[];
+  stakeholderImpact: string[];
+  temporalScope: 'immediate' | 'short-term' | 'long-term' | 'permanent';
+  confidence: number;
+}
+
+/**
  * Comprehensive analysis combining all features
  */
 export interface ComprehensiveAnalysis {
@@ -217,6 +313,16 @@ export interface ComprehensiveAnalysis {
   intent: IntentClassification;
   temporal: TemporalAnalysis;
   readability: ReadabilityMetrics;
+  enhanced?: {
+    sentiment: EnhancedSentiment;
+    intent: EnhancedIntent;
+    semantic: SemanticUnderstanding;
+    reasoning: ReasoningAnalysis;
+    summary: string;
+    keyInsights: string[];
+    questions: string[];
+    suggestions: string[];
+  };
   metadata: {
     wordCount: number;
     sentenceCount: number;
@@ -236,14 +342,16 @@ interface CacheEntry {
 }
 
 /**
- * Main NLP Service class
+ * Main NLP Service class - Unified service with local and AI-enhanced capabilities
  */
 export class NLPService {
   private cache: Map<string, CacheEntry> = new Map();
   private readonly cacheTimeout = 5 * 60 * 1000; // 5 minutes
   private readonly maxCacheSize = 100;
+  public samplingManager: SamplingManager | null = null;
 
-  constructor() {
+  constructor(samplingManager?: SamplingManager) {
+    this.samplingManager = samplingManager || null;
     // Initialize any plugins or extensions here if needed
     // Warm up the NLP engine to avoid first-use initialization overhead
     this.warmUp();
@@ -1313,6 +1421,705 @@ export class NLPService {
       entries: Array.from(this.cache.keys()),
     };
   }
+
+  // ============= Enhanced Async Methods with AI =============
+
+  /**
+   * Perform enhanced analysis with optional AI augmentation
+   */
+  async analyzeAsync(
+    text: string,
+    options?: {
+      includeReasoning?: boolean;
+      includeSemantic?: boolean;
+      includeQuestions?: boolean;
+      domain?: string;
+    }
+  ): Promise<ComprehensiveAnalysis> {
+    // Get basic analysis first (fast, local)
+    const basicAnalysis = this.analyze(text);
+
+    // If no sampling available, return basic analysis
+    if (!this.samplingManager?.isAvailable()) {
+      return basicAnalysis;
+    }
+
+    try {
+      // Perform enhanced analysis in parallel
+      const [sentiment, intent, semantic, reasoning] = await Promise.allSettled([
+        this.enhanceSentiment(text, basicAnalysis),
+        this.enhanceIntent(text, basicAnalysis, options?.domain),
+        options?.includeSemantic !== false ? this.analyzeSemantics(text) : null,
+        options?.includeReasoning ? this.analyzeReasoning(text) : null,
+      ]);
+
+      // Generate insights and suggestions
+      const insights = await this.generateInsights(text, basicAnalysis);
+      const questions = options?.includeQuestions ? await this.generateQuestions(text) : [];
+      const summary = await this.generateSummary(text);
+      const suggestions = await this.generateSuggestions(text, basicAnalysis);
+
+      return {
+        ...basicAnalysis,
+        enhanced: {
+          sentiment: this.resolvePromise(sentiment, this.fallbackSentiment()),
+          intent: this.resolvePromise(intent, this.fallbackIntent()),
+          semantic: this.resolvePromise(semantic, this.fallbackSemantic()),
+          reasoning: this.resolvePromise(reasoning, this.fallbackReasoning()),
+          summary,
+          keyInsights: insights,
+          questions,
+          suggestions,
+        },
+      };
+    } catch (error) {
+      console.error('[NLPService] Enhanced analysis failed:', error);
+      return basicAnalysis;
+    }
+  }
+
+  /**
+   * Analyze action semantics for reflexivity tracking
+   */
+  async analyzeActionSemantics(actionText: string): Promise<ActionAnalysis> {
+    // Input validation and safety checks
+    if (!actionText || actionText.length > 1000) {
+      throw new Error('Action text must be between 1 and 1000 characters');
+    }
+
+    // First try local analysis with enhanced patterns
+    const localAnalysis = this.analyzeActionLocal(actionText);
+
+    // If sampling not available, return local analysis
+    if (!this.samplingManager?.isAvailable()) {
+      return localAnalysis;
+    }
+
+    // Add timeout for AI analysis
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('AI analysis timeout')), 5000)
+    );
+
+    try {
+      // Use AI for deeper semantic understanding with timeout
+      const result = await Promise.race([
+        this.samplingManager.requestSampling(
+          {
+            messages: [
+              {
+                role: 'system',
+                content: `You are an expert in analyzing actions and their consequences.
+Analyze actions for reversibility, stakeholder impact, and temporal effects.`,
+              },
+              {
+                role: 'user',
+                content: `Analyze this action: "${actionText}"
+
+Determine:
+1. Action type (elimination/communication/experimentation/commitment/delegation/automation/integration/transformation/other)
+2. Reversibility (high/medium/low)
+3. Likely effects (list 2-3)
+4. Stakeholder impacts (list 1-2)
+5. Temporal scope (immediate/short-term/long-term/permanent)
+6. Confidence (0-1)
+
+Format as JSON.`,
+              },
+            ],
+            temperature: 0.3,
+            maxTokens: 400,
+          },
+          'action_analysis'
+        ),
+        timeout,
+      ]);
+
+      return this.parseActionAnalysis(result.content, localAnalysis);
+    } catch (error) {
+      console.error('[NLPService] Action analysis failed:', error);
+      return localAnalysis;
+    }
+  }
+
+  /**
+   * Classify action reversibility with context
+   */
+  async classifyActionReversibility(
+    actionText: string,
+    context?: string
+  ): Promise<'high' | 'medium' | 'low'> {
+    const fullText = context ? `${context} Action: ${actionText}` : actionText;
+    const analysis = await this.analyzeActionSemantics(fullText);
+    return analysis.reversibility;
+  }
+
+  /**
+   * Predict action effects
+   */
+  async predictActionEffects(actionText: string, context?: string): Promise<string[]> {
+    const fullText = context ? `${context} Action: ${actionText}` : actionText;
+    const analysis = await this.analyzeActionSemantics(fullText);
+    return analysis.likelyEffects;
+  }
+
+  // ============= Private Helper Methods for AI Enhancement =============
+
+  private analyzeActionLocal(actionText: string): ActionAnalysis {
+    const text = actionText.toLowerCase();
+
+    // Extended action patterns for local analysis
+    const actionPatterns = {
+      elimination: /\b(eliminat|remov|delet|discard|abandon|cancel|terminat|abolish)\w*/i,
+      communication: /\b(communicat|announc|declar|publish|broadcast|inform|notify|tell)\w*/i,
+      experimentation: /\b(test|experiment|trial|pilot|prototype|try|explore|investigate)\w*/i,
+      commitment: /\b(commit|promis|pledg|guarantee|agree|contract|sign|bind)\w*/i,
+      delegation: /\b(delegat|assign|transfer|outsourc|handoff|pass|give)\w*/i,
+      automation: /\b(automat|script|schedul|trigger|workflow|pipeline|bot)\w*/i,
+      integration: /\b(integrat|merg|combin|unif|consolidat|join|connect)\w*/i,
+      transformation: /\b(transform|chang|modif|alter|convert|refactor|restructur)\w*/i,
+    };
+
+    // Determine action type and reversibility
+    let actionType = 'other';
+    let reversibility: 'high' | 'medium' | 'low' = 'medium';
+    const likelyEffects: string[] = [];
+
+    for (const [type, pattern] of Object.entries(actionPatterns)) {
+      if (pattern.test(text)) {
+        actionType = type;
+
+        // Set reversibility based on action type
+        switch (type) {
+          case 'elimination':
+          case 'commitment':
+            reversibility = 'low';
+            likelyEffects.push('Permanent change to system state');
+            break;
+          case 'communication':
+          case 'delegation':
+            reversibility = 'low';
+            likelyEffects.push('Creates stakeholder expectations');
+            break;
+          case 'experimentation':
+            reversibility = 'high';
+            likelyEffects.push('Learning without commitment');
+            break;
+          case 'automation':
+          case 'integration':
+            reversibility = 'medium';
+            likelyEffects.push('System dependencies created');
+            break;
+          case 'transformation':
+            reversibility = 'medium';
+            likelyEffects.push('Structural changes made');
+            break;
+        }
+        break;
+      }
+    }
+
+    // Analyze for temporal keywords
+    let temporalScope: ActionAnalysis['temporalScope'] = 'short-term';
+    if (/\b(permanent|forever|always|indefinite)\b/i.test(text)) {
+      temporalScope = 'permanent';
+    } else if (/\b(long.?term|years?|months?)\b/i.test(text)) {
+      temporalScope = 'long-term';
+    } else if (/\b(immediate|now|instant|right away)\b/i.test(text)) {
+      temporalScope = 'immediate';
+    }
+
+    return {
+      actionType,
+      reversibility,
+      likelyEffects: likelyEffects.length > 0 ? likelyEffects : ['Potential system state change'],
+      stakeholderImpact: ['Stakeholders may be affected'],
+      temporalScope,
+      confidence: 0.6, // Lower confidence for local analysis
+    };
+  }
+
+  private parseActionAnalysis(response: string, fallback: ActionAnalysis): ActionAnalysis {
+    try {
+      const parsed = JSON.parse(response) as Partial<ActionAnalysis>;
+      return {
+        actionType: parsed.actionType || fallback.actionType,
+        reversibility: parsed.reversibility || fallback.reversibility,
+        likelyEffects: parsed.likelyEffects || fallback.likelyEffects,
+        stakeholderImpact: parsed.stakeholderImpact || fallback.stakeholderImpact,
+        temporalScope: parsed.temporalScope || fallback.temporalScope,
+        confidence: parsed.confidence || fallback.confidence,
+      };
+    } catch {
+      return fallback;
+    }
+  }
+
+  private async enhanceSentiment(
+    text: string,
+    basicAnalysis: ComprehensiveAnalysis
+  ): Promise<EnhancedSentiment> {
+    if (!this.samplingManager?.isAvailable()) {
+      return this.fallbackSentiment();
+    }
+
+    const result = await this.samplingManager.requestSampling(
+      {
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert in emotional analysis and sentiment detection.',
+          },
+          {
+            role: 'user',
+            content: `Analyze sentiment and emotions in: "${text.substring(0, 1000)}"
+            
+Provide: sentiment, score (-1 to 1), emotions (0-1 each), tone (0-1 each), confidence.
+Format as JSON.`,
+          },
+        ],
+        temperature: 0.3,
+        maxTokens: 400,
+      },
+      'sentiment_enhancement'
+    );
+
+    return this.parseSentimentResponse(result.content, basicAnalysis);
+  }
+
+  private async enhanceIntent(
+    text: string,
+    basicAnalysis: ComprehensiveAnalysis,
+    domain?: string
+  ): Promise<EnhancedIntent> {
+    if (!this.samplingManager?.isAvailable()) {
+      return this.fallbackIntent();
+    }
+
+    const result = await this.samplingManager.requestSampling(
+      {
+        messages: [
+          {
+            role: 'system',
+            content: `Expert in intent analysis. ${domain ? `Domain: ${domain}` : ''}`,
+          },
+          {
+            role: 'user',
+            content: `Analyze intent: "${text.substring(0, 800)}"`,
+          },
+        ],
+        temperature: 0.4,
+        maxTokens: 500,
+      },
+      'intent_enhancement'
+    );
+
+    return this.parseIntentResponse(result.content, basicAnalysis);
+  }
+
+  private async analyzeSemantics(text: string): Promise<SemanticUnderstanding> {
+    if (!this.samplingManager?.isAvailable()) {
+      return this.fallbackSemantic();
+    }
+
+    const result = await this.samplingManager.requestSampling(
+      {
+        messages: [
+          {
+            role: 'system',
+            content: 'Expert in semantic analysis.',
+          },
+          {
+            role: 'user',
+            content: `Deep semantic analysis of: "${text.substring(0, 1000)}"`,
+          },
+        ],
+        temperature: 0.5,
+        maxTokens: 600,
+      },
+      'semantic_analysis'
+    );
+
+    return this.parseSemanticResponse(result.content);
+  }
+
+  private async analyzeReasoning(text: string): Promise<ReasoningAnalysis> {
+    if (!this.samplingManager?.isAvailable()) {
+      return this.fallbackReasoning();
+    }
+
+    const result = await this.samplingManager.requestSampling(
+      {
+        messages: [
+          {
+            role: 'system',
+            content: 'Expert in logical analysis.',
+          },
+          {
+            role: 'user',
+            content: `Analyze reasoning in: "${text.substring(0, 1000)}"`,
+          },
+        ],
+        temperature: 0.3,
+        maxTokens: 700,
+      },
+      'reasoning_analysis'
+    );
+
+    return this.parseReasoningResponse(result.content);
+  }
+
+  private async generateInsights(
+    text: string,
+    _basicAnalysis: ComprehensiveAnalysis
+  ): Promise<string[]> {
+    if (!this.samplingManager?.isAvailable()) {
+      return [];
+    }
+
+    try {
+      const result = await this.samplingManager.requestSampling(
+        {
+          messages: [
+            {
+              role: 'system',
+              content: 'Generate actionable insights.',
+            },
+            {
+              role: 'user',
+              content: `Key insights from: "${text.substring(0, 800)}"`,
+            },
+          ],
+          temperature: 0.6,
+          maxTokens: 400,
+        },
+        'insight_generation'
+      );
+
+      return this.parseListResponse(result.content);
+    } catch {
+      return [];
+    }
+  }
+
+  private async generateQuestions(text: string): Promise<string[]> {
+    if (!this.samplingManager?.isAvailable()) {
+      return [];
+    }
+
+    try {
+      const result = await this.samplingManager.requestSampling(
+        {
+          messages: [
+            {
+              role: 'system',
+              content: 'Generate clarifying questions.',
+            },
+            {
+              role: 'user',
+              content: `Questions for: "${text.substring(0, 600)}"`,
+            },
+          ],
+          temperature: 0.7,
+          maxTokens: 300,
+        },
+        'question_generation'
+      );
+
+      return this.parseListResponse(result.content, '?');
+    } catch {
+      return [];
+    }
+  }
+
+  private async generateSummary(text: string): Promise<string> {
+    if (text.length < 100 || !this.samplingManager?.isAvailable()) {
+      return text.substring(0, 200) + (text.length > 200 ? '...' : '');
+    }
+
+    try {
+      const result = await this.samplingManager.requestSampling(
+        {
+          messages: [
+            {
+              role: 'system',
+              content: 'Create concise summaries.',
+            },
+            {
+              role: 'user',
+              content: `Summarize: "${text.substring(0, 2000)}"`,
+            },
+          ],
+          temperature: 0.4,
+          maxTokens: 150,
+        },
+        'summary_generation'
+      );
+
+      return result.content.trim();
+    } catch {
+      return text.substring(0, 200) + '...';
+    }
+  }
+
+  private async generateSuggestions(
+    text: string,
+    basicAnalysis: ComprehensiveAnalysis
+  ): Promise<string[]> {
+    if (!this.samplingManager?.isAvailable()) {
+      return [];
+    }
+
+    const hasIssues =
+      basicAnalysis.sentiment.score < -0.3 || basicAnalysis.contradictions.hasContradiction;
+
+    if (!hasIssues) {
+      return [];
+    }
+
+    try {
+      const result = await this.samplingManager.requestSampling(
+        {
+          messages: [
+            {
+              role: 'system',
+              content: 'Provide improvement suggestions.',
+            },
+            {
+              role: 'user',
+              content: `Suggest improvements: "${text.substring(0, 800)}"`,
+            },
+          ],
+          temperature: 0.5,
+          maxTokens: 300,
+        },
+        'suggestion_generation'
+      );
+
+      return this.parseListResponse(result.content);
+    } catch {
+      return [];
+    }
+  }
+
+  // Parsing helpers
+  private parseSentimentResponse(
+    response: string,
+    basicAnalysis: ComprehensiveAnalysis
+  ): EnhancedSentiment {
+    try {
+      const parsed = JSON.parse(response) as {
+        sentiment?: string;
+        score?: number;
+        emotions?: unknown;
+        tone?: unknown;
+        confidence?: number;
+      };
+
+      // Validate and cast polarity
+      const validPolarities = ['positive', 'negative', 'neutral', 'mixed'] as const;
+      type Polarity = (typeof validPolarities)[number];
+      const isValidPolarity = (p: unknown): p is Polarity =>
+        typeof p === 'string' && validPolarities.includes(p as Polarity);
+
+      const polarity: Polarity = isValidPolarity(parsed.sentiment)
+        ? parsed.sentiment
+        : basicAnalysis.sentiment.overall;
+
+      return {
+        basicSentiment: {
+          polarity,
+          score: parsed.score ?? basicAnalysis.sentiment.score,
+        },
+        emotions: this.validateEmotions(parsed.emotions) || this.defaultEmotions(),
+        tone: this.validateTone(parsed.tone) || this.defaultTone(),
+        confidence: parsed.confidence || 0.7,
+      };
+    } catch {
+      return this.fallbackSentiment();
+    }
+  }
+
+  private validateEmotions(emotions: unknown): ReturnType<typeof this.defaultEmotions> | null {
+    if (!emotions || typeof emotions !== 'object') return null;
+    const e = emotions as Record<string, unknown>;
+    const required = [
+      'joy',
+      'sadness',
+      'anger',
+      'fear',
+      'surprise',
+      'disgust',
+      'trust',
+      'anticipation',
+    ];
+    if (required.every(key => typeof e[key] === 'number')) {
+      return e as ReturnType<typeof this.defaultEmotions>;
+    }
+    return null;
+  }
+
+  private validateTone(tone: unknown): ReturnType<typeof this.defaultTone> | null {
+    if (!tone || typeof tone !== 'object') return null;
+    const t = tone as Record<string, unknown>;
+    const required = ['formal', 'casual', 'professional', 'academic', 'creative'];
+    if (required.every(key => typeof t[key] === 'number')) {
+      return t as ReturnType<typeof this.defaultTone>;
+    }
+    return null;
+  }
+
+  private parseIntentResponse(
+    response: string,
+    basicAnalysis: ComprehensiveAnalysis
+  ): EnhancedIntent {
+    try {
+      const parsed = JSON.parse(response) as Partial<EnhancedIntent>;
+      return {
+        primaryIntent: parsed.primaryIntent || basicAnalysis.intent.primaryIntent,
+        secondaryIntents: parsed.secondaryIntents || [],
+        contextualFactors: parsed.contextualFactors || {
+          urgency: 'medium',
+          formality: 'neutral',
+          emotionalState: 'neutral',
+          domainContext: 'general',
+        },
+        suggestedResponses: parsed.suggestedResponses || [],
+        confidence: parsed.confidence || 0.7,
+      };
+    } catch {
+      return this.fallbackIntent();
+    }
+  }
+
+  private parseSemanticResponse(response: string): SemanticUnderstanding {
+    try {
+      const parsed = JSON.parse(response) as Partial<SemanticUnderstanding>;
+      return {
+        mainTheme: parsed.mainTheme || 'general',
+        subThemes: parsed.subThemes || [],
+        implicitMeanings: parsed.implicitMeanings || [],
+        culturalReferences: parsed.culturalReferences || [],
+        metaphors: parsed.metaphors || [],
+        ironySarcasm: parsed.ironySarcasm || {
+          detected: false,
+          instances: [],
+          confidence: 0,
+        },
+      };
+    } catch {
+      return this.fallbackSemantic();
+    }
+  }
+
+  private parseReasoningResponse(response: string): ReasoningAnalysis {
+    try {
+      const parsed = JSON.parse(response) as Partial<ReasoningAnalysis>;
+      return {
+        argumentStructure: parsed.argumentStructure || {
+          claims: [],
+          evidence: [],
+          conclusions: [],
+          assumptions: [],
+        },
+        logicalFallacies: parsed.logicalFallacies || [],
+        reasoningType: parsed.reasoningType || 'mixed',
+        strengthOfArgument: parsed.strengthOfArgument || 0.5,
+      };
+    } catch {
+      return this.fallbackReasoning();
+    }
+  }
+
+  private parseListResponse(response: string, filter?: string): string[] {
+    return response
+      .split('\n')
+      .filter(line => {
+        const trimmed = line.trim();
+        return trimmed.length > 20 && (!filter || trimmed.includes(filter));
+      })
+      .map(line => line.replace(/^[-•*\d.)]\s+/, '').trim())
+      .slice(0, 5);
+  }
+
+  private resolvePromise<T>(result: PromiseSettledResult<T | null>, fallback: T): T {
+    if (result.status === 'fulfilled' && result.value) {
+      return result.value;
+    }
+    return fallback;
+  }
+
+  // Fallback methods
+  private fallbackSentiment(): EnhancedSentiment {
+    return {
+      basicSentiment: { polarity: 'neutral', score: 0 },
+      emotions: this.defaultEmotions(),
+      tone: this.defaultTone(),
+      confidence: 0.5,
+    };
+  }
+
+  private fallbackIntent(): EnhancedIntent {
+    return {
+      primaryIntent: 'general',
+      secondaryIntents: [],
+      contextualFactors: {
+        urgency: 'medium',
+        formality: 'neutral',
+        emotionalState: 'neutral',
+        domainContext: 'general',
+      },
+      suggestedResponses: [],
+      confidence: 0.5,
+    };
+  }
+
+  private fallbackSemantic(): SemanticUnderstanding {
+    return {
+      mainTheme: 'general',
+      subThemes: [],
+      implicitMeanings: [],
+      culturalReferences: [],
+      metaphors: [],
+      ironySarcasm: { detected: false, instances: [], confidence: 0 },
+    };
+  }
+
+  private fallbackReasoning(): ReasoningAnalysis {
+    return {
+      argumentStructure: {
+        claims: [],
+        evidence: [],
+        conclusions: [],
+        assumptions: [],
+      },
+      logicalFallacies: [],
+      reasoningType: 'mixed',
+      strengthOfArgument: 0.5,
+    };
+  }
+
+  private defaultEmotions() {
+    return {
+      joy: 0,
+      sadness: 0,
+      anger: 0,
+      fear: 0,
+      surprise: 0,
+      disgust: 0,
+      trust: 0,
+      anticipation: 0,
+    };
+  }
+
+  private defaultTone() {
+    return {
+      formal: 0.5,
+      casual: 0.5,
+      professional: 0.5,
+      academic: 0,
+      creative: 0,
+    };
+  }
 }
 
 // Singleton instance to avoid multiple initializations
@@ -1320,12 +2127,23 @@ let nlpServiceInstance: NLPService | null = null;
 
 /**
  * Get singleton instance of NLPService
+ * @param samplingManager Optional sampling manager for AI enhancement
  */
-export function getNLPService(): NLPService {
+export function getNLPService(samplingManager?: SamplingManager): NLPService {
   if (!nlpServiceInstance) {
-    nlpServiceInstance = new NLPService();
+    nlpServiceInstance = new NLPService(samplingManager);
+  } else if (samplingManager && !nlpServiceInstance.samplingManager) {
+    // Update sampling manager if not already set
+    nlpServiceInstance.samplingManager = samplingManager;
   }
   return nlpServiceInstance;
+}
+
+/**
+ * Reset the singleton instance (mainly for testing)
+ */
+export function resetNLPService(): void {
+  nlpServiceInstance = null;
 }
 
 // Export singleton instance for convenience

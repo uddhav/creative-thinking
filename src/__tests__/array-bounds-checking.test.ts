@@ -156,20 +156,14 @@ describe('Array Bounds Checking Integration Tests', () => {
             nextStepNeeded: false,
           };
 
-          // Capture console output
-          const originalConsoleError = console.error;
-          let capturedOutput = '';
-          console.error = (msg: string) => {
-            capturedOutput += msg;
-          };
+          const result = await server.executeThinkingStep(input);
+          const response = JSON.parse(result.content[0].text);
 
-          await server.executeThinkingStep(input);
-
-          console.error = originalConsoleError;
-
-          // Should show "Unknown [technique] step -5"
-          expect(capturedOutput).toContain('Unknown');
-          expect(capturedOutput).toContain('step -5');
+          // Should return error context for invalid step
+          expect(response.executionMetadata).toBeDefined();
+          expect(response.executionMetadata.errorContext).toBeDefined();
+          expect(response.executionMetadata.errorContext.providedStep).toBe(-5);
+          expect(response.executionMetadata.errorContext.message).toContain('invalid');
         });
 
         it('should display unknown step message for steps beyond bounds', async () => {
@@ -189,20 +183,14 @@ describe('Array Bounds Checking Integration Tests', () => {
             nextStepNeeded: false,
           };
 
-          // Capture console output
-          const originalConsoleError = console.error;
-          let capturedOutput = '';
-          console.error = (msg: string) => {
-            capturedOutput += msg;
-          };
+          const result = await server.executeThinkingStep(input);
+          const response = JSON.parse(result.content[0].text);
 
-          await server.executeThinkingStep(input);
-
-          console.error = originalConsoleError;
-
-          // Should show "Unknown [technique] step 999"
-          expect(capturedOutput).toContain('Unknown');
-          expect(capturedOutput).toContain('step 999');
+          // Should return error context for out of bounds step
+          expect(response.executionMetadata).toBeDefined();
+          expect(response.executionMetadata.errorContext).toBeDefined();
+          expect(response.executionMetadata.errorContext.providedStep).toBe(999);
+          expect(response.executionMetadata.errorContext.message).toContain('exceeds');
         });
       });
     });

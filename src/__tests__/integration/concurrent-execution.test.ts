@@ -291,8 +291,10 @@ describe('Concurrent Request Handling', () => {
     expect(parsed1.sessionId).toBeDefined();
     expect(parsed2.sessionId).toBeDefined();
 
-    // They should have different session IDs (different techniques)
-    expect(parsed1.sessionId).not.toBe(parsed2.sessionId);
+    // With the bug fix, they should share the same session ID when using the same planId
+    // This ensures parallel execution of techniques in the same plan share state
+    expect(parsed1.sessionId).toBe(parsed2.sessionId);
+    expect(parsed1.sessionId).toBe(`session_${String(plan.planId)}`);
 
     // Successfully handled Claude Desktop parallel tool call pattern
   });

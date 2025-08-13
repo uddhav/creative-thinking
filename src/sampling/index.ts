@@ -11,7 +11,6 @@ export { IdeaEnhancer } from './features/IdeaEnhancer.js';
 export { RiskGenerator } from './features/RiskGenerator.js';
 export { SmartSummaryGenerator } from './features/SmartSummaryGenerator.js';
 export { TechniqueRecommender } from './features/TechniqueRecommender.js';
-export { AugmentedNLPService } from './features/AugmentedNLPService.js';
 
 // Types
 export type {
@@ -38,10 +37,4 @@ export type {
 // Feature-specific types
 export type { SessionData } from './features/SmartSummaryGenerator.js';
 export type { SessionState } from './features/TechniqueRecommender.js';
-export type {
-  EnhancedSentiment,
-  EnhancedIntent,
-  SemanticUnderstanding,
-  ReasoningAnalysis,
-  AugmentedAnalysis,
-} from './features/AugmentedNLPService.js';
+// Enhanced NLP types are now in the unified NLPService

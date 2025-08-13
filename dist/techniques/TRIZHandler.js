@@ -20,6 +20,11 @@ export class TRIZHandler extends BaseTechniqueHandler {
                 ], // Identify → Remove → Apply → Minimize
                 description: 'Must be executed sequentially: each step builds on the contradiction analysis',
             },
+            reflexivityProfile: {
+                primaryCommitmentType: 'structural',
+                overallReversibility: 'low',
+                riskLevel: 'high',
+            },
         };
     }
     getStepInfo(step) {
@@ -28,21 +33,53 @@ export class TRIZHandler extends BaseTechniqueHandler {
                 name: 'Identify Contradiction',
                 focus: 'Find the core technical or physical contradiction',
                 emoji: '⚔️',
+                type: 'thinking',
             },
             {
                 name: 'Remove Compromise',
                 focus: 'Challenge the need for trade-offs',
                 emoji: '🚫',
+                type: 'thinking',
             },
             {
                 name: 'Apply Inventive Principles',
                 focus: 'Use TRIZ principles to resolve contradiction',
                 emoji: '🔧',
+                type: 'action',
+                reflexiveEffects: {
+                    triggers: ['Eliminating contradiction', 'Implementing TRIZ principle'],
+                    realityChanges: [
+                        'System architecture permanently altered',
+                        'Technical dependencies created',
+                        'Previous compromise no longer available',
+                    ],
+                    futureConstraints: [
+                        'Must maintain new structural arrangement',
+                        'Cannot reintroduce eliminated contradiction',
+                        'Technical solution requires ongoing support',
+                    ],
+                    reversibility: 'low',
+                },
             },
             {
                 name: 'Minimize Complexity',
                 focus: 'Simplify solution to essential elements',
                 emoji: '✂️',
+                type: 'action',
+                reflexiveEffects: {
+                    triggers: ['Removing components', 'Simplifying structure'],
+                    realityChanges: [
+                        'Components permanently removed',
+                        'Functionality consolidated',
+                        'Maintenance requirements reduced',
+                    ],
+                    futureConstraints: [
+                        'Cannot add back removed complexity',
+                        'Must work within simplified framework',
+                        'Future additions constrained by minimal design',
+                    ],
+                    reversibility: 'low',
+                },
             },
         ];
         if (step < 1 || step > steps.length) {

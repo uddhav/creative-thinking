@@ -8,6 +8,9 @@ import type { PersistenceAdapter } from '../persistence/adapter.js';
 import type { SessionState } from '../persistence/types.js';
 import { type SkipDetectionResult, type SkipPattern } from './session/SkipDetector.js';
 import { type SessionLock } from './session/SessionLock.js';
+import { ReflexivityTracker } from './ReflexivityTracker.js';
+import type { ReflexiveEffects } from '../techniques/types.js';
+import type { SamplingManager } from '../sampling/SamplingManager.js';
 export interface SessionConfig {
     maxSessions: number;
     maxSessionSize: number;
@@ -20,6 +23,8 @@ export declare class SessionManager {
     private currentSessionId;
     private memoryManager;
     private sessionLock;
+    private reflexivityTracker;
+    private nlpService;
     private sessionCleaner;
     private sessionPersistence;
     private sessionMetrics;
@@ -27,7 +32,7 @@ export declare class SessionManager {
     private skipDetector;
     private sessionIndex;
     private config;
-    constructor();
+    constructor(samplingManager?: SamplingManager);
     /**
      * Lazy initialization for parallel execution components
      */
@@ -151,5 +156,17 @@ export declare class SessionManager {
      * Get the session lock instance for external use
      */
     getSessionLock(): SessionLock;
+    /**
+     * Get reflexivity data for a session
+     */
+    getSessionReflexivity(sessionId: string): {
+        realityState: ReturnType<ReflexivityTracker['getRealityState']>;
+        actionHistory: ReturnType<ReflexivityTracker['getActionHistory']>;
+        summary: ReturnType<ReflexivityTracker['getSessionSummary']>;
+    } | null;
+    /**
+     * Track reflexivity for a step execution
+     */
+    trackReflexivity(sessionId: string, technique: string, stepNumber: number, stepType?: 'thinking' | 'action', reflexiveEffects?: ReflexiveEffects): void;
 }
 //# sourceMappingURL=SessionManager.d.ts.map
