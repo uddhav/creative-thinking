@@ -2,6 +2,7 @@
  * Reflexivity Tracker
  * Tracks post-action reflexive effects during creative thinking execution
  */
+import { ValidationError, ErrorCode } from '../errors/types.js';
 /**
  * Configuration constants for reflexivity tracking
  */
@@ -22,6 +23,33 @@ const ACTION_PATTERNS = {
     communication: /\b(communicat|announc|declar|publish|broadcast)/i,
     experimentation: /\b(test|experiment|trial|pilot|prototype)/i,
 };
+const CHANGE_CATEGORY_PATTERNS = {
+    stakeholder: [
+        /\b(expectation|expect|believes?|assumes?|stakeholder|requirement)\b/i,
+        /\b(customer|client|user|partner|vendor)\b/i,
+        /\b(commit|promise|guarantee|assure)\b/i,
+    ],
+    resource: [
+        /\b(resource|allocat|budget|cost|fund|capacity|bandwidth)\b/i,
+        /\b(invest|spend|consume|utilize|deploy)\b/i,
+        /\b(time|money|personnel|equipment)\b/i,
+    ],
+    relationship: [
+        /\b(relation|team|collaborate|partner|trust|communication)\b/i,
+        /\b(coordinate|align|integrate|sync|cooperate)\b/i,
+        /\b(conflict|tension|harmony|culture)\b/i,
+    ],
+    technical: [
+        /\b(technical|depend|architecture|system|infrastructure|api)\b/i,
+        /\b(interface|protocol|framework|library|component)\b/i,
+        /\b(compatibility|integration|migration|upgrade)\b/i,
+    ],
+    path: [
+        /\b(cannot|closed|foreclosed|must|constrain|require|prevent)\b/i,
+        /\b(lock|restrict|limit|bound|confine)\b/i,
+        /\b(irreversible|permanent|commit|dedicate)\b/i,
+    ],
+};
 /**
  * Tracks reflexive effects across a session
  */
@@ -36,6 +64,30 @@ export class ReflexivityTracker {
     constructor(nlpService) {
         this.nlpService = nlpService;
         this.startCleanupTimer();
+    }
+    /**
+     * Validate input parameters for security and correctness
+     */
+    validateTrackingInput(sessionId, technique, actionDescription) {
+        // Validate sessionId
+        if (!sessionId?.trim() || sessionId.length > 100) {
+            throw new ValidationError(ErrorCode.INVALID_INPUT, 'Invalid sessionId: must be non-empty string under 100 chars', 'sessionId');
+        }
+        // Validate technique
+        if (!technique?.trim() || technique.length > 50) {
+            throw new ValidationError(ErrorCode.INVALID_INPUT, 'Invalid technique: must be non-empty string under 50 chars', 'technique');
+        }
+        // Validate and sanitize actionDescription
+        if (!actionDescription?.trim()) {
+            throw new ValidationError(ErrorCode.INVALID_INPUT, 'Invalid actionDescription: cannot be empty', 'actionDescription');
+        }
+        if (actionDescription.length > 1000) {
+            throw new ValidationError(ErrorCode.INVALID_INPUT, 'Action description too long: max 1000 characters', 'actionDescription');
+        }
+        // Basic XSS prevention - remove script tags
+        if (/<script|javascript:|on\w+=/i.test(actionDescription)) {
+            throw new ValidationError(ErrorCode.INVALID_INPUT, 'Invalid actionDescription: contains potentially unsafe content', 'actionDescription');
+        }
     }
     /**
      * Start periodic cleanup of old sessions
@@ -82,6 +134,35 @@ export class ReflexivityTracker {
         }
     }
     /**
+     * Categorize a change using pattern matching
+     */
+    categorizeChange(change) {
+        let bestMatch = {
+            category: null,
+            score: 0,
+        };
+        for (const [category, patterns] of Object.entries(CHANGE_CATEGORY_PATTERNS)) {
+            let score = 0;
+            for (const pattern of patterns) {
+                if (pattern.test(change)) {
+                    score++;
+                }
+            }
+            if (score > bestMatch.score) {
+                bestMatch = {
+                    category: category,
+                    score,
+                };
+            }
+        }
+        const confidence = bestMatch.score /
+            (bestMatch.category ? CHANGE_CATEGORY_PATTERNS[bestMatch.category].length : 1);
+        return {
+            category: bestMatch.category,
+            confidence,
+        };
+    }
+    /**
      * Get or initialize reality state for a session
      */
     getOrInitRealityState(sessionId) {
@@ -94,6 +175,8 @@ export class ReflexivityTracker {
                 pathsForeclosed: [],
                 optionsCreated: [],
                 lastModified: Date.now(),
+                constraintCount: 0,
+                lastConstraintUpdate: Date.now(),
             });
         }
         const state = this.realityStates.get(sessionId);
@@ -106,6 +189,8 @@ export class ReflexivityTracker {
      * Track a step execution and assess reflexivity
      */
     trackStep(sessionId, technique, step, stepType, actionDescription, reflexiveEffects) {
+        // Validate inputs for security and correctness
+        this.validateTrackingInput(sessionId, technique, actionDescription);
         const record = {
             sessionId,
             technique,
@@ -156,36 +241,37 @@ export class ReflexivityTracker {
             // Currently just noted for future use in warning systems
             // The actual warning logic is in assessFutureAction
         }
-        // Map reflexive effects to reality state changes
+        // Map reflexive effects to reality state changes using pattern-based classification
         if (effects.realityChanges.length > 0) {
-            // Parse reality changes for different categories
             effects.realityChanges.forEach(change => {
-                const lowerChange = change.toLowerCase();
-                if (lowerChange.includes('expectation') ||
-                    lowerChange.includes('expect') ||
-                    lowerChange.includes('believes')) {
-                    if (!changes.stakeholderExpectations)
-                        changes.stakeholderExpectations = [];
-                    changes.stakeholderExpectations.push(change);
-                }
-                else if (lowerChange.includes('resource') ||
-                    lowerChange.includes('allocat') ||
-                    lowerChange.includes('budget')) {
-                    if (!changes.resourceCommitments)
-                        changes.resourceCommitments = [];
-                    changes.resourceCommitments.push(change);
-                }
-                else if (lowerChange.includes('relation') || lowerChange.includes('team')) {
-                    if (!changes.relationshipDynamics)
-                        changes.relationshipDynamics = [];
-                    changes.relationshipDynamics.push(change);
-                }
-                else if (lowerChange.includes('technical') ||
-                    lowerChange.includes('depend') ||
-                    lowerChange.includes('architecture')) {
-                    if (!changes.technicalDependencies)
-                        changes.technicalDependencies = [];
-                    changes.technicalDependencies.push(change);
+                const classification = this.categorizeChange(change);
+                // Only categorize with reasonable confidence (>33% pattern match)
+                if (classification.category && classification.confidence > 0.33) {
+                    switch (classification.category) {
+                        case 'stakeholder':
+                            if (!changes.stakeholderExpectations)
+                                changes.stakeholderExpectations = [];
+                            changes.stakeholderExpectations.push(change);
+                            break;
+                        case 'resource':
+                            if (!changes.resourceCommitments)
+                                changes.resourceCommitments = [];
+                            changes.resourceCommitments.push(change);
+                            break;
+                        case 'relationship':
+                            if (!changes.relationshipDynamics)
+                                changes.relationshipDynamics = [];
+                            changes.relationshipDynamics.push(change);
+                            break;
+                        case 'technical':
+                            if (!changes.technicalDependencies)
+                                changes.technicalDependencies = [];
+                            changes.technicalDependencies.push(change);
+                            break;
+                        case 'path':
+                            // Path constraints are handled separately in futureConstraints
+                            break;
+                    }
                 }
             });
         }
@@ -216,6 +302,7 @@ export class ReflexivityTracker {
      */
     updateRealityState(sessionId, changes) {
         const state = this.getOrInitRealityState(sessionId);
+        let deltaConstraints = 0;
         // Type-safe helper to check if a key is an array property
         const isArrayProperty = (key) => {
             return [
@@ -227,6 +314,8 @@ export class ReflexivityTracker {
                 'optionsCreated',
             ].includes(key);
         };
+        // Track constraint-related arrays for count update
+        const constraintArrays = ['stakeholderExpectations', 'technicalDependencies', 'pathsForeclosed'];
         // Merge changes into state with proper type checking
         Object.entries(changes).forEach(([key, value]) => {
             if (Array.isArray(value) && isArrayProperty(key)) {
@@ -237,8 +326,15 @@ export class ReflexivityTracker {
                 // Add new values - state[key] is definitely an array after initialization
                 const stateArray = state[key];
                 stateArray.push(...value);
+                // Update constraint count for relevant arrays
+                if (constraintArrays.includes(key)) {
+                    deltaConstraints += value.length;
+                }
             }
         });
+        // Update cached constraint count
+        state.constraintCount = (state.constraintCount || 0) + deltaConstraints;
+        state.lastConstraintUpdate = Date.now();
         state.lastModified = Date.now();
     }
     /**
@@ -254,6 +350,57 @@ export class ReflexivityTracker {
         return this.actionHistory.get(sessionId) || [];
     }
     /**
+     * Analyze action with timeout protection
+     */
+    async analyzeActionWithTimeout(proposedAction, timeout = 5000) {
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('NLP service timeout')), timeout));
+        try {
+            return await Promise.race([
+                this.nlpService.analyzeActionSemantics(proposedAction),
+                timeoutPromise,
+            ]);
+        }
+        catch (error) {
+            // Fallback to local pattern matching
+            console.warn('NLP service unavailable, using local patterns:', error);
+            return this.localActionAnalysis(proposedAction);
+        }
+    }
+    /**
+     * Local action analysis fallback using patterns
+     */
+    localActionAnalysis(proposedAction) {
+        let reversibility = 'medium';
+        const likelyEffects = [];
+        const stakeholderImpact = [];
+        let temporalScope = 'short-term';
+        // Check action patterns
+        if (ACTION_PATTERNS.elimination.test(proposedAction)) {
+            reversibility = 'low';
+            temporalScope = 'permanent';
+            likelyEffects.push('Permanent removal of capabilities');
+        }
+        if (ACTION_PATTERNS.communication.test(proposedAction)) {
+            reversibility = 'low';
+            temporalScope = 'long-term';
+            likelyEffects.push('Stakeholder expectations will be set');
+            stakeholderImpact.push('External expectations established');
+        }
+        if (ACTION_PATTERNS.experimentation.test(proposedAction)) {
+            reversibility = 'high';
+            temporalScope = 'short-term';
+            likelyEffects.push('Learning opportunity with minimal commitment');
+        }
+        return {
+            actionType: 'manual-classification',
+            reversibility,
+            likelyEffects,
+            stakeholderImpact,
+            temporalScope,
+            confidence: 0.5, // Lower confidence for local analysis
+        };
+    }
+    /**
      * Get reflexivity assessment for future actions using NLP analysis
      */
     async assessFutureAction(sessionId, proposedAction) {
@@ -263,8 +410,8 @@ export class ReflexivityTracker {
         if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
             return this.buildAssessment(sessionId, cached);
         }
-        // Use NLP service for semantic analysis
-        const actionAnalysis = await this.nlpService.analyzeActionSemantics(proposedAction);
+        // Use NLP service with timeout protection
+        const actionAnalysis = await this.analyzeActionWithTimeout(proposedAction);
         // Cache the analysis
         this.actionAnalysisCache.set(cacheKey, {
             ...actionAnalysis,
@@ -307,9 +454,8 @@ export class ReflexivityTracker {
                 recommendation: 'Proceed with awareness that this is the first action',
             };
         }
-        const constraintCount = state.pathsForeclosed.length +
-            state.stakeholderExpectations.length +
-            state.technicalDependencies.length;
+        // Use cached constraint count for performance
+        const constraintCount = state.constraintCount || 0;
         const recommendation = this.generateRecommendation(constraintCount, reversibilityAssessment);
         const currentConstraints = constraintCount > 0
             ? [
@@ -338,9 +484,8 @@ export class ReflexivityTracker {
                 recommendation: 'Proceed with awareness that this is the first action',
             };
         }
-        const constraintCount = state.pathsForeclosed.length +
-            state.stakeholderExpectations.length +
-            state.technicalDependencies.length;
+        // Use cached constraint count for performance
+        const constraintCount = state.constraintCount || 0;
         const recommendation = this.generateRecommendation(constraintCount, actionAnalysis.reversibility);
         // Use lazy evaluation to avoid unnecessary array creation
         const currentConstraints = constraintCount > 0 ? Array.from(this.getConstraintsIterator(state)) : [];

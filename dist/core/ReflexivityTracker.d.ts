@@ -15,6 +15,8 @@ export interface RealityState {
     pathsForeclosed: string[];
     optionsCreated: string[];
     lastModified: number;
+    constraintCount: number;
+    lastConstraintUpdate: number;
 }
 /**
  * Represents an action taken and its reflexive impact
@@ -42,6 +44,10 @@ export declare class ReflexivityTracker {
     private readonly cacheTimeout;
     constructor(nlpService: NLPService);
     /**
+     * Validate input parameters for security and correctness
+     */
+    private validateTrackingInput;
+    /**
      * Start periodic cleanup of old sessions
      */
     private startCleanupTimer;
@@ -53,6 +59,10 @@ export declare class ReflexivityTracker {
      * Stop the cleanup timer
      */
     destroy(): void;
+    /**
+     * Categorize a change using pattern matching
+     */
+    private categorizeChange;
     /**
      * Get or initialize reality state for a session
      */
@@ -77,6 +87,14 @@ export declare class ReflexivityTracker {
      * Get action history for a session
      */
     getActionHistory(sessionId: string): ActionRecord[];
+    /**
+     * Analyze action with timeout protection
+     */
+    private analyzeActionWithTimeout;
+    /**
+     * Local action analysis fallback using patterns
+     */
+    private localActionAnalysis;
     /**
      * Get reflexivity assessment for future actions using NLP analysis
      */
