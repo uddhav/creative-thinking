@@ -19,6 +19,17 @@ export interface RealityState {
     lastConstraintUpdate: number;
 }
 /**
+ * Memory statistics for monitoring
+ */
+export interface MemoryStats {
+    sessionCount: number;
+    totalActions: number;
+    totalConstraints: number;
+    estimatedMemoryBytes: number;
+    oldestSession: number;
+    newestSession: number;
+}
+/**
  * Represents an action taken and its reflexive impact
  */
 export interface ActionRecord {
@@ -144,5 +155,9 @@ export declare class ReflexivityTracker {
         optionsCreated: number;
         overallReversibility: 'high' | 'medium' | 'low';
     };
+    /**
+     * Get memory statistics for monitoring
+     */
+    getMemoryStats(): MemoryStats;
 }
 //# sourceMappingURL=ReflexivityTracker.d.ts.map

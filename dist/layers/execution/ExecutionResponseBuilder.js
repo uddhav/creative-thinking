@@ -57,6 +57,32 @@ export class ExecutionResponseBuilder {
         if (input.risks && input.risks.length > 0) {
             this.telemetry.trackRisk(sessionId, input.technique, input.risks.length).catch(console.error);
         }
+        // Monitor memory usage periodically (every 10 steps)
+        if (session.history.length % 10 === 0 && this.sessionManager) {
+            // Access reflexivity tracker through SessionManager internals
+            // Type-safe access pattern for internal APIs
+            const sessionManagerInternal = this.sessionManager;
+            const reflexivityTracker = sessionManagerInternal.reflexivityTracker;
+            if (reflexivityTracker?.getMemoryStats) {
+                const memStats = reflexivityTracker.getMemoryStats();
+                // Warn if memory usage is high
+                const MB = 1024 * 1024;
+                if (memStats.estimatedMemoryBytes > 10 * MB) {
+                    console.warn(`[Memory Warning] High memory usage detected: ${(memStats.estimatedMemoryBytes / MB).toFixed(2)}MB across ${memStats.sessionCount} sessions`);
+                }
+                // Log memory stats for monitoring (telemetry doesn't have trackMemoryUsage yet)
+                // Using console.error for DEBUG logging as it's allowed by lint rules
+                if (process.env.LOG_LEVEL === 'DEBUG') {
+                    console.error('[Memory Stats]', {
+                        sessionId,
+                        estimatedBytes: memStats.estimatedMemoryBytes,
+                        sessionCount: memStats.sessionCount,
+                        totalActions: memStats.totalActions,
+                        totalConstraints: memStats.totalConstraints,
+                    });
+                }
+            }
+        }
         // Enhance response object directly (no parsing needed)
         this.enhanceWithMemoryAndProgress(responseData, input, session, sessionId, handler, techniqueLocalStep, techniqueIndex, plan);
         // Enhance with flexibility and warnings

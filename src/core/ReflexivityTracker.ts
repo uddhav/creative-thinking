@@ -88,6 +88,18 @@ export interface RealityState {
 }
 
 /**
+ * Memory statistics for monitoring
+ */
+export interface MemoryStats {
+  sessionCount: number;
+  totalActions: number;
+  totalConstraints: number;
+  estimatedMemoryBytes: number;
+  oldestSession: number;
+  newestSession: number;
+}
+
+/**
  * Represents an action taken and its reflexive impact
  */
 export interface ActionRecord {
@@ -815,6 +827,52 @@ export class ReflexivityTracker {
       currentConstraints: state?.pathsForeclosed?.length || 0,
       optionsCreated: state?.optionsCreated?.length || 0,
       overallReversibility,
+    };
+  }
+
+  /**
+   * Get memory statistics for monitoring
+   */
+  public getMemoryStats(): MemoryStats {
+    const sessionCount = this.realityStates.size;
+    let totalActions = 0;
+    let totalConstraints = 0;
+    let oldestSession = Date.now();
+    let newestSession = 0;
+
+    // Calculate totals
+    this.actionHistory.forEach(history => {
+      totalActions += history.length;
+    });
+
+    this.realityStates.forEach(state => {
+      totalConstraints += state.constraintCount || 0;
+      if (state.lastModified < oldestSession) {
+        oldestSession = state.lastModified;
+      }
+      if (state.lastModified > newestSession) {
+        newestSession = state.lastModified;
+      }
+    });
+
+    // Estimate memory usage (rough approximation)
+    const avgActionSize = 500; // bytes per action record
+    const avgConstraintSize = 100; // bytes per constraint
+    const baseOverhead = 1024; // base overhead per session
+
+    const estimatedMemoryBytes =
+      sessionCount * baseOverhead +
+      totalActions * avgActionSize +
+      totalConstraints * avgConstraintSize +
+      this.actionAnalysisCache.size * 1000; // cache entries
+
+    return {
+      sessionCount,
+      totalActions,
+      totalConstraints,
+      estimatedMemoryBytes,
+      oldestSession,
+      newestSession,
     };
   }
 }

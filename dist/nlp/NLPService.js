@@ -1000,24 +1000,31 @@ export class NLPService {
      * Analyze action semantics for reflexivity tracking
      */
     async analyzeActionSemantics(actionText) {
+        // Input validation and safety checks
+        if (!actionText || actionText.length > 1000) {
+            throw new Error('Action text must be between 1 and 1000 characters');
+        }
         // First try local analysis with enhanced patterns
         const localAnalysis = this.analyzeActionLocal(actionText);
         // If sampling not available, return local analysis
         if (!this.samplingManager?.isAvailable()) {
             return localAnalysis;
         }
+        // Add timeout for AI analysis
+        const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('AI analysis timeout')), 5000));
         try {
-            // Use AI for deeper semantic understanding
-            const result = await this.samplingManager.requestSampling({
-                messages: [
-                    {
-                        role: 'system',
-                        content: `You are an expert in analyzing actions and their consequences.
+            // Use AI for deeper semantic understanding with timeout
+            const result = await Promise.race([
+                this.samplingManager.requestSampling({
+                    messages: [
+                        {
+                            role: 'system',
+                            content: `You are an expert in analyzing actions and their consequences.
 Analyze actions for reversibility, stakeholder impact, and temporal effects.`,
-                    },
-                    {
-                        role: 'user',
-                        content: `Analyze this action: "${actionText}"
+                        },
+                        {
+                            role: 'user',
+                            content: `Analyze this action: "${actionText}"
 
 Determine:
 1. Action type (elimination/communication/experimentation/commitment/delegation/automation/integration/transformation/other)
@@ -1028,11 +1035,13 @@ Determine:
 6. Confidence (0-1)
 
 Format as JSON.`,
-                    },
-                ],
-                temperature: 0.3,
-                maxTokens: 400,
-            }, 'action_analysis');
+                        },
+                    ],
+                    temperature: 0.3,
+                    maxTokens: 400,
+                }, 'action_analysis'),
+                timeout,
+            ]);
             return this.parseActionAnalysis(result.content, localAnalysis);
         }
         catch (error) {

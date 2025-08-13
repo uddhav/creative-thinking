@@ -590,5 +590,44 @@ export class ReflexivityTracker {
             overallReversibility,
         };
     }
+    /**
+     * Get memory statistics for monitoring
+     */
+    getMemoryStats() {
+        const sessionCount = this.realityStates.size;
+        let totalActions = 0;
+        let totalConstraints = 0;
+        let oldestSession = Date.now();
+        let newestSession = 0;
+        // Calculate totals
+        this.actionHistory.forEach(history => {
+            totalActions += history.length;
+        });
+        this.realityStates.forEach(state => {
+            totalConstraints += state.constraintCount || 0;
+            if (state.lastModified < oldestSession) {
+                oldestSession = state.lastModified;
+            }
+            if (state.lastModified > newestSession) {
+                newestSession = state.lastModified;
+            }
+        });
+        // Estimate memory usage (rough approximation)
+        const avgActionSize = 500; // bytes per action record
+        const avgConstraintSize = 100; // bytes per constraint
+        const baseOverhead = 1024; // base overhead per session
+        const estimatedMemoryBytes = sessionCount * baseOverhead +
+            totalActions * avgActionSize +
+            totalConstraints * avgConstraintSize +
+            this.actionAnalysisCache.size * 1000; // cache entries
+        return {
+            sessionCount,
+            totalActions,
+            totalConstraints,
+            estimatedMemoryBytes,
+            oldestSession,
+            newestSession,
+        };
+    }
 }
 //# sourceMappingURL=ReflexivityTracker.js.map
