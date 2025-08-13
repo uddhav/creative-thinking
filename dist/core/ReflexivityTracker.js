@@ -315,7 +315,11 @@ export class ReflexivityTracker {
             ].includes(key);
         };
         // Track constraint-related arrays for count update
-        const constraintArrays = ['stakeholderExpectations', 'technicalDependencies', 'pathsForeclosed'];
+        const constraintArrays = [
+            'stakeholderExpectations',
+            'technicalDependencies',
+            'pathsForeclosed',
+        ];
         // Merge changes into state with proper type checking
         Object.entries(changes).forEach(([key, value]) => {
             if (Array.isArray(value) && isArrayProperty(key)) {
