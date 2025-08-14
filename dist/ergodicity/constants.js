@@ -39,6 +39,15 @@ export const TEXT_LIMITS = {
     /** Minimum word count for unlock response */
     UNLOCK_MIN_WORDS: 50,
 };
+// Cache configuration
+export const CACHE_LIMITS = {
+    /** Maximum number of entries in context cache */
+    MAX_CONTEXT_CACHE_SIZE: 100,
+    /** Number of characters to use for cache key generation */
+    CACHE_KEY_TRUNCATE_LENGTH: 100,
+    /** Maximum input length for regex processing (prevent ReDoS) */
+    MAX_REGEX_INPUT_LENGTH: 10000,
+};
 // Risk assessment parameters
 export const RISK_PARAMS = {
     /** Degradation factor for high commitment actions */

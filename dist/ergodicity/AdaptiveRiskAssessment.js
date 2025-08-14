@@ -5,10 +5,9 @@
  * the detected context, without categorizing into fixed domains.
  * All high-stakes decisions are treated seriously with appropriate terminology.
  */
-import { CONFIDENCE_THRESHOLDS } from './constants.js';
+import { CONFIDENCE_THRESHOLDS, CACHE_LIMITS } from './constants.js';
 export class AdaptiveRiskAssessment {
     contextCache = new Map();
-    MAX_CACHE_SIZE = 100;
     /**
      * Analyze context from problem and output text
      */
@@ -457,9 +456,9 @@ ${context.hasCreativeExploration ? 'This appears to be exploratory. Focus on lea
      * Generate cache key for context analysis
      */
     getCacheKey(problem, output) {
-        // Simple hash using first 100 chars of each + length
-        const truncatedProblem = problem.slice(0, 100);
-        const truncatedOutput = output.slice(0, 100);
+        // Simple hash using truncated strings to limit key size
+        const truncatedProblem = problem.slice(0, CACHE_LIMITS.CACHE_KEY_TRUNCATE_LENGTH);
+        const truncatedOutput = output.slice(0, CACHE_LIMITS.CACHE_KEY_TRUNCATE_LENGTH);
         return `${truncatedProblem}:${truncatedOutput}:${problem.length}:${output.length}`;
     }
     /**
@@ -467,7 +466,7 @@ ${context.hasCreativeExploration ? 'This appears to be exploratory. Focus on lea
      */
     cacheContext(key, context) {
         // Implement simple LRU by removing oldest when at max size
-        if (this.contextCache.size >= this.MAX_CACHE_SIZE) {
+        if (this.contextCache.size >= CACHE_LIMITS.MAX_CONTEXT_CACHE_SIZE) {
             const firstKey = this.contextCache.keys().next().value;
             if (firstKey) {
                 this.contextCache.delete(firstKey);

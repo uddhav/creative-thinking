@@ -35,6 +35,14 @@ export declare const TEXT_LIMITS: {
     /** Minimum word count for unlock response */
     readonly UNLOCK_MIN_WORDS: 50;
 };
+export declare const CACHE_LIMITS: {
+    /** Maximum number of entries in context cache */
+    readonly MAX_CONTEXT_CACHE_SIZE: 100;
+    /** Number of characters to use for cache key generation */
+    readonly CACHE_KEY_TRUNCATE_LENGTH: 100;
+    /** Maximum input length for regex processing (prevent ReDoS) */
+    readonly MAX_REGEX_INPUT_LENGTH: 10000;
+};
 export declare const RISK_PARAMS: {
     /** Degradation factor for high commitment actions */
     readonly HIGH_COMMITMENT_DEGRADATION: 0.7;

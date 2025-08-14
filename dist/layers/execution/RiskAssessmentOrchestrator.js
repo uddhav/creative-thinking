@@ -4,6 +4,7 @@
  */
 import { requiresRuinCheck, assessRuinRisk, generateSurvivalConstraints, } from '../../ergodicity/prompts.js';
 import { adaptiveRiskAssessment } from '../../ergodicity/AdaptiveRiskAssessment.js';
+import { CONFIDENCE_THRESHOLDS } from '../../ergodicity/constants.js';
 import { RuinRiskDiscovery } from '../../core/RuinRiskDiscovery.js';
 import { generateConstraintViolationFeedback } from '../../ergodicity/riskDiscoveryPrompts.js';
 import { RiskDismissalTracker } from '../../ergodicity/riskDismissalTracker.js';
@@ -88,7 +89,7 @@ export class RiskAssessmentOrchestrator {
                 const outputLength = input.output.split(/\s+/).length;
                 if (outputLength > 50) {
                     // Evaluate if response meets unlock requirements
-                    const unlockEval = this.dismissalTracker.evaluateUnlockResponse(input.output, escalationPrompt.minimumConfidence || 0.5, engagementMetrics);
+                    const unlockEval = this.dismissalTracker.evaluateUnlockResponse(input.output, escalationPrompt.minimumConfidence || CONFIDENCE_THRESHOLDS.MODERATE, engagementMetrics);
                     if (unlockEval.isValid) {
                         // Log successful unlock
                         if (process.env.DISABLE_THOUGHT_LOGGING !== 'true') {

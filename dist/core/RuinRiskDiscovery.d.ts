@@ -168,7 +168,7 @@ export declare class RuinRiskDiscovery {
      */
     private extractRiskFeatures;
     /**
-     * Sanitize input for safe regex matching
+     * Sanitize input for safe regex matching with comprehensive Unicode handling
      */
     private sanitizeForRegex;
     /**

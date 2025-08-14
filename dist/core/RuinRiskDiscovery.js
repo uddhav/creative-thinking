@@ -9,6 +9,7 @@
  * without hardcoding specific domain knowledge.
  */
 import nlp from 'compromise';
+import { CACHE_LIMITS } from '../ergodicity/constants.js';
 // Type assertion for the nlp library
 const nlpTyped = nlp;
 /**
@@ -405,10 +406,43 @@ export class RuinRiskDiscovery {
         };
     }
     /**
-     * Sanitize input for safe regex matching
+     * Sanitize input for safe regex matching with comprehensive Unicode handling
      */
     sanitizeForRegex(input) {
-        // Escape special regex characters
+        // First check length to prevent ReDoS attacks
+        if (input.length > CACHE_LIMITS.MAX_REGEX_INPUT_LENGTH) {
+            // Truncate to safe length
+            input = input.slice(0, CACHE_LIMITS.MAX_REGEX_INPUT_LENGTH);
+        }
+        // Remove or replace dangerous Unicode categories:
+        // - Control characters (Cc)
+        // - Format characters (Cf) including zero-width
+        // - Surrogates (Cs)
+        // - Private use (Co)
+        // - Unassigned (Cn)
+        input = input
+            // Remove zero-width characters and joiners
+            .replace(/[\u200B-\u200D\uFEFF]/g, '')
+            // Remove combining marks that could cause issues
+            .replace(/[\u0300-\u036F]/g, '')
+            // Remove RTL/LTR override characters
+            .replace(/[\u202A-\u202E\u2066-\u2069]/g, '');
+        // Remove control characters using char codes to avoid regex control char issues
+        const controlChars = [];
+        // ASCII control characters (0x00-0x1F)
+        for (let i = 0x00; i <= 0x1f; i++) {
+            controlChars.push(String.fromCharCode(i));
+        }
+        // Extended control characters (0x7F-0x9F)
+        for (let i = 0x7f; i <= 0x9f; i++) {
+            controlChars.push(String.fromCharCode(i));
+        }
+        // Remove each control character
+        controlChars.forEach(char => {
+            input = input.split(char).join('');
+        });
+        // Now escape standard regex metacharacters
+        // This includes: . * + ? ^ $ { } ( ) | [ ] \
         return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
     /**

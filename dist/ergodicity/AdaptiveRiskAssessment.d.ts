@@ -18,7 +18,6 @@ export interface ContextIndicators {
 }
 export declare class AdaptiveRiskAssessment {
     private contextCache;
-    private readonly MAX_CACHE_SIZE;
     /**
      * Analyze context from problem and output text
      */

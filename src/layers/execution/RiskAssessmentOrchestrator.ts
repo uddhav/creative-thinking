@@ -15,6 +15,7 @@ import {
   generateSurvivalConstraints,
 } from '../../ergodicity/prompts.js';
 import { adaptiveRiskAssessment } from '../../ergodicity/AdaptiveRiskAssessment.js';
+import { CONFIDENCE_THRESHOLDS } from '../../ergodicity/constants.js';
 import type { RuinRiskAssessment } from '../../ergodicity/prompts.js';
 import { RuinRiskDiscovery } from '../../core/RuinRiskDiscovery.js';
 import type {
@@ -163,7 +164,7 @@ export class RiskAssessmentOrchestrator {
           // Evaluate if response meets unlock requirements
           const unlockEval = this.dismissalTracker.evaluateUnlockResponse(
             input.output,
-            escalationPrompt.minimumConfidence || 0.5,
+            escalationPrompt.minimumConfidence || CONFIDENCE_THRESHOLDS.MODERATE,
             engagementMetrics
           );
 

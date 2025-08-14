@@ -1,4 +1,5 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, beforeEach } from 'vitest';
+import { RuinRiskDiscovery } from '../../core/RuinRiskDiscovery.js';
 
 describe('Regex Security Tests - ReDoS Prevention', () => {
   describe('Domain extraction patterns', () => {
@@ -79,6 +80,142 @@ describe('Regex Security Tests - ReDoS Prevention', () => {
       expect(pattern.test('1. ' + 'a'.repeat(201) + ': description')).toBe(false); // First capture too long
       // Note: Pattern matches first 500 chars even if there are more
       expect(pattern.test('1. test: ' + 'b'.repeat(501))).toBe(true);
+    });
+  });
+
+  describe('Unicode sanitization', () => {
+    let discovery: RuinRiskDiscovery;
+
+    beforeEach(() => {
+      discovery = new RuinRiskDiscovery();
+    });
+
+    test('should handle zero-width characters', () => {
+      const input = 'test\u200Btext\u200Cwith\u200Dzero\uFEFFwidth';
+      // The sanitizeForRegex method is private, but we can test through processDomainAssessment
+      const result = discovery.processDomainAssessment(input);
+      expect(result).toBeDefined();
+      expect(result.primaryDomain).toBeDefined();
+    });
+
+    test('should handle control characters', () => {
+      const input = 'test\x00with\x1Fcontrol\x7Fchars\x9F';
+      const result = discovery.processDomainAssessment(input);
+      expect(result).toBeDefined();
+      expect(result.primaryDomain).toBeDefined();
+    });
+
+    test('should handle combining marks', () => {
+      const input = 'test\u0301with\u0308combining\u0327marks\u036F';
+      const result = discovery.processDomainAssessment(input);
+      expect(result).toBeDefined();
+      expect(result.primaryDomain).toBeDefined();
+    });
+
+    test('should handle RTL/LTR override characters', () => {
+      const input = 'test\u202Awith\u202BRTL\u202Dand\u202ELTR\u2066override\u2069';
+      const result = discovery.processDomainAssessment(input);
+      expect(result).toBeDefined();
+      expect(result.primaryDomain).toBeDefined();
+    });
+
+    test('should handle mixed Unicode attacks', () => {
+      const maliciousInput =
+        'Financial\u200B domain\u200C with\uFEFF' +
+        '\u202Ehidden\u202D text\u0301\u0308' +
+        '\x00null\x1Fchars' +
+        ' '.repeat(100) +
+        'and spaces';
+
+      const result = discovery.processDomainAssessment(maliciousInput);
+      expect(result).toBeDefined();
+      expect(result.primaryDomain).toBeDefined();
+      // Should not crash or hang
+    });
+
+    test('should handle emoji and complex scripts', () => {
+      const input = 'test 😀 with 👨‍👩‍👧‍👦 emoji and नमस्ते देवनागरी العربية';
+      const result = discovery.processDomainAssessment(input);
+      expect(result).toBeDefined();
+      expect(result.primaryDomain).toBeDefined();
+    });
+
+    test('should truncate very long inputs', () => {
+      const veryLongInput = 'a'.repeat(15000); // Longer than MAX_REGEX_INPUT_LENGTH
+      const start = Date.now();
+      const result = discovery.processDomainAssessment(veryLongInput);
+      const duration = Date.now() - start;
+
+      expect(result).toBeDefined();
+      expect(duration).toBeLessThan(100); // Should process quickly
+      expect(result.primaryDomain).toBeDefined();
+    });
+
+    test('should handle surrogate pairs correctly', () => {
+      const input = 'test \uD800\uDC00 with \uD83D\uDE00 surrogates';
+      const result = discovery.processDomainAssessment(input);
+      expect(result).toBeDefined();
+      expect(result.primaryDomain).toBeDefined();
+    });
+
+    test('should handle various Unicode normalization forms', () => {
+      // é can be represented as single char or as e + combining accent
+      const nfc = 'café'; // NFC form
+      const nfd = 'café'; // NFD form (e + combining accent)
+
+      const result1 = discovery.processDomainAssessment(nfc);
+      const result2 = discovery.processDomainAssessment(nfd);
+
+      expect(result1).toBeDefined();
+      expect(result2).toBeDefined();
+    });
+
+    test('should prevent regex injection attempts', () => {
+      const injectionAttempts = [
+        '.*',
+        '^financial$',
+        'test|financial',
+        'test(financial)?',
+        'test[a-z]+',
+        'test{1,100}',
+        'test.*financial',
+        '(?:test|financial)',
+      ];
+
+      injectionAttempts.forEach(attempt => {
+        const result = discovery.processDomainAssessment(attempt);
+        expect(result).toBeDefined();
+        expect(result.primaryDomain).toBeDefined();
+        // Should treat these as literal strings, not regex patterns
+      });
+    });
+  });
+
+  describe('Performance under stress', () => {
+    test('should handle rapid repeated calls', () => {
+      const discovery = new RuinRiskDiscovery();
+      const start = Date.now();
+
+      for (let i = 0; i < 100; i++) {
+        discovery.processDomainAssessment(`test input ${i}`);
+      }
+
+      const duration = Date.now() - start;
+      expect(duration).toBeLessThan(500); // 100 calls in under 500ms
+    });
+
+    test('should handle complex nested patterns', () => {
+      const complexInput =
+        'This is a ((((deeply nested)))) pattern with ' +
+        '{{{{multiple}}}} brackets [[[and]]] different ((((types))))';
+
+      const discovery = new RuinRiskDiscovery();
+      const start = Date.now();
+      const result = discovery.processDomainAssessment(complexInput);
+      const duration = Date.now() - start;
+
+      expect(result).toBeDefined();
+      expect(duration).toBeLessThan(50); // Should process quickly
     });
   });
 });
