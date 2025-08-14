@@ -44,7 +44,7 @@ describe('Risk Discovery Integration', () => {
     it('should block extreme risk recommendations', async () => {
       // Create a plan
       const planResult = server.planThinkingSession({
-        problem: 'Quick money needed',
+        problem: 'Personal financial emergency - quick money needed',
         techniques: ['po'],
       });
 
@@ -54,7 +54,7 @@ describe('Risk Discovery Integration', () => {
       const step1 = await server.executeThinkingStep({
         planId: planData.planId,
         technique: 'po',
-        problem: 'Quick money needed',
+        problem: 'Personal financial emergency - quick money needed',
         currentStep: 1,
         totalSteps: 4,
         provocation: 'Po: Bet everything on one outcome',
@@ -69,7 +69,7 @@ describe('Risk Discovery Integration', () => {
         planId: planData.planId,
         sessionId,
         technique: 'po',
-        problem: 'Quick money needed',
+        problem: 'Personal financial emergency - quick money needed',
         currentStep: 2,
         totalSteps: 4,
         output:

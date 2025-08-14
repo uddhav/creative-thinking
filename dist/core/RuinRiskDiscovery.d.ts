@@ -8,6 +8,7 @@
  * Enhanced with adaptive domain discovery - learns about domains dynamically
  * without hardcoding specific domain knowledge.
  */
+import type { SessionData } from '../types/index.js';
 /**
  * Risk severity levels based on generic characteristics
  */
@@ -113,7 +114,9 @@ export interface DiscoveryPrompts {
  * Main discovery framework that guides LLMs through risk identification
  */
 export declare class RuinRiskDiscovery {
+    private static readonly CONTROL_CHARS_SET;
     private discoveryHistory;
+    private domainAssessmentCache;
     /**
      * Get structured prompts for the discovery process - adaptive version
      */
@@ -159,6 +162,10 @@ export declare class RuinRiskDiscovery {
      */
     private extractRelationships;
     /**
+     * Analyze using an existing NLP document
+     */
+    private analyzeWithNLPDoc;
+    /**
      * Analyze text using Compromise NLP for generic risk features
      */
     private analyzeWithNLP;
@@ -167,7 +174,11 @@ export declare class RuinRiskDiscovery {
      */
     private extractRiskFeatures;
     /**
-     * Extract domain from LLM's description without categorization
+     * Sanitize input for safe regex matching with comprehensive Unicode handling
+     */
+    private sanitizeForRegex;
+    /**
+     * Extract context descriptor from LLM's response - completely open-ended
      */
     private extractDomainFromDescription;
     /**
@@ -208,9 +219,9 @@ export declare class RuinRiskDiscovery {
      */
     private extractPatterns;
     /**
-     * Get previously discovered risks for a domain (if any)
+     * Get session-specific discovered risks (not cached by domain)
      */
-    getCachedDiscovery(domain: string): RiskDiscovery | undefined;
+    getSessionDiscovery(sessionData: SessionData): RiskDiscovery | undefined;
     /**
      * Assess risk severity based on generic characteristics
      */

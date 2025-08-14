@@ -33,6 +33,13 @@ export declare class RiskDismissalTracker {
      */
     detectPatterns(sessionData: SessionData): DismissalPattern[];
     /**
+     * Evaluate if a response meets the requirements to unlock progress
+     */
+    evaluateUnlockResponse(response: string, requiredConfidence: number, metrics: RiskEngagementMetrics): {
+        isValid: boolean;
+        feedback: string;
+    };
+    /**
      * Calculate appropriate escalation level
      */
     private calculateEscalationLevel;

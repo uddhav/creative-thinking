@@ -23,11 +23,11 @@ export declare class EscalationPromptGenerator {
      */
     private generateLevel2Prompt;
     /**
-     * Level 3: Behavioral lock with self-referential requirements
+     * Level 3: Behavioral lock with adaptive requirements
      */
     private generateLevel3Prompt;
     /**
-     * Level 4: High-stakes personal declaration
+     * Level 4: High-stakes decision with adaptive language
      */
     private generateLevel4Prompt;
     /**
@@ -43,9 +43,13 @@ export declare class EscalationPromptGenerator {
      */
     private findContradictions;
     /**
-     * Generate calculation requirements based on discovered risks
+     * Generate calculation requirements based on discovered risks (legacy)
      */
     private generateCalculationRequirements;
+    /**
+     * Generate adaptive calculation requirements based on context
+     */
+    private generateAdaptiveCalculationRequirements;
     /**
      * Generate reflection requirements
      */

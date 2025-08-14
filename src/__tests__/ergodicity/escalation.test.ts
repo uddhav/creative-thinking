@@ -379,8 +379,9 @@ describe('Escalation Prompt Generation', () => {
     expect(prompt).not.toBeNull();
     if (prompt) {
       expect(prompt.level).toBe(3);
-      expect(prompt.prompt).toContain('STOP - ENGAGEMENT REQUIRED');
-      expect(prompt.prompt).toContain('LOCKED');
+      // Adaptive language now generates different text based on context
+      expect(prompt.prompt).toMatch(/WARNING|LOCKED/);
+      expect(prompt.prompt).toContain('next step is LOCKED');
       expect(prompt.locksProgress).toBe(true);
       expect(prompt.minimumConfidence).toBe(0.5);
     }
@@ -404,8 +405,9 @@ describe('Escalation Prompt Generation', () => {
     if (prompt) {
       expect(prompt.level).toBe(4);
       expect(prompt.prompt).toContain('CRITICAL: HIGH-STAKES DECISION');
-      expect(prompt.prompt).toContain('Historical perspective');
-      expect(prompt.prompt).toContain('Cooling-off declaration');
+      // Adaptive language provides context-specific requirements
+      expect(prompt.prompt).toMatch(/at stake|at risk/);
+      expect(prompt.prompt).toContain('Exit criteria');
       expect(prompt.minimumConfidence).toBe(0.7);
     }
   });

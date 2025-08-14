@@ -4,6 +4,7 @@
  * Generates behavioral prompts based on dismissal patterns,
  * not domain categories. References the LLM's own discoveries.
  */
+import { adaptiveRiskAssessment } from './AdaptiveRiskAssessment.js';
 export class EscalationPromptGenerator {
     /**
      * Generate appropriate escalation prompt based on metrics and patterns
@@ -54,28 +55,31 @@ Remember: These are YOUR discoveries, not generic warnings.`,
         };
     }
     /**
-     * Level 3: Behavioral lock with self-referential requirements
+     * Level 3: Behavioral lock with adaptive requirements
      */
     generateLevel3Prompt(metrics, patterns, sessionData) {
         const discoveredRisks = this.extractDiscoveredRisks(sessionData);
         const proposedActions = this.extractProposedActions(sessionData);
         const contradictions = this.findContradictions(discoveredRisks, proposedActions);
-        return {
-            level: 3,
-            prompt: `🚨 STOP - ENGAGEMENT REQUIRED
-
-${metrics.dismissalCount} dismissals detected. ${metrics.consecutiveLowConfidence} consecutive low-confidence assessments.
+        // Analyze context for adaptive language
+        const problem = sessionData.problem || '';
+        const recentAction = proposedActions[0] || '';
+        const context = adaptiveRiskAssessment.analyzeContext(problem, recentAction);
+        // Generate adaptive escalation
+        const adaptivePrompt = adaptiveRiskAssessment.generateAdaptiveEscalation(3, metrics.discoveredRiskIndicators, context);
+        // Add the contradictions and specific requirements
+        const fullPrompt = `${adaptivePrompt}
 
 YOUR discoveries vs YOUR actions:
 ${contradictions
-                .slice(0, 3)
-                .map((c, i) => `${i + 1}. ${c}`)
-                .join('\n')}
+            .slice(0, 3)
+            .map((c, i) => `${i + 1}. ${c}`)
+            .join('\n')}
 
 The next step is LOCKED until you provide:
 
 1. **Specific calculations** based on YOUR identified risks:
-   ${this.generateCalculationRequirements(discoveredRisks)}
+   ${this.generateAdaptiveCalculationRequirements(discoveredRisks, context)}
 
 2. **Exit conditions** - When would you abandon this approach?
    - Condition 1: _________________ (must be measurable)
@@ -88,14 +92,17 @@ The next step is LOCKED until you provide:
     I would know it's failing when _________________"
 
 Minimum confidence required: 0.5
-This is not procedural. Your pattern indicates dangerous overconfidence in the face of risks YOU identified.`,
+This is not procedural. Your pattern indicates dangerous overconfidence in the face of risks YOU identified.`;
+        return {
+            level: 3,
+            prompt: fullPrompt,
             requiresResponse: true,
             minimumConfidence: 0.5,
             locksProgress: true,
         };
     }
     /**
-     * Level 4: High-stakes personal declaration
+     * Level 4: High-stakes decision with adaptive language
      */
     generateLevel4Prompt(metrics, patterns, sessionData) {
         const highStakesIndicators = metrics.discoveredRiskIndicators.filter(i => ['survival threat', 'irreversibility', 'total commitment language'].includes(i));
@@ -106,47 +113,16 @@ This is not procedural. Your pattern indicates dangerous overconfidence in the f
             a.toLowerCase().includes('bet')) ||
             recentActions[0] ||
             'your proposed action';
-        // Get the most severe pattern
-        const severePattern = patterns.find(p => p.severity === 'critical') ||
-            patterns.find(p => p.severity === 'high') ||
-            patterns[0];
+        // The most severe pattern information is embedded in the patterns array
+        // which is already being used to generate the escalation prompt
+        // Analyze context to generate appropriate language
+        const problem = sessionData.problem || '';
+        const context = adaptiveRiskAssessment.analyzeContext(problem, criticalAction);
+        // Generate adaptive escalation using context
+        const adaptivePrompt = adaptiveRiskAssessment.generateAdaptiveEscalation(4, highStakesIndicators, context);
         return {
             level: 4,
-            prompt: `🔴 CRITICAL: HIGH-STAKES DECISION DETECTED
-
-Your analysis identified: ${highStakesIndicators.join(', ')}
-Yet you've dismissed ${metrics.dismissalCount} risk assessments.
-
-Pattern detected: ${severePattern ? severePattern.evidence.join('; ') : 'Systematic dismissal'}
-Most recent action: "${criticalAction.substring(0, 100)}..."
-
-Before proceeding, YOU MUST declare concrete stakes:
-
-1. **What's at risk** (be specific):
-   - Amount: $_________________ 
-   - Percentage of total resources: _____%
-   - What CANNOT be lost: _________________
-   - Time to recover if lost: _____ months/years
-
-2. **Historical perspective**:
-   Similar overconfidence has led to:
-   - Enron (2001): "New economy" dismissal of traditional risks → $74B loss
-   - LTCM (1998): "Models can't fail" → $4.6B loss, systemic crisis
-   - Your scenario: _________________
-
-3. **Falsifiable commitment**:
-   "I will EXIT this position if:
-    □ Loss exceeds ____% of committed resources
-    □ These indicators appear: _________________
-    □ Time horizon exceeds: _________________"
-
-4. **Cooling-off declaration**:
-   □ I understand this decision cannot be made impulsively
-   □ I will review this after a 24-hour cooling period
-   □ I have discussed this with someone who disagrees
-
-Your confidence must exceed 0.7 to proceed with high-stakes actions.
-This escalation triggered because YOU identified potentially ruinous risks.`,
+            prompt: adaptivePrompt,
             requiresResponse: true,
             minimumConfidence: 0.7,
             locksProgress: true,
@@ -226,7 +202,7 @@ This escalation triggered because YOU identified potentially ruinous risks.`,
         return contradictions;
     }
     /**
-     * Generate calculation requirements based on discovered risks
+     * Generate calculation requirements based on discovered risks (legacy)
      */
     generateCalculationRequirements(risks) {
         const calculations = [];
@@ -240,6 +216,60 @@ This escalation triggered because YOU identified potentially ruinous risks.`,
         }
         if (risks.some(r => r.toLowerCase().includes('irreversible'))) {
             calculations.push('- Cost to partially reverse: $_______');
+            calculations.push('- Probability of successful reversal: ____%');
+        }
+        // Always include these
+        calculations.push('- Number of alternative approaches: _____');
+        calculations.push('- Confidence in THIS approach vs best alternative: ____%');
+        return calculations.join('\n   ');
+    }
+    /**
+     * Generate adaptive calculation requirements based on context
+     */
+    generateAdaptiveCalculationRequirements(risks, context) {
+        const calculations = [];
+        // Business context calculations
+        if (context.hasBusinessContext) {
+            if (risks.some(r => r.toLowerCase().includes('vendor') || r.toLowerCase().includes('migration'))) {
+                calculations.push('- Migration cost estimate: _______');
+                calculations.push('- Cost of staying with current solution: _______');
+                calculations.push('- Switching costs if vendor fails: _______');
+            }
+            if (risks.some(r => r.toLowerCase().includes('financial') || r.toLowerCase().includes('budget'))) {
+                calculations.push(`- Maximum ${context.resourceType} at risk: _______`);
+                calculations.push('- Percentage of annual budget: ____%');
+                calculations.push('- Impact on cash flow: _______');
+            }
+            calculations.push('- Number of employees/customers affected: _____');
+            calculations.push('- Revenue impact if this fails: _______');
+        }
+        // Personal finance calculations
+        else if (context.hasPersonalFinance) {
+            calculations.push(`- Maximum ${context.resourceType} at risk: _______`);
+            calculations.push('- Percentage of total resources: ____%');
+            calculations.push('- Emergency fund remaining after: _______');
+        }
+        // Technical migration calculations
+        else if (context.hasTechnicalMigration) {
+            calculations.push('- Data migration complexity (1-10): _____');
+            calculations.push('- Rollback time required: _____ hours');
+            calculations.push('- System downtime tolerance: _____ hours');
+            calculations.push('- Integration points affected: _____');
+        }
+        // Health/safety calculations
+        else if (context.hasHealthSafety) {
+            calculations.push('- Recovery time if complications: _____ weeks');
+            calculations.push('- Probability of success: ____%');
+            calculations.push('- Quality of life impact (1-10): _____');
+        }
+        // Time-based calculations (universal)
+        if (risks.some(r => r.toLowerCase().includes('time'))) {
+            calculations.push(`- Time to recover from worst case: ${context.recoveryTimeframe}`);
+            calculations.push('- Deadline for decision reversal: _______');
+        }
+        // Irreversibility calculations (universal)
+        if (risks.some(r => r.toLowerCase().includes('irreversible'))) {
+            calculations.push('- Cost/effort to partially reverse: _______');
             calculations.push('- Probability of successful reversal: ____%');
         }
         // Always include these

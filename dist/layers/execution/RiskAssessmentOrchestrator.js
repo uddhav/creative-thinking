@@ -2,7 +2,9 @@
  * RiskAssessmentOrchestrator - Handles risk assessment pipeline
  * Extracted from executeThinkingStep to improve maintainability
  */
-import { requiresRuinCheck, generateRuinAssessmentPrompt, assessRuinRisk, generateSurvivalConstraints, } from '../../ergodicity/prompts.js';
+import { requiresRuinCheck, assessRuinRisk, generateSurvivalConstraints, } from '../../ergodicity/prompts.js';
+import { adaptiveRiskAssessment } from '../../ergodicity/AdaptiveRiskAssessment.js';
+import { CONFIDENCE_THRESHOLDS } from '../../ergodicity/constants.js';
 import { RuinRiskDiscovery } from '../../core/RuinRiskDiscovery.js';
 import { generateConstraintViolationFeedback } from '../../ergodicity/riskDiscoveryPrompts.js';
 import { RiskDismissalTracker } from '../../ergodicity/riskDismissalTracker.js';
@@ -26,7 +28,7 @@ export class RiskAssessmentOrchestrator {
         const outputWords = input.output.toLowerCase().split(/\s+/);
         const problemWords = input.problem.toLowerCase().split(/\s+/);
         const allWords = [...outputWords, ...problemWords];
-        // Perform ruin risk assessment
+        // Perform ruin risk assessment with adaptive language
         if (requiresRuinCheck(input.technique, allWords)) {
             const ruinAssessment = this.performRuinAssessment(input, session);
             result.ruinRiskAssessment = ruinAssessment.ruinRiskAssessment;
@@ -56,7 +58,10 @@ export class RiskAssessmentOrchestrator {
      * Perform ruin risk assessment with escalation handling
      */
     performRuinAssessment(input, session) {
-        const ruinPrompt = generateRuinAssessmentPrompt(input.problem, input.technique, input.output);
+        // Analyze context for adaptive language
+        const context = adaptiveRiskAssessment.analyzeContext(input.problem, input.output);
+        // Generate adaptive prompt based on context
+        const ruinPrompt = adaptiveRiskAssessment.generateAdaptivePrompt(input.problem, input.output, context);
         const ruinRiskAssessment = assessRuinRisk(input.problem, input.technique, input.output);
         // Add ruin assessment to input for visibility
         const inputWithRuin = input;
@@ -78,35 +83,82 @@ export class RiskAssessmentOrchestrator {
             if (process.env.DISABLE_THOUGHT_LOGGING !== 'true') {
                 process.stderr.write('\n' + escalationPrompt.prompt + '\n\n');
             }
-            // If progress is locked, return intervention
+            // If progress is locked, check if user is providing an unlock response
             if (escalationPrompt.locksProgress) {
-                return {
-                    ruinRiskAssessment,
-                    escalationRequired: true,
-                    interventionResponse: {
-                        content: [
-                            {
-                                type: 'text',
-                                text: JSON.stringify({
-                                    error: 'Behavioral lock activated',
-                                    escalationLevel: escalationPrompt.level,
-                                    message: escalationPrompt.prompt,
-                                    requirements: {
-                                        minimumConfidence: escalationPrompt.minimumConfidence,
-                                        mustAddress: engagementMetrics.discoveredRiskIndicators,
+                // Check if the current output might be an unlock attempt
+                const outputLength = input.output.split(/\s+/).length;
+                if (outputLength > 50) {
+                    // Evaluate if response meets unlock requirements
+                    const unlockEval = this.dismissalTracker.evaluateUnlockResponse(input.output, escalationPrompt.minimumConfidence || CONFIDENCE_THRESHOLDS.MODERATE, engagementMetrics);
+                    if (unlockEval.isValid) {
+                        // Log successful unlock
+                        if (process.env.DISABLE_THOUGHT_LOGGING !== 'true') {
+                            process.stderr.write(`\n✅ ${unlockEval.feedback}\n\n`);
+                        }
+                        // Continue with normal processing
+                    }
+                    else {
+                        // Still locked, provide feedback
+                        return {
+                            ruinRiskAssessment,
+                            escalationRequired: true,
+                            interventionResponse: {
+                                content: [
+                                    {
+                                        type: 'text',
+                                        text: JSON.stringify({
+                                            error: 'Behavioral lock remains active',
+                                            escalationLevel: escalationPrompt.level,
+                                            message: escalationPrompt.prompt,
+                                            unlockAttemptFeedback: unlockEval.feedback,
+                                            requirements: {
+                                                minimumConfidence: escalationPrompt.minimumConfidence,
+                                                mustAddress: engagementMetrics.discoveredRiskIndicators,
+                                            },
+                                            behaviorPattern: {
+                                                consecutiveDismissals: engagementMetrics.consecutiveLowConfidence,
+                                                averageConfidence: engagementMetrics.averageConfidence,
+                                                totalDismissals: engagementMetrics.dismissalCount,
+                                            },
+                                        }, null, 2),
                                     },
-                                    behaviorPattern: {
-                                        consecutiveDismissals: engagementMetrics.consecutiveLowConfidence,
-                                        averageConfidence: engagementMetrics.averageConfidence,
-                                        totalDismissals: engagementMetrics.dismissalCount,
-                                    },
-                                }, null, 2),
+                                ],
+                                isError: true,
                             },
-                        ],
-                        isError: true,
-                    },
-                    escalationPrompt,
-                };
+                            escalationPrompt,
+                        };
+                    }
+                }
+                else {
+                    // Output too short to be an unlock attempt
+                    return {
+                        ruinRiskAssessment,
+                        escalationRequired: true,
+                        interventionResponse: {
+                            content: [
+                                {
+                                    type: 'text',
+                                    text: JSON.stringify({
+                                        error: 'Behavioral lock activated',
+                                        escalationLevel: escalationPrompt.level,
+                                        message: escalationPrompt.prompt,
+                                        requirements: {
+                                            minimumConfidence: escalationPrompt.minimumConfidence,
+                                            mustAddress: engagementMetrics.discoveredRiskIndicators,
+                                        },
+                                        behaviorPattern: {
+                                            consecutiveDismissals: engagementMetrics.consecutiveLowConfidence,
+                                            averageConfidence: engagementMetrics.averageConfidence,
+                                            totalDismissals: engagementMetrics.dismissalCount,
+                                        },
+                                    }, null, 2),
+                                },
+                            ],
+                            isError: true,
+                        },
+                        escalationPrompt,
+                    };
+                }
             }
             // Add escalation to ruin assessment for visibility
             if (inputWithRuin.ruinAssessment && typeof inputWithRuin.ruinAssessment === 'object') {
@@ -160,17 +212,17 @@ export class RiskAssessmentOrchestrator {
                 validations: [],
             };
         }
-        // Phase 1: Domain assessment
-        let domainAssessment;
-        const cachedDomain = session.riskDiscoveryData.domainAssessment?.primaryDomain;
-        if (!cachedDomain) {
-            const domainResponse = `This problem involves ${input.problem}. The user is considering: ${input.output}`;
-            domainAssessment = this.riskDiscovery.processDomainAssessment(domainResponse);
-            session.riskDiscoveryData.domainAssessment = domainAssessment;
-        }
-        // Phase 2: Get cached discovery
-        const domain = session.riskDiscoveryData.domainAssessment?.primaryDomain || 'general';
-        const discoveredRisks = this.riskDiscovery.getCachedDiscovery(domain);
+        // Phase 1: Context assessment (fresh each time)
+        const contextResponse = `This problem involves ${input.problem}. The user is considering: ${input.output}`;
+        const domainAssessment = this.riskDiscovery.processDomainAssessment(contextResponse);
+        // Store in session for this specific context
+        session.riskDiscoveryData.domainAssessment = domainAssessment;
+        // Phase 2: Risk discovery (fresh for this context)
+        // Don't use cached discovery - let the LLM discover risks fresh each time
+        const discoveryResponse = `For the context: ${domainAssessment.primaryDomain}, the action is: ${input.output}`;
+        const discoveredRisks = this.riskDiscovery.processRiskDiscovery(domainAssessment.primaryDomain, discoveryResponse);
+        // Store in session
+        session.riskDiscoveryData.risks = discoveredRisks;
         // Phase 3: Validate against discovered risks
         let validation;
         if (discoveredRisks && session.riskDiscoveryData.ruinScenarios) {
@@ -181,7 +233,7 @@ export class RiskAssessmentOrchestrator {
                 if (process.env.DISABLE_THOUGHT_LOGGING !== 'true') {
                     process.stderr.write('\n' +
                         generateConstraintViolationFeedback(input.output, validation.violatedConstraints, {
-                            domain,
+                            domain: domainAssessment.primaryDomain,
                             risks: discoveredRisks.identifiedRisks.map(r => r.risk),
                             ruinScenarios: session.riskDiscoveryData.ruinScenarios.length,
                             worstCase: discoveredRisks.identifiedRisks.find(r => r.impactMagnitude === 'catastrophic')?.risk,
