@@ -34,13 +34,14 @@ export class RuinRiskDiscovery {
         for (let i = 0x00; i <= 0x1f; i++) {
             chars.add(String.fromCharCode(i));
         }
-        // Extended control characters (0x7F-0x9F)  
+        // Extended control characters (0x7F-0x9F)
         for (let i = 0x7f; i <= 0x9f; i++) {
             chars.add(String.fromCharCode(i));
         }
         return chars;
     })();
     discoveryHistory = new Map();
+    domainAssessmentCache = new Map();
     /**
      * Get structured prompts for the discovery process - adaptive version
      */
@@ -100,6 +101,12 @@ export class RuinRiskDiscovery {
      * Process LLM's domain assessment response
      */
     processDomainAssessment(response) {
+        // Check cache first
+        const cacheKey = response.slice(0, 200); // Use first 200 chars as key
+        const cached = this.domainAssessmentCache.get(cacheKey);
+        if (cached) {
+            return cached;
+        }
         // Cache the NLP doc to avoid reprocessing
         let nlpDoc;
         try {
@@ -114,7 +121,7 @@ export class RuinRiskDiscovery {
         const riskFeatures = this.extractRiskFeatures(response, nlpAnalysis);
         // Extract primary domain from LLM's own description
         const primaryDomain = this.extractDomainFromDescription(response);
-        return {
+        const result = {
             primaryDomain,
             domainCharacteristics: this.extractCharacteristics(response, nlpDoc),
             confidence: this.assessConfidence(response, riskFeatures),
@@ -122,6 +129,15 @@ export class RuinRiskDiscovery {
             nlpAnalysis,
             riskFeatures,
         };
+        // Cache the result (with simple LRU - keep last 50 entries)
+        if (this.domainAssessmentCache.size >= 50) {
+            const firstKey = this.domainAssessmentCache.keys().next().value;
+            if (firstKey) {
+                this.domainAssessmentCache.delete(firstKey);
+            }
+        }
+        this.domainAssessmentCache.set(cacheKey, result);
+        return result;
     }
     /**
      * Process discovered risks from LLM response

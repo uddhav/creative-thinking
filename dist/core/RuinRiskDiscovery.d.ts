@@ -116,6 +116,7 @@ export interface DiscoveryPrompts {
 export declare class RuinRiskDiscovery {
     private static readonly CONTROL_CHARS_SET;
     private discoveryHistory;
+    private domainAssessmentCache;
     /**
      * Get structured prompts for the discovery process - adaptive version
      */

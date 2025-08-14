@@ -143,6 +143,7 @@ export class RuinRiskDiscovery {
     return chars;
   })();
   private discoveryHistory: Map<string, RiskDiscovery> = new Map();
+  private domainAssessmentCache = new Map<string, DomainAssessment>();
 
   /**
    * Get structured prompts for the discovery process - adaptive version
@@ -209,6 +210,13 @@ export class RuinRiskDiscovery {
    * Process LLM's domain assessment response
    */
   processDomainAssessment(response: string): DomainAssessment {
+    // Check cache first
+    const cacheKey = response.slice(0, 200); // Use first 200 chars as key
+    const cached = this.domainAssessmentCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     // Cache the NLP doc to avoid reprocessing
     let nlpDoc: CompromiseDoc | undefined;
     try {
@@ -226,7 +234,7 @@ export class RuinRiskDiscovery {
     // Extract primary domain from LLM's own description
     const primaryDomain = this.extractDomainFromDescription(response);
 
-    return {
+    const result = {
       primaryDomain,
       domainCharacteristics: this.extractCharacteristics(response, nlpDoc),
       confidence: this.assessConfidence(response, riskFeatures),
@@ -234,6 +242,17 @@ export class RuinRiskDiscovery {
       nlpAnalysis,
       riskFeatures,
     };
+
+    // Cache the result (with simple LRU - keep last 50 entries)
+    if (this.domainAssessmentCache.size >= 50) {
+      const firstKey = this.domainAssessmentCache.keys().next().value;
+      if (firstKey) {
+        this.domainAssessmentCache.delete(firstKey);
+      }
+    }
+    this.domainAssessmentCache.set(cacheKey, result);
+
+    return result;
   }
 
   /**
