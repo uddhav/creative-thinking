@@ -6,7 +6,7 @@
  * All high-stakes decisions are treated seriously with appropriate terminology.
  */
 
-// No imports needed - all types are local to this file
+import { CONFIDENCE_THRESHOLDS } from './constants.js';
 
 export interface ContextIndicators {
   hasPersonalFinance: boolean;
@@ -21,21 +21,46 @@ export interface ContextIndicators {
 }
 
 export class AdaptiveRiskAssessment {
+  private contextCache = new Map<string, ContextIndicators>();
+  private readonly MAX_CACHE_SIZE = 100;
   /**
    * Analyze context from problem and output text
    */
   analyzeContext(problem: string, output: string): ContextIndicators {
+    // Check cache first
+    const cacheKey = this.getCacheKey(problem, output);
+    const cached = this.contextCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     const fullText = `${problem} ${output}`.toLowerCase();
+
+    // Quick check for creative exploration - if true, skip detailed risk analysis
+    const hasCreativeExploration = this.detectCreativeExploration(fullText);
+    if (hasCreativeExploration && !fullText.includes('all') && !fullText.includes('permanent')) {
+      // Fast path for pure creative exploration
+      return {
+        hasPersonalFinance: false,
+        hasBusinessContext: false,
+        hasHealthSafety: false,
+        hasCreativeExploration: true,
+        hasTechnicalMigration: false,
+        hasHighStakes: false,
+        resourceType: 'creative resources',
+        stakeholders: ['creative team'],
+        recoveryTimeframe: 'not applicable',
+      };
+    }
+
+    // Detect high stakes first - most important for risk assessment
+    const hasHighStakes = this.detectHighStakes(fullText);
 
     // Detect various contexts (not exclusive - can have multiple)
     const hasPersonalFinance = this.detectPersonalFinance(fullText);
     const hasBusinessContext = this.detectBusinessContext(fullText);
     const hasHealthSafety = this.detectHealthSafety(fullText);
-    const hasCreativeExploration = this.detectCreativeExploration(fullText);
     const hasTechnicalMigration = this.detectTechnicalMigration(fullText);
-
-    // Detect high stakes regardless of domain
-    const hasHighStakes = this.detectHighStakes(fullText);
 
     // Determine resource type
     const resourceType = this.detectResourceType(fullText, {
@@ -53,7 +78,7 @@ export class AdaptiveRiskAssessment {
     // Estimate recovery timeframe
     const recoveryTimeframe = this.estimateRecoveryTimeframe(fullText);
 
-    return {
+    const result: ContextIndicators = {
       hasPersonalFinance,
       hasBusinessContext,
       hasHealthSafety,
@@ -64,6 +89,11 @@ export class AdaptiveRiskAssessment {
       stakeholders,
       recoveryTimeframe,
     };
+
+    // Cache the result
+    this.cacheContext(cacheKey, result);
+
+    return result;
   }
 
   /**
@@ -392,39 +422,77 @@ ${mitigations.join('\n')}`;
   }
 
   private generateHighStakesEscalation(context: ContextIndicators, indicators: string[]): string {
+    const riskSummary = this.formatRiskSummary(context, indicators);
+    const stakesSection = this.generateStakesSection(context);
+    const stakeholderSection = this.generateStakeholderQuestions(context);
+    const exitCriteria = this.generateExitCriteria(context);
+    const validationChecklist = this.generateValidationChecklist(context);
+
     return `🔴 CRITICAL: HIGH-STAKES DECISION DETECTED
 
-You've identified these risks: ${indicators.join(', ')}
-
-This decision affects: ${context.stakeholders.join(', ')}
-Resources at stake: ${context.resourceType}
-Recovery timeframe if failed: ${context.recoveryTimeframe}
+${riskSummary}
 
 Before proceeding, YOU MUST address:
 
-1. **What's at stake** (be specific):
+${stakesSection}
+
+${stakeholderSection}
+
+${exitCriteria}
+
+${validationChecklist}
+
+Your confidence must exceed ${CONFIDENCE_THRESHOLDS.HIGH_STAKES} to proceed with high-stakes actions.
+This escalation triggered because YOU identified potentially ruinous risks.`;
+  }
+
+  private formatRiskSummary(context: ContextIndicators, indicators: string[]): string {
+    return `You've identified these risks: ${indicators.join(', ')}
+
+This decision affects: ${context.stakeholders.join(', ')}
+Resources at stake: ${context.resourceType}
+Recovery timeframe if failed: ${context.recoveryTimeframe}`;
+  }
+
+  private generateStakesSection(context: ContextIndicators): string {
+    const resourceLabel = context.hasBusinessContext
+      ? 'Company runway remaining'
+      : 'Personal resources remaining';
+
+    return `1. **What's at stake** (be specific):
    - Resources at risk: _________________
-   - ${context.hasBusinessContext ? 'Company runway remaining' : 'Personal resources remaining'}: _________________
+   - ${resourceLabel}: _________________
    - What CANNOT be lost: _________________
-   - Time to recover if lost: _________________
+   - Time to recover if lost: _________________`;
+  }
 
-2. **Stakeholder impact**:
-   ${context.stakeholders.map(s => `- Impact on ${s}: _________________`).join('\n   ')}
+  private generateStakeholderQuestions(context: ContextIndicators): string {
+    const questions = context.stakeholders
+      .map(s => `- Impact on ${s}: _________________`)
+      .join('\n   ');
 
-3. **Exit criteria**:
+    return `2. **Stakeholder impact**:
+   ${questions}`;
+  }
+
+  private generateExitCriteria(context: ContextIndicators): string {
+    return `3. **Exit criteria**:
    "I will STOP this path if:
     □ Loss exceeds ______ of ${context.resourceType}
     □ These warning signs appear: _________________
-    □ Time horizon exceeds: _________________"
+    □ Time horizon exceeds: _________________"`;
+  }
 
-4. **Validation**:
+  private generateValidationChecklist(context: ContextIndicators): string {
+    const advisorCheck = context.hasBusinessContext
+      ? 'Key stakeholders are aligned'
+      : 'I have discussed with trusted advisors';
+
+    return `4. **Validation**:
    □ I have analyzed worst-case scenarios
    □ I have contingency plans for failure
-   □ ${context.hasBusinessContext ? 'Key stakeholders are aligned' : 'I have discussed with trusted advisors'}
-   □ I can survive if this completely fails
-
-Your confidence must exceed 0.7 to proceed with high-stakes actions.
-This escalation triggered because YOU identified potentially ruinous risks.`;
+   □ ${advisorCheck}
+   □ I can survive if this completely fails`;
   }
 
   private generateModerateEscalation(context: ContextIndicators, indicators: string[]): string {
@@ -452,6 +520,37 @@ Consider:
 - What would you learn from failure?
 
 ${context.hasCreativeExploration ? 'This appears to be exploratory. Focus on learning.' : 'Proceed with appropriate caution.'}`;
+  }
+
+  /**
+   * Generate cache key for context analysis
+   */
+  private getCacheKey(problem: string, output: string): string {
+    // Simple hash using first 100 chars of each + length
+    const truncatedProblem = problem.slice(0, 100);
+    const truncatedOutput = output.slice(0, 100);
+    return `${truncatedProblem}:${truncatedOutput}:${problem.length}:${output.length}`;
+  }
+
+  /**
+   * Cache context analysis result
+   */
+  private cacheContext(key: string, context: ContextIndicators): void {
+    // Implement simple LRU by removing oldest when at max size
+    if (this.contextCache.size >= this.MAX_CACHE_SIZE) {
+      const firstKey = this.contextCache.keys().next().value;
+      if (firstKey) {
+        this.contextCache.delete(firstKey);
+      }
+    }
+    this.contextCache.set(key, context);
+  }
+
+  /**
+   * Clear the context cache (useful for testing or session cleanup)
+   */
+  clearCache(): void {
+    this.contextCache.clear();
   }
 }
 

@@ -405,6 +405,13 @@ export class RuinRiskDiscovery {
         };
     }
     /**
+     * Sanitize input for safe regex matching
+     */
+    sanitizeForRegex(input) {
+        // Escape special regex characters
+        return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+    /**
      * Extract context descriptor from LLM's response - completely open-ended
      */
     extractDomainFromDescription(response) {
@@ -418,15 +425,21 @@ export class RuinRiskDiscovery {
             /about ([\w\s]{2,50})/i,
             /considering ([\w\s]{2,50})/i,
         ];
-        for (const pattern of contextPatterns) {
-            const match = response.match(pattern);
-            if (match && match[1]) {
-                // Keep the full description without trying to categorize
-                const context = match[1].trim();
-                if (context && context.length < 100) {
-                    return context; // Return exactly what the LLM said, no categorization
+        try {
+            for (const pattern of contextPatterns) {
+                const match = response.match(pattern);
+                if (match && match[1]) {
+                    // Keep the full description without trying to categorize
+                    const context = match[1].trim();
+                    if (context && context.length < 100) {
+                        return context; // Return exactly what the LLM said, no categorization
+                    }
                 }
             }
+        }
+        catch (error) {
+            // If regex fails, continue with fallback logic
+            console.error('Regex pattern matching failed:', error);
         }
         try {
             // If no explicit domain, extract the main topic from the response

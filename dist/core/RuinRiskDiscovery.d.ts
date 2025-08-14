@@ -168,6 +168,10 @@ export declare class RuinRiskDiscovery {
      */
     private extractRiskFeatures;
     /**
+     * Sanitize input for safe regex matching
+     */
+    private sanitizeForRegex;
+    /**
      * Extract context descriptor from LLM's response - completely open-ended
      */
     private extractDomainFromDescription;

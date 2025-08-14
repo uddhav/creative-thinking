@@ -17,6 +17,8 @@ export interface ContextIndicators {
     recoveryTimeframe: string;
 }
 export declare class AdaptiveRiskAssessment {
+    private contextCache;
+    private readonly MAX_CACHE_SIZE;
     /**
      * Analyze context from problem and output text
      */
@@ -44,8 +46,25 @@ export declare class AdaptiveRiskAssessment {
     private getMitigationSection;
     private getContextualReminder;
     private generateHighStakesEscalation;
+    private formatRiskSummary;
+    private generateStakesSection;
+    private generateStakeholderQuestions;
+    private generateExitCriteria;
+    private generateValidationChecklist;
     private generateModerateEscalation;
     private generateLowEscalation;
+    /**
+     * Generate cache key for context analysis
+     */
+    private getCacheKey;
+    /**
+     * Cache context analysis result
+     */
+    private cacheContext;
+    /**
+     * Clear the context cache (useful for testing or session cleanup)
+     */
+    clearCache(): void;
 }
 export declare const adaptiveRiskAssessment: AdaptiveRiskAssessment;
 //# sourceMappingURL=AdaptiveRiskAssessment.d.ts.map
