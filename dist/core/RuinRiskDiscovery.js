@@ -27,6 +27,19 @@ export var RiskSeverity;
  * Main discovery framework that guides LLMs through risk identification
  */
 export class RuinRiskDiscovery {
+    // Pre-compute control characters for performance
+    static CONTROL_CHARS_SET = (() => {
+        const chars = new Set();
+        // ASCII control characters (0x00-0x1F)
+        for (let i = 0x00; i <= 0x1f; i++) {
+            chars.add(String.fromCharCode(i));
+        }
+        // Extended control characters (0x7F-0x9F)  
+        for (let i = 0x7f; i <= 0x9f; i++) {
+            chars.add(String.fromCharCode(i));
+        }
+        return chars;
+    })();
     discoveryHistory = new Map();
     /**
      * Get structured prompts for the discovery process - adaptive version
@@ -414,36 +427,33 @@ export class RuinRiskDiscovery {
             // Truncate to safe length
             input = input.slice(0, CACHE_LIMITS.MAX_REGEX_INPUT_LENGTH);
         }
-        // Remove or replace dangerous Unicode categories:
-        // - Control characters (Cc)
-        // - Format characters (Cf) including zero-width
-        // - Surrogates (Cs)
-        // - Private use (Co)
-        // - Unassigned (Cn)
-        input = input
-            // Remove zero-width characters and joiners
-            .replace(/[\u200B-\u200D\uFEFF]/g, '')
-            // Remove combining marks that could cause issues
-            .replace(/[\u0300-\u036F]/g, '')
-            // Remove RTL/LTR override characters
-            .replace(/[\u202A-\u202E\u2066-\u2069]/g, '');
-        // Remove control characters using char codes to avoid regex control char issues
-        const controlChars = [];
-        // ASCII control characters (0x00-0x1F)
-        for (let i = 0x00; i <= 0x1f; i++) {
-            controlChars.push(String.fromCharCode(i));
+        // Single pass cleaning - filter out unwanted characters
+        const cleanedChars = [];
+        for (let i = 0; i < input.length; i++) {
+            const char = input[i];
+            const code = input.charCodeAt(i);
+            // Skip control characters
+            if (RuinRiskDiscovery.CONTROL_CHARS_SET.has(char))
+                continue;
+            // Skip zero-width characters and joiners
+            if (code >= 0x200b && code <= 0x200d)
+                continue;
+            if (code === 0xfeff)
+                continue;
+            // Skip combining marks
+            if (code >= 0x0300 && code <= 0x036f)
+                continue;
+            // Skip RTL/LTR override characters
+            if (code >= 0x202a && code <= 0x202e)
+                continue;
+            if (code >= 0x2066 && code <= 0x2069)
+                continue;
+            cleanedChars.push(char);
         }
-        // Extended control characters (0x7F-0x9F)
-        for (let i = 0x7f; i <= 0x9f; i++) {
-            controlChars.push(String.fromCharCode(i));
-        }
-        // Remove each control character
-        controlChars.forEach(char => {
-            input = input.split(char).join('');
-        });
+        const cleaned = cleanedChars.join('');
         // Now escape standard regex metacharacters
         // This includes: . * + ? ^ $ { } ( ) | [ ] \
-        return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        return cleaned.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
     /**
      * Extract context descriptor from LLM's response - completely open-ended

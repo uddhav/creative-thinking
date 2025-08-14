@@ -114,6 +114,7 @@ export interface DiscoveryPrompts {
  * Main discovery framework that guides LLMs through risk identification
  */
 export declare class RuinRiskDiscovery {
+    private static readonly CONTROL_CHARS_SET;
     private discoveryHistory;
     /**
      * Get structured prompts for the discovery process - adaptive version
