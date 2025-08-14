@@ -162,6 +162,10 @@ export declare class RuinRiskDiscovery {
      */
     private extractRelationships;
     /**
+     * Analyze using an existing NLP document
+     */
+    private analyzeWithNLPDoc;
+    /**
      * Analyze text using Compromise NLP for generic risk features
      */
     private analyzeWithNLP;

@@ -101,13 +101,13 @@ export class RuinRiskDiscovery {
      * Process LLM's domain assessment response
      */
     processDomainAssessment(response) {
-        // Check cache first
-        const cacheKey = response.slice(0, 200); // Use first 200 chars as key
+        // Check cache first - use full response for simple inputs, truncated for longer ones
+        const cacheKey = response.length <= 50 ? response : response.slice(0, 200);
         const cached = this.domainAssessmentCache.get(cacheKey);
         if (cached) {
             return cached;
         }
-        // Cache the NLP doc to avoid reprocessing
+        // Create NLP doc once and reuse it
         let nlpDoc;
         try {
             nlpDoc = nlpTyped(response);
@@ -115,12 +115,12 @@ export class RuinRiskDiscovery {
         catch (error) {
             console.error('Failed to parse response with NLP:', error);
         }
-        // Use NLP to analyze the response
-        const nlpAnalysis = this.analyzeWithNLP(response);
+        // Use NLP to analyze the response - pass the doc to avoid recreating
+        const nlpAnalysis = nlpDoc ? this.analyzeWithNLPDoc(nlpDoc) : this.analyzeWithNLP(response);
         // Extract risk features using generic analysis
         const riskFeatures = this.extractRiskFeatures(response, nlpAnalysis);
-        // Extract primary domain from LLM's own description
-        const primaryDomain = this.extractDomainFromDescription(response);
+        // Extract primary domain from LLM's own description - pass nlpDoc
+        const primaryDomain = this.extractDomainFromDescription(response, nlpDoc);
         const result = {
             primaryDomain,
             domainCharacteristics: this.extractCharacteristics(response, nlpDoc),
@@ -304,26 +304,21 @@ export class RuinRiskDiscovery {
      */
     extractRelationships(doc) {
         const relationships = [];
-        // Extract subject-verb-object patterns with multiple verb patterns
+        // Quick check: Skip complex extraction for very short inputs
+        const docText = doc.text ? doc.text() : '';
+        if (docText.length < 20 || !docText.includes(' ')) {
+            return relationships; // No meaningful relationships in short text
+        }
+        // Extract subject-verb-object patterns with a reduced set of common verbs
+        // Focus on most important ones for risk assessment
         const relationVerbs = [
-            'affect',
             'affects',
-            'impact',
             'impacts',
-            'influence',
-            'influences',
-            'depend on',
-            'depends on',
-            'rely on',
-            'relies on',
-            'cause',
             'causes',
-            'lead to',
             'leads to',
-            'result in',
-            'results in',
-            'trigger',
             'triggers',
+            'depends on',
+            'depend on',
         ];
         // Build match patterns for each verb - handle multi-word nouns
         relationVerbs.forEach(verb => {
@@ -372,6 +367,40 @@ export class RuinRiskDiscovery {
             }
         });
         return relationships;
+    }
+    /**
+     * Analyze using an existing NLP document
+     */
+    analyzeWithNLPDoc(doc) {
+        try {
+            // Use helper methods to extract different types of information
+            const entities = this.extractEntities(doc);
+            const topics = this.extractTopics(doc);
+            const verbs = this.extractActionVerbs(doc);
+            const temporalExpressions = this.extractTemporalExpressions(doc);
+            const constraints = this.extractConstraints(doc);
+            const relationships = this.extractRelationships(doc);
+            return {
+                entities,
+                topics,
+                verbs,
+                temporalExpressions,
+                constraints,
+                relationships,
+            };
+        }
+        catch (error) {
+            // Return empty analysis on error rather than crashing
+            console.error('NLP analysis failed:', error);
+            return {
+                entities: [],
+                topics: [],
+                verbs: [],
+                temporalExpressions: [],
+                constraints: [],
+                relationships: [],
+            };
+        }
     }
     /**
      * Analyze text using Compromise NLP for generic risk features
@@ -474,7 +503,7 @@ export class RuinRiskDiscovery {
     /**
      * Extract context descriptor from LLM's response - completely open-ended
      */
-    extractDomainFromDescription(response) {
+    extractDomainFromDescription(response, nlpDoc) {
         // Don't try to extract a "domain" - instead extract a context descriptor
         // This is whatever the LLM describes the situation as
         // Look for how the LLM describes the situation
@@ -503,8 +532,9 @@ export class RuinRiskDiscovery {
         }
         try {
             // If no explicit domain, extract the main topic from the response
+            // Reuse nlpDoc if available for the first sentence
             const firstSentence = response.split(/[.!?]/)[0] || '';
-            const doc = nlpTyped(firstSentence);
+            const doc = nlpDoc && firstSentence === response ? nlpDoc : nlpTyped(firstSentence);
             const topics = doc.topics ? doc.topics().out('array') : [];
             if (topics.length > 0) {
                 return topics[0].toLowerCase();
@@ -940,16 +970,16 @@ Consider revising your recommendation to respect these discovered limits.`;
      */
     extractPatterns(response) {
         const patterns = [];
-        // Look for pattern indicators in the response
+        // Quick check: Skip pattern extraction for very short inputs
+        if (response.length < 50) {
+            return patterns; // No meaningful patterns in short text
+        }
+        // Look for pattern indicators in the response - reduced set for performance
         const patternIndicators = [
             /patterns?\s*[:]\s*([^\n]+)/gi,
-            /notice(?:d)?\s+that\s+([^\n]+)/gi,
             /typically\s+([^\n]+)/gi,
-            /tends?\s+to\s+([^\n]+)/gi,
             /usually\s+([^\n]+)/gi,
             /often\s+([^\n]+)/gi,
-            /common(?:ly)?\s+([^\n]+)/gi,
-            /characteristic(?:ally)?\s+([^\n]+)/gi,
         ];
         patternIndicators.forEach(regex => {
             const matches = response.matchAll(regex);
@@ -959,12 +989,15 @@ Consider revising your recommendation to respect these discovered limits.`;
                 }
             }
         });
-        // Also look for numbered patterns
-        const numberedPattern = /^\d{1,3}\.\s{1,3}([^:\n]{1,200}):\s{1,3}([^\n]{1,500})/gm;
-        const numberedMatches = response.matchAll(numberedPattern);
-        for (const match of numberedMatches) {
-            if (match[2] && match[2].toLowerCase().includes('pattern')) {
-                patterns.push(match[2].trim());
+        // Skip complex numbered pattern extraction for short inputs
+        if (response.length > 200) {
+            // Also look for numbered patterns
+            const numberedPattern = /^\d{1,3}\.\s{1,3}([^:\n]{1,200}):\s{1,3}([^\n]{1,500})/gm;
+            const numberedMatches = response.matchAll(numberedPattern);
+            for (const match of numberedMatches) {
+                if (match[2] && match[2].toLowerCase().includes('pattern')) {
+                    patterns.push(match[2].trim());
+                }
             }
         }
         return [...new Set(patterns)]; // Remove duplicates
