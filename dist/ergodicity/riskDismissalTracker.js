@@ -107,6 +107,74 @@ export class RiskDismissalTracker {
         return patterns;
     }
     /**
+     * Evaluate if a response meets the requirements to unlock progress
+     */
+    evaluateUnlockResponse(response, requiredConfidence, metrics) {
+        const responseLower = response.toLowerCase();
+        // Check for specific commitments
+        const hasExitCriteria = responseLower.includes('will exit if') ||
+            responseLower.includes('abandon if') ||
+            responseLower.includes('stop if');
+        const hasSpecificCalculations = /\d+/.test(response) && // Contains numbers
+            (responseLower.includes('percent') ||
+                responseLower.includes('%') ||
+                responseLower.includes('months') ||
+                responseLower.includes('years') ||
+                responseLower.includes('dollars') ||
+                responseLower.includes('$'));
+        const hasStakeholderConsideration = responseLower.includes('employee') ||
+            responseLower.includes('customer') ||
+            responseLower.includes('partner') ||
+            responseLower.includes('investor') ||
+            responseLower.includes('family') ||
+            responseLower.includes('team');
+        const hasContingencyPlan = responseLower.includes('if fails') ||
+            responseLower.includes('backup') ||
+            responseLower.includes('contingency') ||
+            responseLower.includes('rollback');
+        // Calculate response quality score
+        let qualityScore = 0;
+        if (hasExitCriteria)
+            qualityScore += 0.3;
+        if (hasSpecificCalculations)
+            qualityScore += 0.3;
+        if (hasStakeholderConsideration)
+            qualityScore += 0.2;
+        if (hasContingencyPlan)
+            qualityScore += 0.2;
+        // Check minimum length for substantive response
+        const wordCount = response.split(/\s+/).length;
+        if (wordCount < 50) {
+            return {
+                isValid: false,
+                feedback: 'Response too brief. Please provide detailed analysis addressing all requirements.',
+            };
+        }
+        // Check if confidence meets requirement
+        if (qualityScore < requiredConfidence) {
+            const missing = [];
+            if (!hasExitCriteria)
+                missing.push('clear exit criteria');
+            if (!hasSpecificCalculations)
+                missing.push('specific calculations');
+            if (!hasStakeholderConsideration)
+                missing.push('stakeholder impact analysis');
+            if (!hasContingencyPlan)
+                missing.push('contingency planning');
+            return {
+                isValid: false,
+                feedback: `Response lacks: ${missing.join(', ')}. Quality score: ${qualityScore.toFixed(2)}/${requiredConfidence.toFixed(2)}`,
+            };
+        }
+        // Reset metrics on successful unlock
+        metrics.consecutiveLowConfidence = 0;
+        metrics.escalationLevel = Math.max(1, metrics.escalationLevel - 1);
+        return {
+            isValid: true,
+            feedback: 'Response meets requirements. Behavioral lock released.',
+        };
+    }
+    /**
      * Calculate appropriate escalation level
      */
     calculateEscalationLevel(metrics, sessionData) {
@@ -118,6 +186,8 @@ export class RiskDismissalTracker {
         if (metrics.discoveredRiskIndicators.length === 0) {
             return 1;
         }
+        // No domain-specific escalation limits - all contexts treated equally
+        // The adaptive language system will handle context-appropriate messaging
         // Check for high-stakes indicators first
         const hasHighStakes = this.detectHighStakesIndicators(sessionData);
         // Level 4: Critical - high stakes with dismissive behavior

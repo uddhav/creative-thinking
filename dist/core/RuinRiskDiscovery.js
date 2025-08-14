@@ -119,8 +119,8 @@ export class RuinRiskDiscovery {
             domainSpecificSafetyPractices: this.extractSafetyPractices(response),
             maxAcceptableLoss: this.extractMaxLoss(response),
         };
-        // Cache for future reference
-        this.discoveryHistory.set(domain, discovery);
+        // Don't cache by domain - each discovery should be fresh
+        // Store in session-specific discovery instead
         return discovery;
     }
     /**
@@ -405,30 +405,30 @@ export class RuinRiskDiscovery {
         };
     }
     /**
-     * Extract domain from LLM's description without categorization
+     * Extract context descriptor from LLM's response - completely open-ended
      */
     extractDomainFromDescription(response) {
-        try {
-            // Look for explicit domain mentions
-            const domainPatterns = [
-                /this (?:is|involves?|relates to|concerns?) (?:a |an |the )?([^.!?]{1,100}) (?:domain|area|field|decision|problem)/i,
-                /in the (?:domain|area|field) of ([^.!?]+)/i,
-                /(?:domain|area|field):\s*([^.!?\n]+)/i,
-            ];
-            for (const pattern of domainPatterns) {
-                const match = response.match(pattern);
-                if (match && match[1]) {
-                    // Clean up the match - remove articles and extra words
-                    const domain = match[1]
-                        .replace(/^(a|an|the)\s+/i, '')
-                        .replace(/\s{1,5}(?:domain|area|field|decision|problem)$/i, '')
-                        .trim();
-                    if (domain && domain.length < 50) {
-                        // Reasonable length for a domain name
-                        return domain.toLowerCase();
-                    }
+        // Don't try to extract a "domain" - instead extract a context descriptor
+        // This is whatever the LLM describes the situation as
+        // Look for how the LLM describes the situation
+        const contextPatterns = [
+            /(?:domain|area|field):\s*([^.!?\n]+)/i, // Explicit domain declaration
+            /this (?:is|involves?) (?:a |an |the )?([\w\s]{2,50}?)(?:\s+decision|\s+that|\s+involving|$)/i,
+            /dealing with ([\w\s]{2,50})/i,
+            /about ([\w\s]{2,50})/i,
+            /considering ([\w\s]{2,50})/i,
+        ];
+        for (const pattern of contextPatterns) {
+            const match = response.match(pattern);
+            if (match && match[1]) {
+                // Keep the full description without trying to categorize
+                const context = match[1].trim();
+                if (context && context.length < 100) {
+                    return context; // Return exactly what the LLM said, no categorization
                 }
             }
+        }
+        try {
             // If no explicit domain, extract the main topic from the response
             const firstSentence = response.split(/[.!?]/)[0] || '';
             const doc = nlpTyped(firstSentence);
@@ -897,10 +897,11 @@ Consider revising your recommendation to respect these discovered limits.`;
         return [...new Set(patterns)]; // Remove duplicates
     }
     /**
-     * Get previously discovered risks for a domain (if any)
+     * Get session-specific discovered risks (not cached by domain)
      */
-    getCachedDiscovery(domain) {
-        return this.discoveryHistory.get(domain);
+    getSessionDiscovery(sessionData) {
+        // Return discovery from current session, not from domain cache
+        return sessionData?.riskDiscoveryData?.risks;
     }
     /**
      * Assess risk severity based on generic characteristics

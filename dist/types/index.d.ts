@@ -88,6 +88,7 @@ export interface SessionData {
         discoveredRiskIndicators: string[];
         consecutiveLowConfidence: number;
         totalAssessments: number;
+        problemDomain?: string;
     };
 }
 export interface ExecuteThinkingStepInput {

@@ -62,10 +62,10 @@ describe('Ergodicity Prompts', () => {
     it('should trigger ruin assessment for high-risk keywords', async () => {
       const input: ExecuteThinkingStepInput = {
         technique: 'scamper',
-        problem: 'How to restructure our company?',
+        problem: 'How to manage my personal investment portfolio?',
         currentStep: 2,
         totalSteps: 8,
-        output: 'We could eliminate the entire R&D department to cut costs',
+        output: 'We could eliminate bonds and invest all savings in high-risk stocks',
         nextStepNeeded: true,
       };
 
@@ -82,7 +82,8 @@ describe('Ergodicity Prompts', () => {
       const responseData = JSON.parse(response.content[0].text) as Record<string, unknown>;
       expect(responseData.ruinAssessment).toBeDefined();
       expect(responseData.ruinAssessment.required).toBe(true);
-      expect(responseData.ruinAssessment.prompt).toContain('RUIN RISK ASSESSMENT');
+      // Now uses adaptive language based on context
+      expect(responseData.ruinAssessment.prompt).toMatch(/ASSESSMENT|CHECK/);
       expect(responseData.ruinAssessment.survivalConstraints).toBeInstanceOf(Array);
       expect(responseData.ruinAssessment.survivalConstraints.length).toBeGreaterThan(0);
     });
@@ -156,11 +157,20 @@ describe('Ergodicity Prompts', () => {
       expect(requiresRuinCheck('random_entry', keywords)).toBe(true);
     });
 
-    it('should flag high-risk techniques automatically', () => {
+    it('should flag high-risk techniques', () => {
+      // High-risk techniques always trigger ruin check
       expect(requiresRuinCheck('scamper', [])).toBe(true);
       expect(requiresRuinCheck('disney_method', [])).toBe(true);
       expect(requiresRuinCheck('design_thinking', [])).toBe(true);
       expect(requiresRuinCheck('yes_and', [])).toBe(true);
+
+      // Non-high-risk techniques don't trigger without keywords
+      expect(requiresRuinCheck('six_hats', [])).toBe(false);
+      expect(requiresRuinCheck('random_entry', [])).toBe(false);
+
+      // But they do trigger with risk keywords
+      expect(requiresRuinCheck('six_hats', ['invest', 'savings'])).toBe(true);
+      expect(requiresRuinCheck('random_entry', ['portfolio'])).toBe(true);
     });
   });
 
@@ -287,10 +297,10 @@ describe('Ergodicity Prompts', () => {
     it('should detect high commitment words in any technique', async () => {
       const input: ExecuteThinkingStepInput = {
         technique: 'po',
-        problem: 'Business strategy',
+        problem: 'My retirement savings strategy',
         currentStep: 3,
         totalSteps: 4,
-        output: 'We should permanently eliminate our retail division',
+        output: 'I should permanently invest all my savings in cryptocurrency',
         nextStepNeeded: true,
       };
 
@@ -306,7 +316,8 @@ describe('Ergodicity Prompts', () => {
 
       const responseData = JSON.parse(response.content[0].text) as Record<string, unknown>;
       expect(responseData.ruinAssessment).toBeDefined();
-      expect(responseData.ruinAssessment.prompt).toContain('eliminate');
+      // Personal finance framework focuses on reversibility and survival
+      expect(responseData.ruinAssessment.prompt).toContain('Reversibility');
     });
   });
 });

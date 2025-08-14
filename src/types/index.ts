@@ -143,6 +143,7 @@ export interface SessionData {
     discoveredRiskIndicators: string[]; // from LLM's own analysis
     consecutiveLowConfidence: number;
     totalAssessments: number;
+    problemDomain?: string; // Track the domain for appropriate escalation
   };
 }
 

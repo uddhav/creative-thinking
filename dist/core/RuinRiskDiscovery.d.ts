@@ -8,6 +8,7 @@
  * Enhanced with adaptive domain discovery - learns about domains dynamically
  * without hardcoding specific domain knowledge.
  */
+import type { SessionData } from '../types/index.js';
 /**
  * Risk severity levels based on generic characteristics
  */
@@ -167,7 +168,7 @@ export declare class RuinRiskDiscovery {
      */
     private extractRiskFeatures;
     /**
-     * Extract domain from LLM's description without categorization
+     * Extract context descriptor from LLM's response - completely open-ended
      */
     private extractDomainFromDescription;
     /**
@@ -208,9 +209,9 @@ export declare class RuinRiskDiscovery {
      */
     private extractPatterns;
     /**
-     * Get previously discovered risks for a domain (if any)
+     * Get session-specific discovered risks (not cached by domain)
      */
-    getCachedDiscovery(domain: string): RiskDiscovery | undefined;
+    getSessionDiscovery(sessionData: SessionData): RiskDiscovery | undefined;
     /**
      * Assess risk severity based on generic characteristics
      */

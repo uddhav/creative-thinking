@@ -103,6 +103,10 @@ export function requiresRuinCheck(technique, keywords) {
         'public',
         'lawsuit',
         'legal',
+        'vendor',
+        'migration',
+        'lock-in',
+        'path dependencies',
     ];
     const hasRuinKeyword = keywords.some(keyword => ruinKeywords.some(ruinWord => keyword.toLowerCase().includes(ruinWord)));
     const highRiskTechniques = [

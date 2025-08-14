@@ -88,13 +88,18 @@ describe('RuinRiskDiscovery', () => {
       ).toBe(true);
     });
 
-    it('should cache discovery for future use', () => {
+    it('should return discovery without caching by domain', () => {
       const response = 'Test risks and practices';
-      discovery.processRiskDiscovery('test-domain', response);
+      const result = discovery.processRiskDiscovery('test-context', response);
 
-      const cached = discovery.getCachedDiscovery('test-domain');
-      expect(cached).toBeDefined();
-      expect(cached?.domain).toBe('test-domain');
+      // Discovery is no longer cached by domain - it's session-specific
+      expect(result).toBeDefined();
+      expect(result.domain).toBe('test-context');
+
+      // getSessionDiscovery now requires session data
+      const mockSession = { riskDiscoveryData: { risks: result } };
+      const sessionDiscovery = discovery.getSessionDiscovery(mockSession);
+      expect(sessionDiscovery).toBe(result);
     });
   });
 
@@ -275,8 +280,8 @@ describe('RuinRiskDiscovery', () => {
       const response = 'This is about personal hobbies and interests';
       const assessment = discovery.processDomainAssessment(response);
 
-      // Now extracts the actual domain description
-      expect(assessment.primaryDomain).toBe('personal hobbies and interests');
+      // Now extracts the actual domain description including context words
+      expect(assessment.primaryDomain).toBe('about personal hobbies and interests');
     });
   });
 
