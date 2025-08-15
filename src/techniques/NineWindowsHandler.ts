@@ -1,8 +1,8 @@
 /**
- * Nine Windows (System Operator) technique handler
+ * Nine Windows (System Operator) technique handler with reflexivity for future projections
  */
 
-import { BaseTechniqueHandler, type TechniqueInfo } from './types.js';
+import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 import type { NineWindowsCell } from '../types/index.js';
 
@@ -22,20 +22,89 @@ export class NineWindowsHandler extends BaseTechniqueHandler {
     };
   }
 
-  getStepInfo(step: number): { name: string; focus: string; emoji: string } {
-    const cells = [
-      // Row 1: Past
-      { name: 'Past Sub-system', focus: 'Component history', emoji: '🔧' },
-      { name: 'Past System', focus: 'System evolution', emoji: '⚙️' },
-      { name: 'Past Super-system', focus: 'Environmental history', emoji: '🌍' },
-      // Row 2: Present
-      { name: 'Present Sub-system', focus: 'Current components', emoji: '🔩' },
-      { name: 'Present System', focus: 'Current state', emoji: '🎯' },
-      { name: 'Present Super-system', focus: 'Current environment', emoji: '🏞️' },
-      // Row 3: Future
-      { name: 'Future Sub-system', focus: 'Component evolution', emoji: '🚀' },
-      { name: 'Future System', focus: 'System possibilities', emoji: '🎪' },
-      { name: 'Future Super-system', focus: 'Environmental changes', emoji: '🌅' },
+  getStepInfo(step: number): StepInfo {
+    const cells: StepInfo[] = [
+      // Row 1: Past (thinking - analyzing history)
+      { name: 'Past Sub-system', focus: 'Component history', emoji: '🔧', type: 'thinking' },
+      { name: 'Past System', focus: 'System evolution', emoji: '⚙️', type: 'thinking' },
+      { name: 'Past Super-system', focus: 'Environmental history', emoji: '🌍', type: 'thinking' },
+      // Row 2: Present (thinking - analyzing current state)
+      { name: 'Present Sub-system', focus: 'Current components', emoji: '🔩', type: 'thinking' },
+      { name: 'Present System', focus: 'Current state', emoji: '🎯', type: 'thinking' },
+      { name: 'Present Super-system', focus: 'Current environment', emoji: '🏞️', type: 'thinking' },
+      // Row 3: Future (action - creating projections and path dependencies)
+      {
+        name: 'Future Sub-system',
+        focus: 'Component evolution',
+        emoji: '🚀',
+        type: 'action',
+        reflexiveEffects: {
+          triggers: [
+            'Projecting component evolution',
+            'Defining future dependencies',
+            'Setting component trajectories',
+          ],
+          realityChanges: [
+            'Component evolution path defined',
+            'Future dependencies established',
+            'Development trajectory set',
+          ],
+          futureConstraints: [
+            'Components must evolve along projected paths',
+            'Path dependencies created',
+            'Some evolution paths may be irreversible',
+          ],
+          reversibility: 'medium',
+        },
+      },
+      {
+        name: 'Future System',
+        focus: 'System possibilities',
+        emoji: '🎪',
+        type: 'action',
+        reflexiveEffects: {
+          triggers: [
+            'Defining system futures',
+            'Creating possibility space',
+            'Establishing system trajectory',
+          ],
+          realityChanges: [
+            'Future possibilities defined',
+            'System trajectory established',
+            'Irreversible paths identified',
+          ],
+          futureConstraints: [
+            'System locked into certain futures',
+            'Some possibilities become unreachable',
+            'Path-dependent evolution initiated',
+          ],
+          reversibility: 'low',
+        },
+      },
+      {
+        name: 'Future Super-system',
+        focus: 'Environmental changes',
+        emoji: '🌅',
+        type: 'action',
+        reflexiveEffects: {
+          triggers: [
+            'Projecting environmental evolution',
+            'Setting context boundaries',
+            'Defining external constraints',
+          ],
+          realityChanges: [
+            'Environmental trajectory defined',
+            'External constraints established',
+            'Context evolution initiated',
+          ],
+          futureConstraints: [
+            'Must work within projected environment',
+            'External factors shape possibilities',
+            'Environmental path dependencies created',
+          ],
+          reversibility: 'low',
+        },
+      },
     ];
 
     if (step < 1 || step > cells.length) {

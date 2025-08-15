@@ -1,5 +1,5 @@
 /**
- * Neuro-Computational Synthesis for Enhanced Creativity technique handler
+ * Neuro-Computational Synthesis for Enhanced Creativity technique handler with reflexivity
  *
  * Combines neuroscience-inspired cognitive processes with computational creativity methods
  * to generate enhanced creative solutions through hybrid neural-computational approaches.
@@ -13,59 +13,100 @@
  * explicit computational models for enhanced creative problem solving.
  */
 
-import { BaseTechniqueHandler, type TechniqueInfo } from './types.js';
+import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 
-interface NeuroComputationalStep {
-  name: string;
-  focus: string;
-  emoji: string;
-  description?: string;
-}
-
 export class NeuroComputationalHandler extends BaseTechniqueHandler {
-  private readonly steps: NeuroComputationalStep[] = [
+  private readonly steps: StepInfo[] = [
     {
       name: 'Neural Mapping',
       focus: 'Map problem to neural representations',
       emoji: '🧠',
-      description:
-        'Transform problem space into neural network representations, identifying key cognitive components and their interconnections',
+      type: 'thinking',
     },
     {
       name: 'Pattern Generation',
       focus: 'Generate diverse solution patterns',
       emoji: '🌊',
-      description:
-        'Use parallel distributed processing to generate multiple solution patterns across different neural pathways',
+      type: 'thinking',
     },
     {
       name: 'Interference Analysis',
       focus: 'Analyze pattern interactions',
       emoji: '⚡',
-      description:
-        'Identify constructive and destructive interference between solution patterns to optimize creative output',
+      type: 'thinking',
     },
     {
       name: 'Computational Synthesis',
       focus: 'Synthesize patterns computationally',
       emoji: '🔬',
-      description:
-        'Apply computational models to synthesize neural patterns into coherent creative solutions',
+      type: 'action',
+      reflexiveEffects: {
+        triggers: [
+          'Creating computational models',
+          'Synthesizing neural patterns',
+          'Building hybrid solutions',
+        ],
+        realityChanges: [
+          'Computational models created',
+          'Neural patterns synthesized',
+          'Hybrid architecture established',
+        ],
+        futureConstraints: [
+          'Must work within computational model',
+          'Neural architecture constraints',
+          'Synthesis patterns locked in',
+        ],
+        reversibility: 'low',
+      },
     },
     {
       name: 'Optimization Cycles',
       focus: 'Iterate and refine solutions',
       emoji: '🔄',
-      description:
-        'Run iterative optimization cycles to enhance solution coherence, novelty, and utility',
+      type: 'action',
+      reflexiveEffects: {
+        triggers: [
+          'Running optimization cycles',
+          'Refining solution parameters',
+          'Iterating toward convergence',
+        ],
+        realityChanges: [
+          'Solution optimized',
+          'Parameters refined',
+          'Convergence path established',
+        ],
+        futureConstraints: [
+          'Optimization creates local minima',
+          'Parameter space constrained',
+          'Must continue on optimization path',
+        ],
+        reversibility: 'medium',
+      },
     },
     {
       name: 'Convergence',
       focus: 'Converge to optimal solution',
       emoji: '🎯',
-      description:
-        'Converge neural-computational processes to produce optimal creative solution with preserved insights',
+      type: 'action',
+      reflexiveEffects: {
+        triggers: [
+          'Converging to solution',
+          'Finalizing neural-computational synthesis',
+          'Locking in optimal configuration',
+        ],
+        realityChanges: [
+          'Solution converged',
+          'Optimal configuration established',
+          'Neural-computational model finalized',
+        ],
+        futureConstraints: [
+          'Solution locked at convergence point',
+          'Model architecture fixed',
+          'Further optimization limited',
+        ],
+        reversibility: 'low',
+      },
     },
   ];
 
@@ -87,7 +128,7 @@ export class NeuroComputationalHandler extends BaseTechniqueHandler {
     };
   }
 
-  getStepInfo(step: number): NeuroComputationalStep {
+  getStepInfo(step: number): StepInfo {
     const stepInfo = this.steps[step - 1];
     if (!stepInfo) {
       throw new ValidationError(

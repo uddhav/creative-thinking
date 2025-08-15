@@ -32,21 +32,21 @@ describe('NineWindowsHandler', () => {
   describe('getStepInfo', () => {
     it('should return correct info for past steps (1-3)', () => {
       const step1 = handler.getStepInfo(1);
-      expect(step1).toEqual({
+      expect(step1).toMatchObject({
         name: 'Past Sub-system',
         focus: 'Component history',
         emoji: '🔧',
       });
 
       const step2 = handler.getStepInfo(2);
-      expect(step2).toEqual({
+      expect(step2).toMatchObject({
         name: 'Past System',
         focus: 'System evolution',
         emoji: '⚙️',
       });
 
       const step3 = handler.getStepInfo(3);
-      expect(step3).toEqual({
+      expect(step3).toMatchObject({
         name: 'Past Super-system',
         focus: 'Environmental history',
         emoji: '🌍',
@@ -55,21 +55,21 @@ describe('NineWindowsHandler', () => {
 
     it('should return correct info for present steps (4-6)', () => {
       const step4 = handler.getStepInfo(4);
-      expect(step4).toEqual({
+      expect(step4).toMatchObject({
         name: 'Present Sub-system',
         focus: 'Current components',
         emoji: '🔩',
       });
 
       const step5 = handler.getStepInfo(5);
-      expect(step5).toEqual({
+      expect(step5).toMatchObject({
         name: 'Present System',
         focus: 'Current state',
         emoji: '🎯',
       });
 
       const step6 = handler.getStepInfo(6);
-      expect(step6).toEqual({
+      expect(step6).toMatchObject({
         name: 'Present Super-system',
         focus: 'Current environment',
         emoji: '🏞️',
@@ -78,25 +78,31 @@ describe('NineWindowsHandler', () => {
 
     it('should return correct info for future steps (7-9)', () => {
       const step7 = handler.getStepInfo(7);
-      expect(step7).toEqual({
+      expect(step7).toMatchObject({
         name: 'Future Sub-system',
         focus: 'Component evolution',
         emoji: '🚀',
       });
+      expect(step7.type).toBe('action');
+      expect(step7.reflexiveEffects).toBeDefined();
 
       const step8 = handler.getStepInfo(8);
-      expect(step8).toEqual({
+      expect(step8).toMatchObject({
         name: 'Future System',
         focus: 'System possibilities',
         emoji: '🎪',
       });
+      expect(step8.type).toBe('action');
+      expect(step8.reflexiveEffects).toBeDefined();
 
       const step9 = handler.getStepInfo(9);
-      expect(step9).toEqual({
+      expect(step9).toMatchObject({
         name: 'Future Super-system',
         focus: 'Environmental changes',
         emoji: '🌅',
       });
+      expect(step9.type).toBe('action');
+      expect(step9.reflexiveEffects).toBeDefined();
     });
 
     it('should throw validation error for invalid step', () => {

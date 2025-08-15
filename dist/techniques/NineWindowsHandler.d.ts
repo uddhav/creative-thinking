@@ -1,15 +1,11 @@
 /**
- * Nine Windows (System Operator) technique handler
+ * Nine Windows (System Operator) technique handler with reflexivity for future projections
  */
-import { BaseTechniqueHandler, type TechniqueInfo } from './types.js';
+import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
 import type { NineWindowsCell } from '../types/index.js';
 export declare class NineWindowsHandler extends BaseTechniqueHandler {
     getTechniqueInfo(): TechniqueInfo;
-    getStepInfo(step: number): {
-        name: string;
-        focus: string;
-        emoji: string;
-    };
+    getStepInfo(step: number): StepInfo;
     getStepGuidance(step: number, problem: string): string;
     extractInsights(history: Array<{
         currentStep?: number;

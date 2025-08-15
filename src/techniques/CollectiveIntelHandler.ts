@@ -1,8 +1,8 @@
 /**
- * Collective Intelligence technique handler
+ * Collective Intelligence technique handler with reflexivity tracking
  */
 
-import { BaseTechniqueHandler, type TechniqueInfo } from './types.js';
+import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 
 export class CollectiveIntelHandler extends BaseTechniqueHandler {
@@ -20,32 +20,73 @@ export class CollectiveIntelHandler extends BaseTechniqueHandler {
     };
   }
 
-  getStepInfo(step: number): { name: string; focus: string; emoji: string } {
-    const steps = [
+  getStepInfo(step: number): StepInfo {
+    const steps: StepInfo[] = [
       {
         name: 'Identify Sources',
         focus: 'Map diverse knowledge sources',
         emoji: '📚',
+        type: 'thinking',
       },
       {
         name: 'Gather Wisdom',
         focus: 'Collect insights from each source',
         emoji: '🎯',
+        type: 'thinking',
       },
       {
         name: 'Find Patterns',
         focus: 'Identify emergent patterns',
         emoji: '🔍',
+        type: 'thinking',
       },
       {
         name: 'Create Synergy',
         focus: 'Combine for amplified value',
         emoji: '✨',
+        type: 'action',
+        reflexiveEffects: {
+          triggers: [
+            'Combining insights',
+            'Creating synergistic solutions',
+            'Amplifying collective wisdom',
+          ],
+          realityChanges: [
+            'New hybrid solutions created',
+            'Collective decision formed',
+            'Synergistic value generated',
+          ],
+          futureConstraints: [
+            'Must honor collective synthesis',
+            'Combined approach locks in direction',
+            'Stakeholder expectations aligned to synthesis',
+          ],
+          reversibility: 'medium',
+        },
       },
       {
         name: 'Synthesize Insight',
         focus: 'Form unified understanding',
         emoji: '💫',
+        type: 'action',
+        reflexiveEffects: {
+          triggers: [
+            'Forming unified understanding',
+            'Committing to collective decision',
+            'Creating consensus reality',
+          ],
+          realityChanges: [
+            'Collective intelligence crystallized',
+            'Unified direction established',
+            'Shared understanding created',
+          ],
+          futureConstraints: [
+            'Must work within collective consensus',
+            'Individual perspectives subordinated',
+            'Group commitment created',
+          ],
+          reversibility: 'low',
+        },
       },
     ];
 

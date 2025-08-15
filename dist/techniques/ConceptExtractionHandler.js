@@ -1,5 +1,5 @@
 /**
- * Concept Extraction technique handler
+ * Concept Extraction technique handler with reflexivity
  */
 import { BaseTechniqueHandler } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
@@ -23,21 +23,43 @@ export class ConceptExtractionHandler extends BaseTechniqueHandler {
                 name: 'Identify Success',
                 focus: 'Find successful examples in any domain',
                 emoji: '🏆',
+                type: 'thinking',
             },
             {
                 name: 'Extract Concepts',
                 focus: 'Identify the underlying principles',
                 emoji: '🔍',
+                type: 'thinking',
             },
             {
                 name: 'Abstract Patterns',
                 focus: 'Generalize concepts to broader patterns',
                 emoji: '🔄',
+                type: 'thinking',
             },
             {
                 name: 'Apply to Problem',
                 focus: 'Transfer patterns to your specific context',
                 emoji: '🎯',
+                type: 'action',
+                reflexiveEffects: {
+                    triggers: [
+                        'Applying extracted patterns',
+                        'Implementing abstracted concepts',
+                        'Transferring principles to context',
+                    ],
+                    realityChanges: [
+                        'Patterns implemented in new context',
+                        'Solution approach committed',
+                        'Principles embedded in solution',
+                    ],
+                    futureConstraints: [
+                        'Must work within applied patterns',
+                        'Solution constrained by extracted principles',
+                        'Context adapted to transferred concepts',
+                    ],
+                    reversibility: 'medium',
+                },
             },
         ];
         if (step < 1 || step > steps.length) {

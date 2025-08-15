@@ -1,14 +1,10 @@
 /**
- * Collective Intelligence technique handler
+ * Collective Intelligence technique handler with reflexivity tracking
  */
-import { BaseTechniqueHandler, type TechniqueInfo } from './types.js';
+import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
 export declare class CollectiveIntelHandler extends BaseTechniqueHandler {
     getTechniqueInfo(): TechniqueInfo;
-    getStepInfo(step: number): {
-        name: string;
-        focus: string;
-        emoji: string;
-    };
+    getStepInfo(step: number): StepInfo;
     getStepGuidance(step: number, problem: string): string;
     extractInsights(history: Array<{
         currentStep?: number;
