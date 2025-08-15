@@ -1,9 +1,9 @@
 # Creative Thinking MCP Server
 
 A Model Context Protocol (MCP) server that provides structured creative thinking techniques for
-problem-solving and ideation. This server implements twenty-three enhanced thinking techniques
-through a unified framework combining generative creativity with systematic risk assessment and
-post-action reflexivity tracking.
+problem-solving and ideation. This server implements twenty-one enhanced thinking techniques through
+a unified framework combining generative creativity with systematic risk assessment and post-action
+reflexivity tracking.
 
 > **Note**: This repository is a public fork of work originally developed with Munshy, Personal
 > Secretary.
@@ -46,6 +46,9 @@ The three-layer architecture guides you through comprehensive problem-solving:
 
 3. **Execution Layer** (`execute_thinking_step`) - Guides you through each thinking step while
    maintaining session state and integrating risk assessment.
+
+**📚 New to the techniques? Check out the [Technique Selection Guide](TECHNIQUE_SELECTION.md) for a
+comprehensive overview of all 21 techniques and when to use each one.**
 
 This layered approach ensures efficient problem-solving by matching techniques to problems, creating
 comprehensive workflows, and maintaining focus throughout the creative process.
@@ -219,7 +222,7 @@ const nextResult = await executeThinkingStep({
 - **Persistence Architecture**: Adapter pattern supporting filesystem and memory backends
 - **MCP Sampling Integration**: AI-powered enhancement with graceful degradation when unavailable
 
-### Twenty-Three Enhanced Thinking Techniques
+### Twenty-One Enhanced Thinking Techniques
 
 Each technique integrates creative generation with systematic verification and post-action
 reflexivity tracking:
@@ -235,16 +238,16 @@ additional technique to prevent algorithmic pigeonholing and encourage unexpecte
 - **Concept Extraction** - Cross-domain pattern transfer with boundary awareness
 - **Yes, And** - Collaborative ideation with built-in critical evaluation
 - **Design Thinking** - Human-centered innovation with embedded risk management
-- **TRIZ** - Contradiction resolution through addition and systematic removal
-- **Neural State** - Cognitive mode optimization for creative breakthroughs
+- **TRIZ** - Contradiction ELIMINATION through systematic innovation principles
+- **Neural State** - Optimize YOUR BRAIN's cognitive states (DMN/ECN balance)
 - **Temporal Work Design** - Time-based problem solving and pressure transformation
-- **Cross-Cultural Integration** - Multi-perspective synthesis across cultural frameworks
+- **Cultural Integration** - Unified cross-cultural bridge-building and creative synthesis
 - **Collective Intelligence** - Wisdom aggregation from diverse knowledge sources
 - **Disney Method** - Three-role creative process (Dreamer → Realist → Critic)
 - **Nine Windows** - Systematic 3×3 analysis across time and system levels
 - **Quantum Superposition** - Maintains multiple contradictory solutions until optimal collapse
 - **Temporal Creativity** - Advanced temporal thinking with path memory integration
-- **Paradoxical Problem Solving** - Finds breakthrough solutions through contradiction exploration
+- **Paradoxical Problem Solving** - PRESERVE contradictions for ongoing flexibility
 - **Meta-Learning from Path Integration** - Self-improving system that learns from technique
   patterns
 - **Biomimetic Path Management** - Applies biological solutions and evolutionary strategies to
@@ -253,10 +256,8 @@ additional technique to prevent algorithmic pigeonholing and encourage unexpecte
   solutions
 - **Cultural Path Navigation** - Navigates through cultural contexts to find viable solution
   pathways
-- **Cultural Creativity Orchestration** - Multi-cultural synthesis without appropriation through
-  respectful integration
-- **Neuro-Computational Synthesis** - Hybrid neural-computational models for enhanced creative
-  problem solving
+- **Neuro-Computational Synthesis** - AI/ML algorithms for computational creativity (NOT human
+  cognition)
 
 ### MCP Prompts Support (NEW)
 

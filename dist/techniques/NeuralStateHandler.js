@@ -9,8 +9,8 @@ export class NeuralStateHandler extends BaseTechniqueHandler {
             name: 'Neural State Optimization',
             emoji: '🧠',
             totalSteps: 4,
-            description: 'Optimize thinking by managing neural network states',
-            focus: 'Balance Default Mode Network (DMN) and Executive Control Network (ECN)',
+            description: "Optimize YOUR BRAIN's cognitive states for creative thinking by managing biological neural networks",
+            focus: 'Balance human Default Mode Network (DMN) and Executive Control Network (ECN) for peak creativity',
             parallelSteps: {
                 canParallelize: false,
                 description: 'Neural states transition sequentially through assessment and optimization',
