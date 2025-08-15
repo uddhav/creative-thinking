@@ -1,6 +1,6 @@
 /**
  * Integration test for reflexivity tracking feature
- * Tests that reflexivity data is properly tracked and exposed for TRIZ and Cultural Path
+ * Tests that reflexivity data is properly tracked and exposed for TRIZ and Cultural Integration
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -64,9 +64,9 @@ describe('Reflexivity Integration', () => {
     });
   });
 
-  describe('Cultural Path Reflexivity Tracking', () => {
-    it('should track reflexivity for Cultural Path action steps', async () => {
-      // Plan a Cultural Path session
+  describe('Cultural Integration Reflexivity Tracking', () => {
+    it('should track reflexivity for Cultural Integration action steps', async () => {
+      // Plan a Cultural Integration session
       const planResult = server.planThinkingSession({
         problem: 'Bridge communication gap between engineering and marketing teams',
         techniques: ['cultural_integration'],

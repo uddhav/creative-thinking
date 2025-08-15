@@ -152,7 +152,7 @@ export class ExecutionResponseBuilder {
         if (executionMetadata) {
             responseData.executionMetadata = executionMetadata;
         }
-        // Add reflexivity data for supported techniques (TRIZ and Cultural Path pilot)
+        // Add reflexivity data for supported techniques (TRIZ and Cultural Integration pilot)
         // Only show reflexivity data if there have been action steps
         if (this.sessionManager &&
             (input.technique === 'triz' || input.technique === 'cultural_integration')) {

@@ -158,7 +158,7 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
                 ...operationData,
                 timestamp: new Date().toISOString(),
             });
-            // Track reflexivity for supported techniques (TRIZ and Cultural Path pilot)
+            // Track reflexivity for supported techniques (TRIZ and Cultural Integration pilot)
             if (input.technique === 'triz' || input.technique === 'cultural_integration') {
                 const stepDetails = handler.getStepInfo(techniqueLocalStep);
                 // Only track if the handler provides reflexivity data
