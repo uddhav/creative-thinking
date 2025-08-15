@@ -24,7 +24,6 @@ import { ParadoxicalProblemHandler } from './ParadoxicalProblemHandler.js';
 import { MetaLearningHandler } from './MetaLearningHandler.js';
 import { BiomimeticPathHandler } from './BiomimeticPathHandler.js';
 import { FirstPrinciplesHandler } from './FirstPrinciplesHandler.js';
-import { CulturalPathHandler } from './CulturalPathHandler.js';
 import { CulturalIntegrationHandler } from './CulturalIntegrationHandler.js';
 import { NeuroComputationalHandler } from './NeuroComputationalHandler.js';
 // Removed unused imports - GenericHandler and ConvergenceHandler
@@ -60,7 +59,6 @@ export class TechniqueRegistry {
     this.handlers.set('neural_state', new NeuralStateHandler());
     this.handlers.set('temporal_work', new TemporalWorkHandler());
     this.handlers.set('cultural_integration', new CulturalIntegrationHandler());
-    this.handlers.set('cultural_path', new CulturalPathHandler());
     this.handlers.set('collective_intel', new CollectiveIntelHandler());
     this.handlers.set('disney_method', new DisneyMethodHandler());
     this.handlers.set('nine_windows', new NineWindowsHandler());

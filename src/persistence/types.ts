@@ -23,7 +23,6 @@ export type LateralTechnique =
   | 'meta_learning'
   | 'biomimetic_path'
   | 'first_principles'
-  | 'cultural_path'
   | 'cultural_integration'
   | 'neuro_computational';
 

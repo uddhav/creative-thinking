@@ -1,7 +1,7 @@
 /**
  * Core types and interfaces for session persistence
  */
-export type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 'concept_extraction' | 'yes_and' | 'design_thinking' | 'triz' | 'neural_state' | 'temporal_work' | 'collective_intel' | 'disney_method' | 'nine_windows' | 'quantum_superposition' | 'temporal_creativity' | 'paradoxical_problem' | 'meta_learning' | 'biomimetic_path' | 'first_principles' | 'cultural_path' | 'cultural_integration' | 'neuro_computational';
+export type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 'concept_extraction' | 'yes_and' | 'design_thinking' | 'triz' | 'neural_state' | 'temporal_work' | 'collective_intel' | 'disney_method' | 'nine_windows' | 'quantum_superposition' | 'temporal_creativity' | 'paradoxical_problem' | 'meta_learning' | 'biomimetic_path' | 'first_principles' | 'cultural_integration' | 'neuro_computational';
 /**
  * Represents input data for a lateral thinking step
  */
