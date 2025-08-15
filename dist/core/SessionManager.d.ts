@@ -107,6 +107,16 @@ export declare class SessionManager {
         external: number;
         rss: number;
     };
+    /**
+     * Get reflexivity-specific memory statistics
+     * Provides type-safe access to reflexivity tracker's memory stats
+     */
+    getReflexivityMemoryStats(): {
+        estimatedMemoryBytes: number;
+        sessionCount: number;
+        totalActions: number;
+        totalConstraints: number;
+    };
     logMemoryMetrics(): void;
     /**
      * Create a parallel session group from plans

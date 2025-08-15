@@ -104,42 +104,27 @@ export class ExecutionResponseBuilder {
 
     // Monitor memory usage periodically (every 10 steps, but not on the first step)
     if (session.history.length > 0 && session.history.length % 10 === 0 && this.sessionManager) {
-      // Access reflexivity tracker through SessionManager internals
-      // Type-safe access pattern for internal APIs
-      const sessionManagerInternal = this.sessionManager as unknown as {
-        reflexivityTracker?: {
-          getMemoryStats?: () => {
-            estimatedMemoryBytes: number;
-            sessionCount: number;
-            totalActions: number;
-            totalConstraints: number;
-          };
-        };
-      };
+      // Use type-safe public API to get reflexivity memory stats
+      const memStats = this.sessionManager.getReflexivityMemoryStats();
 
-      const reflexivityTracker = sessionManagerInternal.reflexivityTracker;
-      if (reflexivityTracker?.getMemoryStats) {
-        const memStats = reflexivityTracker.getMemoryStats();
+      // Warn if memory usage is high
+      const MB = 1024 * 1024;
+      if (memStats.estimatedMemoryBytes > 10 * MB) {
+        console.warn(
+          `[Memory Warning] High memory usage detected: ${(memStats.estimatedMemoryBytes / MB).toFixed(2)}MB across ${memStats.sessionCount} sessions`
+        );
+      }
 
-        // Warn if memory usage is high
-        const MB = 1024 * 1024;
-        if (memStats.estimatedMemoryBytes > 10 * MB) {
-          console.warn(
-            `[Memory Warning] High memory usage detected: ${(memStats.estimatedMemoryBytes / MB).toFixed(2)}MB across ${memStats.sessionCount} sessions`
-          );
-        }
-
-        // Log memory stats for monitoring (telemetry doesn't have trackMemoryUsage yet)
-        // Using console.error for DEBUG logging as it's allowed by lint rules
-        if (process.env.LOG_LEVEL === 'DEBUG') {
-          console.error('[Memory Stats]', {
-            sessionId,
-            estimatedBytes: memStats.estimatedMemoryBytes,
-            sessionCount: memStats.sessionCount,
-            totalActions: memStats.totalActions,
-            totalConstraints: memStats.totalConstraints,
-          });
-        }
+      // Log memory stats for monitoring (telemetry doesn't have trackMemoryUsage yet)
+      // Using console.error for DEBUG logging as it's allowed by lint rules
+      if (process.env.LOG_LEVEL === 'DEBUG') {
+        console.error('[Memory Stats]', {
+          sessionId,
+          estimatedBytes: memStats.estimatedMemoryBytes,
+          sessionCount: memStats.sessionCount,
+          totalActions: memStats.totalActions,
+          totalConstraints: memStats.totalConstraints,
+        });
       }
     }
 
