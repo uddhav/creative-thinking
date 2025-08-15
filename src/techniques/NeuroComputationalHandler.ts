@@ -75,8 +75,9 @@ export class NeuroComputationalHandler extends BaseTechniqueHandler {
       emoji: '⚛️',
       totalSteps: 6,
       description:
-        'Synthesize creative solutions through hybrid neural-computational models combining cognitive neuroscience with computational creativity',
-      focus: 'Neural network-inspired computational creativity generation',
+        'Generate solutions using ARTIFICIAL neural network algorithms and computational models (NOT human cognition)',
+      focus:
+        'Apply machine learning and AI-inspired computational methods to creative problem-solving',
       enhancedFocus:
         'Implements parallel distributed processing, interference analysis, and iterative optimization to generate novel solutions through computational synthesis of neural patterns',
       parallelSteps: {

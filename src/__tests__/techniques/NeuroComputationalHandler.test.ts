@@ -21,9 +21,11 @@ describe('NeuroComputationalHandler', () => {
       expect(info.emoji).toBe('⚛️');
       expect(info.totalSteps).toBe(6);
       expect(info.description).toBe(
-        'Synthesize creative solutions through hybrid neural-computational models combining cognitive neuroscience with computational creativity'
+        'Generate solutions using ARTIFICIAL neural network algorithms and computational models (NOT human cognition)'
       );
-      expect(info.focus).toBe('Neural network-inspired computational creativity generation');
+      expect(info.focus).toBe(
+        'Apply machine learning and AI-inspired computational methods to creative problem-solving'
+      );
       expect(info.enhancedFocus).toContain('parallel distributed processing');
       expect(info.enhancedFocus).toContain('interference analysis');
       expect(info.enhancedFocus).toContain('iterative optimization');
