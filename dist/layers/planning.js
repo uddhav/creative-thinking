@@ -444,10 +444,10 @@ function getRisksForStep(technique, step) {
     if (technique === 'collective_intel' && step === 3) {
         return ['Pattern projection bias', 'False pattern recognition'];
     }
-    if (technique === 'cross_cultural' && step === 1) {
+    if (technique === 'cultural_integration' && step === 1) {
         return ['Cultural sensitivity required', 'Avoiding stereotypes'];
     }
-    if (technique === 'cross_cultural' && step === 3) {
+    if (technique === 'cultural_integration' && step === 3) {
         return ['Maintain authenticity', 'Avoid cultural appropriation'];
     }
     if (technique === 'paradoxical_problem') {

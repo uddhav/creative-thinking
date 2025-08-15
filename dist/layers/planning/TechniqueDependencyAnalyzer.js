@@ -140,7 +140,7 @@ export class TechniqueDependencyAnalyzer {
         ['scamper', 'random_entry'], // Both are modification-based
         ['po', 'concept_extraction'], // Both challenge assumptions
         ['neural_state', 'temporal_work'], // Both deal with cognitive patterns
-        ['cross_cultural', 'collective_intel'], // Both leverage diverse perspectives
+        ['cultural_integration', 'collective_intel'], // Both leverage diverse perspectives
     ];
     /**
      * Techniques that should not run in parallel (mutual exclusion)

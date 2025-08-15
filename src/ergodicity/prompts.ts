@@ -208,7 +208,7 @@ export function getErgodicityGuidance(technique: LateralTechnique): string {
     random_entry: 'Random connections are harmless unless they trigger irreversible actions.',
     concept_extraction: 'Extracting concepts is ergodic. Applying them may not be.',
     temporal_work: 'Time itself is non-ergodic. You cannot recover lost time.',
-    cross_cultural:
+    cultural_integration:
       'Cultural missteps in non-ergodic domains can permanently damage relationships.',
     collective_intel:
       'Collective wisdom often embeds survival knowledge from non-ergodic experiences.',

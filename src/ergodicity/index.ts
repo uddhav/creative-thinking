@@ -484,10 +484,10 @@ export class ErgodicityManager {
         typicalCommitment: 0.4,
         riskProfile: 'Medium - Time structures create dependencies',
       },
-      cross_cultural: {
+      cultural_integration: {
         typicalReversibility: 0.8,
         typicalCommitment: 0.3,
-        riskProfile: 'Low - Cultural exploration is adaptable',
+        riskProfile: 'Low - Cultural integration is adaptable',
       },
       collective_intel: {
         typicalReversibility: 0.7,
@@ -543,11 +543,6 @@ export class ErgodicityManager {
         typicalReversibility: 0.5,
         typicalCommitment: 0.6,
         riskProfile: 'Medium - Computational optimization creates dependencies',
-      },
-      cultural_creativity: {
-        typicalReversibility: 0.8,
-        typicalCommitment: 0.3,
-        riskProfile: 'Low - Cultural creativity encourages diverse perspectives',
       },
     };
 

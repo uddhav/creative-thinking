@@ -126,7 +126,7 @@ export class CollectiveIntelInsightStrategy implements InsightStrategy {
 }
 
 export class CrossCulturalInsightStrategy implements InsightStrategy {
-  technique = 'cross_cultural';
+  technique = 'cultural_integration';
 
   generateInsight(input: ThinkingOperationData): string | undefined {
     if (

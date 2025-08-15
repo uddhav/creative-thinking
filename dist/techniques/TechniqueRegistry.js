@@ -12,7 +12,6 @@ import { DesignThinkingHandler } from './DesignThinkingHandler.js';
 import { TRIZHandler } from './TRIZHandler.js';
 import { NeuralStateHandler } from './NeuralStateHandler.js';
 import { TemporalWorkHandler } from './TemporalWorkHandler.js';
-import { CrossCulturalHandler } from './CrossCulturalHandler.js';
 import { CollectiveIntelHandler } from './CollectiveIntelHandler.js';
 import { DisneyMethodHandler } from './DisneyMethodHandler.js';
 import { NineWindowsHandler } from './NineWindowsHandler.js';
@@ -23,7 +22,7 @@ import { MetaLearningHandler } from './MetaLearningHandler.js';
 import { BiomimeticPathHandler } from './BiomimeticPathHandler.js';
 import { FirstPrinciplesHandler } from './FirstPrinciplesHandler.js';
 import { CulturalPathHandler } from './CulturalPathHandler.js';
-import { CulturalCreativityHandler } from './CulturalCreativityHandler.js';
+import { CulturalIntegrationHandler } from './CulturalIntegrationHandler.js';
 import { NeuroComputationalHandler } from './NeuroComputationalHandler.js';
 // Removed unused imports - GenericHandler and ConvergenceHandler
 export class TechniqueRegistry {
@@ -53,7 +52,8 @@ export class TechniqueRegistry {
         this.handlers.set('triz', new TRIZHandler());
         this.handlers.set('neural_state', new NeuralStateHandler());
         this.handlers.set('temporal_work', new TemporalWorkHandler());
-        this.handlers.set('cross_cultural', new CrossCulturalHandler());
+        this.handlers.set('cultural_integration', new CulturalIntegrationHandler());
+        this.handlers.set('cultural_path', new CulturalPathHandler());
         this.handlers.set('collective_intel', new CollectiveIntelHandler());
         this.handlers.set('disney_method', new DisneyMethodHandler());
         this.handlers.set('nine_windows', new NineWindowsHandler());
@@ -63,8 +63,6 @@ export class TechniqueRegistry {
         this.handlers.set('meta_learning', new MetaLearningHandler());
         this.handlers.set('biomimetic_path', new BiomimeticPathHandler());
         this.handlers.set('first_principles', new FirstPrinciplesHandler());
-        this.handlers.set('cultural_path', new CulturalPathHandler());
-        this.handlers.set('cultural_creativity', new CulturalCreativityHandler());
         this.handlers.set('neuro_computational', new NeuroComputationalHandler());
     }
     getHandler(technique) {

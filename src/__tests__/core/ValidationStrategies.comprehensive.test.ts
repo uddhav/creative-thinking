@@ -204,10 +204,10 @@ describe('ValidationStrategies - Comprehensive Tests', () => {
       expect(result.errors).toEqual([]);
     });
 
-    it('should validate cross_cultural with all fields', () => {
+    it('should validate cultural_integration with all fields', () => {
       const input = {
         planId: 'plan123',
-        technique: 'cross_cultural',
+        technique: 'cultural_integration',
         problem: 'Test problem',
         currentStep: 1,
         totalSteps: 5,
@@ -621,7 +621,7 @@ describe('ValidationStrategies - Comprehensive Tests', () => {
       'triz',
       'neural_state',
       'temporal_work',
-      'cross_cultural',
+      'cultural_integration',
       'collective_intel',
       'disney_method',
       'nine_windows',

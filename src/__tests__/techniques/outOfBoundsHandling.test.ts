@@ -16,7 +16,7 @@ describe('Out-of-bounds step handling', () => {
     'triz',
     'neural_state',
     'temporal_work',
-    'cross_cultural',
+    'cultural_integration',
     'collective_intel',
   ];
 

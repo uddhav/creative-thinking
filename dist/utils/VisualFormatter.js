@@ -205,7 +205,7 @@ export class VisualFormatter {
             triz: '⚡',
             neural_state: '🧠',
             temporal_work: '⏰',
-            cross_cultural: '🌍',
+            cultural_integration: '🌍',
             collective_intel: '🧬',
             disney_method: '🎬',
             nine_windows: '🪟',
@@ -217,7 +217,6 @@ export class VisualFormatter {
             first_principles: '🔬',
             cultural_path: '🗺️',
             neuro_computational: '⚛️',
-            cultural_creativity: '🌐',
         };
         return emojis[technique] || '❓';
     }
@@ -236,7 +235,7 @@ export class VisualFormatter {
             triz: 'TRIZ',
             neural_state: 'Neural State Optimization',
             temporal_work: 'Temporal Work Design',
-            cross_cultural: 'Cross-Cultural Integration',
+            cultural_integration: 'Cultural Integration',
             collective_intel: 'Collective Intelligence',
             disney_method: 'Disney Method',
             nine_windows: 'Nine Windows',
@@ -248,7 +247,6 @@ export class VisualFormatter {
             first_principles: 'First Principles Thinking',
             cultural_path: 'Cultural Path Navigation',
             neuro_computational: 'Neuro-Computational Synthesis',
-            cultural_creativity: 'Cultural Creativity Orchestration',
         };
         return names[technique] || technique;
     }

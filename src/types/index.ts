@@ -24,7 +24,6 @@ export type LateralTechnique =
   | 'triz'
   | 'neural_state'
   | 'temporal_work'
-  | 'cross_cultural'
   | 'collective_intel'
   | 'disney_method'
   | 'nine_windows'
@@ -35,8 +34,8 @@ export type LateralTechnique =
   | 'biomimetic_path'
   | 'first_principles'
   | 'cultural_path'
-  | 'neuro_computational'
-  | 'cultural_creativity';
+  | 'cultural_integration'
+  | 'neuro_computational';
 
 export type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green' | 'purple';
 export type ScamperAction =

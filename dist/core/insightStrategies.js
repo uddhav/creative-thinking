@@ -100,7 +100,7 @@ export class CollectiveIntelInsightStrategy {
     }
 }
 export class CrossCulturalInsightStrategy {
-    technique = 'cross_cultural';
+    technique = 'cultural_integration';
     generateInsight(input) {
         if (input.currentStep === 1 &&
             input.culturalFrameworks &&
