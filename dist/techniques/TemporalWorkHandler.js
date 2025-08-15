@@ -4,6 +4,92 @@
 import { BaseTechniqueHandler } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 export class TemporalWorkHandler extends BaseTechniqueHandler {
+    steps = [
+        {
+            name: 'Map Temporal Landscape',
+            focus: 'Identify time constraints and opportunities',
+            emoji: '🗺️',
+            type: 'thinking', // Analysis and mapping
+        },
+        {
+            name: 'Circadian Alignment',
+            focus: 'Align with natural rhythms',
+            emoji: '🌅',
+            type: 'thinking', // Analysis of patterns
+        },
+        {
+            name: 'Pressure Transformation',
+            focus: 'Convert time pressure into creative force',
+            emoji: '💎',
+            type: 'action',
+            reflexiveEffects: {
+                triggers: [
+                    'Transforming time pressure',
+                    'Creating deadline structures',
+                    'Establishing temporal constraints',
+                ],
+                realityChanges: [
+                    'Pressure dynamics established',
+                    'Creative constraints in place',
+                    'Time-boxed commitments made',
+                ],
+                futureConstraints: [
+                    'Must work within pressure framework',
+                    'Deadlines become immovable',
+                    'Creative constraints lock in',
+                ],
+                reversibility: 'medium',
+            },
+        },
+        {
+            name: 'Async-Sync Balance',
+            focus: 'Design information flow patterns',
+            emoji: '⚖️',
+            type: 'action',
+            reflexiveEffects: {
+                triggers: [
+                    'Establishing async patterns',
+                    'Creating sync points',
+                    'Designing flow structures',
+                ],
+                realityChanges: [
+                    'Communication patterns set',
+                    'Synchronization points fixed',
+                    'Information flow established',
+                ],
+                futureConstraints: [
+                    'Must maintain async/sync balance',
+                    'Communication patterns persist',
+                    'Flow structures become dependencies',
+                ],
+                reversibility: 'medium',
+            },
+        },
+        {
+            name: 'Temporal Escape Routes',
+            focus: 'Build flexibility and recovery options',
+            emoji: '🚪',
+            type: 'action',
+            reflexiveEffects: {
+                triggers: [
+                    'Creating escape routes',
+                    'Building recovery options',
+                    'Establishing flexibility buffers',
+                ],
+                realityChanges: [
+                    'Escape mechanisms in place',
+                    'Recovery paths established',
+                    'Flexibility buffers active',
+                ],
+                futureConstraints: [
+                    'Must maintain escape routes',
+                    'Recovery options become expectations',
+                    'Flexibility has costs',
+                ],
+                reversibility: 'high',
+            },
+        },
+    ];
     getTechniqueInfo() {
         return {
             name: 'Temporal Work Design',
@@ -18,37 +104,11 @@ export class TemporalWorkHandler extends BaseTechniqueHandler {
         };
     }
     getStepInfo(step) {
-        const steps = [
-            {
-                name: 'Map Temporal Landscape',
-                focus: 'Identify time constraints and opportunities',
-                emoji: '🗺️',
-            },
-            {
-                name: 'Circadian Alignment',
-                focus: 'Align with natural rhythms',
-                emoji: '🌅',
-            },
-            {
-                name: 'Pressure Transformation',
-                focus: 'Convert time pressure into creative force',
-                emoji: '💎',
-            },
-            {
-                name: 'Async-Sync Balance',
-                focus: 'Design information flow patterns',
-                emoji: '⚖️',
-            },
-            {
-                name: 'Temporal Escape Routes',
-                focus: 'Build flexibility and recovery options',
-                emoji: '🚪',
-            },
-        ];
-        if (step < 1 || step > steps.length) {
-            throw new ValidationError(ErrorCode.INVALID_STEP, `Invalid step ${step} for Temporal Work technique. Valid steps are 1-${steps.length}`, 'step', { providedStep: step, validRange: [1, steps.length] });
+        const stepInfo = this.steps[step - 1];
+        if (!stepInfo) {
+            throw new ValidationError(ErrorCode.INVALID_STEP, `Invalid step ${step} for Temporal Work technique. Valid steps are 1-${this.steps.length}`, 'step', { providedStep: step, validRange: [1, this.steps.length] });
         }
-        return steps[step - 1];
+        return stepInfo;
     }
     getStepGuidance(step, problem) {
         // Handle out of bounds gracefully

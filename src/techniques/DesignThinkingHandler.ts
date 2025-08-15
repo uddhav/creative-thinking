@@ -3,7 +3,7 @@
  */
 
 import type { DesignThinkingStage } from '../types/index.js';
-import { BaseTechniqueHandler, type TechniqueInfo } from './types.js';
+import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 
 interface StageInfo {
@@ -55,6 +55,71 @@ export class DesignThinkingHandler extends BaseTechniqueHandler {
     'test',
   ];
 
+  private readonly stepsWithReflexivity: StepInfo[] = [
+    {
+      name: 'Empathize',
+      focus: 'Understand user needs and context | Challenge assumptions about user needs',
+      emoji: '❤️',
+      type: 'thinking',
+    },
+    {
+      name: 'Define',
+      focus: "Frame the problem clearly | Question if you're solving the right problem",
+      emoji: '📍',
+      type: 'thinking',
+    },
+    {
+      name: 'Ideate',
+      focus: 'Generate diverse solutions | Identify failure modes in each idea',
+      emoji: '💡',
+      type: 'thinking',
+    },
+    {
+      name: 'Prototype',
+      focus: 'Build quick, testable versions | Stress-test assumptions early',
+      emoji: '🔨',
+      type: 'action',
+      reflexiveEffects: {
+        triggers: [
+          'Creating physical/digital artifacts',
+          'Building testable prototypes',
+          'Materializing ideas',
+        ],
+        realityChanges: [
+          'Prototype exists as tangible artifact',
+          'Resources committed to prototype',
+          'Design decisions become concrete',
+        ],
+        futureConstraints: [
+          'Must work within prototype limitations',
+          'User expectations shaped by prototype',
+          'Future iterations constrained by initial design',
+        ],
+        reversibility: 'medium',
+      },
+    },
+    {
+      name: 'Test',
+      focus: 'Validate with real users | Look for unexpected failures and edge cases',
+      emoji: '🧪',
+      type: 'action',
+      reflexiveEffects: {
+        triggers: ['User testing sessions', 'Collecting feedback', 'Measuring performance'],
+        realityChanges: [
+          'User expectations formed',
+          'Feedback documented',
+          'Performance metrics established',
+        ],
+        futureConstraints: [
+          'Must address identified issues',
+          'User feedback shapes future direction',
+          'Test results become benchmarks',
+        ],
+        reversibility: 'high',
+      },
+    },
+  ];
+
   getTechniqueInfo(): TechniqueInfo {
     return {
       name: 'Design Thinking',
@@ -76,22 +141,16 @@ export class DesignThinkingHandler extends BaseTechniqueHandler {
     };
   }
 
-  getStepInfo(step: number): { name: string; focus: string; emoji: string } {
-    const stage = this.stageOrder[step - 1];
-    if (!stage) {
+  getStepInfo(step: number): StepInfo {
+    if (step < 1 || step > this.stepsWithReflexivity.length) {
       throw new ValidationError(
         ErrorCode.INVALID_STEP,
-        `Invalid step ${step} for Design Thinking technique. Valid steps are 1-${this.stageOrder.length}`,
+        `Invalid step ${step} for Design Thinking technique. Valid steps are 1-${this.stepsWithReflexivity.length}`,
         'step',
-        { providedStep: step, validRange: [1, this.stageOrder.length] }
+        { providedStep: step, validRange: [1, this.stepsWithReflexivity.length] }
       );
     }
-    const info = this.stages[stage];
-    return {
-      name: info.name,
-      focus: `${info.focus} | ${info.criticalLens}`,
-      emoji: info.emoji,
-    };
+    return this.stepsWithReflexivity[step - 1];
   }
 
   getStepGuidance(step: number, problem: string): string {

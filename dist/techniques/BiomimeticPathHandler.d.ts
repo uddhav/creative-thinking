@@ -2,20 +2,14 @@
  * Biomimetic Path Management technique handler
  * Applies biological solutions and evolutionary strategies to innovation challenges
  */
-import { BaseTechniqueHandler, type TechniqueInfo } from './types.js';
-interface BiomimeticStep {
-    name: string;
-    focus: string;
-    emoji: string;
-    description?: string;
-}
+import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
 export declare class BiomimeticPathHandler extends BaseTechniqueHandler {
     private readonly steps;
+    private readonly stepsWithReflexivity;
     getTechniqueInfo(): TechniqueInfo;
-    getStepInfo(step: number): BiomimeticStep;
+    getStepInfo(step: number): StepInfo;
     getStepGuidance(step: number, problem: string): string;
     validateStep(step: number, data: unknown): boolean;
     getPromptContext(step: number): Record<string, unknown>;
 }
-export {};
 //# sourceMappingURL=BiomimeticPathHandler.d.ts.map

@@ -59,28 +59,23 @@ export class ExecutionResponseBuilder {
         }
         // Monitor memory usage periodically (every 10 steps, but not on the first step)
         if (session.history.length > 0 && session.history.length % 10 === 0 && this.sessionManager) {
-            // Access reflexivity tracker through SessionManager internals
-            // Type-safe access pattern for internal APIs
-            const sessionManagerInternal = this.sessionManager;
-            const reflexivityTracker = sessionManagerInternal.reflexivityTracker;
-            if (reflexivityTracker?.getMemoryStats) {
-                const memStats = reflexivityTracker.getMemoryStats();
-                // Warn if memory usage is high
-                const MB = 1024 * 1024;
-                if (memStats.estimatedMemoryBytes > 10 * MB) {
-                    console.warn(`[Memory Warning] High memory usage detected: ${(memStats.estimatedMemoryBytes / MB).toFixed(2)}MB across ${memStats.sessionCount} sessions`);
-                }
-                // Log memory stats for monitoring (telemetry doesn't have trackMemoryUsage yet)
-                // Using console.error for DEBUG logging as it's allowed by lint rules
-                if (process.env.LOG_LEVEL === 'DEBUG') {
-                    console.error('[Memory Stats]', {
-                        sessionId,
-                        estimatedBytes: memStats.estimatedMemoryBytes,
-                        sessionCount: memStats.sessionCount,
-                        totalActions: memStats.totalActions,
-                        totalConstraints: memStats.totalConstraints,
-                    });
-                }
+            // Use type-safe public API to get reflexivity memory stats
+            const memStats = this.sessionManager.getReflexivityMemoryStats();
+            // Warn if memory usage is high
+            const MB = 1024 * 1024;
+            if (memStats.estimatedMemoryBytes > 10 * MB) {
+                console.warn(`[Memory Warning] High memory usage detected: ${(memStats.estimatedMemoryBytes / MB).toFixed(2)}MB across ${memStats.sessionCount} sessions`);
+            }
+            // Log memory stats for monitoring (telemetry doesn't have trackMemoryUsage yet)
+            // Using console.error for DEBUG logging as it's allowed by lint rules
+            if (process.env.LOG_LEVEL === 'DEBUG') {
+                console.error('[Memory Stats]', {
+                    sessionId,
+                    estimatedBytes: memStats.estimatedMemoryBytes,
+                    sessionCount: memStats.sessionCount,
+                    totalActions: memStats.totalActions,
+                    totalConstraints: memStats.totalConstraints,
+                });
             }
         }
         // Enhance response object directly (no parsing needed)
@@ -152,10 +147,9 @@ export class ExecutionResponseBuilder {
         if (executionMetadata) {
             responseData.executionMetadata = executionMetadata;
         }
-        // Add reflexivity data for supported techniques (TRIZ and Cultural Integration pilot)
+        // Add reflexivity data for ANY technique that has tracked action steps
         // Only show reflexivity data if there have been action steps
-        if (this.sessionManager &&
-            (input.technique === 'triz' || input.technique === 'cultural_integration')) {
+        if (this.sessionManager) {
             const reflexivityData = this.sessionManager.getSessionReflexivity(sessionId);
             // Only include reflexivity if there have been action steps (actionSteps > 0)
             if (reflexivityData && reflexivityData.summary && reflexivityData.summary.actionSteps > 0) {

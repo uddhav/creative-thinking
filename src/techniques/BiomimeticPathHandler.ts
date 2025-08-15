@@ -3,7 +3,7 @@
  * Applies biological solutions and evolutionary strategies to innovation challenges
  */
 
-import { BaseTechniqueHandler, type TechniqueInfo } from './types.js';
+import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 
 interface BiomimeticStep {
@@ -59,6 +59,131 @@ export class BiomimeticPathHandler extends BaseTechniqueHandler {
     },
   ];
 
+  private readonly stepsWithReflexivity: StepInfo[] = [
+    {
+      name: 'Immune Response',
+      focus: 'Threat detection and adaptive response generation',
+      emoji: '🦠',
+      type: 'thinking', // Analysis and pattern recognition
+    },
+    {
+      name: 'Evolutionary Variation',
+      focus: 'Mutation and selection pressure simulation',
+      emoji: '🧬',
+      type: 'action',
+      reflexiveEffects: {
+        triggers: ['Implementing mutations', 'Applying selection pressures', 'Evolving traits'],
+        realityChanges: [
+          'Solution variants created',
+          'Fitness landscape established',
+          'Selection criteria locked in',
+        ],
+        futureConstraints: [
+          'Must work within evolved traits',
+          'Cannot undo selection pressures',
+          'Fitness criteria become permanent',
+        ],
+        reversibility: 'low',
+      },
+    },
+    {
+      name: 'Ecosystem Dynamics',
+      focus: 'Symbiotic relationships and resource competition',
+      emoji: '🌿',
+      type: 'action',
+      reflexiveEffects: {
+        triggers: [
+          'Creating symbiotic relationships',
+          'Establishing resource flows',
+          'Building ecological balance',
+        ],
+        realityChanges: [
+          'Dependencies established',
+          'Resource allocations fixed',
+          'Ecosystem structure defined',
+        ],
+        futureConstraints: [
+          'Must maintain ecosystem balance',
+          'Cannot break symbiotic relationships',
+          'Resource flows become interdependent',
+        ],
+        reversibility: 'low',
+      },
+    },
+    {
+      name: 'Swarm Intelligence',
+      focus: 'Emergent collective behavior patterns',
+      emoji: '🐜',
+      type: 'action',
+      reflexiveEffects: {
+        triggers: [
+          'Implementing swarm rules',
+          'Creating emergent behaviors',
+          'Establishing collective patterns',
+        ],
+        realityChanges: [
+          'Collective behaviors emerge',
+          'Swarm dynamics established',
+          'Distributed decision-making active',
+        ],
+        futureConstraints: [
+          'Cannot easily change emergent patterns',
+          'Swarm behaviors self-reinforce',
+          'Individual rules affect whole system',
+        ],
+        reversibility: 'medium',
+      },
+    },
+    {
+      name: 'Resilience Patterns',
+      focus: 'Redundancy and modularity application',
+      emoji: '🔄',
+      type: 'action',
+      reflexiveEffects: {
+        triggers: [
+          'Building redundancy',
+          'Creating modular structures',
+          'Implementing adaptive cycles',
+        ],
+        realityChanges: [
+          'Redundant systems in place',
+          'Modular architecture established',
+          'Resilience mechanisms active',
+        ],
+        futureConstraints: [
+          'Must maintain redundancy costs',
+          'Modular boundaries become fixed',
+          'Adaptive cycles continue',
+        ],
+        reversibility: 'medium',
+      },
+    },
+    {
+      name: 'Natural Synthesis',
+      focus: 'Integration of biological solutions',
+      emoji: '🌱',
+      type: 'action',
+      reflexiveEffects: {
+        triggers: [
+          'Synthesizing biological strategies',
+          'Creating unified solution',
+          'Implementing nature-inspired design',
+        ],
+        realityChanges: [
+          'Biological solution implemented',
+          'Natural patterns embedded',
+          'Evolutionary design locked in',
+        ],
+        futureConstraints: [
+          'Must work within biological constraints',
+          'Natural patterns self-perpetuate',
+          'Evolution continues autonomously',
+        ],
+        reversibility: 'low',
+      },
+    },
+  ];
+
   getTechniqueInfo(): TechniqueInfo {
     return {
       name: 'Biomimetic Path Management',
@@ -76,14 +201,14 @@ export class BiomimeticPathHandler extends BaseTechniqueHandler {
     };
   }
 
-  getStepInfo(step: number): BiomimeticStep {
-    const stepInfo = this.steps[step - 1];
+  getStepInfo(step: number): StepInfo {
+    const stepInfo = this.stepsWithReflexivity[step - 1];
     if (!stepInfo) {
       throw new ValidationError(
         ErrorCode.INVALID_STEP,
-        `Invalid step ${step} for Biomimetic Path Management. Valid steps are 1-${this.steps.length}`,
+        `Invalid step ${step} for Biomimetic Path Management. Valid steps are 1-${this.stepsWithReflexivity.length}`,
         'step',
-        { providedStep: step, validRange: `1-${this.steps.length}` }
+        { providedStep: step, validRange: `1-${this.stepsWithReflexivity.length}` }
       );
     }
     return stepInfo;

@@ -1,8 +1,8 @@
 /**
- * SCAMPER technique handler with Path Dependency Analysis
+ * SCAMPER technique handler with Path Dependency Analysis and Reflexivity
  */
 import type { ScamperAction, ScamperPathImpact } from '../types/index.js';
-import { BaseTechniqueHandler, type TechniqueInfo } from './types.js';
+import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
 interface ScamperActionInfo {
     description: string;
     emoji: string;
@@ -14,12 +14,9 @@ interface ScamperActionInfo {
 export declare class ScamperHandler extends BaseTechniqueHandler {
     private readonly actions;
     private readonly actionOrder;
+    private readonly steps;
     getTechniqueInfo(): TechniqueInfo;
-    getStepInfo(step: number): {
-        name: string;
-        focus: string;
-        emoji: string;
-    };
+    getStepInfo(step: number): StepInfo;
     getStepGuidance(step: number, problem: string): string;
     analyzePathImpact(action: ScamperAction, modification: string, history: Array<{
         scamperAction?: string;

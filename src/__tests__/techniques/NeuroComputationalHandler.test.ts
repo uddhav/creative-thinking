@@ -42,9 +42,7 @@ describe('NeuroComputationalHandler', () => {
       expect(step1.name).toBe('Neural Mapping');
       expect(step1.focus).toBe('Map problem to neural representations');
       expect(step1.emoji).toBe('🧠');
-      expect(step1.description).toContain(
-        'Transform problem space into neural network representations'
-      );
+      expect(step1.type).toBe('thinking');
     });
 
     it('should return correct info for step 2 - Pattern Generation', () => {
@@ -52,7 +50,7 @@ describe('NeuroComputationalHandler', () => {
       expect(step2.name).toBe('Pattern Generation');
       expect(step2.focus).toBe('Generate diverse solution patterns');
       expect(step2.emoji).toBe('🌊');
-      expect(step2.description).toContain('parallel distributed processing');
+      expect(step2.type).toBe('thinking');
     });
 
     it('should return correct info for step 3 - Interference Analysis', () => {
@@ -60,7 +58,7 @@ describe('NeuroComputationalHandler', () => {
       expect(step3.name).toBe('Interference Analysis');
       expect(step3.focus).toBe('Analyze pattern interactions');
       expect(step3.emoji).toBe('⚡');
-      expect(step3.description).toContain('constructive and destructive interference');
+      expect(step3.type).toBe('thinking');
     });
 
     it('should return correct info for step 4 - Computational Synthesis', () => {
@@ -68,7 +66,8 @@ describe('NeuroComputationalHandler', () => {
       expect(step4.name).toBe('Computational Synthesis');
       expect(step4.focus).toBe('Synthesize patterns computationally');
       expect(step4.emoji).toBe('🔬');
-      expect(step4.description).toContain('computational models to synthesize neural patterns');
+      expect(step4.type).toBe('action');
+      expect(step4.reflexiveEffects).toBeDefined();
     });
 
     it('should return correct info for step 5 - Optimization Cycles', () => {
@@ -76,7 +75,8 @@ describe('NeuroComputationalHandler', () => {
       expect(step5.name).toBe('Optimization Cycles');
       expect(step5.focus).toBe('Iterate and refine solutions');
       expect(step5.emoji).toBe('🔄');
-      expect(step5.description).toContain('iterative optimization cycles');
+      expect(step5.type).toBe('action');
+      expect(step5.reflexiveEffects).toBeDefined();
     });
 
     it('should return correct info for step 6 - Convergence', () => {
@@ -84,7 +84,8 @@ describe('NeuroComputationalHandler', () => {
       expect(step6.name).toBe('Convergence');
       expect(step6.focus).toBe('Converge to optimal solution');
       expect(step6.emoji).toBe('🎯');
-      expect(step6.description).toContain('optimal creative solution with preserved insights');
+      expect(step6.type).toBe('action');
+      expect(step6.reflexiveEffects).toBeDefined();
     });
 
     it('should throw error for invalid step numbers', () => {

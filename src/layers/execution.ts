@@ -268,11 +268,11 @@ export async function executeThinkingStep(
         timestamp: new Date().toISOString(),
       });
 
-      // Track reflexivity for supported techniques (TRIZ and Cultural Integration pilot)
-      if (input.technique === 'triz' || input.technique === 'cultural_integration') {
+      // Track reflexivity for ANY technique that provides reflexivity data
+      try {
         const stepDetails = handler.getStepInfo(techniqueLocalStep);
 
-        // Only track if the handler provides reflexivity data
+        // Track if the handler provides reflexivity data (type field indicates StepInfo)
         if ('type' in stepDetails) {
           const reflexiveEffects =
             'reflexiveEffects' in stepDetails ? stepDetails.reflexiveEffects : undefined;
@@ -284,6 +284,8 @@ export async function executeThinkingStep(
             reflexiveEffects
           );
         }
+      } catch {
+        // Handler doesn't support StepInfo interface yet - skip reflexivity tracking
       }
 
       // Handle revisions and branches

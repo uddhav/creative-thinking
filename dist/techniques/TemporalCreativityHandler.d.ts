@@ -2,12 +2,7 @@
  * Temporal Creativity with Path Memory Integration technique handler
  * Extends temporal thinking with deep path memory and option preservation
  */
-import { BaseTechniqueHandler, type TechniqueInfo } from './types.js';
-interface TemporalStep {
-    name: string;
-    focus: string;
-    emoji: string;
-}
+import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
 interface PathMemoryEntry {
     timestamp: number;
     decision: string;
@@ -17,9 +12,10 @@ interface PathMemoryEntry {
 }
 export declare class TemporalCreativityHandler extends BaseTechniqueHandler {
     private readonly steps;
+    private readonly stepsWithReflexivity;
     private pathMemory;
     getTechniqueInfo(): TechniqueInfo;
-    getStepInfo(step: number): TemporalStep;
+    getStepInfo(step: number): StepInfo;
     getStepGuidance(step: number, problem: string): string;
     validateStep(step: number, data: unknown): boolean;
     extractInsights(history: Array<{

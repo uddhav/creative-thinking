@@ -2,11 +2,46 @@
  * Disney Method technique handler
  */
 
-import { BaseTechniqueHandler, type TechniqueInfo } from './types.js';
+import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 import type { DisneyRole } from '../types/index.js';
 
 export class DisneyMethodHandler extends BaseTechniqueHandler {
+  private readonly steps: StepInfo[] = [
+    {
+      name: 'Dreamer',
+      focus: 'What if anything were possible?',
+      emoji: '🌟',
+      type: 'thinking', // Pure imagination
+    },
+    {
+      name: 'Realist',
+      focus: 'How could we actually do this?',
+      emoji: '🔨',
+      type: 'action',
+      reflexiveEffects: {
+        triggers: ['Creating implementation plan', 'Defining resources', 'Setting timelines'],
+        realityChanges: [
+          'Implementation plan created',
+          'Resources allocated',
+          'Timeline established',
+        ],
+        futureConstraints: [
+          'Must follow implementation plan',
+          'Resources committed',
+          'Timeline expectations set',
+        ],
+        reversibility: 'medium',
+      },
+    },
+    {
+      name: 'Critic',
+      focus: 'What could go wrong?',
+      emoji: '🔍',
+      type: 'thinking', // Analysis and evaluation
+    },
+  ];
+
   getTechniqueInfo(): TechniqueInfo {
     return {
       name: 'Disney Method',
@@ -26,35 +61,19 @@ export class DisneyMethodHandler extends BaseTechniqueHandler {
     };
   }
 
-  getStepInfo(step: number): { name: string; focus: string; emoji: string } {
-    const steps = [
-      {
-        name: 'Dreamer',
-        focus: 'What if anything were possible?',
-        emoji: '🌟',
-      },
-      {
-        name: 'Realist',
-        focus: 'How could we actually do this?',
-        emoji: '🔨',
-      },
-      {
-        name: 'Critic',
-        focus: 'What could go wrong?',
-        emoji: '🔍',
-      },
-    ];
+  getStepInfo(step: number): StepInfo {
+    const stepInfo = this.steps[step - 1];
 
-    if (step < 1 || step > steps.length) {
+    if (!stepInfo) {
       throw new ValidationError(
         ErrorCode.INVALID_STEP,
-        `Invalid step ${step} for Disney Method. Valid steps are 1-${steps.length}`,
+        `Invalid step ${step} for Disney Method. Valid steps are 1-${this.steps.length}`,
         'step',
-        { providedStep: step, validRange: [1, steps.length] }
+        { providedStep: step, validRange: [1, this.steps.length] }
       );
     }
 
-    return steps[step - 1];
+    return stepInfo;
   }
 
   getStepGuidance(step: number, problem: string): string {

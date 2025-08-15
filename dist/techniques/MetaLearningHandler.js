@@ -1,5 +1,5 @@
 /**
- * Meta-Learning from Path Integration technique handler
+ * Meta-Learning from Path Integration technique handler with reflexivity
  * Improves integration capabilities by learning from path patterns across all techniques
  */
 import { BaseTechniqueHandler } from './types.js';
@@ -10,26 +10,49 @@ export class MetaLearningHandler extends BaseTechniqueHandler {
             name: 'Pattern Recognition',
             focus: 'Identify successful path patterns across techniques',
             emoji: '🔍',
+            type: 'thinking',
         },
         {
             name: 'Learning Accumulation',
             focus: 'Store effective combinations and context mappings',
             emoji: '📊',
+            type: 'thinking',
         },
         {
             name: 'Strategy Evolution',
             focus: 'Adapt technique selection and execution sequences',
             emoji: '🔄',
+            type: 'thinking',
         },
         {
             name: 'Feedback Integration',
             focus: 'Incorporate telemetry data and user choices',
             emoji: '📈',
+            type: 'thinking',
         },
         {
             name: 'Meta-Synthesis',
             focus: 'Generate improved integration strategies',
             emoji: '🧠',
+            type: 'action',
+            reflexiveEffects: {
+                triggers: [
+                    'Creating new integration strategies',
+                    'Synthesizing meta-learning insights',
+                    'Establishing learning frameworks',
+                ],
+                realityChanges: [
+                    'New strategies created',
+                    'Learning patterns established',
+                    'Integration approach evolved',
+                ],
+                futureConstraints: [
+                    'Must follow synthesized strategies',
+                    'Learning patterns guide future decisions',
+                    'Meta-framework shapes technique selection',
+                ],
+                reversibility: 'medium',
+            },
         },
     ];
     getTechniqueInfo() {

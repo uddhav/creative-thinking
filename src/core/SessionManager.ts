@@ -391,6 +391,19 @@ export class SessionManager {
     return this.sessionMetrics.getMemoryStats();
   }
 
+  /**
+   * Get reflexivity-specific memory statistics
+   * Provides type-safe access to reflexivity tracker's memory stats
+   */
+  public getReflexivityMemoryStats(): {
+    estimatedMemoryBytes: number;
+    sessionCount: number;
+    totalActions: number;
+    totalConstraints: number;
+  } {
+    return this.reflexivityTracker.getMemoryStats();
+  }
+
   public logMemoryMetrics(): void {
     this.sessionCleaner.logMemoryMetrics();
   }

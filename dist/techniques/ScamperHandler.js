@@ -1,5 +1,5 @@
 /**
- * SCAMPER technique handler with Path Dependency Analysis
+ * SCAMPER technique handler with Path Dependency Analysis and Reflexivity
  */
 import { BaseTechniqueHandler } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
@@ -84,6 +84,170 @@ export class ScamperHandler extends BaseTechniqueHandler {
         'reverse',
         'parameterize',
     ];
+    // Steps with reflexivity data - ALL are action steps since SCAMPER is about modifications
+    steps = [
+        {
+            name: 'Substitute',
+            focus: 'Replace components or elements',
+            emoji: '🔄',
+            type: 'action',
+            reflexiveEffects: {
+                triggers: ['Component replacement', 'Material substitution', 'Process alternative'],
+                realityChanges: [
+                    'Original components no longer in use',
+                    'New dependencies on substitute elements',
+                    'Changed performance characteristics',
+                ],
+                futureConstraints: [
+                    'Must maintain compatibility with substitutes',
+                    'Cannot revert without replacement cost',
+                    'New supply chain dependencies',
+                ],
+                reversibility: 'medium',
+            },
+        },
+        {
+            name: 'Combine',
+            focus: 'Merge elements or ideas',
+            emoji: '🔗',
+            type: 'action',
+            reflexiveEffects: {
+                triggers: ['Element merging', 'Feature integration', 'System combination'],
+                realityChanges: [
+                    'Previously separate elements now interdependent',
+                    'New emergent properties from combination',
+                    'Increased system complexity',
+                ],
+                futureConstraints: [
+                    'Separation becomes costly or impossible',
+                    'Must maintain combined functionality',
+                    'Integration points become critical dependencies',
+                ],
+                reversibility: 'low',
+            },
+        },
+        {
+            name: 'Adapt',
+            focus: 'Adjust for different context',
+            emoji: '🔧',
+            type: 'action',
+            reflexiveEffects: {
+                triggers: ['Context adjustment', 'Environment fitting', 'Use case modification'],
+                realityChanges: [
+                    'System optimized for specific context',
+                    'Loss of general-purpose flexibility',
+                    'New context-specific requirements',
+                ],
+                futureConstraints: [
+                    'Limited to adapted contexts',
+                    'Reverse adaptation requires redesign',
+                    'Context changes require re-adaptation',
+                ],
+                reversibility: 'medium',
+            },
+        },
+        {
+            name: 'Modify',
+            focus: 'Change attributes or qualities',
+            emoji: '✏️',
+            type: 'action',
+            reflexiveEffects: {
+                triggers: ['Attribute changes', 'Quality adjustments', 'Property modifications'],
+                realityChanges: [
+                    'Original specifications no longer valid',
+                    'New performance profile established',
+                    'Modified user expectations',
+                ],
+                futureConstraints: [
+                    'Must work within modified parameters',
+                    'Documentation needs updating',
+                    'Testing based on new attributes',
+                ],
+                reversibility: 'high',
+            },
+        },
+        {
+            name: 'Put to other use',
+            focus: 'Find new applications',
+            emoji: '🎯',
+            type: 'action',
+            reflexiveEffects: {
+                triggers: ['Repurposing', 'New application discovery', 'Alternative usage'],
+                realityChanges: [
+                    'New user base or market',
+                    'Different value proposition',
+                    'Shifted positioning',
+                ],
+                futureConstraints: [
+                    'Must serve new use case',
+                    'Original use may be abandoned',
+                    'New stakeholder expectations',
+                ],
+                reversibility: 'high',
+            },
+        },
+        {
+            name: 'Eliminate',
+            focus: 'Remove elements permanently',
+            emoji: '❌',
+            type: 'action',
+            reflexiveEffects: {
+                triggers: ['Component removal', 'Feature deletion', 'Process elimination'],
+                realityChanges: [
+                    'Elements permanently removed from system',
+                    'Simplified but reduced functionality',
+                    'Dependencies on eliminated elements broken',
+                ],
+                futureConstraints: [
+                    'Cannot rely on eliminated elements',
+                    'Restoration requires complete rebuild',
+                    'Users must adapt to missing features',
+                    'Permanent loss of capability',
+                ],
+                reversibility: 'low',
+            },
+        },
+        {
+            name: 'Reverse',
+            focus: 'Invert or rearrange',
+            emoji: '🔀',
+            type: 'action',
+            reflexiveEffects: {
+                triggers: ['Order inversion', 'Flow reversal', 'Relationship rearrangement'],
+                realityChanges: [
+                    'Fundamental assumptions challenged',
+                    'New operational sequence',
+                    'Inverted dependencies',
+                ],
+                futureConstraints: [
+                    'Must work with reversed logic',
+                    'Training on new flow required',
+                    'Reversed mental models needed',
+                ],
+                reversibility: 'medium',
+            },
+        },
+        {
+            name: 'Parameterize',
+            focus: 'Identify and vary key parameters',
+            emoji: '🔢',
+            type: 'action',
+            reflexiveEffects: {
+                triggers: ['Variable identification', 'Parameter adjustment', 'Configuration changes'],
+                realityChanges: [
+                    'System becomes configurable',
+                    'Multiple valid states exist',
+                    'Complexity from parameter space',
+                ],
+                futureConstraints: [
+                    'Must maintain parameter compatibility',
+                    'Configuration management required',
+                    'Testing across parameter space needed',
+                ],
+                reversibility: 'medium',
+            },
+        },
+    ];
     getTechniqueInfo() {
         return {
             name: 'SCAMPER+P',
@@ -96,19 +260,18 @@ export class ScamperHandler extends BaseTechniqueHandler {
                 canParallelize: true,
                 description: 'All SCAMPER transformations can be applied simultaneously to explore multiple modification paths',
             },
+            reflexivityProfile: {
+                primaryCommitmentType: 'structural',
+                overallReversibility: 'medium',
+                riskLevel: 'high', // High because every step creates modifications
+            },
         };
     }
     getStepInfo(step) {
-        const action = this.actionOrder[step - 1];
-        if (!action) {
-            throw new ValidationError(ErrorCode.INVALID_STEP, `Invalid step ${step} for SCAMPER technique. Valid steps are 1-${this.actionOrder.length}`, 'step', { providedStep: step, validRange: `1-${this.actionOrder.length}` });
+        if (step < 1 || step > this.steps.length) {
+            throw new ValidationError(ErrorCode.INVALID_STEP, `Invalid step ${step} for SCAMPER technique. Valid steps are 1-${this.steps.length}`, 'step', { providedStep: step, validRange: `1-${this.steps.length}` });
         }
-        const info = this.actions[action];
-        return {
-            name: action.charAt(0).toUpperCase() + action.slice(1).replace(/_/g, ' '),
-            focus: `${info.description} ${info.pathIndicator}`,
-            emoji: info.emoji,
-        };
+        return this.steps[step - 1];
     }
     getStepGuidance(step, problem) {
         // Handle out of bounds gracefully

@@ -3,7 +3,7 @@
  * Break down to fundamental truths and rebuild from the ground up
  */
 
-import { BaseTechniqueHandler, type TechniqueInfo } from './types.js';
+import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 
 interface FirstPrinciplesStep {
@@ -52,6 +52,75 @@ export class FirstPrinciplesHandler extends BaseTechniqueHandler {
     },
   ];
 
+  private readonly stepsWithReflexivity: StepInfo[] = [
+    {
+      name: 'Deconstruction',
+      focus: 'Break down into fundamental components',
+      emoji: '🔨',
+      type: 'thinking',
+    },
+    {
+      name: 'Foundation Identification',
+      focus: 'Identify fundamental truths',
+      emoji: '🏛️',
+      type: 'thinking',
+    },
+    {
+      name: 'Assumption Challenging',
+      focus: 'Question and eliminate assumptions',
+      emoji: '❓',
+      type: 'thinking',
+    },
+    {
+      name: 'Reconstruction',
+      focus: 'Build up from first principles',
+      emoji: '🏗️',
+      type: 'action',
+      reflexiveEffects: {
+        triggers: [
+          'Building new solution architecture',
+          'Creating structural commitments',
+          'Establishing new foundations',
+        ],
+        realityChanges: [
+          'New architecture established',
+          'Solution structure defined',
+          'Design decisions materialized',
+        ],
+        futureConstraints: [
+          'Must work within new architecture',
+          'Solution locked to first principles design',
+          'Future iterations constrained by reconstruction',
+        ],
+        reversibility: 'low',
+      },
+    },
+    {
+      name: 'Solution Synthesis',
+      focus: 'Create novel solution',
+      emoji: '💡',
+      type: 'action',
+      reflexiveEffects: {
+        triggers: [
+          'Synthesizing final solution',
+          'Creating novel approach',
+          'Establishing new paradigm',
+        ],
+        realityChanges: [
+          'Novel solution created',
+          'New paradigm established',
+          'Breakthrough approach materialized',
+        ],
+        futureConstraints: [
+          'Must maintain paradigm consistency',
+          'Solution defines new constraints',
+          'Future development follows new principles',
+        ],
+        reversibility: 'low',
+      },
+    },
+  ];
+
   getTechniqueInfo(): TechniqueInfo {
     return {
       name: 'First Principles Thinking',
@@ -68,14 +137,14 @@ export class FirstPrinciplesHandler extends BaseTechniqueHandler {
     };
   }
 
-  getStepInfo(step: number): FirstPrinciplesStep {
-    const stepInfo = this.steps[step - 1];
+  getStepInfo(step: number): StepInfo {
+    const stepInfo = this.stepsWithReflexivity[step - 1];
     if (!stepInfo) {
       throw new ValidationError(
         ErrorCode.INVALID_STEP,
-        `Invalid step ${step} for First Principles Thinking. Valid steps are 1-${this.steps.length}`,
+        `Invalid step ${step} for First Principles Thinking. Valid steps are 1-${this.stepsWithReflexivity.length}`,
         'step',
-        { providedStep: step, validRange: `1-${this.steps.length}` }
+        { providedStep: step, validRange: `1-${this.stepsWithReflexivity.length}` }
       );
     }
     return stepInfo;

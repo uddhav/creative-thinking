@@ -1,8 +1,8 @@
 /**
- * PO (Provocative Operation) technique handler
+ * PO (Provocative Operation) technique handler with reflexivity
  */
 
-import { BaseTechniqueHandler, type TechniqueInfo } from './types.js';
+import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 
 export class POHandler extends BaseTechniqueHandler {
@@ -26,27 +26,67 @@ export class POHandler extends BaseTechniqueHandler {
     };
   }
 
-  getStepInfo(step: number): { name: string; focus: string; emoji: string } {
-    const steps = [
+  getStepInfo(step: number): StepInfo {
+    const steps: StepInfo[] = [
       {
         name: 'Create Provocation',
         focus: 'Generate a deliberately unreasonable statement',
         emoji: '💥',
+        type: 'thinking',
       },
       {
         name: 'Movement',
         focus: 'Extract useful ideas from the provocation',
         emoji: '➡️',
+        type: 'thinking',
       },
       {
         name: 'Develop Concepts',
         focus: 'Transform extracted ideas into workable concepts',
         emoji: '🔨',
+        type: 'action',
+        reflexiveEffects: {
+          triggers: [
+            'Developing workable concepts',
+            'Transforming provocations into solutions',
+            'Creating practical approaches',
+          ],
+          realityChanges: [
+            'Concepts developed from provocation',
+            'New approaches created',
+            'Unconventional solutions formed',
+          ],
+          futureConstraints: [
+            'Must work within developed concepts',
+            'Provocative origins shape solution',
+            'Unconventional approach committed',
+          ],
+          reversibility: 'high',
+        },
       },
       {
         name: 'Practical Solutions',
         focus: 'Convert concepts into implementable solutions',
         emoji: '✅',
+        type: 'action',
+        reflexiveEffects: {
+          triggers: [
+            'Converting to implementable solutions',
+            'Finalizing practical approach',
+            'Committing to solution path',
+          ],
+          realityChanges: [
+            'Solution implemented',
+            'Practical approach established',
+            'Provocative concept realized',
+          ],
+          futureConstraints: [
+            'Must follow implemented solution',
+            'Practical constraints established',
+            'Solution path locked in',
+          ],
+          reversibility: 'medium',
+        },
       },
     ];
 
