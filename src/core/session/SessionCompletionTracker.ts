@@ -607,7 +607,6 @@ export class SessionCompletionTracker {
       meta_learning: 5,
       biomimetic_path: 6,
       first_principles: 5,
-      cultural_path: 5,
       neuro_computational: 6,
     };
 

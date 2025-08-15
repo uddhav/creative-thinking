@@ -40,7 +40,6 @@ export class TechniqueRecommender {
     'meta_learning',
     'biomimetic_path',
     'first_principles',
-    'cultural_path',
     'neuro_computational',
     'cultural_integration',
   ];
@@ -500,11 +499,6 @@ Focus on maximizing creative output and maintaining session flow.`;
         'Strip away all assumptions',
         'Build from fundamental truths',
         'Create breakthrough innovations',
-      ],
-      cultural_path: [
-        'Navigate cultural contexts sensitively',
-        'Bridge diverse perspectives',
-        'Create culturally-aware solutions',
       ],
       neuro_computational: [
         'Generate solutions through neural-computational synthesis',

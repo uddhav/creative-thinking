@@ -69,7 +69,7 @@ describe('Reflexivity Integration', () => {
       // Plan a Cultural Path session
       const planResult = server.planThinkingSession({
         problem: 'Bridge communication gap between engineering and marketing teams',
-        techniques: ['cultural_path'],
+        techniques: ['cultural_integration'],
       });
 
       const planResponse = JSON.parse(planResult.content[0].text);
@@ -78,7 +78,7 @@ describe('Reflexivity Integration', () => {
       // Execute steps 1-2 (thinking)
       const step1Result = await server.executeThinkingStep({
         planId,
-        technique: 'cultural_path',
+        technique: 'cultural_integration',
         problem: 'Bridge communication gap between engineering and marketing teams',
         currentStep: 1,
         totalSteps: 5,
@@ -94,7 +94,7 @@ describe('Reflexivity Integration', () => {
       await server.executeThinkingStep({
         planId,
         sessionId: step1Response.sessionId,
-        technique: 'cultural_path',
+        technique: 'cultural_integration',
         problem: 'Bridge communication gap between engineering and marketing teams',
         currentStep: 2,
         totalSteps: 5,
@@ -106,7 +106,7 @@ describe('Reflexivity Integration', () => {
       const step3Result = await server.executeThinkingStep({
         planId,
         sessionId: step1Response.sessionId,
-        technique: 'cultural_path',
+        technique: 'cultural_integration',
         problem: 'Bridge communication gap between engineering and marketing teams',
         currentStep: 3,
         totalSteps: 5,
@@ -124,7 +124,7 @@ describe('Reflexivity Integration', () => {
       const step4Result = await server.executeThinkingStep({
         planId,
         sessionId: step3Response.sessionId,
-        technique: 'cultural_path',
+        technique: 'cultural_integration',
         problem: 'Bridge communication gap between engineering and marketing teams',
         currentStep: 4,
         totalSteps: 5,
@@ -136,15 +136,15 @@ describe('Reflexivity Integration', () => {
 
       const step4Response = JSON.parse(step4Result.content[0].text);
       expect(step4Response.reflexivity).toBeDefined();
-      // Should show we've tracked multiple action steps
-      expect(step4Response.reflexivity.summary.actionSteps).toBe(2);
-      // Should have tracked both as actions, not thinking
-      expect(step4Response.reflexivity.summary.thinkingSteps).toBe(0);
-      // Should have accumulated constraints from both action steps
-      expect(step4Response.reflexivity.summary.currentConstraints).toBe(6);
+      // By step 4 of CulturalIntegration, we have 1 action step (step 3: Bridge Building)
+      expect(step4Response.reflexivity.summary.actionSteps).toBe(1);
+      // Steps 1, 2, and 4 are thinking steps
+      expect(step4Response.reflexivity.summary.thinkingSteps).toBe(3);
+      // Should have accumulated constraints from the one action step
+      expect(step4Response.reflexivity.summary.currentConstraints).toBe(4);
       // Should have actual constraint values in the array
       expect(step4Response.reflexivity.currentConstraints).toBeInstanceOf(Array);
-      expect(step4Response.reflexivity.currentConstraints.length).toBe(6);
+      expect(step4Response.reflexivity.currentConstraints.length).toBe(4);
     });
   });
 

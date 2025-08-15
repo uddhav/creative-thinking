@@ -268,7 +268,7 @@ export class ExecutionResponseBuilder {
     // Only show reflexivity data if there have been action steps
     if (
       this.sessionManager &&
-      (input.technique === 'triz' || input.technique === 'cultural_path')
+      (input.technique === 'triz' || input.technique === 'cultural_integration')
     ) {
       const reflexivityData = this.sessionManager.getSessionReflexivity(sessionId);
       // Only include reflexivity if there have been action steps (actionSteps > 0)

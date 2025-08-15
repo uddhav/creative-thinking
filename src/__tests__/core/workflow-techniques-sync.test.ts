@@ -52,16 +52,16 @@ describe('WorkflowGuard Techniques Synchronization', () => {
     // All registered techniques should be valid in WorkflowGuard
     expect([...validTechniques].sort()).toEqual([...registeredTechniques].sort());
 
-    // Also verify the count matches what we expect (22 techniques after consolidation)
-    expect(registeredTechniques.length).toBe(22);
-    expect(validTechniques.length).toBe(22);
+    // Also verify the count matches what we expect (21 techniques after consolidation)
+    expect(registeredTechniques.length).toBe(21);
+    expect(validTechniques.length).toBe(21);
 
     // Explicitly check for the three techniques that were missing
     expect(validTechniques).toContain('quantum_superposition');
     expect(validTechniques).toContain('temporal_creativity');
     expect(validTechniques).toContain('paradoxical_problem');
     expect(validTechniques).toContain('biomimetic_path');
-    expect(validTechniques).toContain('cultural_path');
+    expect(validTechniques).toContain('cultural_integration');
     expect(validTechniques).toContain('neuro_computational');
     expect(validTechniques).toContain('cultural_integration');
   });
@@ -92,7 +92,6 @@ describe('WorkflowGuard Techniques Synchronization', () => {
       'meta_learning',
       'biomimetic_path',
       'first_principles',
-      'cultural_path',
       'neuro_computational',
     ];
 

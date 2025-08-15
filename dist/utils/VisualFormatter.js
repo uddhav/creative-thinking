@@ -215,7 +215,6 @@ export class VisualFormatter {
             meta_learning: '🧠',
             biomimetic_path: '🦠',
             first_principles: '🔬',
-            cultural_path: '🗺️',
             neuro_computational: '⚛️',
         };
         return emojis[technique] || '❓';
@@ -245,7 +244,6 @@ export class VisualFormatter {
             meta_learning: 'Meta-Learning from Path Integration',
             biomimetic_path: 'Biomimetic Path Management',
             first_principles: 'First Principles Thinking',
-            cultural_path: 'Cultural Path Navigation',
             neuro_computational: 'Neuro-Computational Synthesis',
         };
         return names[technique] || technique;
