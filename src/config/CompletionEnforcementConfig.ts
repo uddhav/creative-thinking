@@ -81,11 +81,11 @@ export const ENFORCEMENT_PROFILES: Record<string, CompletionGatekeeperConfig> = 
   research: {
     enforcementLevel: EnforcementLevel.STRICT,
     minimumCompletionThreshold: 0.95,
-    criticalTechniques: ['six_hats', 'triz', 'cross_cultural', 'collective_intel'],
+    criticalTechniques: ['six_hats', 'triz', 'cultural_integration', 'collective_intel'],
     mandatoryStepsForProblemTypes: {
       risk: ['six_hats.black_hat', 'six_hats.yellow_hat', 'triz.contradiction'],
       technical: ['triz', 'scamper', 'nine_windows'],
-      user: ['design_thinking', 'cross_cultural', 'collective_intel'],
+      user: ['design_thinking', 'cultural_integration', 'collective_intel'],
       creative: ['po', 'random_entry', 'concept_extraction'],
     },
     allowExplicitSkip: false,
@@ -187,7 +187,7 @@ export function validateEnforcementConfig(config: CompletionGatekeeperConfig): {
     'triz',
     'neural_state',
     'temporal_work',
-    'cross_cultural',
+    'cultural_integration',
     'collective_intel',
     'disney_method',
     'nine_windows',

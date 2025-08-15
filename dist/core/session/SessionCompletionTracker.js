@@ -434,7 +434,7 @@ export class SessionCompletionTracker {
             triz: 4,
             neural_state: 4,
             temporal_work: 5,
-            cross_cultural: 5,
+            cultural_integration: 5,
             collective_intel: 5,
             disney_method: 3,
             nine_windows: 9,
@@ -446,7 +446,6 @@ export class SessionCompletionTracker {
             first_principles: 5,
             cultural_path: 5,
             neuro_computational: 6,
-            cultural_creativity: 4,
         };
         return stepCounts[technique] || 5;
     }

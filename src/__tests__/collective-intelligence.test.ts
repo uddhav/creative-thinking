@@ -443,7 +443,7 @@ describe('Collective Intelligence Orchestration', () => {
     it('should work well in combination with Cross-Cultural Integration', async () => {
       const planId = createPlan('Create global collective intelligence for climate action', [
         'collective_intel',
-        'cross_cultural',
+        'cultural_integration',
       ]);
 
       // First gather collective intelligence
@@ -468,7 +468,7 @@ describe('Collective Intelligence Orchestration', () => {
       // Then apply cross-cultural perspective
       const culturalStep = await executeStep(planId, {
         sessionId: collectiveStep.sessionId,
-        technique: 'cross_cultural',
+        technique: 'cultural_integration',
         problem: 'Create global collective intelligence for climate action',
         currentStep: 1,
         totalSteps: 1,

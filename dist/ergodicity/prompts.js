@@ -156,7 +156,7 @@ export function getErgodicityGuidance(technique) {
         random_entry: 'Random connections are harmless unless they trigger irreversible actions.',
         concept_extraction: 'Extracting concepts is ergodic. Applying them may not be.',
         temporal_work: 'Time itself is non-ergodic. You cannot recover lost time.',
-        cross_cultural: 'Cultural missteps in non-ergodic domains can permanently damage relationships.',
+        cultural_integration: 'Cultural missteps in non-ergodic domains can permanently damage relationships.',
         collective_intel: 'Collective wisdom often embeds survival knowledge from non-ergodic experiences.',
         nine_windows: 'Past/present/future analysis reveals non-ergodic transitions.',
         neural_state: 'Mental states are generally ergodic, but trauma creates absorbing barriers.',

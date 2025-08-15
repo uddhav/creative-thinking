@@ -66,7 +66,7 @@ export class TechniqueRecommender {
                     effectiveness: 0.88,
                 });
                 recommendations.push({
-                    technique: 'cultural_creativity',
+                    technique: 'cultural_integration',
                     reasoning: 'Synthesizes creative solutions from diverse cultural perspectives',
                     effectiveness: 0.82,
                 });
@@ -95,26 +95,26 @@ export class TechniqueRecommender {
                     effectiveness: 0.8,
                 });
                 recommendations.push({
-                    technique: 'cross_cultural',
+                    technique: 'cultural_integration',
                     reasoning: 'Integrates diverse cultural frameworks respectfully',
                     effectiveness: 0.85,
                 });
                 recommendations.push({
-                    technique: 'cultural_creativity',
+                    technique: 'cultural_integration',
                     reasoning: 'Orchestrates creative synthesis across cultural boundaries',
                     effectiveness: 0.78,
                 });
                 break;
             case 'cultural':
-            case 'cross_cultural':
+            case 'cultural_integration':
             case 'multicultural':
                 recommendations.push({
-                    technique: 'cultural_creativity',
+                    technique: 'cultural_integration',
                     reasoning: 'Primary technique for orchestrating cross-cultural creative synthesis',
                     effectiveness: 0.95,
                 });
                 recommendations.push({
-                    technique: 'cross_cultural',
+                    technique: 'cultural_integration',
                     reasoning: 'Foundational cultural integration and respectful bridge-building',
                     effectiveness: 0.9,
                 });
@@ -332,7 +332,7 @@ export class TechniqueRecommender {
             case 'collaborative':
                 // Boost collaborative techniques
                 recommendations.forEach(r => {
-                    if (['yes_and', 'collective_intel', 'cross_cultural'].includes(r.technique)) {
+                    if (['yes_and', 'collective_intel', 'cultural_integration'].includes(r.technique)) {
                         r.effectiveness *= 1.3;
                     }
                 });
@@ -370,7 +370,7 @@ export class TechniqueRecommender {
             'triz',
             'neural_state',
             'temporal_work',
-            'cross_cultural',
+            'cultural_integration',
             'collective_intel',
             'disney_method',
             'nine_windows',

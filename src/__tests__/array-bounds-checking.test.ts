@@ -37,7 +37,7 @@ describe('Array Bounds Checking Integration Tests', () => {
       { technique: 'triz' as const, maxSteps: 4 },
       { technique: 'neural_state' as const, maxSteps: 4 },
       { technique: 'temporal_work' as const, maxSteps: 5 },
-      { technique: 'cross_cultural' as const, maxSteps: 5 },
+      { technique: 'cultural_integration' as const, maxSteps: 5 },
       { technique: 'collective_intel' as const, maxSteps: 5 },
     ];
 
@@ -65,7 +65,7 @@ describe('Array Bounds Checking Integration Tests', () => {
 
           // Should contain "Complete the" and handle technique name transformation
           expect(response.nextStepGuidance).toContain('Complete the');
-          // Handle technique name variations (cross-cultural vs cross_cultural, etc)
+          // Handle technique name variations (cross-cultural vs cultural_integration, etc)
           // Check if the response contains some part of the technique identifier
           const techniqueWords = technique.split('_');
           const foundWord = techniqueWords.some(word =>
@@ -132,7 +132,7 @@ describe('Array Bounds Checking Integration Tests', () => {
       { technique: 'triz' as const, maxSteps: 4 },
       { technique: 'neural_state' as const, maxSteps: 4 },
       { technique: 'temporal_work' as const, maxSteps: 5 },
-      { technique: 'cross_cultural' as const, maxSteps: 5 },
+      { technique: 'cultural_integration' as const, maxSteps: 5 },
       { technique: 'collective_intel' as const, maxSteps: 5 },
     ];
 

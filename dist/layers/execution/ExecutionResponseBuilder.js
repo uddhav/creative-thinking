@@ -642,7 +642,7 @@ export class ExecutionResponseBuilder {
             return 'These antifragile properties can be applied to other systems';
         }
         // Cross-cultural insights have broad applicability
-        if (input.technique === 'cross_cultural') {
+        if (input.technique === 'cultural_integration') {
             if (input.culturalFrameworks && input.culturalFrameworks.length > 2) {
                 return 'These cultural patterns provide templates for diverse problem contexts';
             }

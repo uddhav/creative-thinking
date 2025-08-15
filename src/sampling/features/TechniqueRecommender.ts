@@ -30,7 +30,7 @@ export class TechniqueRecommender {
     'triz',
     'neural_state',
     'temporal_work',
-    'cross_cultural',
+    'cultural_integration',
     'collective_intel',
     'disney_method',
     'nine_windows',
@@ -42,7 +42,7 @@ export class TechniqueRecommender {
     'first_principles',
     'cultural_path',
     'neuro_computational',
-    'cultural_creativity',
+    'cultural_integration',
   ];
 
   constructor(private samplingManager: SamplingManager) {}
@@ -151,7 +151,7 @@ Available techniques and their strengths:
 - triz: Systematic innovation and contradiction resolution
 - neural_state: Cognitive state optimization
 - temporal_work: Time-based analysis and futures thinking
-- cross_cultural: Diverse cultural perspectives
+- cultural_integration: Diverse cultural perspectives
 - collective_intel: Crowd wisdom and emergence
 - disney_method: Dreamer-realist-critic cycle
 - nine_windows: System-level thinking across time
@@ -340,7 +340,7 @@ Focus on maximizing creative output and maintaining session flow.`;
       dt: 'design_thinking',
       neural: 'neural_state',
       temporal: 'temporal_work',
-      cross_cultural_work: 'cross_cultural',
+      cultural_integration_work: 'cultural_integration',
       collective: 'collective_intel',
       disney: 'disney_method',
       '9_windows': 'nine_windows',
@@ -455,7 +455,7 @@ Focus on maximizing creative output and maintaining session flow.`;
         'Identify temporal patterns',
         'Future-proof solutions',
       ],
-      cross_cultural: [
+      cultural_integration: [
         'Diverse cultural insights',
         'Broaden solution space',
         'Inclusive innovation',
@@ -510,12 +510,6 @@ Focus on maximizing creative output and maintaining session flow.`;
         'Generate solutions through neural-computational synthesis',
         'Optimize creative output through iterative cycles',
         'Achieve convergence to optimal solutions',
-      ],
-      cultural_creativity: [
-        'Orchestrate cross-cultural creative synthesis',
-        'Integrate diverse cultural perspectives into innovative solutions',
-        'Bridge creative divides across cultural boundaries',
-        'Generate inclusive creative outcomes',
       ],
     };
 

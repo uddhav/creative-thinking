@@ -123,7 +123,7 @@ export class ResponseBuilder {
                 'triz',
                 'neural_state',
                 'temporal_work',
-                'cross_cultural',
+                'cultural_integration',
                 'collective_intel',
                 'disney_method',
                 'nine_windows',
@@ -450,7 +450,7 @@ export class ResponseBuilder {
                 if (input.temporalEscapeRoutes)
                     fields.temporalEscapeRoutes = input.temporalEscapeRoutes;
                 break;
-            case 'cross_cultural':
+            case 'cultural_integration':
                 if (input.culturalFrameworks)
                     fields.culturalFrameworks = input.culturalFrameworks;
                 if (input.bridgeBuilding)

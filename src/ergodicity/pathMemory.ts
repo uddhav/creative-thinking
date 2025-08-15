@@ -365,7 +365,7 @@ export class PathMemoryManager {
       triz: 'technical',
       neural_state: 'cognitive',
       temporal_work: 'resource',
-      cross_cultural: 'relational',
+      cultural_integration: 'relational',
       collective_intel: 'cognitive',
       disney_method: 'creative',
       nine_windows: 'technical',
@@ -377,7 +377,6 @@ export class PathMemoryManager {
       first_principles: 'cognitive',
       cultural_path: 'relational',
       neuro_computational: 'cognitive',
-      cultural_creativity: 'relational',
     };
 
     return techniqueConstraintMap[event.technique] || 'creative';

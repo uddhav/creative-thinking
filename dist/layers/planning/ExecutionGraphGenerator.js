@@ -70,7 +70,7 @@ export class ExecutionGraphGenerator {
             'concept_extraction',
             'neural_state',
             'temporal_work',
-            'cross_cultural',
+            'cultural_integration',
             'collective_intel',
         ];
         if (parallelTechniques.includes(technique)) {

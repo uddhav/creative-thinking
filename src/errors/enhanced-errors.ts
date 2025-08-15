@@ -494,7 +494,7 @@ export class ErrorFactory {
       'triz',
       'neural_state',
       'temporal_work',
-      'cross_cultural',
+      'cultural_integration',
       'collective_intel',
       'disney_method',
       'nine_windows',
