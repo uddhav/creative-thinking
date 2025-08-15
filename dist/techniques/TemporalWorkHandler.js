@@ -23,9 +23,21 @@ export class TemporalWorkHandler extends BaseTechniqueHandler {
             emoji: '💎',
             type: 'action',
             reflexiveEffects: {
-                triggers: ['Transforming time pressure', 'Creating deadline structures', 'Establishing temporal constraints'],
-                realityChanges: ['Pressure dynamics established', 'Creative constraints in place', 'Time-boxed commitments made'],
-                futureConstraints: ['Must work within pressure framework', 'Deadlines become immovable', 'Creative constraints lock in'],
+                triggers: [
+                    'Transforming time pressure',
+                    'Creating deadline structures',
+                    'Establishing temporal constraints',
+                ],
+                realityChanges: [
+                    'Pressure dynamics established',
+                    'Creative constraints in place',
+                    'Time-boxed commitments made',
+                ],
+                futureConstraints: [
+                    'Must work within pressure framework',
+                    'Deadlines become immovable',
+                    'Creative constraints lock in',
+                ],
                 reversibility: 'medium',
             },
         },
@@ -35,9 +47,21 @@ export class TemporalWorkHandler extends BaseTechniqueHandler {
             emoji: '⚖️',
             type: 'action',
             reflexiveEffects: {
-                triggers: ['Establishing async patterns', 'Creating sync points', 'Designing flow structures'],
-                realityChanges: ['Communication patterns set', 'Synchronization points fixed', 'Information flow established'],
-                futureConstraints: ['Must maintain async/sync balance', 'Communication patterns persist', 'Flow structures become dependencies'],
+                triggers: [
+                    'Establishing async patterns',
+                    'Creating sync points',
+                    'Designing flow structures',
+                ],
+                realityChanges: [
+                    'Communication patterns set',
+                    'Synchronization points fixed',
+                    'Information flow established',
+                ],
+                futureConstraints: [
+                    'Must maintain async/sync balance',
+                    'Communication patterns persist',
+                    'Flow structures become dependencies',
+                ],
                 reversibility: 'medium',
             },
         },
@@ -47,9 +71,21 @@ export class TemporalWorkHandler extends BaseTechniqueHandler {
             emoji: '🚪',
             type: 'action',
             reflexiveEffects: {
-                triggers: ['Creating escape routes', 'Building recovery options', 'Establishing flexibility buffers'],
-                realityChanges: ['Escape mechanisms in place', 'Recovery paths established', 'Flexibility buffers active'],
-                futureConstraints: ['Must maintain escape routes', 'Recovery options become expectations', 'Flexibility has costs'],
+                triggers: [
+                    'Creating escape routes',
+                    'Building recovery options',
+                    'Establishing flexibility buffers',
+                ],
+                realityChanges: [
+                    'Escape mechanisms in place',
+                    'Recovery paths established',
+                    'Flexibility buffers active',
+                ],
+                futureConstraints: [
+                    'Must maintain escape routes',
+                    'Recovery options become expectations',
+                    'Flexibility has costs',
+                ],
                 reversibility: 'high',
             },
         },

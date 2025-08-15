@@ -68,9 +68,21 @@ export class DesignThinkingHandler extends BaseTechniqueHandler {
             emoji: '🔨',
             type: 'action',
             reflexiveEffects: {
-                triggers: ['Creating physical/digital artifacts', 'Building testable prototypes', 'Materializing ideas'],
-                realityChanges: ['Prototype exists as tangible artifact', 'Resources committed to prototype', 'Design decisions become concrete'],
-                futureConstraints: ['Must work within prototype limitations', 'User expectations shaped by prototype', 'Future iterations constrained by initial design'],
+                triggers: [
+                    'Creating physical/digital artifacts',
+                    'Building testable prototypes',
+                    'Materializing ideas',
+                ],
+                realityChanges: [
+                    'Prototype exists as tangible artifact',
+                    'Resources committed to prototype',
+                    'Design decisions become concrete',
+                ],
+                futureConstraints: [
+                    'Must work within prototype limitations',
+                    'User expectations shaped by prototype',
+                    'Future iterations constrained by initial design',
+                ],
                 reversibility: 'medium',
             },
         },
@@ -81,8 +93,16 @@ export class DesignThinkingHandler extends BaseTechniqueHandler {
             type: 'action',
             reflexiveEffects: {
                 triggers: ['User testing sessions', 'Collecting feedback', 'Measuring performance'],
-                realityChanges: ['User expectations formed', 'Feedback documented', 'Performance metrics established'],
-                futureConstraints: ['Must address identified issues', 'User feedback shapes future direction', 'Test results become benchmarks'],
+                realityChanges: [
+                    'User expectations formed',
+                    'Feedback documented',
+                    'Performance metrics established',
+                ],
+                futureConstraints: [
+                    'Must address identified issues',
+                    'User feedback shapes future direction',
+                    'Test results become benchmarks',
+                ],
                 reversibility: 'high',
             },
         },

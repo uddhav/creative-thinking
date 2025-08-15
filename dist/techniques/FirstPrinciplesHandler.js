@@ -62,9 +62,21 @@ export class FirstPrinciplesHandler extends BaseTechniqueHandler {
             emoji: '🏗️',
             type: 'action',
             reflexiveEffects: {
-                triggers: ['Building new solution architecture', 'Creating structural commitments', 'Establishing new foundations'],
-                realityChanges: ['New architecture established', 'Solution structure defined', 'Design decisions materialized'],
-                futureConstraints: ['Must work within new architecture', 'Solution locked to first principles design', 'Future iterations constrained by reconstruction'],
+                triggers: [
+                    'Building new solution architecture',
+                    'Creating structural commitments',
+                    'Establishing new foundations',
+                ],
+                realityChanges: [
+                    'New architecture established',
+                    'Solution structure defined',
+                    'Design decisions materialized',
+                ],
+                futureConstraints: [
+                    'Must work within new architecture',
+                    'Solution locked to first principles design',
+                    'Future iterations constrained by reconstruction',
+                ],
                 reversibility: 'low',
             },
         },
@@ -74,9 +86,21 @@ export class FirstPrinciplesHandler extends BaseTechniqueHandler {
             emoji: '💡',
             type: 'action',
             reflexiveEffects: {
-                triggers: ['Synthesizing final solution', 'Creating novel approach', 'Establishing new paradigm'],
-                realityChanges: ['Novel solution created', 'New paradigm established', 'Breakthrough approach materialized'],
-                futureConstraints: ['Must maintain paradigm consistency', 'Solution defines new constraints', 'Future development follows new principles'],
+                triggers: [
+                    'Synthesizing final solution',
+                    'Creating novel approach',
+                    'Establishing new paradigm',
+                ],
+                realityChanges: [
+                    'Novel solution created',
+                    'New paradigm established',
+                    'Breakthrough approach materialized',
+                ],
+                futureConstraints: [
+                    'Must maintain paradigm consistency',
+                    'Solution defines new constraints',
+                    'Future development follows new principles',
+                ],
                 reversibility: 'low',
             },
         },

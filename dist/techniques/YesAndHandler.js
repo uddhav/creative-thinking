@@ -18,8 +18,16 @@ export class YesAndHandler extends BaseTechniqueHandler {
             type: 'action',
             reflexiveEffects: {
                 triggers: ['Building on existing ideas', 'Adding new elements', 'Creating commitments'],
-                realityChanges: ['Idea expanded with additions', 'New commitments made', 'Collaborative momentum built'],
-                futureConstraints: ['Must honor all additions made', 'Cannot remove prior contributions', 'Future additions must align with existing ones'],
+                realityChanges: [
+                    'Idea expanded with additions',
+                    'New commitments made',
+                    'Collaborative momentum built',
+                ],
+                futureConstraints: [
+                    'Must honor all additions made',
+                    'Cannot remove prior contributions',
+                    'Future additions must align with existing ones',
+                ],
                 reversibility: 'low',
             },
         },
@@ -35,9 +43,21 @@ export class YesAndHandler extends BaseTechniqueHandler {
             emoji: '🔀',
             type: 'action',
             reflexiveEffects: {
-                triggers: ['Integrating additions', 'Creating final synthesis', 'Forming coherent solution'],
-                realityChanges: ['Solution structure defined', 'Integration decisions made', 'Final form established'],
-                futureConstraints: ['Must work within synthesized structure', 'All integrated elements must be honored', 'Future changes limited by synthesis'],
+                triggers: [
+                    'Integrating additions',
+                    'Creating final synthesis',
+                    'Forming coherent solution',
+                ],
+                realityChanges: [
+                    'Solution structure defined',
+                    'Integration decisions made',
+                    'Final form established',
+                ],
+                futureConstraints: [
+                    'Must work within synthesized structure',
+                    'All integrated elements must be honored',
+                    'Future changes limited by synthesis',
+                ],
                 reversibility: 'medium',
             },
         },

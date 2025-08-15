@@ -18,8 +18,16 @@ export class DisneyMethodHandler extends BaseTechniqueHandler {
             type: 'action',
             reflexiveEffects: {
                 triggers: ['Creating implementation plan', 'Defining resources', 'Setting timelines'],
-                realityChanges: ['Implementation plan created', 'Resources allocated', 'Timeline established'],
-                futureConstraints: ['Must follow implementation plan', 'Resources committed', 'Timeline expectations set'],
+                realityChanges: [
+                    'Implementation plan created',
+                    'Resources allocated',
+                    'Timeline established',
+                ],
+                futureConstraints: [
+                    'Must follow implementation plan',
+                    'Resources committed',
+                    'Timeline expectations set',
+                ],
                 reversibility: 'medium',
             },
         },

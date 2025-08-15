@@ -57,8 +57,16 @@ export class BiomimeticPathHandler extends BaseTechniqueHandler {
             type: 'action',
             reflexiveEffects: {
                 triggers: ['Implementing mutations', 'Applying selection pressures', 'Evolving traits'],
-                realityChanges: ['Solution variants created', 'Fitness landscape established', 'Selection criteria locked in'],
-                futureConstraints: ['Must work within evolved traits', 'Cannot undo selection pressures', 'Fitness criteria become permanent'],
+                realityChanges: [
+                    'Solution variants created',
+                    'Fitness landscape established',
+                    'Selection criteria locked in',
+                ],
+                futureConstraints: [
+                    'Must work within evolved traits',
+                    'Cannot undo selection pressures',
+                    'Fitness criteria become permanent',
+                ],
                 reversibility: 'low',
             },
         },
@@ -68,9 +76,21 @@ export class BiomimeticPathHandler extends BaseTechniqueHandler {
             emoji: '🌿',
             type: 'action',
             reflexiveEffects: {
-                triggers: ['Creating symbiotic relationships', 'Establishing resource flows', 'Building ecological balance'],
-                realityChanges: ['Dependencies established', 'Resource allocations fixed', 'Ecosystem structure defined'],
-                futureConstraints: ['Must maintain ecosystem balance', 'Cannot break symbiotic relationships', 'Resource flows become interdependent'],
+                triggers: [
+                    'Creating symbiotic relationships',
+                    'Establishing resource flows',
+                    'Building ecological balance',
+                ],
+                realityChanges: [
+                    'Dependencies established',
+                    'Resource allocations fixed',
+                    'Ecosystem structure defined',
+                ],
+                futureConstraints: [
+                    'Must maintain ecosystem balance',
+                    'Cannot break symbiotic relationships',
+                    'Resource flows become interdependent',
+                ],
                 reversibility: 'low',
             },
         },
@@ -80,9 +100,21 @@ export class BiomimeticPathHandler extends BaseTechniqueHandler {
             emoji: '🐜',
             type: 'action',
             reflexiveEffects: {
-                triggers: ['Implementing swarm rules', 'Creating emergent behaviors', 'Establishing collective patterns'],
-                realityChanges: ['Collective behaviors emerge', 'Swarm dynamics established', 'Distributed decision-making active'],
-                futureConstraints: ['Cannot easily change emergent patterns', 'Swarm behaviors self-reinforce', 'Individual rules affect whole system'],
+                triggers: [
+                    'Implementing swarm rules',
+                    'Creating emergent behaviors',
+                    'Establishing collective patterns',
+                ],
+                realityChanges: [
+                    'Collective behaviors emerge',
+                    'Swarm dynamics established',
+                    'Distributed decision-making active',
+                ],
+                futureConstraints: [
+                    'Cannot easily change emergent patterns',
+                    'Swarm behaviors self-reinforce',
+                    'Individual rules affect whole system',
+                ],
                 reversibility: 'medium',
             },
         },
@@ -92,9 +124,21 @@ export class BiomimeticPathHandler extends BaseTechniqueHandler {
             emoji: '🔄',
             type: 'action',
             reflexiveEffects: {
-                triggers: ['Building redundancy', 'Creating modular structures', 'Implementing adaptive cycles'],
-                realityChanges: ['Redundant systems in place', 'Modular architecture established', 'Resilience mechanisms active'],
-                futureConstraints: ['Must maintain redundancy costs', 'Modular boundaries become fixed', 'Adaptive cycles continue'],
+                triggers: [
+                    'Building redundancy',
+                    'Creating modular structures',
+                    'Implementing adaptive cycles',
+                ],
+                realityChanges: [
+                    'Redundant systems in place',
+                    'Modular architecture established',
+                    'Resilience mechanisms active',
+                ],
+                futureConstraints: [
+                    'Must maintain redundancy costs',
+                    'Modular boundaries become fixed',
+                    'Adaptive cycles continue',
+                ],
                 reversibility: 'medium',
             },
         },
@@ -104,9 +148,21 @@ export class BiomimeticPathHandler extends BaseTechniqueHandler {
             emoji: '🌱',
             type: 'action',
             reflexiveEffects: {
-                triggers: ['Synthesizing biological strategies', 'Creating unified solution', 'Implementing nature-inspired design'],
-                realityChanges: ['Biological solution implemented', 'Natural patterns embedded', 'Evolutionary design locked in'],
-                futureConstraints: ['Must work within biological constraints', 'Natural patterns self-perpetuate', 'Evolution continues autonomously'],
+                triggers: [
+                    'Synthesizing biological strategies',
+                    'Creating unified solution',
+                    'Implementing nature-inspired design',
+                ],
+                realityChanges: [
+                    'Biological solution implemented',
+                    'Natural patterns embedded',
+                    'Evolutionary design locked in',
+                ],
+                futureConstraints: [
+                    'Must work within biological constraints',
+                    'Natural patterns self-perpetuate',
+                    'Evolution continues autonomously',
+                ],
                 reversibility: 'low',
             },
         },

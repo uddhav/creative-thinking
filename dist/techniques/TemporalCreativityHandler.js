@@ -62,9 +62,21 @@ export class TemporalCreativityHandler extends BaseTechniqueHandler {
             emoji: '⚡',
             type: 'action',
             reflexiveEffects: {
-                triggers: ['Creating temporal options', 'Establishing timelines', 'Setting acceleration/delay paths'],
-                realityChanges: ['Timeline options created', 'Temporal commitments made', 'Parallel paths established'],
-                futureConstraints: ['Must honor temporal commitments', 'Timeline dependencies created', 'Parallel paths must converge'],
+                triggers: [
+                    'Creating temporal options',
+                    'Establishing timelines',
+                    'Setting acceleration/delay paths',
+                ],
+                realityChanges: [
+                    'Timeline options created',
+                    'Temporal commitments made',
+                    'Parallel paths established',
+                ],
+                futureConstraints: [
+                    'Must honor temporal commitments',
+                    'Timeline dependencies created',
+                    'Parallel paths must converge',
+                ],
                 reversibility: 'medium',
             },
         },
@@ -76,7 +88,11 @@ export class TemporalCreativityHandler extends BaseTechniqueHandler {
             reflexiveEffects: {
                 triggers: ['Refining strategy', 'Integrating lessons', 'Evolving approach'],
                 realityChanges: ['Strategy refined', 'Lessons embedded', 'Evolution path set'],
-                futureConstraints: ['Must follow refined strategy', 'Lessons become constraints', 'Evolution continues'],
+                futureConstraints: [
+                    'Must follow refined strategy',
+                    'Lessons become constraints',
+                    'Evolution continues',
+                ],
                 reversibility: 'high',
             },
         },
@@ -86,9 +102,21 @@ export class TemporalCreativityHandler extends BaseTechniqueHandler {
             emoji: '🌉',
             type: 'action',
             reflexiveEffects: {
-                triggers: ['Integrating temporal paths', 'Synthesizing insights', 'Creating unified timeline'],
-                realityChanges: ['Paths integrated', 'Timeline unified', 'Flexibility framework established'],
-                futureConstraints: ['Must work within integrated timeline', 'Synthesis defines boundaries', 'Flexibility has limits'],
+                triggers: [
+                    'Integrating temporal paths',
+                    'Synthesizing insights',
+                    'Creating unified timeline',
+                ],
+                realityChanges: [
+                    'Paths integrated',
+                    'Timeline unified',
+                    'Flexibility framework established',
+                ],
+                futureConstraints: [
+                    'Must work within integrated timeline',
+                    'Synthesis defines boundaries',
+                    'Flexibility has limits',
+                ],
                 reversibility: 'low',
             },
         },
