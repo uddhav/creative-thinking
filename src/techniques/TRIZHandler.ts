@@ -11,8 +11,9 @@ export class TRIZHandler extends BaseTechniqueHandler {
       name: 'TRIZ',
       emoji: '⚡',
       totalSteps: 4,
-      description: 'Systematic innovation through contradiction resolution',
-      focus: 'Resolve contradictions using inventive principles',
+      description:
+        'Systematic innovation through contradiction ELIMINATION using 40 inventive principles',
+      focus: 'Permanently remove contradictions to simplify systems',
       parallelSteps: {
         canParallelize: false,
         dependencies: [

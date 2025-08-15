@@ -3,36 +3,66 @@
  * Transcends contradictions by recognizing the path-dependent nature of seemingly incompatible requirements
  */
 
-import { BaseTechniqueHandler, type TechniqueInfo } from './types.js';
+import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 
-interface ParadoxicalStep {
-  name: string;
-  focus: string;
-  emoji: string;
-}
-
 export class ParadoxicalProblemHandler extends BaseTechniqueHandler {
-  private readonly steps: ParadoxicalStep[] = [
+  private readonly steps: StepInfo[] = [
     {
       name: 'Paradox Identification',
       focus: 'Surface contradictions and trace their path origins',
       emoji: '⚖️',
+      type: 'thinking',
     },
     {
       name: 'Parallel Path Development',
       focus: 'Develop conflicting solutions independently on their own paths',
       emoji: '🔀',
+      type: 'action',
+      reflexiveEffects: {
+        triggers: ['Creating parallel solution paths', 'Building dual infrastructure'],
+        realityChanges: [
+          'Multiple solution architectures now exist',
+          'Team expectations split across approaches',
+          'Resources committed to maintaining duality',
+          'Switching mechanisms established',
+        ],
+        futureConstraints: [
+          'Must maintain both paths going forward',
+          'Cannot abandon either approach easily',
+          'Ongoing balancing and switching costs',
+          'Stakeholders expect continued flexibility',
+        ],
+        reversibility: 'low',
+      },
     },
     {
       name: 'Transcendent Synthesis',
       focus: 'Find meta-path encompassing both solutions',
       emoji: '🌉',
+      type: 'action',
+      reflexiveEffects: {
+        triggers: ['Creating meta-solution', 'Building bridges between paths'],
+        realityChanges: [
+          'New meta-framework becomes organizational reality',
+          'Complexity is now institutionalized',
+          'Context-switching rules established',
+          'Paradox management becomes ongoing practice',
+        ],
+        futureConstraints: [
+          'Must sustain meta-framework indefinitely',
+          'Cannot simplify without losing capability',
+          'Requires sophisticated management',
+          'Organization committed to complexity',
+        ],
+        reversibility: 'low',
+      },
     },
     {
       name: 'Non-Ergodic Validation',
       focus: 'Test resolution across multiple path contexts',
       emoji: '✨',
+      type: 'thinking',
     },
   ];
 
@@ -42,18 +72,23 @@ export class ParadoxicalProblemHandler extends BaseTechniqueHandler {
       emoji: '⚖️',
       totalSteps: 4,
       description:
-        'Transcend contradictions by recognizing path-dependent nature of incompatible requirements',
-      focus: 'Resolution of paradoxes through non-ergodic path analysis',
+        'PRESERVE contradictions by building infrastructure to manage both sides dynamically',
+      focus: 'Embrace paradoxes as permanent tensions requiring ongoing balance',
       enhancedFocus:
         'Recognizes that paradoxes often arise from assuming ergodic conditions where path-dependency actually exists',
       parallelSteps: {
         canParallelize: false,
         description: 'Steps build sequentially from paradox identification to validation',
       },
+      reflexivityProfile: {
+        primaryCommitmentType: 'structural',
+        overallReversibility: 'low',
+        riskLevel: 'high',
+      },
     };
   }
 
-  getStepInfo(step: number): ParadoxicalStep {
+  getStepInfo(step: number): StepInfo {
     const stepInfo = this.steps[step - 1];
     if (!stepInfo) {
       throw new ValidationError(
