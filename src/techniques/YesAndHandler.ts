@@ -2,10 +2,69 @@
  * Yes, And... technique handler
  */
 
-import { BaseTechniqueHandler, type TechniqueInfo } from './types.js';
+import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 
 export class YesAndHandler extends BaseTechniqueHandler {
+  private readonly steps: StepInfo[] = [
+    {
+      name: 'Accept Initial Idea',
+      focus: 'Start with any idea without judgment',
+      emoji: '✅',
+      type: 'thinking',
+    },
+    {
+      name: 'Add and Build',
+      focus: 'Add new elements to enhance the idea',
+      emoji: '➕',
+      type: 'action',
+      reflexiveEffects: {
+        triggers: ['Building on existing ideas', 'Adding new elements', 'Creating commitments'],
+        realityChanges: [
+          'Idea expanded with additions',
+          'New commitments made',
+          'Collaborative momentum built',
+        ],
+        futureConstraints: [
+          'Must honor all additions made',
+          'Cannot remove prior contributions',
+          'Future additions must align with existing ones',
+        ],
+        reversibility: 'low',
+      },
+    },
+    {
+      name: 'Evaluate Combinations',
+      focus: 'Assess the enhanced ideas constructively',
+      emoji: '⚖️',
+      type: 'thinking',
+    },
+    {
+      name: 'Synthesize',
+      focus: 'Integrate the best additions into a solution',
+      emoji: '🔀',
+      type: 'action',
+      reflexiveEffects: {
+        triggers: [
+          'Integrating additions',
+          'Creating final synthesis',
+          'Forming coherent solution',
+        ],
+        realityChanges: [
+          'Solution structure defined',
+          'Integration decisions made',
+          'Final form established',
+        ],
+        futureConstraints: [
+          'Must work within synthesized structure',
+          'All integrated elements must be honored',
+          'Future changes limited by synthesis',
+        ],
+        reversibility: 'medium',
+      },
+    },
+  ];
+
   getTechniqueInfo(): TechniqueInfo {
     return {
       name: 'Yes, And...',
@@ -20,40 +79,17 @@ export class YesAndHandler extends BaseTechniqueHandler {
     };
   }
 
-  getStepInfo(step: number): { name: string; focus: string; emoji: string } {
-    const steps = [
-      {
-        name: 'Accept Initial Idea',
-        focus: 'Start with any idea without judgment',
-        emoji: '✅',
-      },
-      {
-        name: 'Add and Build',
-        focus: 'Add new elements to enhance the idea',
-        emoji: '➕',
-      },
-      {
-        name: 'Evaluate Combinations',
-        focus: 'Assess the enhanced ideas constructively',
-        emoji: '⚖️',
-      },
-      {
-        name: 'Synthesize',
-        focus: 'Integrate the best additions into a solution',
-        emoji: '🔀',
-      },
-    ];
-
-    if (step < 1 || step > steps.length) {
+  getStepInfo(step: number): StepInfo {
+    if (step < 1 || step > this.steps.length) {
       throw new ValidationError(
         ErrorCode.INVALID_STEP,
-        `Invalid step ${step} for Yes, And... technique. Valid steps are 1-${steps.length}`,
+        `Invalid step ${step} for Yes, And... technique. Valid steps are 1-${this.steps.length}`,
         'step',
-        { providedStep: step, validRange: [1, steps.length] }
+        { providedStep: step, validRange: [1, this.steps.length] }
       );
     }
 
-    return steps[step - 1];
+    return this.steps[step - 1];
   }
 
   getStepGuidance(step: number, problem: string): string {

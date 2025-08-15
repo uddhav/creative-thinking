@@ -264,12 +264,9 @@ export class ExecutionResponseBuilder {
       responseData.executionMetadata = executionMetadata;
     }
 
-    // Add reflexivity data for supported techniques (TRIZ and Cultural Integration pilot)
+    // Add reflexivity data for ANY technique that has tracked action steps
     // Only show reflexivity data if there have been action steps
-    if (
-      this.sessionManager &&
-      (input.technique === 'triz' || input.technique === 'cultural_integration')
-    ) {
+    if (this.sessionManager) {
       const reflexivityData = this.sessionManager.getSessionReflexivity(sessionId);
       // Only include reflexivity if there have been action steps (actionSteps > 0)
       if (reflexivityData && reflexivityData.summary && reflexivityData.summary.actionSteps > 0) {

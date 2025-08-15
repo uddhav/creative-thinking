@@ -1,15 +1,12 @@
 /**
  * Disney Method technique handler
  */
-import { BaseTechniqueHandler, type TechniqueInfo } from './types.js';
+import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
 import type { DisneyRole } from '../types/index.js';
 export declare class DisneyMethodHandler extends BaseTechniqueHandler {
+    private readonly steps;
     getTechniqueInfo(): TechniqueInfo;
-    getStepInfo(step: number): {
-        name: string;
-        focus: string;
-        emoji: string;
-    };
+    getStepInfo(step: number): StepInfo;
     getStepGuidance(step: number, problem: string): string;
     extractInsights(history: Array<{
         currentStep?: number;

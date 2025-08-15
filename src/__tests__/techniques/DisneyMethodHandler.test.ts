@@ -32,24 +32,28 @@ describe('DisneyMethodHandler', () => {
   describe('getStepInfo', () => {
     it('should return correct step info for each role', () => {
       const dreamer = handler.getStepInfo(1);
-      expect(dreamer).toEqual({
+      expect(dreamer).toMatchObject({
         name: 'Dreamer',
         focus: 'What if anything were possible?',
         emoji: '🌟',
+        type: 'thinking',
       });
 
       const realist = handler.getStepInfo(2);
-      expect(realist).toEqual({
+      expect(realist).toMatchObject({
         name: 'Realist',
         focus: 'How could we actually do this?',
         emoji: '🔨',
+        type: 'action',
       });
+      expect(realist.reflexiveEffects).toBeDefined();
 
       const critic = handler.getStepInfo(3);
-      expect(critic).toEqual({
+      expect(critic).toMatchObject({
         name: 'Critic',
         focus: 'What could go wrong?',
         emoji: '🔍',
+        type: 'thinking',
       });
     });
 

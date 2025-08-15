@@ -3,7 +3,7 @@
  * Extends temporal thinking with deep path memory and option preservation
  */
 
-import { BaseTechniqueHandler, type TechniqueInfo } from './types.js';
+import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 
 interface TemporalStep {
@@ -54,6 +54,91 @@ export class TemporalCreativityHandler extends BaseTechniqueHandler {
     },
   ];
 
+  private readonly stepsWithReflexivity: StepInfo[] = [
+    {
+      name: 'Archaeological Path Analysis',
+      focus: 'Excavate decision history and extract patterns',
+      emoji: '🏛️',
+      type: 'thinking', // Analysis of past
+    },
+    {
+      name: 'Present State Synthesis',
+      focus: 'Map current constraints and active options',
+      emoji: '🎯',
+      type: 'thinking', // Current state mapping
+    },
+    {
+      name: 'Future Path Projection',
+      focus: 'Project multiple timeline scenarios',
+      emoji: '🔮',
+      type: 'thinking', // Future analysis
+    },
+    {
+      name: 'Temporal Option Creation',
+      focus: 'Design delay, acceleration, and parallel options',
+      emoji: '⚡',
+      type: 'action',
+      reflexiveEffects: {
+        triggers: [
+          'Creating temporal options',
+          'Establishing timelines',
+          'Setting acceleration/delay paths',
+        ],
+        realityChanges: [
+          'Timeline options created',
+          'Temporal commitments made',
+          'Parallel paths established',
+        ],
+        futureConstraints: [
+          'Must honor temporal commitments',
+          'Timeline dependencies created',
+          'Parallel paths must converge',
+        ],
+        reversibility: 'medium',
+      },
+    },
+    {
+      name: 'Cyclical Refinement',
+      focus: 'Integrate lessons and evolve strategy',
+      emoji: '🔄',
+      type: 'action',
+      reflexiveEffects: {
+        triggers: ['Refining strategy', 'Integrating lessons', 'Evolving approach'],
+        realityChanges: ['Strategy refined', 'Lessons embedded', 'Evolution path set'],
+        futureConstraints: [
+          'Must follow refined strategy',
+          'Lessons become constraints',
+          'Evolution continues',
+        ],
+        reversibility: 'high',
+      },
+    },
+    {
+      name: 'Path Integration',
+      focus: 'Synthesize insights preserving maximum flexibility',
+      emoji: '🌉',
+      type: 'action',
+      reflexiveEffects: {
+        triggers: [
+          'Integrating temporal paths',
+          'Synthesizing insights',
+          'Creating unified timeline',
+        ],
+        realityChanges: [
+          'Paths integrated',
+          'Timeline unified',
+          'Flexibility framework established',
+        ],
+        futureConstraints: [
+          'Must work within integrated timeline',
+          'Synthesis defines boundaries',
+          'Flexibility has limits',
+        ],
+        reversibility: 'low',
+      },
+    },
+  ];
+
   // Path memory system for tracking decision history
   private pathMemory: PathMemoryEntry[] = [];
 
@@ -74,14 +159,14 @@ export class TemporalCreativityHandler extends BaseTechniqueHandler {
     };
   }
 
-  getStepInfo(step: number): TemporalStep {
-    const stepInfo = this.steps[step - 1];
+  getStepInfo(step: number): StepInfo {
+    const stepInfo = this.stepsWithReflexivity[step - 1];
     if (!stepInfo) {
       throw new ValidationError(
         ErrorCode.INVALID_STEP,
-        `Invalid step ${step} for Temporal Creativity. Valid steps are 1-${this.steps.length}`,
+        `Invalid step ${step} for Temporal Creativity. Valid steps are 1-${this.stepsWithReflexivity.length}`,
         'step',
-        { providedStep: step, validRange: `1-${this.steps.length}` }
+        { providedStep: step, validRange: `1-${this.stepsWithReflexivity.length}` }
       );
     }
     return stepInfo;

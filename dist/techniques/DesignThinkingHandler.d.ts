@@ -2,16 +2,13 @@
  * Design Thinking technique handler
  */
 import type { DesignThinkingStage } from '../types/index.js';
-import { BaseTechniqueHandler, type TechniqueInfo } from './types.js';
+import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
 export declare class DesignThinkingHandler extends BaseTechniqueHandler {
     private readonly stages;
     private readonly stageOrder;
+    private readonly stepsWithReflexivity;
     getTechniqueInfo(): TechniqueInfo;
-    getStepInfo(step: number): {
-        name: string;
-        focus: string;
-        emoji: string;
-    };
+    getStepInfo(step: number): StepInfo;
     getStepGuidance(step: number, problem: string): string;
     extractInsights(history: Array<{
         designStage?: string;
