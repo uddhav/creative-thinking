@@ -111,56 +111,118 @@ export class MetaLearningHandler extends BaseTechniqueHandler {
       switch (step) {
         case 1:
           // Validate pattern recognition
-          if (!stepData.patternRecognition) {
+          if (!stepData.patternRecognition && !stepData.patterns) {
             throw new ValidationError(
               ErrorCode.MISSING_REQUIRED_FIELD,
-              'Step 1 requires pattern recognition insights',
+              'Step 1 (Pattern Recognition) requires identifying successful patterns across techniques. ' +
+                'Provide "patternRecognition" (array) or "patterns" (array) describing recognized patterns. ' +
+                'Example: { "patternRecognition": ["Divergent thinking works best early", "Constraints improve creativity"], "output": "..." }',
               'patternRecognition',
-              { step, technique: 'meta_learning' }
+              {
+                step,
+                technique: 'meta_learning',
+                acceptedFields: ['patternRecognition', 'patterns'],
+                example: {
+                  patternRecognition: [
+                    'successful pattern 1',
+                    'effective strategy 2',
+                    'recurring theme 3',
+                  ],
+                },
+              }
             );
           }
           break;
         case 2:
           // Validate learning accumulation
-          if (!stepData.learningHistory) {
+          if (!stepData.learningHistory && !stepData.accumulatedLearning) {
             throw new ValidationError(
               ErrorCode.MISSING_REQUIRED_FIELD,
-              'Step 2 requires accumulated learning history',
+              'Step 2 (Learning Accumulation) requires building on previous learning experiences. ' +
+                'Provide "learningHistory" (array) or "accumulatedLearning" (array) describing accumulated insights. ' +
+                'Example: { "learningHistory": ["Technique A works for divergent problems", "Technique B excels at convergent thinking"], "output": "..." }',
               'learningHistory',
-              { step, technique: 'meta_learning' }
+              {
+                step,
+                technique: 'meta_learning',
+                acceptedFields: ['learningHistory', 'accumulatedLearning'],
+                example: {
+                  learningHistory: [
+                    'past learning 1',
+                    'accumulated insight 2',
+                    'knowledge built 3',
+                  ],
+                },
+              }
             );
           }
           break;
         case 3:
           // Validate strategy evolution
-          if (!stepData.strategyAdaptations) {
+          if (!stepData.strategyAdaptations && !stepData.strategyEvolution) {
             throw new ValidationError(
               ErrorCode.MISSING_REQUIRED_FIELD,
-              'Step 3 requires strategy adaptations',
+              'Step 3 (Strategy Evolution) requires adapting and improving technique selection. ' +
+                'Provide "strategyAdaptations" (array) or "strategyEvolution" (string) describing evolved strategies. ' +
+                'Example: { "strategyAdaptations": ["Use visual techniques for spatial problems", "Apply systematic methods for complex systems"], "output": "..." }',
               'strategyAdaptations',
-              { step, technique: 'meta_learning' }
+              {
+                step,
+                technique: 'meta_learning',
+                acceptedFields: ['strategyAdaptations', 'strategyEvolution'],
+                example: {
+                  strategyAdaptations: [
+                    'adapted strategy 1',
+                    'evolved approach 2',
+                    'improved method 3',
+                  ],
+                },
+              }
             );
           }
           break;
         case 4:
           // Validate feedback integration
-          if (!stepData.feedbackInsights) {
+          if (!stepData.feedbackInsights && !stepData.lessonIntegration) {
             throw new ValidationError(
               ErrorCode.MISSING_REQUIRED_FIELD,
-              'Step 4 requires feedback insights',
+              'Step 4 (Feedback Integration) requires incorporating telemetry and user choices. ' +
+                'Provide "feedbackInsights" (array) or "lessonIntegration" (array) describing integrated feedback. ' +
+                'Example: { "feedbackInsights": ["Users prefer visual approaches", "Time constraints favor rapid techniques"], "output": "..." }',
               'feedbackInsights',
-              { step, technique: 'meta_learning' }
+              {
+                step,
+                technique: 'meta_learning',
+                acceptedFields: ['feedbackInsights', 'lessonIntegration'],
+                example: {
+                  feedbackInsights: [
+                    'feedback insight 1',
+                    'user preference 2',
+                    'telemetry finding 3',
+                  ],
+                },
+              }
             );
           }
           break;
         case 5:
           // Validate meta-synthesis
-          if (!stepData.metaSynthesis) {
+          if (!stepData.metaSynthesis && !stepData.synthesisStrategy) {
             throw new ValidationError(
               ErrorCode.MISSING_REQUIRED_FIELD,
-              'Step 5 requires meta-synthesis outputs',
+              'Step 5 (Meta-Synthesis) requires generating self-improving integration strategies. ' +
+                'Provide "metaSynthesis" (string) or "synthesisStrategy" (string) describing the meta-level synthesis. ' +
+                'Example: { "metaSynthesis": "Combine divergent exploration with convergent refinement based on problem complexity", "output": "..." }',
               'metaSynthesis',
-              { step, technique: 'meta_learning' }
+              {
+                step,
+                technique: 'meta_learning',
+                acceptedFields: ['metaSynthesis', 'synthesisStrategy'],
+                example: {
+                  metaSynthesis:
+                    'Self-improving strategy that adapts based on accumulated learning',
+                },
+              }
             );
           }
           break;

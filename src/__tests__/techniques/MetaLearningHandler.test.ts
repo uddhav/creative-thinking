@@ -101,7 +101,7 @@ describe('MetaLearningHandler', () => {
         handler.validateStep(1, data);
       } catch (error: any) {
         expect(error.code).toBe(ErrorCode.MISSING_REQUIRED_FIELD);
-        expect(error.message).toContain('pattern recognition');
+        expect(error.message).toContain('Pattern Recognition');
       }
     });
 
@@ -116,7 +116,7 @@ describe('MetaLearningHandler', () => {
         handler.validateStep(2, data);
       } catch (error: any) {
         expect(error.code).toBe(ErrorCode.MISSING_REQUIRED_FIELD);
-        expect(error.message).toContain('learning history');
+        expect(error.message).toContain('Learning Accumulation');
       }
     });
 
@@ -131,7 +131,7 @@ describe('MetaLearningHandler', () => {
         handler.validateStep(3, data);
       } catch (error: any) {
         expect(error.code).toBe(ErrorCode.MISSING_REQUIRED_FIELD);
-        expect(error.message).toContain('strategy adaptations');
+        expect(error.message).toContain('Strategy Evolution');
       }
     });
 
@@ -146,7 +146,7 @@ describe('MetaLearningHandler', () => {
         handler.validateStep(4, data);
       } catch (error: any) {
         expect(error.code).toBe(ErrorCode.MISSING_REQUIRED_FIELD);
-        expect(error.message).toContain('feedback insights');
+        expect(error.message).toContain('Feedback Integration');
       }
     });
 
@@ -161,7 +161,7 @@ describe('MetaLearningHandler', () => {
         handler.validateStep(5, data);
       } catch (error: any) {
         expect(error.code).toBe(ErrorCode.MISSING_REQUIRED_FIELD);
-        expect(error.message).toContain('meta-synthesis');
+        expect(error.message).toContain('Meta-Synthesis');
       }
     });
 

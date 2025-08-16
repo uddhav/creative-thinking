@@ -162,30 +162,81 @@ export class NeuroComputationalHandler extends BaseTechniqueHandler {
                 case 3: {
                     // Validate interference analysis - require both constructive and destructive
                     if (!stepData.interferenceAnalysis) {
-                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 3 requires interference analysis with constructive and destructive patterns', 'interferenceAnalysis', { step, technique: 'neuro_computational' });
+                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 3 (Interference Analysis) requires analyzing pattern interactions. ' +
+                            'Provide "interferenceAnalysis" object with BOTH constructive AND destructive arrays. ' +
+                            'Example: { "interferenceAnalysis": { "constructive": ["synergy 1", "reinforcement 2"], "destructive": ["conflict 1", "cancellation 2"] }, "output": "..." }', 'interferenceAnalysis', {
+                            step,
+                            technique: 'neuro_computational',
+                            acceptedFields: ['interferenceAnalysis'],
+                            example: {
+                                interferenceAnalysis: {
+                                    constructive: ['pattern reinforcement', 'synergistic interaction'],
+                                    destructive: ['pattern conflict', 'interference cancellation'],
+                                },
+                            },
+                        });
                     }
                     const analysis = stepData.interferenceAnalysis;
                     if (!analysis.constructive || !analysis.destructive) {
-                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 3 requires both constructive AND destructive interference analysis', 'interferenceAnalysis', { step, technique: 'neuro_computational' });
+                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 3 (Interference Analysis) requires BOTH constructive AND destructive interference patterns. ' +
+                            'The interferenceAnalysis object must contain both "constructive" and "destructive" arrays. ' +
+                            'Example: { "interferenceAnalysis": { "constructive": ["synergy 1"], "destructive": ["conflict 1"] }, "output": "..." }', 'interferenceAnalysis', {
+                            step,
+                            technique: 'neuro_computational',
+                            requiredFields: ['constructive', 'destructive'],
+                            example: {
+                                interferenceAnalysis: {
+                                    constructive: ['positive reinforcement'],
+                                    destructive: ['negative interference'],
+                                },
+                            },
+                        });
                     }
                     break;
                 }
                 case 4:
                     // Validate computational synthesis
                     if (!stepData.computationalModels) {
-                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 4 requires computational models for synthesis', 'computationalModels', { step, technique: 'neuro_computational' });
+                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 4 (Computational Synthesis) requires synthesizing patterns using computational models. ' +
+                            'Provide "computationalModels" (array) describing the models used. ' +
+                            'Example: { "computationalModels": ["neural network", "genetic algorithm", "swarm optimization"], "output": "..." }', 'computationalModels', {
+                            step,
+                            technique: 'neuro_computational',
+                            acceptedFields: ['computationalModels'],
+                            example: { computationalModels: ['model 1', 'model 2', 'model 3'] },
+                        });
                     }
                     break;
                 case 5:
                     // Validate optimization cycles - require both cycles and metrics
                     if (!stepData.optimizationCycles || !stepData.convergenceMetrics) {
-                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 5 requires both optimization cycles AND convergence metrics', 'optimizationCycles', { step, technique: 'neuro_computational' });
+                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 5 (Optimization) requires iterating to improve solution quality with measured progress. ' +
+                            'Provide BOTH "optimizationCycles" (number) AND "convergenceMetrics" (object with coherence, novelty, utility). ' +
+                            'Example: { "optimizationCycles": 10, "convergenceMetrics": { "coherence": 0.85, "novelty": 0.7, "utility": 0.9 }, "output": "..." }', 'optimizationCycles', {
+                            step,
+                            technique: 'neuro_computational',
+                            requiredFields: ['optimizationCycles', 'convergenceMetrics'],
+                            example: {
+                                optimizationCycles: 10,
+                                convergenceMetrics: { coherence: 0.85, novelty: 0.7, utility: 0.9 },
+                            },
+                        });
                     }
                     break;
                 case 6:
                     // Validate convergence - require synthesis and final metrics
                     if (!stepData.finalSynthesis || !stepData.convergenceMetrics) {
-                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 6 requires both final synthesis AND convergence metrics', 'finalSynthesis', { step, technique: 'neuro_computational' });
+                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 6 (Convergence) requires achieving optimal solution with final metrics. ' +
+                            'Provide BOTH "finalSynthesis" (string) AND "convergenceMetrics" (object with final scores). ' +
+                            'Example: { "finalSynthesis": "Optimized solution achieving target performance", "convergenceMetrics": { "coherence": 0.95, "novelty": 0.8, "utility": 0.92 }, "output": "..." }', 'finalSynthesis', {
+                            step,
+                            technique: 'neuro_computational',
+                            requiredFields: ['finalSynthesis', 'convergenceMetrics'],
+                            example: {
+                                finalSynthesis: 'Final optimized neural-computational solution',
+                                convergenceMetrics: { coherence: 0.95, novelty: 0.8, utility: 0.92 },
+                            },
+                        });
                     }
                     break;
             }

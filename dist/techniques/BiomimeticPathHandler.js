@@ -210,37 +210,103 @@ export class BiomimeticPathHandler extends BaseTechniqueHandler {
                 case 1:
                     // Validate immune response
                     if (!stepData.immuneResponse && !stepData.antibodies) {
-                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 1 requires immune response patterns or antibody generation', 'immuneResponse', { step, technique: 'biomimetic_path' });
+                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 1 (Immune Response Detection) requires identifying defensive biological patterns. ' +
+                            'Provide either "immuneResponse" (array of threat responses) or "antibodies" (array of defense mechanisms). ' +
+                            'Example: { "immuneResponse": ["Pattern recognition", "Adaptive immunity", "Memory formation"], "output": "..." }', 'immuneResponse', {
+                            step,
+                            technique: 'biomimetic_path',
+                            acceptedFields: ['immuneResponse', 'antibodies'],
+                            example: {
+                                immuneResponse: ['threat detection', 'antibody production', 'immune memory'],
+                            },
+                        });
                     }
                     break;
                 case 2:
                     // Validate evolutionary variation
                     if (!stepData.mutations && !stepData.selectionPressure) {
-                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 2 requires mutations or selection pressure analysis', 'mutations', { step, technique: 'biomimetic_path' });
+                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 2 (Evolutionary Variation) requires generating solution mutations and selection criteria. ' +
+                            'Provide either "mutations" (array of variations) or "selectionPressure" (string describing criteria). ' +
+                            'Example: { "mutations": ["variant A", "variant B", "variant C"], "output": "..." }', 'mutations', {
+                            step,
+                            technique: 'biomimetic_path',
+                            acceptedFields: ['mutations', 'selectionPressure'],
+                            example: {
+                                mutations: ['speed optimization', 'resilience enhancement', 'efficiency variant'],
+                            },
+                        });
                     }
                     break;
                 case 3:
                     // Validate ecosystem dynamics
                     if (!stepData.symbioticRelationships && !stepData.ecosystemBalance) {
-                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 3 requires symbiotic relationships or ecosystem analysis', 'symbioticRelationships', { step, technique: 'biomimetic_path' });
+                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 3 (Ecosystem Dynamics) requires mapping symbiotic relationships and resource flows. ' +
+                            'Provide either "symbioticRelationships" (array) or "ecosystemBalance" (string). ' +
+                            'Example: { "symbioticRelationships": ["mutualism between A and B", "commensalism with C"], "output": "..." }', 'symbioticRelationships', {
+                            step,
+                            technique: 'biomimetic_path',
+                            acceptedFields: ['symbioticRelationships', 'ecosystemBalance'],
+                            example: {
+                                symbioticRelationships: [
+                                    'component synergy',
+                                    'resource sharing',
+                                    'mutual support',
+                                ],
+                            },
+                        });
                     }
                     break;
                 case 4:
                     // Validate swarm intelligence
                     if (!stepData.swarmBehavior && !stepData.emergentPatterns) {
-                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 4 requires swarm behavior or emergent patterns', 'swarmBehavior', { step, technique: 'biomimetic_path' });
+                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 4 (Swarm Intelligence) requires designing collective behavior patterns. ' +
+                            'Provide either "swarmBehavior" (array) or "emergentPatterns" (array). ' +
+                            'Example: { "swarmBehavior": ["simple rule 1", "local interaction 2", "collective decision 3"], "output": "..." }', 'swarmBehavior', {
+                            step,
+                            technique: 'biomimetic_path',
+                            acceptedFields: ['swarmBehavior', 'emergentPatterns'],
+                            example: {
+                                swarmBehavior: [
+                                    'decentralized coordination',
+                                    'stigmergic communication',
+                                    'collective problem-solving',
+                                ],
+                            },
+                        });
                     }
                     break;
                 case 5:
                     // Validate resilience patterns
                     if (!stepData.resiliencePatterns && !stepData.redundancy) {
-                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 5 requires resilience patterns or redundancy strategies', 'resiliencePatterns', { step, technique: 'biomimetic_path' });
+                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 5 (Resilience Patterns) requires building antifragile systems. ' +
+                            'Provide either "resiliencePatterns" (array) or "redundancy" (array). ' +
+                            'Example: { "resiliencePatterns": ["modular design", "adaptive cycles", "fault tolerance"], "output": "..." }', 'resiliencePatterns', {
+                            step,
+                            technique: 'biomimetic_path',
+                            acceptedFields: ['resiliencePatterns', 'redundancy'],
+                            example: {
+                                resiliencePatterns: [
+                                    'graceful degradation',
+                                    'self-healing',
+                                    'distributed backup',
+                                ],
+                            },
+                        });
                     }
                     break;
                 case 6:
                     // Validate natural synthesis
-                    if (!stepData.naturalSynthesis && !stepData.integratedSolution) {
-                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 6 requires natural synthesis or integrated biological solution', 'naturalSynthesis', { step, technique: 'biomimetic_path' });
+                    if (!stepData.naturalSynthesis &&
+                        !stepData.integratedSolution &&
+                        !stepData.biologicalStrategies) {
+                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 6 (Natural Synthesis) requires integrating biological solutions into a unified approach. ' +
+                            'Provide "naturalSynthesis" (string), "integratedSolution" (string), or "biologicalStrategies" (array). ' +
+                            'Example: { "naturalSynthesis": "Integrated bio-inspired solution combining immune response with swarm intelligence", "output": "..." }', 'naturalSynthesis', {
+                            step,
+                            technique: 'biomimetic_path',
+                            acceptedFields: ['naturalSynthesis', 'integratedSolution', 'biologicalStrategies'],
+                            example: { naturalSynthesis: 'Unified biological solution inspired by nature' },
+                        });
                     }
                     break;
             }

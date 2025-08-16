@@ -257,7 +257,11 @@ export const EXECUTE_THINKING_STEP_TOOL: Tool = {
         },
       },
       interdependencies: { type: 'array', items: { type: 'string' } },
-      // Paradoxical Problem specific
+      /**
+       * Paradoxical Problem specific fields
+       * Used for resolving contradictions through synthesis
+       * Note: 'contradiction' field shared with TRIZ, 'contradictions' is array alternative
+       */
       paradox: { type: 'string' },
       // contradiction: already defined for TRIZ
       contradictions: { type: 'array', items: { type: 'string' } },
@@ -325,7 +329,126 @@ export const EXECUTE_THINKING_STEP_TOOL: Tool = {
       strategyEvolution: { type: 'string' },
       synthesisStrategy: { type: 'string' },
       preservedOptions: { type: 'array', items: { type: 'string' } },
-      // Neuro-Computational specific
+      /**
+       * First Principles specific fields
+       * Used for breaking down problems to fundamental components
+       * Alternative fields support flexible input from LLMs
+       */
+      components: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Step 1: Fundamental components from deconstruction',
+      },
+      breakdown: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Step 1: Alternative to components - structured decomposition',
+      },
+      fundamentalTruths: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Step 2: Identified fundamental truths and laws',
+      },
+      foundations: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Step 2: Alternative to fundamentalTruths - bedrock principles',
+      },
+      assumptions: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Step 3: List of assumptions being challenged',
+      },
+      challenges: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Step 3: Alternative to assumptions - convention challenges',
+      },
+      reconstruction: {
+        type: 'string',
+        description: 'Step 4: Solution rebuilt from first principles',
+      },
+      rebuilding: {
+        type: 'string',
+        description: 'Step 4: Alternative to reconstruction - ground-up solution',
+      },
+      solution: {
+        type: 'string',
+        description: 'Step 5: Final synthesized solution',
+      },
+      // synthesis field already exists below for other techniques
+      /**
+       * Meta-Learning specific fields
+       * Used for learning from patterns across techniques
+       * Alternative fields: patterns (patternRecognition), accumulatedLearning (learningHistory)
+       */
+      metaSynthesis: {
+        type: 'string',
+        description: 'Step 5: Meta-level synthesis of learning patterns',
+      },
+      /**
+       * Biomimetic Path specific fields
+       * Used for biological-inspired problem solving
+       * Alternative fields: antibodies (immuneResponse), selectionPressure (mutations), etc.
+       */
+      immuneResponse: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Step 1: Immune system response patterns',
+      },
+      antibodies: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Step 1: Alternative to immuneResponse - antibody strategies',
+      },
+      mutations: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Step 2: Evolutionary mutations and variations',
+      },
+      selectionPressure: {
+        type: 'string',
+        description: 'Step 2: Alternative to mutations - selection forces',
+      },
+      symbioticRelationships: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Step 3: Symbiotic ecosystem relationships',
+      },
+      ecosystemBalance: {
+        type: 'string',
+        description: 'Step 3: Alternative to symbioticRelationships - ecosystem dynamics',
+      },
+      swarmBehavior: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Step 4: Swarm intelligence patterns',
+      },
+      // emergentPatterns already exists below
+      resiliencePatterns: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Step 5: Resilience and adaptation patterns',
+      },
+      redundancy: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Step 5: Alternative to resiliencePatterns - redundancy strategies',
+      },
+      naturalSynthesis: {
+        type: 'string',
+        description: 'Step 6: Natural synthesis of biological strategies',
+      },
+      biologicalStrategies: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Step 6: Alternative to naturalSynthesis - bio-inspired solutions',
+      },
+      /**
+       * Neuro-Computational specific fields
+       * Used for neural network-inspired synthesis
+       * Required interferenceAnalysis must have both constructive and destructive arrays
+       */
       neuralMappings: { type: 'array', items: { type: 'string' } },
       patternGenerations: { type: 'array', items: { type: 'string' } },
       interferenceAnalysis: {

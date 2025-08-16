@@ -299,10 +299,12 @@ export interface ExecuteThinkingStepInput {
 
   // Meta-Learning specific
   patternRecognition?: string[];
+  patterns?: string[]; // Alternative to patternRecognition
   learningHistory?: string[];
+  accumulatedLearning?: string[]; // Alternative to learningHistory
   strategyAdaptations?: string[];
   feedbackInsights?: string[];
-  metaSynthesis?: string[];
+  metaSynthesis?: string;
 
   // Reality assessment
   realityAssessment?: RealityAssessment;
@@ -348,6 +350,59 @@ export interface ExecuteThinkingStepInput {
     completionWarnings: string[];
     minimumThresholdMet: boolean;
   };
+
+  // First Principles specific (alternative fields)
+  components?: string[]; // Step 1: fundamental components
+  breakdown?: string[]; // Alternative to components
+  fundamentalTruths?: string[]; // Step 2: identified truths
+  foundations?: string[]; // Alternative to fundamentalTruths
+  assumptions?: string[]; // Step 3: assumptions to challenge
+  challenges?: string[]; // Alternative to assumptions
+  reconstruction?: string; // Step 4: rebuilt solution
+  rebuilding?: string; // Alternative to reconstruction
+  solution?: string; // Step 5: final solution
+
+  // Biomimetic Path specific (alternative fields)
+  immuneResponse?: string[];
+  antibodies?: string[]; // Alternative to immuneResponse
+  mutations?: string[];
+  selectionPressure?: string; // Alternative to mutations
+  symbioticRelationships?: string[];
+  ecosystemBalance?: string; // Alternative to symbioticRelationships
+  swarmBehavior?: string[];
+  resiliencePatterns?: string[];
+  redundancy?: string[]; // Alternative to resiliencePatterns
+  naturalSynthesis?: string;
+  integratedSolution?: string; // Alternative to naturalSynthesis
+  biologicalStrategies?: string[]; // Alternative to naturalSynthesis
+
+  // NeuroComputational specific
+  neuralMappings?: string[];
+  patternGenerations?: string[];
+  interferenceAnalysis?: {
+    constructive: string[];
+    destructive: string[];
+  };
+  computationalModels?: string[];
+  optimizationCycles?: number;
+  convergenceMetrics?: {
+    coherence?: number;
+    novelty?: number;
+    utility?: number;
+  };
+  finalSynthesis?: string;
+
+  // Paradoxical Problem specific
+  paradox?: string;
+  contradictions?: string[]; // Alternative to paradox (in addition to contradiction field above)
+  solutionA?: string;
+  solutionB?: string;
+  // parallelPaths already defined above
+  metaPath?: string;
+  bridge?: string;
+  validation?: string;
+  pathContexts?: string[];
+  resolutionVerified?: boolean;
 }
 
 // Operation data types
@@ -505,10 +560,12 @@ export interface ThinkingOperationData {
 
   // Meta-Learning specific
   patternRecognition?: string[];
+  patterns?: string[]; // Alternative to patternRecognition
   learningHistory?: string[];
+  accumulatedLearning?: string[]; // Alternative to learningHistory
   strategyAdaptations?: string[];
   feedbackInsights?: string[];
-  metaSynthesis?: string[];
+  metaSynthesis?: string;
 
   // Reality assessment
   realityAssessment?: RealityAssessment;
@@ -557,9 +614,9 @@ export interface ThinkingOperationData {
   computationalModels?: string[];
   optimizationCycles?: number;
   convergenceMetrics?: {
-    coherence: number;
-    novelty: number;
-    utility: number;
+    coherence?: number;
+    novelty?: number;
+    utility?: number;
   };
   finalSynthesis?: string;
 }
