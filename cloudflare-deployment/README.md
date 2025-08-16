@@ -29,6 +29,10 @@ npm run dev
 # Login to Cloudflare
 npx wrangler login
 
+# Set up secrets for production (replace with your values)
+npx wrangler secret put AUTH_DEMO_USERNAME
+npx wrangler secret put AUTH_DEMO_API_KEY
+
 # Deploy to production
 npm run deploy
 
@@ -56,6 +60,17 @@ Edit `wrangler.toml` to configure:
 [vars]
 ENVIRONMENT = "production"
 LOG_LEVEL = "info"
+# Authentication - Replace these in production
+AUTH_DEMO_USERNAME = "demo"
+AUTH_DEMO_API_KEY = "demo-api-key"
+```
+
+**Important**: For production, use Cloudflare secrets instead of plain text:
+
+```bash
+npx wrangler secret put AUTH_DEMO_USERNAME
+npx wrangler secret put AUTH_DEMO_API_KEY
+npx wrangler secret put OAUTH_CLIENT_SECRET
 ```
 
 ### Custom Domain
@@ -72,7 +87,7 @@ zone_name = "your-domain.com"
 
 ### WebSocket Connection
 
-Connect directly via WebSocket (bypasses OAuth):
+Connect directly via WebSocket:
 
 ```javascript
 const ws = new WebSocket('wss://your-server.workers.dev/ws');
@@ -128,21 +143,26 @@ npm run dev
 ## 💡 Features
 
 - ✅ All 23 creative thinking techniques
-- ✅ WebSocket real-time communication
+- ✅ WebSocket real-time communication with hibernation
 - ✅ Session persistence with Durable Objects
-- ✅ OAuth authentication
-- ✅ Cost-optimized with hibernation
+- ✅ OAuth authentication with secure token generation
+- ✅ Rate limiting middleware
+- ✅ Input validation and error handling
+- ✅ Cost-optimized with hibernation (1000x savings)
 - ✅ Progress streaming
 - ✅ Multi-client support
 
 ## 🏛️ Project Structure
 
 ```
-creative-thinking-cloudflare/
+cloudflare-deployment/
 ├── src/
 │   ├── index.ts                    # Worker entry point
 │   ├── CreativeThinkingMcpAgent.ts # Main MCP Agent
 │   ├── auth-handler.ts             # OAuth handler
+│   ├── middleware/                 # Security middleware
+│   │   ├── auth.ts                 # Token validation
+│   │   └── rateLimiter.ts          # Rate limiting
 │   └── adapters/                   # Adapters for core logic
 │       ├── SessionAdapter.ts       # Session management
 │       ├── TechniqueAdapter.ts     # Technique registry
@@ -152,13 +172,39 @@ creative-thinking-cloudflare/
 └── package.json
 ```
 
-## 🔒 Security
+## 🔒 Security Best Practices
 
-- OAuth 2.1 compliant authentication
-- API key support for simple auth
-- Request validation before Durable Object processing
-- Rate limiting via Cloudflare
-- CORS properly configured
+### Production Checklist
+
+Before deploying to production:
+
+- [ ] Replace demo credentials with real OAuth provider (GitHub, Google)
+- [ ] Use Cloudflare secrets for all sensitive values
+- [ ] Configure rate limiting in Cloudflare Dashboard
+- [ ] Set CORS to your specific domain
+- [ ] Enable Cloudflare WAF rules
+- [ ] Review and update CPU limits in `wrangler.toml`
+- [ ] Set up error monitoring and alerts
+- [ ] Test all authentication flows
+- [ ] Verify token expiry and rotation
+
+### Security Features
+
+- **Secure Token Generation**: Uses `crypto.randomUUID()` for all tokens
+- **Token Expiry**: Access tokens expire after 24 hours (configurable)
+- **Single-Use Auth Codes**: Auth codes expire after 5 minutes
+- **Rate Limiting**: Per-endpoint rate limits with burst protection
+- **Input Validation**: All inputs validated before processing
+- **Error Sanitization**: No sensitive data in error messages
+- **KV Data Expiry**: Automatic cleanup of old sessions and logs
+
+### Rate Limiting
+
+Configure in Cloudflare Dashboard:
+
+- `/mcp`: 100 requests/minute per IP
+- `/authorize`: 10 requests/minute per IP
+- `/token`: 5 requests/minute per IP
 
 ## 💰 Cost Optimization
 
@@ -166,31 +212,65 @@ creative-thinking-cloudflare/
 - **Pay only for active processing**: No charges during hibernation
 - **Efficient state management**: Durable Objects with SQL storage
 - **Smart caching**: KV for frequently accessed data
+- **CPU Limits**: Configured for 200ms to handle complex techniques
 
 ## 📊 Monitoring
 
 View logs and metrics in the Cloudflare dashboard:
 
-1. Go to Workers & Pages
+1. Go to **Workers & Pages**
 2. Select your worker
-3. View Analytics, Logs, and Real-time logs
+3. View **Analytics**, **Logs**, and **Real-time logs**
+
+Enable detailed logging in development:
+
+```toml
+[env.development]
+vars = { ENVIRONMENT = "development", LOG_LEVEL = "debug" }
+```
 
 ## 🐛 Troubleshooting
 
 ### Common Issues
 
 1. **Connection refused**: Check server URL and ensure it's deployed
-2. **Auth errors**: Verify OAuth configuration in `wrangler.toml`
+2. **Auth errors**: Verify OAuth configuration and secrets
 3. **Session not found**: Sessions expire after 7 days
+4. **Rate limit exceeded**: Wait for rate limit window to reset
+5. **CPU limit exceeded**: Increase `cpu_ms` in `wrangler.toml`
 
-### Debug Mode
+### Debug Commands
 
-Enable debug logging:
+```bash
+# View real-time logs
+npx wrangler tail
 
-```toml
-[env.development]
-vars = { LOG_LEVEL = "debug" }
+# Check deployment status
+npx wrangler deployments list
+
+# View KV data
+npx wrangler kv:key list --namespace-id=creative_thinking_sessions
 ```
+
+## 📝 Implementation Notes
+
+### What's Been Implemented
+
+- **Full MCP Protocol Support**: All three tools with proper Zod validation
+- **Adapter Pattern**: Bridges existing logic without rewriting
+- **WebSocket Hibernation**: 1000x cost reduction for idle connections
+- **Secure Authentication**: OAuth flow with token management
+- **Error Handling**: Global error boundary with logging
+- **Performance Optimizations**: Batch KV reads, increased CPU limits
+
+### Migration from Local Server
+
+The Cloudflare deployment maintains full compatibility with the local MCP server:
+
+- Same three-tool architecture
+- All 23 thinking techniques supported
+- Compatible session format
+- Identical API responses
 
 ## 📝 License
 
@@ -206,3 +286,4 @@ Contributions welcome! Please see CONTRIBUTING.md in the parent repository.
 - [MCP Specification](https://modelcontextprotocol.io)
 - [Cloudflare Agents SDK](https://developers.cloudflare.com/agents/)
 - [Durable Objects Docs](https://developers.cloudflare.com/durable-objects/)
+- [Workers Security](https://developers.cloudflare.com/workers/platform/security/)

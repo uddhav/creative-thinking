@@ -749,6 +749,71 @@ Reality Assessment:
 - Confidence: 90%
 ```
 
+## Technique Selection Guide
+
+### Quick Decision Tree
+
+```
+What type of problem are you solving?
+│
+├── 🎯 Need fresh ideas or breakthrough thinking?
+│   ├── Want random inspiration → Random Entry 🎲
+│   ├── Need systematic innovation → SCAMPER 🔧
+│   └── Challenge assumptions → PO (Provocative Operation) 💭
+│
+├── 🔍 Need comprehensive analysis?
+│   ├── Multiple perspectives needed → Six Thinking Hats 🎩
+│   ├── User-centered design → Design Thinking 🎨
+│   └── System-wide view → Nine Windows 🔲
+│
+├── ⚡ Facing contradictions or paradoxes?
+│   ├── Technical/engineering problem → TRIZ ⚡
+│   └── Complex systemic tensions → Paradoxical Problem Solving ⚖️
+│
+├── 🌍 Need cultural or collaborative approaches?
+│   ├── Cross-cultural integration → Cultural Integration 🌍
+│   ├── Team collaboration → Yes, And ✅
+│   └── Collective wisdom → Collective Intelligence 🧩
+│
+├── ⏰ Time-related challenges?
+│   ├── Personal productivity → Temporal Work ⏰
+│   └── Creative time exploration → Temporal Creativity ⏳
+│
+├── 🧠 Want to optimize thinking process?
+│   ├── Your cognitive state → Neural State 🧠
+│   ├── AI/computational methods → Neuro-Computational ⚛️
+│   └── Learn from patterns → Meta-Learning 📈
+│
+└── 🔬 Need fundamental or advanced approaches?
+    ├── Strip to basics → First Principles 🏗️
+    ├── Extract key concepts → Concept Extraction 💡
+    ├── Nature-inspired solutions → Biomimetic Path 🦋
+    └── Quantum possibilities → Quantum Superposition 🌌
+```
+
+### Use Case Matrix
+
+| Your Situation                              | Best Techniques                    | Why It Works                  |
+| ------------------------------------------- | ---------------------------------- | ----------------------------- |
+| **"I'm stuck and need inspiration"**        | Random Entry, PO                   | Breaks mental patterns        |
+| **"Product needs innovation"**              | SCAMPER, Design Thinking           | Systematic transformation     |
+| **"Team has conflicting views"**            | Six Hats, Cultural Integration     | Structured perspective-taking |
+| **"Technical limitation seems impossible"** | TRIZ, First Principles             | Eliminates false constraints  |
+| **"System has complex trade-offs"**         | Paradoxical Problem, Nine Windows  | Manages complexity            |
+| **"Need to plan long-term"**                | Temporal Work, Temporal Creativity | Time-aware planning           |
+| **"Want to think more creatively"**         | Neural State, Meta-Learning        | Optimizes cognitive process   |
+| **"Learning from past failures"**           | Meta-Learning, Concept Extraction  | Pattern recognition           |
+| **"Nature might have solved this"**         | Biomimetic Path                    | Biological inspiration        |
+| **"Need radical innovation"**               | Quantum Superposition, PO          | Transcends normal thinking    |
+
+### Quick Start Recommendations
+
+1. **First-time users**: Start with **Six Hats** - comprehensive and easy to follow
+2. **Quick win needed**: Try **Random Entry** - fast and often surprising
+3. **Complex problem**: Begin with **Nine Windows** to understand full context
+4. **Team setting**: Use **Yes, And** or **Collective Intelligence**
+5. **Technical challenge**: Go straight to **TRIZ** or **First Principles**
+
 ## Thinking Techniques
 
 ### Six Thinking Hats Plus with Purple Hat
