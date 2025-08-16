@@ -52,14 +52,16 @@ export class AdaptiveRiskAssessment {
       };
     }
 
-    // Detect high stakes first - most important for risk assessment
-    const hasHighStakes = this.detectHighStakes(fullText);
-
-    // Detect various contexts (not exclusive - can have multiple)
+    // Detect various contexts FIRST before high stakes
+    // This ensures we know the domain before assessing stakes
     const hasPersonalFinance = this.detectPersonalFinance(fullText);
     const hasBusinessContext = this.detectBusinessContext(fullText);
     const hasHealthSafety = this.detectHealthSafety(fullText);
     const hasTechnicalMigration = this.detectTechnicalMigration(fullText);
+
+    // Detect high stakes with context awareness
+    // Portfolio decisions should not trigger survival-level high stakes
+    const hasHighStakes = this.detectHighStakes(fullText) && !this.isPortfolioContext(fullText);
 
     // Determine resource type
     const resourceType = this.detectResourceType(fullText, {
@@ -150,6 +152,16 @@ Remember: ${this.getContextualReminder(context)}`;
       'personal wealth',
       'my money',
       'individual investor',
+      'portfolio allocation',
+      'investment strategy',
+      'asset allocation',
+      'stock portfolio',
+      'bond portfolio',
+      'investment portfolio',
+      'diversification',
+      'rebalancing',
+      'equity allocation',
+      'fixed income',
     ];
     return indicators.some(ind => text.includes(ind));
   }
@@ -243,15 +255,39 @@ Remember: ${this.getContextualReminder(context)}`;
     return indicators.some(ind => text.includes(ind));
   }
 
+  private isPortfolioContext(text: string): boolean {
+    // Check if this is specifically about portfolio/investment decisions
+    const portfolioIndicators = [
+      'portfolio',
+      'allocation',
+      'investment',
+      'stocks',
+      'bonds',
+      'equity',
+      'asset',
+      'diversification',
+      'rebalancing',
+      'index fund',
+      'mutual fund',
+      'etf',
+      'all-stock',
+      'all-bond',
+      'all-weather',
+    ];
+    return portfolioIndicators.some(ind => text.includes(ind));
+  }
+
   private detectResourceType(
     text: string,
     context: { hasPersonalFinance: boolean; hasBusinessContext: boolean; hasHealthSafety: boolean }
   ): string {
-    if (context.hasPersonalFinance) {
+    // Check financial contexts FIRST - they're most common and specific
+    if (context.hasPersonalFinance || this.isPortfolioContext(text)) {
+      if (text.includes('portfolio')) return 'investment portfolio';
       if (text.includes('savings')) return 'personal savings';
       if (text.includes('retirement')) return 'retirement funds';
-      if (text.includes('portfolio')) return 'investment portfolio';
-      return 'personal resources';
+      if (text.includes('allocation')) return 'asset allocation';
+      return 'personal financial resources';
     }
 
     if (context.hasBusinessContext) {
@@ -261,7 +297,9 @@ Remember: ${this.getContextualReminder(context)}`;
       return 'company resources';
     }
 
-    if (context.hasHealthSafety) {
+    // Only return health context if it's ACTUALLY about health
+    // and not just because some word triggered it
+    if (context.hasHealthSafety && !context.hasPersonalFinance && !context.hasBusinessContext) {
       return 'health and wellbeing';
     }
 

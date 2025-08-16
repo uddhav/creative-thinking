@@ -83,80 +83,45 @@ export class RiskAssessmentOrchestrator {
             if (process.env.DISABLE_THOUGHT_LOGGING !== 'true') {
                 process.stderr.write('\n' + escalationPrompt.prompt + '\n\n');
             }
-            // If progress is locked, check if user is providing an unlock response
-            if (escalationPrompt.locksProgress) {
-                // Check if the current output might be an unlock attempt
+            // No longer blocking progress - just log warnings
+            // The locksProgress flag has been set to false in escalation prompts
+            // But we still evaluate responses to provide feedback
+            if (escalationPrompt.requiresResponse) {
+                // Check if the current output might be addressing the concerns
                 const outputLength = input.output.split(/\s+/).length;
                 if (outputLength > 50) {
-                    // Evaluate if response meets unlock requirements
+                    // Evaluate if response meets quality requirements
                     const unlockEval = this.dismissalTracker.evaluateUnlockResponse(input.output, escalationPrompt.minimumConfidence || CONFIDENCE_THRESHOLDS.MODERATE, engagementMetrics);
                     if (unlockEval.isValid) {
-                        // Log successful unlock
+                        // Log positive feedback
                         if (process.env.DISABLE_THOUGHT_LOGGING !== 'true') {
                             process.stderr.write(`\n✅ ${unlockEval.feedback}\n\n`);
                         }
                         // Continue with normal processing
                     }
                     else {
-                        // Still locked, provide feedback
+                        // Log warning but DON'T block - just provide feedback
+                        if (process.env.DISABLE_THOUGHT_LOGGING !== 'true') {
+                            process.stderr.write(`\n⚠️ Risk Assessment Warning:\n${unlockEval.feedback}\n\n`);
+                            process.stderr.write(`Proceeding with caution - please consider the risks identified.\n\n`);
+                        }
+                        // Store warning in behavioral feedback instead of blocking
                         return {
                             ruinRiskAssessment,
-                            escalationRequired: true,
-                            interventionResponse: {
-                                content: [
-                                    {
-                                        type: 'text',
-                                        text: JSON.stringify({
-                                            error: 'Behavioral lock remains active',
-                                            escalationLevel: escalationPrompt.level,
-                                            message: escalationPrompt.prompt,
-                                            unlockAttemptFeedback: unlockEval.feedback,
-                                            requirements: {
-                                                minimumConfidence: escalationPrompt.minimumConfidence,
-                                                mustAddress: engagementMetrics.discoveredRiskIndicators,
-                                            },
-                                            behaviorPattern: {
-                                                consecutiveDismissals: engagementMetrics.consecutiveLowConfidence,
-                                                averageConfidence: engagementMetrics.averageConfidence,
-                                                totalDismissals: engagementMetrics.dismissalCount,
-                                            },
-                                        }, null, 2),
-                                    },
-                                ],
-                                isError: true,
-                            },
-                            escalationPrompt,
+                            escalationRequired: false, // Changed: no longer blocking
+                            behavioralFeedback: `⚠️ Risk Warning: ${escalationPrompt.prompt}\n\nYour response quality: ${unlockEval.feedback}\n\nProceeding with execution but please address the identified risks.`,
                         };
                     }
                 }
                 else {
-                    // Output too short to be an unlock attempt
+                    // Output too short to be addressing concerns - just warn
+                    if (process.env.DISABLE_THOUGHT_LOGGING !== 'true') {
+                        process.stderr.write(`\n⚠️ Risk Assessment Notice:\nYour response appears brief. Consider providing more detailed risk analysis.\n\n`);
+                    }
                     return {
                         ruinRiskAssessment,
-                        escalationRequired: true,
-                        interventionResponse: {
-                            content: [
-                                {
-                                    type: 'text',
-                                    text: JSON.stringify({
-                                        error: 'Behavioral lock activated',
-                                        escalationLevel: escalationPrompt.level,
-                                        message: escalationPrompt.prompt,
-                                        requirements: {
-                                            minimumConfidence: escalationPrompt.minimumConfidence,
-                                            mustAddress: engagementMetrics.discoveredRiskIndicators,
-                                        },
-                                        behaviorPattern: {
-                                            consecutiveDismissals: engagementMetrics.consecutiveLowConfidence,
-                                            averageConfidence: engagementMetrics.averageConfidence,
-                                            totalDismissals: engagementMetrics.dismissalCount,
-                                        },
-                                    }, null, 2),
-                                },
-                            ],
-                            isError: true,
-                        },
-                        escalationPrompt,
+                        escalationRequired: false, // Changed: no longer blocking
+                        behavioralFeedback: `⚠️ Risk Warning: ${escalationPrompt.prompt}\n\nNote: Consider providing a more detailed response (50+ words) addressing the identified risks.`,
                     };
                 }
             }

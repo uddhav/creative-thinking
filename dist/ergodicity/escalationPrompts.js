@@ -98,7 +98,7 @@ This is not procedural. Your pattern indicates dangerous overconfidence in the f
             prompt: fullPrompt,
             requiresResponse: true,
             minimumConfidence: 0.5,
-            locksProgress: true,
+            locksProgress: false, // Changed: No longer blocking progress, just warning
         };
     }
     /**
@@ -125,7 +125,7 @@ This is not procedural. Your pattern indicates dangerous overconfidence in the f
             prompt: adaptivePrompt,
             requiresResponse: true,
             minimumConfidence: 0.7,
-            locksProgress: true,
+            locksProgress: false, // Changed: No longer blocking progress, just warning
         };
     }
     /**
