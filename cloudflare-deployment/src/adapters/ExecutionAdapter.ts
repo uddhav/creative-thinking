@@ -75,6 +75,30 @@ export class ExecutionAdapter {
   async executeThinkingStep(params: any): Promise<any> {
     const { planId, technique, problem, currentStep, totalSteps, output, nextStepNeeded } = params;
 
+    // Validate required fields
+    if (!planId || !technique || !problem) {
+      return {
+        error: 'Missing required fields: planId, technique, and problem are required',
+        isError: true,
+      };
+    }
+
+    // Validate currentStep is within bounds
+    if (typeof currentStep !== 'number' || currentStep < 1 || currentStep > totalSteps) {
+      return {
+        error: `Invalid currentStep: ${currentStep}. Must be between 1 and ${totalSteps}`,
+        isError: true,
+      };
+    }
+
+    // Validate nextStepNeeded is boolean
+    if (typeof nextStepNeeded !== 'boolean') {
+      return {
+        error: 'nextStepNeeded must be a boolean value',
+        isError: true,
+      };
+    }
+
     // Get or create session
     let session = await this.sessionAdapter.getSession(planId);
     if (!session) {

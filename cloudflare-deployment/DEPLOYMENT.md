@@ -1,5 +1,8 @@
 # Deployment Guide - Creative Thinking MCP Server on Cloudflare
 
+> **🔒 Security Note**: Before deploying to production, review [SECURITY.md](./SECURITY.md) for
+> important security configurations and best practices.
+
 ## 🎯 Status: Ready for Deployment
 
 The Creative Thinking MCP Server has been successfully ported to Cloudflare Workers using the Agents

@@ -12,6 +12,42 @@ import { AuthHandler } from './auth-handler.js';
 // Export the Durable Object class
 export { CreativeThinkingMcpAgent };
 
+// Error logging function
+async function logError(error: unknown, request: Request, env: Env): Promise<void> {
+  try {
+    const errorLog = {
+      timestamp: new Date().toISOString(),
+      url: request.url,
+      method: request.method,
+      headers: Object.fromEntries(request.headers.entries()),
+      error:
+        error instanceof Error
+          ? {
+              message: error.message,
+              stack: error.stack,
+              name: error.name,
+            }
+          : { message: String(error) },
+      environment: env.ENVIRONMENT || 'production',
+    };
+
+    // Store error log in KV with expiry
+    if (env.KV) {
+      const errorId = crypto.randomUUID();
+      await env.KV.put(
+        `error:${errorId}`,
+        JSON.stringify(errorLog),
+        { expirationTtl: 86400 } // 24 hours
+      );
+    }
+
+    // Log to console for Cloudflare Logpush
+    console.error('Error logged:', errorLog);
+  } catch (logError) {
+    console.error('Failed to log error:', logError);
+  }
+}
+
 // Define the Worker environment interface
 export interface Env {
   KV: KVNamespace;
@@ -109,16 +145,29 @@ export default {
       return env.OAUTH_PROVIDER.fetch(request, env, ctx);
     } catch (error) {
       console.error('Worker error:', error);
-      return new Response(
-        JSON.stringify({
-          error: 'Internal server error',
-          message: error instanceof Error ? error.message : 'Unknown error',
-        }),
-        {
-          status: 500,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
+
+      // Enhanced error handling with stack traces in development
+      const isDevelopment = env.ENVIRONMENT === 'development';
+      const errorResponse = {
+        error: 'Internal server error',
+        message: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString(),
+        path: new URL(request.url).pathname,
+        ...(isDevelopment && error instanceof Error && { stack: error.stack }),
+      };
+
+      // Log to Cloudflare Analytics if available
+      if (ctx.waitUntil && typeof ctx.waitUntil === 'function') {
+        ctx.waitUntil(logError(error, request, env));
+      }
+
+      return new Response(JSON.stringify(errorResponse), {
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Error-Id': crypto.randomUUID(),
+        },
+      });
     }
   },
 };

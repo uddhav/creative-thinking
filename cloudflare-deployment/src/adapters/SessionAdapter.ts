@@ -76,14 +76,14 @@ export class SessionAdapter {
 
   async listSessions(limit: number = 20): Promise<SessionData[]> {
     const list = await this.kv.list({ prefix: 'session:', limit });
-    const sessions: SessionData[] = [];
 
-    for (const key of list.keys) {
-      const session = (await this.kv.get(key.name, { type: 'json' })) as SessionData;
-      if (session) {
-        sessions.push(session);
-      }
-    }
+    // Batch fetch all sessions in parallel for better performance
+    const sessionPromises = list.keys.map(key =>
+      this.kv.get(key.name, { type: 'json' }).then(data => data as SessionData | null)
+    );
+
+    const sessionResults = await Promise.all(sessionPromises);
+    const sessions = sessionResults.filter((session): session is SessionData => session !== null);
 
     return sessions.sort((a, b) => b.lastActivityTime - a.lastActivityTime);
   }

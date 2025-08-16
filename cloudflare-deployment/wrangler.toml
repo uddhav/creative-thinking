@@ -27,6 +27,9 @@ binding = "AI"
 [vars]
 ENVIRONMENT = "production"
 LOG_LEVEL = "info"
+# Authentication - Replace these in production
+AUTH_DEMO_USERNAME = "demo"
+AUTH_DEMO_API_KEY = "demo-api-key"
 
 # Development settings
 [env.development]
@@ -37,13 +40,20 @@ vars = { ENVIRONMENT = "development", LOG_LEVEL = "debug" }
 # pattern = "creative-thinking.example.com/*"
 # zone_name = "example.com"
 
-# Limits
+# Limits - Increased for complex thinking techniques
 [limits]
-cpu_ms = 50
+cpu_ms = 200
 
 # Observability
 [observability]
 enabled = true
+
+# Rate limiting (Cloudflare's built-in rate limiting)
+# Configure via Cloudflare dashboard or API for production
+# Example configuration (not directly in wrangler.toml):
+# - 100 requests per minute per IP for /mcp endpoint
+# - 10 requests per minute per IP for /authorize endpoint
+# - Burst of 20 requests allowed
 
 # Tail Workers (for logging)
 [[tail_consumers]]

@@ -96,11 +96,29 @@ export class AuthHandler {
     const apiKey = formData.get('api_key');
     const username = formData.get('username');
 
+    // Use environment variables for demo credentials
+    const validApiKey = this.env.AUTH_DEMO_API_KEY || 'demo-api-key';
+    const validUsername = this.env.AUTH_DEMO_USERNAME || 'demo';
+
     // Simple validation - in production, verify against database
-    if (apiKey === 'demo-api-key' || username === 'demo') {
+    if (apiKey === validApiKey || username === validUsername) {
       const code = this.generateAuthCode();
       const state = formData.get('state') || '';
       const redirectUri = formData.get('redirect_uri') || '/';
+
+      // Store auth code in KV with expiry (5 minutes)
+      if (this.env.KV) {
+        await this.env.KV.put(
+          `auth_code:${code}`,
+          JSON.stringify({
+            createdAt: Date.now(),
+            userId: `user_${username}`,
+            redirectUri,
+            state,
+          }),
+          { expirationTtl: 300 }
+        ); // 5 minutes
+      }
 
       return Response.redirect(`${redirectUri}?code=${code}&state=${state}`);
     }
@@ -187,15 +205,15 @@ export class AuthHandler {
           
           <form method="POST" action="/login">
             <div class="form-group">
-              <label for="username">Username (Demo)</label>
-              <input type="text" id="username" name="username" value="demo" required>
+              <label for="username">Username</label>
+              <input type="text" id="username" name="username" placeholder="Enter username" required>
             </div>
             
             <div class="divider">OR</div>
             
             <div class="form-group">
               <label for="api_key">API Key</label>
-              <input type="text" id="api_key" name="api_key" placeholder="demo-api-key">
+              <input type="password" id="api_key" name="api_key" placeholder="Enter API key">
             </div>
             
             <input type="hidden" name="state" value="">
@@ -205,8 +223,8 @@ export class AuthHandler {
           </form>
           
           <div class="info">
-            <strong>Demo Mode:</strong> Use username "demo" or API key "demo-api-key" to sign in.
-            In production, this would integrate with your identity provider.
+            <strong>Note:</strong> This is a demo authentication system.
+            In production, integrate with your identity provider (GitHub, Google, etc.).
           </div>
         </div>
       </body>
@@ -327,11 +345,27 @@ export class AuthHandler {
   }
 
   private generateToken(): string {
-    return `ct_token_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+    // Use crypto.randomUUID() for secure token generation
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return `ct_token_${crypto.randomUUID()}`;
+    }
+    // Fallback to more secure random generation
+    const array = new Uint8Array(16);
+    crypto.getRandomValues(array);
+    const token = Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+    return `ct_token_${token}`;
   }
 
   private generateAuthCode(): string {
-    return `auth_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    // Use crypto for secure auth code generation
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return `auth_${crypto.randomUUID().substring(0, 12)}`;
+    }
+    // Fallback to crypto.getRandomValues
+    const array = new Uint8Array(8);
+    crypto.getRandomValues(array);
+    const code = Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+    return `auth_${code}`;
   }
 }
 
