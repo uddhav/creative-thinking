@@ -2,6 +2,8 @@
  * SessionAdapter - Bridges Cloudflare KV storage with existing SessionManager logic
  */
 
+import * as crypto from 'crypto';
+
 export interface SessionData {
   id: string;
   planId?: string;
@@ -111,7 +113,7 @@ export class SessionAdapter {
 
   private generateSessionId(): string {
     const timestamp = Date.now().toString(36);
-    const random = Math.random().toString(36).substring(2, 9);
+    const random = crypto.randomBytes(8).toString('base64url');
     return `session_${timestamp}_${random}`;
   }
 
