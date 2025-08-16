@@ -1,0 +1,54 @@
+name = "creative-thinking-mcp"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# KV namespace for session storage
+[[kv_namespaces]]
+binding = "KV"
+id = "creative_thinking_sessions"
+preview_id = "creative_thinking_sessions_preview"
+
+# Durable Objects configuration
+[[durable_objects.bindings]]
+name = "CREATIVE_THINKING_AGENT"
+class_name = "CreativeThinkingMcpAgent"
+
+# Migration for Durable Objects with SQL
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["CreativeThinkingMcpAgent"]
+
+# Workers AI binding (optional, for future AI enhancements)
+[ai]
+binding = "AI"
+
+# Environment variables
+[vars]
+ENVIRONMENT = "production"
+LOG_LEVEL = "info"
+
+# Development settings
+[env.development]
+vars = { ENVIRONMENT = "development", LOG_LEVEL = "debug" }
+
+# Route configuration (uncomment when deploying to custom domain)
+# [[routes]]
+# pattern = "creative-thinking.example.com/*"
+# zone_name = "example.com"
+
+# Limits
+[limits]
+cpu_ms = 50
+
+# Observability
+[observability]
+enabled = true
+
+# Tail Workers (for logging)
+[[tail_consumers]]
+service = "creative-thinking-logger"
+
+# Build configuration
+[build]
+command = "npm run build"
