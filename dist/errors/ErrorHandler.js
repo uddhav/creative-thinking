@@ -93,21 +93,28 @@ export class ErrorHandler {
             });
         }
         if (error instanceof ValidationError) {
-            // Use the appropriate ErrorFactory method based on the error code
-            if (error.code === ErrorCode.MISSING_REQUIRED_FIELD && error.field) {
-                return this.errorFactory.missingField(error.field);
-            }
-            else if (error.code === ErrorCode.INVALID_FIELD_VALUE && error.field) {
-                return this.errorFactory.invalidFieldType(error.field, 'expected type', 'actual type');
-            }
-            // For all other validation errors including INVALID_TECHNIQUE, use mapping to preserve message
+            // Preserve the detailed message from validation handlers
+            // The handlers now provide helpful, detailed messages with examples
+            const details = error.details;
+            const acceptedFields = details?.acceptedFields;
+            const example = details?.example;
             return new EnhancedError({
                 code: mapping.code,
-                message: error.message,
+                message: error.message, // Use the detailed message from the handler
                 category: 'validation',
                 severity: mapping.severity,
-                recovery: mapping.recovery,
-                context: enhancedContext,
+                recovery: acceptedFields
+                    ? [
+                        `Provide one of the accepted fields: ${acceptedFields.join(', ')}`,
+                        'Check the error message above for the exact format and example',
+                        'These fields help structure your thinking and improve results',
+                    ]
+                    : mapping.recovery,
+                context: {
+                    ...enhancedContext,
+                    field: error.field,
+                    example,
+                },
             });
         }
         if (error instanceof PersistenceError) {

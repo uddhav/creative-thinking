@@ -177,20 +177,36 @@ export class FirstPrinciplesHandler extends BaseTechniqueHandler {
           if (!stepData.components && !stepData.breakdown) {
             throw new ValidationError(
               ErrorCode.MISSING_REQUIRED_FIELD,
-              'Step 1 requires components breakdown or fundamental decomposition',
+              'Step 1 (Deconstruction) requires breaking down the problem into fundamental components. ' +
+                'Provide either "components" (array of component names) or "breakdown" (structured decomposition). ' +
+                'Example: { "components": ["database layer", "API layer", "UI layer"], "output": "..." }',
               'components',
-              { step, technique: 'first_principles' }
+              {
+                step,
+                technique: 'first_principles',
+                acceptedFields: ['components', 'breakdown'],
+                example: { components: ['core element 1', 'core element 2', 'core element 3'] },
+              }
             );
           }
           break;
         case 2:
           // Validate foundation identification
-          if (!stepData.fundamentalTruths && !stepData.foundations) {
+          if (!stepData.fundamentalTruths && !stepData.foundations && !stepData.principles) {
             throw new ValidationError(
               ErrorCode.MISSING_REQUIRED_FIELD,
-              'Step 2 requires identification of fundamental truths or foundations',
+              'Step 2 (Foundation Identification) requires identifying fundamental truths that cannot be reduced further. ' +
+                'Provide "fundamentalTruths" (array), "foundations" (array), or "principles" (array). ' +
+                'Example: { "fundamentalTruths": ["Energy cannot be created or destroyed", "Users seek convenience"], "output": "..." }',
               'fundamentalTruths',
-              { step, technique: 'first_principles' }
+              {
+                step,
+                technique: 'first_principles',
+                acceptedFields: ['fundamentalTruths', 'foundations', 'principles'],
+                example: {
+                  fundamentalTruths: ['physical law', 'mathematical truth', 'universal human need'],
+                },
+              }
             );
           }
           break;
@@ -199,9 +215,22 @@ export class FirstPrinciplesHandler extends BaseTechniqueHandler {
           if (!stepData.assumptions && !stepData.challenges) {
             throw new ValidationError(
               ErrorCode.MISSING_REQUIRED_FIELD,
-              'Step 3 requires listing and challenging assumptions',
+              'Step 3 (Assumption Challenging) requires listing assumptions to be questioned. ' +
+                'Provide either "assumptions" (array of assumptions) or "challenges" (array of challenged conventions). ' +
+                'Example: { "assumptions": ["This must be done manually", "Users need all features"], "output": "..." }',
               'assumptions',
-              { step, technique: 'first_principles' }
+              {
+                step,
+                technique: 'first_principles',
+                acceptedFields: ['assumptions', 'challenges'],
+                example: {
+                  assumptions: [
+                    'current limitation 1',
+                    'accepted convention 2',
+                    'unchallenged rule 3',
+                  ],
+                },
+              }
             );
           }
           break;
@@ -210,9 +239,19 @@ export class FirstPrinciplesHandler extends BaseTechniqueHandler {
           if (!stepData.reconstruction && !stepData.rebuilding) {
             throw new ValidationError(
               ErrorCode.MISSING_REQUIRED_FIELD,
-              'Step 4 requires reconstruction from first principles',
+              'Step 4 (Reconstruction) requires building a solution from fundamental truths only. ' +
+                'Provide either "reconstruction" (string) or "rebuilding" (string) describing the ground-up solution. ' +
+                'Example: { "reconstruction": "Based on fundamentals alone, we can achieve this by...", "output": "..." }',
               'reconstruction',
-              { step, technique: 'first_principles' }
+              {
+                step,
+                technique: 'first_principles',
+                acceptedFields: ['reconstruction', 'rebuilding'],
+                example: {
+                  reconstruction:
+                    'Solution built from first principles without conventional constraints',
+                },
+              }
             );
           }
           break;
@@ -221,9 +260,16 @@ export class FirstPrinciplesHandler extends BaseTechniqueHandler {
           if (!stepData.solution && !stepData.synthesis) {
             throw new ValidationError(
               ErrorCode.MISSING_REQUIRED_FIELD,
-              'Step 5 requires solution synthesis from first principles',
+              'Step 5 (Solution Synthesis) requires combining the reconstruction with practical constraints. ' +
+                'Provide either "solution" (string) or "synthesis" (string) describing the final breakthrough solution. ' +
+                'Example: { "solution": "The revolutionary approach that emerges is...", "output": "..." }',
               'solution',
-              { step, technique: 'first_principles' }
+              {
+                step,
+                technique: 'first_principles',
+                acceptedFields: ['solution', 'synthesis'],
+                example: { solution: 'Final synthesized breakthrough solution' },
+              }
             );
           }
           break;

@@ -109,19 +109,40 @@ export class ParadoxicalProblemHandler extends BaseTechniqueHandler {
                 case 1:
                     // Validate paradox identification - accept multiple field variations
                     if (!stepData.paradox && !stepData.contradictions && !stepData.contradiction) {
-                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 1 requires identifying the paradox or contradictions (fields: paradox, contradiction, or contradictions)', 'paradox', { step, technique: 'paradoxical_problem' });
+                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 1 (Paradox Identification) requires identifying contradictory requirements. ' +
+                            'Provide "paradox" (string), "contradiction" (string), or "contradictions" (array). ' +
+                            'Example: { "paradox": "Need both speed and accuracy which conflict", "output": "..." }', 'paradox', {
+                            step,
+                            technique: 'paradoxical_problem',
+                            acceptedFields: ['paradox', 'contradiction', 'contradictions'],
+                            example: { paradox: 'Conflicting requirements that seem impossible to reconcile' },
+                        });
                     }
                     break;
                 case 2:
                     // Validate parallel path development
                     if (!stepData.solutionA && !stepData.solutionB && !stepData.parallelPaths) {
-                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 2 requires developing parallel solution paths (fields: solutionA, solutionB, or parallelPaths)', 'parallelPaths', { step, technique: 'paradoxical_problem' });
+                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 2 (Parallel Path Development) requires developing independent solutions. ' +
+                            'Provide "solutionA" (string), "solutionB" (string), or "parallelPaths" (array). ' +
+                            'Example: { "solutionA": "Optimize for speed", "solutionB": "Optimize for accuracy", "output": "..." }', 'parallelPaths', {
+                            step,
+                            technique: 'paradoxical_problem',
+                            acceptedFields: ['solutionA', 'solutionB', 'parallelPaths'],
+                            example: { solutionA: 'Path A solution', solutionB: 'Path B solution' },
+                        });
                     }
                     break;
                 case 3:
                     // Validate transcendent synthesis
                     if (!stepData.synthesis && !stepData.metaPath && !stepData.bridge) {
-                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 3 requires creating a transcendent synthesis (fields: synthesis, metaPath, or bridge)', 'synthesis', { step, technique: 'paradoxical_problem' });
+                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 3 (Transcendent Synthesis) requires creating a meta-solution. ' +
+                            'Provide "synthesis" (string), "metaPath" (string), or "bridge" (string). ' +
+                            'Example: { "synthesis": "Dynamic switching between solutions based on context", "output": "..." }', 'synthesis', {
+                            step,
+                            technique: 'paradoxical_problem',
+                            acceptedFields: ['synthesis', 'metaPath', 'bridge'],
+                            example: { synthesis: 'Transcendent solution that encompasses both paths' },
+                        });
                     }
                     break;
                 case 4:
@@ -130,7 +151,21 @@ export class ParadoxicalProblemHandler extends BaseTechniqueHandler {
                         !stepData.pathContexts &&
                         !stepData.resolutionVerified &&
                         !stepData.finalSynthesis) {
-                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 4 requires validating the resolution across path contexts (fields: validation, pathContexts, resolutionVerified, or finalSynthesis)', 'validation', { step, technique: 'paradoxical_problem' });
+                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 4 (Non-Ergodic Validation) requires validating the resolution. ' +
+                            'Provide "validation" (string), "pathContexts" (array), "resolutionVerified" (boolean), or "finalSynthesis" (string). ' +
+                            'Example: { "validation": "Resolution tested across multiple contexts", "output": "..." }', 'validation', {
+                            step,
+                            technique: 'paradoxical_problem',
+                            acceptedFields: [
+                                'validation',
+                                'pathContexts',
+                                'resolutionVerified',
+                                'finalSynthesis',
+                            ],
+                            example: {
+                                validation: 'Paradox successfully resolved through transcendent synthesis',
+                            },
+                        });
                     }
                     break;
             }
