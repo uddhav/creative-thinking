@@ -448,11 +448,21 @@ How can we improve team communication in a remote work environment?</textarea
         recommendations.forEach(rec => {
           const item = document.createElement('div');
           item.className = 'technique-item';
-          item.innerHTML = `
-                    <strong>${rec.displayName}</strong><br>
-                    <small>${rec.reason}</small><br>
-                    <small>⏱ ${rec.timeEstimate} | 📊 ${rec.complexity}</small>
-                `;
+
+          const strong = document.createElement('strong');
+          strong.textContent = rec.displayName;
+          item.appendChild(strong);
+          item.appendChild(document.createElement('br'));
+
+          const reason = document.createElement('small');
+          reason.textContent = rec.reason;
+          item.appendChild(reason);
+          item.appendChild(document.createElement('br'));
+
+          const details = document.createElement('small');
+          details.textContent = `⏱ ${rec.timeEstimate} | 📊 ${rec.complexity}`;
+          item.appendChild(details);
+
           item.onclick = () => toggleTechnique(rec.technique, item);
           listEl.appendChild(item);
         });
