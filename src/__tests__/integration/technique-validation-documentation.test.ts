@@ -8,6 +8,11 @@ import { LateralThinkingServer } from '../../index.js';
 import type { ExecuteThinkingStepInput, PlanThinkingSessionInput } from '../../types/index.js';
 import { EXECUTE_THINKING_STEP_TOOL } from '../../server/ToolDefinitions.js';
 
+// Test constants
+const DEFAULT_STEP = 1;
+const DEFAULT_TOTAL_STEPS = 5;
+const MIN_RECOVERY_SUGGESTIONS = 1;
+
 describe('Technique Validation Documentation', () => {
   let server: LateralThinkingServer;
 
@@ -36,8 +41,8 @@ describe('Technique Validation Documentation', () => {
         planId,
         technique: 'first_principles',
         problem: 'Test problem for validation',
-        currentStep: 1,
-        totalSteps: 5,
+        currentStep: DEFAULT_STEP,
+        totalSteps: DEFAULT_TOTAL_STEPS,
         output: 'Breaking down the problem into parts',
         nextStepNeeded: true,
       };
@@ -73,7 +78,7 @@ describe('Technique Validation Documentation', () => {
         output: 'Identifying fundamental truths',
         nextStepNeeded: true,
         principles: ['Truth 1', 'Truth 2'], // Alternative field name
-      } as any;
+      };
 
       const result = await server.executeThinkingStep(step2Input);
       const response = JSON.parse(result.content[0].text);
@@ -108,7 +113,7 @@ describe('Technique Validation Documentation', () => {
       const planId = planResult.content[0].text.match(/"planId":\s*"([^"]+)"/)?.[1];
       if (!planId) throw new Error('Plan ID not found');
 
-      // Step 3 with incomplete interferenceAnalysis
+      // Step 3 with missing destructive field in interferenceAnalysis
       const step3Input: ExecuteThinkingStepInput = {
         planId,
         technique: 'neuro_computational',
@@ -119,9 +124,9 @@ describe('Technique Validation Documentation', () => {
         nextStepNeeded: true,
         interferenceAnalysis: {
           constructive: ['Synergy found'],
-          // Missing destructive
-        },
-      } as any;
+          // destructive field missing entirely to test validation
+        } as any,
+      };
 
       const result = await server.executeThinkingStep(step3Input);
       const response = JSON.parse(result.content[0].text);
@@ -163,7 +168,7 @@ describe('Technique Validation Documentation', () => {
         planId,
         technique: 'biomimetic_path',
         problem: 'Test problem',
-        currentStep: 1,
+        currentStep: DEFAULT_STEP,
         totalSteps: 6,
         output: 'Analyzing biological defense mechanisms',
         nextStepNeeded: true,
@@ -208,7 +213,7 @@ describe('Technique Validation Documentation', () => {
         output: 'Meta-synthesis complete',
         nextStepNeeded: false,
         synthesisStrategy: 'Adaptive meta-learning strategy', // Alternative to metaSynthesis
-      } as any;
+      };
 
       const result = await server.executeThinkingStep(step5Input);
       const response = JSON.parse(result.content[0].text);
@@ -249,7 +254,7 @@ describe('Technique Validation Documentation', () => {
       for (const technique of techniques) {
         const planInput: PlanThinkingSessionInput = {
           problem: `Test ${technique}`,
-          techniques: [technique as any],
+          techniques: [technique],
         };
         const planResult = server.planThinkingSession(planInput);
         const planId = planResult.content[0].text.match(/"planId":\s*"([^"]+)"/)?.[1];
@@ -268,9 +273,9 @@ describe('Technique Validation Documentation', () => {
         ) {
           const stepInput: ExecuteThinkingStepInput = {
             planId,
-            technique: technique as any,
+            technique: technique,
             problem: `Test ${technique}`,
-            currentStep: 1,
+            currentStep: DEFAULT_STEP,
             totalSteps: 3,
             output: `Executing ${technique} step 1`,
             nextStepNeeded: true,
@@ -300,7 +305,7 @@ describe('Technique Validation Documentation', () => {
       for (const { technique, step } of techniquesWithValidation) {
         const planInput: PlanThinkingSessionInput = {
           problem: 'Test problem',
-          techniques: [technique as any],
+          techniques: [technique],
         };
         const planResult = server.planThinkingSession(planInput);
         const planId = planResult.content[0].text.match(/"planId":\s*"([^"]+)"/)?.[1];
@@ -342,8 +347,8 @@ describe('Technique Validation Documentation', () => {
         planId,
         technique: 'first_principles',
         problem: 'Test problem',
-        currentStep: 1,
-        totalSteps: 5,
+        currentStep: DEFAULT_STEP,
+        totalSteps: DEFAULT_TOTAL_STEPS,
         output: 'Breaking down',
         nextStepNeeded: true,
       };
@@ -354,7 +359,7 @@ describe('Technique Validation Documentation', () => {
       expect(response.error).toBeDefined();
       expect(response.error.recovery).toBeDefined();
       expect(Array.isArray(response.error.recovery)).toBe(true);
-      expect(response.error.recovery.length).toBeGreaterThan(0);
+      expect(response.error.recovery.length).toBeGreaterThan(MIN_RECOVERY_SUGGESTIONS - 1);
       expect(response.error.recovery[0]).toContain('Provide');
     });
   });

@@ -212,10 +212,12 @@ export interface ExecuteThinkingStepInput {
     synthesisStrategy?: string;
     preservedOptions?: string[];
     patternRecognition?: string[];
+    patterns?: string[];
     learningHistory?: string[];
+    accumulatedLearning?: string[];
     strategyAdaptations?: string[];
     feedbackInsights?: string[];
-    metaSynthesis?: string[];
+    metaSynthesis?: string;
     realityAssessment?: RealityAssessment;
     culturalContexts?: string[];
     powerDynamics?: string[];
@@ -254,6 +256,50 @@ export interface ExecuteThinkingStepInput {
         completionWarnings: string[];
         minimumThresholdMet: boolean;
     };
+    components?: string[];
+    breakdown?: string[];
+    fundamentalTruths?: string[];
+    foundations?: string[];
+    assumptions?: string[];
+    challenges?: string[];
+    reconstruction?: string;
+    rebuilding?: string;
+    solution?: string;
+    immuneResponse?: string[];
+    antibodies?: string[];
+    mutations?: string[];
+    selectionPressure?: string;
+    symbioticRelationships?: string[];
+    ecosystemBalance?: string;
+    swarmBehavior?: string[];
+    resiliencePatterns?: string[];
+    redundancy?: string[];
+    naturalSynthesis?: string;
+    integratedSolution?: string;
+    biologicalStrategies?: string[];
+    neuralMappings?: string[];
+    patternGenerations?: string[];
+    interferenceAnalysis?: {
+        constructive: string[];
+        destructive: string[];
+    };
+    computationalModels?: string[];
+    optimizationCycles?: number;
+    convergenceMetrics?: {
+        coherence?: number;
+        novelty?: number;
+        utility?: number;
+    };
+    finalSynthesis?: string;
+    paradox?: string;
+    contradictions?: string[];
+    solutionA?: string;
+    solutionB?: string;
+    metaPath?: string;
+    bridge?: string;
+    validation?: string;
+    pathContexts?: string[];
+    resolutionVerified?: boolean;
 }
 export interface ThinkingOperationData {
     sessionId?: string;
@@ -375,10 +421,12 @@ export interface ThinkingOperationData {
     synthesisStrategy?: string;
     preservedOptions?: string[];
     patternRecognition?: string[];
+    patterns?: string[];
     learningHistory?: string[];
+    accumulatedLearning?: string[];
     strategyAdaptations?: string[];
     feedbackInsights?: string[];
-    metaSynthesis?: string[];
+    metaSynthesis?: string;
     realityAssessment?: RealityAssessment;
     culturalContexts?: string[];
     powerDynamics?: string[];
@@ -417,9 +465,9 @@ export interface ThinkingOperationData {
     computationalModels?: string[];
     optimizationCycles?: number;
     convergenceMetrics?: {
-        coherence: number;
-        novelty: number;
-        utility: number;
+        coherence?: number;
+        novelty?: number;
+        utility?: number;
     };
     finalSynthesis?: string;
 }

@@ -257,7 +257,11 @@ export const EXECUTE_THINKING_STEP_TOOL: Tool = {
         },
       },
       interdependencies: { type: 'array', items: { type: 'string' } },
-      // Paradoxical Problem specific
+      /**
+       * Paradoxical Problem specific fields
+       * Used for resolving contradictions through synthesis
+       * Note: 'contradiction' field shared with TRIZ, 'contradictions' is array alternative
+       */
       paradox: { type: 'string' },
       // contradiction: already defined for TRIZ
       contradictions: { type: 'array', items: { type: 'string' } },
@@ -325,7 +329,11 @@ export const EXECUTE_THINKING_STEP_TOOL: Tool = {
       strategyEvolution: { type: 'string' },
       synthesisStrategy: { type: 'string' },
       preservedOptions: { type: 'array', items: { type: 'string' } },
-      // First Principles specific
+      /**
+       * First Principles specific fields
+       * Used for breaking down problems to fundamental components
+       * Alternative fields support flexible input from LLMs
+       */
       components: {
         type: 'array',
         items: { type: 'string' },
@@ -369,12 +377,20 @@ export const EXECUTE_THINKING_STEP_TOOL: Tool = {
         description: 'Step 5: Final synthesized solution',
       },
       // synthesis field already exists below for other techniques
-      // Meta-Learning specific
+      /**
+       * Meta-Learning specific fields
+       * Used for learning from patterns across techniques
+       * Alternative fields: patterns (patternRecognition), accumulatedLearning (learningHistory)
+       */
       metaSynthesis: {
         type: 'string',
         description: 'Step 5: Meta-level synthesis of learning patterns',
       },
-      // Biomimetic Path specific
+      /**
+       * Biomimetic Path specific fields
+       * Used for biological-inspired problem solving
+       * Alternative fields: antibodies (immuneResponse), selectionPressure (mutations), etc.
+       */
       immuneResponse: {
         type: 'array',
         items: { type: 'string' },
@@ -428,7 +444,11 @@ export const EXECUTE_THINKING_STEP_TOOL: Tool = {
         items: { type: 'string' },
         description: 'Step 6: Alternative to naturalSynthesis - bio-inspired solutions',
       },
-      // Neuro-Computational specific
+      /**
+       * Neuro-Computational specific fields
+       * Used for neural network-inspired synthesis
+       * Required interferenceAnalysis must have both constructive and destructive arrays
+       */
       neuralMappings: { type: 'array', items: { type: 'string' } },
       patternGenerations: { type: 'array', items: { type: 'string' } },
       interferenceAnalysis: {
