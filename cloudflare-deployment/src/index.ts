@@ -147,13 +147,13 @@ export default {
       console.error('Worker error:', error);
 
       // Enhanced error handling with stack traces in development
-      const isDevelopment = env.ENVIRONMENT === 'development';
+      const errorId = crypto.randomUUID();
       const errorResponse = {
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: 'An unexpected error occurred. Please contact support with the error ID.',
         timestamp: new Date().toISOString(),
         path: new URL(request.url).pathname,
-        ...(isDevelopment && error instanceof Error && { stack: error.stack }),
+        errorId,
       };
 
       // Log to Cloudflare Analytics if available
@@ -165,7 +165,7 @@ export default {
         status: 500,
         headers: {
           'Content-Type': 'application/json',
-          'X-Error-Id': crypto.randomUUID(),
+          'X-Error-Id': errorId,
         },
       });
     }
