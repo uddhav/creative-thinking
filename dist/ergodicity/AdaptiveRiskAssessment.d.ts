@@ -36,6 +36,7 @@ export declare class AdaptiveRiskAssessment {
     private detectCreativeExploration;
     private detectTechnicalMigration;
     private detectHighStakes;
+    private isPortfolioContext;
     private detectResourceType;
     private identifyStakeholders;
     private estimateRecoveryTimeframe;

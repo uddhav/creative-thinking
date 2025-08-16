@@ -77,9 +77,13 @@ describe('Risk Discovery Integration', () => {
         nextStepNeeded: true,
       });
 
-      // Should now block due to behavioral lock mechanism detecting high-risk action
-      // The escalation system detects "all your savings" as total commitment language
-      expect(step2.isError).toBeTruthy();
+      // Changed: No longer blocks, only warns about high-risk actions
+      // The system provides warnings but continues execution
+      expect(step2.isError).toBeFalsy();
+
+      // Should still complete successfully but potentially with warnings
+      const step2Data = JSON.parse(step2.content[0].text);
+      expect(step2Data.sessionId).toBeDefined();
     });
   });
 

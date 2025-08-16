@@ -231,8 +231,8 @@ export class RiskDismissalTracker {
     metrics: RiskEngagementMetrics,
     sessionData: SessionData
   ): number {
-    // Don't escalate on first assessment
-    if (metrics.totalAssessments === 1) {
+    // Don't escalate on first few assessments - give time to understand
+    if (metrics.totalAssessments <= 3) {
       return 1;
     }
 
@@ -247,20 +247,23 @@ export class RiskDismissalTracker {
     // Check for high-stakes indicators first
     const hasHighStakes = this.detectHighStakesIndicators(sessionData);
 
-    // Level 4: Critical - high stakes with dismissive behavior
-    if (hasHighStakes && (metrics.consecutiveLowConfidence >= 2 || metrics.dismissalCount >= 3)) {
+    // Level 4: Critical - only for severe patterns with high stakes
+    // Increased thresholds: now requires 4+ consecutive or 6+ total dismissals
+    if (hasHighStakes && (metrics.consecutiveLowConfidence >= 4 || metrics.dismissalCount >= 6)) {
       return 4;
     }
 
     // Level 3: Persistent dismissal OF ACTUAL RISKS
-    if (metrics.dismissalCount >= 6) {
+    // Increased threshold from 6 to 8 dismissals
+    if (metrics.dismissalCount >= 8) {
       return 3;
     }
 
-    // Level 2: Pattern emerging (require actual dismissals, not just low confidence)
+    // Level 2: Pattern emerging (require more dismissals)
+    // Increased thresholds from 3 to 5 dismissals
     if (
-      metrics.dismissalCount >= 3 ||
-      (metrics.consecutiveLowConfidence >= 3 && metrics.discoveredRiskIndicators.length > 0)
+      metrics.dismissalCount >= 5 ||
+      (metrics.consecutiveLowConfidence >= 4 && metrics.discoveredRiskIndicators.length > 0)
     ) {
       return 2;
     }
@@ -299,25 +302,66 @@ export class RiskDismissalTracker {
       }
     }
 
-    // Extract from proposed action
+    // Extract from proposed action with improved context awareness
     const actionLower = proposedAction.toLowerCase();
-    // Use word boundaries to avoid false positives like "allocation" containing "all"
-    const actionWords = actionLower.split(/\b/);
+
+    // Check for true total commitment language, avoiding false positives
+    // like "all-stock", "all-weather", "all-cap" etc.
+    const totalCommitmentPhrases = [
+      'all in',
+      'everything on',
+      'entire savings',
+      'entire portfolio on',
+      'all my money',
+      'everything i have',
+      'bet it all',
+      'risk everything',
+    ];
+
+    // Check for standalone "all" or "everything" that aren't part of compound terms
+    const hasStandaloneAll = /\ball\s+(my|our|the)\s+(money|savings|resources|funds)/i.test(
+      proposedAction
+    );
+    const hasStandaloneEverything = /\beverything\s+(on|into|at)\b/i.test(proposedAction);
+
+    // Exclude common false positives in financial contexts
+    const falsePositives = [
+      'all-stock',
+      'all-weather',
+      'all-cap',
+      'all-equity',
+      'all-bond',
+      'all-season',
+      'allocation',
+      'all things considered',
+      'all else being equal',
+    ];
+
+    const containsFalsePositive = falsePositives.some(fp => actionLower.includes(fp));
+
     if (
-      actionWords.includes('all') ||
-      actionWords.includes('everything') ||
-      actionLower.includes('all in') ||
-      actionLower.includes('entire')
+      !containsFalsePositive &&
+      (totalCommitmentPhrases.some(phrase => actionLower.includes(phrase)) ||
+        hasStandaloneAll ||
+        hasStandaloneEverything)
     ) {
       indicators.push('total commitment language');
     }
 
-    if (
-      actionWords.includes('bet') ||
-      actionWords.includes('gamble') ||
-      actionLower.includes('betting') ||
-      actionLower.includes('gambling')
-    ) {
+    // Check for actual gambling language (not just portfolio "bets")
+    const gamblingPhrases = [
+      'bet it all',
+      'gamble everything',
+      'roll the dice',
+      'double or nothing',
+    ];
+
+    // Check for true gambling context, not investment terminology
+    const hasGamblingContext =
+      gamblingPhrases.some(phrase => actionLower.includes(phrase)) ||
+      /\b(bet|gamble)\s+(all|everything|it all)/i.test(proposedAction);
+
+    if (hasGamblingContext) {
       indicators.push('gambling language');
     }
 
