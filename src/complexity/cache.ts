@@ -96,7 +96,7 @@ export class ComplexityCache {
     return {
       size: this.cache.size,
       maxSize: this.maxSize,
-      hitRate: total > 0 ? hits / total : 0,
+      hitRate: hits / Math.max(total, 1), // Avoid division by zero
       methodDistribution: methods,
     };
   }

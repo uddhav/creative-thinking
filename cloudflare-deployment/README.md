@@ -142,7 +142,7 @@ npm run dev
 
 ## 💡 Features
 
-- ✅ All 23 creative thinking techniques
+- ✅ All 21 creative thinking techniques
 - ✅ WebSocket real-time communication with hibernation
 - ✅ Session persistence with Durable Objects
 - ✅ OAuth authentication with secure token generation
@@ -268,7 +268,7 @@ npx wrangler kv:key list --namespace-id=creative_thinking_sessions
 The Cloudflare deployment maintains full compatibility with the local MCP server:
 
 - Same three-tool architecture
-- All 23 thinking techniques supported
+- All 21 thinking techniques supported
 - Compatible session format
 - Identical API responses
 

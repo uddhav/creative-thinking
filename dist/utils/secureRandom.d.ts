@@ -4,6 +4,7 @@
  */
 /**
  * Get a cryptographically secure random integer for array index selection
+ * Uses rejection sampling to avoid modulo bias
  * @param arrayLength The length of the array
  * @returns A random index between 0 and arrayLength-1
  */

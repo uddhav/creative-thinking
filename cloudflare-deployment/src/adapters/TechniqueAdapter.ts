@@ -23,7 +23,7 @@ export class TechniqueAdapter {
   private initializeTechniques(): Map<string, TechniqueInfo> {
     const techniques = new Map<string, TechniqueInfo>();
 
-    // Define all 23 techniques with their metadata
+    // Define all 21 techniques with their metadata
     const techniqueList: TechniqueInfo[] = [
       {
         name: 'six_hats',

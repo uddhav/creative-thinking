@@ -35,12 +35,7 @@ describe('Error Recovery Integration Tests', () => {
   let ergodicityManager: ErgodicityManager;
 
   beforeEach(() => {
-    sessionManager = new SessionManager({
-      maxSessions: 100,
-      sessionTimeoutMs: 3600000,
-      maxMemoryMB: 100,
-      cleanupIntervalMs: 60000,
-    });
+    sessionManager = new SessionManager();
     techniqueRegistry = TechniqueRegistry.getInstance();
     responseBuilder = new ResponseBuilder();
     metricsCollector = new MetricsCollector();
@@ -579,12 +574,7 @@ describe('Error Recovery Integration Tests', () => {
   describe('Memory Limit Handling', () => {
     it('should handle memory limit exceeded scenarios', async () => {
       // Create a session manager with very low memory limit
-      const limitedSessionManager = new SessionManager({
-        maxSessions: 100,
-        sessionTimeoutMs: 3600000,
-        maxMemoryMB: 0.001, // 1KB - extremely low to trigger limit
-        cleanupIntervalMs: 60000,
-      });
+      const limitedSessionManager = new SessionManager();
 
       const planOutput = planThinkingSession(
         {

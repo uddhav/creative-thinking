@@ -8,6 +8,7 @@ import { ValidationError, ErrorCode } from '../errors/types.js';
 
 /**
  * Get a cryptographically secure random integer for array index selection
+ * Uses rejection sampling to avoid modulo bias
  * @param arrayLength The length of the array
  * @returns A random index between 0 and arrayLength-1
  */
@@ -21,16 +22,31 @@ export function getSecureRandomIndex(arrayLength: number): number {
     );
   }
 
-  // For small arrays, use a single byte
+  // Use rejection sampling to avoid modulo bias
+  // Find the largest multiple of arrayLength that fits in the range
   if (arrayLength <= 256) {
-    const buffer = randomBytes(1);
-    return buffer[0] % arrayLength;
-  }
+    // For small arrays, use a single byte
+    const max = 256 - (256 % arrayLength); // Largest multiple of arrayLength <= 256
+    let value: number;
 
-  // For larger arrays, use 32-bit value
-  const buffer = randomBytes(4);
-  const value = buffer.readUInt32BE(0);
-  return value % arrayLength;
+    do {
+      const buffer = randomBytes(1);
+      value = buffer[0];
+    } while (value >= max);
+
+    return value % arrayLength;
+  } else {
+    // For larger arrays, use 32-bit value
+    const max = 0x100000000 - (0x100000000 % arrayLength); // Largest multiple <= 2^32
+    let value: number;
+
+    do {
+      const buffer = randomBytes(4);
+      value = buffer.readUInt32BE(0);
+    } while (value >= max);
+
+    return value % arrayLength;
+  }
 }
 
 /**

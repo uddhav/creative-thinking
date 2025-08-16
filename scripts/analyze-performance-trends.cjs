@@ -44,9 +44,17 @@ function loadBenchmarkData(inputPath) {
 
     return allData;
   } else {
-    // Load single file
-    const data = JSON.parse(fs.readFileSync(inputPath, 'utf8'));
-    return [{ file: inputPath, data: Array.isArray(data) ? data : [data] }];
+    // Load single file - handle potential race condition
+    try {
+      const data = JSON.parse(fs.readFileSync(inputPath, 'utf8'));
+      return [{ file: inputPath, data: Array.isArray(data) ? data : [data] }];
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        console.error(`File not found: ${inputPath}`);
+        return [];
+      }
+      throw error;
+    }
   }
 }
 
@@ -66,7 +74,13 @@ function analyzeTrends(benchmarkSets) {
       trends.get(name).push({
         value: benchmark.value,
         unit: benchmark.unit,
-        timestamp: benchmark.timestamp || new Date(fs.statSync(file).mtime).toISOString(),
+        timestamp: benchmark.timestamp || (() => {
+          try {
+            return new Date(fs.statSync(file).mtime).toISOString();
+          } catch {
+            return new Date().toISOString();
+          }
+        })(),
         file,
         metadata: benchmark.extra || benchmark.metadata,
       });

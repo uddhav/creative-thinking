@@ -92,7 +92,7 @@ describe('Option Generation Integration', () => {
       scamperAction: 'combine',
     };
 
-    response = await executeThinkingStep(
+    await executeThinkingStep(
       step2,
       sessionManager,
       techniqueRegistry,
