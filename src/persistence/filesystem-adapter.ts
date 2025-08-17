@@ -126,12 +126,16 @@ export class FilesystemAdapter implements PersistenceAdapter {
       }
 
       // Use atomic writes to prevent race conditions and partial writes
-      // Write to temporary file first, then rename atomically
-      tempSessionPath = `${sessionPath}.tmp.${randomUUID()}`;
-      tempMetadataPath = `${metadataPath}.tmp.${randomUUID()}`;
+      // Create temporary files in system temp directory with restrictive permissions
+      const tmpDir = os.tmpdir();
+      tempSessionPath = path.join(tmpDir, `session-${randomUUID()}.tmp`);
+      tempMetadataPath = path.join(tmpDir, `metadata-${randomUUID()}.tmp`);
 
-      // Write session data atomically
-      await fs.writeFile(tempSessionPath, serialized, 'utf8');
+      // Write session data atomically with restrictive permissions (0600)
+      await fs.writeFile(tempSessionPath, serialized, {
+        encoding: 'utf8',
+        mode: 0o600, // Owner read/write only
+      });
       await fs.rename(tempSessionPath, sessionPath);
       tempSessionPath = null; // Mark as successfully moved
 
@@ -139,8 +143,11 @@ export class FilesystemAdapter implements PersistenceAdapter {
       const metadata = this.extractMetadata(state);
       const metadataJson = JSON.stringify(metadata, null, 2);
 
-      // Write metadata atomically
-      await fs.writeFile(tempMetadataPath, metadataJson, 'utf8');
+      // Write metadata atomically with restrictive permissions
+      await fs.writeFile(tempMetadataPath, metadataJson, {
+        encoding: 'utf8',
+        mode: 0o600, // Owner read/write only
+      });
       await fs.rename(tempMetadataPath, metadataPath);
       tempMetadataPath = null; // Mark as successfully moved
     } catch (error) {

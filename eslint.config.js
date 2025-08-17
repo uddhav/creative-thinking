@@ -12,6 +12,7 @@ export default [
       'node_modules/',
       'coverage/',
       'examples/',
+      'cloudflare-deployment/',
       '*.js',
       '*.d.ts',
       '!eslint.config.js',

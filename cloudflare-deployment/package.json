@@ -1,0 +1,26 @@
+{
+  "name": "creative-thinking-cloudflare",
+  "version": "1.0.0",
+  "description": "Creative Thinking MCP Server deployed on Cloudflare Workers with Agents SDK",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "agents": "^0.0.113",
+    "@modelcontextprotocol/sdk": "^1.17.2",
+    "@cloudflare/workers-oauth-provider": "^0.0.6",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.0.0",
+    "wrangler": "^3.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
+  }
+}

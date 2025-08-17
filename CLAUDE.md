@@ -29,7 +29,7 @@ npm run format       # Run prettier to format all files
 - **Three tools only**: `discover_techniques`, `plan_thinking_session`, `execute_thinking_step`
 - **Three-layer architecture**: Discovery → Planning → Execution
 - **MCP Protocol**: stdout for JSON-RPC only, stderr for visual output
-- **23 thinking techniques** with specific step counts
+- **21 thinking techniques** with specific step counts
 - **Unified framework**: All techniques support risk/adversarial fields
 - **Sequential execution**: Server implements sequential-only execution for maximum coherence
 - **Session resilience**: Base64 encoding allows sessions to survive server restarts

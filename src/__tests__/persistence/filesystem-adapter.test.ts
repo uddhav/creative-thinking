@@ -215,9 +215,12 @@ describe('FilesystemAdapter', () => {
 
       expect(newSessionId).toMatch(/^session_[a-f0-9-]+$/);
       expect(fs.writeFile).toHaveBeenCalledWith(
-        expect.stringContaining(newSessionId),
+        expect.stringMatching(/session-.*\.tmp$/),
         expect.any(String),
-        'utf8'
+        {
+          encoding: 'utf8',
+          mode: 0o600, // Owner read/write only
+        }
       );
     });
 
@@ -263,9 +266,9 @@ describe('FilesystemAdapter', () => {
       // Should save both session and metadata files to temp files first
       expect(fs.writeFile).toHaveBeenCalledTimes(2);
 
-      // Check that temp files were written
+      // Check that temp files were written with secure permissions
       expect(fs.writeFile).toHaveBeenCalledWith(
-        expect.stringMatching(/sessions\/test-session\.json\.tmp\./),
+        expect.stringMatching(/session-.*\.tmp$/),
         JSON.stringify(
           {
             version: '1.0.0',
@@ -277,22 +280,28 @@ describe('FilesystemAdapter', () => {
           null,
           2
         ),
-        'utf8'
+        {
+          encoding: 'utf8',
+          mode: 0o600, // Owner read/write only
+        }
       );
       expect(fs.writeFile).toHaveBeenCalledWith(
-        expect.stringMatching(/metadata\/test-session\.json\.tmp\./),
+        expect.stringMatching(/metadata-.*\.tmp$/),
         expect.any(String),
-        'utf8'
+        {
+          encoding: 'utf8',
+          mode: 0o600, // Owner read/write only
+        }
       );
 
       // Check that rename was called to move temp files to final location
       expect(fs.rename).toHaveBeenCalledTimes(2);
       expect(fs.rename).toHaveBeenCalledWith(
-        expect.stringMatching(/sessions\/test-session\.json\.tmp\./),
+        expect.stringMatching(/session-.*\.tmp$/),
         path.join(tempDir, 'sessions', 'test-session.json')
       );
       expect(fs.rename).toHaveBeenCalledWith(
-        expect.stringMatching(/metadata\/test-session\.json\.tmp\./),
+        expect.stringMatching(/metadata-.*\.tmp$/),
         path.join(tempDir, 'metadata', 'test-session.json')
       );
     });

@@ -1,0 +1,563 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Creative Thinking MCP Client</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .header {
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+      }
+
+      .header h1 {
+        color: #333;
+        font-size: 28px;
+        margin-bottom: 10px;
+      }
+
+      .header p {
+        color: #666;
+        font-size: 16px;
+      }
+
+      .main-content {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+
+      .panel {
+        background: white;
+        padding: 25px;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      }
+
+      .panel h2 {
+        color: #5850ec;
+        font-size: 20px;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #f3f4f6;
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      label {
+        display: block;
+        color: #374151;
+        font-weight: 500;
+        margin-bottom: 8px;
+        font-size: 14px;
+      }
+
+      input,
+      textarea,
+      select {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        font-size: 14px;
+        transition: border-color 0.2s;
+      }
+
+      input:focus,
+      textarea:focus,
+      select:focus {
+        outline: none;
+        border-color: #5850ec;
+        box-shadow: 0 0 0 3px rgba(88, 80, 236, 0.1);
+      }
+
+      textarea {
+        min-height: 100px;
+        resize: vertical;
+      }
+
+      button {
+        background: #5850ec;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+
+      button:hover {
+        background: #4338ca;
+      }
+
+      button:disabled {
+        background: #9ca3af;
+        cursor: not-allowed;
+      }
+
+      .button-group {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+      }
+
+      .connection-status {
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 14px;
+        margin-bottom: 20px;
+      }
+
+      .connected {
+        background: #d1fae5;
+        color: #065f46;
+      }
+
+      .disconnected {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+
+      .connecting {
+        background: #fef3c7;
+        color: #92400e;
+      }
+
+      .response-area {
+        background: #f9fafb;
+        padding: 15px;
+        border-radius: 6px;
+        min-height: 200px;
+        max-height: 400px;
+        overflow-y: auto;
+        font-family: 'Monaco', 'Menlo', monospace;
+        font-size: 13px;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+      }
+
+      .technique-list {
+        display: grid;
+        gap: 10px;
+        margin-top: 15px;
+      }
+
+      .technique-item {
+        padding: 10px;
+        background: #f9fafb;
+        border-radius: 6px;
+        border: 1px solid #e5e7eb;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .technique-item:hover {
+        background: #f3f4f6;
+        border-color: #5850ec;
+      }
+
+      .technique-item.selected {
+        background: #ede9fe;
+        border-color: #5850ec;
+      }
+
+      .progress-bar {
+        width: 100%;
+        height: 6px;
+        background: #e5e7eb;
+        border-radius: 3px;
+        margin-top: 10px;
+        overflow: hidden;
+      }
+
+      .progress-fill {
+        height: 100%;
+        background: #5850ec;
+        transition: width 0.3s ease;
+      }
+
+      .step-info {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 10px;
+        font-size: 14px;
+        color: #6b7280;
+      }
+
+      @media (max-width: 768px) {
+        .main-content {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🧠 Creative Thinking MCP Client</h1>
+        <p>Test the Creative Thinking MCP Server with real-time WebSocket connection</p>
+      </div>
+
+      <div class="main-content">
+        <div class="panel">
+          <h2>Connection & Tools</h2>
+
+          <div id="status" class="connection-status disconnected">⚫ Disconnected</div>
+
+          <div class="form-group">
+            <label for="serverUrl">Server URL</label>
+            <input
+              type="text"
+              id="serverUrl"
+              value="ws://localhost:8787/ws"
+              placeholder="ws://localhost:8787/ws"
+            />
+          </div>
+
+          <div class="button-group">
+            <button id="connectBtn" onclick="connect()">Connect</button>
+            <button id="disconnectBtn" onclick="disconnect()" disabled>Disconnect</button>
+          </div>
+
+          <hr style="margin: 20px 0; border: none; border-top: 1px solid #e5e7eb" />
+
+          <h3 style="margin-bottom: 15px; color: #374151">Test Tools</h3>
+
+          <div class="form-group">
+            <label for="problem">Problem Statement</label>
+            <textarea id="problem" placeholder="Enter your problem or challenge...">
+How can we improve team communication in a remote work environment?</textarea
+            >
+          </div>
+
+          <div class="button-group">
+            <button id="discoverBtn" onclick="discoverTechniques()" disabled>
+              Discover Techniques
+            </button>
+            <button id="planBtn" onclick="planSession()" disabled>Plan Session</button>
+            <button id="executeBtn" onclick="executeStep()" disabled>Execute Step</button>
+          </div>
+
+          <div id="techniqueList" class="technique-list" style="display: none">
+            <!-- Techniques will be populated here -->
+          </div>
+
+          <div id="progressContainer" style="display: none; margin-top: 20px">
+            <div class="progress-bar">
+              <div id="progressFill" class="progress-fill" style="width: 0%"></div>
+            </div>
+            <div class="step-info">
+              <span id="stepInfo">Step 0 / 0</span>
+              <span id="techniqueInfo">-</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Response & Output</h2>
+          <div id="response" class="response-area">Waiting for connection...</div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let socket = null;
+      let currentPlanId = null;
+      let currentStep = 1;
+      let totalSteps = 0;
+      let selectedTechniques = [];
+      let currentTechnique = null;
+
+      function updateStatus(status, message) {
+        const statusEl = document.getElementById('status');
+        statusEl.className = `connection-status ${status}`;
+        statusEl.textContent = message;
+      }
+
+      function appendResponse(message, isError = false) {
+        const responseEl = document.getElementById('response');
+        const timestamp = new Date().toLocaleTimeString();
+        const prefix = isError ? '❌' : '✅';
+        responseEl.textContent += `\n[${timestamp}] ${prefix} ${message}\n`;
+        responseEl.scrollTop = responseEl.scrollHeight;
+      }
+
+      function connect() {
+        const url = document.getElementById('serverUrl').value;
+
+        if (!url) {
+          alert('Please enter a server URL');
+          return;
+        }
+
+        updateStatus('connecting', '🟡 Connecting...');
+
+        try {
+          socket = new WebSocket(url);
+
+          socket.onopen = () => {
+            updateStatus('connected', '🟢 Connected');
+            appendResponse('Connected to Creative Thinking MCP Server');
+
+            document.getElementById('connectBtn').disabled = true;
+            document.getElementById('disconnectBtn').disabled = false;
+            document.getElementById('discoverBtn').disabled = false;
+            document.getElementById('planBtn').disabled = false;
+          };
+
+          socket.onmessage = event => {
+            try {
+              const data = JSON.parse(event.data);
+              handleMessage(data);
+            } catch (e) {
+              appendResponse(`Received: ${event.data}`);
+            }
+          };
+
+          socket.onerror = error => {
+            updateStatus('disconnected', '🔴 Error');
+            appendResponse(`WebSocket error: ${error}`, true);
+          };
+
+          socket.onclose = () => {
+            updateStatus('disconnected', '⚫ Disconnected');
+            appendResponse('Disconnected from server');
+
+            document.getElementById('connectBtn').disabled = false;
+            document.getElementById('disconnectBtn').disabled = true;
+            document.getElementById('discoverBtn').disabled = true;
+            document.getElementById('planBtn').disabled = true;
+            document.getElementById('executeBtn').disabled = true;
+          };
+        } catch (error) {
+          updateStatus('disconnected', '🔴 Error');
+          appendResponse(`Failed to connect: ${error.message}`, true);
+        }
+      }
+
+      function disconnect() {
+        if (socket) {
+          socket.close();
+          socket = null;
+        }
+      }
+
+      function sendRequest(method, params) {
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
+          appendResponse('Not connected to server', true);
+          return;
+        }
+
+        const request = {
+          jsonrpc: '2.0',
+          id: Date.now(),
+          method: `tools/call`,
+          params: {
+            name: method,
+            arguments: params,
+          },
+        };
+
+        socket.send(JSON.stringify(request));
+        appendResponse(`Sent: ${method}`);
+      }
+
+      function handleMessage(data) {
+        if (data.type === 'connected') {
+          appendResponse(data.message);
+        } else if (data.type === 'error') {
+          appendResponse(data.message, true);
+        } else if (data.result) {
+          handleToolResponse(data.result);
+        } else {
+          appendResponse(JSON.stringify(data, null, 2));
+        }
+      }
+
+      function handleToolResponse(result) {
+        try {
+          const content = JSON.parse(result.content[0].text);
+
+          if (content.error) {
+            appendResponse(`Error: ${content.error}`, true);
+            return;
+          }
+
+          if (content.recommendations) {
+            // Handle discover_techniques response
+            displayTechniques(content.recommendations);
+            appendResponse(`Found ${content.recommendations.length} recommended techniques`);
+          } else if (content.planId) {
+            // Handle plan_thinking_session response
+            currentPlanId = content.planId;
+            totalSteps = content.totalSteps;
+            currentStep = 1;
+            appendResponse(`Created plan: ${currentPlanId} with ${totalSteps} steps`);
+            document.getElementById('executeBtn').disabled = false;
+            updateProgress();
+          } else if (content.status === 'success') {
+            // Handle execute_thinking_step response
+            appendResponse(`Executed step ${content.currentStep}/${content.totalSteps}`);
+
+            if (content.nextStep) {
+              currentStep = content.nextStep.step;
+              currentTechnique = content.nextStep.technique;
+              updateProgress();
+            } else if (content.completion) {
+              appendResponse(`Session completed! ${content.completion.message}`);
+              document.getElementById('executeBtn').disabled = true;
+            }
+          }
+
+          appendResponse(JSON.stringify(content, null, 2));
+        } catch (e) {
+          appendResponse(`Response: ${JSON.stringify(result, null, 2)}`);
+        }
+      }
+
+      function displayTechniques(recommendations) {
+        const listEl = document.getElementById('techniqueList');
+        listEl.style.display = 'block';
+
+        // Clear existing content safely without using innerHTML
+        while (listEl.firstChild) {
+          listEl.removeChild(listEl.firstChild);
+        }
+
+        recommendations.forEach(rec => {
+          const item = document.createElement('div');
+          item.className = 'technique-item';
+
+          const strong = document.createElement('strong');
+          strong.textContent = rec.displayName;
+          item.appendChild(strong);
+          item.appendChild(document.createElement('br'));
+
+          const reason = document.createElement('small');
+          reason.textContent = rec.reason;
+          item.appendChild(reason);
+          item.appendChild(document.createElement('br'));
+
+          const details = document.createElement('small');
+          details.textContent = `⏱ ${rec.timeEstimate} | 📊 ${rec.complexity}`;
+          item.appendChild(details);
+
+          item.onclick = () => toggleTechnique(rec.technique, item);
+          listEl.appendChild(item);
+        });
+      }
+
+      function toggleTechnique(technique, element) {
+        element.classList.toggle('selected');
+
+        if (selectedTechniques.includes(technique)) {
+          selectedTechniques = selectedTechniques.filter(t => t !== technique);
+        } else {
+          selectedTechniques.push(technique);
+        }
+      }
+
+      function updateProgress() {
+        const container = document.getElementById('progressContainer');
+        const fill = document.getElementById('progressFill');
+        const stepInfo = document.getElementById('stepInfo');
+        const techniqueInfo = document.getElementById('techniqueInfo');
+
+        if (totalSteps > 0) {
+          container.style.display = 'block';
+          const progress = ((currentStep - 1) / totalSteps) * 100;
+          fill.style.width = `${progress}%`;
+          stepInfo.textContent = `Step ${currentStep} / ${totalSteps}`;
+          techniqueInfo.textContent = currentTechnique || '-';
+        }
+      }
+
+      function discoverTechniques() {
+        const problem = document.getElementById('problem').value;
+
+        if (!problem) {
+          alert('Please enter a problem statement');
+          return;
+        }
+
+        sendRequest('discover_techniques', {
+          problem: problem,
+          context: 'Remote work environment with distributed team',
+          constraints: ['time-efficient', 'inclusive'],
+          domain: 'organizational',
+        });
+      }
+
+      function planSession() {
+        const problem = document.getElementById('problem').value;
+
+        if (!problem) {
+          alert('Please enter a problem statement');
+          return;
+        }
+
+        if (selectedTechniques.length === 0) {
+          // Use default techniques if none selected
+          selectedTechniques = ['six_hats', 'scamper'];
+        }
+
+        sendRequest('plan_thinking_session', {
+          problem: problem,
+          techniques: selectedTechniques,
+          objectives: ['Improve communication', 'Build team cohesion'],
+          timeframe: 'thorough',
+        });
+      }
+
+      function executeStep() {
+        if (!currentPlanId) {
+          alert('Please create a plan first');
+          return;
+        }
+
+        const problem = document.getElementById('problem').value;
+
+        sendRequest('execute_thinking_step', {
+          planId: currentPlanId,
+          technique: currentTechnique || 'six_hats',
+          problem: problem,
+          currentStep: currentStep,
+          totalSteps: totalSteps,
+          output: `This is the output for step ${currentStep}`,
+          nextStepNeeded: currentStep < totalSteps,
+        });
+      }
+
+      // Auto-connect on load for development
+      window.onload = () => {
+        // Uncomment to auto-connect
+        // connect();
+      };
+    </script>
+  </body>
+</html>

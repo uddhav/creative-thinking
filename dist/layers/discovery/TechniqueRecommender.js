@@ -272,7 +272,7 @@ export class TechniqueRecommender {
         // Get top recommendations based on dynamic limit
         const topRecommendations = validatedRecommendations.slice(0, baseRecommendationCount);
         // Early exit if wildcard not needed (performance optimization)
-        if (Math.random() > this.WILDCARD_PROBABILITY) {
+        if (Math.random() >= this.WILDCARD_PROBABILITY) {
             return topRecommendations;
         }
         // Add wildcard technique(s) to prevent pigeonholing
