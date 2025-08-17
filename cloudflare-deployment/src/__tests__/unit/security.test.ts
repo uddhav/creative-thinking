@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import * as crypto from 'crypto';
 
 describe('Security Fixes', () => {
   describe('Error Response Information Disclosure', () => {
