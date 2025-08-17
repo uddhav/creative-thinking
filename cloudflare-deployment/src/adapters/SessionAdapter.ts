@@ -83,13 +83,29 @@ export class SessionAdapter {
   async listSessions(limit: number = 20): Promise<SessionData[]> {
     const list = await this.kv.list({ prefix: 'session:', limit });
 
-    // Batch fetch all sessions in parallel for better performance
+    // Batch fetch all sessions in parallel with error resilience
     const sessionPromises = list.keys.map(key =>
-      this.kv.get(key.name, { type: 'json' }).then(data => data as SessionData | null)
+      this.kv
+        .get(key.name, { type: 'json' })
+        .then(data => ({ status: 'fulfilled', value: data as SessionData | null }))
+        .catch(error => ({ status: 'rejected', reason: error }))
     );
 
-    const sessionResults = await Promise.all(sessionPromises);
-    const sessions = sessionResults.filter((session): session is SessionData => session !== null);
+    const sessionResults = await Promise.allSettled(sessionPromises);
+
+    // Log any failed fetches for monitoring
+    const failures = sessionResults.filter(r => r.status === 'rejected');
+    if (failures.length > 0) {
+      console.error(`Failed to fetch ${failures.length} sessions:`, failures);
+    }
+
+    // Extract successful sessions
+    const sessions = sessionResults
+      .filter(
+        (result): result is PromiseFulfilledResult<any> =>
+          result.status === 'fulfilled' && result.value?.value !== null
+      )
+      .map(result => result.value.value as SessionData);
 
     return sessions.sort((a, b) => b.lastActivityTime - a.lastActivityTime);
   }

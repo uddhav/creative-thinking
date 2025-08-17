@@ -27,9 +27,8 @@ binding = "AI"
 [vars]
 ENVIRONMENT = "production"
 LOG_LEVEL = "info"
-# Authentication - Replace these in production
-AUTH_DEMO_USERNAME = "demo"
-AUTH_DEMO_API_KEY = "demo-api-key"
+# Authentication - Set these via environment or secrets in production
+# AUTH_USERNAME and AUTH_API_KEY should be configured separately
 
 # Development settings
 [env.development]

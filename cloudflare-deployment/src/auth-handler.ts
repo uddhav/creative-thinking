@@ -96,9 +96,15 @@ export class AuthHandler {
     const apiKey = formData.get('api_key');
     const username = formData.get('username');
 
-    // Use environment variables for demo credentials
-    const validApiKey = this.env.AUTH_DEMO_API_KEY || 'demo-api-key';
-    const validUsername = this.env.AUTH_DEMO_USERNAME || 'demo';
+    // Use environment variables for credentials (required in production)
+    const validApiKey = this.env.AUTH_API_KEY;
+    const validUsername = this.env.AUTH_USERNAME;
+
+    // Check if credentials are configured
+    if (!validApiKey || !validUsername) {
+      console.error('AUTH_API_KEY and AUTH_USERNAME must be configured');
+      return new Response('Authentication not configured', { status: 500 });
+    }
 
     // Simple validation - in production, verify against database
     if (apiKey === validApiKey || username === validUsername) {

@@ -4,6 +4,8 @@
 
 import { SessionAdapter } from './SessionAdapter.js';
 import { TechniqueAdapter } from './TechniqueAdapter.js';
+import { McpError, Errors } from '../utils/errors.js';
+import { VALID_TECHNIQUES } from '../constants/techniques.js';
 
 export class ExecutionAdapter {
   constructor(
@@ -35,10 +37,7 @@ export class ExecutionAdapter {
     }
 
     if (invalidTechniques.length > 0) {
-      return {
-        error: `Invalid techniques: ${invalidTechniques.join(', ')}`,
-        isError: true,
-      };
+      throw Errors.invalidTechnique(invalidTechniques[0], VALID_TECHNIQUES.slice());
     }
 
     // Create plan
@@ -76,27 +75,30 @@ export class ExecutionAdapter {
     const { planId, technique, problem, currentStep, totalSteps, output, nextStepNeeded } = params;
 
     // Validate required fields
-    if (!planId || !technique || !problem) {
-      return {
-        error: 'Missing required fields: planId, technique, and problem are required',
-        isError: true,
-      };
+    if (!planId) {
+      throw Errors.missingRequiredField('planId', 'executeThinkingStep');
+    }
+    if (!technique) {
+      throw Errors.missingRequiredField('technique', 'executeThinkingStep');
+    }
+    if (!problem) {
+      throw Errors.missingRequiredField('problem', 'executeThinkingStep');
     }
 
     // Validate currentStep is within bounds
     if (typeof currentStep !== 'number' || currentStep < 1 || currentStep > totalSteps) {
-      return {
-        error: `Invalid currentStep: ${currentStep}. Must be between 1 and ${totalSteps}`,
-        isError: true,
-      };
+      throw Errors.invalidStepNumber(currentStep, totalSteps);
     }
 
     // Validate nextStepNeeded is boolean
     if (typeof nextStepNeeded !== 'boolean') {
-      return {
-        error: 'nextStepNeeded must be a boolean value',
-        isError: true,
-      };
+      throw new McpError(
+        'INVALID_PARAMETER',
+        'nextStepNeeded must be a boolean value',
+        { nextStepNeeded },
+        'Set nextStepNeeded to true if more steps are needed, false otherwise',
+        400
+      );
     }
 
     // Get or create session
