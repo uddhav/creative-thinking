@@ -1,0 +1,290 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { CreativeThinkingMcpAgent } from '../../CreativeThinkingMcpAgent';
+import { McpAgent } from 'agents';
+
+describe('MCP Protocol Integration', () => {
+  let agent: CreativeThinkingMcpAgent;
+  let mockEnv: any;
+  let mockCtx: any;
+
+  beforeEach(() => {
+    // Mock environment
+    mockEnv = {
+      KV: {
+        put: vi.fn(),
+        get: vi.fn(),
+        delete: vi.fn(),
+        list: vi.fn(),
+      },
+      ENVIRONMENT: 'test',
+    };
+
+    // Mock execution context
+    mockCtx = {
+      waitUntil: vi.fn(),
+      passThroughOnException: vi.fn(),
+    };
+
+    // Create agent instance
+    agent = new CreativeThinkingMcpAgent(new DurableObjectState(), mockEnv);
+  });
+
+  describe('Tool Registration', () => {
+    it('should register discover_techniques tool', () => {
+      const tools = agent.server.getRegisteredTools();
+      const discoverTool = tools.find(t => t.name === 'discover_techniques');
+
+      expect(discoverTool).toBeDefined();
+      expect(discoverTool?.description).toContain('Analyzes a problem');
+      expect(discoverTool?.inputSchema).toBeDefined();
+    });
+
+    it('should register plan_thinking_session tool', () => {
+      const tools = agent.server.getRegisteredTools();
+      const planTool = tools.find(t => t.name === 'plan_thinking_session');
+
+      expect(planTool).toBeDefined();
+      expect(planTool?.description).toContain('Creates a structured workflow');
+      expect(planTool?.inputSchema).toBeDefined();
+    });
+
+    it('should register execute_thinking_step tool', () => {
+      const tools = agent.server.getRegisteredTools();
+      const executeTool = tools.find(t => t.name === 'execute_thinking_step');
+
+      expect(executeTool).toBeDefined();
+      expect(executeTool?.description).toContain('Executes a single step');
+      expect(executeTool?.inputSchema).toBeDefined();
+    });
+  });
+
+  describe('Tool Execution', () => {
+    it('should execute discover_techniques with valid input', async () => {
+      const input = {
+        problem: 'How to improve team communication',
+        context: 'Remote team of 10 people',
+        constraints: ['Limited budget', 'Different time zones'],
+      };
+
+      const result = await agent.handleToolCall('discover_techniques', input);
+
+      expect(result).toBeDefined();
+      expect(result.recommendations).toBeInstanceOf(Array);
+      expect(result.recommendations.length).toBeGreaterThan(0);
+      expect(result.recommendations[0]).toHaveProperty('technique');
+      expect(result.recommendations[0]).toHaveProperty('reason');
+    });
+
+    it('should validate required parameters', async () => {
+      const invalidInput = {
+        // Missing required 'problem' field
+        context: 'Some context',
+      };
+
+      await expect(agent.handleToolCall('discover_techniques', invalidInput)).rejects.toThrow();
+    });
+
+    it('should handle plan creation workflow', async () => {
+      const planInput = {
+        problem: 'Test problem',
+        techniques: ['six_hats', 'scamper'],
+        timeframe: 'quick',
+      };
+
+      const planResult = await agent.handleToolCall('plan_thinking_session', planInput);
+
+      expect(planResult).toHaveProperty('planId');
+      expect(planResult.planId).toMatch(/^plan_/);
+      expect(planResult).toHaveProperty('workflow');
+      expect(planResult.workflow).toHaveProperty('steps');
+    });
+
+    it('should execute thinking steps in sequence', async () => {
+      // First create a plan
+      const planInput = {
+        problem: 'Test problem',
+        techniques: ['po'],
+        timeframe: 'quick',
+      };
+
+      const planResult = await agent.handleToolCall('plan_thinking_session', planInput);
+      const planId = planResult.planId;
+
+      // Execute first step
+      const step1Input = {
+        planId,
+        technique: 'po',
+        problem: 'Test problem',
+        currentStep: 1,
+        totalSteps: 4,
+        output: 'Provocation: What if we did the opposite?',
+        nextStepNeeded: true,
+        provocation: 'Do the opposite',
+      };
+
+      const step1Result = await agent.handleToolCall('execute_thinking_step', step1Input);
+
+      expect(step1Result).toHaveProperty('sessionId');
+      expect(step1Result).toHaveProperty('guidance');
+      expect(step1Result.currentStep).toBe(1);
+      expect(step1Result.nextStepNeeded).toBe(true);
+    });
+  });
+
+  describe('Error Handling', () => {
+    it('should handle invalid technique names gracefully', async () => {
+      const input = {
+        problem: 'Test problem',
+        techniques: ['invalid_technique'],
+        timeframe: 'quick',
+      };
+
+      await expect(agent.handleToolCall('plan_thinking_session', input)).rejects.toThrow(
+        'Invalid techniques'
+      );
+    });
+
+    it('should handle missing plan ID', async () => {
+      const input = {
+        planId: 'non_existent_plan',
+        technique: 'six_hats',
+        problem: 'Test',
+        currentStep: 1,
+        totalSteps: 6,
+        output: 'Test output',
+        nextStepNeeded: true,
+      };
+
+      await expect(agent.handleToolCall('execute_thinking_step', input)).rejects.toThrow();
+    });
+
+    it('should validate step numbers', async () => {
+      // Create a valid plan first
+      const planResult = await agent.handleToolCall('plan_thinking_session', {
+        problem: 'Test',
+        techniques: ['random_entry'],
+        timeframe: 'quick',
+      });
+
+      // Try to execute with invalid step number
+      const input = {
+        planId: planResult.planId,
+        technique: 'random_entry',
+        problem: 'Test',
+        currentStep: -1,
+        totalSteps: 3,
+        output: 'Test',
+        nextStepNeeded: true,
+      };
+
+      await expect(agent.handleToolCall('execute_thinking_step', input)).rejects.toThrow();
+    });
+  });
+
+  describe('WebSocket Communication', () => {
+    it('should handle WebSocket upgrade requests', async () => {
+      const request = new Request('http://example.com/mcp', {
+        headers: {
+          Upgrade: 'websocket',
+        },
+      });
+
+      const response = await agent.fetch(request);
+
+      expect(response.status).toBe(101);
+      expect(response.webSocket).toBeDefined();
+    });
+
+    it('should process MCP messages over WebSocket', async () => {
+      const mockWebSocket = {
+        send: vi.fn(),
+        addEventListener: vi.fn(),
+        accept: vi.fn(),
+      };
+
+      // Simulate MCP request
+      const mcpRequest = {
+        jsonrpc: '2.0',
+        method: 'tools/call',
+        params: {
+          name: 'discover_techniques',
+          arguments: {
+            problem: 'Test problem',
+          },
+        },
+        id: 1,
+      };
+
+      // Process the message
+      await agent.handleWebSocketMessage(JSON.stringify(mcpRequest), mockWebSocket);
+
+      expect(mockWebSocket.send).toHaveBeenCalled();
+      const response = JSON.parse(mockWebSocket.send.mock.calls[0][0]);
+      expect(response.jsonrpc).toBe('2.0');
+      expect(response.id).toBe(1);
+      expect(response.result).toBeDefined();
+    });
+  });
+
+  describe('Session Persistence', () => {
+    it('should persist sessions to KV storage', async () => {
+      const planResult = await agent.handleToolCall('plan_thinking_session', {
+        problem: 'Test persistence',
+        techniques: ['six_hats'],
+        timeframe: 'quick',
+      });
+
+      const stepResult = await agent.handleToolCall('execute_thinking_step', {
+        planId: planResult.planId,
+        technique: 'six_hats',
+        problem: 'Test persistence',
+        currentStep: 1,
+        totalSteps: 6,
+        output: 'Blue hat thinking',
+        nextStepNeeded: true,
+        hatColor: 'blue',
+      });
+
+      expect(mockEnv.KV.put).toHaveBeenCalledWith(
+        expect.stringMatching(/^session:/),
+        expect.any(String),
+        expect.any(Object)
+      );
+    });
+
+    it('should retrieve sessions from KV storage', async () => {
+      const mockSession = {
+        id: 'session_123',
+        history: [],
+        planId: 'plan_456',
+      };
+
+      mockEnv.KV.get.mockResolvedValue(mockSession);
+
+      const stepResult = await agent.handleToolCall('execute_thinking_step', {
+        sessionId: 'session_123',
+        planId: 'plan_456',
+        technique: 'po',
+        problem: 'Test',
+        currentStep: 2,
+        totalSteps: 4,
+        output: 'Step 2 output',
+        nextStepNeeded: true,
+      });
+
+      expect(mockEnv.KV.get).toHaveBeenCalledWith('session:session_123', { type: 'json' });
+      expect(stepResult.sessionId).toBe('session_123');
+    });
+  });
+});
+
+// Mock DurableObjectState for testing
+class DurableObjectState {
+  id = { toString: () => 'test-id' };
+  storage = {
+    get: vi.fn(),
+    put: vi.fn(),
+    delete: vi.fn(),
+    list: vi.fn(),
+  };
+}

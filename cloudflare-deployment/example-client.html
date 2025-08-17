@@ -443,7 +443,11 @@ How can we improve team communication in a remote work environment?</textarea
       function displayTechniques(recommendations) {
         const listEl = document.getElementById('techniqueList');
         listEl.style.display = 'block';
-        listEl.innerHTML = '';
+
+        // Clear existing content safely without using innerHTML
+        while (listEl.firstChild) {
+          listEl.removeChild(listEl.firstChild);
+        }
 
         recommendations.forEach(rec => {
           const item = document.createElement('div');

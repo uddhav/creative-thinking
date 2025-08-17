@@ -3,6 +3,12 @@
  */
 
 import * as crypto from 'crypto';
+import {
+  isValidTechnique,
+  getStepCountForTechnique,
+  ValidTechnique,
+  VALID_TECHNIQUES,
+} from '../constants/techniques';
 
 export interface SessionData {
   id: string;
@@ -119,6 +125,12 @@ export class SessionAdapter {
 
   // Plan management
   async createPlan(problem: string, techniques: string[], options: any = {}): Promise<string> {
+    // Validate all techniques before creating the plan
+    const invalidTechniques = techniques.filter(t => !isValidTechnique(t));
+    if (invalidTechniques.length > 0) {
+      throw new Error(`Invalid techniques: ${invalidTechniques.join(', ')}`);
+    }
+
     const planId = this.generatePlanId();
     const plan = {
       id: planId,
@@ -142,7 +154,10 @@ export class SessionAdapter {
 
   private generatePlanId(): string {
     const timestamp = Date.now().toString(36);
-    const random = Math.random().toString(36).substring(2, 9);
+    // Use crypto.randomUUID() for cryptographically secure random generation
+    const uuid = crypto.randomUUID();
+    // Take first 8 characters of UUID for compact ID
+    const random = uuid.replace(/-/g, '').substring(0, 8);
     return `plan_${timestamp}_${random}`;
   }
 
@@ -152,7 +167,8 @@ export class SessionAdapter {
     let stepNumber = 1;
 
     for (const technique of techniques) {
-      const stepCount = this.getStepCountForTechnique(technique);
+      // Use validated step count function
+      const stepCount = getStepCountForTechnique(technique);
       for (let i = 1; i <= stepCount; i++) {
         steps.push({
           stepNumber,
@@ -166,35 +182,5 @@ export class SessionAdapter {
     }
 
     return steps;
-  }
-
-  private getStepCountForTechnique(technique: string): number {
-    // Map technique names to their step counts
-    const stepCounts: Record<string, number> = {
-      six_hats: 6,
-      po: 4,
-      random_entry: 3,
-      scamper: 8,
-      concept_extraction: 4,
-      yes_and: 4,
-      design_thinking: 5,
-      triz: 4,
-      neural_state: 4,
-      temporal_work: 5,
-      cross_cultural: 5,
-      collective_intel: 5,
-      disney_method: 3,
-      nine_windows: 9,
-      quantum_superposition: 6,
-      temporal_creativity: 6,
-      paradoxical_problem: 5,
-      meta_learning: 5,
-      biomimetic_path: 6,
-      first_principles: 4,
-      cultural_integration: 5,
-      neuro_computational: 6,
-    };
-
-    return stepCounts[technique] || 3;
   }
 }

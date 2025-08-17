@@ -24,7 +24,8 @@ async function logError(error: unknown, request: Request, env: Env): Promise<voi
         error instanceof Error
           ? {
               message: error.message,
-              stack: error.stack,
+              // Only include stack traces in development environment
+              ...(env.ENVIRONMENT === 'development' ? { stack: error.stack } : {}),
               name: error.name,
             }
           : { message: String(error) },
@@ -146,14 +147,21 @@ export default {
     } catch (error) {
       console.error('Worker error:', error);
 
-      // Enhanced error handling with stack traces in development
+      // Enhanced error handling - only include details in development
       const errorId = crypto.randomUUID();
+      const isDevelopment = env.ENVIRONMENT === 'development';
+
       const errorResponse = {
         error: 'Internal server error',
-        message: 'An unexpected error occurred. Please contact support with the error ID.',
+        message:
+          isDevelopment && error instanceof Error
+            ? error.message
+            : 'An unexpected error occurred. Please contact support with the error ID.',
         timestamp: new Date().toISOString(),
         path: new URL(request.url).pathname,
         errorId,
+        // Only include stack trace in development
+        ...(isDevelopment && error instanceof Error ? { stack: error.stack } : {}),
       };
 
       // Log to Cloudflare Analytics if available
