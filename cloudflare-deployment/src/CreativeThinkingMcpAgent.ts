@@ -1,14 +1,29 @@
 import { McpAgent } from 'agents/mcp';
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { SessionAdapter } from './adapters/SessionAdapter.js';
 import { TechniqueAdapter } from './adapters/TechniqueAdapter.js';
 import { ExecutionAdapter } from './adapters/ExecutionAdapter.js';
 import { formatErrorResponse } from './utils/errors.js';
+import { ResourceProviderRegistry } from './resources/ResourceProvider.js';
+import { SessionResourceProvider } from './resources/SessionResourceProvider.js';
+import { DocumentationResourceProvider } from './resources/DocumentationResourceProvider.js';
+import { MetricsResourceProvider } from './resources/MetricsResourceProvider.js';
+import { PromptRegistry } from './prompts/PromptRegistry.js';
+import { CreativeWorkshopPrompt } from './prompts/workshop/CreativeWorkshopPrompt.js';
+import { ProblemSolverPrompt } from './prompts/problem/ProblemSolverPrompt.js';
+import { RiskAssessmentPrompt } from './prompts/analysis/RiskAssessmentPrompt.js';
+import { StreamingManager, VisualOutputFormatter } from './streaming/StreamingManager.js';
+import type { StreamingConfig } from './streaming/types.js';
+import { SamplingManager } from './sampling/SamplingManager.js';
+import { IdeaEnhancer } from './sampling/features/IdeaEnhancer.js';
+import type { SamplingCapability } from './sampling/types.js';
 
-export interface Props {
+export interface Props extends Record<string, unknown> {
   userId?: string;
   accessToken?: string;
+  streamingConfig?: StreamingConfig;
+  samplingEnabled?: boolean;
 }
 
 export interface Env {
@@ -16,11 +31,43 @@ export interface Env {
   AI?: any;
 }
 
-export class CreativeThinkingMcpAgent extends McpAgent<Props, Env> {
+// Define the state interface for our Agent
+export interface CreativeThinkingState {
+  sessions: Record<string, any>;
+  currentSessionId?: string;
+  workflows: Record<string, any>;
+  globalMetrics: {
+    totalSessions: number;
+    totalIdeasGenerated: number;
+    averageFlexibilityScore: number;
+    techniqueUsage: Record<string, number>;
+  };
+}
+
+export class CreativeThinkingMcpAgent extends McpAgent<Env, CreativeThinkingState, Props> {
   private sessionAdapter!: SessionAdapter;
   private techniqueAdapter!: TechniqueAdapter;
   private executionAdapter!: ExecutionAdapter;
+  private resourceRegistry!: ResourceProviderRegistry;
+  private promptRegistry!: PromptRegistry;
+  private streamingManager!: StreamingManager;
+  private samplingManager!: SamplingManager;
+  private ideaEnhancer!: IdeaEnhancer;
 
+  // Initial state for the Agent
+  initialState: CreativeThinkingState = {
+    sessions: {},
+    workflows: {},
+    currentSessionId: undefined,
+    globalMetrics: {
+      totalSessions: 0,
+      totalIdeasGenerated: 0,
+      averageFlexibilityScore: 1.0,
+      techniqueUsage: {},
+    },
+  };
+
+  // McpAgent requires server to be a property that returns McpServer
   server = new McpServer({
     name: 'Creative Thinking MCP Server',
     version: '1.0.0',
@@ -33,10 +80,82 @@ export class CreativeThinkingMcpAgent extends McpAgent<Props, Env> {
     this.techniqueAdapter = new TechniqueAdapter();
     this.executionAdapter = new ExecutionAdapter(this.sessionAdapter, this.techniqueAdapter);
 
+    // Initialize streaming manager
+    this.streamingManager = new StreamingManager(
+      this.props.streamingConfig || {
+        bufferFlushInterval: 50,
+        maxConcurrentConnections: 1000,
+        enableCollaboration: true,
+        sse: {
+          keepAliveInterval: 30000,
+          retryInterval: 5000,
+          maxBufferSize: 1024 * 1024,
+        },
+        websocket: {
+          heartbeatInterval: 30000,
+          maxConnectionsPerUser: 5,
+          maxMessageSize: 1024 * 1024,
+        },
+      }
+    );
+
+    // Initialize sampling manager for AI enhancement
+    this.samplingManager = new SamplingManager();
+
+    // Set sampling capability if enabled
+    if (this.props.samplingEnabled !== false) {
+      this.samplingManager.setCapability({
+        supported: true,
+        providers: ['cloudflare-ai', 'openai', 'anthropic'],
+        maxTokens: 4096,
+        defaultPreferences: {
+          intelligencePriority: 0.7,
+          speedPriority: 0.5,
+          costPriority: 0.5,
+        },
+      });
+    }
+
+    // Initialize AI-enhanced features
+    this.ideaEnhancer = new IdeaEnhancer(this.samplingManager);
+
+    // Set up sampling notification handler for streaming
+    this.samplingManager.setNotificationHandler(notification => {
+      this.streamingManager
+        .broadcast({
+          event: 'sampling',
+          data: notification,
+        })
+        .catch(console.error);
+    });
+
+    // Initialize resource providers
+    this.resourceRegistry = new ResourceProviderRegistry();
+    this.resourceRegistry.register(
+      new SessionResourceProvider(this.sessionAdapter, () => this.state)
+    );
+    this.resourceRegistry.register(new DocumentationResourceProvider());
+    this.resourceRegistry.register(new MetricsResourceProvider(() => this.state));
+
+    // Initialize prompt registry and register prompts
+    this.promptRegistry = new PromptRegistry();
+    this.promptRegistry.register(new CreativeWorkshopPrompt());
+    this.promptRegistry.register(new ProblemSolverPrompt());
+    this.promptRegistry.register(new RiskAssessmentPrompt());
+
     // Register the three core MCP tools
     this.registerDiscoverTechniques();
     this.registerPlanThinkingSession();
     this.registerExecuteThinkingStep();
+
+    // Register MCP sampling tools
+    this.registerSamplingTools();
+
+    // Register MCP resources
+    this.registerResources();
+
+    // Register MCP prompts
+    this.registerPrompts();
   }
 
   private registerDiscoverTechniques() {
@@ -376,7 +495,422 @@ export class CreativeThinkingMcpAgent extends McpAgent<Props, Env> {
       },
       async params => {
         try {
-          const result = await this.executionAdapter.executeThinkingStep(params);
+          // Stream progress if we have an active session
+          const sessionId = params.planId;
+
+          // Send visual header for step execution
+          await this.streamingManager.broadcast(
+            VisualOutputFormatter.formatHeader(
+              `Executing ${params.technique} - Step ${params.currentStep}/${params.totalSteps}`,
+              '🧠'
+            )
+          );
+
+          // Execute with progress reporting
+          const result = await this.streamingManager.streamProgress(
+            `execute_step_${params.technique}`,
+            sessionId,
+            params.totalSteps,
+            async reporter => {
+              // Update progress for current step
+              reporter.update(params.currentStep - 1, params.totalSteps, {
+                technique: params.technique,
+                label: `Processing step ${params.currentStep}`,
+              });
+
+              // Execute the actual step
+              const stepResult = await this.executionAdapter.executeThinkingStep(params);
+
+              // Send visual output for the step result
+              if (params.output) {
+                await this.streamingManager.broadcast(
+                  VisualOutputFormatter.formatTechniqueOutput(
+                    params.technique,
+                    params.currentStep,
+                    params.output
+                  )
+                );
+              }
+
+              // Update progress to current step complete
+              reporter.update(params.currentStep, params.totalSteps, {
+                technique: params.technique,
+                label: `Completed step ${params.currentStep}`,
+              });
+
+              // Send state change event
+              await this.streamingManager.sendStateChange({
+                sessionId,
+                path: ['sessions', sessionId, 'currentStep'],
+                oldValue: params.currentStep - 1,
+                newValue: params.currentStep,
+                source: 'server',
+              });
+
+              return stepResult;
+            }
+          );
+
+          // Send completion visual if this is the last step
+          if (!params.nextStepNeeded) {
+            await this.streamingManager.broadcast(VisualOutputFormatter.formatDivider('double'));
+            await this.streamingManager.broadcast(
+              VisualOutputFormatter.formatHeader(`✨ Completed ${params.technique} Technique`, '✅')
+            );
+          }
+
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(result, null, 2),
+              },
+            ],
+          };
+        } catch (error) {
+          // Send error as warning
+          await this.streamingManager.sendWarning({
+            level: 'CRITICAL',
+            type: 'performance',
+            message: `Error in ${params.technique} step ${params.currentStep}: ${(error as Error).message}`,
+            details: { error: (error as Error).stack },
+          });
+
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(formatErrorResponse(error), null, 2),
+              },
+            ],
+          };
+        }
+      }
+    );
+  }
+
+  /**
+   * Convert our content format to MCP-compatible format
+   */
+  private convertToMcpContent(content: any): any {
+    // If it's a string, convert to text content
+    if (typeof content === 'string') {
+      return { type: 'text' as const, text: content };
+    }
+
+    // If it's already a text content object
+    if (content && content.type === 'text') {
+      return content;
+    }
+
+    // If it's an array, convert the first item to text
+    if (Array.isArray(content)) {
+      const first = content[0];
+      if (first && first.type === 'text') {
+        return first;
+      }
+      // For other content types, convert to text representation
+      if (first && first.type === 'resource') {
+        return {
+          type: 'text' as const,
+          text: `[Resource: ${first.resource.uri}${first.resource.text ? ` - ${first.resource.text}` : ''}]`,
+        };
+      }
+      if (first && first.type === 'tool_use') {
+        return {
+          type: 'text' as const,
+          text: `[Tool Use: ${first.toolUse.toolName}(${JSON.stringify(first.toolUse.arguments)})]`,
+        };
+      }
+      // Default to text representation of first item
+      return { type: 'text' as const, text: JSON.stringify(first) };
+    }
+
+    // Default fallback
+    return { type: 'text' as const, text: JSON.stringify(content) };
+  }
+
+  /**
+   * Register MCP prompts with the server
+   */
+  private registerPrompts() {
+    // Creative Workshop Prompt
+    this.server.prompt(
+      'creative_workshop',
+      'Facilitate a complete creative thinking workshop',
+      {
+        topic: z.string().describe('Workshop topic or challenge'),
+        duration: z.string().optional().describe('Duration in minutes (e.g., "60")'),
+        participants: z.string().optional().describe('Number of participants'),
+        objectives: z.string().optional().describe('Comma-separated objectives'),
+      },
+      async (args, extra) => {
+        const prompt = this.promptRegistry.get('creative_workshop');
+        if (!prompt) {
+          throw new Error('Creative workshop prompt not found');
+        }
+
+        // Convert string arguments to proper types
+        const workshopArgs = {
+          topic: args.topic,
+          duration: args.duration ? parseInt(args.duration) : undefined,
+          participants: args.participants,
+          objectives: args.objectives ? args.objectives.split(',').map(s => s.trim()) : undefined,
+        };
+
+        const result = await prompt.generate(workshopArgs);
+
+        // Convert our prompt format to MCP format
+        return {
+          description: result.description,
+          messages: result.messages.map(msg => ({
+            role: msg.role,
+            content: this.convertToMcpContent(msg.content),
+          })),
+        };
+      }
+    );
+
+    // Problem Solver Prompt
+    this.server.prompt(
+      'problem_solver',
+      'Comprehensive problem-solving wizard',
+      {
+        problem: z.string().describe('Problem description'),
+        context: z.string().optional().describe('Additional context'),
+        desired_outcome: z.string().optional().describe('What success looks like'),
+      },
+      async (args, extra) => {
+        const prompt = this.promptRegistry.get('problem_solver');
+        if (!prompt) {
+          throw new Error('Problem solver prompt not found');
+        }
+
+        const result = await prompt.generate(args);
+
+        // Convert our prompt format to MCP format
+        return {
+          description: result.description,
+          messages: result.messages.map(msg => ({
+            role: msg.role,
+            content: this.convertToMcpContent(msg.content),
+          })),
+        };
+      }
+    );
+
+    // Risk Assessment Prompt
+    this.server.prompt(
+      'risk_assessment',
+      'Comprehensive risk and opportunity analysis',
+      {
+        idea: z.string().describe('Idea or solution to assess'),
+        context: z.string().optional().describe('Implementation context'),
+        risk_tolerance: z.string().optional().describe('Risk tolerance level (low/moderate/high)'),
+      },
+      async (args, extra) => {
+        const prompt = this.promptRegistry.get('risk_assessment');
+        if (!prompt) {
+          throw new Error('Risk assessment prompt not found');
+        }
+
+        const result = await prompt.generate(args);
+
+        // Convert our prompt format to MCP format
+        return {
+          description: result.description,
+          messages: result.messages.map(msg => ({
+            role: msg.role,
+            content: this.convertToMcpContent(msg.content),
+          })),
+        };
+      }
+    );
+
+    console.log(`Registered ${this.promptRegistry.list().length} prompts`);
+  }
+
+  /**
+   * Register MCP sampling tools
+   */
+  private registerSamplingTools() {
+    // Tool to check sampling capability
+    this.server.tool(
+      'sampling_capability',
+      'Check if MCP Sampling is available and get capability details',
+      {},
+      async () => {
+        const capability = this.samplingManager.getCapability();
+        const stats = this.samplingManager.getStats();
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(
+                {
+                  available: this.samplingManager.isAvailable(),
+                  capability,
+                  stats,
+                  pendingRequests: this.samplingManager.getPendingCount(),
+                },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      }
+    );
+
+    // Tool to enhance ideas with AI
+    this.server.tool(
+      'enhance_idea',
+      'Enhance a creative idea using AI',
+      {
+        idea: z.string().describe('The idea to enhance'),
+        context: z.string().optional().describe('Additional context'),
+        style: z.enum(['creative', 'analytical', 'practical', 'innovative']).optional(),
+        depth: z.enum(['shallow', 'moderate', 'deep']).optional(),
+        addExamples: z.boolean().optional(),
+        addRisks: z.boolean().optional(),
+      },
+      async params => {
+        try {
+          const enhanced = await this.ideaEnhancer.enhanceIdea(params.idea, params.context, {
+            style: params.style,
+            depth: params.depth,
+            addExamples: params.addExamples,
+            addRisks: params.addRisks,
+          });
+
+          // Update metrics
+          this.state.globalMetrics.totalIdeasGenerated++;
+
+          return {
+            content: [
+              {
+                type: 'text',
+                text: enhanced,
+              },
+            ],
+          };
+        } catch (error) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(formatErrorResponse(error), null, 2),
+              },
+            ],
+          };
+        }
+      }
+    );
+
+    // Tool to generate idea variations
+    this.server.tool(
+      'generate_variations',
+      'Generate variations of an idea',
+      {
+        idea: z.string().describe('The original idea'),
+        count: z.number().min(1).max(10).default(3).describe('Number of variations'),
+        style: z.enum(['similar', 'diverse', 'opposite']).optional(),
+      },
+      async params => {
+        try {
+          const variations = await this.ideaEnhancer.generateVariations(
+            params.idea,
+            params.count,
+            params.style
+          );
+
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(
+                  {
+                    original: params.idea,
+                    variations,
+                    count: variations.length,
+                  },
+                  null,
+                  2
+                ),
+              },
+            ],
+          };
+        } catch (error) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(formatErrorResponse(error), null, 2),
+              },
+            ],
+          };
+        }
+      }
+    );
+
+    // Tool to synthesize multiple ideas
+    this.server.tool(
+      'synthesize_ideas',
+      'Combine multiple ideas into a unified solution',
+      {
+        ideas: z.array(z.string()).min(2).describe('Ideas to synthesize'),
+        goal: z.string().optional().describe('Overall goal for synthesis'),
+      },
+      async params => {
+        try {
+          const synthesis = await this.ideaEnhancer.synthesizeIdeas(params.ideas, params.goal);
+
+          return {
+            content: [
+              {
+                type: 'text',
+                text: synthesis,
+              },
+            ],
+          };
+        } catch (error) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(formatErrorResponse(error), null, 2),
+              },
+            ],
+          };
+        }
+      }
+    );
+
+    // Tool to test direct sampling
+    this.server.tool(
+      'test_sampling',
+      'Test MCP Sampling with a custom prompt',
+      {
+        prompt: z.string().describe('The prompt to send'),
+        temperature: z.number().min(0).max(1).optional(),
+        maxTokens: z.number().min(1).max(4096).optional(),
+      },
+      async params => {
+        try {
+          if (!this.samplingManager.isAvailable()) {
+            throw new Error('MCP Sampling is not available');
+          }
+
+          const result = await this.samplingManager.requestSampling(
+            {
+              messages: [{ role: 'user', content: params.prompt }],
+              temperature: params.temperature,
+              maxTokens: params.maxTokens,
+            },
+            'test_sampling'
+          );
+
           return {
             content: [
               {
@@ -397,58 +931,216 @@ export class CreativeThinkingMcpAgent extends McpAgent<Props, Env> {
         }
       }
     );
+
+    console.log('Registered 5 MCP Sampling tools');
   }
 
-  // WebSocket handlers for real-time communication
-  async onConnect(connection: any, ctx: any) {
-    console.log(`Client connected: ${connection.id}`);
-    // Accept the connection
-    connection.accept();
+  /**
+   * Register MCP resources with the server
+   */
+  private async registerResources() {
+    // Get all resources from all providers
+    const allResources = await this.resourceRegistry.listAllResources();
 
-    // Send initial state if needed
-    connection.send(
-      JSON.stringify({
-        type: 'connected',
-        message: 'Connected to Creative Thinking MCP Server',
-        version: '1.0.0',
-      })
-    );
-  }
-
-  async onMessage(connection: any, message: string | ArrayBuffer) {
-    // Handle incoming WebSocket messages
-    if (typeof message === 'string') {
-      try {
-        const data = JSON.parse(message);
-
-        // Handle different message types
-        if (data.type === 'ping') {
-          connection.send(JSON.stringify({ type: 'pong' }));
-        } else if (data.type === 'progress') {
-          // Stream progress updates during long operations
-          connection.send(
-            JSON.stringify({
-              type: 'progress',
-              data: data,
-            })
-          );
+    // Register each resource with the MCP server
+    for (const resource of allResources) {
+      this.server.resource(resource.name, resource.uri, async (uri: URL) => {
+        const content = await this.resourceRegistry.readResource(uri.toString());
+        if (!content) {
+          throw new Error(`Resource not found: ${uri.toString()}`);
         }
-      } catch (error) {
-        connection.send(
-          JSON.stringify({
-            type: 'error',
-            message: 'Invalid message format',
-          })
-        );
-      }
+        return {
+          contents: [
+            content.text
+              ? {
+                  uri: content.uri,
+                  mimeType: content.mimeType,
+                  text: content.text,
+                }
+              : {
+                  uri: content.uri,
+                  mimeType: content.mimeType,
+                  blob: content.blob!,
+                },
+          ],
+        };
+      });
+    }
+
+    // Register resource templates for dynamic URIs
+    const templates = await this.resourceRegistry.listAllTemplates();
+    for (const template of templates) {
+      // Create a proper ResourceTemplate instance
+      const resourceTemplate = new ResourceTemplate(template.uriTemplate, {
+        list: async () => {
+          // Return possible URIs for this template
+          const resources = await this.resourceRegistry.listAllResources();
+          const filtered = resources
+            .filter((r: { uri: string }) => r.uri.startsWith(template.uriTemplate.split('/')[0]))
+            .map((r: { uri: string; name: string; mimeType: string }) => ({
+              uri: r.uri,
+              name: r.name,
+              mimeType: r.mimeType,
+            }));
+
+          return {
+            resources: filtered,
+          };
+        },
+      });
+
+      this.server.resource(
+        template.name,
+        resourceTemplate,
+        {
+          mimeType: template.mimeType,
+          description: template.description,
+        },
+        async (uri: URL, variables: { [key: string]: string | string[] }) => {
+          // The URI has already been resolved with the template variables
+          const content = await this.resourceRegistry.readResource(uri.toString());
+          if (!content) {
+            throw new Error(`Resource not found: ${uri.toString()}`);
+          }
+
+          return {
+            contents: [
+              content.text
+                ? {
+                    uri: content.uri,
+                    mimeType: content.mimeType,
+                    text: content.text,
+                  }
+                : {
+                    uri: content.uri,
+                    mimeType: content.mimeType,
+                    blob: content.blob!,
+                  },
+            ],
+          };
+        }
+      );
+    }
+
+    console.log(`Registered ${allResources.length} resources and ${templates.length} templates`);
+  }
+
+  // Lifecycle method: Called when state is updated
+  onStateUpdate(state: CreativeThinkingState | undefined, source: any): void {
+    if (state) {
+      console.log('State updated:', {
+        sessions: Object.keys(state.sessions).length,
+        totalSessions: state.globalMetrics.totalSessions,
+        source: source === 'server' ? 'server' : 'client',
+      });
     }
   }
 
-  async onClose(connection: any, code: number, reason: string) {
-    console.log(`Client disconnected: ${connection.id}, code: ${code}, reason: ${reason}`);
+  // Lifecycle method: Called when Agent starts
+  async onStart(): Promise<void> {
+    console.log('Creative Thinking MCP Agent started');
+    await this.init();
   }
 
-  async onError(connection: any, error: Error) {
-    console.error(`WebSocket error for ${connection.id}:`, error);
+  // Override fetch to handle streaming endpoints
+  async fetch(request: Request): Promise<Response> {
+    const url = new URL(request.url);
+
+    // Handle streaming endpoints
+    if (url.pathname.startsWith('/stream')) {
+      return this.handleStreamingRequest(request);
+    }
+
+    // Handle streaming stats endpoint
+    if (url.pathname === '/stream/stats') {
+      return new Response(JSON.stringify(this.getStreamingStats()), {
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Otherwise, let McpAgent handle the request
+    return super.fetch(request);
+  }
+
+  // Handle WebSocket messages through McpAgent
+  async webSocketMessage(ws: WebSocket, event: ArrayBuffer | string): Promise<void> {
+    // McpAgent handles the MCP protocol, but we can add custom handling if needed
+    await super.webSocketMessage(ws, event);
+
+    // Update metrics after processing
+    const state = this.state;
+    if (state) {
+      state.globalMetrics.totalSessions = Object.keys(state.sessions).length;
+      this.setState(state);
+    }
+  }
+
+  // Handle WebSocket errors
+  async webSocketError(ws: WebSocket, error: unknown): Promise<void> {
+    console.error('WebSocket error:', error);
+    await super.webSocketError(ws, error);
+  }
+
+  // Handle WebSocket close
+  async webSocketClose(
+    ws: WebSocket,
+    code: number,
+    reason: string,
+    wasClean: boolean
+  ): Promise<void> {
+    console.log(`WebSocket closed: code=${code}, reason=${reason}, clean=${wasClean}`);
+    await super.webSocketClose(ws, code, reason, wasClean);
+  }
+
+  // Override onError from McpAgent base class
+  onError(error: Error) {
+    console.error('MCP Agent error:', error);
+    return {
+      status: 500,
+      message: 'Internal server error',
+    };
+  }
+
+  /**
+   * Handle streaming requests (SSE or WebSocket)
+   * This method should be called from the main worker for streaming endpoints
+   */
+  async handleStreamingRequest(request: Request): Promise<Response> {
+    // Generate a unique connection ID
+    const connectionId = crypto.randomUUID();
+
+    // Extract session ID from query params or headers
+    const url = new URL(request.url);
+    const sessionId = url.searchParams.get('sessionId');
+
+    // Subscribe to session updates if session ID provided
+    if (sessionId) {
+      this.streamingManager.subscribeToSession(connectionId, sessionId);
+    }
+
+    // Handle the streaming request
+    const response = await this.streamingManager.handleRequest(request, connectionId);
+
+    // Clean up on disconnect
+    if (sessionId) {
+      // The cleanup will happen when the connection closes
+      // StreamingManager handles this internally
+    }
+
+    return response;
+  }
+
+  /**
+   * Get streaming statistics
+   */
+  getStreamingStats() {
+    return this.streamingManager.getStats();
+  }
+
+  /**
+   * Broadcast a custom event to all connected clients
+   */
+  async broadcastEvent(event: any) {
+    await this.streamingManager.broadcast(event);
   }
 }

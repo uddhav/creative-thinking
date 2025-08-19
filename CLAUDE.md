@@ -6,8 +6,9 @@ repository.
 ## Project Overview
 
 This is a **Creative Thinking MCP Server** implementing a three-layer tool architecture for
-structured problem-solving. The server provides twenty-three enhanced thinking techniques through a
-unified framework that combines generative creativity with systematic risk assessment.
+structured problem-solving. The server provides twenty-four enhanced thinking techniques through a
+unified framework that combines generative creativity with systematic risk assessment and analytical
+verification.
 
 ## Quick Reference
 
@@ -29,7 +30,7 @@ npm run format       # Run prettier to format all files
 - **Three tools only**: `discover_techniques`, `plan_thinking_session`, `execute_thinking_step`
 - **Three-layer architecture**: Discovery → Planning → Execution
 - **MCP Protocol**: stdout for JSON-RPC only, stderr for visual output
-- **21 thinking techniques** with specific step counts
+- **24 thinking techniques** with specific step counts
 - **Unified framework**: All techniques support risk/adversarial fields
 - **Sequential execution**: Server implements sequential-only execution for maximum coherence
 - **Session resilience**: Base64 encoding allows sessions to survive server restarts
@@ -96,13 +97,19 @@ When working with this codebase:
   feedback integration → meta-synthesis)
 - Biomimetic Path Management: 6 steps (immune response → evolutionary variation → ecosystem dynamics
   → swarm intelligence → resilience patterns → natural synthesis)
-- First Principles: 4 steps (deconstruct → fundamental truths → reason up → reconstruct)
+- First Principles: 5 steps (deconstruct → foundation identification → assumption challenging →
+  reconstruction → solution synthesis)
 - Cultural Path: 5 steps (landscape mapping → context sensitivity → bridge building → adaptive
   navigation → synthesis)
-- Cultural Creativity: 4 steps (cultural mapping → touchpoint identification → bridge building →
-  authentic synthesis)
 - NeuroComputational: 6 steps (neural mapping → pattern generation → interference analysis →
   computational synthesis → optimization cycles → convergence)
+- Criteria-Based Analysis: 5 steps (baseline assessment → cognitive criteria → motivational analysis
+  → reality monitoring → validity synthesis)
+- Linguistic Forensics: 6 steps (content mapping → pattern recognition → pronoun analysis →
+  complexity assessment → emotional profiling → coherence verification)
+- Competing Hypotheses: 8 steps (hypothesis generation → evidence mapping → matrix construction →
+  diagnostic assessment → deception modeling → Bayesian update → sensitivity analysis → decision
+  synthesis)
 
 ### PR Integration Checklist
 

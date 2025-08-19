@@ -157,7 +157,7 @@ describe('SessionAdapter', () => {
 
   describe('generatePlanId', () => {
     it('should use crypto.randomUUID for secure random generation', async () => {
-      const crypto = await import('crypto');
+      const crypto = await import('node:crypto');
 
       await adapter.createPlan('test', ['six_hats']);
 

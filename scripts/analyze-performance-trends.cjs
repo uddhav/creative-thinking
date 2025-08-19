@@ -74,13 +74,15 @@ function analyzeTrends(benchmarkSets) {
       trends.get(name).push({
         value: benchmark.value,
         unit: benchmark.unit,
-        timestamp: benchmark.timestamp || (() => {
-          try {
-            return new Date(fs.statSync(file).mtime).toISOString();
-          } catch {
-            return new Date().toISOString();
-          }
-        })(),
+        timestamp:
+          benchmark.timestamp ||
+          (() => {
+            try {
+              return new Date(fs.statSync(file).mtime).toISOString();
+            } catch {
+              return new Date().toISOString();
+            }
+          })(),
         file,
         metadata: benchmark.extra || benchmark.metadata,
       });

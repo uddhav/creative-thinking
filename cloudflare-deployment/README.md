@@ -45,10 +45,68 @@ npm run deploy
 This implementation uses:
 
 - **Cloudflare Agents SDK** with `McpAgent` class for MCP protocol support
+- **Multi-Transport Architecture**:
+  - **Server-Sent Events (SSE)** for MCP protocol streaming at `/mcp`
+  - **HTTP API** for standard MCP requests at `/api`
+  - **WebSocket** for real-time bidirectional MCP communication at `/ws`
+  - **Streaming Architecture** for real-time progress updates at `/stream`
 - **Durable Objects** for session state persistence
 - **WebSocket Hibernation** for cost-efficient real-time connections (1000x cost savings)
 - **KV Storage** for session data
-- **OAuth Provider** for authentication
+- **OAuth Provider** for authentication (optional)
+
+### 📡 Streaming Architecture
+
+The server includes a comprehensive streaming architecture for real-time updates:
+
+#### Transport Options
+
+1. **Server-Sent Events (SSE)** at `/stream`
+   - One-way server-to-client streaming
+   - Automatic reconnection support
+   - Keep-alive heartbeats
+   - Progress tracking for long operations
+
+2. **WebSocket** at `/stream` (with `Upgrade: websocket`)
+   - Bidirectional communication
+   - Lower latency than SSE
+   - RPC support for interactive operations
+   - Real-time collaboration features
+
+#### Streaming Events
+
+- **Progress Events**: Track long-running operations with percentage, ETA, and metadata
+- **State Changes**: Real-time synchronization of session state
+- **Visual Output**: Rich terminal-like output with colors and formatting
+- **Warnings**: Risk level notifications (SAFE, CAUTION, WARNING, CRITICAL)
+- **Collaboration**: Multi-user session support with presence and activity tracking
+
+#### Visual Output Features
+
+The streaming system provides rich visual output:
+
+- Headers with icons and colors
+- Progress bars with percentage tracking
+- Divider lines (solid, dashed, double)
+- Technique-specific output formatting
+- Warning messages with severity indicators
+
+#### Usage Example
+
+````javascript
+// Connect via SSE
+const eventSource = new EventSource('/stream?sessionId=abc123');
+eventSource.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  console.log('Streaming event:', data);
+};
+
+// Or connect via WebSocket
+const ws = new WebSocket('wss://your-server.workers.dev/stream?sessionId=abc123');
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  console.log('WebSocket event:', data);
+};
 
 ## 🔧 Configuration
 
@@ -63,7 +121,7 @@ LOG_LEVEL = "info"
 # Authentication - Replace these in production
 AUTH_DEMO_USERNAME = "demo"
 AUTH_DEMO_API_KEY = "demo-api-key"
-```
+````
 
 **Important**: For production, use Cloudflare secrets instead of plain text:
 
@@ -83,11 +141,106 @@ pattern = "your-domain.com/*"
 zone_name = "your-domain.com"
 ```
 
+## 🤖 MCP Sampling (AI Enhancement)
+
+The server supports MCP Sampling protocol for AI-powered enhancement of creative thinking sessions.
+
+### Features
+
+- **Idea Enhancement**: Improve and expand creative ideas with AI
+- **Variation Generation**: Create multiple variations of ideas
+- **Idea Synthesis**: Combine multiple ideas into unified solutions
+- **Custom Sampling**: Direct access to AI models for custom prompts
+
+### Sampling Tools
+
+1. **sampling_capability**: Check if sampling is available
+2. **enhance_idea**: Enhance a single idea with various styles and depths
+3. **generate_variations**: Create variations (similar, diverse, or opposite)
+4. **synthesize_ideas**: Combine multiple ideas into one solution
+5. **test_sampling**: Test direct AI sampling with custom prompts
+
+### Configuration
+
+Enable sampling by setting the `samplingEnabled` prop when creating the agent:
+
+```javascript
+const agent = new CreativeThinkingMcpAgent({
+  samplingEnabled: true, // Enable AI features
+  // Other props...
+});
+```
+
+### Example Usage
+
+```javascript
+// Enhance an idea
+const enhanced = await agent.tools.enhance_idea({
+  idea: 'Create a mobile app for gardeners',
+  style: 'innovative',
+  depth: 'deep',
+  addExamples: true,
+  addRisks: true,
+});
+
+// Generate variations
+const variations = await agent.tools.generate_variations({
+  idea: 'Virtual reality training',
+  count: 5,
+  style: 'diverse',
+});
+
+// Synthesize ideas
+const synthesis = await agent.tools.synthesize_ideas({
+  ideas: ['Use AI for personalization', 'Implement gamification', 'Add social features'],
+  goal: 'Increase user engagement',
+});
+```
+
+### Fallback Behavior
+
+When sampling is unavailable, the system gracefully falls back to:
+
+- Basic enhancement using templates
+- Rule-based variation generation
+- Simple combination for synthesis
+
+This ensures the server remains functional even without AI capabilities.
+
 ## 🔌 Connecting Clients
+
+### MCP Server-Sent Events (SSE) Connection
+
+Connect MCP clients via SSE (primary transport):
+
+```
+https://your-server.workers.dev/mcp
+```
+
+This endpoint supports the full MCP protocol over Server-Sent Events.
+
+### HTTP API Connection
+
+Standard HTTP requests:
+
+```javascript
+fetch('https://your-server.workers.dev/api/tools/call', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    jsonrpc: '2.0',
+    method: 'tools/call',
+    params: {
+      name: 'discover_techniques',
+      arguments: { problem: 'Your problem here' },
+    },
+  }),
+});
+```
 
 ### WebSocket Connection
 
-Connect directly via WebSocket:
+For real-time bidirectional MCP communication:
 
 ```javascript
 const ws = new WebSocket('wss://your-server.workers.dev/ws');
@@ -103,14 +256,6 @@ ws.onopen = () => {
     })
   );
 };
-```
-
-### MCP Client Connection
-
-Connect any MCP client to:
-
-```
-https://your-server.workers.dev/mcp
 ```
 
 ### OAuth Flow

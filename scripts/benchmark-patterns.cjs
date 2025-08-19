@@ -75,12 +75,12 @@ benchmarkPatterns.forEach((pattern, index) => {
   try {
     // Test the regex is valid
     new RegExp(pattern.regex);
-    
+
     // Ensure required properties exist
     if (!pattern.name || !pattern.type || !pattern.extract) {
       throw new Error(`Pattern at index ${index} missing required properties`);
     }
-    
+
     // Test the extract function with a sample match
     if (pattern.regex.source.includes('(\\d+)')) {
       const testMatch = ['full match', '50'];

@@ -2,9 +2,9 @@ name: CI Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 env:
@@ -114,7 +114,7 @@ jobs:
           node dist/index.js &
           CLI_PID=$!
           sleep 2
-          
+
           if kill -0 $CLI_PID 2>/dev/null; then
             kill $CLI_PID
             echo "✅ CLI started successfully"

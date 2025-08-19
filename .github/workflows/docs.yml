@@ -2,7 +2,7 @@ name: Documentation
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
     paths:
       - 'src/**'
       - 'README.md'
@@ -15,7 +15,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: "pages"
+  group: 'pages'
   cancel-in-progress: false
 
 jobs:
@@ -51,7 +51,7 @@ jobs:
         run: |
           # Create docs directory
           mkdir -p docs/api
-          
+
           # Generate TypeDoc documentation
           npx typedoc src/index.ts \
             --out docs/api \
@@ -65,18 +65,18 @@ jobs:
         run: |
           cat > docs/index.md << 'EOF'
           # Creative Thinking MCP Tool Documentation
-          
+
           Welcome to the Creative Thinking MCP Tool documentation!
-          
+
           ## 📚 Documentation Sections
-          
+
           - [Getting Started](../README.md)
           - [API Reference](./api/README.md)
           - [Session Management](../examples/session-management.md)
           - [Export Formats](../examples/export-formats.md)
-          
+
           ## 🧠 Thinking Techniques
-          
+
           ### Available Techniques
           1. **Six Thinking Hats** - Systematic perspective analysis
           2. **Provocative Operation (PO)** - Challenge assumptions
@@ -84,21 +84,21 @@ jobs:
           4. **SCAMPER** - Systematic transformations
           5. **Concept Extraction** - Pattern transfer
           6. **Yes, And...** - Collaborative ideation
-          
+
           ## 🚀 Quick Start
-          
+
           \`\`\`bash
           # Install globally
           npm install -g creative-thinking
-          
+
           # Or use with npx
           npx creative-thinking
           \`\`\`
-          
+
           ## 🔧 Configuration
-          
+
           Configure in Claude Desktop or other MCP-compatible tools:
-          
+
           \`\`\`json
           {
             "mcpServers": {
@@ -109,33 +109,33 @@ jobs:
             }
           }
           \`\`\`
-          
+
           ## 📖 Examples
-          
+
           Visit our [examples directory](https://github.com/uddhav/creative-thinking/tree/main/examples) for detailed usage examples.
-          
+
           ## 🤝 Contributing
-          
+
           See our [contribution guidelines](https://github.com/uddhav/creative-thinking/blob/main/CONTRIBUTING.md).
-          
+
           ---
-          
+
           Generated on $(date)
           EOF
 
       - name: 🎨 Generate technique guides
         run: |
           mkdir -p docs/techniques
-          
+
           # Six Hats guide
           cat > docs/techniques/six-hats.md << 'EOF'
           # Six Thinking Hats Technique
-          
+
           ## Overview
           Edward de Bono's Six Thinking Hats method for comprehensive perspective analysis.
-          
+
           ## Hat Colors and Focus
-          
+
           | Hat | Color | Focus | Enhanced Focus |
           |-----|-------|-------|----------------|
           | 🔵 | Blue | Process control | Meta-uncertainty awareness |
@@ -144,9 +144,9 @@ jobs:
           | 🟡 | Yellow | Optimism & benefits | Positive black swans |
           | ⚫ | Black | Critical judgment | Catastrophic discontinuities |
           | 🟢 | Green | Creativity | Antifragile innovations |
-          
+
           ## Usage Example
-          
+
           \`\`\`json
           {
             "technique": "six_hats",

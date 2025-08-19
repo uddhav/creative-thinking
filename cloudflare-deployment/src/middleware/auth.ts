@@ -6,6 +6,7 @@ export interface TokenData {
   userId: string;
   createdAt: number;
   expiresAt: number;
+  lastActivity?: number;
   scope?: string;
   metadata?: Record<string, any>;
 }
