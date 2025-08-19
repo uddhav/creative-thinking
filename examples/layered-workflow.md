@@ -3,6 +3,7 @@
 This example demonstrates the three-layer architecture in action.
 
 ## Scenario
+
 Improving customer retention for a subscription software product with 15% monthly churn.
 
 ## Step 1: Discovery Layer
@@ -129,7 +130,7 @@ Based on the recommendations, let's create a structured workflow:
       "description": "Combine: Merge with other ideas or functions",
       "expectedOutputs": ["Ideas for combine", "Risk assessment"],
       "riskConsiderations": ["What could go wrong with combine?"]
-    },
+    }
     // ... continues for all SCAMPER actions
   ],
   "estimatedSteps": 12,

@@ -34,7 +34,7 @@ class PerformanceReporter {
       if (match) {
         const data = pattern.extract(match);
         const label = data.count ? `${pattern.name} (${data.count})` : pattern.name;
-        
+
         return {
           name: label,
           value: duration,

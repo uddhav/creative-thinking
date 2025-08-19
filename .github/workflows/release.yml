@@ -38,14 +38,14 @@ jobs:
           else
             VERSION="${{ github.ref_name }}"
           fi
-          
+
           # Validate version format
           if ! echo "$VERSION" | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+)?$'; then
             echo "❌ Invalid version format: $VERSION"
             echo "Version must be in format: vX.Y.Z or vX.Y.Z-suffix"
             exit 1
           fi
-          
+
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "📦 Building release for version: ${VERSION}"
 
@@ -79,7 +79,7 @@ jobs:
             echo "### 👥 Contributors" >> RELEASE_NOTES.md
             git log $LAST_TAG..HEAD --pretty=format:"%an" | sort -u | sed 's/^/- @/' >> RELEASE_NOTES.md
           fi
-          
+
           echo "Release notes generated"
 
       - name: 🚀 Create GitHub Release
@@ -131,13 +131,13 @@ jobs:
         run: |
           # Create distribution directory
           mkdir -p creative-thinking-${{ matrix.platform }}
-          
+
           # Copy built files
           cp -r dist/* creative-thinking-${{ matrix.platform }}/
           cp package.json creative-thinking-${{ matrix.platform }}/
           cp README.md creative-thinking-${{ matrix.platform }}/
           cp LICENSE creative-thinking-${{ matrix.platform }}/ || true
-          
+
           # Create minimal package.json for distribution
           node -e "
           const pkg = require('./package.json');

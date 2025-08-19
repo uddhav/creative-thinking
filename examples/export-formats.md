@@ -1,8 +1,11 @@
 # Export Formats Guide
 
-The Creative Thinking MCP Tool supports exporting your thinking sessions in three formats: **Markdown**, **JSON**, and **CSV**. Each format serves different use cases and provides varying levels of detail.
+The Creative Thinking MCP Tool supports exporting your thinking sessions in three formats:
+**Markdown**, **JSON**, and **CSV**. Each format serves different use cases and provides varying
+levels of detail.
 
 ## Table of Contents
+
 - [Export Command Usage](#export-command-usage)
 - [Markdown Export](#markdown-export)
 - [JSON Export](#json-export)
@@ -24,14 +27,15 @@ To export a session, use the `sessionOperation: 'export'` with the following opt
   "sessionOperation": "export",
   "exportOptions": {
     "sessionId": "session_123abc",
-    "format": "markdown"  // or "json" or "csv"
+    "format": "markdown" // or "json" or "csv"
   }
 }
 ```
 
 ## Markdown Export
 
-Markdown export creates a human-readable document perfect for reports, documentation, or sharing insights with others.
+Markdown export creates a human-readable document perfect for reports, documentation, or sharing
+insights with others.
 
 ### Example Output
 
@@ -44,12 +48,14 @@ Markdown export creates a human-readable document perfect for reports, documenta
 **Status**: Completed (6/6 steps)
 
 ## Session Overview
+
 - **Duration**: 45 minutes
 - **Steps Completed**: 6/6
 - **Branches**: 2
 - **Insights Generated**: 5
 
 ## Performance Metrics
+
 - **Creativity Score**: 75
 - **Risks Identified**: 8
 - **Antifragile Features**: 3
@@ -57,28 +63,35 @@ Markdown export creates a human-readable document perfect for reports, documenta
 ## Thinking Process
 
 ### 🔵 Step 1
-*January 15, 2024 at 10:00 AM*
+
+_January 15, 2024 at 10:00 AM_
 
 **BLUE HAT - Process Control**
 
-We need to analyze our collaboration challenges systematically. The goal is to identify concrete improvements that can be implemented within Q1.
+We need to analyze our collaboration challenges systematically. The goal is to identify concrete
+improvements that can be implemented within Q1.
 
 ### ⚪ Step 2
-*January 15, 2024 at 10:05 AM*
+
+_January 15, 2024 at 10:05 AM_
 
 **WHITE HAT - Facts & Information**
 
-Current facts: 8 team members across 3 time zones, average response time 48 hours, 2 weekly meetings with 60% attendance.
+Current facts: 8 team members across 3 time zones, average response time 48 hours, 2 weekly meetings
+with 60% attendance.
 
 #### ⚠️ Risks Identified
+
 - Communication delays affecting project timelines
 - Meeting fatigue leading to low engagement
 
 #### ✅ Mitigations
+
 - Implement async communication protocols
 - Record all meetings for later viewing
 
 ## Key Insights
+
 1. Asynchronous communication is critical for distributed teams
 2. Time zone awareness must be built into our workflows
 3. Meeting fatigue can be reduced with better agenda management
@@ -86,10 +99,12 @@ Current facts: 8 team members across 3 time zones, average response time 48 hour
 5. Regular social interactions improve team cohesion
 
 ---
-*Exported from Creative Thinking MCP Tool*
+
+_Exported from Creative Thinking MCP Tool_
 ```
 
 ### Features
+
 - Rich formatting with emojis for visual appeal
 - Technique-specific sections (hat colors, SCAMPER actions, etc.)
 - Risk and mitigation tracking
@@ -98,6 +113,7 @@ Current facts: 8 team members across 3 time zones, average response time 48 hour
 - Key insights highlighted
 
 ### Best For
+
 - Sharing results with stakeholders
 - Creating documentation
 - Personal reflection and review
@@ -105,7 +121,8 @@ Current facts: 8 team members across 3 time zones, average response time 48 hour
 
 ## JSON Export
 
-JSON export provides complete session data in a structured format, ideal for programmatic processing and analysis.
+JSON export provides complete session data in a structured format, ideal for programmatic processing
+and analysis.
 
 ### Example Output
 
@@ -172,6 +189,7 @@ JSON export provides complete session data in a structured format, ideal for pro
 ```
 
 ### Features
+
 - Complete session data preservation
 - Structured metadata and statistics
 - Enhanced metrics with categorization
@@ -180,6 +198,7 @@ JSON export provides complete session data in a structured format, ideal for pro
 - Supports partial exports via options
 
 ### Best For
+
 - Data analysis and visualization
 - Integration with other tools
 - Backup and archival
@@ -213,6 +232,7 @@ session_789,Cost reduction,Random Entry,30,3/3,65,4,3
 ```
 
 ### Features
+
 - Dynamic column generation based on technique
 - Proper CSV escaping for commas and quotes
 - Array data joined with semicolons
@@ -220,6 +240,7 @@ session_789,Cost reduction,Random Entry,30,3/3,65,4,3
 - Easy import into Excel/Google Sheets
 
 ### Best For
+
 - Data analysis in spreadsheets
 - Creating charts and graphs
 - Comparative session analysis
@@ -229,19 +250,29 @@ session_789,Cost reduction,Random Entry,30,3/3,65,4,3
 ## Use Cases
 
 ### 1. Project Documentation
-Export completed sessions as **Markdown** to include in project documentation, wikis, or knowledge bases.
+
+Export completed sessions as **Markdown** to include in project documentation, wikis, or knowledge
+bases.
 
 ### 2. Performance Analytics
-Export multiple sessions as **CSV** to analyze trends, measure improvement, and identify patterns across thinking sessions.
+
+Export multiple sessions as **CSV** to analyze trends, measure improvement, and identify patterns
+across thinking sessions.
 
 ### 3. Tool Integration
-Export as **JSON** to integrate with other tools, build custom visualizations, or create automated workflows.
+
+Export as **JSON** to integrate with other tools, build custom visualizations, or create automated
+workflows.
 
 ### 4. Stakeholder Reports
-Export as **Markdown** with custom templates to create professional reports for management or clients.
+
+Export as **Markdown** with custom templates to create professional reports for management or
+clients.
 
 ### 5. Research and Analysis
-Export as **JSON** for detailed analysis of thinking patterns, technique effectiveness, and insight generation.
+
+Export as **JSON** for detailed analysis of thinking patterns, technique effectiveness, and insight
+generation.
 
 ## Export Options
 
@@ -250,7 +281,7 @@ All export formats support these options:
 ```typescript
 {
   includeMetadata?: boolean;    // Session metadata (default: true)
-  includeHistory?: boolean;     // Thinking steps (default: true)  
+  includeHistory?: boolean;     // Thinking steps (default: true)
   includeInsights?: boolean;    // Generated insights (default: true)
   includeMetrics?: boolean;     // Performance metrics (default: true)
   includeBranches?: boolean;    // Alternative paths (default: true)

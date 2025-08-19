@@ -4,7 +4,7 @@
 
 import { SessionAdapter } from './SessionAdapter.js';
 import { TechniqueAdapter } from './TechniqueAdapter.js';
-import { McpError, Errors } from '../utils/errors.js';
+import { McpError, Errors, ErrorCode } from '../utils/errors.js';
 import { VALID_TECHNIQUES } from '../constants/techniques.js';
 
 export class ExecutionAdapter {
@@ -93,7 +93,7 @@ export class ExecutionAdapter {
     // Validate nextStepNeeded is boolean
     if (typeof nextStepNeeded !== 'boolean') {
       throw new McpError(
-        'INVALID_PARAMETER',
+        ErrorCode.INVALID_PARAMETER,
         'nextStepNeeded must be a boolean value',
         { nextStepNeeded },
         'Set nextStepNeeded to true if more steps are needed, false otherwise',

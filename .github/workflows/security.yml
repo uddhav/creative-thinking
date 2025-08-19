@@ -36,7 +36,7 @@ jobs:
       - name: 🔍 Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
         with:
-          category: "/language:${{matrix.language}}"
+          category: '/language:${{matrix.language}}'
 
   # Job 2: Dependency Scanning
   dependency-scan:
@@ -77,7 +77,7 @@ jobs:
           args: >
             --enableRetired
             --enableExperimental
-        
+
       - name: 📤 Upload OWASP results
         uses: actions/upload-artifact@v4
         with:
@@ -166,7 +166,7 @@ jobs:
           echo "| Dependencies | ${{ needs.dependency-scan.result }} |" >> security-report.md
           echo "| Secrets | ${{ needs.secret-scan.result }} |" >> security-report.md
           echo "" >> security-report.md
-          
+
           if [ "${{ needs.codeql.result }}" != "success" ] || \
              [ "${{ needs.dependency-scan.result }}" != "success" ] || \
              [ "${{ needs.secret-scan.result }}" != "success" ]; then

@@ -47,21 +47,21 @@ jobs:
             const additions = pr.additions;
             const deletions = pr.deletions;
             const totalChanges = additions + deletions;
-            
+
             let size = 'XS';
             if (totalChanges > 1000) size = 'XXL';
             else if (totalChanges > 500) size = 'XL';
             else if (totalChanges > 250) size = 'L';
             else if (totalChanges > 100) size = 'M';
             else if (totalChanges > 50) size = 'S';
-            
+
             await github.rest.issues.addLabels({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: pr.number,
               labels: [`size/${size}`]
             }).catch(() => {});
-            
+
             if (size === 'XXL' || size === 'XL') {
               core.warning(`This PR is ${size} (${totalChanges} changes). Consider breaking it into smaller PRs.`);
             }
@@ -69,7 +69,7 @@ jobs:
       - name: 🏷️ Auto-label PR
         uses: actions/labeler@v5
         with:
-          repo-token: "${{ secrets.GITHUB_TOKEN }}"
+          repo-token: '${{ secrets.GITHUB_TOKEN }}'
 
   # Job 2: Code Review Checks
   code-review:
@@ -98,16 +98,16 @@ jobs:
         uses: github/codeql-action/init@v3
         with:
           languages: javascript-typescript
-          
+
       - name: 🔨 Autobuild
         uses: github/codeql-action/autobuild@v3
-        
+
       - name: 🔍 Run CodeQL analysis
         uses: github/codeql-action/analyze@v3
 
       - name: 🧪 Run tests with coverage
         run: npm run test:coverage || true
-        
+
       - name: 📊 Comment test coverage
         uses: romeovs/lcov-reporter-action@v0.4.0
         if: always() && github.event.pull_request.draft == false
@@ -122,25 +122,25 @@ jobs:
         with:
           script: |
             const output = `## 🤖 Automated PR Review
-            
+
             ### 📊 Code Quality Metrics
             - **Test Coverage**: See comment above
             - **Build Status**: Check CI workflow
             - **Security Scan**: Check security job
-            
+
             ### 📝 PR Checklist
             - [ ] Tests added/updated
             - [ ] Documentation updated
             - [ ] No console.logs left
             - [ ] Version bumped (if needed)
             - [ ] CHANGELOG updated (if needed)
-            
+
             ### 🎯 Review Focus Areas
             - Check for proper error handling
             - Verify TypeScript types
             - Review security implications
             - Ensure consistent code style`;
-            
+
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
@@ -168,7 +168,7 @@ jobs:
         with:
           fail-on-severity: high
           comment-summary-in-pr: always
-          
+
   # Job 4: Preview Deployment
   preview:
     name: Preview Documentation
@@ -191,7 +191,7 @@ jobs:
         run: |
           # Generate API docs
           npx typedoc src/index.ts --out docs/api || true
-          
+
           # Create PR preview info
           echo "# PR Preview for #${{ github.event.pull_request.number }}" > docs/index.html
           echo "<h2>Changed Files</h2><ul>" >> docs/index.html
