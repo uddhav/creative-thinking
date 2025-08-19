@@ -11,7 +11,14 @@ export class HTTPTransport extends BaseTransport {
   private abortController?: AbortController;
 
   constructor(config: ClientConfig) {
-    super(config);
+    super(config as any);
+  }
+
+  /**
+   * Send a request (delegates to request method)
+   */
+  async send(method: string, params: any): Promise<any> {
+    return this.request(method, params);
   }
 
   /**

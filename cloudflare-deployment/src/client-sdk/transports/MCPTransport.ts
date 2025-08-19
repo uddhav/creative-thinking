@@ -9,7 +9,14 @@ import type { ClientConfig, ClientOptions } from '../types.js';
 
 export class MCPTransport extends BaseTransport {
   constructor(config: ClientConfig) {
-    super(config);
+    super(config as any);
+  }
+
+  /**
+   * Send a request (delegates to request method)
+   */
+  async send(method: string, params: any): Promise<any> {
+    return this.request(method, params);
   }
 
   /**

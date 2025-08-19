@@ -20,6 +20,37 @@ export type ConnectionState =
   | 'error';
 
 /**
+ * Transport state (alias for ConnectionState)
+ */
+export type TransportState = ConnectionState;
+
+/**
+ * Transport configuration
+ */
+export interface TransportConfig {
+  serverUrl: string;
+  autoReconnect?: boolean;
+  maxReconnectAttempts?: number;
+  reconnectDelay?: number;
+  timeout?: {
+    connect?: number;
+    request?: number;
+  };
+  headers?: Record<string, string>;
+  auth?: {
+    type: 'api-key' | 'oauth' | 'basic';
+    credentials: Record<string, string>;
+  };
+  retry?: {
+    maxAttempts?: number;
+    initialDelay?: number;
+    maxDelay?: number;
+    backoffFactor?: number;
+  };
+  debug?: boolean;
+}
+
+/**
  * Client configuration
  */
 export interface ClientConfig {
