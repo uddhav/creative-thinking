@@ -4,7 +4,7 @@
  * Performance optimization middleware for Cloudflare Workers
  */
 
-import { randomUUID } from 'node:crypto';
+import { randomUUID, webcrypto } from 'node:crypto';
 import { CacheManager } from '../performance/CacheManager.js';
 import { PerformanceMonitor, RequestTimer } from '../performance/PerformanceMonitor.js';
 import type { Env } from '../index.js';
@@ -346,7 +346,7 @@ export class PerformanceMiddleware {
   private async hashString(str: string): Promise<string> {
     const encoder = new TextEncoder();
     const data = encoder.encode(str);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashBuffer = await webcrypto.subtle.digest('SHA-256', data);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     return hashArray
       .map(b => b.toString(16).padStart(2, '0'))
