@@ -4,7 +4,7 @@
  * Handles authentication and authorization for the MCP server
  */
 
-import { createHash } from 'crypto';
+import { createHash, getRandomValues } from 'node:crypto';
 
 export interface AuthConfig {
   /**
@@ -288,7 +288,7 @@ export class AuthManager {
    * Generate session ID
    */
   private generateSessionId(): string {
-    const random = crypto.getRandomValues(new Uint8Array(32));
+    const random = getRandomValues(new Uint8Array(32));
     return Array.from(random, b => b.toString(16).padStart(2, '0')).join('');
   }
 

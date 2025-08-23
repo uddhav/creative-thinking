@@ -4,6 +4,7 @@
  * Provides bidirectional real-time communication for enhanced features
  */
 
+import { randomUUID } from 'node:crypto';
 import type {
   StreamingTransport,
   StreamingEvent,
@@ -102,7 +103,7 @@ export class WebSocketTransport implements StreamingTransport {
       event: 'connection',
       data: {
         status: 'connected',
-        connectionId: crypto.randomUUID(),
+        connectionId: randomUUID(),
         timestamp: Date.now(),
       },
     });

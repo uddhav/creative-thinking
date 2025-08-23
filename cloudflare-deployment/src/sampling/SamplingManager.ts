@@ -4,6 +4,7 @@
  * Manages MCP Sampling requests through the Cloudflare Agents SDK
  */
 
+import { randomUUID } from 'node:crypto';
 import type {
   SamplingRequest,
   SamplingResult,
@@ -82,7 +83,7 @@ export class SamplingManager {
       this.stats.requestsByFeature[feature] = (this.stats.requestsByFeature[feature] || 0) + 1;
     }
 
-    const requestId = crypto.randomUUID();
+    const requestId = randomUUID();
     const startTime = Date.now();
 
     // Send start notification

@@ -4,6 +4,7 @@
  * Comprehensive security middleware for Cloudflare Workers
  */
 
+import { randomUUID } from 'node:crypto';
 import {
   AuthManager,
   createApiKeyProvider,
@@ -153,7 +154,7 @@ export class SecurityMiddleware {
       (request as any).security = {
         auth: authContext,
         ip: this.getClientIp(request),
-        requestId: crypto.randomUUID(),
+        requestId: randomUUID(),
       };
 
       // Process request

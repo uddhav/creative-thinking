@@ -4,6 +4,7 @@
  * Performance optimization middleware for Cloudflare Workers
  */
 
+import { randomUUID } from 'node:crypto';
 import { CacheManager } from '../performance/CacheManager.js';
 import { PerformanceMonitor, RequestTimer } from '../performance/PerformanceMonitor.js';
 import type { Env } from '../index.js';
@@ -107,7 +108,7 @@ export class PerformanceMiddleware {
     const timer = new RequestTimer();
     timer.mark('start');
 
-    const requestId = crypto.randomUUID();
+    const requestId = randomUUID();
     const url = new URL(request.url);
 
     // Start monitoring
