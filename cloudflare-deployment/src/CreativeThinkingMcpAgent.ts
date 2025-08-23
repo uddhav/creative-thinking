@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { McpAgent } from 'agents/mcp';
 import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
@@ -1107,7 +1108,7 @@ export class CreativeThinkingMcpAgent extends McpAgent<Env, CreativeThinkingStat
    */
   async handleStreamingRequest(request: Request): Promise<Response> {
     // Generate a unique connection ID
-    const connectionId = crypto.randomUUID();
+    const connectionId = randomUUID();
 
     // Extract session ID from query params or headers
     const url = new URL(request.url);

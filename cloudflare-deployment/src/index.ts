@@ -5,6 +5,7 @@
  * the Creative Thinking MCP Server with OAuth authentication.
  */
 
+import { randomUUID } from 'node:crypto';
 import OAuthProvider from '@cloudflare/workers-oauth-provider';
 import { CreativeThinkingMcpAgent } from './CreativeThinkingMcpAgent.js';
 import { AuthHandler } from './auth-handler.js';
@@ -36,7 +37,7 @@ async function logError(error: unknown, request: Request, env: Env): Promise<voi
 
     // Store error log in KV with expiry
     if (env.KV) {
-      const errorId = crypto.randomUUID();
+      const errorId = randomUUID();
       await env.KV.put(
         `error:${errorId}`,
         JSON.stringify(errorLog),
@@ -252,7 +253,7 @@ async function handleRequest(request: Request, env: Env, ctx: ExecutionContext):
     console.error('Worker error:', error);
 
     // Enhanced error handling - only include details in development
-    const errorId = crypto.randomUUID();
+    const errorId = randomUUID();
     const isDevelopment = env.ENVIRONMENT === 'development';
 
     const errorResponse = {

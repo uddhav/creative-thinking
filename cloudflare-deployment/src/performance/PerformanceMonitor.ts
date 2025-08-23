@@ -4,6 +4,8 @@
  * Tracks and optimizes performance metrics for Cloudflare Workers
  */
 
+import { randomUUID } from 'node:crypto';
+
 export interface PerformanceMetrics {
   requestId: string;
   method: string;
@@ -130,7 +132,7 @@ export class PerformanceMonitor {
    */
   createMiddleware() {
     return async (request: Request, next: () => Promise<Response>): Promise<Response> => {
-      const requestId = crypto.randomUUID();
+      const requestId = randomUUID();
 
       // Start tracking
       this.startRequest(requestId, request);

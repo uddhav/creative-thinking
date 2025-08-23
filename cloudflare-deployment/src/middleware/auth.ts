@@ -2,6 +2,8 @@
  * Authentication middleware for validating tokens
  */
 
+import { randomUUID } from 'node:crypto';
+
 export interface TokenData {
   userId: string;
   createdAt: number;
@@ -66,7 +68,7 @@ export class AuthMiddleware {
     metadata?: Record<string, any>
   ): Promise<string> {
     // Generate secure token
-    const tokenId = crypto.randomUUID();
+    const tokenId = randomUUID();
     const token = `ct_token_${tokenId}`;
 
     const tokenData: TokenData = {

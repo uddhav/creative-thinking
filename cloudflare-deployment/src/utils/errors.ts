@@ -2,6 +2,8 @@
  * Structured error handling for Cloudflare deployment
  */
 
+import { randomUUID } from 'node:crypto';
+
 export enum ErrorCode {
   // Validation errors (400-499)
   INVALID_TECHNIQUE = 'INVALID_TECHNIQUE',
@@ -65,7 +67,7 @@ export class McpError extends Error {
       recovery: this.recovery,
       httpStatus: this.httpStatus,
       timestamp: new Date().toISOString(),
-      requestId: crypto.randomUUID(),
+      requestId: randomUUID(),
     };
   }
 }
@@ -173,7 +175,7 @@ export function formatErrorResponse(error: unknown): any {
         code: ErrorCode.INTERNAL_ERROR,
         message: error.message,
         timestamp: new Date().toISOString(),
-        requestId: crypto.randomUUID(),
+        requestId: randomUUID(),
       },
     };
   }
@@ -184,7 +186,7 @@ export function formatErrorResponse(error: unknown): any {
       code: ErrorCode.INTERNAL_ERROR,
       message: 'An unknown error occurred',
       timestamp: new Date().toISOString(),
-      requestId: crypto.randomUUID(),
+      requestId: randomUUID(),
     },
   };
 }
