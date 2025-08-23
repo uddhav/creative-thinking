@@ -5,9 +5,14 @@
  * the Creative Thinking MCP Server with OAuth authentication.
  */
 
+import { randomUUID } from 'node:crypto';
 import OAuthProvider from '@cloudflare/workers-oauth-provider';
 import { CreativeThinkingMcpAgent } from './CreativeThinkingMcpAgent.js';
 import { AuthHandler } from './auth-handler.js';
+import { createSecurityMiddleware } from './middleware/security.js';
+import { createPerformanceMiddleware } from './middleware/performance.js';
+import { createSafeErrorResponse } from './utils/sanitizeStackTrace.js';
+import { applyMiddlewareChain, type Middleware } from './utils/middleware.js';
 
 // Export the Durable Object class
 export { CreativeThinkingMcpAgent };
@@ -34,7 +39,7 @@ async function logError(error: unknown, request: Request, env: Env): Promise<voi
 
     // Store error log in KV with expiry
     if (env.KV) {
-      const errorId = crypto.randomUUID();
+      const errorId = randomUUID();
       await env.KV.put(
         `error:${errorId}`,
         JSON.stringify(errorLog),
@@ -61,28 +66,28 @@ export interface Env {
 
 // Create and configure the OAuth Provider
 const createOAuthProvider = (env: Env) => {
+  const apiHandler = async (request: Request): Promise<Response> => {
+    // Get or create Durable Object instance
+    // Use a hash of the user ID or session ID for instance selection
+    const url = new URL(request.url);
+    const userId = url.searchParams.get('user_id') || 'default';
+    const id = env.CREATIVE_THINKING_AGENT.idFromName(userId);
+    const stub = env.CREATIVE_THINKING_AGENT.get(id);
+
+    // Forward the request to the Durable Object
+    return stub.fetch(request);
+  };
+
+  const defaultHandler = async (request: Request): Promise<Response> => {
+    const authHandler = new AuthHandler(env);
+    return authHandler.fetch(request);
+  };
+
   return new OAuthProvider({
     // MCP endpoint where clients connect
     apiRoute: '/mcp',
-
-    // Mount the MCP Agent at the API route
-    apiHandler: async (request: Request) => {
-      // Get or create Durable Object instance
-      // Use a hash of the user ID or session ID for instance selection
-      const url = new URL(request.url);
-      const userId = url.searchParams.get('user_id') || 'default';
-      const id = env.CREATIVE_THINKING_AGENT.idFromName(userId);
-      const stub = env.CREATIVE_THINKING_AGENT.get(id);
-
-      // Forward the request to the Durable Object
-      return stub.fetch(request);
-    },
-
-    // Authentication handler
-    defaultHandler: async (request: Request) => {
-      const authHandler = new AuthHandler(env);
-      return authHandler.fetch(request);
-    },
+    apiHandler: apiHandler as any,
+    defaultHandler: defaultHandler as any,
 
     // OAuth endpoints
     authorizeEndpoint: '/authorize',
@@ -97,91 +102,194 @@ const createOAuthProvider = (env: Env) => {
       supportedScopes: ['read', 'write', 'execute'],
       tokenEndpointAuthMethods: ['client_secret_basic', 'client_secret_post'],
     },
-  });
+  } as any);
 };
+
+// Create the MCP SSE handler using McpAgent's built-in method
+const mcpSSEHandler = CreativeThinkingMcpAgent.serveSSE('/mcp', {
+  binding: 'CREATIVE_THINKING_AGENT',
+  corsOptions: {
+    origin: '*',
+    methods: 'GET, POST, OPTIONS',
+    headers: 'Content-Type, Authorization',
+  },
+});
+
+// Create the MCP HTTP handler for non-SSE requests
+const mcpHTTPHandler = CreativeThinkingMcpAgent.mount('/api', {
+  binding: 'CREATIVE_THINKING_AGENT',
+  corsOptions: {
+    origin: '*',
+    methods: 'GET, POST, OPTIONS',
+    headers: 'Content-Type, Authorization',
+  },
+});
+
+// Create the WebSocket handler using McpAgent's serve method
+const mcpWebSocketHandler = CreativeThinkingMcpAgent.serve('/ws', {
+  binding: 'CREATIVE_THINKING_AGENT',
+  corsOptions: {
+    origin: '*',
+    methods: 'GET, POST, OPTIONS',
+    headers: 'Content-Type, Authorization, Upgrade',
+  },
+});
 
 // Main Worker fetch handler
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    try {
-      const url = new URL(request.url);
+    // Create middleware chain
+    const securityMiddleware = createSecurityMiddleware(env, {
+      auth: {
+        enabled: true,
+        required: false,
+        providers: ['api-key', 'basic'],
+      },
+      rateLimit: {
+        enabled: true,
+        maxRequests: 100,
+        windowSeconds: 60,
+      },
+      headers: {
+        enabled: true,
+        hsts: true,
+        frameOptions: 'DENY',
+      },
+    });
 
-      // Health check endpoint
-      if (url.pathname === '/health') {
-        return new Response(
-          JSON.stringify({
-            status: 'healthy',
-            version: '1.0.0',
-            environment: env.ENVIRONMENT || 'production',
-            timestamp: new Date().toISOString(),
-          }),
-          {
-            headers: { 'Content-Type': 'application/json' },
-          }
-        );
-      }
-
-      // API documentation endpoint
-      if (url.pathname === '/') {
-        return new Response(getHomePage(), {
-          headers: { 'Content-Type': 'text/html' },
-        });
-      }
-
-      // WebSocket upgrade for direct connections (bypassing OAuth)
-      if (request.headers.get('Upgrade') === 'websocket') {
-        // For WebSocket connections, directly connect to Durable Object
-        const userId = url.searchParams.get('user_id') || 'default';
-        const id = env.CREATIVE_THINKING_AGENT.idFromName(userId);
-        const stub = env.CREATIVE_THINKING_AGENT.get(id);
-        return stub.fetch(request);
-      }
-
-      // Handle OAuth-protected endpoints
-      if (!env.OAUTH_PROVIDER) {
-        // Create OAuth provider if not already created
-        env.OAUTH_PROVIDER = createOAuthProvider(env);
-      }
-
-      return env.OAUTH_PROVIDER.fetch(request, env, ctx);
-    } catch (error) {
-      console.error('Worker error:', error);
-
-      // Enhanced error handling - only include details in development
-      const errorId = crypto.randomUUID();
-      const isDevelopment = env.ENVIRONMENT === 'development';
-
-      const errorResponse = {
-        error: 'Internal server error',
-        message:
-          isDevelopment && error instanceof Error
-            ? error.message
-            : 'An unexpected error occurred. Please contact support with the error ID.',
-        timestamp: new Date().toISOString(),
-        path: new URL(request.url).pathname,
-        errorId,
-        // Only include stack trace in development
-        ...(isDevelopment && error instanceof Error ? { stack: error.stack } : {}),
-      };
-
-      // Log to Cloudflare Analytics if available
-      if (ctx.waitUntil && typeof ctx.waitUntil === 'function') {
-        ctx.waitUntil(logError(error, request, env));
-      }
-
-      return new Response(JSON.stringify(errorResponse), {
-        status: 500,
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Error-Id': errorId,
+    const performanceMiddleware = createPerformanceMiddleware(
+      env,
+      {
+        cache: {
+          enabled: true,
+          ttl: 300,
+          paths: ['/api/discover_techniques', '/api/resources'],
         },
-      });
-    }
+        compression: {
+          enabled: true,
+          threshold: 1024,
+        },
+        monitoring: {
+          enabled: true,
+          sampleRate: 1.0,
+        },
+      },
+      ctx
+    );
+
+    // Apply middleware chain using pipeline approach
+    const middlewares: Middleware[] = [securityMiddleware, performanceMiddleware];
+    return applyMiddlewareChain(request, middlewares, () => handleRequest(request, env, ctx));
   },
 };
 
+// Extract original handler logic
+async function handleRequest(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  try {
+    const url = new URL(request.url);
+
+    // Health check endpoint
+    if (url.pathname === '/health') {
+      return new Response(
+        JSON.stringify({
+          status: 'healthy',
+          version: '1.0.0',
+          environment: env.ENVIRONMENT || 'production',
+          timestamp: new Date().toISOString(),
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    // API documentation endpoint
+    if (url.pathname === '/') {
+      return new Response(getHomePage(url), {
+        headers: { 'Content-Type': 'text/html' },
+      });
+    }
+
+    // Handle MCP SSE endpoint
+    if (url.pathname.startsWith('/mcp')) {
+      return mcpSSEHandler.fetch(request, env, ctx);
+    }
+
+    // Handle MCP HTTP API endpoints
+    if (url.pathname.startsWith('/api')) {
+      return mcpHTTPHandler.fetch(request, env, ctx);
+    }
+
+    // Handle WebSocket connections through McpAgent
+    if (url.pathname.startsWith('/ws') || request.headers.get('Upgrade') === 'websocket') {
+      return mcpWebSocketHandler.fetch(request, env, ctx);
+    }
+
+    // Handle streaming endpoints (SSE and WebSocket for real-time updates)
+    if (url.pathname.startsWith('/stream')) {
+      // Get or create the Durable Object instance
+      const userId = url.searchParams.get('user_id') || 'default';
+      const id = env.CREATIVE_THINKING_AGENT.idFromName(userId);
+      const stub = env.CREATIVE_THINKING_AGENT.get(id);
+
+      // Forward the streaming request directly to the Durable Object
+      // The agent's fetch method will handle it through handleStreamingRequest
+      return stub.fetch(request);
+    }
+
+    // Handle OAuth-protected endpoints if OAuth is configured
+    if (
+      env.OAUTH_PROVIDER ||
+      url.pathname.startsWith('/authorize') ||
+      url.pathname.startsWith('/token')
+    ) {
+      if (!env.OAUTH_PROVIDER) {
+        env.OAUTH_PROVIDER = createOAuthProvider(env);
+      }
+      return env.OAUTH_PROVIDER.fetch(request, env, ctx);
+    }
+
+    // 404 for unmatched routes
+    return new Response('Not Found', { status: 404 });
+  } catch (error) {
+    console.error('Worker error:', error);
+
+    // Enhanced error handling with sanitized stack traces
+    const errorId = randomUUID();
+    const isDevelopment = env.ENVIRONMENT === 'development';
+
+    // Use sanitized error response
+    const safeError = createSafeErrorResponse(error, isDevelopment);
+
+    const errorResponse = {
+      error: 'Internal server error',
+      message: isDevelopment
+        ? safeError.message
+        : 'An unexpected error occurred. Please contact support with the error ID.',
+      timestamp: new Date().toISOString(),
+      path: new URL(request.url).pathname,
+      errorId,
+      // Never include stack traces in responses for security
+      ...(isDevelopment && safeError.type ? { type: safeError.type } : {}),
+    };
+
+    // Log to Cloudflare Analytics if available
+    if (ctx.waitUntil && typeof ctx.waitUntil === 'function') {
+      ctx.waitUntil(logError(error, request, env));
+    }
+
+    return new Response(JSON.stringify(errorResponse), {
+      status: 500,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Error-Id': errorId,
+      },
+    });
+  }
+}
+
 // Home page HTML
-function getHomePage(): string {
+function getHomePage(url: URL): string {
   return `
     <!DOCTYPE html>
     <html>
@@ -318,7 +426,7 @@ function getHomePage(): string {
         
         <h2>Quick Start</h2>
         <p>Connect your MCP client to this server:</p>
-        <code>https://${self.location.host}/mcp</code>
+        <code>https://${url.host}/mcp</code>
         
         <h2>Available Techniques</h2>
         <p>23 creative thinking techniques including Six Hats, SCAMPER, TRIZ, Design Thinking, First Principles, and more.</p>

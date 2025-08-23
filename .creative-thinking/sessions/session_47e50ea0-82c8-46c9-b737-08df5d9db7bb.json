@@ -48,10 +48,7 @@
                 "uncertaintyLevel": "medium"
               }
             },
-            "survivalConstraints": [
-              "Identify what cannot be lost",
-              "Set maximum acceptable loss"
-            ]
+            "survivalConstraints": ["Identify what cannot be lost", "Set maximum acceptable loss"]
           },
           "riskDiscoveryData": {
             "domainAssessment": {
@@ -71,16 +68,8 @@
               "discoveredPatterns": [],
               "nlpAnalysis": {
                 "entities": [],
-                "topics": [
-                  "This problem",
-                  "Test problem.",
-                  "The user",
-                  "Initial idea"
-                ],
-                "verbs": [
-                  "involves",
-                  "is considering:"
-                ],
+                "topics": ["This problem", "Test problem.", "The user", "Initial idea"],
+                "verbs": ["involves", "is considering:"],
                 "temporalExpressions": [],
                 "constraints": [],
                 "relationships": []
@@ -137,10 +126,7 @@
                 "uncertaintyLevel": "medium"
               }
             },
-            "survivalConstraints": [
-              "Identify what cannot be lost",
-              "Set maximum acceptable loss"
-            ]
+            "survivalConstraints": ["Identify what cannot be lost", "Set maximum acceptable loss"]
           },
           "riskDiscoveryData": {
             "domainAssessment": {
@@ -160,16 +146,8 @@
               "discoveredPatterns": [],
               "nlpAnalysis": {
                 "entities": [],
-                "topics": [
-                  "This problem",
-                  "Test problem.",
-                  "The user",
-                  "Initial idea"
-                ],
-                "verbs": [
-                  "involves",
-                  "is considering:"
-                ],
+                "topics": ["This problem", "Test problem.", "The user", "Initial idea"],
+                "verbs": ["involves", "is considering:"],
                 "temporalExpressions": [],
                 "constraints": [],
                 "relationships": []
@@ -194,9 +172,7 @@
       }
     ],
     "branches": {},
-    "insights": [
-      "Initial idea: Start with this"
-    ],
+    "insights": ["Initial idea: Start with this"],
     "startTime": 1754096354521,
     "metrics": {
       "creativityScore": 0.10986122886681096,

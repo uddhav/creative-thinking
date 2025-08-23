@@ -2,7 +2,7 @@
  * SessionAdapter - Bridges Cloudflare KV storage with existing SessionManager logic
  */
 
-import * as crypto from 'crypto';
+import * as crypto from 'node:crypto';
 import {
   isValidTechnique,
   getStepCountForTechnique,
@@ -102,8 +102,8 @@ export class SessionAdapter {
     // Extract successful sessions
     const sessions = sessionResults
       .filter(
-        (result): result is PromiseFulfilledResult<any> =>
-          result.status === 'fulfilled' && result.value?.value !== null
+        (result): result is PromiseFulfilledResult<{ status: string; value: SessionData | null }> =>
+          result.status === 'fulfilled' && (result as any).value?.value !== null
       )
       .map(result => result.value.value as SessionData);
 

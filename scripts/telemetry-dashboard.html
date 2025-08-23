@@ -1,316 +1,330 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Creative Thinking Telemetry Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        h1 {
-            color: #333;
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        .metrics-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 40px;
-        }
-        .metric-card {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            text-align: center;
-        }
-        .metric-value {
-            font-size: 2.5em;
-            font-weight: bold;
-            color: #007bff;
-            margin: 10px 0;
-        }
-        .metric-label {
-            color: #666;
-            font-size: 0.9em;
-        }
-        .chart-container {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            margin-bottom: 30px;
-        }
-        .chart-title {
-            font-size: 1.2em;
-            font-weight: bold;
-            margin-bottom: 20px;
-            color: #333;
-        }
-        canvas {
-            max-height: 400px;
-        }
-        #fileInput {
-            display: block;
-            margin: 20px auto;
-            padding: 10px 20px;
-            font-size: 16px;
-        }
-        .instructions {
-            text-align: center;
-            color: #666;
-            margin-bottom: 30px;
-        }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background-color: #f5f5f5;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      h1 {
+        color: #333;
+        text-align: center;
+        margin-bottom: 30px;
+      }
+      .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 40px;
+      }
+      .metric-card {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        text-align: center;
+      }
+      .metric-value {
+        font-size: 2.5em;
+        font-weight: bold;
+        color: #007bff;
+        margin: 10px 0;
+      }
+      .metric-label {
+        color: #666;
+        font-size: 0.9em;
+      }
+      .chart-container {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 30px;
+      }
+      .chart-title {
+        font-size: 1.2em;
+        font-weight: bold;
+        margin-bottom: 20px;
+        color: #333;
+      }
+      canvas {
+        max-height: 400px;
+      }
+      #fileInput {
+        display: block;
+        margin: 20px auto;
+        padding: 10px 20px;
+        font-size: 16px;
+      }
+      .instructions {
+        text-align: center;
+        color: #666;
+        margin-bottom: 30px;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <h1>🧠 Creative Thinking Telemetry Dashboard</h1>
-        
-        <div class="instructions">
-            <p>Upload your telemetry export JSON file to visualize the data</p>
-            <input type="file" id="fileInput" accept=".json">
+      <h1>🧠 Creative Thinking Telemetry Dashboard</h1>
+
+      <div class="instructions">
+        <p>Upload your telemetry export JSON file to visualize the data</p>
+        <input type="file" id="fileInput" accept=".json" />
+      </div>
+
+      <div id="dashboard" style="display: none">
+        <div class="metrics-grid" id="metricsGrid"></div>
+
+        <div class="chart-container">
+          <div class="chart-title">Technique Effectiveness</div>
+          <canvas id="effectivenessChart"></canvas>
         </div>
-        
-        <div id="dashboard" style="display: none;">
-            <div class="metrics-grid" id="metricsGrid"></div>
-            
-            <div class="chart-container">
-                <div class="chart-title">Technique Effectiveness</div>
-                <canvas id="effectivenessChart"></canvas>
-            </div>
-            
-            <div class="chart-container">
-                <div class="chart-title">Insights Generated by Technique</div>
-                <canvas id="insightsChart"></canvas>
-            </div>
-            
-            <div class="chart-container">
-                <div class="chart-title">Completion Rates</div>
-                <canvas id="completionChart"></canvas>
-            </div>
-            
-            <div class="chart-container">
-                <div class="chart-title">Average Duration by Technique</div>
-                <canvas id="durationChart"></canvas>
-            </div>
+
+        <div class="chart-container">
+          <div class="chart-title">Insights Generated by Technique</div>
+          <canvas id="insightsChart"></canvas>
         </div>
+
+        <div class="chart-container">
+          <div class="chart-title">Completion Rates</div>
+          <canvas id="completionChart"></canvas>
+        </div>
+
+        <div class="chart-container">
+          <div class="chart-title">Average Duration by Technique</div>
+          <canvas id="durationChart"></canvas>
+        </div>
+      </div>
     </div>
 
     <script>
-        let charts = {};
-        
-        document.getElementById('fileInput').addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            
-            try {
-                const text = await file.text();
-                const data = JSON.parse(text);
-                visualizeData(data);
-                document.getElementById('dashboard').style.display = 'block';
-            } catch (error) {
-                alert('Error loading file: ' + error.message);
-            }
+      let charts = {};
+
+      document.getElementById('fileInput').addEventListener('change', async e => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        try {
+          const text = await file.text();
+          const data = JSON.parse(text);
+          visualizeData(data);
+          document.getElementById('dashboard').style.display = 'block';
+        } catch (error) {
+          alert('Error loading file: ' + error.message);
+        }
+      });
+
+      function visualizeData(data) {
+        // Display metrics
+        displayMetrics(data.sessions);
+
+        // Create charts
+        createEffectivenessChart(data.effectiveness);
+        createInsightsChart(data.effectiveness);
+        createCompletionChart(data.effectiveness);
+        createDurationChart(data.effectiveness);
+      }
+
+      function displayMetrics(sessions) {
+        const metricsGrid = document.getElementById('metricsGrid');
+        metricsGrid.innerHTML = '';
+
+        const metrics = [
+          { label: 'Total Sessions', value: sessions.totalSessions },
+          { label: 'Completed Sessions', value: sessions.completedSessions },
+          { label: 'Total Insights', value: sessions.totalInsights },
+          { label: 'Risks Identified', value: sessions.totalRisks },
+          {
+            label: 'Avg Duration',
+            value: Math.round(sessions.averageDuration / 1000 / 60) + ' min',
+          },
+          {
+            label: 'Completion Rate',
+            value: Math.round((sessions.completedSessions / sessions.totalSessions) * 100) + '%',
+          },
+        ];
+
+        metrics.forEach(metric => {
+          const card = document.createElement('div');
+          card.className = 'metric-card';
+
+          const labelDiv = document.createElement('div');
+          labelDiv.className = 'metric-label';
+          labelDiv.textContent = metric.label;
+
+          const valueDiv = document.createElement('div');
+          valueDiv.className = 'metric-value';
+          valueDiv.textContent = metric.value;
+
+          card.appendChild(labelDiv);
+          card.appendChild(valueDiv);
+
+          metricsGrid.appendChild(card);
         });
-        
-        function visualizeData(data) {
-            // Display metrics
-            displayMetrics(data.sessions);
-            
-            // Create charts
-            createEffectivenessChart(data.effectiveness);
-            createInsightsChart(data.effectiveness);
-            createCompletionChart(data.effectiveness);
-            createDurationChart(data.effectiveness);
-        }
-        
-        function displayMetrics(sessions) {
-            const metricsGrid = document.getElementById('metricsGrid');
-            metricsGrid.innerHTML = '';
-            
-            const metrics = [
-                { label: 'Total Sessions', value: sessions.totalSessions },
-                { label: 'Completed Sessions', value: sessions.completedSessions },
-                { label: 'Total Insights', value: sessions.totalInsights },
-                { label: 'Risks Identified', value: sessions.totalRisks },
-                { label: 'Avg Duration', value: Math.round(sessions.averageDuration / 1000 / 60) + ' min' },
-                { label: 'Completion Rate', value: Math.round((sessions.completedSessions / sessions.totalSessions) * 100) + '%' }
-            ];
-            
-            metrics.forEach(metric => {
-                const card = document.createElement('div');
-                card.className = 'metric-card';
+      }
 
-                const labelDiv = document.createElement('div');
-                labelDiv.className = 'metric-label';
-                labelDiv.textContent = metric.label;
+      function createEffectivenessChart(effectiveness) {
+        const ctx = document.getElementById('effectivenessChart').getContext('2d');
 
-                const valueDiv = document.createElement('div');
-                valueDiv.className = 'metric-value';
-                valueDiv.textContent = metric.value;
+        if (charts.effectiveness) charts.effectiveness.destroy();
 
-                card.appendChild(labelDiv);
-                card.appendChild(valueDiv);
+        charts.effectiveness = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: effectiveness.map(e => formatTechniqueName(e.technique)),
+            datasets: [
+              {
+                label: 'Effectiveness Score',
+                data: effectiveness.map(e => e.averageEffectiveness),
+                backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              y: {
+                beginAtZero: true,
+                max: 1,
+              },
+            },
+          },
+        });
+      }
 
-                metricsGrid.appendChild(card);
-            });
-        }
-        
-        function createEffectivenessChart(effectiveness) {
-            const ctx = document.getElementById('effectivenessChart').getContext('2d');
-            
-            if (charts.effectiveness) charts.effectiveness.destroy();
-            
-            charts.effectiveness = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: effectiveness.map(e => formatTechniqueName(e.technique)),
-                    datasets: [{
-                        label: 'Effectiveness Score',
-                        data: effectiveness.map(e => e.averageEffectiveness),
-                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
-                        borderColor: 'rgba(54, 162, 235, 1)',
-                        borderWidth: 1
-                    }]
+      function createInsightsChart(effectiveness) {
+        const ctx = document.getElementById('insightsChart').getContext('2d');
+
+        if (charts.insights) charts.insights.destroy();
+
+        charts.insights = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: effectiveness.map(e => formatTechniqueName(e.technique)),
+            datasets: [
+              {
+                label: 'Average Insights',
+                data: effectiveness.map(e => e.averageInsights),
+                backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              y: {
+                beginAtZero: true,
+              },
+            },
+          },
+        });
+      }
+
+      function createCompletionChart(effectiveness) {
+        const ctx = document.getElementById('completionChart').getContext('2d');
+
+        if (charts.completion) charts.completion.destroy();
+
+        charts.completion = new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels: effectiveness.map(e => formatTechniqueName(e.technique)),
+            datasets: [
+              {
+                data: effectiveness.map(e => e.completionRate * 100),
+                backgroundColor: [
+                  'rgba(255, 99, 132, 0.5)',
+                  'rgba(54, 162, 235, 0.5)',
+                  'rgba(255, 206, 86, 0.5)',
+                  'rgba(75, 192, 192, 0.5)',
+                  'rgba(153, 102, 255, 0.5)',
+                  'rgba(255, 159, 64, 0.5)',
+                ],
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              tooltip: {
+                callbacks: {
+                  label: context => {
+                    return context.label + ': ' + context.parsed.toFixed(1) + '%';
+                  },
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            max: 1
-                        }
-                    }
-                }
-            });
-        }
-        
-        function createInsightsChart(effectiveness) {
-            const ctx = document.getElementById('insightsChart').getContext('2d');
-            
-            if (charts.insights) charts.insights.destroy();
-            
-            charts.insights = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: effectiveness.map(e => formatTechniqueName(e.technique)),
-                    datasets: [{
-                        label: 'Average Insights',
-                        data: effectiveness.map(e => e.averageInsights),
-                        backgroundColor: 'rgba(75, 192, 192, 0.5)',
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
-                    }
-                }
-            });
-        }
-        
-        function createCompletionChart(effectiveness) {
-            const ctx = document.getElementById('completionChart').getContext('2d');
-            
-            if (charts.completion) charts.completion.destroy();
-            
-            charts.completion = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: effectiveness.map(e => formatTechniqueName(e.technique)),
-                    datasets: [{
-                        data: effectiveness.map(e => e.completionRate * 100),
-                        backgroundColor: [
-                            'rgba(255, 99, 132, 0.5)',
-                            'rgba(54, 162, 235, 0.5)',
-                            'rgba(255, 206, 86, 0.5)',
-                            'rgba(75, 192, 192, 0.5)',
-                            'rgba(153, 102, 255, 0.5)',
-                            'rgba(255, 159, 64, 0.5)'
-                        ]
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        tooltip: {
-                            callbacks: {
-                                label: (context) => {
-                                    return context.label + ': ' + context.parsed.toFixed(1) + '%';
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-        }
-        
-        function createDurationChart(effectiveness) {
-            const ctx = document.getElementById('durationChart').getContext('2d');
-            
-            if (charts.duration) charts.duration.destroy();
-            
-            charts.duration = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: effectiveness.map(e => formatTechniqueName(e.technique)),
-                    datasets: [{
-                        label: 'Average Duration (minutes)',
-                        data: effectiveness.map(e => e.averageDuration / 1000 / 60),
-                        borderColor: 'rgba(255, 99, 132, 1)',
-                        backgroundColor: 'rgba(255, 99, 132, 0.1)',
-                        tension: 0.1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
-                    }
-                }
-            });
-        }
-        
-        function formatTechniqueName(technique) {
-            const names = {
-                'six_hats': 'Six Hats',
-                'po': 'PO',
-                'random_entry': 'Random Entry',
-                'scamper': 'SCAMPER',
-                'concept_extraction': 'Concept Extraction',
-                'yes_and': 'Yes, And',
-                'design_thinking': 'Design Thinking',
-                'triz': 'TRIZ',
-                'neural_state': 'Neural State',
-                'temporal_work': 'Temporal Work',
-                'cross_cultural': 'Cross-Cultural',
-                'collective_intel': 'Collective Intel',
-                'disney_method': 'Disney Method',
-                'nine_windows': 'Nine Windows'
-            };
-            return names[technique] || technique;
-        }
+              },
+            },
+          },
+        });
+      }
+
+      function createDurationChart(effectiveness) {
+        const ctx = document.getElementById('durationChart').getContext('2d');
+
+        if (charts.duration) charts.duration.destroy();
+
+        charts.duration = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: effectiveness.map(e => formatTechniqueName(e.technique)),
+            datasets: [
+              {
+                label: 'Average Duration (minutes)',
+                data: effectiveness.map(e => e.averageDuration / 1000 / 60),
+                borderColor: 'rgba(255, 99, 132, 1)',
+                backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                tension: 0.1,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              y: {
+                beginAtZero: true,
+              },
+            },
+          },
+        });
+      }
+
+      function formatTechniqueName(technique) {
+        const names = {
+          six_hats: 'Six Hats',
+          po: 'PO',
+          random_entry: 'Random Entry',
+          scamper: 'SCAMPER',
+          concept_extraction: 'Concept Extraction',
+          yes_and: 'Yes, And',
+          design_thinking: 'Design Thinking',
+          triz: 'TRIZ',
+          neural_state: 'Neural State',
+          temporal_work: 'Temporal Work',
+          cross_cultural: 'Cross-Cultural',
+          collective_intel: 'Collective Intel',
+          disney_method: 'Disney Method',
+          nine_windows: 'Nine Windows',
+        };
+        return names[technique] || technique;
+      }
     </script>
-</body>
+  </body>
 </html>

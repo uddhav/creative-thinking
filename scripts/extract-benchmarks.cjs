@@ -37,11 +37,15 @@ function validateBenchmarkResult(benchmark) {
     return false;
   }
   if (typeof benchmark.value !== 'number' || benchmark.value < 0) {
-    console.warn(`[extract-benchmarks] Invalid benchmark value for ${benchmark.name}: ${benchmark.value}`);
+    console.warn(
+      `[extract-benchmarks] Invalid benchmark value for ${benchmark.name}: ${benchmark.value}`
+    );
     return false;
   }
   if (!benchmark.unit || typeof benchmark.unit !== 'string') {
-    console.warn(`[extract-benchmarks] Invalid benchmark unit for ${benchmark.name}: ${benchmark.unit}`);
+    console.warn(
+      `[extract-benchmarks] Invalid benchmark unit for ${benchmark.name}: ${benchmark.unit}`
+    );
     return false;
   }
   return true;
@@ -72,7 +76,7 @@ function extractBenchmarks(testResults) {
         if (match) {
           const data = pattern.extract(match);
           const label = data.count ? `${pattern.name} (${data.count})` : pattern.name;
-          
+
           const benchmark = {
             name: label,
             unit: 'ms',
@@ -82,7 +86,7 @@ function extractBenchmarks(testResults) {
               fullTitle: test.fullTitle,
             },
           };
-          
+
           // Validate benchmark before adding
           if (validateBenchmarkResult(benchmark)) {
             benchmarks.push(benchmark);

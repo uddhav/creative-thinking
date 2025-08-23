@@ -1,9 +1,9 @@
 # Creative Thinking MCP Server
 
 A Model Context Protocol (MCP) server that provides structured creative thinking techniques for
-problem-solving and ideation. This server implements twenty-one enhanced thinking techniques through
-a unified framework combining generative creativity with systematic risk assessment and post-action
-reflexivity tracking.
+problem-solving and ideation. This server implements twenty-four enhanced thinking techniques
+through a unified framework combining generative creativity with systematic risk assessment,
+analytical verification, and post-action reflexivity tracking.
 
 > **Note**: This repository is a public fork of work originally developed with Munshy, Personal
 > Secretary.
@@ -355,6 +355,51 @@ All three layers now provide memory-suggestive outputs to enhance contextual und
 - **Noteworthy Moments**: Significant insights or turning points
 - **Future Relevance**: Patterns that may apply to future challenges
 
+### Analytical Verification Techniques
+
+Three new techniques provide systematic validation and truth assessment capabilities:
+
+#### Criteria-Based Analysis (CBA)
+
+Five-step structured approach for evaluating authenticity and validity:
+
+1. **Baseline Assessment** - Establish normal patterns and expected characteristics
+2. **Cognitive Criteria** - Evaluate logical consistency and detail richness
+3. **Motivational Analysis** - Examine incentives and potential biases
+4. **Reality Monitoring** - Distinguish experienced vs. imagined elements
+5. **Validity Synthesis** - Integrate findings into confidence assessment
+
+Best for: Validating solutions, assessing information reliability, detecting flawed assumptions
+
+#### Linguistic Forensics
+
+Six-step deep analysis of communication patterns:
+
+1. **Content Mapping** - Identify key claims and statements
+2. **Pattern Recognition** - Detect linguistic markers and anomalies
+3. **Pronoun Analysis** - Examine psychological distance indicators
+4. **Complexity Assessment** - Evaluate cognitive load indicators
+5. **Emotional Profiling** - Analyze sentiment and affect patterns
+6. **Coherence Verification** - Check internal consistency
+
+Best for: Understanding stakeholder communications, revealing hidden insights, cross-cultural
+analysis
+
+#### Competing Hypotheses Analysis (CHA)
+
+Eight-step systematic evaluation of multiple explanations:
+
+1. **Hypothesis Generation** - Create multiple competing explanations
+2. **Evidence Mapping** - List all available evidence
+3. **Matrix Construction** - Build evidence-hypothesis compatibility matrix
+4. **Diagnostic Assessment** - Identify discriminating evidence
+5. **Deception Modeling** - Consider manipulation possibilities
+6. **Bayesian Update** - Apply probabilistic reasoning
+7. **Sensitivity Analysis** - Test conclusion robustness
+8. **Decision Synthesis** - Integrate into actionable recommendation
+
+Best for: Complex decision-making, handling contradictory evidence, reducing confirmation bias
+
 ### Unified Framework Features
 
 - Dual thinking modes with visual indicators for creative and critical phases
@@ -362,6 +407,7 @@ All three layers now provide memory-suggestive outputs to enhance contextual und
 - Antifragile solution design that benefits from stress and change
 - Consideration of low-probability, high-impact events
 - Meta-learning metrics to track session effectiveness
+- Analytical verification integrated with creative generation
 
 ### Session Management
 

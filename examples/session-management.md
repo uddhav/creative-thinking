@@ -1,6 +1,7 @@
 # Session Management Examples
 
-The Creative Thinking MCP Tool now supports session management, allowing you to save, load, list, delete, and export your creative thinking sessions.
+The Creative Thinking MCP Tool now supports session management, allowing you to save, load, list,
+delete, and export your creative thinking sessions.
 
 ## Session Management Operations
 
@@ -42,13 +43,14 @@ View all your saved sessions or filter by criteria:
 ```
 
 Example output:
+
 ```
 📚 Saved Creative Thinking Sessions
 ══════════════════════════════════════════════════
 
 📝 Team Collaboration Brainstorm
    Technique: 🎩 SIX HATS
-   Progress: ████░░░░░░ 3/6 steps 
+   Progress: ████░░░░░░ 3/6 steps
    Updated: 5 minutes ago
    Tags: teamwork, productivity, management
 
@@ -128,6 +130,7 @@ Configure persistence behavior with environment variables:
 - `PERSISTENCE_PATH`: Custom path for filesystem storage (default: `~/.creative-thinking/sessions`)
 
 Example:
+
 ```bash
 export PERSISTENCE_TYPE=filesystem
 export PERSISTENCE_PATH=/path/to/sessions
@@ -138,6 +141,7 @@ export PERSISTENCE_PATH=/path/to/sessions
 Here's a complete workflow using session management:
 
 1. **Start a new thinking session**
+
 ```json
 {
   "technique": "concept_extraction",
@@ -152,6 +156,7 @@ Here's a complete workflow using session management:
 ```
 
 2. **Continue with more steps** (session ID returned from step 1)
+
 ```json
 {
   "sessionId": "session_abc123",
@@ -167,6 +172,7 @@ Here's a complete workflow using session management:
 ```
 
 3. **Save with a memorable name**
+
 ```json
 {
   "sessionOperation": "save",
@@ -178,6 +184,7 @@ Here's a complete workflow using session management:
 ```
 
 4. **Later, list and reload the session**
+
 ```json
 {
   "sessionOperation": "list",
@@ -188,6 +195,7 @@ Here's a complete workflow using session management:
 ```
 
 Then load it:
+
 ```json
 {
   "sessionOperation": "load",
@@ -198,6 +206,7 @@ Then load it:
 ```
 
 5. **Export the completed session**
+
 ```json
 {
   "sessionOperation": "export",

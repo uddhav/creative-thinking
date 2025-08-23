@@ -1,11 +1,11 @@
 codecov:
   require_ci_to_pass: true
-  bot: "codecov-bot"
+  bot: 'codecov-bot'
 
 coverage:
   precision: 2
   round: down
-  range: "70...100"
+  range: '70...100'
 
   status:
     project:
@@ -13,8 +13,8 @@ coverage:
         target: 70%
         threshold: 2%
         paths:
-          - "src/"
-        
+          - 'src/'
+
     patch:
       default:
         target: 80%
@@ -25,18 +25,18 @@ parsers:
     enable_partials: true
 
 comment:
-  layout: "reach,diff,flags,files,footer"
+  layout: 'reach,diff,flags,files,footer'
   behavior: default
   require_changes: false
   require_base: false
   require_head: true
 
 ignore:
-  - "**/*.test.ts"
-  - "**/*.spec.ts"
-  - "**/__tests__/**"
-  - "**/test/**"
-  - "dist/**"
-  - "coverage/**"
-  - "docs/**"
-  - "examples/**"
+  - '**/*.test.ts'
+  - '**/*.spec.ts'
+  - '**/__tests__/**'
+  - '**/test/**'
+  - 'dist/**'
+  - 'coverage/**'
+  - 'docs/**'
+  - 'examples/**'
