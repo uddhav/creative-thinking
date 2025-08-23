@@ -3,6 +3,8 @@
  * Supports both API key authentication and OAuth flow
  */
 
+import { webcrypto } from 'node:crypto';
+
 export interface AuthContext {
   userId: string;
   metadata?: Record<string, any>;
@@ -356,25 +358,31 @@ export class AuthHandler {
   }
 
   private generateToken(): string {
+    // Use available crypto implementation
+    const cryptoImpl = typeof crypto !== 'undefined' ? crypto : (webcrypto as any);
+
     // Use crypto.randomUUID() for secure token generation
-    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-      return `ct_token_${crypto.randomUUID()}`;
+    if (cryptoImpl.randomUUID) {
+      return `ct_token_${cryptoImpl.randomUUID()}`;
     }
     // Fallback to more secure random generation
     const array = new Uint8Array(16);
-    crypto.getRandomValues(array);
+    cryptoImpl.getRandomValues(array);
     const token = Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
     return `ct_token_${token}`;
   }
 
   private generateAuthCode(): string {
+    // Use available crypto implementation
+    const cryptoImpl = typeof crypto !== 'undefined' ? crypto : (webcrypto as any);
+
     // Use crypto for secure auth code generation
-    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-      return `auth_${crypto.randomUUID().substring(0, 12)}`;
+    if (cryptoImpl.randomUUID) {
+      return `auth_${cryptoImpl.randomUUID().substring(0, 12)}`;
     }
     // Fallback to crypto.getRandomValues
     const array = new Uint8Array(8);
-    crypto.getRandomValues(array);
+    cryptoImpl.getRandomValues(array);
     const code = Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
     return `auth_${code}`;
   }

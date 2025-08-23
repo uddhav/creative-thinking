@@ -90,24 +90,44 @@ export class AuthManager {
       return sessionContext;
     }
 
-    // Try each provider
-    for (const provider of this.config.providers) {
-      const credentials = provider.extractCredentials
-        ? provider.extractCredentials(request)
-        : this.extractCredentials(request, provider.type);
+    // Try all providers in parallel for faster authentication
+    const authPromises = this.config.providers.map(async provider => {
+      try {
+        const credentials = provider.extractCredentials
+          ? provider.extractCredentials(request)
+          : this.extractCredentials(request, provider.type);
 
-      if (credentials) {
+        if (!credentials) {
+          return null;
+        }
+
         const result = await provider.validate(credentials);
         if (result && result.authenticated) {
-          // Create session if configured
-          const sessionId = await this.createSession(result);
-
-          return {
-            user: result,
-            sessionId,
-            provider: provider.type,
-          };
+          return { result, provider };
         }
+        return null;
+      } catch (error) {
+        // Log provider errors but don't fail the entire auth process
+        console.error(`Auth provider ${provider.type} failed:`, error);
+        return null;
+      }
+    });
+
+    // Wait for all providers to complete
+    const results = await Promise.allSettled(authPromises);
+
+    // Return the first successful authentication
+    for (const result of results) {
+      if (result.status === 'fulfilled' && result.value) {
+        const { result: authResult, provider } = result.value;
+        // Create session if configured
+        const sessionId = await this.createSession(authResult);
+
+        return {
+          user: authResult,
+          sessionId,
+          provider: provider.type,
+        };
       }
     }
 

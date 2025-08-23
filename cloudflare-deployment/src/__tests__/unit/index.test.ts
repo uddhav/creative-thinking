@@ -152,7 +152,11 @@ describe('Cloudflare Worker - index.ts', () => {
 
       await worker.fetch(request, mockEnv, mockCtx);
 
-      expect(createPerformanceMiddleware).toHaveBeenCalledWith(mockEnv, expect.any(Object));
+      expect(createPerformanceMiddleware).toHaveBeenCalledWith(
+        mockEnv,
+        expect.any(Object),
+        mockCtx
+      );
     });
 
     it('should handle /stream endpoint', async () => {

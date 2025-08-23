@@ -12,6 +12,7 @@ import { AuthHandler } from './auth-handler.js';
 import { createSecurityMiddleware } from './middleware/security.js';
 import { createPerformanceMiddleware } from './middleware/performance.js';
 import { createSafeErrorResponse } from './utils/sanitizeStackTrace.js';
+import { applyMiddlewareChain, type Middleware } from './utils/middleware.js';
 
 // Export the Durable Object class
 export { CreativeThinkingMcpAgent };
@@ -156,29 +157,29 @@ export default {
       },
     });
 
-    const performanceMiddleware = createPerformanceMiddleware(env, {
-      cache: {
-        enabled: true,
-        ttl: 300,
-        paths: ['/api/discover_techniques', '/api/resources'],
+    const performanceMiddleware = createPerformanceMiddleware(
+      env,
+      {
+        cache: {
+          enabled: true,
+          ttl: 300,
+          paths: ['/api/discover_techniques', '/api/resources'],
+        },
+        compression: {
+          enabled: true,
+          threshold: 1024,
+        },
+        monitoring: {
+          enabled: true,
+          sampleRate: 1.0,
+        },
       },
-      compression: {
-        enabled: true,
-        threshold: 1024,
-      },
-      monitoring: {
-        enabled: true,
-        sampleRate: 1.0,
-      },
-    });
+      ctx
+    );
 
-    // Apply middleware chain
-    return securityMiddleware(request, async () => {
-      return performanceMiddleware(request, async () => {
-        // Original request handler
-        return handleRequest(request, env, ctx);
-      });
-    });
+    // Apply middleware chain using pipeline approach
+    const middlewares: Middleware[] = [securityMiddleware, performanceMiddleware];
+    return applyMiddlewareChain(request, middlewares, () => handleRequest(request, env, ctx));
   },
 };
 
@@ -268,8 +269,7 @@ async function handleRequest(request: Request, env: Env, ctx: ExecutionContext):
       timestamp: new Date().toISOString(),
       path: new URL(request.url).pathname,
       errorId,
-      // Include sanitized stack trace in development
-      ...(isDevelopment && safeError.stack ? { stack: safeError.stack } : {}),
+      // Never include stack traces in responses for security
       ...(isDevelopment && safeError.type ? { type: safeError.type } : {}),
     };
 

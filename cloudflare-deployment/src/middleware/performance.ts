@@ -8,6 +8,7 @@ import { randomUUID, webcrypto } from 'node:crypto';
 import { CacheManager } from '../performance/CacheManager.js';
 import { PerformanceMonitor, RequestTimer } from '../performance/PerformanceMonitor.js';
 import type { Env } from '../index.js';
+import type { ExecutionContext } from '@cloudflare/workers-types';
 
 export interface PerformanceConfig {
   /**
@@ -53,8 +54,10 @@ export class PerformanceMiddleware {
   private config: PerformanceConfig;
   private cache?: CacheManager;
   private monitor?: PerformanceMonitor;
+  private ctx?: ExecutionContext;
 
-  constructor(env: Env, config: PerformanceConfig = {}) {
+  constructor(env: Env, config: PerformanceConfig = {}, ctx?: ExecutionContext) {
+    this.ctx = ctx;
     this.config = {
       cache: {
         enabled: true,
@@ -178,8 +181,20 @@ export class PerformanceMiddleware {
     if (response.ok && response.headers.get('Content-Type')?.includes('json')) {
       timer.mark('cache-write');
       const data = await response.clone().json();
-      await this.cache.set(cacheKey, data, this.config.cache!.ttl);
-      timer.measure('cache-store', 'cache-write');
+
+      // Use background cache write if ExecutionContext is available
+      if (this.ctx?.waitUntil) {
+        this.ctx.waitUntil(
+          this.cache
+            .set(cacheKey, data, this.config.cache!.ttl)
+            .then(() => timer.measure('cache-store', 'cache-write'))
+            .catch(err => console.error('Background cache write failed:', err))
+        );
+      } else {
+        // Fallback to blocking cache write
+        await this.cache.set(cacheKey, data, this.config.cache!.ttl);
+        timer.measure('cache-store', 'cache-write');
+      }
 
       // Return new response with cache headers
       return new Response(JSON.stringify(data), {
@@ -367,8 +382,12 @@ export class PerformanceMiddleware {
 /**
  * Create performance middleware function
  */
-export function createPerformanceMiddleware(env: Env, config?: PerformanceConfig) {
-  const performance = new PerformanceMiddleware(env, config);
+export function createPerformanceMiddleware(
+  env: Env,
+  config?: PerformanceConfig,
+  ctx?: ExecutionContext
+) {
+  const performance = new PerformanceMiddleware(env, config, ctx);
 
   return async (request: Request, next: () => Promise<Response>): Promise<Response> => {
     return performance.apply(request, next);
