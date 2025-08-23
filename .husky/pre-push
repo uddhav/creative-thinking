@@ -57,4 +57,19 @@ if [ "$LAST_SRC_COMMIT" != "$LAST_DIST_COMMIT" ]; then
   fi
 fi
 
+# Check cloudflare deployment build if directory exists
+if [ -d "cloudflare-deployment" ]; then
+  echo "Checking cloudflare deployment build..."
+  
+  # Try to build cloudflare deployment
+  if ! (cd cloudflare-deployment && npm run build > /dev/null 2>&1); then
+    echo "❌ Cloudflare deployment build failed"
+    echo "Please fix build errors before pushing"
+    echo "Run 'cd cloudflare-deployment && npm run build' to see errors"
+    exit 1
+  fi
+  
+  echo "✅ Cloudflare deployment build successful"
+fi
+
 echo "✅ Pre-push checks passed"
