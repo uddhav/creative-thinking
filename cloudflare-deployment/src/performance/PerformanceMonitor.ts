@@ -5,6 +5,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
+import { createLogger, type Logger } from '../utils/logger.js';
 
 export interface PerformanceMetrics {
   requestId: string;
@@ -49,8 +50,10 @@ export interface PerformanceConfig {
 export class PerformanceMonitor {
   private config: PerformanceConfig;
   private metrics: Map<string, Partial<PerformanceMetrics>> = new Map();
+  private logger: Logger;
 
   constructor(config: PerformanceConfig = {}) {
+    this.logger = createLogger({}, 'PerformanceMonitor');
     this.config = {
       detailedTiming: false,
       sampleRate: 1.0,
@@ -97,7 +100,9 @@ export class PerformanceMonitor {
 
     // Check if slow request
     if (metric.duration > this.config.slowThreshold!) {
-      console.warn(`Slow request detected: ${metric.method} ${metric.path} (${metric.duration}ms)`);
+      this.logger.warn(
+        `Slow request detected: ${metric.method} ${metric.path} (${metric.duration}ms)`
+      );
     }
 
     // Send to Analytics Engine
@@ -186,7 +191,7 @@ export class PerformanceMonitor {
         blobs: [metrics.method, metrics.statusCode?.toString()],
       });
     } catch (error) {
-      console.error('Failed to send metrics to Analytics Engine:', error);
+      this.logger.error('Failed to send metrics to Analytics Engine', error);
     }
   }
 

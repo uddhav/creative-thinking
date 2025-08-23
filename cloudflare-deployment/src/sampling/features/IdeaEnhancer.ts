@@ -5,6 +5,7 @@
  */
 
 import { SamplingManager } from '../SamplingManager.js';
+import { createLogger, type Logger } from '../../utils/logger.js';
 import type { SamplingRequest, SamplingResult } from '../types.js';
 
 export interface EnhancementOptions {
@@ -16,7 +17,11 @@ export interface EnhancementOptions {
 }
 
 export class IdeaEnhancer {
-  constructor(private samplingManager: SamplingManager) {}
+  private logger: Logger;
+
+  constructor(private samplingManager: SamplingManager) {
+    this.logger = createLogger({}, 'IdeaEnhancer');
+  }
 
   /**
    * Enhance a single idea
@@ -53,7 +58,7 @@ export class IdeaEnhancer {
       const result = await this.samplingManager.requestSampling(request, 'idea_enhancement');
       return this.formatEnhancement(idea, result.text);
     } catch (error) {
-      console.error('[IdeaEnhancer] Sampling failed:', error);
+      this.logger.error('Sampling failed', error);
       return this.basicEnhancement(idea);
     }
   }
@@ -103,7 +108,7 @@ export class IdeaEnhancer {
       const result = await this.samplingManager.requestSampling(request, 'batch_enhancement');
       return this.parseEnhancedIdeas(result.text, ideas);
     } catch (error) {
-      console.error('[IdeaEnhancer] Batch enhancement failed:', error);
+      this.logger.error('Batch enhancement failed', error);
       return ideas.map(idea => this.basicEnhancement(idea));
     }
   }
@@ -158,7 +163,7 @@ export class IdeaEnhancer {
       const result = await this.samplingManager.requestSampling(request, 'idea_variations');
       return this.parseVariations(result.text, count);
     } catch (error) {
-      console.error('[IdeaEnhancer] Variation generation failed:', error);
+      this.logger.error('Variation generation failed', error);
       return this.basicVariations(idea, count);
     }
   }
@@ -202,7 +207,7 @@ export class IdeaEnhancer {
       const result = await this.samplingManager.requestSampling(request, 'idea_synthesis');
       return this.formatSynthesis(result.text, ideas);
     } catch (error) {
-      console.error('[IdeaEnhancer] Synthesis failed:', error);
+      this.logger.error('Synthesis failed', error);
       return this.basicSynthesis(ideas);
     }
   }

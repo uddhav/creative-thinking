@@ -4,6 +4,7 @@
  * Provides HTTP streaming for MCP-compliant real-time updates
  */
 
+import { createLogger, type Logger } from '../utils/logger.js';
 import type {
   StreamingTransport,
   StreamingEvent,
@@ -22,8 +23,10 @@ export class SSETransport implements StreamingTransport {
   private active: boolean = false;
   private eventId: number = 0;
   private keepAliveTimer?: number;
+  private logger: Logger;
 
   constructor(config: SSEConfig = {}) {
+    this.logger = createLogger({}, 'SSETransport');
     this.config = {
       keepAliveInterval: config.keepAliveInterval || 30000, // 30 seconds
       retryInterval: config.retryInterval || 5000, // 5 seconds
@@ -56,7 +59,7 @@ export class SSETransport implements StreamingTransport {
 
     // Process the request asynchronously
     handler(this).catch(error => {
-      console.error('SSE handler error:', error);
+      this.logger.error('SSE handler error', error);
       this.close();
     });
 

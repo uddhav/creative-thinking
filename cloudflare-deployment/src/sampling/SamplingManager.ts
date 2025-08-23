@@ -5,6 +5,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
+import { createLogger, type Logger } from '../utils/logger.js';
 import type {
   SamplingRequest,
   SamplingResult,
@@ -31,13 +32,14 @@ export class SamplingManager {
   private readonly MAX_RETRIES = 3;
   private readonly RETRY_DELAY = 1000; // 1 second
   private notificationHandler?: (notification: SamplingNotification) => void;
+  private logger: Logger = createLogger({}, 'SamplingManager');
 
   /**
    * Set the sampling capability from client
    */
   setCapability(capability: SamplingCapability): void {
     this.capability = capability;
-    console.log('[SamplingManager] Capability set:', capability);
+    this.logger.debug('Capability set', capability);
   }
 
   /**
@@ -145,7 +147,7 @@ export class SamplingManager {
   handleSamplingResponse(requestId: string, result: SamplingResult | SamplingError): void {
     const pending = this.pendingRequests.get(requestId);
     if (!pending) {
-      console.error(`[SamplingManager] No pending request found for ID: ${requestId}`);
+      this.logger.error(`No pending request found for ID: ${requestId}`);
       return;
     }
 

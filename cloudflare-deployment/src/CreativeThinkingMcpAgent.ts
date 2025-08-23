@@ -6,6 +6,7 @@ import { SessionAdapter } from './adapters/SessionAdapter.js';
 import { TechniqueAdapter } from './adapters/TechniqueAdapter.js';
 import { ExecutionAdapter } from './adapters/ExecutionAdapter.js';
 import { formatErrorResponse } from './utils/errors.js';
+import { createLogger, type Logger } from './utils/logger.js';
 import { ResourceProviderRegistry } from './resources/ResourceProvider.js';
 import { SessionResourceProvider } from './resources/SessionResourceProvider.js';
 import { DocumentationResourceProvider } from './resources/DocumentationResourceProvider.js';
@@ -54,6 +55,7 @@ export class CreativeThinkingMcpAgent extends McpAgent<Env, CreativeThinkingStat
   private streamingManager!: StreamingManager;
   private samplingManager!: SamplingManager;
   private ideaEnhancer!: IdeaEnhancer;
+  private logger!: Logger;
 
   // Initial state for the Agent
   initialState: CreativeThinkingState = {
@@ -76,6 +78,9 @@ export class CreativeThinkingMcpAgent extends McpAgent<Env, CreativeThinkingStat
   });
 
   async init() {
+    // Initialize logger
+    this.logger = createLogger(this.env as any, 'CreativeThinkingMcpAgent');
+
     // Initialize adapters with environment
     this.sessionAdapter = new SessionAdapter(this.env.KV);
     this.techniqueAdapter = new TechniqueAdapter();
@@ -127,7 +132,7 @@ export class CreativeThinkingMcpAgent extends McpAgent<Env, CreativeThinkingStat
           event: 'sampling',
           data: notification,
         })
-        .catch(console.error);
+        .catch(err => this.logger.error('Failed to broadcast sampling notification', err));
     });
 
     // Initialize resource providers
@@ -728,7 +733,7 @@ export class CreativeThinkingMcpAgent extends McpAgent<Env, CreativeThinkingStat
       }
     );
 
-    console.log(`Registered ${this.promptRegistry.list().length} prompts`);
+    this.logger.debug(`Registered ${this.promptRegistry.list().length} prompts`);
   }
 
   /**
@@ -933,7 +938,7 @@ export class CreativeThinkingMcpAgent extends McpAgent<Env, CreativeThinkingStat
       }
     );
 
-    console.log('Registered 5 MCP Sampling tools');
+    this.logger.debug('Registered 5 MCP Sampling tools');
   }
 
   /**
@@ -1023,13 +1028,15 @@ export class CreativeThinkingMcpAgent extends McpAgent<Env, CreativeThinkingStat
       );
     }
 
-    console.log(`Registered ${allResources.length} resources and ${templates.length} templates`);
+    this.logger.debug(
+      `Registered ${allResources.length} resources and ${templates.length} templates`
+    );
   }
 
   // Lifecycle method: Called when state is updated
   onStateUpdate(state: CreativeThinkingState | undefined, source: any): void {
     if (state) {
-      console.log('State updated:', {
+      this.logger.debug('State updated', {
         sessions: Object.keys(state.sessions).length,
         totalSessions: state.globalMetrics.totalSessions,
         source: source === 'server' ? 'server' : 'client',
@@ -1039,7 +1046,7 @@ export class CreativeThinkingMcpAgent extends McpAgent<Env, CreativeThinkingStat
 
   // Lifecycle method: Called when Agent starts
   async onStart(): Promise<void> {
-    console.log('Creative Thinking MCP Agent started');
+    this.logger.info('Creative Thinking MCP Agent started');
     await this.init();
   }
 
@@ -1078,7 +1085,7 @@ export class CreativeThinkingMcpAgent extends McpAgent<Env, CreativeThinkingStat
 
   // Handle WebSocket errors
   async webSocketError(ws: WebSocket, error: unknown): Promise<void> {
-    console.error('WebSocket error:', error);
+    this.logger.error('WebSocket error', error);
     await super.webSocketError(ws, error);
   }
 
@@ -1089,13 +1096,13 @@ export class CreativeThinkingMcpAgent extends McpAgent<Env, CreativeThinkingStat
     reason: string,
     wasClean: boolean
   ): Promise<void> {
-    console.log(`WebSocket closed: code=${code}, reason=${reason}, clean=${wasClean}`);
+    this.logger.debug(`WebSocket closed: code=${code}, reason=${reason}, clean=${wasClean}`);
     await super.webSocketClose(ws, code, reason, wasClean);
   }
 
   // Override onError from McpAgent base class
   onError(error: Error) {
-    console.error('MCP Agent error:', error);
+    this.logger.error('MCP Agent error', error);
     return {
       status: 500,
       message: 'Internal server error',

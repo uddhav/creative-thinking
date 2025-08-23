@@ -5,14 +5,18 @@
 import { BaseResourceProvider } from './ResourceProvider.js';
 import type { ResourceContent } from './types.js';
 import type { CreativeThinkingState } from '../CreativeThinkingMcpAgent.js';
+import type {
+  MetricsHistoryEntry,
+  SessionState,
+  ErgodicityMetrics,
+  FlexibilityMetrics,
+  Warning,
+  OptionsMetrics,
+  TechniqueUsageStats,
+} from '../types/metrics.js';
 
 export class MetricsResourceProvider extends BaseResourceProvider {
-  private metricsHistory: Array<{
-    timestamp: number;
-    flexibilityScore: number;
-    optionsGenerated: number;
-    pathDependencies: number;
-  }> = [];
+  private metricsHistory: MetricsHistoryEntry[] = [];
 
   constructor(private getState: () => CreativeThinkingState) {
     super('metrics://');
@@ -285,7 +289,7 @@ export class MetricsResourceProvider extends BaseResourceProvider {
 
     // Calculate usage statistics
     const usage = { ...state.globalMetrics.techniqueUsage };
-    const total = Object.values(usage).reduce((sum: number, count: any) => sum + count, 0);
+    const total = Object.values(usage).reduce((sum, count) => sum + count, 0);
 
     const statistics = Object.entries(usage).map(([technique, count]) => ({
       technique,
@@ -322,7 +326,7 @@ export class MetricsResourceProvider extends BaseResourceProvider {
    * Helper methods
    */
 
-  private detectAbsorbingBarriers(session: any): string[] {
+  private detectAbsorbingBarriers(session: SessionState | null): string[] {
     const barriers = [];
 
     if (session?.completed) {
@@ -336,7 +340,7 @@ export class MetricsResourceProvider extends BaseResourceProvider {
     return barriers;
   }
 
-  private calculateTimeAverage(session: any): number {
+  private calculateTimeAverage(session: SessionState | null): number {
     if (!session?.metrics?.history) {
       return 0;
     }
@@ -353,7 +357,7 @@ export class MetricsResourceProvider extends BaseResourceProvider {
     }
 
     const sum = sessions.reduce(
-      (total, session: any) => total + (session.flexibilityScore || 0),
+      (total, session) => total + ((session as SessionState).flexibilityScore || 0),
       0
     );
     return sum / sessions.length;
@@ -394,7 +398,7 @@ export class MetricsResourceProvider extends BaseResourceProvider {
     return recommendations;
   }
 
-  private calculateGenerationRate(session: any): string {
+  private calculateGenerationRate(session: SessionState | null): string {
     if (!session?.startTime || !session?.optionsGenerated) {
       return 'N/A';
     }

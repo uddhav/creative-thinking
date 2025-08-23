@@ -7,6 +7,7 @@
 import { randomUUID, webcrypto } from 'node:crypto';
 import { CacheManager } from '../performance/CacheManager.js';
 import { PerformanceMonitor, RequestTimer } from '../performance/PerformanceMonitor.js';
+import { createLogger, type Logger } from '../utils/logger.js';
 import type { Env } from '../index.js';
 import type { ExecutionContext } from '@cloudflare/workers-types';
 
@@ -55,9 +56,11 @@ export class PerformanceMiddleware {
   private cache?: CacheManager;
   private monitor?: PerformanceMonitor;
   private ctx?: ExecutionContext;
+  private logger: Logger;
 
   constructor(env: Env, config: PerformanceConfig = {}, ctx?: ExecutionContext) {
     this.ctx = ctx;
+    this.logger = createLogger(env as any, 'PerformanceMiddleware');
     this.config = {
       cache: {
         enabled: true,
@@ -188,7 +191,7 @@ export class PerformanceMiddleware {
           this.cache
             .set(cacheKey, data, this.config.cache!.ttl)
             .then(() => timer.measure('cache-store', 'cache-write'))
-            .catch(err => console.error('Background cache write failed:', err))
+            .catch(err => this.logger.error('Background cache write failed', err))
         );
       } else {
         // Fallback to blocking cache write

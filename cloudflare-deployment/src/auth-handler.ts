@@ -4,6 +4,7 @@
  */
 
 import { webcrypto } from 'node:crypto';
+import { createLogger, type Logger } from './utils/logger.js';
 
 export interface AuthContext {
   userId: string;
@@ -11,7 +12,11 @@ export interface AuthContext {
 }
 
 export class AuthHandler {
-  constructor(private env: any) {}
+  private logger: Logger;
+
+  constructor(private env: any) {
+    this.logger = createLogger(env, 'AuthHandler');
+  }
 
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
@@ -105,7 +110,7 @@ export class AuthHandler {
 
     // Check if credentials are configured
     if (!validApiKey || !validUsername) {
-      console.error('AUTH_API_KEY and AUTH_USERNAME must be configured');
+      this.logger.error('AUTH_API_KEY and AUTH_USERNAME must be configured');
       return new Response('Authentication not configured', { status: 500 });
     }
 

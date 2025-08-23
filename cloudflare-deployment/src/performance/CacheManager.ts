@@ -4,6 +4,8 @@
  * Intelligent caching for Cloudflare Workers using KV and Cache API
  */
 
+import { createLogger, type Logger } from '../utils/logger.js';
+
 export interface CacheConfig {
   /**
    * Default TTL in seconds
@@ -49,9 +51,11 @@ export class CacheManager {
   private config: Required<CacheConfig>;
   private memoryCache: Map<string, CacheEntry> = new Map();
   private cacheSize = 0;
+  private logger: Logger;
 
   constructor(kv?: KVNamespace, config: CacheConfig = {}) {
     this.kv = kv;
+    this.logger = createLogger({}, 'CacheManager');
     this.config = {
       defaultTTL: 3600, // 1 hour
       maxSize: 10 * 1024 * 1024, // 10MB
@@ -403,6 +407,6 @@ export class CacheManager {
           await cache.put(cacheKey, response);
         }
       })
-      .catch(console.error);
+      .catch(err => this.logger.error('Background cache operation failed', err));
   }
 }
