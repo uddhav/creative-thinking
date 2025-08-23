@@ -11,6 +11,7 @@ import { CreativeThinkingMcpAgent } from './CreativeThinkingMcpAgent.js';
 import { AuthHandler } from './auth-handler.js';
 import { createSecurityMiddleware } from './middleware/security.js';
 import { createPerformanceMiddleware } from './middleware/performance.js';
+import { createSafeErrorResponse } from './utils/sanitizeStackTrace.js';
 
 // Export the Durable Object class
 export { CreativeThinkingMcpAgent };
@@ -252,21 +253,24 @@ async function handleRequest(request: Request, env: Env, ctx: ExecutionContext):
   } catch (error) {
     console.error('Worker error:', error);
 
-    // Enhanced error handling - only include details in development
+    // Enhanced error handling with sanitized stack traces
     const errorId = randomUUID();
     const isDevelopment = env.ENVIRONMENT === 'development';
 
+    // Use sanitized error response
+    const safeError = createSafeErrorResponse(error, isDevelopment);
+
     const errorResponse = {
       error: 'Internal server error',
-      message:
-        isDevelopment && error instanceof Error
-          ? error.message
-          : 'An unexpected error occurred. Please contact support with the error ID.',
+      message: isDevelopment
+        ? safeError.message
+        : 'An unexpected error occurred. Please contact support with the error ID.',
       timestamp: new Date().toISOString(),
       path: new URL(request.url).pathname,
       errorId,
-      // Only include stack trace in development
-      ...(isDevelopment && error instanceof Error ? { stack: error.stack } : {}),
+      // Include sanitized stack trace in development
+      ...(isDevelopment && safeError.stack ? { stack: safeError.stack } : {}),
+      ...(isDevelopment && safeError.type ? { type: safeError.type } : {}),
     };
 
     // Log to Cloudflare Analytics if available

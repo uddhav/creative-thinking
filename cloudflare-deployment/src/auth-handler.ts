@@ -80,7 +80,8 @@ export class AuthHandler {
         },
       });
 
-      return Response.redirect(redirectTo);
+      // Ensure redirectTo has trailing slash removed if present
+      return Response.redirect(redirectTo.replace(/\/$/, ''));
     }
 
     // Fallback redirect
@@ -126,7 +127,11 @@ export class AuthHandler {
         ); // 5 minutes
       }
 
-      return Response.redirect(`${redirectUri}?code=${code}&state=${state}`);
+      // Ensure redirectUri is a full URL for Response.redirect
+      const fullRedirectUri = redirectUri.startsWith('http')
+        ? redirectUri
+        : `${new URL(request.url).origin}${redirectUri}`;
+      return Response.redirect(`${fullRedirectUri}?code=${code}&state=${state}`);
     }
 
     return new Response('Invalid credentials', { status: 401 });
