@@ -27,19 +27,38 @@ if ! timeout 300 npx lint-staged > "$LINT_LOG" 2>&1; then
 fi
 echo "✅ Lint-staged passed"
 
-# Run tests (with 10 minute timeout)
-echo "Running tests..."
+# Run main tests (with 10 minute timeout)
+echo "Running main tests..."
 if ! timeout 600 npm test > "$TEST_LOG" 2>&1; then
   if [ $? -eq 124 ]; then
-    echo "❌ Tests timed out after 10 minutes"
+    echo "❌ Main tests timed out after 10 minutes"
   else
-    echo "❌ Tests failed. See output below:"
+    echo "❌ Main tests failed. See output below:"
   fi
   cat "$TEST_LOG"
   rm -rf "$TEMP_DIR"
   exit 1
 fi
-echo "✅ Tests passed"
+echo "✅ Main tests passed"
+
+# Run cloudflare deployment tests if the directory exists
+if [ -d "cloudflare-deployment" ]; then
+  echo "Running cloudflare deployment tests..."
+  CLOUDFLARE_TEST_LOG="$TEMP_DIR/cloudflare-test.log"
+  
+  # Change to cloudflare-deployment directory and run tests
+  if ! (cd cloudflare-deployment && timeout 300 npm test > "$CLOUDFLARE_TEST_LOG" 2>&1); then
+    if [ $? -eq 124 ]; then
+      echo "❌ Cloudflare tests timed out after 5 minutes"
+    else
+      echo "❌ Cloudflare tests failed. See output below:"
+    fi
+    cat "$CLOUDFLARE_TEST_LOG"
+    rm -rf "$TEMP_DIR"
+    exit 1
+  fi
+  echo "✅ Cloudflare deployment tests passed"
+fi
 
 # Clean up temp files
 rm -rf "$TEMP_DIR"
