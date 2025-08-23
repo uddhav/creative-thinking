@@ -102,7 +102,7 @@ describe('Cloudflare Worker - index.ts', () => {
       const response = await worker.fetch(request, mockEnv, mockCtx);
 
       expect(response.status).toBe(200);
-      const json = await response.json();
+      const json = (await response.json()) as any;
       expect(json.status).toBe('healthy');
       expect(json.version).toBe('1.0.0');
       expect(json.environment).toBe('development');
