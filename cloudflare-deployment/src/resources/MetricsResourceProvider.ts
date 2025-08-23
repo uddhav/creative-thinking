@@ -333,7 +333,7 @@ export class MetricsResourceProvider extends BaseResourceProvider {
       barriers.push('Session completed - no further changes possible');
     }
 
-    if (session?.lockedDecisions?.length > 0) {
+    if (session?.lockedDecisions && session.lockedDecisions.length > 0) {
       barriers.push(`${session.lockedDecisions.length} decisions locked`);
     }
 
