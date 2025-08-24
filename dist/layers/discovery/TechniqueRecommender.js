@@ -3,8 +3,8 @@
  * Extracted from discoverTechniques to improve maintainability
  */
 export class TechniqueRecommender {
-    // Wildcard inclusion probability (15-20% chance)
-    WILDCARD_PROBABILITY = parseFloat(process.env.WILDCARD_PROBABILITY || '0.175');
+    // Wildcard inclusion probability (20% chance)
+    WILDCARD_PROBABILITY = parseFloat(process.env.WILDCARD_PROBABILITY || '0.20');
     // Dynamic recommendation limits based on complexity
     RECOMMENDATION_LIMITS = {
         low: { min: 2, max: 3, wildcard: 1 },
