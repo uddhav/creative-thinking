@@ -157,12 +157,20 @@ describe('SessionAdapter', () => {
 
   describe('generatePlanId', () => {
     it('should use crypto.randomUUID for secure random generation', async () => {
-      const cryptoSpy = vi.spyOn(globalThis.crypto, 'randomUUID');
+      // Mock crypto.randomUUID
+      const originalRandomUUID = crypto.randomUUID;
+      let randomUUIDCalled = false;
+      crypto.randomUUID = () => {
+        randomUUIDCalled = true;
+        return 'mock-uuid-12345678-1234-1234-1234-123456789012';
+      };
 
       await adapter.createPlan('test', ['six_hats']);
 
-      expect(cryptoSpy).toHaveBeenCalled();
-      cryptoSpy.mockRestore();
+      expect(randomUUIDCalled).toBe(true);
+
+      // Restore original
+      crypto.randomUUID = originalRandomUUID;
     });
 
     it('should not use Math.random', async () => {
