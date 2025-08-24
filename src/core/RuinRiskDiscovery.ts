@@ -1178,10 +1178,19 @@ export class RuinRiskDiscovery {
     response: string,
     riskFeatures?: DomainAssessment['riskFeatures']
   ): number {
+    // Limit input length to prevent ReDoS attacks
+    const truncatedResponse = response.length > 10000 ? response.substring(0, 10000) : response;
+
     // Higher confidence if response is detailed and specific
-    const wordCount = response.split(' ').length;
-    const hasSpecifics = /\d+%|\$\d+|specific|exactly|precisely/.test(response);
-    const hasUncertainty = /maybe|perhaps|possibly|might|could/.test(response.toLowerCase());
+    const wordCount = truncatedResponse.split(' ').length;
+    // Use non-overlapping, more specific patterns to avoid ReDoS
+    const hasPercentage = /\d{1,3}%/.test(truncatedResponse);
+    const hasMoney = /\$\d{1,10}(?:\.\d{2})?/.test(truncatedResponse);
+    const hasSpecificWords = /\b(?:specific|exactly|precisely)\b/.test(truncatedResponse);
+    const hasSpecifics = hasPercentage || hasMoney || hasSpecificWords;
+    const hasUncertainty = /\b(?:maybe|perhaps|possibly|might|could)\b/.test(
+      truncatedResponse.toLowerCase()
+    );
 
     let confidence = Math.min(wordCount / 100, 0.5); // Base confidence from detail
     if (hasSpecifics) confidence += 0.2;
