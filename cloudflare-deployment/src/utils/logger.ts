@@ -66,6 +66,29 @@ export class Logger {
     return args.map(arg => this.sanitizeValue(arg));
   }
 
+  /**
+   * Sanitize error details to redact sensitive information
+   */
+  private sanitizeError(error: any): any {
+    if (!error) {
+      return undefined;
+    }
+    // If Error instance, include only name and message
+    if (error instanceof Error) {
+      return { name: error.name, message: error.message };
+    }
+    // If it's a string, redact if sensitive word present
+    if (typeof error === 'string') {
+      for (const key of Logger.sensitiveKeys) {
+        if (error.toLowerCase().includes(key)) {
+          return '[REDACTED]';
+        }
+      }
+      return error;
+    }
+    // Otherwise, recursively redact sensitive fields (object case)
+    return this.sanitizeValue(error);
+  }
   private sanitizeValue(value: any): any {
     if (value === null || value === undefined) {
       return value;
@@ -133,24 +156,29 @@ export class Logger {
 
   error(message: string, error?: Error | unknown, ...args: any[]): void {
     if (this.shouldLog('error')) {
-      if (error instanceof Error) {
-        const sanitizedArgs = this.sanitizeArgs(...args);
-        // Only log error name and message, not full error object
+      const sanitizedArgs = this.sanitizeArgs(...args);
+      const sanitizedError = this.sanitizeError(error);
+
+      if (sanitizedError !== undefined) {
         console.error(
           this.formatMessage('error', message),
-          { name: error.name, message: error.message },
+          sanitizedError,
           ...sanitizedArgs
         );
-        // Never log stack traces in production, even in error logs
-        if (this.environment === 'development' && error.stack) {
+        // Only print stack in development, but never log it if it's sensitive
+        if (
+          this.environment === 'development' &&
+          error instanceof Error &&
+          error.stack
+        ) {
+          // Optional: Could sanitize stack for sensitive info here if required
           console.error(error.stack);
         }
-      } else if (error) {
-        const sanitizedArgs = this.sanitizeArgs(error, ...args);
-        console.error(this.formatMessage('error', message), ...sanitizedArgs);
       } else {
-        const sanitizedArgs = this.sanitizeArgs(...args);
-        console.error(this.formatMessage('error', message), ...sanitizedArgs);
+        console.error(
+          this.formatMessage('error', message),
+          ...sanitizedArgs
+        );
       }
     }
   }
