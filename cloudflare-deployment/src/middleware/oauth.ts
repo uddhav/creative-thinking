@@ -128,7 +128,6 @@ export class OAuthMiddleware {
 
     this.logger.info('OAuth authorization initiated', {
       provider: this.provider.name,
-      state,
     });
 
     return Response.redirect(authUrl.toString(), 302);
