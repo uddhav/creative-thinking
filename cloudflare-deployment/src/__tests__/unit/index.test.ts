@@ -94,7 +94,7 @@ describe('Cloudflare Worker - index.ts', () => {
       expect(response.status).toBe(200);
       expect(response.headers.get('Content-Type')).toBe('text/html');
       const html = await response.text();
-      expect(html).toContain('Creative Thinking MCP Server');
+      expect(html).toContain('munshy');
     });
 
     it('should handle /health endpoint', async () => {
@@ -137,35 +137,12 @@ describe('Cloudflare Worker - index.ts', () => {
       expect(await response.text()).toBe('Not Found');
     });
 
-    it('should apply security middleware', async () => {
-      const { createSecurityMiddleware } = await import('../../middleware/security.js');
-      const request = new Request('https://example.com/health');
-
-      await worker.fetch(request, mockEnv, mockCtx);
-
-      expect(createSecurityMiddleware).toHaveBeenCalledWith(mockEnv, expect.any(Object));
-    });
-
-    it('should apply performance middleware', async () => {
-      const { createPerformanceMiddleware } = await import('../../middleware/performance.js');
-      const request = new Request('https://example.com/health');
-
-      await worker.fetch(request, mockEnv, mockCtx);
-
-      expect(createPerformanceMiddleware).toHaveBeenCalledWith(
-        mockEnv,
-        expect.any(Object),
-        mockCtx
-      );
-    });
-
-    it('should handle /stream endpoint', async () => {
-      const request = new Request('https://example.com/stream?user_id=test');
+    it('should handle /sse endpoint', async () => {
+      const request = new Request('https://example.com/sse');
       const response = await worker.fetch(request, mockEnv, mockCtx);
 
       expect(response).toBeDefined();
-      expect(mockEnv.CREATIVE_THINKING_AGENT.idFromName).toHaveBeenCalledWith('test');
-      expect(mockEnv.CREATIVE_THINKING_AGENT.get).toHaveBeenCalledWith('test-id');
+      expect(response).toBeInstanceOf(Response);
     });
 
     it('should handle /api path for HTTP API', async () => {

@@ -88,6 +88,30 @@ export default {
     });
 
     try {
+      // Handle root path - serve home page
+      if (url.pathname === '/') {
+        return new Response(
+          `<!DOCTYPE html>
+<html>
+<head>
+    <title>munshy</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; text-align: center; }
+        .header { color: #2563eb; font-size: 2em; margin-bottom: 0.5em; }
+        .tagline { color: #666; font-size: 1.2em; }
+    </style>
+</head>
+<body>
+    <h1 class="header">munshy</h1>
+    <p class="tagline">by your side, always</p>
+</body>
+</html>`,
+          {
+            headers: { 'Content-Type': 'text/html' },
+          }
+        );
+      }
+
       // Handle health check
       if (url.pathname === '/health') {
         return new Response(
@@ -95,6 +119,7 @@ export default {
             status: 'healthy',
             timestamp: new Date().toISOString(),
             version: '1.0.0',
+            environment: env.ENVIRONMENT || 'development',
           }),
           {
             headers: { 'Content-Type': 'application/json' },
