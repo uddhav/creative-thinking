@@ -6,7 +6,6 @@
 import {
   isValidTechnique,
   getStepCountForTechnique,
-  ValidTechnique,
   VALID_TECHNIQUES,
 } from '../constants/techniques';
 

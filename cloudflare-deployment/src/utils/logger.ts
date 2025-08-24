@@ -18,6 +18,22 @@ export class Logger {
     error: 3,
   };
 
+  private static sensitiveKeys = [
+    'password',
+    'secret',
+    'token',
+    'key',
+    'auth',
+    'authorization',
+    'credentials',
+    'api_key',
+    'apikey',
+    'client_secret',
+    'access_token',
+    'refresh_token',
+    'bearer',
+  ];
+
   private level: number;
   private environment: string;
   private prefix: string;
@@ -43,35 +59,98 @@ export class Logger {
     return `${timestamp} [${level.toUpperCase()}] ${prefixStr}${message}`;
   }
 
+  /**
+   * Sanitize arguments to remove sensitive data
+   */
+  private sanitizeArgs(...args: any[]): any[] {
+    return args.map(arg => this.sanitizeValue(arg));
+  }
+
+  private sanitizeValue(value: any): any {
+    if (value === null || value === undefined) {
+      return value;
+    }
+
+    if (typeof value === 'string') {
+      // Check if string looks like a token/secret
+      if (value.length > 20 && /^[a-zA-Z0-9+/=._-]+$/.test(value)) {
+        return '[REDACTED-TOKEN]';
+      }
+      return value;
+    }
+
+    if (typeof value === 'object') {
+      if (value instanceof Error) {
+        return {
+          name: value.name,
+          message: value.message,
+          // Don't include stack trace - it may contain sensitive paths
+        };
+      }
+
+      if (Array.isArray(value)) {
+        return value.map(item => this.sanitizeValue(item));
+      }
+
+      // Sanitize object properties
+      const sanitized: any = {};
+      for (const [key, val] of Object.entries(value)) {
+        const lowerKey = key.toLowerCase();
+        const isSensitive = Logger.sensitiveKeys.some(sensitive => lowerKey.includes(sensitive));
+
+        if (isSensitive) {
+          sanitized[key] = '[REDACTED]';
+        } else {
+          sanitized[key] = this.sanitizeValue(val);
+        }
+      }
+      return sanitized;
+    }
+
+    return value;
+  }
+
   debug(message: string, ...args: any[]): void {
     if (this.shouldLog('debug')) {
-      console.log(this.formatMessage('debug', message), ...args);
+      const sanitizedArgs = this.sanitizeArgs(...args);
+      console.log(this.formatMessage('debug', message), ...sanitizedArgs);
     }
   }
 
   info(message: string, ...args: any[]): void {
     if (this.shouldLog('info')) {
-      console.log(this.formatMessage('info', message), ...args);
+      const sanitizedArgs = this.sanitizeArgs(...args);
+      console.log(this.formatMessage('info', message), ...sanitizedArgs);
     }
   }
 
   warn(message: string, ...args: any[]): void {
     if (this.shouldLog('warn')) {
-      console.warn(this.formatMessage('warn', message), ...args);
+      const sanitizedArgs = this.sanitizeArgs(...args);
+      console.warn(this.formatMessage('warn', message), ...sanitizedArgs);
     }
   }
 
   error(message: string, error?: Error | unknown, ...args: any[]): void {
     if (this.shouldLog('error')) {
       if (error instanceof Error) {
-        console.error(this.formatMessage('error', message), error.message, ...args);
+        const sanitizedArgs = this.sanitizeArgs(...args);
+        // Only log error name and message, not full error object
+        console.error(
+          this.formatMessage('error', message),
+          { name: error.name, message: error.message },
+          ...sanitizedArgs
+        );
+        // Never log stack traces in production, even in error logs
         if (this.environment === 'development' && error.stack) {
           console.error(error.stack);
         }
       } else if (error) {
-        console.error(this.formatMessage('error', message), error, ...args);
+        const sanitizedArgs = this.sanitizeArgs(error, ...args);
+        console.error(this.formatMessage('error', message), ...sanitizedArgs);
       } else {
-        console.error(this.formatMessage('error', message), ...args);
+        const sanitizedArgs = this.sanitizeArgs(...args);
+        console.error(this.formatMessage('error', message), ...sanitizedArgs);
       }
     }
   }
