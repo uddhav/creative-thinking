@@ -174,11 +174,8 @@ export class Logger {
       }
 
       // Use structured logging to avoid CodeQL clear-text logging alerts
-      if (Object.keys(logData).length > 0) {
-        console.log(this.formatMessage('info', message), logData);
-      } else {
-        console.log(this.formatMessage('info', message));
-      }
+      // Remove dynamic data from console calls to prevent CodeQL taint flow
+      console.log(this.formatMessage('info', message));
     }
   }
 
@@ -198,11 +195,8 @@ export class Logger {
       }
 
       // Use structured logging to avoid CodeQL clear-text logging alerts
-      if (Object.keys(logData).length > 0) {
-        console.warn(this.formatMessage('warn', message), logData);
-      } else {
-        console.warn(this.formatMessage('warn', message));
-      }
+      // Remove dynamic data from console calls to prevent CodeQL taint flow
+      console.warn(this.formatMessage('warn', message));
     }
   }
 
@@ -226,11 +220,8 @@ export class Logger {
         logData.data = sanitizedArgs;
       }
 
-      if (Object.keys(logData).length > 0) {
-        console.error(this.formatMessage('error', message), logData);
-      } else {
-        console.error(this.formatMessage('error', message));
-      }
+      // Remove dynamic data from console calls to prevent CodeQL taint flow
+      console.error(this.formatMessage('error', message));
 
       // Only print stack in development, and sanitize it
       if (this.environment === 'development' && error instanceof Error && error.stack) {
