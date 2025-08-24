@@ -55,8 +55,9 @@ export class Logger {
 
   private formatMessage(level: LogLevel, message: string, ...args: any[]): string {
     const timestamp = new Date().toISOString();
-    const prefixStr = this.prefix ? `[${this.prefix}] ` : '';
-    return `${timestamp} [${level.toUpperCase()}] ${prefixStr}${message}`;
+    const sanitizedPrefix = this.prefix ? `[${this.sanitizeValue(this.prefix)}] ` : '';
+    const sanitizedMessage = typeof message === 'string' ? this.sanitizeValue(message) : '';
+    return `${timestamp} [${level.toUpperCase()}] ${sanitizedPrefix}${sanitizedMessage}`;
   }
 
   /**
