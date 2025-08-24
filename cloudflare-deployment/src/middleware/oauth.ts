@@ -144,9 +144,19 @@ export class OAuthMiddleware {
     const error = url.searchParams.get('error');
 
     if (error) {
+      // Only log sanitized error code (alphanumeric, short) and truncated, sanitized description.
+      const safeError = typeof error === 'string' && error.length < 30 && /^[\w\-]+$/.test(error) ? error : '[REDACTED]';
+      const rawDescription = url.searchParams.get('error_description') || '';
+      // Only allow first 50 chars, and strip all but simple safe chars (letters, numbers, space, .,-)
+      const safeDescription = rawDescription
+        ? rawDescription
+            .substring(0, 50)
+            .replace(/[^\w\s.,\-]/g, '')
+        : undefined;
+      // Do not log full error description or unknown fields
       this.logger.warn('OAuth callback error', {
-        error,
-        description: url.searchParams.get('error_description'),
+        error: safeError,
+        description: safeDescription,
       });
       return new Response(
         JSON.stringify({
