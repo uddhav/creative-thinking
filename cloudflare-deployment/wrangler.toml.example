@@ -1,0 +1,70 @@
+name = "your-worker-name"
+main = "src/index.ts"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+# KV namespace for session storage
+# Create with: npx wrangler kv namespace create sessions
+[[kv_namespaces]]
+binding = "KV"
+id = "YOUR_KV_NAMESPACE_ID"
+preview_id = "YOUR_KV_PREVIEW_ID"
+
+# KV namespace for OAuth (clients, grants, tokens)
+# Create with: npx wrangler kv namespace create oauth
+[[kv_namespaces]]
+binding = "OAUTH_KV"
+id = "YOUR_OAUTH_KV_NAMESPACE_ID"
+
+# Durable Objects configuration
+[[durable_objects.bindings]]
+name = "CREATIVE_THINKING_AGENT"
+class_name = "CreativeThinkingMcpAgent"
+
+# Migration for Durable Objects with SQL
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["CreativeThinkingMcpAgent"]
+
+# Workers AI binding (optional, for future AI enhancements)
+[ai]
+binding = "AI"
+
+# Environment variables
+[vars]
+ENVIRONMENT = "production"
+LOG_LEVEL = "info"
+# Set ADMIN_REGISTRATION_KEY for production to protect client registration
+# ADMIN_REGISTRATION_KEY = "your-secret-admin-key"
+
+# Development settings
+[env.development]
+vars = { ENVIRONMENT = "development", LOG_LEVEL = "debug" }
+
+# Route configuration (uncomment when deploying to custom domain)
+# [[routes]]
+# pattern = "creative-thinking.example.com/*"
+# zone_name = "example.com"
+
+# Limits - Increased for complex thinking techniques (requires paid plan)
+# [limits]
+# cpu_ms = 200
+
+# Observability
+[observability]
+enabled = true
+
+# Rate limiting (Cloudflare's built-in rate limiting)
+# Configure via Cloudflare dashboard or API for production
+# Example configuration (not directly in wrangler.toml):
+# - 100 requests per minute per IP for /mcp endpoint
+# - 10 requests per minute per IP for /authorize endpoint
+# - Burst of 20 requests allowed
+
+# Tail Workers (for logging) - Requires paid plan
+# [[tail_consumers]]
+# service = "creative-thinking-logger"
+
+# Build configuration
+[build]
+command = "npm run build"

@@ -7,8 +7,8 @@ import type { LateralTechnique } from '../../types/index.js';
 import type { TechniqueRegistry } from '../../techniques/TechniqueRegistry.js';
 
 export class TechniqueRecommender {
-  // Wildcard inclusion probability (15-20% chance)
-  private readonly WILDCARD_PROBABILITY = parseFloat(process.env.WILDCARD_PROBABILITY || '0.175');
+  // Wildcard inclusion probability (20% chance)
+  private readonly WILDCARD_PROBABILITY = parseFloat(process.env.WILDCARD_PROBABILITY || '0.20');
 
   // Dynamic recommendation limits based on complexity
   private readonly RECOMMENDATION_LIMITS = {

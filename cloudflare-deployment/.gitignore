@@ -1,0 +1,62 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+*.js
+*.js.map
+*.d.ts
+!src/**/*.d.ts
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Cloudflare deployment config with sensitive IDs
+wrangler.toml
+# Keep the example file
+!wrangler.toml.example
+
+# Local credentials and setup files
+CLAUDE_DESKTOP_SETUP.md
+*-credentials.md
+*-setup.md
+*.credentials
+*.secrets
+.dev.vars
+
+# Test files that might contain credentials
+test/mcp-client.ts
+test/generate-dev-token.ts
+test/*.local.*
+
+# Wrangler state
+.wrangler/
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+.cache/

@@ -2,11 +2,10 @@
  * SessionAdapter - Bridges Cloudflare KV storage with existing SessionManager logic
  */
 
-import * as crypto from 'node:crypto';
+// Using Web Crypto API available in Cloudflare Workers
 import {
   isValidTechnique,
   getStepCountForTechnique,
-  ValidTechnique,
   VALID_TECHNIQUES,
 } from '../constants/techniques';
 
@@ -135,7 +134,9 @@ export class SessionAdapter {
 
   private generateSessionId(): string {
     const timestamp = Date.now().toString(36);
-    const random = crypto.randomBytes(8).toString('base64url');
+    // Use Web Crypto API available in Cloudflare Workers
+    const uuid = crypto.randomUUID();
+    const random = uuid.replace(/-/g, '').substring(0, 8);
     return `session_${timestamp}_${random}`;
   }
 

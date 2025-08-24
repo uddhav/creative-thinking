@@ -1,23 +1,30 @@
 name = "creative-thinking-mcp"
 main = "src/index.ts"
-compatibility_date = "2024-01-01"
+compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
 
 # KV namespace for session storage
 [[kv_namespaces]]
 binding = "KV"
-id = "creative_thinking_sessions"
-preview_id = "creative_thinking_sessions_preview"
+id = "b7dab4a71e584d6f93906082353807f8"
+preview_id = "2c07444e683244e7a5e7aa78d7e7c204"
+
+# OAuth KV namespace removed - no longer using OAuth
 
 # Durable Objects configuration
 [[durable_objects.bindings]]
 name = "CREATIVE_THINKING_AGENT"
 class_name = "CreativeThinkingMcpAgent"
 
-# Migration for Durable Objects with SQL
+# Migration for Durable Objects with SQL - Updated tag
 [[migrations]]
-tag = "v1"
+tag = "v2"
 new_sqlite_classes = ["CreativeThinkingMcpAgent"]
+
+# Migration to delete old class from previous deployments
+[[migrations]]
+tag = "v3" 
+deleted_classes = ["SimpleMcpAgent"]
 
 # Workers AI binding (optional, for future AI enhancements)
 [ai]
@@ -27,21 +34,47 @@ binding = "AI"
 [vars]
 ENVIRONMENT = "production"
 LOG_LEVEL = "info"
-# Authentication - Set these via environment or secrets in production
-# AUTH_USERNAME and AUTH_API_KEY should be configured separately
+
+# Optional OAuth Authentication (disabled by default)
+OAUTH_ENABLED = "false"
+OAUTH_REQUIRED = "false"
+OAUTH_PROVIDER = "github"  # Options: github, google, custom
+OAUTH_REDIRECT_URI = "https://creative-thinking-mcp.mbfw8r4d6n.workers.dev/oauth/callback"
+
+# Rate Limiting (enabled by default)
+RATE_LIMIT_ENABLED = "true"
+RATE_LIMIT_ANONYMOUS = "30"       # Requests per minute for anonymous users
+RATE_LIMIT_AUTHENTICATED = "100"  # Requests per minute for authenticated users
+
+# Performance Monitoring (enabled by default)
+PERFORMANCE_MONITORING = "true"
+METRICS_SAMPLE_RATE = "1.0"
+
+# OAuth Secrets (set via wrangler secret put)
+# OAUTH_CLIENT_ID = "your_oauth_client_id"
+# OAUTH_CLIENT_SECRET = "your_oauth_client_secret"
+# 
+# Example commands to set OAuth secrets:
+# wrangler secret put OAUTH_CLIENT_ID
+# wrangler secret put OAUTH_CLIENT_SECRET
 
 # Development settings
 [env.development]
-vars = { ENVIRONMENT = "development", LOG_LEVEL = "debug" }
+[env.development.vars]
+ENVIRONMENT = "development"
+LOG_LEVEL = "debug"
+OAUTH_ENABLED = "false"
+RATE_LIMIT_ENABLED = "false"  # Disable rate limiting in development
+PERFORMANCE_MONITORING = "true"
 
 # Route configuration (uncomment when deploying to custom domain)
 # [[routes]]
 # pattern = "creative-thinking.example.com/*"
 # zone_name = "example.com"
 
-# Limits - Increased for complex thinking techniques
-[limits]
-cpu_ms = 200
+# Limits - Increased for complex thinking techniques (requires paid plan)
+# [limits]
+# cpu_ms = 200
 
 # Observability
 [observability]
@@ -54,9 +87,9 @@ enabled = true
 # - 10 requests per minute per IP for /authorize endpoint
 # - Burst of 20 requests allowed
 
-# Tail Workers (for logging)
-[[tail_consumers]]
-service = "creative-thinking-logger"
+# Tail Workers (for logging) - Requires paid plan
+# [[tail_consumers]]
+# service = "creative-thinking-logger"
 
 # Build configuration
 [build]

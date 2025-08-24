@@ -1,7 +1,7 @@
 # Creative Thinking MCP Server - Cloudflare Deployment
 
-This is the Cloudflare Workers deployment of the Creative Thinking MCP Server using the Agents SDK
-with WebSocket hibernation for optimal performance and cost efficiency.
+Deploy the Creative Thinking MCP Server to Cloudflare Workers with OAuth 2.0 authentication, Durable
+Objects for stateful sessions, and KV storage for persistence.
 
 ## 🚀 Quick Start
 
@@ -11,12 +11,32 @@ with WebSocket hibernation for optimal performance and cost efficiency.
 - Node.js 18+
 - Wrangler CLI (`npm install -g wrangler`)
 
-### Local Development
+### Initial Setup
 
 ```bash
+# Clone the repository
+git clone [repository-url]
+cd creative-thinking/cloudflare-deployment
+
 # Install dependencies
 npm install
 
+# Copy the example configuration
+cp wrangler.toml.example wrangler.toml
+
+# Login to Cloudflare
+npx wrangler login
+
+# Create KV namespaces
+npx wrangler kv namespace create sessions
+npx wrangler kv namespace create oauth
+
+# Update wrangler.toml with the namespace IDs returned above
+```
+
+### Local Development
+
+```bash
 # Run locally with Miniflare
 npm run dev
 
@@ -26,12 +46,9 @@ npm run dev
 ### Deploy to Cloudflare
 
 ```bash
-# Login to Cloudflare
-npx wrangler login
-
 # Set up secrets for production (replace with your values)
-npx wrangler secret put AUTH_DEMO_USERNAME
-npx wrangler secret put AUTH_DEMO_API_KEY
+npx wrangler secret put AUTH_USERNAME
+npx wrangler secret put AUTH_API_KEY
 
 # Deploy to production
 npm run deploy
@@ -46,10 +63,9 @@ This implementation uses:
 
 - **Cloudflare Agents SDK** with `McpAgent` class for MCP protocol support
 - **Multi-Transport Architecture**:
-  - **Server-Sent Events (SSE)** for MCP protocol streaming at `/mcp`
-  - **HTTP API** for standard MCP requests at `/api`
-  - **WebSocket** for real-time bidirectional MCP communication at `/ws`
-  - **Streaming Architecture** for real-time progress updates at `/stream`
+  - **Streamable HTTP** with auto-fallback to SSE at `/mcp` (recommended)
+  - **Server-Sent Events (SSE)** for MCP protocol streaming at `/sse`
+  - **Automatic transport negotiation** for best performance
 - **Durable Objects** for session state persistence
 - **WebSocket Hibernation** for cost-efficient real-time connections (1000x cost savings)
 - **KV Storage** for session data
@@ -126,8 +142,8 @@ AUTH_DEMO_API_KEY = "demo-api-key"
 **Important**: For production, use Cloudflare secrets instead of plain text:
 
 ```bash
-npx wrangler secret put AUTH_DEMO_USERNAME
-npx wrangler secret put AUTH_DEMO_API_KEY
+npx wrangler secret put AUTH_USERNAME
+npx wrangler secret put AUTH_API_KEY
 npx wrangler secret put OAUTH_CLIENT_SECRET
 ```
 
@@ -140,6 +156,31 @@ To use a custom domain, uncomment and update in `wrangler.toml`:
 pattern = "your-domain.com/*"
 zone_name = "your-domain.com"
 ```
+
+## 🧪 Testing MCP Functionality
+
+Test your deployed server with the included test client:
+
+```bash
+# Test with HTTP/SSE transport (default)
+npx tsx test/mcp-client.ts
+
+# Test with WebSocket transport
+USE_WEBSOCKET=true npx tsx test/mcp-client.ts
+
+# Test with custom server URL
+SERVER_URL=http://localhost:8787 npx tsx test/mcp-client.ts
+
+# Test with custom credentials
+AUTH_USERNAME=myuser AUTH_API_KEY=mykey npx tsx test/mcp-client.ts
+```
+
+The test client verifies:
+
+- Health endpoint availability
+- Authentication (rejects invalid credentials)
+- All three MCP tools (discover, plan, execute)
+- WebSocket and SSE streaming
 
 ## 🤖 MCP Sampling (AI Enhancement)
 
@@ -209,53 +250,46 @@ This ensures the server remains functional even without AI capabilities.
 
 ## 🔌 Connecting Clients
 
-### MCP Server-Sent Events (SSE) Connection
+### MCP Connection (Recommended)
 
-Connect MCP clients via SSE (primary transport):
+Connect MCP clients with automatic transport selection:
 
 ```
 https://your-server.workers.dev/mcp
 ```
 
-This endpoint supports the full MCP protocol over Server-Sent Events.
+This endpoint automatically selects the best transport:
 
-### HTTP API Connection
+- Tries streamable HTTP first (more efficient)
+- Falls back to SSE if streamable HTTP is not supported
+- Fully compatible with Claude Desktop and other MCP clients
 
-Standard HTTP requests:
+### SSE-Only Connection
 
-```javascript
-fetch('https://your-server.workers.dev/api/tools/call', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    jsonrpc: '2.0',
-    method: 'tools/call',
-    params: {
-      name: 'discover_techniques',
-      arguments: { problem: 'Your problem here' },
-    },
-  }),
-});
+For clients that specifically need SSE transport:
+
+```
+https://your-server.workers.dev/sse
 ```
 
-### WebSocket Connection
+### Example Configuration for Claude Desktop
 
-For real-time bidirectional MCP communication:
-
-```javascript
-const ws = new WebSocket('wss://your-server.workers.dev/ws');
-ws.onopen = () => {
-  ws.send(
-    JSON.stringify({
-      jsonrpc: '2.0',
-      method: 'tools/call',
-      params: {
-        name: 'discover_techniques',
-        arguments: { problem: 'Your problem here' },
-      },
-    })
-  );
-};
+```json
+{
+  "mcpServers": {
+    "creative-thinking": {
+      "url": "https://your-server.workers.dev/mcp",
+      "transport": "auto",
+      "oauth": {
+        "clientId": "YOUR_CLIENT_ID",
+        "clientSecret": "YOUR_CLIENT_SECRET",
+        "tokenEndpoint": "https://your-server.workers.dev/token",
+        "grantType": "client_credentials",
+        "scope": "read write execute"
+      }
+    }
+  }
+}
 ```
 
 ### OAuth Flow
