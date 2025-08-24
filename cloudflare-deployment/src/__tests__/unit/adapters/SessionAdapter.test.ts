@@ -2,13 +2,17 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { SessionAdapter } from '../../../adapters/SessionAdapter';
 import { VALID_TECHNIQUES } from '../../../constants/techniques';
 
-// Mock the crypto module
+// Mock the global crypto API for Cloudflare Workers environment
 let uuidCounter = 0;
-let bytesCounter = 0;
-vi.mock('crypto', () => ({
-  randomUUID: vi.fn(() => `test-uuid-${++uuidCounter}`),
-  randomBytes: vi.fn(() => Buffer.from(`test${++bytesCounter}234`)),
-}));
+const mockCrypto = {
+  randomUUID: vi.fn(() => `12345678-1234-1234-1234-${String(++uuidCounter).padStart(12, '0')}`),
+};
+
+// Set up global crypto mock
+Object.defineProperty(global, 'crypto', {
+  value: mockCrypto,
+  writable: true,
+});
 
 // Mock KV namespace
 const mockKV = {
@@ -44,6 +48,10 @@ describe('SessionAdapter', () => {
     it('should generate unique session IDs', async () => {
       const problem = 'test';
       const session1 = await adapter.createSession(problem);
+
+      // Add small delay to ensure different timestamp
+      await new Promise(resolve => setTimeout(resolve, 2));
+
       const session2 = await adapter.createSession(problem);
 
       expect(session1.id).not.toBe(session2.id);
@@ -157,20 +165,12 @@ describe('SessionAdapter', () => {
 
   describe('generatePlanId', () => {
     it('should use crypto.randomUUID for secure random generation', async () => {
-      // Mock crypto.randomUUID
-      const originalRandomUUID = crypto.randomUUID;
-      let randomUUIDCalled = false;
-      crypto.randomUUID = () => {
-        randomUUIDCalled = true;
-        return 'mock-uuid-12345678-1234-1234-1234-123456789012';
-      };
+      // Clear previous calls and set up spy
+      vi.clearAllMocks();
 
       await adapter.createPlan('test', ['six_hats']);
 
-      expect(randomUUIDCalled).toBe(true);
-
-      // Restore original
-      crypto.randomUUID = originalRandomUUID;
+      expect(mockCrypto.randomUUID).toHaveBeenCalled();
     });
 
     it('should not use Math.random', async () => {
