@@ -1177,9 +1177,42 @@ See [Telemetry in Contributing Guide](./CONTRIBUTING.md#telemetry-system) for de
 
 ## Configuration
 
-### For Desktop Applications
+You can connect to the Creative Thinking MCP Server using three different methods:
 
-Add to your MCP configuration file:
+### Option 1: Cloudflare Workers (Recommended)
+
+Connect directly to the hosted server with optional authentication and enhanced features:
+
+```json
+{
+  "mcpServers": {
+    "creative-thinking": {
+      "transport": {
+        "type": "sse",
+        "url": "https://creative-thinking-mcp.mbfw8r4d6n.workers.dev"
+      }
+    }
+  }
+}
+```
+
+**🚀 Enhanced Features Available:**
+
+- **Rate Limiting**: 30 requests/minute for anonymous users (enabled by default)
+- **Performance Monitoring**: Server-Timing headers with detailed metrics
+- **Optional OAuth Authentication**: Support for GitHub, Google, and custom providers
+- **Health Monitoring**: `/health` endpoint for status checks
+
+**🔐 OAuth Setup (Optional):** To enable OAuth authentication:
+
+1. Contact the server administrator to configure OAuth credentials
+2. Access authorization URL: `https://creative-thinking-mcp.mbfw8r4d6n.workers.dev/oauth/authorize`
+3. Use Bearer tokens in Authorization header for authenticated requests
+4. Higher rate limits (100 requests/minute) for authenticated users
+
+### Option 2: Local Installation via NPX
+
+Run directly from GitHub without installation:
 
 ```json
 {
@@ -1192,21 +1225,31 @@ Add to your MCP configuration file:
 }
 ```
 
-### For Code Editors
+### Option 3: Local Development Setup
 
-Add to your editor's MCP settings:
+For local development and customization:
 
 ```json
 {
-  "mcp": {
-    "servers": {
-      "creative-thinking": {
-        "command": "npx",
-        "args": ["-y", "github:uddhav/creative-thinking"]
-      }
+  "mcpServers": {
+    "creative-thinking": {
+      "command": "node",
+      "args": ["/path/to/creative-thinking/dist/index.js"]
     }
   }
 }
+```
+
+### Connection Health Check
+
+Test your connection:
+
+```bash
+# For Cloudflare Workers deployment
+curl https://creative-thinking-mcp.mbfw8r4d6n.workers.dev/health
+
+# Expected response:
+# {"status":"healthy","timestamp":"2025-01-23T19:31:58.328Z","version":"1.0.0"}
 ```
 
 ### Auto-Save Feature
