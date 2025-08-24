@@ -32,6 +32,7 @@ export class Logger {
     'access_token',
     'refresh_token',
     'bearer',
+    'state', // ADD: redact OAuth state values from logs
   ];
 
   private level: number;
