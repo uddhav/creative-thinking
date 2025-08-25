@@ -1,9 +1,9 @@
 # Creative Thinking MCP Server
 
 A Model Context Protocol (MCP) server that provides structured creative thinking techniques for
-problem-solving and ideation. This server implements twenty-four enhanced thinking techniques
-through a unified framework combining generative creativity with systematic risk assessment,
-analytical verification, and post-action reflexivity tracking.
+problem-solving and ideation. This server implements twenty-one enhanced thinking techniques through
+a unified framework combining generative creativity with systematic risk assessment, analytical
+verification, and post-action reflexivity tracking.
 
 > **Note**: This repository is a public fork of work originally developed with Munshy, Personal
 > Secretary.

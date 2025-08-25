@@ -16,6 +16,10 @@ preview_id = "2c07444e683244e7a5e7aa78d7e7c204"
 name = "CREATIVE_THINKING_AGENT"
 class_name = "CreativeThinkingMcpAgent"
 
+[[durable_objects.bindings]]
+name = "IDEA_STORMING_AGENT"
+class_name = "IdeaStormingMcpAgent"
+
 # Migration for Durable Objects with SQL - Updated tag
 [[migrations]]
 tag = "v2"
@@ -25,6 +29,11 @@ new_sqlite_classes = ["CreativeThinkingMcpAgent"]
 [[migrations]]
 tag = "v3" 
 deleted_classes = ["SimpleMcpAgent"]
+
+# Migration to add new IdeaStormingMcpAgent
+[[migrations]]
+tag = "v4"
+new_sqlite_classes = ["IdeaStormingMcpAgent"]
 
 # Workers AI binding (optional, for future AI enhancements)
 [ai]

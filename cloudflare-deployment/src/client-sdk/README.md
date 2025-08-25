@@ -1,7 +1,8 @@
 # Creative Thinking MCP Client SDK
 
-A TypeScript/JavaScript SDK for interacting with the Creative Thinking MCP Server deployed on
-Cloudflare Workers.
+A TypeScript/JavaScript SDK for interacting with the Creative Thinking and Idea Storming MCP Servers
+deployed on Cloudflare Workers. This SDK provides two separate clients for the dual-agent
+architecture.
 
 ## 🚀 Installation
 
@@ -13,12 +14,14 @@ yarn add @creative-thinking/client-sdk
 
 ## 📖 Quick Start
 
+### Creative Thinking Client
+
 ```typescript
 import { CreativeThinkingClient } from '@creative-thinking/client-sdk';
 
-// Create client
-const client = new CreativeThinkingClient({
-  serverUrl: 'https://your-server.workers.dev',
+// Create client for creative thinking (3 tools)
+const creativeClient = new CreativeThinkingClient({
+  serverUrl: 'https://your-server.workers.dev/thinker/streamable',
   auth: {
     type: 'api-key',
     credentials: { apiKey: 'your-api-key' },
@@ -27,16 +30,16 @@ const client = new CreativeThinkingClient({
 });
 
 // Connect
-await client.connect();
+await creativeClient.connect();
 
 // Discover techniques
-const discovery = await client.discoverTechniques('How to improve product design?');
+const discovery = await creativeClient.discoverTechniques('How to improve product design?');
 
 // Plan session
-const plan = await client.planThinkingSession(discovery.problem, ['six_hats', 'scamper']);
+const plan = await creativeClient.planThinkingSession(discovery.problem, ['six_hats', 'scamper']);
 
 // Execute steps
-const result = await client.executeThinkingStep({
+const result = await creativeClient.executeThinkingStep({
   planId: plan.planId,
   technique: 'six_hats',
   problem: plan.problem,
@@ -45,6 +48,46 @@ const result = await client.executeThinkingStep({
   output: 'Analyzing facts...',
   nextStepNeeded: true,
 });
+```
+
+### Idea Storming Client
+
+```typescript
+import { IdeaStormingClient } from '@creative-thinking/client-sdk';
+
+// Create client for AI-powered idea enhancement
+const ideaClient = new IdeaStormingClient({
+  serverUrl: 'https://your-server.workers.dev/ideator/streamable',
+  auth: {
+    type: 'api-key',
+    credentials: { apiKey: 'your-api-key' },
+  },
+});
+
+// Connect
+await ideaClient.connect();
+
+// Check AI capability
+const capability = await ideaClient.checkSamplingCapability();
+
+if (capability.available) {
+  // Enhance ideas
+  const enhanced = await ideaClient.enhanceIdea(
+    'Mobile app for gardeners',
+    'Product design context',
+    {
+      style: 'innovative',
+      depth: 'deep',
+      addExamples: true,
+    }
+  );
+
+  // Generate variations
+  const variations = await ideaClient.generateVariations('Original idea', 5, 'diverse');
+
+  // Synthesize multiple ideas
+  const synthesis = await ideaClient.synthesizeIdeas(['Idea 1', 'Idea 2', 'Idea 3'], 'Common goal');
+}
 ```
 
 ## 🔧 Configuration
@@ -147,30 +190,6 @@ client.on('warning', (level, message) => {
 client.on('streamingEvent', event => {
   // Handle custom streaming events
 });
-```
-
-## 🤖 AI Enhancement
-
-Use MCP Sampling for AI-powered features:
-
-```typescript
-// Check capability
-const capability = await client.getSamplingCapability();
-
-if (capability.available) {
-  // Enhance ideas
-  const enhanced = await client.enhanceIdea('Mobile app for gardeners', 'Product design context', {
-    style: 'innovative',
-    depth: 'deep',
-    addExamples: true,
-  });
-
-  // Generate variations
-  const variations = await client.generateVariations('Original idea', 5, 'diverse');
-
-  // Synthesize multiple ideas
-  const synthesis = await client.synthesizeIdeas(['Idea 1', 'Idea 2', 'Idea 3'], 'Common goal');
-}
 ```
 
 ## 📊 Session Management

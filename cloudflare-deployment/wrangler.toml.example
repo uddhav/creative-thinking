@@ -10,23 +10,28 @@ binding = "KV"
 id = "YOUR_KV_NAMESPACE_ID"
 preview_id = "YOUR_KV_PREVIEW_ID"
 
-# KV namespace for OAuth (clients, grants, tokens)
-# Create with: npx wrangler kv namespace create oauth
-[[kv_namespaces]]
-binding = "OAUTH_KV"
-id = "YOUR_OAUTH_KV_NAMESPACE_ID"
+# OAuth KV namespace removed - no longer using OAuth
 
 # Durable Objects configuration
 [[durable_objects.bindings]]
 name = "CREATIVE_THINKING_AGENT"
 class_name = "CreativeThinkingMcpAgent"
 
+[[durable_objects.bindings]]
+name = "IDEA_STORMING_AGENT"
+class_name = "IdeaStormingMcpAgent"
+
 # Migration for Durable Objects with SQL
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["CreativeThinkingMcpAgent"]
 
-# Workers AI binding (optional, for future AI enhancements)
+# Migration to add new IdeaStormingMcpAgent
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["IdeaStormingMcpAgent"]
+
+# Workers AI binding (used by Idea Storming Agent)
 [ai]
 binding = "AI"
 

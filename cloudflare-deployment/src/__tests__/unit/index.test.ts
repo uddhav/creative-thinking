@@ -25,6 +25,20 @@ vi.mock('../../CreativeThinkingMcpAgent.js', () => ({
   },
 }));
 
+vi.mock('../../IdeaStormingMcpAgent.js', () => ({
+  IdeaStormingMcpAgent: {
+    serveSSE: vi.fn().mockReturnValue({
+      fetch: vi.fn().mockResolvedValue(new Response('SSE response')),
+    }),
+    mount: vi.fn().mockReturnValue({
+      fetch: vi.fn().mockResolvedValue(new Response('HTTP response')),
+    }),
+    serve: vi.fn().mockReturnValue({
+      fetch: vi.fn().mockResolvedValue(new Response('WebSocket response')),
+    }),
+  },
+}));
+
 vi.mock('../../auth-handler.js', () => ({
   AuthHandler: vi.fn().mockImplementation(() => ({
     fetch: vi.fn().mockResolvedValue(new Response('Auth response')),
@@ -72,6 +86,12 @@ describe('Cloudflare Worker - index.ts', () => {
           fetch: vi.fn().mockResolvedValue(new Response('Durable Object response')),
         }),
       },
+      IDEA_STORMING_AGENT: {
+        idFromName: vi.fn().mockReturnValue('test-id'),
+        get: vi.fn().mockReturnValue({
+          fetch: vi.fn().mockResolvedValue(new Response('Durable Object response')),
+        }),
+      },
       OAUTH_PROVIDER: null, // Will be created on demand
       KV: {
         get: vi.fn(),
@@ -108,8 +128,8 @@ describe('Cloudflare Worker - index.ts', () => {
       expect(json.environment).toBe('development');
     });
 
-    it('should handle /mcp path for SSE', async () => {
-      const request = new Request('https://example.com/mcp');
+    it('should handle /thinker/streamable endpoint', async () => {
+      const request = new Request('https://example.com/thinker/streamable');
       const response = await worker.fetch(request, mockEnv, mockCtx);
 
       expect(response).toBeDefined();
@@ -137,8 +157,8 @@ describe('Cloudflare Worker - index.ts', () => {
       expect(await response.text()).toBe('Not Found');
     });
 
-    it('should handle /sse endpoint', async () => {
-      const request = new Request('https://example.com/sse');
+    it('should handle /ideator/streamable endpoint', async () => {
+      const request = new Request('https://example.com/ideator/streamable');
       const response = await worker.fetch(request, mockEnv, mockCtx);
 
       expect(response).toBeDefined();

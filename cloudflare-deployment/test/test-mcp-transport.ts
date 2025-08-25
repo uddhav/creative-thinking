@@ -7,7 +7,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 
-const SERVER_URL = process.env.SERVER_URL || 'https://socketes.munshy.app';
+const SERVER_URL = process.env.SERVER_URL || 'https://creative-thinking-mcp.mbfw8r4d6n.workers.dev';
 const CLIENT_ID = process.env.CLIENT_ID || 'AZylqSElUQXkOElI';
 const CLIENT_SECRET = process.env.CLIENT_SECRET || '6BjIG4tYKdOQLDzljcWAAm0rmqBxntIk';
 
@@ -128,12 +128,12 @@ async function testTransport(endpoint: string, transportType: 'streamable-http' 
   }
 }
 
-async function testAutoFallback() {
-  log.header('Testing auto-fallback at /mcp endpoint');
+async function testCreativeThinkingAgent() {
+  log.header('Testing Creative Thinking Agent at /thinker/streamable endpoint');
 
   const accessToken = await getAccessToken();
   const client = new Client({ name: 'test-client', version: '1.0.0' });
-  const url = new URL('/mcp', SERVER_URL);
+  const url = new URL('/thinker/streamable', SERVER_URL);
 
   try {
     // First try streamable HTTP
@@ -172,10 +172,10 @@ async function testAutoFallback() {
     log.success(`Found ${tools.tools.length} tools`);
 
     await client.close();
-    log.success('Auto-fallback test completed successfully!');
+    log.success('Creative Thinking Agent test completed successfully!');
     return true;
   } catch (error) {
-    log.error(`Auto-fallback test failed: ${error}`);
+    log.error(`Creative Thinking Agent test failed: ${error}`);
     return false;
   }
 }
@@ -187,13 +187,13 @@ async function main() {
 
   let allPassed = true;
 
-  // Test auto-fallback endpoint
-  if (!(await testAutoFallback())) {
+  // Test Creative Thinking Agent
+  if (!(await testCreativeThinkingAgent())) {
     allPassed = false;
   }
 
-  // Test SSE-only endpoint
-  if (!(await testTransport('/sse', 'sse'))) {
+  // Test Idea Storming Agent
+  if (!(await testTransport('/ideator/streamable', 'streamable-http'))) {
     allPassed = false;
   }
 
