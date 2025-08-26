@@ -229,8 +229,9 @@ export default {
               error: {
                 code: -32603,
                 message: 'Internal server error',
+                // Do not expose details to the user; details are logged server-side
                 data: {
-                  details: env.ENVIRONMENT === 'development' ? String(error) : undefined,
+                  details: undefined,
                 },
               },
               id: null,
@@ -263,9 +264,10 @@ export default {
               jsonrpc: '2.0',
               error: {
                 code: -32603,
+                // Do not expose details to the user; details are logged server-side
                 message: 'Internal server error',
                 data: {
-                  details: env.ENVIRONMENT === 'development' ? String(error) : undefined,
+                  details: undefined,
                 },
               },
               id: null,
