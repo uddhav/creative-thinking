@@ -226,6 +226,63 @@ export class TechniqueRecommender {
                     effectiveness: 0.85,
                 });
                 break;
+            case 'validation':
+            case 'verification':
+            case 'truth':
+                recommendations.push({
+                    technique: 'criteria_based_analysis',
+                    reasoning: 'Systematic truth verification through established criteria',
+                    effectiveness: 0.92,
+                });
+                recommendations.push({
+                    technique: 'linguistic_forensics',
+                    reasoning: 'Deep analysis of communication patterns for authenticity',
+                    effectiveness: 0.85,
+                });
+                recommendations.push({
+                    technique: 'competing_hypotheses',
+                    reasoning: 'Prevent confirmation bias through systematic comparison',
+                    effectiveness: 0.88,
+                });
+                break;
+            case 'decision':
+            case 'multi-factor':
+            case 'uncertainty':
+                recommendations.push({
+                    technique: 'competing_hypotheses',
+                    reasoning: 'Bayesian approach to handle multiple competing explanations',
+                    effectiveness: 0.9,
+                });
+                recommendations.push({
+                    technique: 'criteria_based_analysis',
+                    reasoning: 'Structured assessment with confidence scoring',
+                    effectiveness: 0.85,
+                });
+                recommendations.push({
+                    technique: 'six_hats',
+                    reasoning: 'Consider all perspectives before deciding',
+                    effectiveness: 0.8,
+                });
+                break;
+            case 'communication':
+            case 'stakeholder':
+            case 'understanding':
+                recommendations.push({
+                    technique: 'linguistic_forensics',
+                    reasoning: 'Reveal hidden patterns and motivations in communication',
+                    effectiveness: 0.88,
+                });
+                recommendations.push({
+                    technique: 'design_thinking',
+                    reasoning: 'Empathize with stakeholders to understand needs',
+                    effectiveness: 0.85,
+                });
+                recommendations.push({
+                    technique: 'cultural_integration',
+                    reasoning: 'Bridge communication gaps across cultural differences',
+                    effectiveness: 0.82,
+                });
+                break;
             default:
                 recommendations.push({
                     technique: 'six_hats',

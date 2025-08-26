@@ -505,6 +505,21 @@ Focus on maximizing creative output and maintaining session flow.`;
         'Optimize creative output through iterative cycles',
         'Achieve convergence to optimal solutions',
       ],
+      criteria_based_analysis: [
+        'Systematically evaluate authenticity and validity',
+        'Reduce cognitive biases in assessment',
+        'Provide confidence scores for decisions',
+      ],
+      linguistic_forensics: [
+        'Reveal hidden patterns in communication',
+        'Understand stakeholder motivations and concerns',
+        'Detect authenticity markers in language',
+      ],
+      competing_hypotheses: [
+        'Prevent confirmation bias through systematic analysis',
+        'Quantify uncertainty with Bayesian reasoning',
+        'Make robust decisions under competing explanations',
+      ],
     };
 
     return (

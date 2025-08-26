@@ -235,6 +235,36 @@ export class TechniqueAdapter {
         timeEstimate: '60-90 minutes',
         bestFor: ['AI-assisted creativity', 'pattern synthesis', 'optimization'],
       },
+      {
+        name: 'criteria_based_analysis',
+        displayName: 'Criteria-Based Analysis',
+        description: 'Systematic truth verification through established criteria',
+        stepCount: 5,
+        category: 'analytical',
+        complexity: 'medium',
+        timeEstimate: '30-45 minutes',
+        bestFor: ['validity assessment', 'truth verification', 'decision confidence'],
+      },
+      {
+        name: 'linguistic_forensics',
+        displayName: 'Linguistic Forensics',
+        description: 'Deep analysis of communication patterns for hidden insights',
+        stepCount: 6,
+        category: 'analytical',
+        complexity: 'high',
+        timeEstimate: '45-60 minutes',
+        bestFor: ['communication analysis', 'stakeholder understanding', 'authenticity detection'],
+      },
+      {
+        name: 'competing_hypotheses',
+        displayName: 'Competing Hypotheses Analysis',
+        description: 'Systematic evaluation of multiple explanations using evidence matrices',
+        stepCount: 8,
+        category: 'analytical',
+        complexity: 'high',
+        timeEstimate: '60-90 minutes',
+        bestFor: ['complex decisions', 'uncertainty quantification', 'avoiding confirmation bias'],
+      },
     ];
 
     for (const technique of techniqueList) {
@@ -294,6 +324,13 @@ export class TechniqueAdapter {
         fullText.includes('perspective') ||
         fullText.includes('viewpoint') ||
         fullText.includes('opinion'),
+      needsValidation:
+        fullText.includes('verify') ||
+        fullText.includes('validate') ||
+        fullText.includes('truth') ||
+        fullText.includes('authentic') ||
+        fullText.includes('decision') ||
+        fullText.includes('evidence'),
       complexity: this.assessComplexity(problem),
       domain: domain || this.detectDomain(fullText),
     };
@@ -347,6 +384,11 @@ export class TechniqueAdapter {
       if (
         analysis.needsPerspectives &&
         ['six_hats', 'disney_method', 'cultural_integration'].includes(name)
+      )
+        score += 3;
+      if (
+        analysis.needsValidation &&
+        ['criteria_based_analysis', 'linguistic_forensics', 'competing_hypotheses'].includes(name)
       )
         score += 3;
 

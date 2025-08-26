@@ -24,7 +24,10 @@ export type LateralTechnique =
   | 'biomimetic_path'
   | 'first_principles'
   | 'cultural_integration'
-  | 'neuro_computational';
+  | 'neuro_computational'
+  | 'criteria_based_analysis'
+  | 'linguistic_forensics'
+  | 'competing_hypotheses';
 
 /**
  * Represents input data for a lateral thinking step

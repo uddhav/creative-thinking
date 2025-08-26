@@ -317,6 +317,9 @@ export class PathMemoryManager {
             biomimetic_path: 'technical',
             first_principles: 'cognitive',
             neuro_computational: 'cognitive',
+            criteria_based_analysis: 'cognitive',
+            linguistic_forensics: 'relational',
+            competing_hypotheses: 'cognitive',
         };
         return techniqueConstraintMap[event.technique] || 'creative';
     }

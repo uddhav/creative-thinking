@@ -23,6 +23,9 @@ import { BiomimeticPathHandler } from './BiomimeticPathHandler.js';
 import { FirstPrinciplesHandler } from './FirstPrinciplesHandler.js';
 import { CulturalIntegrationHandler } from './CulturalIntegrationHandler.js';
 import { NeuroComputationalHandler } from './NeuroComputationalHandler.js';
+import { CriteriaBasedAnalysisHandler } from './CriteriaBasedAnalysisHandler.js';
+import { LinguisticForensicsHandler } from './LinguisticForensicsHandler.js';
+import { CompetingHypothesesHandler } from './CompetingHypothesesHandler.js';
 // Removed unused imports - GenericHandler and ConvergenceHandler
 export class TechniqueRegistry {
     static instance;
@@ -62,6 +65,9 @@ export class TechniqueRegistry {
         this.handlers.set('biomimetic_path', new BiomimeticPathHandler());
         this.handlers.set('first_principles', new FirstPrinciplesHandler());
         this.handlers.set('neuro_computational', new NeuroComputationalHandler());
+        this.handlers.set('criteria_based_analysis', new CriteriaBasedAnalysisHandler());
+        this.handlers.set('linguistic_forensics', new LinguisticForensicsHandler());
+        this.handlers.set('competing_hypotheses', new CompetingHypothesesHandler());
     }
     getHandler(technique) {
         const handler = this.handlers.get(technique);

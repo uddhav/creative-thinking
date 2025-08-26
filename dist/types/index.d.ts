@@ -5,7 +5,7 @@ import type { PathMemory } from '../ergodicity/index.js';
 import type { ErgodicityManager } from '../ergodicity/index.js';
 import type { EarlyWarningState, EscapeProtocol } from '../ergodicity/earlyWarning/types.js';
 import type { DomainAssessment, RiskDiscovery, RuinScenario, ValidationResult } from '../core/RuinRiskDiscovery.js';
-export type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 'concept_extraction' | 'yes_and' | 'design_thinking' | 'triz' | 'neural_state' | 'temporal_work' | 'collective_intel' | 'disney_method' | 'nine_windows' | 'quantum_superposition' | 'temporal_creativity' | 'paradoxical_problem' | 'meta_learning' | 'biomimetic_path' | 'first_principles' | 'cultural_integration' | 'neuro_computational';
+export type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 'concept_extraction' | 'yes_and' | 'design_thinking' | 'triz' | 'neural_state' | 'temporal_work' | 'collective_intel' | 'disney_method' | 'nine_windows' | 'quantum_superposition' | 'temporal_creativity' | 'paradoxical_problem' | 'meta_learning' | 'biomimetic_path' | 'first_principles' | 'cultural_integration' | 'neuro_computational' | 'criteria_based_analysis' | 'linguistic_forensics' | 'competing_hypotheses';
 export type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green' | 'purple';
 export type ScamperAction = 'substitute' | 'combine' | 'adapt' | 'modify' | 'put_to_other_use' | 'eliminate' | 'reverse' | 'parameterize';
 export type DesignThinkingStage = 'empathize' | 'define' | 'ideate' | 'prototype' | 'test';
@@ -526,5 +526,41 @@ export interface Tool {
         required?: string[];
         additionalProperties?: boolean;
     };
+}
+export interface ValidityAssessment {
+    validityScore: number;
+    confidenceBounds: {
+        lower: number;
+        upper: number;
+    };
+    criteria: string[];
+    pathDependentFactors: string[];
+    assessmentType: 'baseline' | 'cognitive' | 'motivational' | 'reality' | 'synthesis';
+}
+export interface LinguisticMarkers {
+    pronounRatios: {
+        iWe: number;
+        activePassive: number;
+        ownershipAvoidance: number;
+    };
+    complexityMetrics: {
+        avgSentenceLength: number;
+        lexicalDiversity: number;
+        abstractionLevel: number;
+    };
+    emotionalProfile: {
+        valence: 'positive' | 'negative' | 'neutral';
+        intensity: number;
+        trajectory: 'stable' | 'increasing' | 'decreasing' | 'volatile';
+    };
+    coherenceScore: number;
+}
+export interface HypothesisMatrix {
+    hypotheses: string[];
+    evidence: string[];
+    ratings: Record<string, number>;
+    diagnosticValue: Record<string, number>;
+    probabilities: Record<string, number>;
+    sensitivityFactors: string[];
 }
 //# sourceMappingURL=index.d.ts.map

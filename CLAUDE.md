@@ -6,7 +6,7 @@ repository.
 ## Project Overview
 
 This is a **Creative Thinking MCP Server** implementing a three-layer tool architecture for
-structured problem-solving. The server provides twenty-one enhanced thinking techniques through a
+structured problem-solving. The server provides twenty-four enhanced thinking techniques through a
 unified framework that combines generative creativity with systematic risk assessment and analytical
 verification.
 
@@ -30,7 +30,8 @@ npm run format       # Run prettier to format all files
 - **Three tools only**: `discover_techniques`, `plan_thinking_session`, `execute_thinking_step`
 - **Three-layer architecture**: Discovery → Planning → Execution
 - **MCP Protocol**: stdout for JSON-RPC only, stderr for visual output
-- **21 thinking techniques** with specific step counts
+- **24 thinking techniques** with specific step counts (including 3 analytical verification
+  techniques)
 - **Unified framework**: All techniques support risk/adversarial fields
 - **Sequential execution**: Server implements sequential-only execution for maximum coherence
 - **Session resilience**: Base64 encoding allows sessions to survive server restarts
@@ -68,7 +69,9 @@ When working with this codebase:
 5. **Check CONTRIBUTING.md** for detailed architecture and guidelines
 6. **Understand sequential flow** - Steps execute in order for maximum coherence
 
-### Technique Step Counts Reference
+### Technique Step Counts Reference (24 Total)
+
+**Creative Techniques:**
 
 - Six Hats: 6 steps (one per thinking hat)
 - PO: 4 steps (provocation → exploration → verification → solution)
@@ -78,6 +81,11 @@ When working with this codebase:
 - Yes, And: 4 steps (accept → build → evaluate → integrate)
 - Design Thinking: 5 steps (empathize → define → ideate → prototype → test)
 - TRIZ: 4 steps (identify → remove → apply → minimize)
+- Disney Method: 3 steps (dreamer → realist → critic)
+- Nine Windows: 9 steps (3×3 matrix: past/present/future × sub-system/system/super-system)
+
+**Advanced Techniques:**
+
 - Neural State: 4 steps (assess → identify suppression → develop rhythm → integrate)
 - Temporal Work: 5 steps (map landscape → circadian alignment → pressure transformation → async-sync
   balance → escape routes)
@@ -85,8 +93,6 @@ When working with this codebase:
   respectfully → implement adaptively)
 - Collective Intelligence: 5 steps (identify sources → gather wisdom → find patterns → create
   synergy → synthesize insight)
-- Disney Method: 3 steps (dreamer → realist → critic)
-- Nine Windows: 9 steps (3×3 matrix: past/present/future × sub-system/system/super-system)
 - Quantum Superposition: 6 steps (state generation → interference mapping → entanglement analysis →
   amplitude evolution → measurement context → state collapse)
 - Temporal Creativity: 6 steps (archaeological analysis → present synthesis → future projection →
@@ -99,10 +105,11 @@ When working with this codebase:
   → swarm intelligence → resilience patterns → natural synthesis)
 - First Principles: 5 steps (deconstruct → foundation identification → assumption challenging →
   reconstruction → solution synthesis)
-- Cultural Path: 5 steps (landscape mapping → context sensitivity → bridge building → adaptive
-  navigation → synthesis)
 - NeuroComputational: 6 steps (neural mapping → pattern generation → interference analysis →
   computational synthesis → optimization cycles → convergence)
+
+**Analytical Verification Techniques (NEW):**
+
 - Criteria-Based Analysis: 5 steps (baseline assessment → cognitive criteria → motivational analysis
   → reality monitoring → validity synthesis)
 - Linguistic Forensics: 6 steps (content mapping → pattern recognition → pronoun analysis →
