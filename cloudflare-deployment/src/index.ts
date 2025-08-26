@@ -91,16 +91,14 @@ export default {
       origin: request.headers.get('Origin'),
     });
 
-    // Check for debug mode with secure token
-    const debugParam = url.searchParams.get('debug');
+    // Check for debug mode with secure token (header only for security)
     const debugHeader = request.headers.get('X-Debug-Token');
 
-    // Only enable debug if token matches
-    const isDebugMode =
-      (debugParam && env.DEBUG_TOKEN && debugParam === env.DEBUG_TOKEN) ||
-      (debugHeader && env.DEBUG_TOKEN && debugHeader === env.DEBUG_TOKEN);
+    // Only enable debug if token matches (header-based only to prevent token exposure in logs)
+    const isDebugMode = debugHeader && env.DEBUG_TOKEN && debugHeader === env.DEBUG_TOKEN;
 
-    if (debugParam && !isDebugMode) {
+    if (!isDebugMode && debugHeader) {
+      // Log invalid attempts but don't log the actual token
       logger.warn('Invalid debug token attempted', {
         path: url.pathname,
         ip: request.headers.get('CF-Connecting-IP'),
@@ -224,7 +222,24 @@ export default {
           }).fetch(request, env, ctxWithProps);
         } catch (error) {
           logger.error('Creative Thinking routing error', error);
-          return new Response('Internal Server Error', { status: 500 });
+          // Return JSON error response for MCP protocol consistency
+          return new Response(
+            JSON.stringify({
+              jsonrpc: '2.0',
+              error: {
+                code: -32603,
+                message: 'Internal server error',
+                data: {
+                  details: env.ENVIRONMENT === 'development' ? String(error) : undefined,
+                },
+              },
+              id: null,
+            }),
+            {
+              status: 500,
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
         }
       }
 
@@ -242,7 +257,24 @@ export default {
           }).fetch(request, env, ctxWithProps);
         } catch (error) {
           logger.error('Idea Storming routing error', error);
-          return new Response('Internal Server Error', { status: 500 });
+          // Return JSON error response for MCP protocol consistency
+          return new Response(
+            JSON.stringify({
+              jsonrpc: '2.0',
+              error: {
+                code: -32603,
+                message: 'Internal server error',
+                data: {
+                  details: env.ENVIRONMENT === 'development' ? String(error) : undefined,
+                },
+              },
+              id: null,
+            }),
+            {
+              status: 500,
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
         }
       }
 

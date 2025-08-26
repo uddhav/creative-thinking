@@ -26,6 +26,7 @@ export interface Props extends Record<string, unknown> {
 export interface Env {
   KV: KVNamespace;
   AI?: any;
+  ENVIRONMENT?: string;
 }
 
 // Define the state interface for our Agent with proper session and plan management
@@ -203,7 +204,7 @@ export class CreativeThinkingMcpAgent extends McpAgent<Env, CreativeThinkingStat
             content: [
               {
                 type: 'text',
-                text: JSON.stringify(formatErrorResponse(error), null, 2),
+                text: JSON.stringify(formatErrorResponse(error, this.env.ENVIRONMENT), null, 2),
               },
             ],
           };
@@ -322,7 +323,7 @@ export class CreativeThinkingMcpAgent extends McpAgent<Env, CreativeThinkingStat
             content: [
               {
                 type: 'text',
-                text: JSON.stringify(formatErrorResponse(error), null, 2),
+                text: JSON.stringify(formatErrorResponse(error, this.env.ENVIRONMENT), null, 2),
               },
             ],
           };
@@ -789,7 +790,7 @@ export class CreativeThinkingMcpAgent extends McpAgent<Env, CreativeThinkingStat
             content: [
               {
                 type: 'text',
-                text: JSON.stringify(formatErrorResponse(error), null, 2),
+                text: JSON.stringify(formatErrorResponse(error, this.env.ENVIRONMENT), null, 2),
               },
             ],
           };

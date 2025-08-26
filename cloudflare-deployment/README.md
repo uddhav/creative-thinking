@@ -151,12 +151,32 @@ AUTH_DEMO_USERNAME = "demo"
 AUTH_DEMO_API_KEY = "demo-api-key"
 ```
 
-**Important**: For production, use Cloudflare secrets instead of plain text:
+### 🔒 Security Configuration
+
+**Debug Mode**: Debug mode should only be enabled in development environments.
+
+```bash
+# Set debug token as a Cloudflare secret (NEVER commit tokens to source control)
+npx wrangler secret put DEBUG_TOKEN
+# Enter your secure token when prompted
+```
+
+To enable debug mode in requests:
+
+```javascript
+// Use header-based authentication only (URL parameters are not supported for security)
+headers: {
+  'X-Debug-Token': 'your-secure-token-here'
+}
+```
+
+**Important**: For production, always use Cloudflare secrets:
 
 ```bash
 npx wrangler secret put AUTH_USERNAME
 npx wrangler secret put AUTH_API_KEY
 npx wrangler secret put OAUTH_CLIENT_SECRET
+npx wrangler secret put DEBUG_TOKEN
 ```
 
 ### Custom Domain
@@ -284,8 +304,8 @@ Enable debug mode with a secure token:
 # Set debug token as secret
 npx wrangler secret put DEBUG_TOKEN
 
-# Access with token parameter
-https://your-server.workers.dev/thinker/streamable?debug=<your-token>
+# Access with header authentication (URL parameters not supported for security)
+curl -H "X-Debug-Token: your-secure-token" https://your-server.workers.dev/thinker/streamable
 ```
 
 ### Example Configuration for Claude Desktop

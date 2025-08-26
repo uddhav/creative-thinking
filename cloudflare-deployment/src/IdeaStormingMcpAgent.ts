@@ -24,6 +24,7 @@ export interface Props extends Record<string, unknown> {
 export interface Env {
   KV: KVNamespace;
   AI?: any;
+  ENVIRONMENT?: string;
 }
 
 export interface IdeaStormingState {
@@ -70,14 +71,16 @@ export class IdeaStormingMcpAgent extends McpAgent<Env, IdeaStormingState, Props
   }
 
   async init() {
-    // Prevent double initialization
-    if (this.initialized) {
-      this.logger?.debug('Agent already initialized, skipping');
-      return;
+    // Initialize logger first to ensure it's always available
+    if (!this.logger) {
+      this.logger = createLogger(this.env as any, 'IdeaStormingMcpAgent');
     }
 
-    // Initialize logger
-    this.logger = createLogger(this.env as any, 'IdeaStormingMcpAgent');
+    // Prevent double initialization
+    if (this.initialized) {
+      this.logger.debug('Agent already initialized, skipping');
+      return;
+    }
     this.logger.info('Initializing Idea Storming MCP Agent', {
       debugMode: this.props?.debugMode,
     });
@@ -204,7 +207,7 @@ export class IdeaStormingMcpAgent extends McpAgent<Env, IdeaStormingState, Props
             content: [
               {
                 type: 'text',
-                text: JSON.stringify(formatErrorResponse(error), null, 2),
+                text: JSON.stringify(formatErrorResponse(error, this.env.ENVIRONMENT), null, 2),
               },
             ],
           };
@@ -264,7 +267,7 @@ export class IdeaStormingMcpAgent extends McpAgent<Env, IdeaStormingState, Props
             content: [
               {
                 type: 'text',
-                text: JSON.stringify(formatErrorResponse(error), null, 2),
+                text: JSON.stringify(formatErrorResponse(error, this.env.ENVIRONMENT), null, 2),
               },
             ],
           };
@@ -305,7 +308,7 @@ export class IdeaStormingMcpAgent extends McpAgent<Env, IdeaStormingState, Props
             content: [
               {
                 type: 'text',
-                text: JSON.stringify(formatErrorResponse(error), null, 2),
+                text: JSON.stringify(formatErrorResponse(error, this.env.ENVIRONMENT), null, 2),
               },
             ],
           };
@@ -345,7 +348,7 @@ export class IdeaStormingMcpAgent extends McpAgent<Env, IdeaStormingState, Props
             content: [
               {
                 type: 'text',
-                text: JSON.stringify(formatErrorResponse(error), null, 2),
+                text: JSON.stringify(formatErrorResponse(error, this.env.ENVIRONMENT), null, 2),
               },
             ],
           };
