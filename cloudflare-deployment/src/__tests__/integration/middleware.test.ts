@@ -12,6 +12,7 @@ const mockEnv: Env = {
     list: vi.fn(),
   } as any,
   CREATIVE_THINKING_AGENT: {} as any,
+  IDEA_STORMING_AGENT: {} as any,
   ENVIRONMENT: 'test',
 };
 

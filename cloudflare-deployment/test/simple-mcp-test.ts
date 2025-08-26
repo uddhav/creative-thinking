@@ -82,21 +82,21 @@ async function main() {
   let allPassed = true;
 
   try {
-    // Test /mcp endpoint
-    if (!(await testMcpEndpoint('/mcp'))) {
+    // Test Creative Thinking Agent endpoint
+    if (!(await testMcpEndpoint('/thinker/streamable'))) {
       allPassed = false;
     }
 
-    // Test /sse endpoint (it handles POST the same way now)
-    if (!(await testMcpEndpoint('/sse'))) {
+    // Test Idea Storming Agent endpoint
+    if (!(await testMcpEndpoint('/ideator/streamable'))) {
       allPassed = false;
     }
 
     console.log('\n📊 Test Results');
     if (allPassed) {
       console.log('🎉 All tests passed! Transport is working correctly.');
-      console.log('\n✅ The WebSocket issue has been resolved!');
-      console.log('✅ Both /mcp and /sse endpoints are functional');
+      console.log('\n✅ Creative Thinking Agent is functional');
+      console.log('✅ Idea Storming Agent is functional');
       console.log('✅ OAuth authentication is working');
       console.log('✅ MCP protocol responses are valid');
       process.exit(0);

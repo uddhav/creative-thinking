@@ -15,20 +15,18 @@ import { ProblemSolverPrompt } from './prompts/problem/ProblemSolverPrompt.js';
 import { RiskAssessmentPrompt } from './prompts/analysis/RiskAssessmentPrompt.js';
 import { StreamingManager, VisualOutputFormatter } from './streaming/StreamingManager.js';
 import type { StreamingConfig } from './streaming/types.js';
-import { SamplingManager } from './sampling/SamplingManager.js';
-import { IdeaEnhancer } from './sampling/features/IdeaEnhancer.js';
-import type { SamplingCapability } from './sampling/types.js';
 
 export interface Props extends Record<string, unknown> {
   userId?: string;
   accessToken?: string;
   streamingConfig?: StreamingConfig;
-  samplingEnabled?: boolean;
+  debugMode?: boolean;
 }
 
 export interface Env {
   KV: KVNamespace;
   AI?: any;
+  ENVIRONMENT?: string;
 }
 
 // Define the state interface for our Agent with proper session and plan management
@@ -78,8 +76,6 @@ export class CreativeThinkingMcpAgent extends McpAgent<Env, CreativeThinkingStat
   private resourceRegistry!: ResourceProviderRegistry;
   private promptRegistry!: PromptRegistry;
   private streamingManager!: StreamingManager;
-  private samplingManager!: SamplingManager;
-  private ideaEnhancer!: IdeaEnhancer;
   private logger!: Logger;
   private initialized: boolean = false;
 
@@ -98,11 +94,18 @@ export class CreativeThinkingMcpAgent extends McpAgent<Env, CreativeThinkingStat
   };
 
   // McpAgent requires server to be a property that returns McpServer or Promise<McpServer>
-  server = new McpServer({
-    name: 'Creative Thinking MCP Server',
-    version: '1.0.0',
-    description: 'A three-layer MCP server for structured creative problem-solving techniques',
-  });
+  private _server: McpServer | null = null;
+
+  get server(): McpServer {
+    if (!this._server) {
+      this._server = new McpServer({
+        name: 'Creative Thinking MCP Server',
+        version: '1.0.0',
+        description: 'A three-layer MCP server for structured creative problem-solving techniques',
+      });
+    }
+    return this._server;
+  }
 
   async init() {
     // Prevent double initialization
@@ -136,34 +139,6 @@ export class CreativeThinkingMcpAgent extends McpAgent<Env, CreativeThinkingStat
       },
     });
 
-    // Initialize sampling manager for AI enhancement
-    this.samplingManager = new SamplingManager();
-
-    // Set basic sampling capability
-    this.samplingManager.setCapability({
-      supported: true,
-      providers: ['cloudflare-ai'],
-      maxTokens: 1024,
-      defaultPreferences: {
-        intelligencePriority: 0.7,
-        speedPriority: 0.5,
-        costPriority: 0.5,
-      },
-    });
-
-    // Initialize AI-enhanced features
-    this.ideaEnhancer = new IdeaEnhancer(this.samplingManager);
-
-    // Set up sampling notification handler for streaming
-    this.samplingManager.setNotificationHandler(notification => {
-      this.streamingManager
-        .broadcast({
-          event: 'sampling',
-          data: notification,
-        })
-        .catch(err => this.logger.error('Failed to broadcast sampling notification', err));
-    });
-
     // Initialize resource providers
     this.resourceRegistry = new ResourceProviderRegistry();
     this.resourceRegistry.register(
@@ -184,17 +159,17 @@ export class CreativeThinkingMcpAgent extends McpAgent<Env, CreativeThinkingStat
     this.registerPlanThinkingSession();
     this.registerExecuteThinkingStep();
 
-    // Register MCP sampling tools
-    this.registerSamplingTools();
-
     // Register MCP resources
     await this.registerResources();
 
     // Register MCP prompts
     this.registerPrompts();
 
-    // Register diagnostic tools
-    this.registerDiagnosticTools();
+    // Only register diagnostic tools in debug mode
+    if (this.props?.debugMode === true) {
+      this.logger.info('Debug mode enabled - registering diagnostic tools');
+      this.registerDiagnosticTools();
+    }
 
     // Sessions will be created dynamically when requests come in
 
@@ -229,7 +204,7 @@ export class CreativeThinkingMcpAgent extends McpAgent<Env, CreativeThinkingStat
             content: [
               {
                 type: 'text',
-                text: JSON.stringify(formatErrorResponse(error), null, 2),
+                text: JSON.stringify(formatErrorResponse(error, this.env.ENVIRONMENT), null, 2),
               },
             ],
           };
@@ -348,7 +323,7 @@ export class CreativeThinkingMcpAgent extends McpAgent<Env, CreativeThinkingStat
             content: [
               {
                 type: 'text',
-                text: JSON.stringify(formatErrorResponse(error), null, 2),
+                text: JSON.stringify(formatErrorResponse(error, this.env.ENVIRONMENT), null, 2),
               },
             ],
           };
@@ -815,7 +790,7 @@ export class CreativeThinkingMcpAgent extends McpAgent<Env, CreativeThinkingStat
             content: [
               {
                 type: 'text',
-                text: JSON.stringify(formatErrorResponse(error), null, 2),
+                text: JSON.stringify(formatErrorResponse(error, this.env.ENVIRONMENT), null, 2),
               },
             ],
           };
@@ -963,211 +938,6 @@ export class CreativeThinkingMcpAgent extends McpAgent<Env, CreativeThinkingStat
     );
 
     this.logger.debug(`Registered ${this.promptRegistry.list().length} prompts`);
-  }
-
-  /**
-   * Register MCP sampling tools
-   */
-  private registerSamplingTools() {
-    // Tool to check sampling capability
-    this.server.tool(
-      'sampling_capability',
-      'Check if MCP Sampling is available and get capability details',
-      {},
-      async () => {
-        const capability = this.samplingManager.getCapability();
-        const stats = this.samplingManager.getStats();
-
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(
-                {
-                  available: this.samplingManager.isAvailable(),
-                  capability,
-                  stats,
-                  pendingRequests: this.samplingManager.getPendingCount(),
-                },
-                null,
-                2
-              ),
-            },
-          ],
-        };
-      }
-    );
-
-    // Tool to enhance ideas with AI
-    this.server.tool(
-      'enhance_idea',
-      'Enhance a creative idea using AI',
-      {
-        idea: z.string().describe('The idea to enhance'),
-        context: z.string().optional().describe('Additional context'),
-        style: z.enum(['creative', 'analytical', 'practical', 'innovative']).optional(),
-        depth: z.enum(['shallow', 'moderate', 'deep']).optional(),
-        addExamples: z.boolean().optional(),
-        addRisks: z.boolean().optional(),
-      },
-      async params => {
-        try {
-          const enhanced = await this.ideaEnhancer.enhanceIdea(params.idea, params.context, {
-            style: params.style,
-            depth: params.depth,
-            addExamples: params.addExamples,
-            addRisks: params.addRisks,
-          });
-
-          // Update metrics
-          this.state.globalMetrics.totalIdeasGenerated++;
-
-          return {
-            content: [
-              {
-                type: 'text',
-                text: enhanced,
-              },
-            ],
-          };
-        } catch (error) {
-          return {
-            content: [
-              {
-                type: 'text',
-                text: JSON.stringify(formatErrorResponse(error), null, 2),
-              },
-            ],
-          };
-        }
-      }
-    );
-
-    // Tool to generate idea variations
-    this.server.tool(
-      'generate_variations',
-      'Generate variations of an idea',
-      {
-        idea: z.string().describe('The original idea'),
-        count: z.number().min(1).max(10).default(3).describe('Number of variations'),
-        style: z.enum(['similar', 'diverse', 'opposite']).optional(),
-      },
-      async params => {
-        try {
-          const variations = await this.ideaEnhancer.generateVariations(
-            params.idea,
-            params.count,
-            params.style
-          );
-
-          return {
-            content: [
-              {
-                type: 'text',
-                text: JSON.stringify(
-                  {
-                    original: params.idea,
-                    variations,
-                    count: variations.length,
-                  },
-                  null,
-                  2
-                ),
-              },
-            ],
-          };
-        } catch (error) {
-          return {
-            content: [
-              {
-                type: 'text',
-                text: JSON.stringify(formatErrorResponse(error), null, 2),
-              },
-            ],
-          };
-        }
-      }
-    );
-
-    // Tool to synthesize multiple ideas
-    this.server.tool(
-      'synthesize_ideas',
-      'Combine multiple ideas into a unified solution',
-      {
-        ideas: z.array(z.string()).min(2).describe('Ideas to synthesize'),
-        goal: z.string().optional().describe('Overall goal for synthesis'),
-      },
-      async params => {
-        try {
-          const synthesis = await this.ideaEnhancer.synthesizeIdeas(params.ideas, params.goal);
-
-          return {
-            content: [
-              {
-                type: 'text',
-                text: synthesis,
-              },
-            ],
-          };
-        } catch (error) {
-          return {
-            content: [
-              {
-                type: 'text',
-                text: JSON.stringify(formatErrorResponse(error), null, 2),
-              },
-            ],
-          };
-        }
-      }
-    );
-
-    // Tool to test direct sampling
-    this.server.tool(
-      'test_sampling',
-      'Test MCP Sampling with a custom prompt',
-      {
-        prompt: z.string().describe('The prompt to send'),
-        temperature: z.number().min(0).max(1).optional(),
-        maxTokens: z.number().min(1).max(4096).optional(),
-      },
-      async params => {
-        try {
-          if (!this.samplingManager.isAvailable()) {
-            throw new Error('MCP Sampling is not available');
-          }
-
-          const result = await this.samplingManager.requestSampling(
-            {
-              messages: [{ role: 'user', content: params.prompt }],
-              temperature: params.temperature,
-              maxTokens: params.maxTokens,
-            },
-            'test_sampling'
-          );
-
-          return {
-            content: [
-              {
-                type: 'text',
-                text: JSON.stringify(result, null, 2),
-              },
-            ],
-          };
-        } catch (error) {
-          return {
-            content: [
-              {
-                type: 'text',
-                text: JSON.stringify(formatErrorResponse(error), null, 2),
-              },
-            ],
-          };
-        }
-      }
-    );
-
-    this.logger.debug('Registered 5 MCP Sampling tools');
   }
 
   /**
@@ -1339,6 +1109,16 @@ export class CreativeThinkingMcpAgent extends McpAgent<Env, CreativeThinkingStat
 
   // Override fetch for comprehensive session handling - CRITICAL FIX
   async fetch(request: Request): Promise<Response> {
+    // Ensure logger exists
+    if (!this.logger) {
+      this.logger = createLogger(this.env as any, 'CreativeThinkingMcpAgent');
+    }
+
+    // Ensure state exists
+    if (!this.state) {
+      this.setState(this.initialState);
+    }
+
     const url = new URL(request.url);
     const sessionId = request.headers.get('Mcp-Session-Id');
     const contentType = request.headers.get('Content-Type');
@@ -1452,6 +1232,16 @@ export class CreativeThinkingMcpAgent extends McpAgent<Env, CreativeThinkingStat
 
   // FINAL SOLUTION: Override ALL session validation to always succeed
   async onSSEMcpMessage(sessionId: string, messageBody: unknown): Promise<Error | null> {
+    // Ensure logger exists
+    if (!this.logger) {
+      this.logger = createLogger(this.env as any, 'CreativeThinkingMcpAgent');
+    }
+
+    // Ensure state exists
+    if (!this.state) {
+      this.setState(this.initialState);
+    }
+
     this.logger.info('MCP SSE message - Durable Object provides session context', { sessionId });
 
     // CRITICAL: Never return session validation errors

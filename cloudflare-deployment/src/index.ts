@@ -7,23 +7,27 @@
  */
 
 import { CreativeThinkingMcpAgent } from './CreativeThinkingMcpAgent.js';
+import { IdeaStormingMcpAgent } from './IdeaStormingMcpAgent.js';
 import { RateLimiter } from './middleware/rateLimiter.js';
 import { OAuthMiddleware } from './middleware/oauth.js';
 import { createLogger } from './utils/logger.js';
 import type { ExecutionContext } from '@cloudflare/workers-types';
 
-// Export the Durable Object class
+// Export the Durable Object classes
 export { CreativeThinkingMcpAgent };
+export { IdeaStormingMcpAgent };
 
 // Define the Worker environment interface
 export interface Env {
   KV: KVNamespace;
   CREATIVE_THINKING_AGENT: DurableObjectNamespace;
+  IDEA_STORMING_AGENT: DurableObjectNamespace;
   AI?: any;
 
   // Core settings
   ENVIRONMENT?: string;
   LOG_LEVEL?: string;
+  DEBUG_TOKEN?: string;
 
   // OAuth settings (optional)
   OAUTH_ENABLED?: string;
@@ -86,6 +90,20 @@ export default {
       userAgent: request.headers.get('User-Agent'),
       origin: request.headers.get('Origin'),
     });
+
+    // Check for debug mode with secure token (header only for security)
+    const debugHeader = request.headers.get('X-Debug-Token');
+
+    // Only enable debug if token matches (header-based only to prevent token exposure in logs)
+    const isDebugMode = debugHeader && env.DEBUG_TOKEN && debugHeader === env.DEBUG_TOKEN;
+
+    if (!isDebugMode && debugHeader) {
+      // Log invalid attempts but don't log the actual token
+      logger.warn('Invalid debug token attempted', {
+        path: url.pathname,
+        ip: request.headers.get('CF-Connecting-IP'),
+      });
+    }
 
     try {
       // Handle root path - serve home page
@@ -180,30 +198,86 @@ export default {
         }
       }
 
-      // SSE transport endpoint
-      if (url.pathname.startsWith('/sse')) {
-        logger.debug('Routing to SSE transport');
-        return CreativeThinkingMcpAgent.serveSSE('/sse', {
-          binding: 'CREATIVE_THINKING_AGENT',
-          corsOptions: {
-            origin: '*',
-            methods: 'GET, POST, OPTIONS',
-            headers: '*',
-          },
-        }).fetch(request, env, ctx);
+      // Create a minimal context object with props for the MCP Agent
+      // Include debug mode in props
+      const ctxWithProps = {
+        waitUntil: ctx.waitUntil.bind(ctx),
+        passThroughOnException: ctx.passThroughOnException.bind(ctx),
+        props: {
+          debugMode: isDebugMode,
+        },
+      } as ExecutionContext & { props: any };
+
+      // Creative Thinking endpoint (3 core tools)
+      if (url.pathname.startsWith('/thinker/streamable')) {
+        logger.debug('Routing to Creative Thinking Agent', { debugMode: isDebugMode });
+        try {
+          return CreativeThinkingMcpAgent.serve('/thinker/streamable', {
+            binding: 'CREATIVE_THINKING_AGENT',
+            corsOptions: {
+              origin: '*',
+              methods: 'GET, POST, OPTIONS',
+              headers: '*',
+            },
+          }).fetch(request, env, ctxWithProps);
+        } catch (error) {
+          logger.error('Creative Thinking routing error', error);
+          // Return JSON error response for MCP protocol consistency
+          return new Response(
+            JSON.stringify({
+              jsonrpc: '2.0',
+              error: {
+                code: -32603,
+                message: 'Internal server error',
+                // Do not expose details to the user; details are logged server-side
+                data: {
+                  details: undefined,
+                },
+              },
+              id: null,
+            }),
+            {
+              status: 500,
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
+        }
       }
 
-      // Streamable HTTP transport endpoint
-      if (url.pathname === '/mcp') {
-        logger.debug('Routing to Streamable HTTP transport');
-        return CreativeThinkingMcpAgent.serve('/mcp', {
-          binding: 'CREATIVE_THINKING_AGENT',
-          corsOptions: {
-            origin: '*',
-            methods: 'GET, POST, OPTIONS',
-            headers: '*',
-          },
-        }).fetch(request, env, ctx);
+      // Idea Storming endpoint (AI enhancement tools)
+      if (url.pathname.startsWith('/ideator/streamable')) {
+        logger.debug('Routing to Idea Storming Agent', { debugMode: isDebugMode });
+        try {
+          return IdeaStormingMcpAgent.serve('/ideator/streamable', {
+            binding: 'IDEA_STORMING_AGENT',
+            corsOptions: {
+              origin: '*',
+              methods: 'GET, POST, OPTIONS',
+              headers: '*',
+            },
+          }).fetch(request, env, ctxWithProps);
+        } catch (error) {
+          logger.error('Idea Storming routing error', error);
+          // Return JSON error response for MCP protocol consistency
+          return new Response(
+            JSON.stringify({
+              jsonrpc: '2.0',
+              error: {
+                code: -32603,
+                // Do not expose details to the user; details are logged server-side
+                message: 'Internal server error',
+                data: {
+                  details: undefined,
+                },
+              },
+              id: null,
+            }),
+            {
+              status: 500,
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
+        }
       }
 
       // Default 404 for unknown paths

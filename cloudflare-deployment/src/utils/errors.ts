@@ -158,13 +158,36 @@ export const Errors = {
 };
 
 /**
+ * Sanitize stack traces to remove sensitive information
+ */
+function sanitizeStackTrace(stack?: string): string | undefined {
+  if (!stack) return undefined;
+
+  // Remove absolute paths and keep only relative paths
+  return stack
+    .split('\n')
+    .map(line => {
+      // Remove absolute paths (e.g., /home/user/project/...)
+      return line.replace(/\/[\w\-\/\.]+\/(src|dist|node_modules)/g, '/$1');
+    })
+    .join('\n');
+}
+
+/**
  * Error response formatter for MCP protocol
  */
-export function formatErrorResponse(error: unknown): any {
+export function formatErrorResponse(error: unknown, environment?: string): any {
+  const isDevelopment = environment === 'development';
+
   if (error instanceof McpError) {
+    const errorJson = error.toJSON();
+    // Only include stack traces in development
+    if (!isDevelopment && errorJson.details?.stack) {
+      errorJson.details.stack = sanitizeStackTrace(errorJson.details.stack);
+    }
     return {
       isError: true,
-      error: error.toJSON(),
+      error: errorJson,
     };
   }
 
@@ -176,6 +199,8 @@ export function formatErrorResponse(error: unknown): any {
         message: error.message,
         timestamp: new Date().toISOString(),
         requestId: randomUUID(),
+        // Only include stack trace in development
+        stack: isDevelopment ? error.stack : undefined,
       },
     };
   }

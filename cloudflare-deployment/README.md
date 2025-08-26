@@ -62,32 +62,33 @@ npm run deploy
 This implementation uses:
 
 - **Cloudflare Agents SDK** with `McpAgent` class for MCP protocol support
-- **Multi-Transport Architecture**:
-  - **Streamable HTTP** with auto-fallback to SSE at `/mcp` (recommended)
-  - **Server-Sent Events (SSE)** for MCP protocol streaming at `/sse`
-  - **Automatic transport negotiation** for best performance
+- **Dual-Agent Architecture**:
+  - **Creative Thinking Agent** at `/thinker/streamable` - Core 3-tool creative thinking
+  - **Idea Storming Agent** at `/ideator/streamable` - AI-powered enhancement tools
+  - **Streamable HTTP Transport** for MCP protocol
 - **Durable Objects** for session state persistence
 - **WebSocket Hibernation** for cost-efficient real-time connections (1000x cost savings)
 - **KV Storage** for session data
 - **OAuth Provider** for authentication (optional)
 
-### 📡 Streaming Architecture
+### 📡 Agent Architecture
 
-The server includes a comprehensive streaming architecture for real-time updates:
+The deployment includes two specialized MCP agents:
 
-#### Transport Options
+#### Creative Thinking Agent (`/thinker/streamable`)
 
-1. **Server-Sent Events (SSE)** at `/stream`
-   - One-way server-to-client streaming
-   - Automatic reconnection support
-   - Keep-alive heartbeats
-   - Progress tracking for long operations
+- Implements the core 3-tool architecture
+- 21 creative thinking techniques
+- Session management and persistence
+- Risk assessment and ergodicity tracking
 
-2. **WebSocket** at `/stream` (with `Upgrade: websocket`)
-   - Bidirectional communication
-   - Lower latency than SSE
-   - RPC support for interactive operations
-   - Real-time collaboration features
+#### Idea Storming Agent (`/ideator/streamable`)
+
+- AI-powered enhancement tools
+- `enhance_idea` - Enhance ideas with depth and examples
+- `generate_variations` - Create idea variations
+- `synthesize_ideas` - Combine multiple ideas
+- `sampling_capability` - Check AI availability
 
 #### Streaming Events
 
@@ -109,20 +110,31 @@ The streaming system provides rich visual output:
 
 #### Usage Example
 
-````javascript
-// Connect via SSE
-const eventSource = new EventSource('/stream?sessionId=abc123');
-eventSource.onmessage = (event) => {
-  const data = JSON.parse(event.data);
-  console.log('Streaming event:', data);
-};
+```javascript
+// Connect to Creative Thinking Agent
+const creativeResponse = await fetch('https://your-server.workers.dev/thinker/streamable', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    jsonrpc: '2.0',
+    method: 'discover_techniques',
+    params: { problem: 'How to improve team productivity' },
+    id: 1,
+  }),
+});
 
-// Or connect via WebSocket
-const ws = new WebSocket('wss://your-server.workers.dev/stream?sessionId=abc123');
-ws.onmessage = (event) => {
-  const data = JSON.parse(event.data);
-  console.log('WebSocket event:', data);
-};
+// Connect to Idea Storming Agent
+const ideaResponse = await fetch('https://your-server.workers.dev/ideator/streamable', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    jsonrpc: '2.0',
+    method: 'enhance_idea',
+    params: { idea: 'Weekly team retrospectives' },
+    id: 1,
+  }),
+});
+```
 
 ## 🔧 Configuration
 
@@ -137,14 +149,34 @@ LOG_LEVEL = "info"
 # Authentication - Replace these in production
 AUTH_DEMO_USERNAME = "demo"
 AUTH_DEMO_API_KEY = "demo-api-key"
-````
+```
 
-**Important**: For production, use Cloudflare secrets instead of plain text:
+### 🔒 Security Configuration
+
+**Debug Mode**: Debug mode should only be enabled in development environments.
+
+```bash
+# Set debug token as a Cloudflare secret (NEVER commit tokens to source control)
+npx wrangler secret put DEBUG_TOKEN
+# Enter your secure token when prompted
+```
+
+To enable debug mode in requests:
+
+```javascript
+// Use header-based authentication only (URL parameters are not supported for security)
+headers: {
+  'X-Debug-Token': 'your-secure-token-here'
+}
+```
+
+**Important**: For production, always use Cloudflare secrets:
 
 ```bash
 npx wrangler secret put AUTH_USERNAME
 npx wrangler secret put AUTH_API_KEY
 npx wrangler secret put OAUTH_CLIENT_SECRET
+npx wrangler secret put DEBUG_TOKEN
 ```
 
 ### Custom Domain
@@ -162,7 +194,7 @@ zone_name = "your-domain.com"
 Test your deployed server with the included test client:
 
 ```bash
-# Test with HTTP/SSE transport (default)
+# Test with Streamable HTTP transport
 npx tsx test/mcp-client.ts
 
 # Test with WebSocket transport
@@ -180,7 +212,7 @@ The test client verifies:
 - Health endpoint availability
 - Authentication (rejects invalid credentials)
 - All three MCP tools (discover, plan, execute)
-- WebSocket and SSE streaming
+- Streamable HTTP transport
 
 ## 🤖 MCP Sampling (AI Enhancement)
 
@@ -261,15 +293,19 @@ https://your-server.workers.dev/mcp
 This endpoint automatically selects the best transport:
 
 - Tries streamable HTTP first (more efficient)
-- Falls back to SSE if streamable HTTP is not supported
+- Uses streamable HTTP transport exclusively
 - Fully compatible with Claude Desktop and other MCP clients
 
-### SSE-Only Connection
+### Debug Mode
 
-For clients that specifically need SSE transport:
+Enable debug mode with a secure token:
 
-```
-https://your-server.workers.dev/sse
+```bash
+# Set debug token as secret
+npx wrangler secret put DEBUG_TOKEN
+
+# Access with header authentication (URL parameters not supported for security)
+curl -H "X-Debug-Token: your-secure-token" https://your-server.workers.dev/thinker/streamable
 ```
 
 ### Example Configuration for Claude Desktop
