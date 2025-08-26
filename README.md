@@ -1,9 +1,10 @@
 # Creative Thinking MCP Server
 
 A Model Context Protocol (MCP) server that provides structured creative thinking techniques for
-problem-solving and ideation. This server implements twenty-one enhanced thinking techniques through
-a unified framework combining generative creativity with systematic risk assessment, analytical
-verification, and post-action reflexivity tracking.
+problem-solving and ideation. This server implements 34+ creative thinking techniques through a
+unified framework combining generative creativity with systematic risk assessment, analytical
+verification, and post-action reflexivity tracking, including new techniques inspired by behavioral
+economics insights from Rory Sutherland.
 
 > **Note**: This repository is a public fork of work originally developed with Munshy, Personal
 > Secretary.
@@ -48,7 +49,7 @@ The three-layer architecture guides you through comprehensive problem-solving:
    maintaining session state and integrating risk assessment.
 
 **📚 New to the techniques? Check out the [Technique Selection Guide](TECHNIQUE_SELECTION.md) for a
-comprehensive overview of all 21 techniques and when to use each one.**
+comprehensive overview of all 34+ techniques and when to use each one.**
 
 This layered approach ensures efficient problem-solving by matching techniques to problems, creating
 comprehensive workflows, and maintaining focus throughout the creative process.
@@ -222,10 +223,11 @@ const nextResult = await executeThinkingStep({
 - **Persistence Architecture**: Adapter pattern supporting filesystem and memory backends
 - **MCP Sampling Integration**: AI-powered enhancement with graceful degradation when unavailable
 
-### Twenty-One Enhanced Thinking Techniques
+### 34+ Creative Thinking Techniques
 
 Each technique integrates creative generation with systematic verification and post-action
-reflexivity tracking:
+reflexivity tracking. The collection includes 21 core techniques plus new Rory Sutherland-inspired
+behavioral economics approaches:
 
 **Note**: The discovery layer includes a wildcard technique selection feature (17.5% probability by
 default, configurable via `WILDCARD_PROBABILITY` environment variable) that randomly includes an
@@ -258,6 +260,15 @@ additional technique to prevent algorithmic pigeonholing and encourage unexpecte
   pathways
 - **Neuro-Computational Synthesis** - AI/ML algorithms for computational creativity (NOT human
   cognition)
+
+**New Behavioral Economics Techniques (Rory Sutherland-inspired):**
+
+- **Reverse Benchmarking** - Excel where all competitors fail, creating uncontested market spaces
+- **Context Reframing** - Change one context to reshape all decisions within it
+- **Perception Optimization** - Optimize for subjective experience over objective metrics
+- **Anecdotal Signal Detection** - Identify future trends from individual outlier stories
+- **Enhanced Random Entry with 'Rory Mode'** - Deliberate absurdity wildcards that force radical
+  reframing
 
 ### MCP Prompts Support (NEW)
 

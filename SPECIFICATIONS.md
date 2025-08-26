@@ -27,6 +27,7 @@ path dependence, non-ergodic systems, absorbing barriers, antifragility, Model C
 1. Introduction: The Duality of Creative Intelligence in Non-Ergodic Reality
 2. The Non-Ergodic Nature of Creative and Critical Thinking
 3. Part I: Lateral Thinking Techniques Enhanced with Path-Dependence Awareness
+   - 3.6 Enhanced Random Entry with Rory Mode
 4. Part II: Improv Principles with Narrative Path Memory
 5. Part III: Creative Problem-Solving in Non-Ergodic Domains
 6. Part IV: Domain-Specific Applications with Ergodicity Consciousness
@@ -35,6 +36,11 @@ path dependence, non-ergodic systems, absorbing barriers, antifragility, Model C
 9. Part VII: Advanced Integration in Non-Ergodic Systems
 10. Conclusion: Navigating the Path-Dependent Future of AI Reasoning
 11. Current Implementation: Three-Layer Architecture
+12. Part VIII: Behavioral Economics-Inspired Techniques
+    - 16. Reverse Benchmarking with Vacant Space Discovery
+    - 17. Context Reframing with Decision Environment Design
+    - 18. Perception Optimization with Subjective Value Creation
+    - 19. Anecdotal Signal Detection with Non-Ergodic Path Analysis
 
 ## Introduction: The Duality of Creative Intelligence in Non-Ergodic Reality
 
@@ -634,8 +640,13 @@ Track "associative debt" accumulating
 
 **6. Rory Mode - Provocative Wildcard Generation** (Enhanced):
 
-Inspired by Rory Sutherland's use of deliberate absurdity to force radical reframing, this
-enhancement creates wildcards that are intentionally contradictory, inversional, or impossible.
+**Note: This is a major enhancement to the Random Entry technique inspired by behavioral economist
+Rory Sutherland's approach of using deliberate absurdity to force radical reframing.**
+
+Sutherland demonstrates that deliberately absurd or contradictory wildcards force more creative
+thinking than standard random words. As he says: "The opposite of a good idea can be another good
+idea." This enhancement creates wildcards that are intentionally contradictory, inversional, or
+impossible.
 
 **Wildcard Categories**:
 
@@ -746,6 +757,11 @@ After generating absurd wildcard:
 - "What if this was a dating problem?"
 - "How would Vikings solve this?"
 - "What would happen in zero gravity?"
+
+**Related Enhancement**: This Rory Mode approach connects directly with the **PO (Provocative
+Operation)** technique, which similarly uses deliberate provocation to escape thinking patterns.
+While PO focuses on systematic pattern disruption, Rory Mode specializes in absurdist reframing
+through behavioral economics insights.
 
 **Historical Anecdotal Wildcards**:
 
@@ -2024,6 +2040,13 @@ beauty"—occupying the vacant space competitors created through collective obse
 - Anti-mimetic strategies preserve path independence
 - Sometimes the best move is the one no one else will make
 
+**Related Techniques**:
+
+- **Concept Extraction** (Section 3.5) - Cross-domain pattern transfer to identify excellence
+  patterns from other industries
+- **SCAMPER** (Section 3.4) - Systematic transformations that can reveal vacant competitive spaces
+- **First Principles Thinking** - Breaking down competitor strategies to fundamental assumptions
+
 ### 17. Context Reframing with Decision Environment Design
 
 **Traditional Persuasion**: Change millions of individual minds **Context Reframing**: Change one
@@ -2125,6 +2148,12 @@ fundamentally changing purchase decision psychology.
 - Decision architecture is often invisible but powerful
 - Reframing preserves optionality while changing choices
 
+**Related Techniques**:
+
+- **Design Thinking** (Section 4.1) - Human-centered design that understands context importance
+- **Six Thinking Hats** (Section 3.1) - Multiple perspectives reveal different contextual frames
+- **Disney Method** - Different roles (dreamer/realist/critic) create different decision contexts
+
 ### 18. Perception Optimization with Subjective Value Creation
 
 **Traditional Optimization**: Improve objective metrics and features **Perception Optimization**:
@@ -2216,6 +2245,12 @@ Result: Dramatic behavior change from simple reframing
 - Experience design > feature addition
 - Subjective value often cheaper than objective value
 - Optimize for feelings, not metrics
+
+**Related Techniques**:
+
+- **Yes, And** (Section 4.2) - Building on perceptual insights collaboratively
+- **Quantum Superposition** - Maintaining multiple perceptual frames simultaneously
+- **Neural State** - Understanding cognitive states that shape perception
 
 ### 19. Anecdotal Signal Detection with Non-Ergodic Path Analysis
 
@@ -2336,6 +2371,13 @@ def process_anecdotal_signal(anecdote):
 - Outliers often indicate future mainstreams
 - Path-dependent insights don't generalize linearly
 - Listen to the user who does something "wrong"
+
+**Related Techniques**:
+
+- **Random Entry** (Section 3.3) - Random stimuli can reveal anecdotal patterns
+- **Meta-Learning from Path Integration** - Learning from individual path stories
+- **Temporal Creativity** - Understanding how anecdotes evolve over time
+- **First Principles Thinking** - Breaking down anecdotal signals to fundamental insights
 
 ### 20. Temporal Work Design with Kairos-Chronos Integration
 
