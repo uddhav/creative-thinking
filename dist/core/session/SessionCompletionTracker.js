@@ -445,6 +445,9 @@ export class SessionCompletionTracker {
             biomimetic_path: 6,
             first_principles: 5,
             neuro_computational: 6,
+            criteria_based_analysis: 5,
+            linguistic_forensics: 6,
+            competing_hypotheses: 8,
         };
         return stepCounts[technique] || 5;
     }

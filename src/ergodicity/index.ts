@@ -539,6 +539,21 @@ export class ErgodicityManager {
         typicalCommitment: 0.6,
         riskProfile: 'Medium - Computational optimization creates dependencies',
       },
+      criteria_based_analysis: {
+        typicalReversibility: 0.7,
+        typicalCommitment: 0.4,
+        riskProfile: 'Low - Analysis without action commitment',
+      },
+      linguistic_forensics: {
+        typicalReversibility: 0.6,
+        typicalCommitment: 0.5,
+        riskProfile: 'Medium - Reveals relationship dynamics',
+      },
+      competing_hypotheses: {
+        typicalReversibility: 0.4,
+        typicalCommitment: 0.7,
+        riskProfile: 'Medium - Decision commitment based on evidence',
+      },
     };
 
     return profiles[technique];

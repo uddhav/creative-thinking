@@ -1,10 +1,9 @@
 # Creative Thinking MCP Server
 
 A Model Context Protocol (MCP) server that provides structured creative thinking techniques for
-problem-solving and ideation. This server implements 34+ creative thinking techniques through a
+problem-solving and ideation. This server implements 24 creative thinking techniques through a
 unified framework combining generative creativity with systematic risk assessment, analytical
-verification, and post-action reflexivity tracking, including new techniques inspired by behavioral
-economics insights from Rory Sutherland.
+verification, and post-action reflexivity tracking.
 
 > **Note**: This repository is a public fork of work originally developed with Munshy, Personal
 > Secretary.
@@ -223,11 +222,11 @@ const nextResult = await executeThinkingStep({
 - **Persistence Architecture**: Adapter pattern supporting filesystem and memory backends
 - **MCP Sampling Integration**: AI-powered enhancement with graceful degradation when unavailable
 
-### 34+ Creative Thinking Techniques
+### 24 Creative Thinking Techniques
 
 Each technique integrates creative generation with systematic verification and post-action
-reflexivity tracking. The collection includes 21 core techniques plus new Rory Sutherland-inspired
-behavioral economics approaches:
+reflexivity tracking. The collection includes 21 core creative techniques plus 3 analytical
+verification techniques:
 
 **Note**: The discovery layer includes a wildcard technique selection feature (17.5% probability by
 default, configurable via `WILDCARD_PROBABILITY` environment variable) that randomly includes an
@@ -256,19 +255,16 @@ additional technique to prevent algorithmic pigeonholing and encourage unexpecte
   innovation
 - **First Principles Thinking** - Breaks complex problems down to fundamental truths and rebuilds
   solutions
-- **Cultural Path Navigation** - Navigates through cultural contexts to find viable solution
-  pathways
+- **Cultural Integration** - Unified cross-cultural bridge-building and creative synthesis
 - **Neuro-Computational Synthesis** - AI/ML algorithms for computational creativity (NOT human
   cognition)
 
-**New Behavioral Economics Techniques (Rory Sutherland-inspired):**
+**Analytical Verification Techniques:**
 
-- **Reverse Benchmarking** - Excel where all competitors fail, creating uncontested market spaces
-- **Context Reframing** - Change one context to reshape all decisions within it
-- **Perception Optimization** - Optimize for subjective experience over objective metrics
-- **Anecdotal Signal Detection** - Identify future trends from individual outlier stories
-- **Enhanced Random Entry with 'Rory Mode'** - Deliberate absurdity wildcards that force radical
-  reframing
+- **Criteria-Based Analysis** - Systematic truth verification through established criteria (5 steps)
+- **Linguistic Forensics** - Deep analysis of communication patterns for hidden insights (6 steps)
+- **Competing Hypotheses Analysis** - Systematic evaluation of multiple explanations using evidence
+  matrices and Bayesian reasoning (8 steps)
 
 ### MCP Prompts Support (NEW)
 

@@ -1436,6 +1436,19 @@ export class CreativeThinkingMcpAgent extends McpAgent<Env, CreativeThinkingStat
       design_thinking: ['designStage', 'empathyInsights', 'problemStatement', 'ideaList'],
       triz: ['contradiction', 'inventivePrinciples', 'minimalSolution'],
       first_principles: ['components', 'fundamentalTruths', 'assumptions', 'reconstruction'],
+      criteria_based_analysis: ['validityScore', 'criteriaAssessments', 'confidenceBounds'],
+      linguistic_forensics: [
+        'pronounRatios',
+        'complexityMetrics',
+        'coherenceScore',
+        'linguisticMarkers',
+      ],
+      competing_hypotheses: [
+        'hypothesisMatrix',
+        'probabilities',
+        'diagnosticValue',
+        'sensitivityFactors',
+      ],
     };
 
     const extracted: any = {};

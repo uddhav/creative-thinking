@@ -34,7 +34,10 @@ export type LateralTechnique =
   | 'biomimetic_path'
   | 'first_principles'
   | 'cultural_integration'
-  | 'neuro_computational';
+  | 'neuro_computational'
+  | 'criteria_based_analysis'
+  | 'linguistic_forensics'
+  | 'competing_hypotheses';
 
 export type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green' | 'purple';
 export type ScamperAction =
@@ -689,4 +692,42 @@ export interface Tool {
     required?: string[];
     additionalProperties?: boolean;
   };
+}
+
+// Analytical Verification Types (for Criteria-Based Analysis, Linguistic Forensics, Competing Hypotheses)
+
+export interface ValidityAssessment {
+  validityScore: number; // 0-100
+  confidenceBounds: { lower: number; upper: number };
+  criteria: string[];
+  pathDependentFactors: string[];
+  assessmentType: 'baseline' | 'cognitive' | 'motivational' | 'reality' | 'synthesis';
+}
+
+export interface LinguisticMarkers {
+  pronounRatios: {
+    iWe: number; // Individual vs collective
+    activePassive: number;
+    ownershipAvoidance: number;
+  };
+  complexityMetrics: {
+    avgSentenceLength: number;
+    lexicalDiversity: number; // unique words / total words
+    abstractionLevel: number; // 0-1 scale
+  };
+  emotionalProfile: {
+    valence: 'positive' | 'negative' | 'neutral';
+    intensity: number; // 0-1 scale
+    trajectory: 'stable' | 'increasing' | 'decreasing' | 'volatile';
+  };
+  coherenceScore: number; // 0-100
+}
+
+export interface HypothesisMatrix {
+  hypotheses: string[];
+  evidence: string[];
+  ratings: Record<string, number>; // evidence_hypothesis -> -2 to +2
+  diagnosticValue: Record<string, number>; // evidence -> 0-1
+  probabilities: Record<string, number>; // hypothesis -> 0-1
+  sensitivityFactors: string[];
 }

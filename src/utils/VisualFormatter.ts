@@ -298,6 +298,9 @@ export class VisualFormatter {
       biomimetic_path: '🦠',
       first_principles: '🔬',
       neuro_computational: '⚛️',
+      criteria_based_analysis: '🔬',
+      linguistic_forensics: '🔤',
+      competing_hypotheses: '⚖️',
     };
     return emojis[technique] || '❓';
   }
@@ -328,6 +331,9 @@ export class VisualFormatter {
       biomimetic_path: 'Biomimetic Path Management',
       first_principles: 'First Principles Thinking',
       neuro_computational: 'Neuro-Computational Synthesis',
+      criteria_based_analysis: 'Criteria-Based Analysis',
+      linguistic_forensics: 'Linguistic Forensics',
+      competing_hypotheses: 'Competing Hypotheses Analysis',
     };
     return names[technique] || technique;
   }
