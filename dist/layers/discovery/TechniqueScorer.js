@@ -443,8 +443,9 @@ export class TechniqueScorer {
     ) {
         // Check cache first
         const cacheKey = `${technique}-${JSON.stringify(context)}-${categoryScore}`;
-        if (this.scoreCache.has(cacheKey)) {
-            return this.scoreCache.get(cacheKey);
+        const cachedScore = this.scoreCache.get(cacheKey);
+        if (cachedScore !== undefined) {
+            return cachedScore;
         }
         const metadata = this.techniqueMetadata[technique];
         if (!metadata) {
