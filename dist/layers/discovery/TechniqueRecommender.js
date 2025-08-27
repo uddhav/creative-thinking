@@ -192,6 +192,16 @@ export class TechniqueRecommender {
                 break;
             case 'strategic':
                 recommendations.push({
+                    technique: 'reverse_benchmarking',
+                    reasoning: 'Find competitive advantage where all competitors fail',
+                    effectiveness: 0.92,
+                });
+                recommendations.push({
+                    technique: 'anecdotal_signal',
+                    reasoning: 'Detect early strategic changes from outlier signals',
+                    effectiveness: 0.88,
+                });
+                recommendations.push({
                     technique: 'six_hats',
                     reasoning: 'Comprehensive strategic analysis from all angles',
                     effectiveness: 0.9,
@@ -271,6 +281,11 @@ export class TechniqueRecommender {
                     technique: 'linguistic_forensics',
                     reasoning: 'Reveal hidden patterns and motivations in communication',
                     effectiveness: 0.88,
+                });
+                recommendations.push({
+                    technique: 'context_reframing',
+                    reasoning: 'Change decision environments to influence stakeholder behavior',
+                    effectiveness: 0.85,
                 });
                 recommendations.push({
                     technique: 'design_thinking',

@@ -320,6 +320,10 @@ export class PathMemoryManager {
             criteria_based_analysis: 'cognitive',
             linguistic_forensics: 'relational',
             competing_hypotheses: 'cognitive',
+            reverse_benchmarking: 'strategic',
+            context_reframing: 'behavioral',
+            perception_optimization: 'perceptual',
+            anecdotal_signal: 'observational',
         };
         return techniqueConstraintMap[event.technique] || 'creative';
     }

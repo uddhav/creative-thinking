@@ -7,7 +7,7 @@ import type { LateralTechnique } from '../index.js';
  */
 export interface Constraint {
     id: string;
-    type: 'technical' | 'resource' | 'cognitive' | 'relational' | 'market' | 'regulatory' | 'creative';
+    type: 'technical' | 'resource' | 'cognitive' | 'relational' | 'market' | 'regulatory' | 'creative' | 'strategic' | 'behavioral' | 'perceptual' | 'observational';
     description: string;
     createdAt: string;
     createdBy: PathEvent;

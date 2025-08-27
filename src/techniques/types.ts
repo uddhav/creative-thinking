@@ -16,7 +16,7 @@ export interface ReflexiveEffects {
   triggers: string[]; // What actions trigger reflexivity
   realityChanges: string[]; // How reality changes post-action
   futureConstraints: string[]; // What must be considered going forward
-  reversibility: 'high' | 'medium' | 'low'; // How easily can this be undone
+  reversibility: 'high' | 'medium' | 'low' | 'very_low'; // How easily can this be undone
 }
 
 /**
@@ -44,8 +44,18 @@ export interface TechniqueInfo {
   };
   reflexivityProfile?: {
     // Overall reflexivity characteristics of the technique
-    primaryCommitmentType: 'relationship' | 'path' | 'structural' | 'behavioral' | 'technical';
-    overallReversibility: 'high' | 'medium' | 'low';
+    primaryCommitmentType:
+      | 'relationship'
+      | 'path'
+      | 'structural'
+      | 'behavioral'
+      | 'technical'
+      | 'strategic'
+      | 'environmental'
+      | 'perceptual'
+      | 'exploratory'
+      | 'observational';
+    overallReversibility: 'high' | 'medium' | 'low' | 'very_low';
     riskLevel: 'low' | 'medium' | 'high';
   };
 }

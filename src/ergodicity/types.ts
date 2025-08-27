@@ -16,7 +16,11 @@ export interface Constraint {
     | 'relational'
     | 'market'
     | 'regulatory'
-    | 'creative';
+    | 'creative'
+    | 'strategic'
+    | 'behavioral'
+    | 'perceptual'
+    | 'observational';
   description: string;
   createdAt: string;
   createdBy: PathEvent;

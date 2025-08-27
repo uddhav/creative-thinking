@@ -29,6 +29,10 @@ import { NeuroComputationalHandler } from './NeuroComputationalHandler.js';
 import { CriteriaBasedAnalysisHandler } from './CriteriaBasedAnalysisHandler.js';
 import { LinguisticForensicsHandler } from './LinguisticForensicsHandler.js';
 import { CompetingHypothesesHandler } from './CompetingHypothesesHandler.js';
+import { ReverseBenchmarkingHandler } from './ReverseBenchmarkingHandler.js';
+import { ContextReframingHandler } from './ContextReframingHandler.js';
+import { PerceptionOptimizationHandler } from './PerceptionOptimizationHandler.js';
+import { AnecdotalSignalHandler } from './AnecdotalSignalHandler.js';
 // Removed unused imports - GenericHandler and ConvergenceHandler
 
 export class TechniqueRegistry {
@@ -75,6 +79,10 @@ export class TechniqueRegistry {
     this.handlers.set('criteria_based_analysis', new CriteriaBasedAnalysisHandler());
     this.handlers.set('linguistic_forensics', new LinguisticForensicsHandler());
     this.handlers.set('competing_hypotheses', new CompetingHypothesesHandler());
+    this.handlers.set('reverse_benchmarking', new ReverseBenchmarkingHandler());
+    this.handlers.set('context_reframing', new ContextReframingHandler());
+    this.handlers.set('perception_optimization', new PerceptionOptimizationHandler());
+    this.handlers.set('anecdotal_signal', new AnecdotalSignalHandler());
   }
 
   getHandler(technique: string): TechniqueHandler {
