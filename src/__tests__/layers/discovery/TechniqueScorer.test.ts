@@ -252,6 +252,65 @@ describe('TechniqueScorer', () => {
       expect(score).toBeGreaterThan(0);
       expect(score).toBeLessThanOrEqual(1);
     });
+
+    it('should throw error for zero weights', () => {
+      const zeroWeights: ScoringWeights = {
+        categoryFit: 0,
+        complexityMatch: 0,
+        constraintCompatibility: 0,
+        outcomeAlignment: 0,
+      };
+
+      expect(() => new TechniqueScorer(zeroWeights)).toThrow(
+        'TechniqueScorer: Sum of weights must be positive'
+      );
+    });
+
+    it('should throw error for negative weights', () => {
+      const negativeWeights: ScoringWeights = {
+        categoryFit: -1,
+        complexityMatch: 0.5,
+        constraintCompatibility: 0.3,
+        outcomeAlignment: 0.2,
+      };
+
+      expect(() => new TechniqueScorer(negativeWeights)).toThrow(
+        'TechniqueScorer: All weights must be non-negative'
+      );
+    });
+
+    it('should handle invalid preferred outcome gracefully', () => {
+      const context: ProblemContext = {
+        category: 'general',
+        complexity: 'medium',
+        hasTimeConstraints: false,
+        hasResourceConstraints: false,
+        needsCollaboration: false,
+        preferredOutcome: 'invalid_outcome',
+      };
+
+      const score = scorer.calculateScore('six_hats', context, 0.5);
+      expect(score).toBeGreaterThan(0); // Should fallback to default score
+      expect(score).toBeLessThanOrEqual(1);
+    });
+
+    it('should handle all constraints active', () => {
+      const context: ProblemContext = {
+        category: 'general',
+        complexity: 'high',
+        hasTimeConstraints: true,
+        hasResourceConstraints: true,
+        needsCollaboration: true,
+      };
+
+      // Six hats handles all constraints well
+      const goodScore = scorer.calculateScore('six_hats', context, 0.5);
+
+      // First principles doesn't handle time or collaboration
+      const poorScore = scorer.calculateScore('first_principles', context, 0.5);
+
+      expect(goodScore).toBeGreaterThan(poorScore);
+    });
   });
 
   describe('Performance', () => {

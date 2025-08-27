@@ -457,12 +457,23 @@ export class TechniqueScorer {
     // Store weights internally, using defaults if not provided
     this.weights = weights ? { ...weights } : { ...this.DEFAULT_WEIGHTS };
 
+    // Validate weights are non-negative
+    const weightValues = Object.values(this.weights);
+    if (weightValues.some(w => w < 0)) {
+      throw new Error('TechniqueScorer: All weights must be non-negative');
+    }
+
     // Normalize weights to ensure they sum to 1
     const sum =
       this.weights.categoryFit +
       this.weights.complexityMatch +
       this.weights.constraintCompatibility +
       this.weights.outcomeAlignment;
+
+    // Protect against division by zero
+    if (sum <= 0) {
+      throw new Error('TechniqueScorer: Sum of weights must be positive (got ' + sum + ')');
+    }
 
     if (Math.abs(sum - 1.0) > 0.01) {
       // Auto-normalize if weights don't sum to 1

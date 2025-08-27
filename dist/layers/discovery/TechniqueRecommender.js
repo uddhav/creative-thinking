@@ -3,6 +3,7 @@
  * Extracted from discoverTechniques to improve maintainability
  * Enhanced with multi-factor scoring system for intelligent recommendations
  */
+import { ALL_LATERAL_TECHNIQUES } from '../../types/index.js';
 import { TechniqueScorer } from './TechniqueScorer.js';
 export class TechniqueRecommender {
     // Wildcard inclusion probability (20% chance)
@@ -578,39 +579,9 @@ export class TechniqueRecommender {
      * Select a wildcard technique to prevent algorithmic pigeonholing
      */
     selectWildcardTechnique(excludeTechniques, techniqueRegistry) {
-        // All available techniques (all 28)
-        const allTechniques = [
-            'six_hats',
-            'po',
-            'random_entry',
-            'scamper',
-            'concept_extraction',
-            'yes_and',
-            'design_thinking',
-            'triz',
-            'neural_state',
-            'temporal_work',
-            'cultural_integration',
-            'collective_intel',
-            'disney_method',
-            'nine_windows',
-            'quantum_superposition',
-            'temporal_creativity',
-            'paradoxical_problem',
-            'meta_learning',
-            'biomimetic_path',
-            'first_principles',
-            'neuro_computational',
-            'criteria_based_analysis',
-            'linguistic_forensics',
-            'competing_hypotheses',
-            'reverse_benchmarking',
-            'context_reframing',
-            'perception_optimization',
-            'anecdotal_signal',
-        ];
-        // Filter out already recommended techniques (O(1) lookup with Set)
-        const availableTechniques = allTechniques.filter(t => !excludeTechniques.has(t) && techniqueRegistry.isValidTechnique(t));
+        // Use the single source of truth for all techniques
+        // This ensures we always include all available techniques
+        const availableTechniques = ALL_LATERAL_TECHNIQUES.filter(t => !excludeTechniques.has(t) && techniqueRegistry.isValidTechnique(t));
         if (availableTechniques.length === 0) {
             return null;
         }

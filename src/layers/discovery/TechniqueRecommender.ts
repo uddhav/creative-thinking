@@ -5,6 +5,7 @@
  */
 
 import type { LateralTechnique } from '../../types/index.js';
+import { ALL_LATERAL_TECHNIQUES } from '../../types/index.js';
 import type { TechniqueRegistry } from '../../techniques/TechniqueRegistry.js';
 import { TechniqueScorer, type ProblemContext } from './TechniqueScorer.js';
 
@@ -684,40 +685,9 @@ export class TechniqueRecommender {
     excludeTechniques: Set<LateralTechnique>,
     techniqueRegistry: TechniqueRegistry
   ): { technique: LateralTechnique; reasoning: string; effectiveness: number } | null {
-    // All available techniques (all 28)
-    const allTechniques: LateralTechnique[] = [
-      'six_hats',
-      'po',
-      'random_entry',
-      'scamper',
-      'concept_extraction',
-      'yes_and',
-      'design_thinking',
-      'triz',
-      'neural_state',
-      'temporal_work',
-      'cultural_integration',
-      'collective_intel',
-      'disney_method',
-      'nine_windows',
-      'quantum_superposition',
-      'temporal_creativity',
-      'paradoxical_problem',
-      'meta_learning',
-      'biomimetic_path',
-      'first_principles',
-      'neuro_computational',
-      'criteria_based_analysis',
-      'linguistic_forensics',
-      'competing_hypotheses',
-      'reverse_benchmarking',
-      'context_reframing',
-      'perception_optimization',
-      'anecdotal_signal',
-    ];
-
-    // Filter out already recommended techniques (O(1) lookup with Set)
-    const availableTechniques = allTechniques.filter(
+    // Use the single source of truth for all techniques
+    // This ensures we always include all available techniques
+    const availableTechniques = ALL_LATERAL_TECHNIQUES.filter(
       t => !excludeTechniques.has(t) && techniqueRegistry.isValidTechnique(t)
     );
 
