@@ -450,7 +450,8 @@ export class TechniqueRecommender {
                 c.toLowerCase().includes('limited')) ?? false,
             needsCollaboration: (constraints?.some(c => c.toLowerCase().includes('team') ||
                 c.toLowerCase().includes('collaboration') ||
-                c.toLowerCase().includes('stakeholder')) ?? false) ||
+                c.toLowerCase().includes('stakeholder')) ??
+                false) ||
                 problemCategory === 'organizational',
             preferredOutcome,
         };
@@ -477,8 +478,7 @@ export class TechniqueRecommender {
             }
             // Get execution time estimate
             const timeEstimate = this.scorer.estimateExecutionTime(rec.technique);
-            const timeLabel = timeEstimate === 'quick' ? '⚡' :
-                timeEstimate === 'moderate' ? '⏱️' : '⏳';
+            const timeLabel = timeEstimate === 'quick' ? '⚡' : timeEstimate === 'moderate' ? '⏱️' : '⏳';
             return {
                 ...rec,
                 // Enhance reasoning with step count and time estimate

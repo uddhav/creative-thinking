@@ -38,10 +38,10 @@ export interface ProblemContext {
     preferredOutcome?: string;
 }
 export declare class TechniqueScorer {
-    private weights;
     private readonly DEFAULT_WEIGHTS;
     private readonly techniqueMetadata;
     constructor(weights?: ScoringWeights);
+    private weights;
     /**
      * Calculate multi-factor score for a technique given the problem context
      */

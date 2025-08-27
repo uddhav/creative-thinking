@@ -3,7 +3,6 @@
  * Provides intelligent technique recommendations based on multiple factors
  */
 export class TechniqueScorer {
-    weights;
     DEFAULT_WEIGHTS = {
         categoryFit: 0.4,
         complexityMatch: 0.2,
@@ -408,17 +407,23 @@ export class TechniqueScorer {
             stepCount: 6,
         },
     };
-    constructor(weights = this.DEFAULT_WEIGHTS) {
-        this.weights = weights;
+    constructor(weights) {
+        // Store weights internally, using defaults if not provided
+        this.weights = weights ? { ...weights } : { ...this.DEFAULT_WEIGHTS };
         // Normalize weights to ensure they sum to 1
-        const sum = Object.values(weights).reduce((a, b) => a + b, 0);
+        const sum = this.weights.categoryFit +
+            this.weights.complexityMatch +
+            this.weights.constraintCompatibility +
+            this.weights.outcomeAlignment;
         if (Math.abs(sum - 1.0) > 0.01) {
             // Auto-normalize if weights don't sum to 1
-            Object.keys(weights).forEach(key => {
-                this.weights[key] /= sum;
-            });
+            this.weights.categoryFit /= sum;
+            this.weights.complexityMatch /= sum;
+            this.weights.constraintCompatibility /= sum;
+            this.weights.outcomeAlignment /= sum;
         }
     }
+    weights;
     /**
      * Calculate multi-factor score for a technique given the problem context
      */
