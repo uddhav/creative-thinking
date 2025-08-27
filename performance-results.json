@@ -24,7 +24,7 @@
     "updated": 0,
     "didUpdate": false
   },
-  "startTime": 1754405294612,
+  "startTime": 1756274428950,
   "success": true,
   "testResults": [
     {
@@ -34,7 +34,7 @@
           "fullName": "Performance Integration Tests Concurrent Operations should handle 50 concurrent discovery requests",
           "status": "passed",
           "title": "should handle 50 concurrent discovery requests",
-          "duration": 62.40837499999998,
+          "duration": 331.2763749999999,
           "failureMessages": [],
           "meta": {}
         },
@@ -43,7 +43,7 @@
           "fullName": "Performance Integration Tests Concurrent Operations should handle 100 concurrent planning requests",
           "status": "passed",
           "title": "should handle 100 concurrent planning requests",
-          "duration": 8.851791000000048,
+          "duration": 13.525707999999895,
           "failureMessages": [],
           "meta": {}
         },
@@ -52,7 +52,7 @@
           "fullName": "Performance Integration Tests Concurrent Operations should handle 100 concurrent step executions",
           "status": "passed",
           "title": "should handle 100 concurrent step executions",
-          "duration": 83.561375,
+          "duration": 418.06283299999996,
           "failureMessages": [],
           "meta": {}
         },
@@ -61,7 +61,7 @@
           "fullName": "Performance Integration Tests Large Session Handling should handle session with 100 steps efficiently",
           "status": "passed",
           "title": "should handle session with 100 steps efficiently",
-          "duration": 111.90020800000002,
+          "duration": 396.5314589999998,
           "failureMessages": [],
           "meta": {}
         },
@@ -70,7 +70,7 @@
           "fullName": "Performance Integration Tests Large Session Handling should handle deep revision chains efficiently",
           "status": "passed",
           "title": "should handle deep revision chains efficiently",
-          "duration": 50.071916999999985,
+          "duration": 197.0350420000002,
           "failureMessages": [],
           "meta": {}
         },
@@ -79,7 +79,7 @@
           "fullName": "Performance Integration Tests Memory Usage should handle memory efficiently with many sessions",
           "status": "passed",
           "title": "should handle memory efficiently with many sessions",
-          "duration": 637.3059580000001,
+          "duration": 805.2639160000003,
           "failureMessages": [],
           "meta": {}
         },
@@ -88,7 +88,7 @@
           "fullName": "Performance Integration Tests Response Time Consistency should maintain consistent response times under load",
           "status": "passed",
           "title": "should maintain consistent response times under load",
-          "duration": 12.485125000000153,
+          "duration": 122.83054200000015,
           "failureMessages": [],
           "meta": {}
         },
@@ -97,13 +97,13 @@
           "fullName": "Performance Integration Tests Complex Workflow Performance should handle multi-technique workflow efficiently",
           "status": "passed",
           "title": "should handle multi-technique workflow efficiently",
-          "duration": 21.83162500000003,
+          "duration": 137.48783299999968,
           "failureMessages": [],
           "meta": {}
         }
       ],
-      "startTime": 1754405295445,
-      "endTime": 1754405296433.8315,
+      "startTime": 1756274429805,
+      "endTime": 1756274432227.4878,
       "status": "passed",
       "message": "",
       "name": "/Users/uddhav/Workspace/creative-thinking/src/__tests__/integration/performance.test.ts"

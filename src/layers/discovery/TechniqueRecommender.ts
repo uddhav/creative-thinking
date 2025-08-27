@@ -72,6 +72,16 @@ export class TechniqueRecommender {
           effectiveness: 0.9,
         });
         recommendations.push({
+          technique: 'first_principles',
+          reasoning: 'Deconstruct technical problems to fundamental components',
+          effectiveness: 0.88,
+        });
+        recommendations.push({
+          technique: 'neuro_computational',
+          reasoning: 'Apply neural synthesis and computational modeling',
+          effectiveness: 0.82,
+        });
+        recommendations.push({
           technique: 'scamper',
           reasoning: 'Structured modifications for technical improvements',
           effectiveness: 0.75,
@@ -96,6 +106,16 @@ export class TechniqueRecommender {
           effectiveness: 0.88,
         });
         recommendations.push({
+          technique: 'perception_optimization',
+          reasoning: 'Enhances subjective experience and perceived value',
+          effectiveness: 0.83,
+        });
+        recommendations.push({
+          technique: 'anecdotal_signal',
+          reasoning: 'Find inspiration in outliers and edge cases',
+          effectiveness: 0.78,
+        });
+        recommendations.push({
           technique: 'cultural_integration',
           reasoning: 'Synthesizes creative solutions from diverse cultural perspectives',
           effectiveness: 0.82,
@@ -107,6 +127,16 @@ export class TechniqueRecommender {
           technique: 'scamper',
           reasoning: 'Systematic process improvement through modifications',
           effectiveness: 0.9,
+        });
+        recommendations.push({
+          technique: 'first_principles',
+          reasoning: 'Rebuild process from fundamental requirements',
+          effectiveness: 0.85,
+        });
+        recommendations.push({
+          technique: 'nine_windows',
+          reasoning: 'Analyze process across time and system levels',
+          effectiveness: 0.8,
         });
         recommendations.push({
           technique: 'concept_extraction',
@@ -132,8 +162,8 @@ export class TechniqueRecommender {
           effectiveness: 0.85,
         });
         recommendations.push({
-          technique: 'cultural_integration',
-          reasoning: 'Orchestrates creative synthesis across cultural boundaries',
+          technique: 'context_reframing',
+          reasoning: 'Reshapes organizational decision environments',
           effectiveness: 0.78,
         });
         break;
@@ -147,13 +177,13 @@ export class TechniqueRecommender {
           effectiveness: 0.95,
         });
         recommendations.push({
-          technique: 'cultural_integration',
-          reasoning: 'Foundational cultural integration and respectful bridge-building',
+          technique: 'collective_intel',
+          reasoning: 'Foundational collective intelligence and diverse wisdom integration',
           effectiveness: 0.9,
         });
         recommendations.push({
-          technique: 'collective_intel',
-          reasoning: 'Harnesses diverse cultural wisdom sources',
+          technique: 'temporal_work',
+          reasoning: 'Integrates time-based cultural evolution and adaptability',
           effectiveness: 0.85,
         });
         break;
@@ -342,6 +372,91 @@ export class TechniqueRecommender {
         });
         break;
 
+      case 'behavioral':
+      case 'psychology':
+      case 'perception':
+        recommendations.push({
+          technique: 'perception_optimization',
+          reasoning: 'Optimize for subjective experience over objective metrics',
+          effectiveness: 0.92,
+        });
+        recommendations.push({
+          technique: 'context_reframing',
+          reasoning: 'Change decision environments to influence behavior',
+          effectiveness: 0.9,
+        });
+        recommendations.push({
+          technique: 'anecdotal_signal',
+          reasoning: 'Detect behavioral patterns from individual outliers',
+          effectiveness: 0.85,
+        });
+        recommendations.push({
+          technique: 'reverse_benchmarking',
+          reasoning: 'Find opportunities in anti-mimetic behavior',
+          effectiveness: 0.82,
+        });
+        break;
+
+      case 'fundamental':
+      case 'first-principles':
+      case 'basics':
+        recommendations.push({
+          technique: 'first_principles',
+          reasoning: 'Deconstruct to absolute fundamentals and rebuild',
+          effectiveness: 0.95,
+        });
+        recommendations.push({
+          technique: 'triz',
+          reasoning: 'Apply fundamental innovation principles',
+          effectiveness: 0.85,
+        });
+        recommendations.push({
+          technique: 'concept_extraction',
+          reasoning: 'Extract core patterns from successful examples',
+          effectiveness: 0.8,
+        });
+        break;
+
+      case 'learning':
+      case 'knowledge':
+      case 'synthesis':
+        recommendations.push({
+          technique: 'meta_learning',
+          reasoning: 'Synthesize patterns across multiple learning experiences',
+          effectiveness: 0.9,
+        });
+        recommendations.push({
+          technique: 'biomimetic_path',
+          reasoning: 'Apply evolutionary and biological learning strategies',
+          effectiveness: 0.88,
+        });
+        recommendations.push({
+          technique: 'temporal_creativity',
+          reasoning: 'Learn from historical patterns and future projections',
+          effectiveness: 0.85,
+        });
+        break;
+
+      case 'computational':
+      case 'algorithmic':
+      case 'neural':
+        recommendations.push({
+          technique: 'neuro_computational',
+          reasoning: 'Neural synthesis with computational optimization',
+          effectiveness: 0.92,
+        });
+        recommendations.push({
+          technique: 'quantum_superposition',
+          reasoning: 'Parallel processing of multiple solution states',
+          effectiveness: 0.88,
+        });
+        recommendations.push({
+          technique: 'first_principles',
+          reasoning: 'Algorithmic decomposition to basic operations',
+          effectiveness: 0.85,
+        });
+        break;
+
       default:
         recommendations.push({
           technique: 'six_hats',
@@ -510,7 +625,7 @@ export class TechniqueRecommender {
     excludeTechniques: Set<LateralTechnique>,
     techniqueRegistry: TechniqueRegistry
   ): { technique: LateralTechnique; reasoning: string; effectiveness: number } | null {
-    // All available techniques
+    // All available techniques (all 28)
     const allTechniques: LateralTechnique[] = [
       'six_hats',
       'po',
@@ -528,6 +643,18 @@ export class TechniqueRecommender {
       'nine_windows',
       'quantum_superposition',
       'temporal_creativity',
+      'paradoxical_problem',
+      'meta_learning',
+      'biomimetic_path',
+      'first_principles',
+      'neuro_computational',
+      'criteria_based_analysis',
+      'linguistic_forensics',
+      'competing_hypotheses',
+      'reverse_benchmarking',
+      'context_reframing',
+      'perception_optimization',
+      'anecdotal_signal',
     ];
 
     // Filter out already recommended techniques (O(1) lookup with Set)

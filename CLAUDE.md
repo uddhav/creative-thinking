@@ -73,7 +73,7 @@ When working with this codebase:
 
 **Creative Techniques:**
 
-- Six Hats: 6 steps (one per thinking hat)
+- Six Hats: 7 steps (including Purple Hat for path dependency analysis)
 - PO: 4 steps (provocation → exploration → verification → solution)
 - Random Entry: 3 steps (stimulus → connections → validation)
 - SCAMPER: 8 steps (one per transformation action including parameterize)

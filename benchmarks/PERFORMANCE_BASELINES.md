@@ -4,46 +4,48 @@ This document defines the expected performance ranges for different operation ty
 Thinking MCP Server. These baselines help identify performance regressions and guide optimization
 efforts.
 
+**Last Updated**: January 2025 (v0.6.0 with NLP support and 28 techniques)
+
 ## Expected Performance Ranges
 
 ### Concurrent Operations
 
 #### Discovery Requests
 
-- **Baseline**: 50-60ms for 50 concurrent requests
-- **Acceptable Range**: 40-80ms
-- **CI Environment**: +20% overhead expected (48-96ms)
+- **Baseline**: 300-350ms for 50 concurrent requests (with NLP categorization)
+- **Acceptable Range**: 250-400ms
+- **CI Environment**: +20% overhead expected (300-480ms)
 - **Memory Impact**: ~50MB heap growth
 
 #### Planning Sessions
 
-- **Baseline**: 80-100ms for 100 concurrent sessions
-- **Acceptable Range**: 60-120ms
-- **CI Environment**: +20% overhead expected (72-144ms)
+- **Baseline**: 12-15ms for 100 concurrent sessions
+- **Acceptable Range**: 10-20ms
+- **CI Environment**: +20% overhead expected (12-24ms)
 - **Memory Impact**: ~100MB heap growth
 
 #### Step Executions
 
-- **Baseline**: 90-110ms for 100 concurrent steps
-- **Acceptable Range**: 70-130ms
-- **CI Environment**: +20% overhead expected (84-156ms)
+- **Baseline**: 400-450ms for 100 concurrent steps
+- **Acceptable Range**: 350-500ms
+- **CI Environment**: +20% overhead expected (420-600ms)
 - **Memory Impact**: ~150MB heap growth
 
 ### Large Session Handling
 
 #### 100 Steps Session
 
-- **Baseline**: 150-200ms total execution time
-- **Acceptable Range**: 120-250ms
-- **CI Environment**: +30% overhead expected (156-325ms)
+- **Baseline**: 380-420ms total execution time
+- **Acceptable Range**: 350-450ms
+- **CI Environment**: +30% overhead expected (455-585ms)
 - **Memory Impact**: ~200MB heap growth
-- **Per-Step Average**: 1.5-2ms
+- **Per-Step Average**: 3.8-4.2ms
 
 #### Deep Revision Chains (50 revisions)
 
-- **Baseline**: 80-120ms
-- **Acceptable Range**: 60-150ms
-- **CI Environment**: +25% overhead expected (75-188ms)
+- **Baseline**: 180-220ms
+- **Acceptable Range**: 150-250ms
+- **CI Environment**: +25% overhead expected (188-313ms)
 - **Memory Impact**: ~100MB heap growth
 
 ### Memory Usage
@@ -119,9 +121,14 @@ efforts.
    - GC frequency
 
 3. **Operation Type**
-   - Discovery: CPU-bound (analysis)
+   - Discovery: CPU-bound (NLP analysis + technique matching)
    - Planning: Memory-bound (session creation)
    - Execution: Mixed (state management + computation)
+
+4. **NLP Processing** (Added in v0.5.0)
+   - Problem categorization adds ~200-250ms to discovery
+   - Compromise.js NLP analysis for better technique selection
+   - Trade-off: Better technique matching vs. increased latency
 
 ### Optimization Targets
 
