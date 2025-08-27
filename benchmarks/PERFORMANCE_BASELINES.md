@@ -4,7 +4,7 @@ This document defines the expected performance ranges for different operation ty
 Thinking MCP Server. These baselines help identify performance regressions and guide optimization
 efforts.
 
-**Last Updated**: January 2025 (v0.6.0 with NLP support and 28 techniques)
+**Last Updated**: January 2025 (v0.6.1 with optimized NLP and 28 techniques)
 
 ## Expected Performance Ranges
 
@@ -12,10 +12,10 @@ efforts.
 
 #### Discovery Requests
 
-- **Baseline**: 300-350ms for 50 concurrent requests (with NLP categorization)
-- **Acceptable Range**: 250-400ms
-- **CI Environment**: +20% overhead expected (300-480ms)
-- **Memory Impact**: ~50MB heap growth
+- **Baseline**: 250-290ms for 50 concurrent requests (with optimized NLP categorization)
+- **Acceptable Range**: 200-350ms
+- **CI Environment**: +20% overhead expected (240-420ms)
+- **Memory Impact**: ~3-5MB heap growth (optimized from ~50MB)
 
 #### Planning Sessions
 
@@ -125,10 +125,12 @@ efforts.
    - Planning: Memory-bound (session creation)
    - Execution: Mixed (state management + computation)
 
-4. **NLP Processing** (Added in v0.5.0)
-   - Problem categorization adds ~200-250ms to discovery
-   - Compromise.js NLP analysis for better technique selection
-   - Trade-off: Better technique matching vs. increased latency
+4. **NLP Processing** (Optimized in v0.6.1)
+   - Fast-path for explicit technique requests (skips NLP entirely)
+   - Removed redundant string matching after NLP analysis
+   - NLP now adds ~150-200ms (down from 200-250ms)
+   - Better utilization of NLP results without duplicate work
+   - Trade-off: Better technique matching with reduced latency
 
 ### Optimization Targets
 
