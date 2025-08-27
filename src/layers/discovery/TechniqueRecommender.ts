@@ -177,13 +177,13 @@ export class TechniqueRecommender {
           effectiveness: 0.95,
         });
         recommendations.push({
-          technique: 'cultural_integration',
-          reasoning: 'Foundational cultural integration and respectful bridge-building',
+          technique: 'collective_intel',
+          reasoning: 'Foundational collective intelligence and diverse wisdom integration',
           effectiveness: 0.9,
         });
         recommendations.push({
-          technique: 'collective_intel',
-          reasoning: 'Harnesses diverse cultural wisdom sources',
+          technique: 'temporal_work',
+          reasoning: 'Integrates time-based cultural evolution and adaptability',
           effectiveness: 0.85,
         });
         break;
