@@ -6,9 +6,9 @@ repository.
 ## Project Overview
 
 This is a **Creative Thinking MCP Server** implementing a three-layer tool architecture for
-structured problem-solving. The server provides twenty-four enhanced thinking techniques through a
-unified framework that combines generative creativity with systematic risk assessment and analytical
-verification.
+structured problem-solving. The server provides twenty-eight enhanced thinking techniques through a
+unified framework that combines generative creativity with systematic risk assessment, analytical
+verification, and behavioral economics insights.
 
 ## Quick Reference
 
@@ -30,8 +30,8 @@ npm run format       # Run prettier to format all files
 - **Three tools only**: `discover_techniques`, `plan_thinking_session`, `execute_thinking_step`
 - **Three-layer architecture**: Discovery → Planning → Execution
 - **MCP Protocol**: stdout for JSON-RPC only, stderr for visual output
-- **24 thinking techniques** with specific step counts (including 3 analytical verification
-  techniques)
+- **28 thinking techniques** with specific step counts (including 3 analytical verification
+  techniques and 4 behavioral economics techniques)
 - **Unified framework**: All techniques support risk/adversarial fields
 - **Sequential execution**: Server implements sequential-only execution for maximum coherence
 - **Session resilience**: Base64 encoding allows sessions to survive server restarts
@@ -69,7 +69,7 @@ When working with this codebase:
 5. **Check CONTRIBUTING.md** for detailed architecture and guidelines
 6. **Understand sequential flow** - Steps execute in order for maximum coherence
 
-### Technique Step Counts Reference (24 Total)
+### Technique Step Counts Reference (28 Total)
 
 **Creative Techniques:**
 
@@ -117,6 +117,18 @@ When working with this codebase:
 - Competing Hypotheses: 8 steps (hypothesis generation → evidence mapping → matrix construction →
   diagnostic assessment → deception modeling → Bayesian update → sensitivity analysis → decision
   synthesis)
+
+**Behavioral Economics Techniques (NEW):**
+
+- Reverse Benchmarking: 5 steps (weakness mapping → vacant space analysis → anti-mimetic strategy →
+  excellence design → implementation path)
+- Context Reframing: 5 steps (context analysis → intervention points → frame shifting → environment
+  design → behavioral activation)
+- Perception Optimization: 5 steps (perception mapping → value amplification → experience design →
+  psychological value creation → perception activation)
+- Anecdotal Signal Detection: 6 steps (anecdote collection → signal assessment → trajectory analysis
+  → early warning extraction → scaling projection → strategic response)
+- Random Entry (Enhanced): 3 steps - now includes "Rory Mode" for behavioral economics wildcarding
 
 ### PR Integration Checklist
 

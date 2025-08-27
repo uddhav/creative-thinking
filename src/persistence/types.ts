@@ -27,7 +27,11 @@ export type LateralTechnique =
   | 'neuro_computational'
   | 'criteria_based_analysis'
   | 'linguistic_forensics'
-  | 'competing_hypotheses';
+  | 'competing_hypotheses'
+  | 'reverse_benchmarking'
+  | 'context_reframing'
+  | 'perception_optimization'
+  | 'anecdotal_signal';
 
 /**
  * Represents input data for a lateral thinking step

@@ -554,6 +554,26 @@ export class ErgodicityManager {
         typicalCommitment: 0.7,
         riskProfile: 'Medium - Decision commitment based on evidence',
       },
+      reverse_benchmarking: {
+        typicalReversibility: 0.6,
+        typicalCommitment: 0.6,
+        riskProfile: 'Medium - Strategic positioning affects future options',
+      },
+      context_reframing: {
+        typicalReversibility: 0.3,
+        typicalCommitment: 0.8,
+        riskProfile: 'High - Environmental changes lock in behaviors',
+      },
+      perception_optimization: {
+        typicalReversibility: 0.4,
+        typicalCommitment: 0.7,
+        riskProfile: 'Medium - Perception changes alter reality',
+      },
+      anecdotal_signal: {
+        typicalReversibility: 0.8,
+        typicalCommitment: 0.3,
+        riskProfile: 'Low - Observation without immediate commitment',
+      },
     };
 
     return profiles[technique];

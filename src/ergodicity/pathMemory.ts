@@ -352,7 +352,18 @@ export class PathMemoryManager {
    */
   private inferConstraintType(
     event: PathEvent
-  ): 'technical' | 'resource' | 'cognitive' | 'relational' | 'market' | 'regulatory' | 'creative' {
+  ):
+    | 'technical'
+    | 'resource'
+    | 'cognitive'
+    | 'relational'
+    | 'market'
+    | 'regulatory'
+    | 'creative'
+    | 'strategic'
+    | 'behavioral'
+    | 'perceptual'
+    | 'observational' {
     // Simple heuristic based on technique
     const techniqueConstraintMap: Record<LateralTechnique, Constraint['type']> = {
       six_hats: 'cognitive',
@@ -379,6 +390,10 @@ export class PathMemoryManager {
       criteria_based_analysis: 'cognitive',
       linguistic_forensics: 'relational',
       competing_hypotheses: 'cognitive',
+      reverse_benchmarking: 'strategic',
+      context_reframing: 'behavioral',
+      perception_optimization: 'perceptual',
+      anecdotal_signal: 'observational',
     };
 
     return techniqueConstraintMap[event.technique] || 'creative';

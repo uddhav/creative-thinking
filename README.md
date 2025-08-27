@@ -1,7 +1,7 @@
 # Creative Thinking MCP Server
 
 A Model Context Protocol (MCP) server that provides structured creative thinking techniques for
-problem-solving and ideation. This server implements 24 creative thinking techniques through a
+problem-solving and ideation. This server implements 28 creative thinking techniques through a
 unified framework combining generative creativity with systematic risk assessment, analytical
 verification, and post-action reflexivity tracking.
 
@@ -222,11 +222,11 @@ const nextResult = await executeThinkingStep({
 - **Persistence Architecture**: Adapter pattern supporting filesystem and memory backends
 - **MCP Sampling Integration**: AI-powered enhancement with graceful degradation when unavailable
 
-### 24 Creative Thinking Techniques
+### 28 Creative Thinking Techniques
 
 Each technique integrates creative generation with systematic verification and post-action
-reflexivity tracking. The collection includes 21 core creative techniques plus 3 analytical
-verification techniques:
+reflexivity tracking. The collection includes 21 core creative techniques, 3 analytical verification
+techniques, and 4 behavioral economics techniques inspired by Rory Sutherland:
 
 **Note**: The discovery layer includes a wildcard technique selection feature (17.5% probability by
 default, configurable via `WILDCARD_PROBABILITY` environment variable) that randomly includes an

@@ -301,6 +301,10 @@ export class VisualFormatter {
       criteria_based_analysis: '🔬',
       linguistic_forensics: '🔤',
       competing_hypotheses: '⚖️',
+      reverse_benchmarking: '🔄',
+      context_reframing: '🖼️',
+      perception_optimization: '👁️',
+      anecdotal_signal: '🔍',
     };
     return emojis[technique] || '❓';
   }
@@ -334,6 +338,10 @@ export class VisualFormatter {
       criteria_based_analysis: 'Criteria-Based Analysis',
       linguistic_forensics: 'Linguistic Forensics',
       competing_hypotheses: 'Competing Hypotheses Analysis',
+      reverse_benchmarking: 'Reverse Benchmarking',
+      context_reframing: 'Context Reframing',
+      perception_optimization: 'Perception Optimization',
+      anecdotal_signal: 'Anecdotal Signal Detection',
     };
     return names[technique] || technique;
   }

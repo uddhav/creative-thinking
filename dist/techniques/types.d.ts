@@ -12,7 +12,7 @@ export interface ReflexiveEffects {
     triggers: string[];
     realityChanges: string[];
     futureConstraints: string[];
-    reversibility: 'high' | 'medium' | 'low';
+    reversibility: 'high' | 'medium' | 'low' | 'very_low';
 }
 /**
  * Enhanced step information with reflexivity awareness
@@ -37,8 +37,8 @@ export interface TechniqueInfo {
         description?: string;
     };
     reflexivityProfile?: {
-        primaryCommitmentType: 'relationship' | 'path' | 'structural' | 'behavioral' | 'technical';
-        overallReversibility: 'high' | 'medium' | 'low';
+        primaryCommitmentType: 'relationship' | 'path' | 'structural' | 'behavioral' | 'technical' | 'strategic' | 'environmental' | 'perceptual' | 'exploratory' | 'observational';
+        overallReversibility: 'high' | 'medium' | 'low' | 'very_low';
         riskLevel: 'low' | 'medium' | 'high';
     };
 }

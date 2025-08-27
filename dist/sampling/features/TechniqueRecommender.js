@@ -469,6 +469,26 @@ Focus on maximizing creative output and maintaining session flow.`;
                 'Quantify uncertainty with Bayesian reasoning',
                 'Make robust decisions under competing explanations',
             ],
+            reverse_benchmarking: [
+                'Find competitive advantage in overlooked areas',
+                'Excel where all competitors fail',
+                'Create uncontested market spaces',
+            ],
+            context_reframing: [
+                'Change behavior without persuasion',
+                'Design environments for desired outcomes',
+                'Influence at scale through context',
+            ],
+            perception_optimization: [
+                'Enhance subjective experience dramatically',
+                'Create disproportionate perceived value',
+                'Optimize for human psychology',
+            ],
+            anecdotal_signal: [
+                'Detect early change indicators',
+                'Learn from outliers and edge cases',
+                'Identify non-ergodic path dependencies',
+            ],
         };
         return (benefits[technique] || [
             'Explore new perspectives',

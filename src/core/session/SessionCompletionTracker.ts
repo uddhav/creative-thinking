@@ -611,6 +611,10 @@ export class SessionCompletionTracker {
       criteria_based_analysis: 5,
       linguistic_forensics: 6,
       competing_hypotheses: 8,
+      reverse_benchmarking: 5,
+      context_reframing: 5,
+      perception_optimization: 5,
+      anecdotal_signal: 6,
     };
 
     return stepCounts[technique] || 5;
