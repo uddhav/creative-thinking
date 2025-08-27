@@ -1,7 +1,9 @@
 /**
  * TechniqueRecommender - Handles technique recommendation logic
  * Extracted from discoverTechniques to improve maintainability
+ * Enhanced with multi-factor scoring system for intelligent recommendations
  */
+import { TechniqueScorer } from './TechniqueScorer.js';
 export class TechniqueRecommender {
     // Wildcard inclusion probability (20% chance)
     WILDCARD_PROBABILITY = parseFloat(process.env.WILDCARD_PROBABILITY || '0.20');
@@ -13,8 +15,14 @@ export class TechniqueRecommender {
     };
     // Cache for technique info to avoid repeated lookups
     techniqueInfoCache = new Map();
+    // Multi-factor scorer for intelligent recommendations
+    scorer;
+    constructor() {
+        this.scorer = new TechniqueScorer();
+    }
     /**
      * Recommend techniques based on problem category and other factors
+     * Now enhanced with multi-factor scoring
      */
     recommendTechniques(problemCategory, preferredOutcome, constraints, complexity, techniqueRegistry) {
         const recommendations = [];
@@ -430,10 +438,35 @@ export class TechniqueRecommender {
                 });
             }
         }
-        // Sort by effectiveness
-        recommendations.sort((a, b) => b.effectiveness - a.effectiveness);
+        // Build problem context for multi-factor scoring
+        const problemContext = {
+            category: problemCategory,
+            complexity,
+            hasTimeConstraints: constraints?.some(c => c.toLowerCase().includes('time') ||
+                c.toLowerCase().includes('deadline') ||
+                c.toLowerCase().includes('urgent')) ?? false,
+            hasResourceConstraints: constraints?.some(c => c.toLowerCase().includes('resource') ||
+                c.toLowerCase().includes('budget') ||
+                c.toLowerCase().includes('limited')) ?? false,
+            needsCollaboration: (constraints?.some(c => c.toLowerCase().includes('team') ||
+                c.toLowerCase().includes('collaboration') ||
+                c.toLowerCase().includes('stakeholder')) ?? false) ||
+                problemCategory === 'organizational',
+            preferredOutcome,
+        };
+        // Apply multi-factor scoring to all recommendations
+        const scoredRecommendations = recommendations.map(rec => {
+            const multiFactorScore = this.scorer.calculateScore(rec.technique, problemContext, rec.effectiveness // Use initial effectiveness as category score
+            );
+            return {
+                ...rec,
+                effectiveness: multiFactorScore, // Replace with multi-factor score
+            };
+        });
+        // Sort by multi-factor score
+        scoredRecommendations.sort((a, b) => b.effectiveness - a.effectiveness);
         // Validate techniques exist and enhance with additional info (with caching)
-        const validatedRecommendations = recommendations
+        const validatedRecommendations = scoredRecommendations
             .filter(rec => techniqueRegistry.isValidTechnique(rec.technique))
             .map(rec => {
             // Use cache for technique info (performance optimization)
@@ -442,10 +475,14 @@ export class TechniqueRecommender {
                 info = techniqueRegistry.getTechniqueInfo(rec.technique);
                 this.techniqueInfoCache.set(rec.technique, info);
             }
+            // Get execution time estimate
+            const timeEstimate = this.scorer.estimateExecutionTime(rec.technique);
+            const timeLabel = timeEstimate === 'quick' ? '⚡' :
+                timeEstimate === 'moderate' ? '⏱️' : '⏳';
             return {
                 ...rec,
-                // Enhance reasoning with step count info
-                reasoning: `${rec.reasoning} (${info.totalSteps} steps)`,
+                // Enhance reasoning with step count and time estimate
+                reasoning: `${rec.reasoning} (${info.totalSteps} steps ${timeLabel})`,
             };
         });
         // Get dynamic recommendation count based on complexity
