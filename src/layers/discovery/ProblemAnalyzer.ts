@@ -18,140 +18,127 @@ export class ProblemAnalyzer {
   categorizeProblem(problem: string, context?: string): string {
     const fullText = `${problem} ${context || ''}`;
 
-    // Use NLPService for comprehensive analysis
+    // OPTIMIZATION: Fast-path for explicit technique requests (skip NLP)
+    const explicitTechnique = this.checkExplicitTechniqueRequest(fullText);
+    if (explicitTechnique) {
+      return explicitTechnique;
+    }
+
+    // Use NLPService for comprehensive analysis (only once!)
     const nlpAnalysis = this.nlpService.analyze(fullText);
 
-    // Check for paradoxes and contradictions using enhanced NLP
-    if (this.detectParadoxicalPattern(fullText)) {
-      return 'paradoxical';
+    // 1. Check for paradoxes using NLP results
+    if (nlpAnalysis.paradoxes.hasParadox || nlpAnalysis.contradictions.hasContradiction) {
+      // Exclude time/requirement conflicts that aren't true paradoxes
+      const lower = fullText.toLowerCase();
+      if (!lower.includes('deadline') && !lower.includes('conflicting requirements')) {
+        return 'paradoxical';
+      }
     }
 
-    // Use temporal analysis for time-related problems (check early, before creative)
-    if (nlpAnalysis.temporal.hasDeadline || nlpAnalysis.temporal.urgency !== 'none') {
-      return 'temporal';
-    }
-
-    // Additional temporal checks (already covered by NLP analysis above)
-    if (nlpAnalysis.temporal.expressions.length > 2) {
-      return 'temporal';
-    }
-
-    // Check for explicit deadline/time keywords
+    // 2. Check temporal using NLP results (no redundant string matching)
     if (
-      fullText.toLowerCase().includes('deadline') ||
-      fullText.toLowerCase().includes('time pressure') ||
-      fullText.toLowerCase().includes('limited time')
+      nlpAnalysis.temporal.hasDeadline ||
+      nlpAnalysis.temporal.urgency !== 'none' ||
+      nlpAnalysis.temporal.expressions.length > 2
     ) {
       return 'temporal';
     }
-    // Check for cognitive/focus problems
+
+    // 3. Check organizational/collaborative using NLP entities
     if (
-      fullText.includes('focus') ||
-      fullText.includes('cognitive') ||
-      fullText.includes('attention') ||
-      fullText.includes('mental') ||
-      fullText.includes('brain') ||
-      fullText.includes('productivity')
+      nlpAnalysis.entities.people.length > 2 ||
+      nlpAnalysis.topics.categories.includes('people')
+    ) {
+      return 'organizational';
+    }
+
+    // 4. Use NLP topic categories for classification
+    const topicCategories = nlpAnalysis.topics.categories;
+    const entities = nlpAnalysis.entities;
+    const verbs = nlpAnalysis.entities.verbs;
+
+    // Cognitive: Check NLP topics and verbs
+    if (
+      topicCategories.includes('psychology') ||
+      verbs.some(v => ['focus', 'think', 'concentrate', 'remember'].includes(v.toLowerCase()))
     ) {
       return 'cognitive';
     }
-    // Check for implementation/execution problems
+
+    // Implementation: Check verbs and intent
     if (
-      fullText.includes('implement') ||
-      fullText.includes('execute') ||
-      fullText.includes('deploy') ||
-      fullText.includes('launch') ||
-      fullText.includes('realize') ||
-      fullText.includes('make it happen') ||
-      fullText.includes('put into practice')
+      nlpAnalysis.intent.intents.some(i => i.intent === 'request_action') &&
+      verbs.some(v =>
+        ['implement', 'execute', 'deploy', 'launch', 'build'].includes(v.toLowerCase())
+      )
     ) {
       return 'implementation';
     }
 
-    // Check for system-level analysis problems
+    // Systems: Use NLP topics and entities
     if (
-      fullText.includes('system') ||
-      fullText.includes('ecosystem') ||
-      fullText.includes('holistic') ||
-      fullText.includes('comprehensive') ||
-      fullText.includes('multi-level') ||
-      fullText.includes('scale') ||
-      fullText.includes('component')
+      topicCategories.includes('technology') &&
+      entities.nouns.some(n =>
+        ['system', 'architecture', 'ecosystem', 'component'].includes(n.toLowerCase())
+      )
     ) {
       return 'systems';
     }
 
-    // Check for organizational/cultural using NLP analysis
-    if (nlpAnalysis.entities.people.length > 2 || this.needsCollaboration(problem, context)) {
-      return 'organizational';
-    }
-
-    // Check for organizational keywords with NLP topics
-    const orgKeywords = [
-      'team',
-      'collaboration',
-      'stakeholder',
-      'collective',
-      'culture',
-      'diverse',
-      'crowdsourc',
-      'collaborat',
-      'consensus',
-      'together',
-      'perspectives',
-      'swarm',
-      'wisdom of crowds',
-      'bring together',
-      'multiple perspectives',
-    ];
+    // User-centered: Check entities and topics
     if (
-      orgKeywords.some(
-        keyword =>
-          fullText.toLowerCase().includes(keyword) ||
-          nlpAnalysis.topics.keywords.some(k => k.toLowerCase().includes(keyword))
-      )
-    ) {
-      return 'organizational';
-    }
-    if (
-      fullText.includes('user') ||
-      fullText.includes('customer') ||
-      fullText.includes('experience')
+      (entities.nouns.some(n => ['user', 'customer', 'client'].includes(n.toLowerCase())) ||
+        topicCategories.includes('people')) &&
+      verbs.some(v => ['experience', 'interact', 'use'].includes(v.toLowerCase()))
     ) {
       return 'user-centered';
     }
+
+    // Technical: Use NLP readability and topics
     if (
-      fullText.includes('technical') ||
-      fullText.includes('system') ||
-      fullText.includes('architecture') ||
-      fullText.includes('energy') ||
-      fullText.includes('machine') ||
-      fullText.includes('motion') ||
-      fullText.includes('physics') ||
-      fullText.includes('engineering')
+      nlpAnalysis.readability.clarity === 'complex' ||
+      nlpAnalysis.readability.clarity === 'very_complex' ||
+      topicCategories.includes('science') ||
+      topicCategories.includes('technology')
     ) {
       return 'technical';
     }
+
+    // Creative: Check adjectives and intent
     if (
-      fullText.includes('creative') ||
-      fullText.includes('innovative') ||
-      fullText.includes('new')
+      entities.adjectives.some(a =>
+        ['creative', 'innovative', 'novel', 'original'].includes(a.toLowerCase())
+      ) ||
+      nlpAnalysis.intent.intents.some(i => i.intent === 'express_opinion' && i.confidence > 0.7)
     ) {
       return 'creative';
     }
+
+    // Process: Check nouns and verbs
     if (
-      fullText.includes('process') ||
-      fullText.includes('workflow') ||
-      fullText.includes('efficiency')
+      entities.nouns.some(n => ['process', 'workflow', 'procedure'].includes(n.toLowerCase())) &&
+      verbs.some(v => ['optimize', 'improve', 'streamline'].includes(v.toLowerCase()))
     ) {
       return 'process';
     }
+
+    // Strategic: Use topics and entities
     if (
-      fullText.includes('strategy') ||
-      fullText.includes('business') ||
-      fullText.includes('market')
+      topicCategories.includes('business') ||
+      entities.nouns.some(n => ['strategy', 'market', 'competition'].includes(n.toLowerCase()))
     ) {
       return 'strategic';
+    }
+
+    // Check for behavioral economics patterns
+    if (this.detectBehavioralPattern(nlpAnalysis)) {
+      return 'behavioral';
+    }
+
+    // Check for fundamental/first principles patterns
+    if (this.detectFundamentalPattern(nlpAnalysis)) {
+      return 'fundamental';
     }
 
     return 'general';
@@ -159,87 +146,17 @@ export class ProblemAnalyzer {
 
   /**
    * Detect paradoxical patterns using enhanced NLP
+   * Note: Now called ONLY when needed since categorizeProblem handles most cases
    */
   private detectParadoxicalPattern(text: string): boolean {
-    const lower = text.toLowerCase();
+    // This method is now rarely used since categorizeProblem handles paradox detection directly
+    // Kept for backward compatibility and edge cases
 
-    // Use NLPService for comprehensive paradox detection
     const paradoxAnalysis = this.nlpService.detectParadoxes(text);
     const contradictionAnalysis = this.nlpService.detectContradictions(text);
 
-    // If NLPService detects paradoxes or contradictions, return true
-    if (paradoxAnalysis.hasParadox || contradictionAnalysis.hasContradiction) {
-      // But exclude time-related conflicts
-      if (lower.includes('deadline') || lower.includes('schedule')) {
-        // Check if it's specifically about time conflicts
-        const temporal = this.nlpService.extractTemporalExpressions(text);
-        if (temporal.expressions.length > 0 && !lower.includes('paradox')) {
-          return false; // It's a time conflict, not a paradox
-        }
-      }
-      // Exclude "conflicting requirements" which is not necessarily paradoxical
-      if (lower.includes('conflicting') && lower.includes('requirements')) {
-        return false;
-      }
-      return true;
-    }
-
-    // Additional paradox keywords that might not be caught by NLPService
-    const paradoxKeywords = [
-      'paradox',
-      'contradict',
-      'incompatible',
-      'mutually exclusive',
-      'trade-off',
-      'opposing',
-      'dilemma',
-      'tension',
-    ];
-
-    // Skip "conflicting" if it's about deadlines/schedules or requirements
-    const hasConflicting =
-      lower.includes('conflicting') &&
-      !lower.includes('deadline') &&
-      !lower.includes('schedule') &&
-      !lower.includes('time') &&
-      !lower.includes('requirements');
-
-    if (paradoxKeywords.some(k => lower.includes(k)) || hasConflicting) {
-      return true;
-    }
-
-    // Check for structural patterns using NLP relationships
-    const relationships = this.nlpService.extractRelationships(text);
-
-    // Look for opposing relationships
-    const hasOpposingRelationships = relationships.dependencies.some(
-      dep =>
-        dep.type === 'conditional' &&
-        (dep.dependency.includes('but') || dep.dependency.includes('however'))
-    );
-
-    if (hasOpposingRelationships) {
-      return true;
-    }
-
-    // Pattern: "on one hand" or similar
-    const hasOnOneHand = lower.includes('on one hand') || lower.includes('on the one hand');
-    if (hasOnOneHand) {
-      return true;
-    }
-
-    // "Balance" is too generic - only consider it paradoxical with specific context
-    const hasBalanceParadox =
-      lower.includes('balance') && (lower.includes('opposing') || lower.includes('contradictory'));
-
-    // Pattern: opposition words
-    const hasOpposition =
-      lower.includes('versus') ||
-      lower.includes('vs') ||
-      lower.includes('at odds') ||
-      lower.includes('in conflict');
-
-    return hasBalanceParadox || hasOpposition;
+    // Trust NLP analysis
+    return paradoxAnalysis.hasParadox || contradictionAnalysis.hasContradiction;
   }
 
   /**
@@ -258,18 +175,10 @@ export class ProblemAnalyzer {
     if (constraints) {
       const constraintText = constraints.join(' ');
       const constraintTemporal = this.nlpService.extractTemporalExpressions(constraintText);
-      if (constraintTemporal.hasDeadline || constraintTemporal.urgency !== 'none') {
-        return true;
-      }
+      return constraintTemporal.hasDeadline || constraintTemporal.urgency !== 'none';
     }
 
-    // Fallback to keyword matching for edge cases
-    const timeWords = ['deadline', 'urgent', 'asap', 'quickly', 'time-sensitive'];
-    const problemHasTime = timeWords.some(word => problem.toLowerCase().includes(word));
-    const constraintsHaveTime =
-      constraints?.some(c => timeWords.some(word => c.toLowerCase().includes(word))) || false;
-
-    return problemHasTime || constraintsHaveTime;
+    return false;
   }
 
   /**
@@ -298,23 +207,134 @@ export class ProblemAnalyzer {
       return true;
     }
 
-    // Fallback to keyword matching
-    const collabWords = [
-      'team',
-      'stakeholder',
-      'collaboration',
-      'together',
-      'group',
-      'collective',
-      'consensus',
-      'crowdsourc',
-      'collaborat',
-      'perspectives',
-      'swarm',
-      'emergent',
-      'bring together',
+    // Check for collaborative keywords in NLP-extracted topics
+    const collabKeywords = ['team', 'collaboration', 'collective', 'together'];
+    return topics.keywords.some(keyword =>
+      collabKeywords.some(collab => keyword.toLowerCase().includes(collab))
+    );
+  }
+
+  /**
+   * Fast-path check for explicit technique requests (avoids NLP overhead)
+   */
+  private checkExplicitTechniqueRequest(text: string): string | null {
+    const lower = text.toLowerCase();
+
+    // Fast-path for explicit temporal keywords (deadlines, time management)
+    if (
+      lower.includes('deadline') ||
+      lower.includes('time management') ||
+      lower.includes('schedule')
+    ) {
+      return 'temporal';
+    }
+
+    // Fast-path for explicit cultural/global/organizational keywords
+    if (
+      lower.includes('cultural') ||
+      lower.includes('cross-cultural') ||
+      lower.includes('global') ||
+      lower.includes('multicultural') ||
+      lower.includes('stakeholder') ||
+      lower.includes('collective') ||
+      lower.includes('crowdsourc') ||
+      lower.includes('wisdom of crowds') ||
+      lower.includes('team collaboration') ||
+      lower.includes('consensus') ||
+      lower.includes('swarm intelligence') ||
+      lower.includes('multiple perspectives') ||
+      lower.includes('bring together') ||
+      lower.includes('emergent')
+    ) {
+      return 'organizational';
+    }
+
+    // Fast-path for explicit cognitive/mental keywords
+    if (
+      lower.includes('cognitive') ||
+      lower.includes('mental') ||
+      lower.includes('focus') ||
+      lower.includes('productivity')
+    ) {
+      return 'cognitive';
+    }
+
+    // Map explicit technique mentions to categories
+    const techniqueMap: Record<string, string> = {
+      'first principles': 'fundamental',
+      'six hats': 'creative',
+      'six thinking hats': 'creative',
+      scamper: 'creative',
+      'random entry': 'creative',
+      'po technique': 'creative',
+      'design thinking': 'user-centered',
+      triz: 'technical',
+      'disney method': 'creative',
+      'nine windows': 'systems',
+      'temporal creativity': 'temporal',
+      'paradoxical problem': 'paradoxical',
+      'competing hypotheses': 'analytical',
+      'criteria-based': 'analytical',
+      'linguistic forensics': 'analytical',
+      'reverse benchmarking': 'behavioral',
+      'context reframing': 'behavioral',
+      'perception optimization': 'behavioral',
+      'anecdotal signal': 'behavioral',
+    };
+
+    // Check for explicit technique requests
+    for (const [technique, category] of Object.entries(techniqueMap)) {
+      if (lower.includes(technique)) {
+        return category;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Detect behavioral economics patterns using NLP analysis
+   */
+  private detectBehavioralPattern(nlpAnalysis: ReturnType<NLPService['analyze']>): boolean {
+    const behavioralKeywords = [
+      'behavior',
+      'perception',
+      'value',
+      'psychology',
+      'incentive',
+      'nudge',
     ];
-    const lower = fullText.toLowerCase();
-    return collabWords.some(word => lower.includes(word));
+    const hasKeywords = nlpAnalysis.topics.keywords.some(k =>
+      behavioralKeywords.some(b => k.toLowerCase().includes(b))
+    );
+
+    const hasPsychCategory = nlpAnalysis.topics.categories.includes('psychology');
+    const hasMoneyEntities = nlpAnalysis.entities.money.length > 0;
+
+    return hasKeywords || hasPsychCategory || hasMoneyEntities;
+  }
+
+  /**
+   * Detect fundamental/first principles patterns using NLP analysis
+   */
+  private detectFundamentalPattern(nlpAnalysis: ReturnType<NLPService['analyze']>): boolean {
+    const fundamentalKeywords = [
+      'fundamental',
+      'basic',
+      'core',
+      'essential',
+      'foundation',
+      'root cause',
+    ];
+    const hasKeywords = nlpAnalysis.topics.keywords.some(k =>
+      fundamentalKeywords.some(f => k.toLowerCase().includes(f))
+    );
+
+    // Check for questions about "why" which often indicate fundamental analysis
+    const hasWhyQuestions = nlpAnalysis.pos.sentences.some(
+      s => s.type === 'question' && s.text.toLowerCase().includes('why')
+    );
+
+    return hasKeywords || hasWhyQuestions;
   }
 }

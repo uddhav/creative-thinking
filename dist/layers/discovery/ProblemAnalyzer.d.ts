@@ -12,6 +12,7 @@ export declare class ProblemAnalyzer {
     categorizeProblem(problem: string, context?: string): string;
     /**
      * Detect paradoxical patterns using enhanced NLP
+     * Note: Now called ONLY when needed since categorizeProblem handles most cases
      */
     private detectParadoxicalPattern;
     /**
@@ -22,5 +23,17 @@ export declare class ProblemAnalyzer {
      * Check if the problem needs collaboration using NLP
      */
     needsCollaboration(problem: string, context?: string): boolean;
+    /**
+     * Fast-path check for explicit technique requests (avoids NLP overhead)
+     */
+    private checkExplicitTechniqueRequest;
+    /**
+     * Detect behavioral economics patterns using NLP analysis
+     */
+    private detectBehavioralPattern;
+    /**
+     * Detect fundamental/first principles patterns using NLP analysis
+     */
+    private detectFundamentalPattern;
 }
 //# sourceMappingURL=ProblemAnalyzer.d.ts.map
