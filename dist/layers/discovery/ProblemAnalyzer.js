@@ -158,19 +158,33 @@ export class ProblemAnalyzer {
     checkExplicitTechniqueRequest(text) {
         const lower = text.toLowerCase();
         // Fast-path for explicit temporal keywords (deadlines, time management)
-        if (lower.includes('deadline') || lower.includes('time management') || lower.includes('schedule')) {
+        if (lower.includes('deadline') ||
+            lower.includes('time management') ||
+            lower.includes('schedule')) {
             return 'temporal';
         }
         // Fast-path for explicit cultural/global/organizational keywords
-        if (lower.includes('cultural') || lower.includes('cross-cultural') || lower.includes('global') ||
-            lower.includes('multicultural') || lower.includes('stakeholder') || lower.includes('collective') ||
-            lower.includes('crowdsourc') || lower.includes('wisdom of crowds') || lower.includes('team collaboration') ||
-            lower.includes('consensus') || lower.includes('swarm intelligence') || lower.includes('multiple perspectives') ||
-            lower.includes('bring together') || lower.includes('emergent')) {
+        if (lower.includes('cultural') ||
+            lower.includes('cross-cultural') ||
+            lower.includes('global') ||
+            lower.includes('multicultural') ||
+            lower.includes('stakeholder') ||
+            lower.includes('collective') ||
+            lower.includes('crowdsourc') ||
+            lower.includes('wisdom of crowds') ||
+            lower.includes('team collaboration') ||
+            lower.includes('consensus') ||
+            lower.includes('swarm intelligence') ||
+            lower.includes('multiple perspectives') ||
+            lower.includes('bring together') ||
+            lower.includes('emergent')) {
             return 'organizational';
         }
         // Fast-path for explicit cognitive/mental keywords
-        if (lower.includes('cognitive') || lower.includes('mental') || lower.includes('focus') || lower.includes('productivity')) {
+        if (lower.includes('cognitive') ||
+            lower.includes('mental') ||
+            lower.includes('focus') ||
+            lower.includes('productivity')) {
             return 'cognitive';
         }
         // Map explicit technique mentions to categories
