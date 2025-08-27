@@ -39,6 +39,8 @@ export interface ProblemContext {
 }
 export declare class TechniqueScorer {
     private readonly DEFAULT_WEIGHTS;
+    private readonly scoreCache;
+    private readonly CACHE_MAX_SIZE;
     private readonly techniqueMetadata;
     constructor(weights?: ScoringWeights);
     private weights;

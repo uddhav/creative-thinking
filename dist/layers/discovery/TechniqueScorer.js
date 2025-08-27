@@ -9,6 +9,9 @@ export class TechniqueScorer {
         constraintCompatibility: 0.2,
         outcomeAlignment: 0.2,
     };
+    // Memoization cache for performance optimization
+    scoreCache = new Map();
+    CACHE_MAX_SIZE = 1000;
     techniqueMetadata = {
         // Creative Techniques
         six_hats: {
@@ -438,6 +441,11 @@ export class TechniqueScorer {
      */
     calculateScore(technique, context, categoryScore // Base category fit score from existing logic
     ) {
+        // Check cache first
+        const cacheKey = `${technique}-${JSON.stringify(context)}-${categoryScore}`;
+        if (this.scoreCache.has(cacheKey)) {
+            return this.scoreCache.get(cacheKey);
+        }
         const metadata = this.techniqueMetadata[technique];
         if (!metadata) {
             return categoryScore; // Fallback to simple category score
@@ -449,10 +457,19 @@ export class TechniqueScorer {
             outcomeAlignment: this.calculateOutcomeAlignment(metadata, context.preferredOutcome),
         };
         // Calculate weighted average
-        return (factors.categoryFit * this.weights.categoryFit +
+        const score = factors.categoryFit * this.weights.categoryFit +
             factors.complexityMatch * this.weights.complexityMatch +
             factors.constraintCompatibility * this.weights.constraintCompatibility +
-            factors.outcomeAlignment * this.weights.outcomeAlignment);
+            factors.outcomeAlignment * this.weights.outcomeAlignment;
+        // Store in cache with LRU eviction
+        this.scoreCache.set(cacheKey, score);
+        if (this.scoreCache.size > this.CACHE_MAX_SIZE) {
+            const firstKey = this.scoreCache.keys().next().value;
+            if (firstKey) {
+                this.scoreCache.delete(firstKey);
+            }
+        }
+        return score;
     }
     /**
      * Get detailed scoring breakdown for debugging/transparency
@@ -494,40 +511,40 @@ export class TechniqueScorer {
         // Technique too simple for problem = lower score
         if (techniquLevel < problemLevel) {
             const diff = problemLevel - techniquLevel;
-            return Math.max(0.3, 1.0 - diff * 0.3);
+            return Math.max(0.4, 1.0 - diff * 0.25); // Gentler penalty (was 0.3)
         }
         // Technique too complex for problem = moderate penalty
         const diff = techniquLevel - problemLevel;
-        return Math.max(0.5, 1.0 - diff * 0.2);
+        return Math.max(0.6, 1.0 - diff * 0.15); // Gentler penalty (was 0.2)
     }
     /**
      * Calculate constraint compatibility score
      */
     calculateConstraintCompatibility(metadata, context) {
-        let score = 1.0;
+        let score = 1.0; // Start optimistic
         let constraintCount = 0;
         if (context.hasTimeConstraints) {
             constraintCount++;
             if (!metadata.handlesTimeConstraints) {
-                score -= 0.3;
+                score -= 0.25; // Gentler penalty (was 0.3)
             }
         }
         if (context.hasResourceConstraints) {
             constraintCount++;
             if (!metadata.handlesResourceConstraints) {
-                score -= 0.3;
+                score -= 0.2; // Gentler penalty (was 0.3)
             }
         }
         if (context.needsCollaboration) {
             constraintCount++;
             if (!metadata.handlesCollaborationNeeds) {
-                score -= 0.4; // Collaboration is more critical
+                score -= 0.3; // Slightly gentler (was 0.4)
             }
         }
         // No constraints = all techniques equally good
         if (constraintCount === 0)
-            return 0.8;
-        return Math.max(0.1, score);
+            return 0.9; // Higher baseline (was 0.8)
+        return Math.max(0.2, score); // Higher minimum (was 0.1)
     }
     /**
      * Calculate outcome alignment score

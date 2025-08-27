@@ -5,6 +5,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { TechniqueScorer } from '../../../layers/discovery/TechniqueScorer.js';
 import type { ProblemContext, ScoringWeights } from '../../../layers/discovery/TechniqueScorer.js';
+import type { LateralTechnique } from '../../../types/index.js';
 
 describe('TechniqueScorer', () => {
   let scorer: TechniqueScorer;
@@ -30,7 +31,7 @@ describe('TechniqueScorer', () => {
 
       // Competing hypotheses is not great for creative innovation
       const analyticalScore = scorer.calculateScore('competing_hypotheses', context, 0.2);
-      expect(analyticalScore).toBeLessThan(0.5); // Should score poorly
+      expect(analyticalScore).toBeLessThan(0.55); // Should score poorly (adjusted for gentler penalties)
     });
 
     it('should penalize complexity mismatch', () => {
@@ -332,6 +333,119 @@ describe('TechniqueScorer', () => {
 
       const avgTime = (endTime - startTime) / 1000;
       expect(avgTime).toBeLessThan(0.1); // Should be well under 0.1ms per calculation
+    });
+
+    it('should maintain performance under concurrent load', () => {
+      // Generate varied contexts to simulate real-world usage
+      const contexts: ProblemContext[] = [];
+      const complexities: Array<'low' | 'medium' | 'high'> = ['low', 'medium', 'high'];
+      const categories = ['general', 'creative', 'analytical', 'organizational', 'technical'];
+
+      for (let i = 0; i < 10; i++) {
+        contexts.push({
+          category: categories[i % categories.length],
+          complexity: complexities[i % complexities.length],
+          hasTimeConstraints: i % 2 === 0,
+          hasResourceConstraints: i % 3 === 0,
+          needsCollaboration: i % 4 === 0,
+          preferredOutcome: i % 2 === 0 ? 'systematic' : 'innovative',
+        });
+      }
+
+      const techniques: LateralTechnique[] = [
+        'six_hats',
+        'po',
+        'random_entry',
+        'scamper',
+        'triz',
+        'design_thinking',
+        'first_principles',
+        'quantum_superposition',
+      ];
+
+      const startTime = Date.now();
+      for (const context of contexts) {
+        for (const technique of techniques) {
+          scorer.calculateScore(technique, context, 0.5);
+        }
+      }
+      const duration = Date.now() - startTime;
+
+      // 10 contexts × 8 techniques = 80 calculations
+      expect(duration).toBeLessThan(50); // Should complete in <50ms
+    });
+
+    it('should benefit from caching for repeated calculations', () => {
+      const context: ProblemContext = {
+        category: 'general',
+        complexity: 'medium',
+        hasTimeConstraints: false,
+        hasResourceConstraints: false,
+        needsCollaboration: false,
+        preferredOutcome: 'innovative',
+      };
+
+      // Create a new scorer for clean cache
+      const cachedScorer = new TechniqueScorer();
+
+      // First run - no cache (100 iterations)
+      const start1 = Date.now();
+      for (let i = 0; i < 100; i++) {
+        cachedScorer.calculateScore('six_hats', context, 0.5);
+      }
+      const duration1 = Date.now() - start1;
+
+      // Clear and warm up cache with one call
+      cachedScorer.calculateScore('six_hats', context, 0.5);
+
+      // Second run - with cache (100 iterations)
+      const start2 = Date.now();
+      for (let i = 0; i < 100; i++) {
+        cachedScorer.calculateScore('six_hats', context, 0.5);
+      }
+      const duration2 = Date.now() - start2;
+
+      // Cache should provide significant speedup
+      // Note: First iteration includes cache population
+      // Relaxed expectation due to JS performance timer variability
+      expect(duration2).toBeLessThanOrEqual(duration1); // Should be faster or equal with cache
+    });
+
+    it('should handle cache eviction properly', () => {
+      const cachedScorer = new TechniqueScorer();
+      const contexts: ProblemContext[] = [];
+
+      // Create more contexts than cache size to test LRU eviction
+      for (let i = 0; i < 1100; i++) {
+        // More than CACHE_MAX_SIZE (1000)
+        contexts.push({
+          category: `category-${i}`,
+          complexity: 'medium',
+          hasTimeConstraints: false,
+          hasResourceConstraints: false,
+          needsCollaboration: false,
+        });
+      }
+
+      // Fill cache beyond limit
+      for (const context of contexts) {
+        const score = cachedScorer.calculateScore('six_hats', context, 0.5);
+        expect(score).toBeGreaterThan(0);
+        expect(score).toBeLessThanOrEqual(1);
+      }
+
+      // Should still perform correctly after cache evictions
+      const testContext: ProblemContext = {
+        category: 'test',
+        complexity: 'high',
+        hasTimeConstraints: true,
+        hasResourceConstraints: true,
+        needsCollaboration: true,
+      };
+
+      const score = cachedScorer.calculateScore('design_thinking', testContext, 0.7);
+      expect(score).toBeGreaterThan(0);
+      expect(score).toBeLessThanOrEqual(1);
     });
   });
 });

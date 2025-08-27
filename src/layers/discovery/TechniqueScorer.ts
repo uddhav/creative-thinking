@@ -51,6 +51,10 @@ export class TechniqueScorer {
     outcomeAlignment: 0.2,
   };
 
+  // Memoization cache for performance optimization
+  private readonly scoreCache = new Map<string, number>();
+  private readonly CACHE_MAX_SIZE = 1000;
+
   private readonly techniqueMetadata: Record<LateralTechnique, TechniqueMetadata> = {
     // Creative Techniques
     six_hats: {
@@ -494,6 +498,13 @@ export class TechniqueScorer {
     context: ProblemContext,
     categoryScore: number // Base category fit score from existing logic
   ): number {
+    // Check cache first
+    const cacheKey = `${technique}-${JSON.stringify(context)}-${categoryScore}`;
+    const cachedScore = this.scoreCache.get(cacheKey);
+    if (cachedScore !== undefined) {
+      return cachedScore;
+    }
+
     const metadata = this.techniqueMetadata[technique];
     if (!metadata) {
       return categoryScore; // Fallback to simple category score
@@ -507,12 +518,22 @@ export class TechniqueScorer {
     };
 
     // Calculate weighted average
-    return (
+    const score =
       factors.categoryFit * this.weights.categoryFit +
       factors.complexityMatch * this.weights.complexityMatch +
       factors.constraintCompatibility * this.weights.constraintCompatibility +
-      factors.outcomeAlignment * this.weights.outcomeAlignment
-    );
+      factors.outcomeAlignment * this.weights.outcomeAlignment;
+
+    // Store in cache with LRU eviction
+    this.scoreCache.set(cacheKey, score);
+    if (this.scoreCache.size > this.CACHE_MAX_SIZE) {
+      const firstKey = this.scoreCache.keys().next().value;
+      if (firstKey) {
+        this.scoreCache.delete(firstKey);
+      }
+    }
+
+    return score;
   }
 
   /**
@@ -568,12 +589,12 @@ export class TechniqueScorer {
     // Technique too simple for problem = lower score
     if (techniquLevel < problemLevel) {
       const diff = problemLevel - techniquLevel;
-      return Math.max(0.3, 1.0 - diff * 0.3);
+      return Math.max(0.4, 1.0 - diff * 0.25); // Gentler penalty (was 0.3)
     }
 
     // Technique too complex for problem = moderate penalty
     const diff = techniquLevel - problemLevel;
-    return Math.max(0.5, 1.0 - diff * 0.2);
+    return Math.max(0.6, 1.0 - diff * 0.15); // Gentler penalty (was 0.2)
   }
 
   /**
@@ -583,34 +604,34 @@ export class TechniqueScorer {
     metadata: TechniqueMetadata,
     context: ProblemContext
   ): number {
-    let score = 1.0;
+    let score = 1.0; // Start optimistic
     let constraintCount = 0;
 
     if (context.hasTimeConstraints) {
       constraintCount++;
       if (!metadata.handlesTimeConstraints) {
-        score -= 0.3;
+        score -= 0.25; // Gentler penalty (was 0.3)
       }
     }
 
     if (context.hasResourceConstraints) {
       constraintCount++;
       if (!metadata.handlesResourceConstraints) {
-        score -= 0.3;
+        score -= 0.2; // Gentler penalty (was 0.3)
       }
     }
 
     if (context.needsCollaboration) {
       constraintCount++;
       if (!metadata.handlesCollaborationNeeds) {
-        score -= 0.4; // Collaboration is more critical
+        score -= 0.3; // Slightly gentler (was 0.4)
       }
     }
 
     // No constraints = all techniques equally good
-    if (constraintCount === 0) return 0.8;
+    if (constraintCount === 0) return 0.9; // Higher baseline (was 0.8)
 
-    return Math.max(0.1, score);
+    return Math.max(0.2, score); // Higher minimum (was 0.1)
   }
 
   /**
