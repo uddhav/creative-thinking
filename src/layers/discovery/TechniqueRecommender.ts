@@ -1,10 +1,13 @@
 /**
  * TechniqueRecommender - Handles technique recommendation logic
  * Extracted from discoverTechniques to improve maintainability
+ * Enhanced with multi-factor scoring system for intelligent recommendations
  */
 
 import type { LateralTechnique } from '../../types/index.js';
+import { ALL_LATERAL_TECHNIQUES } from '../../types/index.js';
 import type { TechniqueRegistry } from '../../techniques/TechniqueRegistry.js';
+import { TechniqueScorer, type ProblemContext } from './TechniqueScorer.js';
 
 export class TechniqueRecommender {
   // Wildcard inclusion probability (20% chance)
@@ -22,8 +25,16 @@ export class TechniqueRecommender {
     LateralTechnique,
     ReturnType<TechniqueRegistry['getTechniqueInfo']>
   >();
+
+  // Multi-factor scorer for intelligent recommendations
+  private scorer: TechniqueScorer;
+  constructor() {
+    this.scorer = new TechniqueScorer();
+  }
+
   /**
    * Recommend techniques based on problem category and other factors
+   * Now enhanced with multi-factor scoring
    */
   recommendTechniques(
     problemCategory: string,
@@ -481,11 +492,54 @@ export class TechniqueRecommender {
       }
     }
 
-    // Sort by effectiveness
-    recommendations.sort((a, b) => b.effectiveness - a.effectiveness);
+    // Build problem context for multi-factor scoring
+    const problemContext: ProblemContext = {
+      category: problemCategory,
+      complexity,
+      hasTimeConstraints:
+        constraints?.some(
+          c =>
+            c.toLowerCase().includes('time') ||
+            c.toLowerCase().includes('deadline') ||
+            c.toLowerCase().includes('urgent')
+        ) ?? false,
+      hasResourceConstraints:
+        constraints?.some(
+          c =>
+            c.toLowerCase().includes('resource') ||
+            c.toLowerCase().includes('budget') ||
+            c.toLowerCase().includes('limited')
+        ) ?? false,
+      needsCollaboration:
+        (constraints?.some(
+          c =>
+            c.toLowerCase().includes('team') ||
+            c.toLowerCase().includes('collaboration') ||
+            c.toLowerCase().includes('stakeholder')
+        ) ??
+          false) ||
+        problemCategory === 'organizational',
+      preferredOutcome,
+    };
+
+    // Apply multi-factor scoring to all recommendations
+    const scoredRecommendations = recommendations.map(rec => {
+      const multiFactorScore = this.scorer.calculateScore(
+        rec.technique,
+        problemContext,
+        rec.effectiveness // Use initial effectiveness as category score
+      );
+      return {
+        ...rec,
+        effectiveness: multiFactorScore, // Replace with multi-factor score
+      };
+    });
+
+    // Sort by multi-factor score
+    scoredRecommendations.sort((a, b) => b.effectiveness - a.effectiveness);
 
     // Validate techniques exist and enhance with additional info (with caching)
-    const validatedRecommendations = recommendations
+    const validatedRecommendations = scoredRecommendations
       .filter(rec => techniqueRegistry.isValidTechnique(rec.technique))
       .map(rec => {
         // Use cache for technique info (performance optimization)
@@ -494,10 +548,16 @@ export class TechniqueRecommender {
           info = techniqueRegistry.getTechniqueInfo(rec.technique);
           this.techniqueInfoCache.set(rec.technique, info);
         }
+
+        // Get execution time estimate
+        const timeEstimate = this.scorer.estimateExecutionTime(rec.technique);
+        const timeLabel =
+          timeEstimate === 'quick' ? '⚡' : timeEstimate === 'moderate' ? '⏱️' : '⏳';
+
         return {
           ...rec,
-          // Enhance reasoning with step count info
-          reasoning: `${rec.reasoning} (${info.totalSteps} steps)`,
+          // Enhance reasoning with step count and time estimate
+          reasoning: `${rec.reasoning} (${info.totalSteps} steps ${timeLabel})`,
         };
       });
 
@@ -625,40 +685,9 @@ export class TechniqueRecommender {
     excludeTechniques: Set<LateralTechnique>,
     techniqueRegistry: TechniqueRegistry
   ): { technique: LateralTechnique; reasoning: string; effectiveness: number } | null {
-    // All available techniques (all 28)
-    const allTechniques: LateralTechnique[] = [
-      'six_hats',
-      'po',
-      'random_entry',
-      'scamper',
-      'concept_extraction',
-      'yes_and',
-      'design_thinking',
-      'triz',
-      'neural_state',
-      'temporal_work',
-      'cultural_integration',
-      'collective_intel',
-      'disney_method',
-      'nine_windows',
-      'quantum_superposition',
-      'temporal_creativity',
-      'paradoxical_problem',
-      'meta_learning',
-      'biomimetic_path',
-      'first_principles',
-      'neuro_computational',
-      'criteria_based_analysis',
-      'linguistic_forensics',
-      'competing_hypotheses',
-      'reverse_benchmarking',
-      'context_reframing',
-      'perception_optimization',
-      'anecdotal_signal',
-    ];
-
-    // Filter out already recommended techniques (O(1) lookup with Set)
-    const availableTechniques = allTechniques.filter(
+    // Use the single source of truth for all techniques
+    // This ensures we always include all available techniques
+    const availableTechniques = ALL_LATERAL_TECHNIQUES.filter(
       t => !excludeTechniques.has(t) && techniqueRegistry.isValidTechnique(t)
     );
 

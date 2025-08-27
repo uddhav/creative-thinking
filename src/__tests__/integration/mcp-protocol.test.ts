@@ -60,6 +60,52 @@ describe('MCP Protocol Integration', () => {
       expect(errorData.error.message).toContain('Problem description is required');
     });
 
+    it('should use multi-factor scoring for technique recommendations', () => {
+      // Test that multi-factor scoring properly affects recommendations
+      const complexInput: DiscoverTechniquesInput = {
+        problem: 'Design a scalable microservice architecture',
+        context: 'High traffic system with limited budget and tight deadline',
+        constraints: ['time', 'resources', 'team collaboration required'],
+        preferredOutcome: 'systematic',
+      };
+
+      const result = server.discoverTechniques(complexInput);
+      const data = parseServerResponse<DiscoverTechniquesResponse>(result);
+
+      // With multi-factor scoring, techniques that match outcome and handle constraints should rank higher
+      // TRIZ has systematic=1.0 but doesn't handle time constraints well
+      // So it might not be in top recommendations despite category match
+
+      // Verify that recommendations consider multiple factors
+      const topRecommendations = data.recommendations.slice(0, 3);
+
+      // At least one should handle time constraints well
+      const hasTimeHandler = topRecommendations.some(r =>
+        ['six_hats', 'scamper', 'disney_method'].includes(r.technique)
+      );
+      expect(hasTimeHandler).toBeTruthy();
+
+      // All should have execution time indicators in reasoning
+      topRecommendations.forEach(rec => {
+        expect(rec.reasoning).toMatch(/[⚡⏱⏳]/); // Contains time estimate emoji (removed misleading character class)
+      });
+    });
+
+    it('should handle edge cases in scoring parameters', () => {
+      // Test with invalid preferred outcome
+      const invalidOutcomeInput: DiscoverTechniquesInput = {
+        problem: 'Improve system performance',
+        preferredOutcome: 'super-fast-ultra' as any, // Invalid outcome
+      };
+
+      const result = server.discoverTechniques(invalidOutcomeInput);
+      expect(result.isError).toBeFalsy();
+      const data = parseServerResponse<DiscoverTechniquesResponse>(result);
+      expect(data.recommendations.length).toBeGreaterThan(0);
+
+      // Should still provide recommendations despite invalid outcome
+    });
+
     it('should detect low flexibility and suggest option generation', () => {
       const input: DiscoverTechniquesInput = {
         problem: 'Reduce costs by 50% immediately',
