@@ -5,6 +5,7 @@
  */
 export declare class ProblemAnalyzer {
     private nlpService;
+    private readonly COGNITIVE_PATTERN;
     constructor();
     /**
      * Categorize the problem based on NLP analysis and patterns

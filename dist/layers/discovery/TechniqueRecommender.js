@@ -100,11 +100,6 @@ export class TechniqueRecommender {
                     effectiveness: 0.7,
                 });
                 recommendations.push({
-                    technique: 'neuro_computational',
-                    reasoning: 'Neural pattern generation for creative synthesis',
-                    effectiveness: 0.68,
-                });
-                recommendations.push({
                     technique: 'quantum_superposition',
                     reasoning: 'Explores multiple creative possibilities simultaneously without premature commitment',
                     effectiveness: 0.88,

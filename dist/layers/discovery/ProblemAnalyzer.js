@@ -6,6 +6,8 @@
 import { getNLPService } from '../../nlp/NLPService.js';
 export class ProblemAnalyzer {
     nlpService;
+    // Pre-compiled regex patterns for performance
+    COGNITIVE_PATTERN = /\b(cognitive|mental|focus|productivity)\b/;
     constructor() {
         this.nlpService = getNLPService();
     }
@@ -14,8 +16,10 @@ export class ProblemAnalyzer {
      */
     categorizeProblem(problem, context) {
         const fullText = `${problem} ${context || ''}`;
+        // Cache toLowerCase result for performance
+        const lowerText = fullText.toLowerCase();
         // OPTIMIZATION: Fast-path for explicit technique requests (skip NLP)
-        const explicitTechnique = this.checkExplicitTechniqueRequest(fullText);
+        const explicitTechnique = this.checkExplicitTechniqueRequest(fullText, lowerText);
         if (explicitTechnique) {
             return explicitTechnique;
         }
@@ -42,25 +46,25 @@ export class ProblemAnalyzer {
         }
         // 4. Check for specific pattern categories FIRST (higher priority)
         // These should take precedence over general categories
-        // Pass fullText to detection methods for direct matching
+        // Pass lowerText to detection methods to avoid repeated toLowerCase calls
         // Check for validation/verification patterns first
-        if (this.detectValidationPattern(nlpAnalysis, fullText)) {
+        if (this.detectValidationPattern(nlpAnalysis, lowerText)) {
             return 'validation';
         }
         // Check for behavioral economics patterns
-        if (this.detectBehavioralPattern(nlpAnalysis, fullText)) {
+        if (this.detectBehavioralPattern(nlpAnalysis, lowerText)) {
             return 'behavioral';
         }
         // Check for fundamental/first principles patterns
-        if (this.detectFundamentalPattern(nlpAnalysis, fullText)) {
+        if (this.detectFundamentalPattern(nlpAnalysis, lowerText)) {
             return 'fundamental';
         }
         // Check for learning/adaptive patterns
-        if (this.detectLearningPattern(nlpAnalysis, fullText)) {
+        if (this.detectLearningPattern(nlpAnalysis, lowerText)) {
             return 'learning';
         }
         // Check for computational/algorithmic patterns
-        if (this.detectComputationalPattern(nlpAnalysis, fullText)) {
+        if (this.detectComputationalPattern(nlpAnalysis, lowerText)) {
             return 'computational';
         }
         // 5. Use NLP topic categories for general classification
@@ -170,8 +174,8 @@ export class ProblemAnalyzer {
     /**
      * Fast-path check for explicit technique requests (avoids NLP overhead)
      */
-    checkExplicitTechniqueRequest(text) {
-        const lower = text.toLowerCase();
+    checkExplicitTechniqueRequest(text, lowerText) {
+        const lower = lowerText || text.toLowerCase();
         // Fast-path for explicit temporal keywords (deadlines, time management)
         if (lower.includes('deadline') ||
             lower.includes('time management') ||
@@ -196,9 +200,8 @@ export class ProblemAnalyzer {
             return 'organizational';
         }
         // Fast-path for explicit cognitive/mental keywords
-        // Use word boundaries to avoid false positives like 'fundamental' matching 'mental'
-        const cognitivePattern = /\b(cognitive|mental|focus|productivity)\b/;
-        if (cognitivePattern.test(lower)) {
+        // Use pre-compiled regex to avoid false positives like 'fundamental' matching 'mental'
+        if (this.COGNITIVE_PATTERN.test(lower)) {
             return 'cognitive';
         }
         // Map explicit technique mentions to categories
@@ -241,9 +244,9 @@ export class ProblemAnalyzer {
     /**
      * Detect behavioral economics patterns using NLP analysis
      */
-    detectBehavioralPattern(nlpAnalysis, fullText) {
-        // Check the full text for behavioral keywords
-        const lower = fullText.toLowerCase();
+    detectBehavioralPattern(nlpAnalysis, lowerText) {
+        // Use pre-lowercased text for performance
+        const lower = lowerText;
         const behavioralKeywords = [
             'behavior',
             'behaviour',
@@ -268,9 +271,9 @@ export class ProblemAnalyzer {
     /**
      * Detect fundamental/first principles patterns using NLP analysis
      */
-    detectFundamentalPattern(nlpAnalysis, fullText) {
-        // Check the full text for fundamental keywords
-        const lower = fullText.toLowerCase();
+    detectFundamentalPattern(nlpAnalysis, lowerText) {
+        // Use pre-lowercased text for performance
+        const lower = lowerText;
         const fundamentalKeywords = [
             'fundamental principle',
             'fundamental',
@@ -299,9 +302,9 @@ export class ProblemAnalyzer {
     /**
      * Detect learning/adaptive patterns using NLP analysis
      */
-    detectLearningPattern(nlpAnalysis, fullText) {
-        // Check the full text for learning keywords
-        const lower = fullText.toLowerCase();
+    detectLearningPattern(nlpAnalysis, lowerText) {
+        // Use pre-lowercased text for performance
+        const lower = lowerText;
         const learningKeywords = [
             'learn from',
             'adapt',
@@ -328,9 +331,9 @@ export class ProblemAnalyzer {
     /**
      * Detect computational/algorithmic patterns using NLP analysis
      */
-    detectComputationalPattern(nlpAnalysis, fullText) {
-        // Check the full text for computational keywords
-        const lower = fullText.toLowerCase();
+    detectComputationalPattern(nlpAnalysis, lowerText) {
+        // Use pre-lowercased text for performance
+        const lower = lowerText;
         const computationalKeywords = [
             'algorithm',
             'computational',
@@ -356,9 +359,9 @@ export class ProblemAnalyzer {
     /**
      * Detect validation/verification patterns using NLP analysis
      */
-    detectValidationPattern(nlpAnalysis, fullText) {
-        // Check the full text for validation keywords
-        const lower = fullText.toLowerCase();
+    detectValidationPattern(nlpAnalysis, lowerText) {
+        // Use pre-lowercased text for performance
+        const lower = lowerText;
         const validationKeywords = [
             'truth',
             'verify',
