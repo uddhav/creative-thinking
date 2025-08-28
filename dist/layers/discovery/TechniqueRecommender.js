@@ -20,9 +20,9 @@ export class TechniqueRecommender {
         VERY_HIGH: 0.92,
         HIGH: 0.88,
         MEDIUM_HIGH: 0.85,
-        MEDIUM: 0.80,
+        MEDIUM: 0.8,
         MEDIUM_LOW: 0.75,
-        LOW: 0.70,
+        LOW: 0.7,
         VERY_LOW: 0.65,
     };
     // Cache for technique info to avoid repeated lookups

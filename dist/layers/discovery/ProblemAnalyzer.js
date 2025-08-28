@@ -405,25 +405,39 @@ export class ProblemAnalyzer {
      */
     fallbackCategorization(lowerText) {
         // Check most common patterns using simple keyword matching
-        if (lowerText.includes('technical') || lowerText.includes('engineer') || lowerText.includes('code')) {
+        if (lowerText.includes('technical') ||
+            lowerText.includes('engineer') ||
+            lowerText.includes('code')) {
             return 'technical';
         }
-        if (lowerText.includes('creative') || lowerText.includes('innovate') || lowerText.includes('idea')) {
+        if (lowerText.includes('creative') ||
+            lowerText.includes('innovate') ||
+            lowerText.includes('idea')) {
             return 'creative';
         }
-        if (lowerText.includes('process') || lowerText.includes('workflow') || lowerText.includes('optimize')) {
+        if (lowerText.includes('process') ||
+            lowerText.includes('workflow') ||
+            lowerText.includes('optimize')) {
             return 'process';
         }
-        if (lowerText.includes('team') || lowerText.includes('organization') || lowerText.includes('collaborate')) {
+        if (lowerText.includes('team') ||
+            lowerText.includes('organization') ||
+            lowerText.includes('collaborate')) {
             return 'organizational';
         }
-        if (lowerText.includes('strategy') || lowerText.includes('business') || lowerText.includes('market')) {
+        if (lowerText.includes('strategy') ||
+            lowerText.includes('business') ||
+            lowerText.includes('market')) {
             return 'strategic';
         }
-        if (lowerText.includes('system') || lowerText.includes('architect') || lowerText.includes('component')) {
+        if (lowerText.includes('system') ||
+            lowerText.includes('architect') ||
+            lowerText.includes('component')) {
             return 'systems';
         }
-        if (lowerText.includes('user') || lowerText.includes('customer') || lowerText.includes('experience')) {
+        if (lowerText.includes('user') ||
+            lowerText.includes('customer') ||
+            lowerText.includes('experience')) {
             return 'user-centered';
         }
         // Default to general if no specific category matches
