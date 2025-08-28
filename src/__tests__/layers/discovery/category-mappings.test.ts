@@ -347,7 +347,8 @@ describe('Enhanced Category Mappings', () => {
       const wildcardRecommendations = new Set<string>();
 
       // Run wildcard selection multiple times to collect different techniques
-      for (let i = 0; i < 100; i++) {
+      // Increased iterations for better statistical coverage (20% wildcard probability)
+      for (let i = 0; i < 200; i++) {
         const recommendations = recommender.recommendTechniques(
           'general',
           undefined,
@@ -363,6 +364,7 @@ describe('Enhanced Category Mappings', () => {
       }
 
       // Should have collected a diverse set of techniques (at least 10)
+      // With 200 iterations at 20% probability = ~40 wildcards from 28 techniques
       expect(wildcardRecommendations.size).toBeGreaterThanOrEqual(10);
     });
   });
