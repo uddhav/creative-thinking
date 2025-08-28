@@ -53,7 +53,36 @@ export class ProblemAnalyzer {
       return 'organizational';
     }
 
-    // 4. Use NLP topic categories for classification
+    // 4. Check for specific pattern categories FIRST (higher priority)
+    // These should take precedence over general categories
+    // Pass fullText to detection methods for direct matching
+
+    // Check for validation/verification patterns first
+    if (this.detectValidationPattern(nlpAnalysis, fullText)) {
+      return 'validation';
+    }
+
+    // Check for behavioral economics patterns
+    if (this.detectBehavioralPattern(nlpAnalysis, fullText)) {
+      return 'behavioral';
+    }
+
+    // Check for fundamental/first principles patterns
+    if (this.detectFundamentalPattern(nlpAnalysis, fullText)) {
+      return 'fundamental';
+    }
+
+    // Check for learning/adaptive patterns
+    if (this.detectLearningPattern(nlpAnalysis, fullText)) {
+      return 'learning';
+    }
+
+    // Check for computational/algorithmic patterns
+    if (this.detectComputationalPattern(nlpAnalysis, fullText)) {
+      return 'computational';
+    }
+
+    // 5. Use NLP topic categories for general classification
     const topicCategories = nlpAnalysis.topics.categories;
     const entities = nlpAnalysis.entities;
     const verbs = nlpAnalysis.entities.verbs;
@@ -129,16 +158,6 @@ export class ProblemAnalyzer {
       entities.nouns.some(n => ['strategy', 'market', 'competition'].includes(n.toLowerCase()))
     ) {
       return 'strategic';
-    }
-
-    // Check for behavioral economics patterns
-    if (this.detectBehavioralPattern(nlpAnalysis)) {
-      return 'behavioral';
-    }
-
-    // Check for fundamental/first principles patterns
-    if (this.detectFundamentalPattern(nlpAnalysis)) {
-      return 'fundamental';
     }
 
     return 'general';
@@ -250,12 +269,9 @@ export class ProblemAnalyzer {
     }
 
     // Fast-path for explicit cognitive/mental keywords
-    if (
-      lower.includes('cognitive') ||
-      lower.includes('mental') ||
-      lower.includes('focus') ||
-      lower.includes('productivity')
-    ) {
+    // Use word boundaries to avoid false positives like 'fundamental' matching 'mental'
+    const cognitivePattern = /\b(cognitive|mental|focus|productivity)\b/;
+    if (cognitivePattern.test(lower)) {
       return 'cognitive';
     }
 
@@ -273,13 +289,20 @@ export class ProblemAnalyzer {
       'nine windows': 'systems',
       'temporal creativity': 'temporal',
       'paradoxical problem': 'paradoxical',
-      'competing hypotheses': 'analytical',
-      'criteria-based': 'analytical',
-      'linguistic forensics': 'analytical',
+      'competing hypotheses': 'validation',
+      'criteria-based': 'validation',
+      'linguistic forensics': 'validation',
       'reverse benchmarking': 'behavioral',
       'context reframing': 'behavioral',
       'perception optimization': 'behavioral',
       'anecdotal signal': 'behavioral',
+      'meta learning': 'learning',
+      'meta-learning': 'learning',
+      biomimetic: 'biological',
+      'neural state': 'cognitive',
+      'neuro computational': 'computational',
+      'neuro-computational': 'computational',
+      'quantum superposition': 'computational',
     };
 
     // Check for explicit technique requests
@@ -295,15 +318,30 @@ export class ProblemAnalyzer {
   /**
    * Detect behavioral economics patterns using NLP analysis
    */
-  private detectBehavioralPattern(nlpAnalysis: ReturnType<NLPService['analyze']>): boolean {
+  private detectBehavioralPattern(
+    nlpAnalysis: ReturnType<NLPService['analyze']>,
+    fullText: string
+  ): boolean {
+    // Check the full text for behavioral keywords
+    const lower = fullText.toLowerCase();
+
     const behavioralKeywords = [
       'behavior',
+      'behaviour',
       'perception',
-      'value',
       'psychology',
+      'psychological',
       'incentive',
       'nudge',
+      'influence',
+      'customer behavior',
+      'user psychology',
     ];
+
+    // Direct text matching for better detection
+    const hasDirectMatch = behavioralKeywords.some(keyword => lower.includes(keyword));
+    if (hasDirectMatch) return true;
+
     const hasKeywords = nlpAnalysis.topics.keywords.some(k =>
       behavioralKeywords.some(b => k.toLowerCase().includes(b))
     );
@@ -317,15 +355,34 @@ export class ProblemAnalyzer {
   /**
    * Detect fundamental/first principles patterns using NLP analysis
    */
-  private detectFundamentalPattern(nlpAnalysis: ReturnType<NLPService['analyze']>): boolean {
+  private detectFundamentalPattern(
+    nlpAnalysis: ReturnType<NLPService['analyze']>,
+    fullText: string
+  ): boolean {
+    // Check the full text for fundamental keywords
+    const lower = fullText.toLowerCase();
+
     const fundamentalKeywords = [
+      'fundamental principle',
       'fundamental',
+      'basic component',
       'basic',
+      'core issue',
       'core',
+      'essential element',
       'essential',
       'foundation',
       'root cause',
+      'first principle',
+      'break down',
+      'break this down',
+      'deconstruct',
     ];
+
+    // Direct text matching for better detection
+    const hasDirectMatch = fundamentalKeywords.some(keyword => lower.includes(keyword));
+    if (hasDirectMatch) return true;
+
     const hasKeywords = nlpAnalysis.topics.keywords.some(k =>
       fundamentalKeywords.some(f => k.toLowerCase().includes(f))
     );
@@ -336,5 +393,127 @@ export class ProblemAnalyzer {
     );
 
     return hasKeywords || hasWhyQuestions;
+  }
+
+  /**
+   * Detect learning/adaptive patterns using NLP analysis
+   */
+  private detectLearningPattern(
+    nlpAnalysis: ReturnType<NLPService['analyze']>,
+    fullText: string
+  ): boolean {
+    // Check the full text for learning keywords
+    const lower = fullText.toLowerCase();
+
+    const learningKeywords = [
+      'learn from',
+      'adapt',
+      'synthesize pattern',
+      'evolve our',
+      'evolve your',
+      'evolve the',
+      'evolution',
+      'feedback',
+      'knowledge',
+      'past failures',
+      'past experience',
+    ];
+
+    // Direct text matching for better detection
+    const hasDirectMatch = learningKeywords.some(keyword => lower.includes(keyword));
+    if (hasDirectMatch) return true;
+
+    const hasKeywords = nlpAnalysis.topics.keywords.some(k =>
+      learningKeywords.some(l => k.toLowerCase().includes(l))
+    );
+
+    // Check for education or knowledge topics
+    const hasEducationCategory =
+      nlpAnalysis.topics.categories.includes('education') ||
+      nlpAnalysis.topics.categories.includes('knowledge');
+
+    return hasKeywords || hasEducationCategory;
+  }
+
+  /**
+   * Detect computational/algorithmic patterns using NLP analysis
+   */
+  private detectComputationalPattern(
+    nlpAnalysis: ReturnType<NLPService['analyze']>,
+    fullText: string
+  ): boolean {
+    // Check the full text for computational keywords
+    const lower = fullText.toLowerCase();
+
+    const computationalKeywords = [
+      'algorithm',
+      'computational',
+      'neural network',
+      'neural',
+      'parallel process',
+      'process these in parallel',
+      'process in parallel',
+      'computational model',
+      'computational efficiency',
+    ];
+
+    // Direct text matching for better detection
+    const hasDirectMatch = computationalKeywords.some(keyword => lower.includes(keyword));
+    if (hasDirectMatch) return true;
+
+    const hasKeywords = nlpAnalysis.topics.keywords.some(k =>
+      computationalKeywords.some(c => k.toLowerCase().includes(c))
+    );
+
+    // Check for technology topics and complex technical language
+    const hasTechCategory = nlpAnalysis.topics.categories.includes('technology');
+    const hasComplexity =
+      nlpAnalysis.readability.clarity === 'complex' ||
+      nlpAnalysis.readability.clarity === 'very_complex';
+
+    return hasKeywords || (hasTechCategory && hasComplexity);
+  }
+
+  /**
+   * Detect validation/verification patterns using NLP analysis
+   */
+  private detectValidationPattern(
+    nlpAnalysis: ReturnType<NLPService['analyze']>,
+    fullText: string
+  ): boolean {
+    // Check the full text for validation keywords
+    const lower = fullText.toLowerCase();
+
+    const validationKeywords = [
+      'truth',
+      'verify',
+      'authentic',
+      'validate',
+      'evidence',
+      'hypothesis',
+      'test our',
+      'test the',
+      'prove',
+      'validation',
+    ];
+
+    // Direct text matching for better detection
+    const hasDirectMatch = validationKeywords.some(keyword => lower.includes(keyword));
+    if (hasDirectMatch) return true;
+
+    const hasKeywords = nlpAnalysis.topics.keywords.some(k =>
+      validationKeywords.some(v => k.toLowerCase().includes(v))
+    );
+
+    // Check for questions about verification
+    const hasVerificationQuestions = nlpAnalysis.pos.sentences.some(
+      s =>
+        s.type === 'question' &&
+        (s.text.toLowerCase().includes('true') ||
+          s.text.toLowerCase().includes('real') ||
+          s.text.toLowerCase().includes('valid'))
+    );
+
+    return hasKeywords || hasVerificationQuestions;
   }
 }

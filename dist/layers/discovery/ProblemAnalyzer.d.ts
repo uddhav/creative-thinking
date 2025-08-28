@@ -35,5 +35,17 @@ export declare class ProblemAnalyzer {
      * Detect fundamental/first principles patterns using NLP analysis
      */
     private detectFundamentalPattern;
+    /**
+     * Detect learning/adaptive patterns using NLP analysis
+     */
+    private detectLearningPattern;
+    /**
+     * Detect computational/algorithmic patterns using NLP analysis
+     */
+    private detectComputationalPattern;
+    /**
+     * Detect validation/verification patterns using NLP analysis
+     */
+    private detectValidationPattern;
 }
 //# sourceMappingURL=ProblemAnalyzer.d.ts.map
