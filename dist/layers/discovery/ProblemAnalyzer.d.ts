@@ -5,6 +5,7 @@
  */
 export declare class ProblemAnalyzer {
     private nlpService;
+    private readonly COGNITIVE_PATTERN;
     constructor();
     /**
      * Categorize the problem based on NLP analysis and patterns
@@ -35,5 +36,22 @@ export declare class ProblemAnalyzer {
      * Detect fundamental/first principles patterns using NLP analysis
      */
     private detectFundamentalPattern;
+    /**
+     * Detect learning/adaptive patterns using NLP analysis
+     */
+    private detectLearningPattern;
+    /**
+     * Detect computational/algorithmic patterns using NLP analysis
+     */
+    private detectComputationalPattern;
+    /**
+     * Detect validation/verification patterns using NLP analysis
+     */
+    private detectValidationPattern;
+    /**
+     * Fallback categorization when NLP service fails
+     * Uses simple keyword matching without NLP analysis
+     */
+    private fallbackCategorization;
 }
 //# sourceMappingURL=ProblemAnalyzer.d.ts.map

@@ -6,6 +6,8 @@
 import { getNLPService } from '../../nlp/NLPService.js';
 export class ProblemAnalyzer {
     nlpService;
+    // Pre-compiled regex patterns for performance
+    COGNITIVE_PATTERN = /\b(cognitive|mental|focus|productivity)\b/;
     constructor() {
         this.nlpService = getNLPService();
     }
@@ -14,13 +16,23 @@ export class ProblemAnalyzer {
      */
     categorizeProblem(problem, context) {
         const fullText = `${problem} ${context || ''}`;
+        // Cache toLowerCase result for performance
+        const lowerText = fullText.toLowerCase();
         // OPTIMIZATION: Fast-path for explicit technique requests (skip NLP)
-        const explicitTechnique = this.checkExplicitTechniqueRequest(fullText);
+        const explicitTechnique = this.checkExplicitTechniqueRequest(fullText, lowerText);
         if (explicitTechnique) {
             return explicitTechnique;
         }
-        // Use NLPService for comprehensive analysis (only once!)
-        const nlpAnalysis = this.nlpService.analyze(fullText);
+        // Use NLPService for comprehensive analysis with error handling
+        let nlpAnalysis;
+        try {
+            nlpAnalysis = this.nlpService.analyze(fullText);
+        }
+        catch (error) {
+            console.warn('NLP analysis failed, using fallback categorization', error);
+            // Fallback to keyword-only detection when NLP fails
+            return this.fallbackCategorization(lowerText);
+        }
         // 1. Check for paradoxes using NLP results
         if (nlpAnalysis.paradoxes.hasParadox || nlpAnalysis.contradictions.hasContradiction) {
             // Exclude time/requirement conflicts that aren't true paradoxes
@@ -40,7 +52,30 @@ export class ProblemAnalyzer {
             nlpAnalysis.topics.categories.includes('people')) {
             return 'organizational';
         }
-        // 4. Use NLP topic categories for classification
+        // 4. Check for specific pattern categories FIRST (higher priority)
+        // These should take precedence over general categories
+        // Pass lowerText to detection methods to avoid repeated toLowerCase calls
+        // Check for validation/verification patterns first
+        if (this.detectValidationPattern(nlpAnalysis, lowerText)) {
+            return 'validation';
+        }
+        // Check for behavioral economics patterns
+        if (this.detectBehavioralPattern(nlpAnalysis, lowerText)) {
+            return 'behavioral';
+        }
+        // Check for fundamental/first principles patterns
+        if (this.detectFundamentalPattern(nlpAnalysis, lowerText)) {
+            return 'fundamental';
+        }
+        // Check for learning/adaptive patterns
+        if (this.detectLearningPattern(nlpAnalysis, lowerText)) {
+            return 'learning';
+        }
+        // Check for computational/algorithmic patterns
+        if (this.detectComputationalPattern(nlpAnalysis, lowerText)) {
+            return 'computational';
+        }
+        // 5. Use NLP topic categories for general classification
         const topicCategories = nlpAnalysis.topics.categories;
         const entities = nlpAnalysis.entities;
         const verbs = nlpAnalysis.entities.verbs;
@@ -86,14 +121,6 @@ export class ProblemAnalyzer {
         if (topicCategories.includes('business') ||
             entities.nouns.some(n => ['strategy', 'market', 'competition'].includes(n.toLowerCase()))) {
             return 'strategic';
-        }
-        // Check for behavioral economics patterns
-        if (this.detectBehavioralPattern(nlpAnalysis)) {
-            return 'behavioral';
-        }
-        // Check for fundamental/first principles patterns
-        if (this.detectFundamentalPattern(nlpAnalysis)) {
-            return 'fundamental';
         }
         return 'general';
     }
@@ -155,8 +182,8 @@ export class ProblemAnalyzer {
     /**
      * Fast-path check for explicit technique requests (avoids NLP overhead)
      */
-    checkExplicitTechniqueRequest(text) {
-        const lower = text.toLowerCase();
+    checkExplicitTechniqueRequest(text, lowerText) {
+        const lower = lowerText || text.toLowerCase();
         // Fast-path for explicit temporal keywords (deadlines, time management)
         if (lower.includes('deadline') ||
             lower.includes('time management') ||
@@ -181,10 +208,8 @@ export class ProblemAnalyzer {
             return 'organizational';
         }
         // Fast-path for explicit cognitive/mental keywords
-        if (lower.includes('cognitive') ||
-            lower.includes('mental') ||
-            lower.includes('focus') ||
-            lower.includes('productivity')) {
+        // Use pre-compiled regex to avoid false positives like 'fundamental' matching 'mental'
+        if (this.COGNITIVE_PATTERN.test(lower)) {
             return 'cognitive';
         }
         // Map explicit technique mentions to categories
@@ -201,13 +226,20 @@ export class ProblemAnalyzer {
             'nine windows': 'systems',
             'temporal creativity': 'temporal',
             'paradoxical problem': 'paradoxical',
-            'competing hypotheses': 'analytical',
-            'criteria-based': 'analytical',
-            'linguistic forensics': 'analytical',
+            'competing hypotheses': 'validation',
+            'criteria-based': 'validation',
+            'linguistic forensics': 'validation',
             'reverse benchmarking': 'behavioral',
             'context reframing': 'behavioral',
             'perception optimization': 'behavioral',
             'anecdotal signal': 'behavioral',
+            'meta learning': 'learning',
+            'meta-learning': 'learning',
+            biomimetic: 'biological',
+            'neural state': 'cognitive',
+            'neuro computational': 'computational',
+            'neuro-computational': 'computational',
+            'quantum superposition': 'computational',
         };
         // Check for explicit technique requests
         for (const [technique, category] of Object.entries(techniqueMap)) {
@@ -220,15 +252,26 @@ export class ProblemAnalyzer {
     /**
      * Detect behavioral economics patterns using NLP analysis
      */
-    detectBehavioralPattern(nlpAnalysis) {
+    detectBehavioralPattern(nlpAnalysis, lowerText) {
+        // Use pre-lowercased text for performance
+        const lower = lowerText;
+        // Ordered from most to least specific for early exit optimization
         const behavioralKeywords = [
-            'behavior',
-            'perception',
-            'value',
+            'customer behavior',
+            'user psychology',
+            'psychological',
             'psychology',
+            'influence',
             'incentive',
+            'perception',
+            'behavior',
+            'behaviour',
             'nudge',
         ];
+        // Use find() for early exit on first match instead of checking all
+        const hasDirectMatch = behavioralKeywords.find(keyword => lower.includes(keyword));
+        if (hasDirectMatch)
+            return true;
         const hasKeywords = nlpAnalysis.topics.keywords.some(k => behavioralKeywords.some(b => k.toLowerCase().includes(b)));
         const hasPsychCategory = nlpAnalysis.topics.categories.includes('psychology');
         const hasMoneyEntities = nlpAnalysis.entities.money.length > 0;
@@ -237,19 +280,168 @@ export class ProblemAnalyzer {
     /**
      * Detect fundamental/first principles patterns using NLP analysis
      */
-    detectFundamentalPattern(nlpAnalysis) {
+    detectFundamentalPattern(nlpAnalysis, lowerText) {
+        // Use pre-lowercased text for performance
+        const lower = lowerText;
+        // Ordered from most to least specific for early exit optimization
         const fundamentalKeywords = [
+            'fundamental principle',
+            'first principle',
+            'root cause',
+            'basic component',
+            'core issue',
+            'essential element',
+            'break this down',
+            'break down',
+            'deconstruct',
+            'foundation',
             'fundamental',
+            'essential',
             'basic',
             'core',
-            'essential',
-            'foundation',
-            'root cause',
         ];
+        // Use find() for early exit on first match instead of checking all
+        const hasDirectMatch = fundamentalKeywords.find(keyword => lower.includes(keyword));
+        if (hasDirectMatch)
+            return true;
         const hasKeywords = nlpAnalysis.topics.keywords.some(k => fundamentalKeywords.some(f => k.toLowerCase().includes(f)));
         // Check for questions about "why" which often indicate fundamental analysis
         const hasWhyQuestions = nlpAnalysis.pos.sentences.some(s => s.type === 'question' && s.text.toLowerCase().includes('why'));
         return hasKeywords || hasWhyQuestions;
+    }
+    /**
+     * Detect learning/adaptive patterns using NLP analysis
+     */
+    detectLearningPattern(nlpAnalysis, lowerText) {
+        // Use pre-lowercased text for performance
+        const lower = lowerText;
+        // Ordered from most to least specific for early exit optimization
+        const learningKeywords = [
+            'learn from',
+            'synthesize pattern',
+            'past failures',
+            'past experience',
+            'evolve our',
+            'evolve your',
+            'evolve the',
+            'evolution',
+            'feedback',
+            'knowledge',
+            'adapt',
+        ];
+        // Use find() for early exit on first match instead of checking all
+        const hasDirectMatch = learningKeywords.find(keyword => lower.includes(keyword));
+        if (hasDirectMatch)
+            return true;
+        const hasKeywords = nlpAnalysis.topics.keywords.some(k => learningKeywords.some(l => k.toLowerCase().includes(l)));
+        // Check for education or knowledge topics
+        const hasEducationCategory = nlpAnalysis.topics.categories.includes('education') ||
+            nlpAnalysis.topics.categories.includes('knowledge');
+        return hasKeywords || hasEducationCategory;
+    }
+    /**
+     * Detect computational/algorithmic patterns using NLP analysis
+     */
+    detectComputationalPattern(nlpAnalysis, lowerText) {
+        // Use pre-lowercased text for performance
+        const lower = lowerText;
+        // Ordered from most to least specific for early exit optimization
+        const computationalKeywords = [
+            'computational efficiency',
+            'computational model',
+            'process these in parallel',
+            'process in parallel',
+            'parallel process',
+            'neural network',
+            'computational',
+            'algorithm',
+            'neural',
+        ];
+        // Use find() for early exit on first match instead of checking all
+        const hasDirectMatch = computationalKeywords.find(keyword => lower.includes(keyword));
+        if (hasDirectMatch)
+            return true;
+        const hasKeywords = nlpAnalysis.topics.keywords.some(k => computationalKeywords.some(c => k.toLowerCase().includes(c)));
+        // Check for technology topics and complex technical language
+        const hasTechCategory = nlpAnalysis.topics.categories.includes('technology');
+        const hasComplexity = nlpAnalysis.readability.clarity === 'complex' ||
+            nlpAnalysis.readability.clarity === 'very_complex';
+        return hasKeywords || (hasTechCategory && hasComplexity);
+    }
+    /**
+     * Detect validation/verification patterns using NLP analysis
+     */
+    detectValidationPattern(nlpAnalysis, lowerText) {
+        // Use pre-lowercased text for performance
+        const lower = lowerText;
+        // Ordered from most to least specific for early exit optimization
+        const validationKeywords = [
+            'test our',
+            'test the',
+            'validation',
+            'hypothesis',
+            'authentic',
+            'evidence',
+            'validate',
+            'verify',
+            'prove',
+            'truth',
+        ];
+        // Use find() for early exit on first match instead of checking all
+        const hasDirectMatch = validationKeywords.find(keyword => lower.includes(keyword));
+        if (hasDirectMatch)
+            return true;
+        const hasKeywords = nlpAnalysis.topics.keywords.some(k => validationKeywords.some(v => k.toLowerCase().includes(v)));
+        // Check for questions about verification
+        const hasVerificationQuestions = nlpAnalysis.pos.sentences.some(s => s.type === 'question' &&
+            (s.text.toLowerCase().includes('true') ||
+                s.text.toLowerCase().includes('real') ||
+                s.text.toLowerCase().includes('valid')));
+        return hasKeywords || hasVerificationQuestions;
+    }
+    /**
+     * Fallback categorization when NLP service fails
+     * Uses simple keyword matching without NLP analysis
+     */
+    fallbackCategorization(lowerText) {
+        // Check most common patterns using simple keyword matching
+        if (lowerText.includes('technical') ||
+            lowerText.includes('engineer') ||
+            lowerText.includes('code')) {
+            return 'technical';
+        }
+        if (lowerText.includes('creative') ||
+            lowerText.includes('innovate') ||
+            lowerText.includes('idea')) {
+            return 'creative';
+        }
+        if (lowerText.includes('process') ||
+            lowerText.includes('workflow') ||
+            lowerText.includes('optimize')) {
+            return 'process';
+        }
+        if (lowerText.includes('team') ||
+            lowerText.includes('organization') ||
+            lowerText.includes('collaborate')) {
+            return 'organizational';
+        }
+        if (lowerText.includes('strategy') ||
+            lowerText.includes('business') ||
+            lowerText.includes('market')) {
+            return 'strategic';
+        }
+        if (lowerText.includes('system') ||
+            lowerText.includes('architect') ||
+            lowerText.includes('component')) {
+            return 'systems';
+        }
+        if (lowerText.includes('user') ||
+            lowerText.includes('customer') ||
+            lowerText.includes('experience')) {
+            return 'user-centered';
+        }
+        // Default to general if no specific category matches
+        return 'general';
     }
 }
 //# sourceMappingURL=ProblemAnalyzer.js.map

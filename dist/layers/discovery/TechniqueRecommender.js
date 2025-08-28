@@ -14,6 +14,17 @@ export class TechniqueRecommender {
         medium: { min: 3, max: 5, wildcard: 1 },
         high: { min: 5, max: 7, wildcard: 2 },
     };
+    // Effectiveness score constants for maintainability
+    EFFECTIVENESS_SCORES = {
+        EXCELLENT: 0.95,
+        VERY_HIGH: 0.92,
+        HIGH: 0.88,
+        MEDIUM_HIGH: 0.85,
+        MEDIUM: 0.8,
+        MEDIUM_LOW: 0.75,
+        LOW: 0.7,
+        VERY_LOW: 0.65,
+    };
     // Cache for technique info to avoid repeated lookups
     techniqueInfoCache = new Map();
     // Multi-factor scorer for intelligent recommendations
@@ -58,9 +69,9 @@ export class TechniqueRecommender {
                     effectiveness: 0.88,
                 });
                 recommendations.push({
-                    technique: 'neuro_computational',
-                    reasoning: 'Apply neural synthesis and computational modeling',
-                    effectiveness: 0.82,
+                    technique: 'biomimetic_path',
+                    reasoning: 'Nature-inspired solutions to technical challenges',
+                    effectiveness: 0.8,
                 });
                 recommendations.push({
                     technique: 'scamper',
@@ -80,19 +91,24 @@ export class TechniqueRecommender {
                     effectiveness: 0.85,
                 });
                 recommendations.push({
-                    technique: 'quantum_superposition',
-                    reasoning: 'Explores multiple creative possibilities simultaneously without premature commitment',
-                    effectiveness: 0.88,
-                });
-                recommendations.push({
                     technique: 'perception_optimization',
-                    reasoning: 'Enhances subjective experience and perceived value',
-                    effectiveness: 0.83,
+                    reasoning: 'Design subjective experience for creative value',
+                    effectiveness: 0.75,
                 });
                 recommendations.push({
                     technique: 'anecdotal_signal',
-                    reasoning: 'Find inspiration in outliers and edge cases',
-                    effectiveness: 0.78,
+                    reasoning: 'Draw inspiration from outliers and edge cases',
+                    effectiveness: 0.72,
+                });
+                recommendations.push({
+                    technique: 'context_reframing',
+                    reasoning: 'Change environmental context to boost creativity',
+                    effectiveness: 0.7,
+                });
+                recommendations.push({
+                    technique: 'quantum_superposition',
+                    reasoning: 'Explores multiple creative possibilities simultaneously without premature commitment',
+                    effectiveness: 0.88,
                 });
                 recommendations.push({
                     technique: 'cultural_integration',
@@ -112,9 +128,14 @@ export class TechniqueRecommender {
                     effectiveness: 0.85,
                 });
                 recommendations.push({
-                    technique: 'nine_windows',
-                    reasoning: 'Analyze process across time and system levels',
+                    technique: 'temporal_work',
+                    reasoning: 'Optimize process timing and workflow management',
                     effectiveness: 0.8,
+                });
+                recommendations.push({
+                    technique: 'nine_windows',
+                    reasoning: 'Systematic process analysis across time and scale',
+                    effectiveness: 0.78,
                 });
                 recommendations.push({
                     technique: 'concept_extraction',
@@ -134,14 +155,14 @@ export class TechniqueRecommender {
                     effectiveness: 0.8,
                 });
                 recommendations.push({
+                    technique: 'context_reframing',
+                    reasoning: 'Reshape organizational environment for behavioral change',
+                    effectiveness: 0.75,
+                });
+                recommendations.push({
                     technique: 'cultural_integration',
                     reasoning: 'Integrates diverse cultural frameworks respectfully',
                     effectiveness: 0.85,
-                });
-                recommendations.push({
-                    technique: 'context_reframing',
-                    reasoning: 'Reshapes organizational decision environments',
-                    effectiveness: 0.78,
                 });
                 break;
             case 'cultural':
@@ -241,14 +262,24 @@ export class TechniqueRecommender {
                     effectiveness: 0.88,
                 });
                 recommendations.push({
+                    technique: 'perception_optimization',
+                    reasoning: 'Optimize strategic value perception in market',
+                    effectiveness: 0.85,
+                });
+                recommendations.push({
+                    technique: 'context_reframing',
+                    reasoning: 'Reframe competitive environment for strategic advantage',
+                    effectiveness: 0.83,
+                });
+                recommendations.push({
+                    technique: 'first_principles',
+                    reasoning: 'Build strategy from fundamental market truths',
+                    effectiveness: 0.8,
+                });
+                recommendations.push({
                     technique: 'six_hats',
                     reasoning: 'Comprehensive strategic analysis from all angles',
                     effectiveness: 0.9,
-                });
-                recommendations.push({
-                    technique: 'temporal_work',
-                    reasoning: 'Strategic timing and flexibility considerations',
-                    effectiveness: 0.75,
                 });
                 break;
             case 'implementation':
@@ -273,6 +304,16 @@ export class TechniqueRecommender {
                     technique: 'triz',
                     reasoning: 'System contradictions and evolution patterns',
                     effectiveness: 0.85,
+                });
+                recommendations.push({
+                    technique: 'first_principles',
+                    reasoning: 'Analyze system from fundamental components',
+                    effectiveness: 0.82,
+                });
+                recommendations.push({
+                    technique: 'meta_learning',
+                    reasoning: 'Learn from system patterns and behaviors',
+                    effectiveness: 0.78,
                 });
                 break;
             case 'validation':
@@ -325,6 +366,11 @@ export class TechniqueRecommender {
                     technique: 'context_reframing',
                     reasoning: 'Change decision environments to influence stakeholder behavior',
                     effectiveness: 0.85,
+                });
+                recommendations.push({
+                    technique: 'perception_optimization',
+                    reasoning: 'Optimize message perception and subjective value',
+                    effectiveness: 0.82,
                 });
                 recommendations.push({
                     technique: 'design_thinking',
