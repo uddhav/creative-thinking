@@ -48,5 +48,10 @@ export declare class ProblemAnalyzer {
      * Detect validation/verification patterns using NLP analysis
      */
     private detectValidationPattern;
+    /**
+     * Fallback categorization when NLP service fails
+     * Uses simple keyword matching without NLP analysis
+     */
+    private fallbackCategorization;
 }
 //# sourceMappingURL=ProblemAnalyzer.d.ts.map

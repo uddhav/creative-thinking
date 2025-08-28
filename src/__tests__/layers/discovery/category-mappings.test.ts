@@ -128,7 +128,7 @@ describe('Enhanced Category Mappings', () => {
         expect(firstPrinciples?.reasoning).toContain('fundamental components');
       });
 
-      it('should recommend neuro_computational for technical problems', () => {
+      it('should recommend triz for technical problems', () => {
         const recommendations = recommender.recommendTechniques(
           'technical',
           undefined,
@@ -137,9 +137,9 @@ describe('Enhanced Category Mappings', () => {
           registry
         );
 
-        const neuroComp = recommendations.find(r => r.technique === 'neuro_computational');
-        expect(neuroComp).toBeDefined();
-        expect(neuroComp?.reasoning).toContain('computational modeling');
+        const triz = recommendations.find(r => r.technique === 'triz');
+        expect(triz).toBeDefined();
+        expect(triz?.reasoning).toContain('Systematic innovation');
       });
 
       it('should recommend biomimetic_path for technical problems', () => {

@@ -14,6 +14,17 @@ export class TechniqueRecommender {
         medium: { min: 3, max: 5, wildcard: 1 },
         high: { min: 5, max: 7, wildcard: 2 },
     };
+    // Effectiveness score constants for maintainability
+    EFFECTIVENESS_SCORES = {
+        EXCELLENT: 0.95,
+        VERY_HIGH: 0.92,
+        HIGH: 0.88,
+        MEDIUM_HIGH: 0.85,
+        MEDIUM: 0.80,
+        MEDIUM_LOW: 0.75,
+        LOW: 0.70,
+        VERY_LOW: 0.65,
+    };
     // Cache for technique info to avoid repeated lookups
     techniqueInfoCache = new Map();
     // Multi-factor scorer for intelligent recommendations
@@ -56,11 +67,6 @@ export class TechniqueRecommender {
                     technique: 'first_principles',
                     reasoning: 'Deconstruct technical problems to fundamental components',
                     effectiveness: 0.88,
-                });
-                recommendations.push({
-                    technique: 'neuro_computational',
-                    reasoning: 'Apply computational modeling and neural synthesis',
-                    effectiveness: 0.82,
                 });
                 recommendations.push({
                     technique: 'biomimetic_path',

@@ -28,8 +28,15 @@ export class ProblemAnalyzer {
       return explicitTechnique;
     }
 
-    // Use NLPService for comprehensive analysis (only once!)
-    const nlpAnalysis = this.nlpService.analyze(fullText);
+    // Use NLPService for comprehensive analysis with error handling
+    let nlpAnalysis;
+    try {
+      nlpAnalysis = this.nlpService.analyze(fullText);
+    } catch (error) {
+      console.warn('NLP analysis failed, using fallback categorization', error);
+      // Fallback to keyword-only detection when NLP fails
+      return this.fallbackCategorization(lowerText);
+    }
 
     // 1. Check for paradoxes using NLP results
     if (nlpAnalysis.paradoxes.hasParadox || nlpAnalysis.contradictions.hasContradiction) {
@@ -328,21 +335,22 @@ export class ProblemAnalyzer {
     // Use pre-lowercased text for performance
     const lower = lowerText;
 
+    // Ordered from most to least specific for early exit optimization
     const behavioralKeywords = [
-      'behavior',
-      'behaviour',
-      'perception',
-      'psychology',
-      'psychological',
-      'incentive',
-      'nudge',
-      'influence',
       'customer behavior',
       'user psychology',
+      'psychological',
+      'psychology',
+      'influence',
+      'incentive',
+      'perception',
+      'behavior',
+      'behaviour',
+      'nudge',
     ];
 
-    // Direct text matching for better detection
-    const hasDirectMatch = behavioralKeywords.some(keyword => lower.includes(keyword));
+    // Use find() for early exit on first match instead of checking all
+    const hasDirectMatch = behavioralKeywords.find(keyword => lower.includes(keyword));
     if (hasDirectMatch) return true;
 
     const hasKeywords = nlpAnalysis.topics.keywords.some(k =>
@@ -365,25 +373,26 @@ export class ProblemAnalyzer {
     // Use pre-lowercased text for performance
     const lower = lowerText;
 
+    // Ordered from most to least specific for early exit optimization
     const fundamentalKeywords = [
       'fundamental principle',
-      'fundamental',
-      'basic component',
-      'basic',
-      'core issue',
-      'core',
-      'essential element',
-      'essential',
-      'foundation',
-      'root cause',
       'first principle',
-      'break down',
+      'root cause',
+      'basic component',
+      'core issue',
+      'essential element',
       'break this down',
+      'break down',
       'deconstruct',
+      'foundation',
+      'fundamental',
+      'essential',
+      'basic',
+      'core',
     ];
 
-    // Direct text matching for better detection
-    const hasDirectMatch = fundamentalKeywords.some(keyword => lower.includes(keyword));
+    // Use find() for early exit on first match instead of checking all
+    const hasDirectMatch = fundamentalKeywords.find(keyword => lower.includes(keyword));
     if (hasDirectMatch) return true;
 
     const hasKeywords = nlpAnalysis.topics.keywords.some(k =>
@@ -408,22 +417,23 @@ export class ProblemAnalyzer {
     // Use pre-lowercased text for performance
     const lower = lowerText;
 
+    // Ordered from most to least specific for early exit optimization
     const learningKeywords = [
       'learn from',
-      'adapt',
       'synthesize pattern',
+      'past failures',
+      'past experience',
       'evolve our',
       'evolve your',
       'evolve the',
       'evolution',
       'feedback',
       'knowledge',
-      'past failures',
-      'past experience',
+      'adapt',
     ];
 
-    // Direct text matching for better detection
-    const hasDirectMatch = learningKeywords.some(keyword => lower.includes(keyword));
+    // Use find() for early exit on first match instead of checking all
+    const hasDirectMatch = learningKeywords.find(keyword => lower.includes(keyword));
     if (hasDirectMatch) return true;
 
     const hasKeywords = nlpAnalysis.topics.keywords.some(k =>
@@ -448,20 +458,21 @@ export class ProblemAnalyzer {
     // Use pre-lowercased text for performance
     const lower = lowerText;
 
+    // Ordered from most to least specific for early exit optimization
     const computationalKeywords = [
-      'algorithm',
-      'computational',
-      'neural network',
-      'neural',
-      'parallel process',
+      'computational efficiency',
+      'computational model',
       'process these in parallel',
       'process in parallel',
-      'computational model',
-      'computational efficiency',
+      'parallel process',
+      'neural network',
+      'computational',
+      'algorithm',
+      'neural',
     ];
 
-    // Direct text matching for better detection
-    const hasDirectMatch = computationalKeywords.some(keyword => lower.includes(keyword));
+    // Use find() for early exit on first match instead of checking all
+    const hasDirectMatch = computationalKeywords.find(keyword => lower.includes(keyword));
     if (hasDirectMatch) return true;
 
     const hasKeywords = nlpAnalysis.topics.keywords.some(k =>
@@ -487,21 +498,22 @@ export class ProblemAnalyzer {
     // Use pre-lowercased text for performance
     const lower = lowerText;
 
+    // Ordered from most to least specific for early exit optimization
     const validationKeywords = [
-      'truth',
-      'verify',
-      'authentic',
-      'validate',
-      'evidence',
-      'hypothesis',
       'test our',
       'test the',
-      'prove',
       'validation',
+      'hypothesis',
+      'authentic',
+      'evidence',
+      'validate',
+      'verify',
+      'prove',
+      'truth',
     ];
 
-    // Direct text matching for better detection
-    const hasDirectMatch = validationKeywords.some(keyword => lower.includes(keyword));
+    // Use find() for early exit on first match instead of checking all
+    const hasDirectMatch = validationKeywords.find(keyword => lower.includes(keyword));
     if (hasDirectMatch) return true;
 
     const hasKeywords = nlpAnalysis.topics.keywords.some(k =>
@@ -518,5 +530,65 @@ export class ProblemAnalyzer {
     );
 
     return hasKeywords || hasVerificationQuestions;
+  }
+
+  /**
+   * Fallback categorization when NLP service fails
+   * Uses simple keyword matching without NLP analysis
+   */
+  private fallbackCategorization(lowerText: string): string {
+    // Check most common patterns using simple keyword matching
+    if (
+      lowerText.includes('technical') ||
+      lowerText.includes('engineer') ||
+      lowerText.includes('code')
+    ) {
+      return 'technical';
+    }
+    if (
+      lowerText.includes('creative') ||
+      lowerText.includes('innovate') ||
+      lowerText.includes('idea')
+    ) {
+      return 'creative';
+    }
+    if (
+      lowerText.includes('process') ||
+      lowerText.includes('workflow') ||
+      lowerText.includes('optimize')
+    ) {
+      return 'process';
+    }
+    if (
+      lowerText.includes('team') ||
+      lowerText.includes('organization') ||
+      lowerText.includes('collaborate')
+    ) {
+      return 'organizational';
+    }
+    if (
+      lowerText.includes('strategy') ||
+      lowerText.includes('business') ||
+      lowerText.includes('market')
+    ) {
+      return 'strategic';
+    }
+    if (
+      lowerText.includes('system') ||
+      lowerText.includes('architect') ||
+      lowerText.includes('component')
+    ) {
+      return 'systems';
+    }
+    if (
+      lowerText.includes('user') ||
+      lowerText.includes('customer') ||
+      lowerText.includes('experience')
+    ) {
+      return 'user-centered';
+    }
+
+    // Default to general if no specific category matches
+    return 'general';
   }
 }

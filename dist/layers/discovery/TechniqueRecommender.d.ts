@@ -8,6 +8,7 @@ import type { TechniqueRegistry } from '../../techniques/TechniqueRegistry.js';
 export declare class TechniqueRecommender {
     private readonly WILDCARD_PROBABILITY;
     private readonly RECOMMENDATION_LIMITS;
+    private readonly EFFECTIVENESS_SCORES;
     private techniqueInfoCache;
     private scorer;
     constructor();
