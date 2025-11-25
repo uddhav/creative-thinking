@@ -1163,8 +1163,9 @@ The server supports environment variables for advanced features:
 - `NEURAL_OPTIMIZATION=true` - Enable neural state optimization features
 - `CULTURAL_FRAMEWORKS=framework1,framework2` - Specify available cultural frameworks
 - `DISABLE_THOUGHT_LOGGING=true` - Disable visual output logging
-- `PERSISTENCE_TYPE=filesystem|memory` - Choose storage type
-- `PERSISTENCE_PATH=/path/to/sessions` - Custom session storage location
+- `PERSISTENCE_ADAPTER=filesystem|postgres` - Choose storage backend (default: filesystem)
+- `PERSISTENCE_PATH=/path/to/sessions` - Custom session storage location (filesystem only)
+- `DATABASE_URL=postgres://...` - PostgreSQL connection string (postgres adapter only)
 
 ### MCP Sampling Configuration
 
@@ -1335,9 +1336,50 @@ Export a session:
 
 ### Persistence Options
 
-- `PERSISTENCE_TYPE` - Choose between filesystem or memory storage
-- `PERSISTENCE_PATH` - Customize session storage location
-- `autoSave` - Enable automatic progress saving
+The server supports two persistence backends for session storage:
+
+#### Filesystem Storage (Default)
+
+Simple file-based storage ideal for single-server deployments and development:
+
+```bash
+export PERSISTENCE_ADAPTER=filesystem
+export PERSISTENCE_PATH=~/.creative-thinking  # Optional, defaults to home directory
+```
+
+**Use when:**
+
+- Running single server instance
+- Simple deployment requirements
+- Development and testing
+
+#### PostgreSQL Storage (Production)
+
+Recommended for production deployments requiring:
+
+- Multi-server horizontal scaling with shared session state
+- Crash recovery and session persistence
+- Advanced querying and search capabilities
+
+```bash
+export PERSISTENCE_ADAPTER=postgres
+export DATABASE_URL=postgres://user:pass@localhost/creative_thinking
+```
+
+**Setup:**
+
+1. Install PostgreSQL dependency: `npm install pg`
+2. Create database: `createdb creative_thinking`
+3. Tables auto-created on first connection
+4. Supports connection pooling and automatic cleanup
+
+**Features:**
+
+- JSONB storage for flexible schema
+- Full-text search with GIN indexes
+- Automatic session TTL (24-hour expiry)
+- Transaction support for batch operations
+- Efficient metadata querying
 
 For detailed examples, see the [examples directory](examples/).
 

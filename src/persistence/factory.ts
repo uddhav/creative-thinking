@@ -1,5 +1,28 @@
 /**
  * Factory for creating persistence adapters
+ *
+ * Architecture Decision: Two-Tier Persistence
+ * ==========================================
+ *
+ * This implementation separates two distinct concerns:
+ *
+ * 1. **Active Session Storage** (This file)
+ *    - Purpose: Crash recovery and multi-server state sharing
+ *    - Backends: Filesystem (simple) and PostgreSQL (production)
+ *    - Lifecycle: Short-lived (24-hour TTL)
+ *    - Operations: CRUD, search, batch operations
+ *
+ * 2. **Historical Analytics** (Future - See Issue #241)
+ *    - Purpose: Learning from past sessions, technique effectiveness
+ *    - Implementation: Separate append-only storage
+ *    - Features: Aggregation, pattern detection, recommendation improvement
+ *    - When sessions complete, write to analytics store
+ *
+ * Why not a single abstraction?
+ * - Different access patterns (hot state vs. cold analytics)
+ * - Different retention policies (TTL vs. permanent)
+ * - Different query needs (simple CRUD vs. complex aggregations)
+ * - Simpler to implement and maintain as separate concerns
  */
 
 import { homedir } from 'os';
@@ -8,6 +31,7 @@ import type { PersistenceAdapter } from './adapter.js';
 import type { PersistenceConfig } from './types.js';
 import { PersistenceError, PersistenceErrorCode } from './types.js';
 import { FilesystemAdapter } from './filesystem-adapter.js';
+import { PostgresAdapter } from './postgres-adapter.js';
 
 /**
  * Create a persistence adapter based on configuration
@@ -20,30 +44,20 @@ export async function createAdapter(config: PersistenceConfig): Promise<Persiste
       adapter = new FilesystemAdapter();
       break;
 
-    case 'memory':
-      // TODO: Implement in-memory adapter for testing
-      throw new PersistenceError(
-        'Memory adapter not yet implemented',
-        PersistenceErrorCode.INVALID_FORMAT
-      );
-
-    case 'sqlite':
-      // TODO: Implement SQLite adapter
-      throw new PersistenceError(
-        'SQLite adapter not yet implemented',
-        PersistenceErrorCode.INVALID_FORMAT
-      );
-
     case 'postgres':
-      // TODO: Implement PostgreSQL adapter
+      adapter = new PostgresAdapter();
+      break;
+
+    case 'memory':
+    case 'sqlite':
       throw new PersistenceError(
-        'PostgreSQL adapter not yet implemented',
+        `${config.adapter} adapter not available. Use 'filesystem' (simple) or 'postgres' (production).`,
         PersistenceErrorCode.INVALID_FORMAT
       );
 
     default:
       throw new PersistenceError(
-        `Unknown adapter type: ${config.adapter as string}`,
+        `Unknown adapter type: ${config.adapter as string}. Use 'filesystem' or 'postgres'.`,
         PersistenceErrorCode.INVALID_FORMAT
       );
   }
@@ -68,24 +82,6 @@ export function getDefaultConfig(adapter: PersistenceConfig['adapter']): Persist
         },
       };
 
-    case 'memory':
-      return {
-        adapter: 'memory',
-        options: {
-          maxSize: 100 * 1024 * 1024, // 100MB
-          autoSave: false,
-        },
-      };
-
-    case 'sqlite':
-      return {
-        adapter: 'sqlite',
-        options: {
-          path: 'creative-thinking.db',
-          autoSave: true,
-        },
-      };
-
     case 'postgres':
       return {
         adapter: 'postgres',
@@ -94,5 +90,24 @@ export function getDefaultConfig(adapter: PersistenceConfig['adapter']): Persist
           autoSave: true,
         },
       };
+
+    case 'memory':
+      // Memory adapter requested - return special config that SessionPersistence will handle
+      return {
+        adapter: 'memory',
+        options: {},
+      };
+
+    case 'sqlite':
+      throw new PersistenceError(
+        `sqlite adapter not available. Use 'filesystem' or 'postgres'.`,
+        PersistenceErrorCode.INVALID_FORMAT
+      );
+
+    default:
+      throw new PersistenceError(
+        `Unknown adapter type: ${adapter as string}. Use 'filesystem' or 'postgres'.`,
+        PersistenceErrorCode.INVALID_FORMAT
+      );
   }
 }
