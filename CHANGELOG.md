@@ -9,6 +9,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **PostgreSQL Persistence Adapter** (#237) - Production-ready database storage for session state
+  - Multi-server horizontal scaling with shared session state
+  - Crash recovery with persistent sessions across server restarts
+  - JSONB storage for flexible schema and efficient querying
+  - Full-text search with GIN indexes for advanced queries
+  - Automatic session TTL with 24-hour expiry
+  - Transaction support for batch operations
+  - Connection pooling for production deployments
+  - Comprehensive test suite with 27 unit tests
+  - Optional dependency (pg) - only installed when needed
 - **Part VII Advanced Techniques (Continued)** - Implemented three more techniques from Part VII
   - **Paradoxical Problem Solving** (#156) - Finds breakthrough solutions through contradiction
     exploration
@@ -31,6 +41,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Persistence Architecture** - Simplified from 4-adapter pattern to 2-backend approach
+  - Removed: Memory and SQLite adapters (over-engineered for actual use cases)
+  - Kept: Filesystem (simple deployments) and PostgreSQL (production scaling)
+  - Design rationale: Active session storage vs. historical analytics are separate concerns
+  - Future: Analytics storage will be implemented as separate feature (see Issue #241)
 - **Total Techniques** - Increased from 16 to 19 enhanced thinking techniques
 - **Memory Growth Threshold** - Adjusted stress test memory limit from 50MB to 70MB to account for
   19 techniques
