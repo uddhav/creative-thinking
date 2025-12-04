@@ -30,6 +30,25 @@ export interface MemoryStats {
     newestSession: number;
 }
 /**
+ * Warning types for reflexivity tracking
+ */
+export type ReflexivityWarningType = 'constraint_threshold' | 'path_foreclosed' | 'low_reversibility';
+/**
+ * Warning levels for severity
+ */
+export type ReflexivityWarningLevel = 'info' | 'caution' | 'warning' | 'critical';
+/**
+ * Reflexivity warning for real-time feedback
+ */
+export interface ReflexivityWarning {
+    level: ReflexivityWarningLevel;
+    type: ReflexivityWarningType;
+    message: string;
+    currentConstraints: number;
+    pathsForeclosed: string[];
+    suggestions?: string[];
+}
+/**
  * Represents an action taken and its reflexive impact
  */
 export interface ActionRecord {
@@ -98,6 +117,11 @@ export declare class ReflexivityTracker {
      * Get action history for a session
      */
     getActionHistory(sessionId: string): ActionRecord[];
+    /**
+     * Generate warnings based on current reality state
+     * Returns null if no warning needed
+     */
+    generateWarning(sessionId: string): ReflexivityWarning | null;
     /**
      * Analyze action with timeout protection
      */

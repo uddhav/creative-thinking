@@ -26,6 +26,7 @@ import { monitorCriticalSection } from '../../utils/PerformanceIntegration.js';
 import { TelemetryCollector } from '../../telemetry/TelemetryCollector.js';
 import { SessionCompletionTracker } from '../../core/session/SessionCompletionTracker.js';
 import type { SessionManager } from '../../core/SessionManager.js';
+import type { ReflexivityWarning } from '../../core/ReflexivityTracker.js';
 
 interface ComplexitySuggestion {
   complexityNote: string;
@@ -141,7 +142,13 @@ export class ExecutionResponseBuilder {
     );
 
     // Enhance with flexibility and warnings
-    this.enhanceWithFlexibilityAndWarnings(responseData, currentFlexibility, input, session);
+    this.enhanceWithFlexibilityAndWarnings(
+      responseData,
+      currentFlexibility,
+      input,
+      session,
+      sessionId
+    );
 
     // Track flexibility warnings
     if (currentFlexibility < 0.4) {
@@ -370,11 +377,12 @@ export class ExecutionResponseBuilder {
     parsedResponse: Record<string, unknown>,
     currentFlexibility: number,
     input: ExecuteThinkingStepInput,
-    session: SessionData
+    session: SessionData,
+    sessionId: string
   ): void {
     this.addFlexibilityInfo(parsedResponse, currentFlexibility, input.alternativeSuggestions);
     this.addPathAnalysis(parsedResponse, session.pathMemory, currentFlexibility);
-    this.addWarnings(parsedResponse, session);
+    this.addWarnings(parsedResponse, session, sessionId);
   }
 
   /**
@@ -633,7 +641,11 @@ export class ExecutionResponseBuilder {
     }
   }
 
-  private addWarnings(parsedResponse: Record<string, unknown>, session: SessionData): void {
+  private addWarnings(
+    parsedResponse: Record<string, unknown>,
+    session: SessionData,
+    sessionId: string
+  ): void {
     if (session.earlyWarningState && session.earlyWarningState.activeWarnings.length > 0) {
       parsedResponse.earlyWarningState = {
         activeWarnings: session.earlyWarningState.activeWarnings.map(w => ({
@@ -650,6 +662,36 @@ export class ExecutionResponseBuilder {
         steps: session.escapeRecommendation.steps.slice(0, 3),
         recommendation: 'Consider these alternative approaches to regain flexibility.',
       };
+    }
+
+    // Add reflexivity warnings if available
+    if (this.sessionManager && process.env.DISABLE_REFLEXIVITY_WARNINGS !== 'true') {
+      try {
+        // Using type guard to safely access reflexivityTracker
+        const sessionManagerWithTracker = this.sessionManager as unknown as {
+          reflexivityTracker?: {
+            generateWarning: (sessionId: string) => ReflexivityWarning | null;
+          };
+        };
+        const reflexivityTracker = sessionManagerWithTracker.reflexivityTracker;
+        if (reflexivityTracker && typeof reflexivityTracker.generateWarning === 'function') {
+          const reflexivityWarning: ReflexivityWarning | null =
+            reflexivityTracker.generateWarning(sessionId);
+          if (reflexivityWarning) {
+            parsedResponse.reflexivityWarning = {
+              level: reflexivityWarning.level,
+              type: reflexivityWarning.type,
+              message: reflexivityWarning.message,
+              constraintCount: reflexivityWarning.currentConstraints,
+              pathsForeclosed: reflexivityWarning.pathsForeclosed.slice(0, 5), // Limit to first 5
+              suggestions: reflexivityWarning.suggestions,
+            };
+          }
+        }
+      } catch {
+        // Silently ignore errors to avoid breaking response building
+        // Warnings are informational only
+      }
     }
   }
 

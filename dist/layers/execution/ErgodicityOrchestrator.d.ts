@@ -17,8 +17,9 @@ export interface ErgodicityOrchestrationResult {
 export declare class ErgodicityOrchestrator {
     private visualFormatter;
     private ergodicityManager;
+    private sessionManager?;
     private resultAdapter;
-    constructor(visualFormatter: VisualFormatter, ergodicityManager: ErgodicityManager);
+    constructor(visualFormatter: VisualFormatter, ergodicityManager: ErgodicityManager, sessionManager?: unknown | undefined);
     /**
      * Check and display ergodicity prompts
      */

@@ -58,7 +58,11 @@ export async function executeThinkingStep(
     visualFormatter
   );
   const riskAssessmentOrchestrator = new RiskAssessmentOrchestrator(visualFormatter);
-  const ergodicityOrchestrator = new ErgodicityOrchestrator(visualFormatter, ergodicityManager);
+  const ergodicityOrchestrator = new ErgodicityOrchestrator(
+    visualFormatter,
+    ergodicityManager,
+    sessionManager
+  );
   const executionResponseBuilder = new ExecutionResponseBuilder(
     complexityAnalyzer,
     new EscalationPromptGenerator(),

@@ -9,10 +9,13 @@ import { ErgodicityResultAdapter } from './ErgodicityResultAdapter.js';
 export class ErgodicityOrchestrator {
     visualFormatter;
     ergodicityManager;
+    sessionManager;
     resultAdapter = new ErgodicityResultAdapter();
-    constructor(visualFormatter, ergodicityManager) {
+    constructor(visualFormatter, ergodicityManager, sessionManager // SessionManager - using unknown to avoid circular dependency
+    ) {
         this.visualFormatter = visualFormatter;
         this.ergodicityManager = ergodicityManager;
+        this.sessionManager = sessionManager;
     }
     /**
      * Check and display ergodicity prompts
@@ -56,6 +59,30 @@ export class ErgodicityOrchestrator {
             const flexibilityWarning = this.visualFormatter.formatFlexibilityWarning(currentFlexibility, input.alternativeSuggestions);
             if (flexibilityWarning) {
                 process.stderr.write('\n' + flexibilityWarning + '\n');
+            }
+        }
+        // Display reflexivity warning if available and not disabled
+        if (this.sessionManager &&
+            process.env.DISABLE_REFLEXIVITY_WARNINGS !== 'true' &&
+            process.env.DISABLE_THOUGHT_LOGGING !== 'true') {
+            try {
+                // Access reflexivity tracker through sessionManager
+                // Using type guard to safely access reflexivityTracker
+                const sessionManagerWithTracker = this.sessionManager;
+                const reflexivityTracker = sessionManagerWithTracker.reflexivityTracker;
+                if (reflexivityTracker && typeof reflexivityTracker.generateWarning === 'function') {
+                    const reflexivityWarning = reflexivityTracker.generateWarning(sessionId);
+                    if (reflexivityWarning) {
+                        const warningDisplay = this.visualFormatter.formatReflexivityWarning(reflexivityWarning);
+                        if (warningDisplay) {
+                            process.stderr.write('\n' + warningDisplay + '\n');
+                        }
+                    }
+                }
+            }
+            catch {
+                // Silently ignore errors to avoid breaking execution
+                // Warnings are informational only
             }
         }
         // Display escape recommendations if available

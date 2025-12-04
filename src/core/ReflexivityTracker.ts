@@ -100,6 +100,31 @@ export interface MemoryStats {
 }
 
 /**
+ * Warning types for reflexivity tracking
+ */
+export type ReflexivityWarningType =
+  | 'constraint_threshold'
+  | 'path_foreclosed'
+  | 'low_reversibility';
+
+/**
+ * Warning levels for severity
+ */
+export type ReflexivityWarningLevel = 'info' | 'caution' | 'warning' | 'critical';
+
+/**
+ * Reflexivity warning for real-time feedback
+ */
+export interface ReflexivityWarning {
+  level: ReflexivityWarningLevel;
+  type: ReflexivityWarningType;
+  message: string;
+  currentConstraints: number;
+  pathsForeclosed: string[];
+  suggestions?: string[];
+}
+
+/**
  * Represents an action taken and its reflexive impact
  */
 export interface ActionRecord {
@@ -508,6 +533,62 @@ export class ReflexivityTracker {
    */
   public getActionHistory(sessionId: string): ActionRecord[] {
     return this.actionHistory.get(sessionId) || [];
+  }
+
+  /**
+   * Generate warnings based on current reality state
+   * Returns null if no warning needed
+   */
+  public generateWarning(sessionId: string): ReflexivityWarning | null {
+    const state = this.getRealityState(sessionId);
+    if (!state) {
+      return null;
+    }
+
+    const constraintCount = state.constraintCount || 0;
+    const pathsForeclosed = state.pathsForeclosed;
+
+    // Determine warning level based on constraint count
+    let level: ReflexivityWarningLevel;
+    let type: ReflexivityWarningType;
+    let message: string;
+    const suggestions: string[] = [];
+
+    // Critical level: > 10 constraints
+    if (constraintCount > REFLEXIVITY_CONFIG.CAUTION_CONSTRAINT_THRESHOLD) {
+      level = 'critical';
+      type = 'constraint_threshold';
+      message = `Critical: ${constraintCount} constraints accumulated. Reality highly constrained.`;
+      suggestions.push(
+        'Consider escape protocols to preserve future flexibility',
+        'Document assumptions that led to these constraints',
+        'Evaluate if any constraints can be temporarily relaxed'
+      );
+    }
+    // Warning level: > 5 constraints
+    else if (constraintCount > REFLEXIVITY_CONFIG.WARNING_CONSTRAINT_THRESHOLD) {
+      level = 'warning';
+      type = 'constraint_threshold';
+      message = `Warning: ${constraintCount} constraints detected. Path dependencies building.`;
+      suggestions.push(
+        'Generate alternative approaches before committing further',
+        'Review recent decisions for irreversibility',
+        'Consider parallel exploration of options'
+      );
+    }
+    // No warning needed
+    else {
+      return null;
+    }
+
+    return {
+      level,
+      type,
+      message,
+      currentConstraints: constraintCount,
+      pathsForeclosed,
+      suggestions,
+    };
   }
 
   /**

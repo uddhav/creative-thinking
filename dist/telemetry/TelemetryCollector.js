@@ -143,6 +143,25 @@ export class TelemetryCollector {
         });
     }
     /**
+     * Track technique pair usage for complementarity learning
+     */
+    async trackTechniquePair(sessionId, technique1, technique2, completionRate, effectiveness) {
+        await this.trackEvent('technique_pair_used', sessionId, {
+            pairSequence: [technique1, technique2],
+            pairCompletionRate: completionRate,
+            pairEffectiveness: effectiveness,
+        });
+    }
+    /**
+     * Track technique recommendation for effectiveness learning
+     */
+    async trackTechniqueRecommendation(sessionId, recommendedTechniques, selectedTechnique) {
+        await this.trackEvent('technique_recommended', sessionId, {
+            recommendedTechniques,
+            selectedTechnique,
+        });
+    }
+    /**
      * Flush buffered events to storage
      */
     async flush() {
