@@ -26,7 +26,7 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
     // Initialize orchestrators
     const executionValidator = new ExecutionValidator(sessionManager, techniqueRegistry, visualFormatter);
     const riskAssessmentOrchestrator = new RiskAssessmentOrchestrator(visualFormatter);
-    const ergodicityOrchestrator = new ErgodicityOrchestrator(visualFormatter, ergodicityManager);
+    const ergodicityOrchestrator = new ErgodicityOrchestrator(visualFormatter, ergodicityManager, sessionManager);
     const executionResponseBuilder = new ExecutionResponseBuilder(complexityAnalyzer, new EscalationPromptGenerator(), techniqueRegistry, sessionManager);
     // Initialize completion gatekeeper
     const completionGatekeeper = new CompletionGatekeeper();

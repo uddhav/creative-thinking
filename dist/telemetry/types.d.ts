@@ -6,7 +6,7 @@ import type { LateralTechnique } from '../types/index.js';
 /**
  * Telemetry event types
  */
-export type TelemetryEventType = 'technique_start' | 'technique_step' | 'technique_complete' | 'insight_generated' | 'risk_identified' | 'option_generated' | 'flexibility_warning' | 'escape_protocol_triggered' | 'session_start' | 'session_complete' | 'workflow_transition';
+export type TelemetryEventType = 'technique_start' | 'technique_step' | 'technique_complete' | 'insight_generated' | 'risk_identified' | 'option_generated' | 'flexibility_warning' | 'escape_protocol_triggered' | 'session_start' | 'session_complete' | 'workflow_transition' | 'technique_pair_used' | 'technique_recommended';
 /**
  * Telemetry data collection levels
  */
@@ -55,6 +55,11 @@ export interface TelemetryMetadata {
     escapeProtocol?: string;
     previousTechnique?: LateralTechnique;
     nextTechnique?: LateralTechnique;
+    recommendedTechniques?: LateralTechnique[];
+    selectedTechnique?: LateralTechnique;
+    pairSequence?: [LateralTechnique, LateralTechnique];
+    pairCompletionRate?: number;
+    pairEffectiveness?: number;
 }
 /**
  * Analytics query parameters

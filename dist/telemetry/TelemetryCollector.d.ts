@@ -59,6 +59,14 @@ export declare class TelemetryCollector {
      */
     trackWorkflowTransition(sessionId: string, fromTechnique: LateralTechnique, toTechnique: LateralTechnique): Promise<void>;
     /**
+     * Track technique pair usage for complementarity learning
+     */
+    trackTechniquePair(sessionId: string, technique1: LateralTechnique, technique2: LateralTechnique, completionRate?: number, effectiveness?: number): Promise<void>;
+    /**
+     * Track technique recommendation for effectiveness learning
+     */
+    trackTechniqueRecommendation(sessionId: string, recommendedTechniques: LateralTechnique[], selectedTechnique: LateralTechnique): Promise<void>;
+    /**
      * Flush buffered events to storage
      */
     flush(): Promise<void>;

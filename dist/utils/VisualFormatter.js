@@ -536,6 +536,72 @@ export class VisualFormatter {
         return lines.join('\n');
     }
     /**
+     * Format reflexivity warning for display
+     */
+    formatReflexivityWarning(warning) {
+        if (this.disableThoughtLogging) {
+            return '';
+        }
+        const lines = [];
+        const borderLength = this.maxLineLength;
+        // Determine color based on warning level
+        const color = warning.level === 'critical'
+            ? chalk.red
+            : warning.level === 'warning'
+                ? chalk.yellow
+                : warning.level === 'caution'
+                    ? chalk.blue
+                    : chalk.gray;
+        // Header
+        lines.push(color('┌' + '─'.repeat(borderLength - 2) + '┐'));
+        // Title
+        const icon = warning.level === 'critical' ? '🔴' : warning.level === 'warning' ? '⚠️' : '⚡';
+        const title = ` ${icon}  Reflexivity Alert: ${warning.currentConstraints} constraints `;
+        const titlePadding = Math.max(0, borderLength - title.length - 2);
+        lines.push(color('│') +
+            ' '.repeat(Math.floor(titlePadding / 2)) +
+            color.bold(title) +
+            ' '.repeat(Math.ceil(titlePadding / 2)) +
+            color('│'));
+        lines.push(color('├' + '─'.repeat(borderLength - 2) + '┤'));
+        // Message
+        this.wrapText(warning.message, borderLength - 4).forEach(line => {
+            lines.push(color('│') + ' ' + line.padEnd(borderLength - 4) + ' ' + color('│'));
+        });
+        // Show foreclosed paths if available
+        if (warning.pathsForeclosed && warning.pathsForeclosed.length > 0) {
+            lines.push(color('├' + '─'.repeat(borderLength - 2) + '┤'));
+            lines.push(color('│') +
+                ' ' +
+                chalk.bold('Foreclosed Paths:').padEnd(borderLength - 4) +
+                ' ' +
+                color('│'));
+            warning.pathsForeclosed.slice(0, 3).forEach(path => {
+                const pathText = `• ${path}`;
+                this.wrapText(pathText, borderLength - 6).forEach(line => {
+                    lines.push(color('│') + '  ' + line.padEnd(borderLength - 5) + ' ' + color('│'));
+                });
+            });
+            if (warning.pathsForeclosed.length > 3) {
+                const moreText = `... and ${warning.pathsForeclosed.length - 3} more`;
+                lines.push(color('│') + '  ' + moreText.padEnd(borderLength - 5) + ' ' + color('│'));
+            }
+        }
+        // Show suggestions if available
+        if (warning.suggestions && warning.suggestions.length > 0) {
+            lines.push(color('├' + '─'.repeat(borderLength - 2) + '┤'));
+            lines.push(color('│') + ' ' + chalk.bold('Suggestions:').padEnd(borderLength - 4) + ' ' + color('│'));
+            warning.suggestions.forEach((suggestion, i) => {
+                const suggestionText = `${i + 1}. ${suggestion}`;
+                this.wrapText(suggestionText, borderLength - 6).forEach(line => {
+                    lines.push(color('│') + '  ' + line.padEnd(borderLength - 5) + ' ' + color('│'));
+                });
+            });
+        }
+        lines.push(color('└' + '─'.repeat(borderLength - 2) + '┘'));
+        return lines.join('\n');
+    }
+    /**
      * Format escape recommendations for display
      */
     formatEscapeRecommendations(routes) {

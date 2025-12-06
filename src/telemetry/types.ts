@@ -19,7 +19,9 @@ export type TelemetryEventType =
   | 'escape_protocol_triggered'
   | 'session_start'
   | 'session_complete'
-  | 'workflow_transition';
+  | 'workflow_transition'
+  | 'technique_pair_used' // Track which techniques follow each other
+  | 'technique_recommended'; // Track which techniques were recommended vs selected
 
 /**
  * Telemetry data collection levels
@@ -83,6 +85,13 @@ export interface TelemetryMetadata {
   escapeProtocol?: string;
   previousTechnique?: LateralTechnique;
   nextTechnique?: LateralTechnique;
+
+  // Technique pairing and recommendation tracking
+  recommendedTechniques?: LateralTechnique[]; // What was recommended
+  selectedTechnique?: LateralTechnique; // What user selected
+  pairSequence?: [LateralTechnique, LateralTechnique]; // Technique pair used together
+  pairCompletionRate?: number; // Did the pairing lead to completion?
+  pairEffectiveness?: number; // Combined effectiveness score
 }
 
 /**

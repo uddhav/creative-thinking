@@ -235,6 +235,37 @@ export class TelemetryCollector {
   }
 
   /**
+   * Track technique pair usage for complementarity learning
+   */
+  async trackTechniquePair(
+    sessionId: string,
+    technique1: LateralTechnique,
+    technique2: LateralTechnique,
+    completionRate?: number,
+    effectiveness?: number
+  ): Promise<void> {
+    await this.trackEvent('technique_pair_used', sessionId, {
+      pairSequence: [technique1, technique2],
+      pairCompletionRate: completionRate,
+      pairEffectiveness: effectiveness,
+    } as TelemetryMetadata);
+  }
+
+  /**
+   * Track technique recommendation for effectiveness learning
+   */
+  async trackTechniqueRecommendation(
+    sessionId: string,
+    recommendedTechniques: LateralTechnique[],
+    selectedTechnique: LateralTechnique
+  ): Promise<void> {
+    await this.trackEvent('technique_recommended', sessionId, {
+      recommendedTechniques,
+      selectedTechnique,
+    } as TelemetryMetadata);
+  }
+
+  /**
    * Flush buffered events to storage
    */
   async flush(): Promise<void> {

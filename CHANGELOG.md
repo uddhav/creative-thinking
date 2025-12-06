@@ -9,6 +9,21 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Real-time Reflexivity Warnings** (#238) - Passive warnings during execution about path
+  dependencies
+  - Monitors reflexivity constraint thresholds (5+ warning, 10+ critical)
+  - Visual warnings via stderr with color-coded severity levels
+  - JSON response includes reflexivity state for programmatic access
+  - Configurable via `DISABLE_REFLEXIVITY_WARNINGS` environment variable
+  - Non-blocking passive output maintains execution flow
+  - Suggestions provided for constraint management
+  - Foreclosed paths displayed with warning context
+- **Telemetry Event Types for Complementarity Learning** (#241 - partial)
+  - Added `technique_pair_used` event type for tracking technique combinations
+  - Added `technique_recommended` event type for recommendation effectiveness
+  - New metadata fields: `pairSequence`, `pairCompletionRate`, `pairEffectiveness`
+  - `trackTechniquePair()` and `trackTechniqueRecommendation()` methods in TelemetryCollector
+  - Foundation for future complementarity learning system
 - **PostgreSQL Persistence Adapter** (#237) - Production-ready database storage for session state
   - Multi-server horizontal scaling with shared session state
   - Crash recovery with persistent sessions across server restarts

@@ -90,6 +90,16 @@ export declare class VisualFormatter {
      */
     formatFlexibilityWarning(flexibility: number, alternatives?: string[]): string;
     /**
+     * Format reflexivity warning for display
+     */
+    formatReflexivityWarning(warning: {
+        level: 'info' | 'caution' | 'warning' | 'critical';
+        message: string;
+        currentConstraints: number;
+        pathsForeclosed: string[];
+        suggestions?: string[];
+    }): string;
+    /**
      * Format escape recommendations for display
      */
     formatEscapeRecommendations(routes: Array<{

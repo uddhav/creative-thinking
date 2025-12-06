@@ -354,6 +354,49 @@ export class ReflexivityTracker {
         return this.actionHistory.get(sessionId) || [];
     }
     /**
+     * Generate warnings based on current reality state
+     * Returns null if no warning needed
+     */
+    generateWarning(sessionId) {
+        const state = this.getRealityState(sessionId);
+        if (!state) {
+            return null;
+        }
+        const constraintCount = state.constraintCount || 0;
+        const pathsForeclosed = state.pathsForeclosed;
+        // Determine warning level based on constraint count
+        let level;
+        let type;
+        let message;
+        const suggestions = [];
+        // Critical level: > 10 constraints
+        if (constraintCount > REFLEXIVITY_CONFIG.CAUTION_CONSTRAINT_THRESHOLD) {
+            level = 'critical';
+            type = 'constraint_threshold';
+            message = `Critical: ${constraintCount} constraints accumulated. Reality highly constrained.`;
+            suggestions.push('Consider escape protocols to preserve future flexibility', 'Document assumptions that led to these constraints', 'Evaluate if any constraints can be temporarily relaxed');
+        }
+        // Warning level: > 5 constraints
+        else if (constraintCount > REFLEXIVITY_CONFIG.WARNING_CONSTRAINT_THRESHOLD) {
+            level = 'warning';
+            type = 'constraint_threshold';
+            message = `Warning: ${constraintCount} constraints detected. Path dependencies building.`;
+            suggestions.push('Generate alternative approaches before committing further', 'Review recent decisions for irreversibility', 'Consider parallel exploration of options');
+        }
+        // No warning needed
+        else {
+            return null;
+        }
+        return {
+            level,
+            type,
+            message,
+            currentConstraints: constraintCount,
+            pathsForeclosed,
+            suggestions,
+        };
+    }
+    /**
      * Analyze action with timeout protection
      */
     async analyzeActionWithTimeout(proposedAction, timeout = 5000) {
