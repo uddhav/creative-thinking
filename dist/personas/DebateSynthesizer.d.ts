@@ -42,8 +42,10 @@ export declare class DebateSynthesizer {
      * Generate actionable synthesis text
      */
     private generateSynthesis;
+    /** Common structural words that shouldn't count as thematic overlap */
+    private static readonly STOP_WORDS;
     /**
-     * Extract keyword set from an argument string (cached per call)
+     * Extract keyword set from an argument string, filtering stop words
      */
     private extractKeywords;
     /**

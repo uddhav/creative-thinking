@@ -170,6 +170,19 @@ describe('DebateOrchestrator', () => {
     });
   });
 
+  describe('synthesis plan step count', () => {
+    it('should match the registered competing_hypotheses handler totalSteps', () => {
+      const personas = [BUILTIN_PERSONAS.rich_hickey, BUILTIN_PERSONAS.joe_armstrong];
+      const result = orchestrator.createDebateStructure('Test', personas, registry);
+
+      const handler = registry.getHandler('competing_hypotheses');
+      const expectedSteps = handler.getTechniqueInfo().totalSteps;
+      const actualSteps = result.synthesisPlan.workflow[0].steps.length;
+
+      expect(actualSteps).toBe(expectedSteps);
+    });
+  });
+
   describe('available technique filtering', () => {
     it('should filter persona techniques to available techniques when specified', () => {
       const personas = [BUILTIN_PERSONAS.rich_hickey];

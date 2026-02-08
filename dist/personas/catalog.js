@@ -7,6 +7,7 @@
 import { readFileSync, existsSync, statSync } from 'fs';
 import { resolve } from 'path';
 import { ALL_LATERAL_TECHNIQUES } from '../types/index.js';
+import { logger } from '../utils/Logger.js';
 export const BUILTIN_PERSONAS = {
     rory_sutherland: {
         id: 'rory_sutherland',
@@ -400,28 +401,28 @@ export function loadExternalPersonas(path) {
     try {
         // Reject empty paths and null byte injection
         if (!path || path.includes('\0')) {
-            console.error('[Personas] Invalid external persona path rejected');
+            logger.error('[Personas] Invalid external persona path rejected');
             return {};
         }
         // Resolve to absolute path and reject path traversal
         const absolutePath = resolve(path);
         if (absolutePath.includes('..') || path.includes('..')) {
-            console.error('[Personas] Path traversal rejected in external persona path');
+            logger.error('[Personas] Path traversal rejected in external persona path');
             return {};
         }
         // Verify file exists and is a regular file (not a device, socket, etc.)
         if (!existsSync(absolutePath)) {
-            console.error('[Personas] External persona file does not exist');
+            logger.error('[Personas] External persona file does not exist');
             return {};
         }
         const stats = statSync(absolutePath);
         if (!stats.isFile()) {
-            console.error('[Personas] External persona path is not a regular file');
+            logger.error('[Personas] External persona path is not a regular file');
             return {};
         }
         // Check file size to prevent DoS via huge files
         if (stats.size > MAX_EXTERNAL_FILE_SIZE) {
-            console.error('[Personas] External persona file too large (max 1MB)');
+            logger.error('[Personas] External persona file too large (max 1MB)');
             return {};
         }
         const raw = readFileSync(absolutePath, 'utf-8');
@@ -433,7 +434,7 @@ export function loadExternalPersonas(path) {
                 result[id] = sanitizePersonaDefinition(def);
             }
             else {
-                console.error(`[Personas] Invalid persona definition for "${sanitizePersonaString(id, 50)}", skipping`);
+                logger.error(`[Personas] Invalid persona definition for "${sanitizePersonaString(id, 50)}", skipping`);
             }
         }
         return result;
@@ -441,7 +442,7 @@ export function loadExternalPersonas(path) {
     catch (error) {
         // Don't leak path details in error messages
         const message = error instanceof SyntaxError ? 'invalid JSON' : 'read error';
-        console.error(`[Personas] Failed to load external personas: ${message}`);
+        logger.error(`[Personas] Failed to load external personas: ${message}`);
         return {};
     }
 }
@@ -464,7 +465,7 @@ export function getMergedCatalog() {
         // Log warnings when external personas override built-in ones
         for (const id of Object.keys(external)) {
             if (id in BUILTIN_PERSONAS) {
-                console.error(`[Personas] Warning: External persona "${id}" overrides built-in persona`);
+                logger.warn(`[Personas] External persona "${id}" overrides built-in persona`);
             }
         }
         catalogCache = { ...BUILTIN_PERSONAS, ...external };

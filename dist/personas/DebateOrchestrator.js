@@ -6,8 +6,11 @@
  */
 import { randomUUID } from 'crypto';
 import { PersonaGuidanceInjector } from './PersonaGuidanceInjector.js';
+import { logger } from '../utils/Logger.js';
 /** Default fallback techniques when persona bias yields no matches */
 const DEFAULT_DEBATE_TECHNIQUES = ['six_hats', 'first_principles'];
+/** Fallback step count when competing_hypotheses handler is unavailable */
+const COMPETING_HYPOTHESES_DEFAULT_STEPS = 8;
 export class DebateOrchestrator {
     /**
      * Create a complete debate structure for the given personas
@@ -118,7 +121,8 @@ export class DebateOrchestrator {
         }
         else {
             // Fallback if competing_hypotheses handler isn't available
-            totalSteps = 8;
+            totalSteps = COMPETING_HYPOTHESES_DEFAULT_STEPS;
+            logger.warn(`competing_hypotheses handler not found in registry; using default ${COMPETING_HYPOTHESES_DEFAULT_STEPS} steps for synthesis plan`);
         }
         const synthesisHeader = PersonaGuidanceInjector.createDebateSynthesisHeader(personas);
         const steps = [];

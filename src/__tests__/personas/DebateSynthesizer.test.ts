@@ -194,7 +194,7 @@ describe('DebateSynthesizer', () => {
         BUILTIN_PERSONAS.joe_armstrong,
       ]);
 
-      // "robust" and "testing" are both >4 chars and shared
+      // "robust" (6 chars) and "testing" (7 chars) are shared and not stop words
       expect(result.agreements.length).toBeGreaterThan(0);
     });
 
@@ -215,6 +215,44 @@ describe('DebateSynthesizer', () => {
 
       // Should not crash on special characters
       expect(result).toBeDefined();
+    });
+
+    it('should NOT find agreement when shared words are only structural stop words', () => {
+      const positions: PersonaPosition[] = [
+        makePosition('a', 'Persona A', {
+          keyArguments: ['Managing system complexity through process change'],
+        }),
+        makePosition('b', 'Persona B', {
+          keyArguments: ['System access control through approach change'],
+        }),
+      ];
+
+      const result = synthesizer.synthesize('Topic', positions, [
+        BUILTIN_PERSONAS.rich_hickey,
+        BUILTIN_PERSONAS.joe_armstrong,
+      ]);
+
+      // "system", "through", "change", "approach", "process" are all stop words
+      expect(result.agreements).toHaveLength(0);
+    });
+
+    it('should find agreement when arguments share genuine thematic keywords', () => {
+      const positions: PersonaPosition[] = [
+        makePosition('a', 'Persona A', {
+          keyArguments: ['Implementing circuit breakers improves resilience'],
+        }),
+        makePosition('b', 'Persona B', {
+          keyArguments: ['Circuit breakers and resilience patterns matter'],
+        }),
+      ];
+
+      const result = synthesizer.synthesize('Topic', positions, [
+        BUILTIN_PERSONAS.rich_hickey,
+        BUILTIN_PERSONAS.joe_armstrong,
+      ]);
+
+      // "circuit", "breakers", "resilience" are meaningful overlapping keywords
+      expect(result.agreements.length).toBeGreaterThan(0);
     });
 
     it('should handle empty argument lists', () => {

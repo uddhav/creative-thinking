@@ -16,6 +16,7 @@ import type {
 import type { LateralTechnique } from '../types/index.js';
 import type { TechniqueRegistry } from '../techniques/TechniqueRegistry.js';
 import { PersonaGuidanceInjector } from './PersonaGuidanceInjector.js';
+import { logger } from '../utils/Logger.js';
 
 export interface DebateStructure {
   personaPlans: ParallelPlan[];
@@ -25,6 +26,9 @@ export interface DebateStructure {
 
 /** Default fallback techniques when persona bias yields no matches */
 const DEFAULT_DEBATE_TECHNIQUES: LateralTechnique[] = ['six_hats', 'first_principles'];
+
+/** Fallback step count when competing_hypotheses handler is unavailable */
+const COMPETING_HYPOTHESES_DEFAULT_STEPS = 8;
 
 export class DebateOrchestrator {
   /**
@@ -207,7 +211,10 @@ export class DebateOrchestrator {
       totalSteps = handler.getTechniqueInfo().totalSteps;
     } else {
       // Fallback if competing_hypotheses handler isn't available
-      totalSteps = 8;
+      totalSteps = COMPETING_HYPOTHESES_DEFAULT_STEPS;
+      logger.warn(
+        `competing_hypotheses handler not found in registry; using default ${COMPETING_HYPOTHESES_DEFAULT_STEPS} steps for synthesis plan`
+      );
     }
 
     const synthesisHeader = PersonaGuidanceInjector.createDebateSynthesisHeader(personas);

@@ -173,15 +173,51 @@ export class DebateSynthesizer {
     return lines.join('\n');
   }
 
+  /** Common structural words that shouldn't count as thematic overlap */
+  private static readonly STOP_WORDS = new Set([
+    'should',
+    'would',
+    'could',
+    'using',
+    'about',
+    'being',
+    'every',
+    'their',
+    'these',
+    'those',
+    'which',
+    'while',
+    'through',
+    'system',
+    'approach',
+    'process',
+    'problem',
+    'solution',
+    'result',
+    'method',
+    'based',
+    'level',
+    'change',
+    'makes',
+    'needs',
+    'point',
+    'thing',
+    'think',
+    'might',
+    'still',
+    'going',
+  ]);
+
   /**
-   * Extract keyword set from an argument string (cached per call)
+   * Extract keyword set from an argument string, filtering stop words
    */
   private extractKeywords(arg: string): Set<string> {
     return new Set(
       arg
         .toLowerCase()
+        .replace(/[^a-z\s]/g, ' ')
         .split(/\s+/)
-        .filter(w => w.length > 4)
+        .filter(w => w.length > 4 && !DebateSynthesizer.STOP_WORDS.has(w))
     );
   }
 
