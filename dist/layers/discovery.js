@@ -6,11 +6,34 @@ import { ProblemAnalyzer } from './discovery/ProblemAnalyzer.js';
 import { TechniqueRecommender } from './discovery/TechniqueRecommender.js';
 import { WorkflowBuilder } from './discovery/WorkflowBuilder.js';
 import { MemoryContextGenerator } from './discovery/MemoryContextGenerator.js';
-// Create singleton instance for proper caching across requests
-// This ensures the techniqueInfoCache is reused, improving performance
+import { PersonaResolver } from '../personas/PersonaResolver.js';
+// Create singleton instances for proper caching across requests
+// This ensures the techniqueInfoCache and catalog cache are reused, improving performance
 const techniqueRecommender = new TechniqueRecommender();
-export function discoverTechniques(input, techniqueRegistry, complexityAnalyzer) {
-    const { problem, context, preferredOutcome, constraints, currentFlexibility } = input;
+const personaResolver = new PersonaResolver();
+export function discoverTechniques(input, techniqueRegistry, complexityAnalyzer, sessionManager) {
+    const { problem, context, preferredOutcome, constraints, currentFlexibility, persona, personas } = input;
+    // Resolve persona(s) if provided
+    const resolvedPersonas = [];
+    let effectivePreferredOutcome = preferredOutcome;
+    if (persona) {
+        const resolved = personaResolver.resolve(persona);
+        if (resolved) {
+            resolvedPersonas.push(resolved);
+            // Persona's preferred outcome overrides if no explicit preference given
+            if (!preferredOutcome) {
+                effectivePreferredOutcome = resolved.preferredOutcome;
+            }
+        }
+    }
+    if (personas && Array.isArray(personas)) {
+        for (const p of personas) {
+            const resolved = personaResolver.resolve(p);
+            if (resolved) {
+                resolvedPersonas.push(resolved);
+            }
+        }
+    }
     // Analyze problem complexity
     const fullText = `${problem} ${context || ''}`;
     const complexityAssessment = complexityAnalyzer.analyze(fullText);
@@ -21,7 +44,29 @@ export function discoverTechniques(input, techniqueRegistry, complexityAnalyzer)
     // Categorize the problem
     const problemCategory = problemAnalyzer.categorizeProblem(problem, context);
     // Get technique recommendations
-    const recommendations = techniqueRecommender.recommendTechniques(problemCategory, preferredOutcome, constraints, complexityAssessment.level, techniqueRegistry);
+    let recommendations = techniqueRecommender.recommendTechniques(problemCategory, effectivePreferredOutcome, constraints, complexityAssessment.level, techniqueRegistry);
+    // Apply persona technique bias to boost/demote recommendations
+    // 70/30 split ensures persona preferences influence but don't dominate recommendations
+    const BASE_WEIGHT = 0.7;
+    const PERSONA_BIAS_WEIGHT = 0.3;
+    if (resolvedPersonas.length > 0) {
+        const primaryPersona = resolvedPersonas[0];
+        const bias = primaryPersona.techniqueBias;
+        let biasApplied = false;
+        recommendations = recommendations.map(rec => {
+            const biasScore = bias[rec.technique];
+            if (biasScore !== undefined) {
+                biasApplied = true;
+                const boosted = rec.effectiveness * BASE_WEIGHT + biasScore * PERSONA_BIAS_WEIGHT;
+                return { ...rec, effectiveness: Math.min(1, boosted) };
+            }
+            return rec;
+        });
+        // Only re-sort if bias was actually applied
+        if (biasApplied) {
+            recommendations.sort((a, b) => b.effectiveness - a.effectiveness);
+        }
+    }
     // Build integration suggestions
     let integrationSuggestions = workflowBuilder.buildIntegrationSuggestions(recommendations.map(r => r.technique), complexityAssessment.level);
     // Create workflow if multiple techniques recommended
@@ -56,6 +101,22 @@ export function discoverTechniques(input, techniqueRegistry, complexityAnalyzer)
     };
     // Domain is always general - we don't pigeonhole into categories
     // No domain-specific warnings as we treat all problems generically
+    // Store recommendations in session manager for later tracking
+    if (sessionManager) {
+        const recommendedTechniques = recommendations.map(r => r.technique);
+        sessionManager.setLastRecommendations(problem, recommendedTechniques);
+    }
+    // Build persona context for output
+    const personaContext = resolvedPersonas.length > 0
+        ? {
+            activePersonas: resolvedPersonas.map(p => ({
+                id: p.id,
+                name: p.name,
+                tagline: p.tagline,
+            })),
+            isDebateMode: resolvedPersonas.length > 1,
+        }
+        : undefined;
     return {
         problem,
         problemCategory,
@@ -70,6 +131,7 @@ export function discoverTechniques(input, techniqueRegistry, complexityAnalyzer)
             flexibilityScore: currentFlexibility,
         },
         complexityAssessment: enhancedComplexityAssessment,
+        personaContext,
         problemAnalysis: {
             observation: memoryContextGenerator.generateObservation(problem, context, problemCategory, constraints),
             historicalRelevance: memoryContextGenerator.generateHistoricalRelevance(problemCategory, preferredOutcome),

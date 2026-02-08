@@ -249,16 +249,28 @@ describe('RandomEntryHandler', () => {
       // Check psychological category
       expect(handlerAny.roryModeStimuli.psychological).toContain('status anxiety');
       expect(handlerAny.roryModeStimuli.psychological).toContain('loss aversion');
+      expect(handlerAny.roryModeStimuli.psychological).toContain(
+        'rationality blindspot - what are we missing by being logical?'
+      );
 
       // Check contextual category
       expect(handlerAny.roryModeStimuli.contextual).toContain('expensive wine in cheap bottle');
 
       // Check perceptual category
       expect(handlerAny.roryModeStimuli.perceptual).toContain('progress illusion');
+      expect(handlerAny.roryModeStimuli.perceptual).toContain(
+        'costly signaling - spending visibly to prove trustworthiness'
+      );
 
       // Check counterintuitive category
       expect(handlerAny.roryModeStimuli.counterintuitive).toContain(
         'make it harder to increase value'
+      );
+      expect(handlerAny.roryModeStimuli.counterintuitive).toContain(
+        'design for your most extreme user, not your average one'
+      );
+      expect(handlerAny.roryModeStimuli.counterintuitive).toContain(
+        'dare to be trivial - what tiny change creates disproportionate value?'
       );
     });
   });

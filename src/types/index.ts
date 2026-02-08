@@ -196,6 +196,7 @@ export interface ExecuteThinkingStepInput {
   output: string;
   nextStepNeeded: boolean;
   autoSave?: boolean;
+  persona?: string; // Which persona is speaking (for debate mode)
 
   // Technique-specific fields
   hatColor?: SixHatsColor;
@@ -512,6 +513,9 @@ export interface ThinkingOperationData {
   // Session management
   autoSave?: boolean;
 
+  // Persona
+  persona?: string;
+
   // Neural State specific
   dominantNetwork?: 'dmn' | 'ecn';
   suppressionDepth?: number;
@@ -723,6 +727,9 @@ export interface Tool {
         required?: string[];
         minimum?: number;
         maximum?: number;
+        minLength?: number;
+        maxLength?: number;
+        maxItems?: number;
         default?: unknown;
       }
     >;

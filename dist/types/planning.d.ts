@@ -74,6 +74,9 @@ export interface DiscoverTechniquesInput {
     sessionId?: string;
     executionMode?: ExecutionMode;
     maxParallelism?: number;
+    persona?: string;
+    personas?: string[];
+    debateTopic?: string;
 }
 export interface DiscoverTechniquesOutput {
     problem: string;
@@ -119,6 +122,14 @@ export interface DiscoverTechniquesOutput {
         level: 'low' | 'medium' | 'high';
         factors: string[];
         suggestion?: string;
+    };
+    personaContext?: {
+        activePersonas: Array<{
+            id: string;
+            name: string;
+            tagline: string;
+        }>;
+        isDebateMode: boolean;
     };
     problemAnalysis?: {
         observation: string;
@@ -223,6 +234,9 @@ export interface PlanThinkingSessionInput {
     executionMode?: ExecutionMode;
     maxParallelism?: number;
     parallelizationStrategy?: ParallelizationStrategy;
+    persona?: string;
+    personas?: string[];
+    debateFormat?: 'structured' | 'adversarial' | 'collaborative';
 }
 export interface PlanThinkingSessionOutput {
     planId: string;
@@ -268,5 +282,21 @@ export interface PlanThinkingSessionOutput {
     parallelPlans?: ParallelPlan[];
     coordinationStrategy?: CoordinationStrategy;
     parallelGroupIds?: string[];
+    personaContext?: {
+        activePersonas: Array<{
+            id: string;
+            name: string;
+            tagline: string;
+        }>;
+        isDebateMode: boolean;
+    };
+    debateOutline?: {
+        personaPlans: Array<{
+            personaId: string;
+            planId: string;
+            techniques: LateralTechnique[];
+        }>;
+        synthesisPlanId?: string;
+    };
 }
 //# sourceMappingURL=planning.d.ts.map

@@ -134,6 +134,64 @@ export class PromptsHandler {
                     },
                 ],
             },
+            {
+                name: 'persona-thinking',
+                description: 'Solve a problem through the lens of a specific thinking personality',
+                arguments: [
+                    {
+                        name: 'problem',
+                        description: 'The problem or challenge to solve',
+                        required: true,
+                    },
+                    {
+                        name: 'persona',
+                        description: 'Thinking personality: rory_sutherland, rich_hickey, joe_armstrong, tarantino, security_engineer, veritasium, design_thinker, nassim_taleb, or custom:description',
+                        required: true,
+                    },
+                    {
+                        name: 'depth',
+                        description: 'How thorough: quick, thorough, or comprehensive',
+                        required: false,
+                    },
+                ],
+            },
+            {
+                name: 'persona-debate',
+                description: 'Stage a debate between multiple thinking personalities on a problem',
+                arguments: [
+                    {
+                        name: 'problem',
+                        description: 'The problem or topic for debate',
+                        required: true,
+                    },
+                    {
+                        name: 'personas',
+                        description: 'Comma-separated list of personas (e.g., "rich_hickey,joe_armstrong,nassim_taleb")',
+                        required: true,
+                    },
+                    {
+                        name: 'format',
+                        description: 'Debate format: structured, adversarial, or collaborative',
+                        required: false,
+                    },
+                ],
+            },
+            {
+                name: 'rory-mode',
+                description: "Apply Rory Sutherland's behavioral economics lens to find counterintuitive solutions",
+                arguments: [
+                    {
+                        name: 'problem',
+                        description: 'The problem to analyze through a behavioral economics lens',
+                        required: true,
+                    },
+                    {
+                        name: 'focus_rules',
+                        description: 'Comma-separated rule numbers to focus on (1-11). Leave empty for automatic selection',
+                        required: false,
+                    },
+                ],
+            },
         ];
     }
     /**
@@ -263,6 +321,66 @@ export class PromptsHandler {
                             content: {
                                 type: 'text',
                                 text: "I'll guide you through temporal creativity analysis, tracking how decisions create constraints and close options over time, while maintaining creative flexibility.",
+                            },
+                        },
+                    ],
+                };
+            case 'persona-thinking':
+                return {
+                    description: prompt.description || '',
+                    messages: [
+                        {
+                            role: 'user',
+                            content: {
+                                type: 'text',
+                                text: 'Solve this problem through the lens of {{persona}}: {{problem}}. Depth: {{depth}}.',
+                            },
+                        },
+                        {
+                            role: 'assistant',
+                            content: {
+                                type: 'text',
+                                text: 'I\'ll approach this problem as {{persona}} would, applying their thinking style, principles, and challenge questions throughout the session. Let me start by discovering the right techniques for this persona.\n\nStep 1: Call `discover_techniques` with `persona: "{{persona}}"` to get persona-biased recommendations.\nStep 2: Call `plan_thinking_session` with `persona: "{{persona}}"` and the recommended techniques.\nStep 3: Execute each step with `execute_thinking_step`, setting `persona: "{{persona}}"` on each call.\n\nThe persona\'s principles and challenges will be injected into every step\'s guidance.',
+                            },
+                        },
+                    ],
+                };
+            case 'persona-debate':
+                return {
+                    description: prompt.description || '',
+                    messages: [
+                        {
+                            role: 'user',
+                            content: {
+                                type: 'text',
+                                text: 'Stage a debate on: {{problem}}. Debaters: {{personas}}. Format: {{format}}.',
+                            },
+                        },
+                        {
+                            role: 'assistant',
+                            content: {
+                                type: 'text',
+                                text: "I'll orchestrate a multi-persona debate on this topic. Here's the workflow:\n\nStep 1: Call `discover_techniques` with `personas: [{{personas}}]` to get each persona's recommended techniques.\nStep 2: Call `plan_thinking_session` with `personas: [{{personas}}]` and `debateFormat: \"{{format}}\"` to generate per-persona plans and a synthesis plan.\nStep 3: For each persona, execute their plan's steps with `execute_thinking_step`, setting `persona` to identify who is speaking.\nStep 4: Execute the synthesis steps using `competing_hypotheses` to integrate all positions.\nStep 5: Present the debate outcome: agreements, disagreements, blind spots, and recommendations.",
+                            },
+                        },
+                    ],
+                };
+            case 'rory-mode':
+                return {
+                    description: prompt.description || '',
+                    messages: [
+                        {
+                            role: 'user',
+                            content: {
+                                type: 'text',
+                                text: "Apply Rory Sutherland's behavioral economics lens to: {{problem}}. Focus rules: {{focus_rules}}.",
+                            },
+                        },
+                        {
+                            role: 'assistant',
+                            content: {
+                                type: 'text',
+                                text: 'I\'ll analyze this through Rory Sutherland\'s 11 Rules of behavioral economics. This is "Rory Mode" — optimizing for perception, not just reality.\n\nStep 1: Call `discover_techniques` with `persona: "rory_sutherland"` to get behavioral economics-aligned techniques (perception_optimization, context_reframing, reverse_benchmarking, random_entry, anecdotal_signal).\nStep 2: Call `plan_thinking_session` with `persona: "rory_sutherland"` and the recommended techniques.\nStep 3: Execute each step. Rory\'s principles will be injected:\n- "The opposite of a good idea can also be a good idea"\n- "A flower is a weed with an advertising budget"\n- "Dare to be trivial"\n- "Solving with only rationality is playing golf with one club"\n\nKey questions at every step: What would an economist hate about this? What tiny change has disproportionate impact? Are we designing for average users?',
                             },
                         },
                     ],

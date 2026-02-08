@@ -14,6 +14,15 @@ import type { SessionManager } from '../core/SessionManager.js';
 import type { TechniqueRegistry } from '../techniques/TechniqueRegistry.js';
 import type { TechniqueHandler } from '../techniques/types.js';
 import { ExecutionGraphGenerator } from './planning/ExecutionGraphGenerator.js';
+import { TelemetryCollector } from '../telemetry/TelemetryCollector.js';
+import { PersonaResolver } from '../personas/PersonaResolver.js';
+import { PersonaGuidanceInjector } from '../personas/PersonaGuidanceInjector.js';
+import { DebateOrchestrator } from '../personas/DebateOrchestrator.js';
+
+// Create singleton instances to avoid per-call allocation
+const personaResolver = new PersonaResolver();
+import type { DebateStructure } from '../personas/DebateOrchestrator.js';
+import type { PersonaDefinition } from '../personas/types.js';
 
 interface ScamperHandlerType extends TechniqueHandler {
   getAction(step: number): string;
@@ -42,7 +51,32 @@ export function planThinkingSession(
     constraints,
     timeframe = 'thorough',
     executionMode = 'sequential',
+    persona,
+    personas,
+    debateFormat,
   } = input;
+
+  // Resolve persona for guidance injection
+  let resolvedPersona: PersonaDefinition | null = null;
+  const resolvedPersonas: PersonaDefinition[] = [];
+
+  if (persona) {
+    resolvedPersona = personaResolver.resolve(persona);
+  }
+
+  if (personas && Array.isArray(personas)) {
+    for (const p of personas) {
+      const resolved = personaResolver.resolve(p);
+      if (resolved) {
+        resolvedPersonas.push(resolved);
+      }
+    }
+    // In debate mode with multiple personas, use the first as the primary
+    if (!resolvedPersona && resolvedPersonas.length > 0) {
+      resolvedPersona = resolvedPersonas[0];
+    }
+  }
+
   // Generate unique plan ID
   const planId = `plan_${randomUUID()}`;
 
@@ -50,7 +84,13 @@ export function planThinkingSession(
   const workflow = techniques.map(technique => {
     const handler = techniqueRegistry.getHandler(technique);
     const info = handler.getTechniqueInfo();
-    const steps = generateStepsForTechnique(technique as string, problem, info.totalSteps, handler);
+    const steps = generateStepsForTechnique(
+      technique as string,
+      problem,
+      info.totalSteps,
+      handler,
+      resolvedPersona
+    );
 
     return {
       technique,
@@ -91,6 +131,20 @@ export function planThinkingSession(
   // Generate execution graph for client-side parallel execution
   const executionGraph = ExecutionGraphGenerator.generateExecutionGraph(planId, problem, workflow);
 
+  // Generate debate structure if multiple personas (debate mode)
+  const isDebateMode = resolvedPersonas.length > 1;
+  let debateStructure: DebateStructure | undefined;
+  if (isDebateMode) {
+    const debateOrchestrator = new DebateOrchestrator();
+    debateStructure = debateOrchestrator.createDebateStructure(
+      problem,
+      resolvedPersonas,
+      techniqueRegistry,
+      debateFormat || 'structured',
+      techniques
+    );
+  }
+
   // Save plan
   const plan: PlanThinkingSessionOutput = {
     planId,
@@ -109,9 +163,63 @@ export function planThinkingSession(
     complexityAssessment,
     executionMode,
     executionGraph,
+    personaContext:
+      resolvedPersona || resolvedPersonas.length > 0
+        ? {
+            activePersonas: (resolvedPersonas.length > 0
+              ? resolvedPersonas
+              : resolvedPersona
+                ? [resolvedPersona]
+                : []
+            ).map(p => ({ id: p.id, name: p.name, tagline: p.tagline })),
+            isDebateMode,
+          }
+        : undefined,
+    debateOutline:
+      isDebateMode && debateStructure
+        ? {
+            personaPlans: debateStructure.personaPlans.map((pp, i) => ({
+              personaId: resolvedPersonas[i].id,
+              planId: pp.planId,
+              techniques: pp.techniques,
+            })),
+            synthesisPlanId: debateStructure.synthesisPlan.planId,
+          }
+        : undefined,
+    parallelPlans: debateStructure
+      ? [...debateStructure.personaPlans, debateStructure.synthesisPlan]
+      : undefined,
+    coordinationStrategy: debateStructure?.coordinationStrategy,
   };
 
   sessionManager.savePlan(planId, plan);
+
+  // Track recommendation effectiveness if we have stored recommendations
+  const telemetry = TelemetryCollector.getInstance();
+  const lastRecommendations = sessionManager.getLastRecommendations(problem);
+
+  if (lastRecommendations && lastRecommendations.length > 0) {
+    // Track each selected technique against recommendations
+    techniques.forEach(selectedTechnique => {
+      telemetry
+        .trackTechniqueRecommendation(planId, lastRecommendations, selectedTechnique)
+        .catch(error =>
+          console.error('[Planning] Failed to track recommendation effectiveness:', error)
+        );
+    });
+
+    // Clear recommendations after tracking
+    sessionManager.clearLastRecommendations(problem);
+  }
+
+  // Track technique pairs for complementarity learning
+  if (techniques.length > 1) {
+    for (let i = 0; i < techniques.length - 1; i++) {
+      telemetry
+        .trackTechniquePair(planId, techniques[i], techniques[i + 1])
+        .catch(error => console.error('[Planning] Failed to track technique pair:', error));
+    }
+  }
 
   return plan;
 }
@@ -120,12 +228,18 @@ function generateStepsForTechnique(
   technique: string,
   problem: string,
   totalSteps: number,
-  handler: TechniqueHandler
+  handler: TechniqueHandler,
+  persona?: PersonaDefinition | null
 ): ThinkingStep[] {
   const steps: ThinkingStep[] = [];
 
   for (let i = 1; i <= totalSteps; i++) {
     let guidance = handler.getStepGuidance(i, problem);
+
+    // Inject persona guidance if active (using static method)
+    if (persona) {
+      guidance = PersonaGuidanceInjector.injectGuidance(guidance, persona, i, totalSteps);
+    }
 
     // Add path indicators for SCAMPER
     if (technique === 'scamper' && 'getAction' in handler && 'getAllActions' in handler) {
@@ -232,6 +346,26 @@ function getExpectedOutputs(technique: string): string[] {
       'Diverse perspective integration',
       'Cultural bridge innovations',
       'Inclusive creative solutions',
+    ],
+    reverse_benchmarking: [
+      'Universal competitor weaknesses mapped',
+      'Counter-positioning strategies identified',
+      'Differentiation opportunities synthesized',
+    ],
+    context_reframing: [
+      'Decision environment mapped',
+      'Alternative contextual frames generated',
+      'Context-driven solution designed',
+    ],
+    perception_optimization: [
+      'Perception-reality gaps identified',
+      'Psychological value opportunities mapped',
+      'Perception-optimized solution designed',
+    ],
+    anecdotal_signal: [
+      'Outlier stories collected and assessed',
+      'Signal patterns identified from anecdotes',
+      'Early indicators and scalability evaluated',
     ],
   };
 
@@ -472,6 +606,35 @@ function getExpectedOutputForStep(technique: string, step: number): string {
       4: 'Computational models synthesized from neural patterns',
       5: 'Optimization cycles completed with convergence metrics',
       6: 'Optimal creative solution converged with preserved insights',
+    },
+    reverse_benchmarking: {
+      1: 'Universal competitor weaknesses mapped',
+      2: 'Root cause patterns identified across failures',
+      3: 'Counter-positioning strategies developed',
+      4: 'Differentiation advantages validated',
+      5: 'Implementation roadmap synthesized',
+    },
+    context_reframing: {
+      1: 'Current decision environment mapped',
+      2: 'Alternative contextual frames generated',
+      3: 'Frame impact on behavior analyzed',
+      4: 'Optimal contextual redesign selected',
+      5: 'Context-driven solution synthesized',
+    },
+    perception_optimization: {
+      1: 'Perception-reality gaps mapped across dimensions',
+      2: 'Psychological value levers identified',
+      3: 'Perception optimization strategies generated',
+      4: 'Low-cost high-impact interventions designed',
+      5: 'Perception-optimized solution synthesized',
+    },
+    anecdotal_signal: {
+      1: 'Outlier stories and edge cases collected',
+      2: 'Signal strength assessed against noise',
+      3: 'Divergence patterns from mainstream analyzed',
+      4: 'Early indicators of emerging trends identified',
+      5: 'Scalability potential of signals evaluated',
+      6: 'Signal synthesis and actionable insights generated',
     },
   };
 

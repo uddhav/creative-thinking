@@ -148,6 +148,12 @@ Key Actions:
 4. Look for "good enough" areas where excellence would stand out
 5. Identify customer pain points everyone tolerates
 
+Dare to Be Trivial (Rule 10):
+What absurdly small, trivially easy improvement would have disproportionate
+impact? The best competitive advantages often hide in the mundane — things
+so simple that everyone assumes they can't matter. Fix the annoying thing
+that everyone tolerates. The easiest improvements are often the best.
+
 Examples to consider:
 - Coffee/beer at fine dining (11 Madison Park)
 - Direct sales in insurance (Direct Line)
@@ -224,6 +230,12 @@ Real-World Excellence Examples:
 - Apple: Beautiful packaging for disposable boxes
 
 Remember: Excellence in the mundane > adequacy in the exotic
+
+Costly Signaling (Rule 5):
+Excellence in an overlooked area IS costly signaling. When you invest visibly
+in something competitors dismiss as unimportant, you send a powerful message:
+"If we care this much about X, imagine what everything else is like."
+The very unexpectedness of the investment amplifies the signal.
 
 ⚠️ High Reflexivity: Excellence commitments shape brand perception permanently.
 

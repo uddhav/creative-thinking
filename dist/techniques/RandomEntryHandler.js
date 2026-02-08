@@ -20,6 +20,7 @@ export class RandomEntryHandler extends BaseTechniqueHandler {
             'endowment effect',
             'availability heuristic',
             'confirmation bias',
+            'rationality blindspot - what are we missing by being logical?',
         ],
         contextual: [
             'expensive wine in cheap bottle',
@@ -44,6 +45,7 @@ export class RandomEntryHandler extends BaseTechniqueHandler {
             'contrast amplification',
             'attention misdirection',
             'expectation management',
+            'costly signaling - spending visibly to prove trustworthiness',
         ],
         counterintuitive: [
             'make it harder to increase value',
@@ -56,6 +58,8 @@ export class RandomEntryHandler extends BaseTechniqueHandler {
             'embrace the constraint',
             'celebrate the flaw',
             'reverse the assumption',
+            'design for your most extreme user, not your average one',
+            'dare to be trivial - what tiny change creates disproportionate value?',
         ],
     };
     getTechniqueInfo() {

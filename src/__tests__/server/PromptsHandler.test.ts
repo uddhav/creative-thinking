@@ -11,7 +11,7 @@ describe('PromptsHandler', () => {
       const handler = new PromptsHandler();
       const prompts = handler.getPrompts();
 
-      expect(prompts).toHaveLength(6);
+      expect(prompts).toHaveLength(9);
 
       // Check first prompt structure
       const problemDiscovery = prompts[0];
@@ -43,6 +43,9 @@ describe('PromptsHandler', () => {
       expect(promptNames).toContain('complete-session');
       expect(promptNames).toContain('quantum-thinking');
       expect(promptNames).toContain('temporal-creativity');
+      expect(promptNames).toContain('persona-thinking');
+      expect(promptNames).toContain('persona-debate');
+      expect(promptNames).toContain('rory-mode');
     });
   });
 
@@ -95,6 +98,9 @@ describe('PromptsHandler', () => {
         'complete-session',
         'quantum-thinking',
         'temporal-creativity',
+        'persona-thinking',
+        'persona-debate',
+        'rory-mode',
       ];
 
       promptNames.forEach(name => {

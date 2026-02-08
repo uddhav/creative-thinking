@@ -180,6 +180,12 @@ Key Questions:
 - Which gaps cause the most dissatisfaction?
 - Where could perception exceed reality cheaply?
 
+Beyond Rationality (Rule 9):
+"Solving problems with only rationality is like playing golf with one club."
+Don't just map functional gaps — map emotional, social, and identity gaps too.
+What would a poet notice that an engineer wouldn't? What dimensions of experience
+are invisible to spreadsheets but obvious to humans?
+
 Sutherland's Examples:
 - Uber: Didn't make taxis faster, made waiting feel better
 - Nespresso: Made instant coffee feel premium
@@ -290,6 +296,13 @@ Meaning Layer Strategies:
 - Build community and belonging
 - Enable self-expression
 - Provide transformation narrative
+
+Costly Signaling Principle (Rule 5):
+"A flower is a weed with an advertising budget."
+Visible investment signals trustworthiness. Spending lavishly on packaging,
+customer service, or seemingly "wasteful" gestures builds trust precisely
+because it's costly. The inefficiency IS the message — it proves commitment.
+Ask: Where could deliberate visible expense build disproportionate trust?
 
 Sutherland's Insight:
 "The functional attributes of a product are often less important than what it means"

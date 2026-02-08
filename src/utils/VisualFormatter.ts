@@ -70,6 +70,21 @@ export class VisualFormatter {
         chalk.blue('│')
     );
 
+    // Add persona indicator if present (truncate for display)
+    if (input.persona) {
+      const personaLabel = ` 🎭 Thinking as: ${input.persona.slice(0, 200)} `;
+      const personaPadding = Math.max(0, borderLength - personaLabel.length - 2);
+      const personaPaddingLeft = Math.floor(personaPadding / 2);
+      const personaPaddingRight = personaPadding - personaPaddingLeft;
+      lines.push(
+        chalk.blue('│') +
+          ' '.repeat(personaPaddingLeft) +
+          chalk.magenta(personaLabel) +
+          ' '.repeat(personaPaddingRight) +
+          chalk.blue('│')
+      );
+    }
+
     // Add progress bar if session and plan are available
     if (session && plan) {
       const progressDisplay = this.formatSessionProgressBar(session, plan, currentStep, totalSteps);

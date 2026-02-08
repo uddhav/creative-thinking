@@ -82,6 +82,9 @@ export interface DiscoverTechniquesInput {
   sessionId?: string;
   executionMode?: ExecutionMode; // Client execution preference - server provides compatible DAG
   maxParallelism?: number; // Maximum parallel branches client can handle (default: 3)
+  persona?: string; // Single persona for biased recommendations
+  personas?: string[]; // Multiple personas for debate mode
+  debateTopic?: string; // Specific debate topic (defaults to problem)
 }
 
 export interface DiscoverTechniquesOutput {
@@ -128,6 +131,10 @@ export interface DiscoverTechniquesOutput {
     level: 'low' | 'medium' | 'high';
     factors: string[];
     suggestion?: string;
+  };
+  personaContext?: {
+    activePersonas: Array<{ id: string; name: string; tagline: string }>;
+    isDebateMode: boolean;
   };
   problemAnalysis?: {
     observation: string;
@@ -237,6 +244,9 @@ export interface PlanThinkingSessionInput {
   executionMode?: ExecutionMode;
   maxParallelism?: number;
   parallelizationStrategy?: ParallelizationStrategy;
+  persona?: string; // Single persona for guidance injection
+  personas?: string[]; // Multiple personas for debate mode
+  debateFormat?: 'structured' | 'adversarial' | 'collaborative';
 }
 
 export interface PlanThinkingSessionOutput {
@@ -289,4 +299,14 @@ export interface PlanThinkingSessionOutput {
 
   // Parallel execution group IDs for Anthropic-style parallel tool calls
   parallelGroupIds?: string[];
+
+  // Persona context
+  personaContext?: {
+    activePersonas: Array<{ id: string; name: string; tagline: string }>;
+    isDebateMode: boolean;
+  };
+  debateOutline?: {
+    personaPlans: Array<{ personaId: string; planId: string; techniques: LateralTechnique[] }>;
+    synthesisPlanId?: string;
+  };
 }
