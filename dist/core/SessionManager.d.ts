@@ -25,12 +25,15 @@ export declare class SessionManager {
     private sessionLock;
     private reflexivityTracker;
     private nlpService;
+    private telemetry;
     private sessionCleaner;
     private sessionPersistence;
     private sessionMetrics;
     private planManager;
     private skipDetector;
     private sessionIndex;
+    private static readonly MAX_RECOMMENDATION_ENTRIES;
+    private lastRecommendations;
     private config;
     constructor(samplingManager?: SamplingManager);
     /**
@@ -178,5 +181,17 @@ export declare class SessionManager {
      * Track reflexivity for a step execution
      */
     trackReflexivity(sessionId: string, technique: string, stepNumber: number, stepType?: 'thinking' | 'action', reflexiveEffects?: ReflexiveEffects): void;
+    /**
+     * Store recommendations for a session (for later comparison with selected techniques)
+     */
+    setLastRecommendations(problemOrSessionId: string, recommendations: LateralTechnique[]): void;
+    /**
+     * Get stored recommendations for a session
+     */
+    getLastRecommendations(problemOrSessionId: string): LateralTechnique[] | undefined;
+    /**
+     * Clear stored recommendations for a session
+     */
+    clearLastRecommendations(problemOrSessionId: string): void;
 }
 //# sourceMappingURL=SessionManager.d.ts.map

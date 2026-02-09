@@ -91,6 +91,8 @@ describe('AnecdotalSignalHandler', () => {
       expect(guidance).toContain('edge cases');
       expect(guidance).toContain('Sutherland');
       expect(guidance).toContain('Titanic');
+      expect(guidance).toContain('Design for Average');
+      expect(guidance).toContain('extreme users');
     });
 
     it('should provide guidance for step 2 - Signal Assessment', () => {
@@ -124,6 +126,8 @@ describe('AnecdotalSignalHandler', () => {
       expect(guidance).toContain('adoption');
       expect(guidance).toContain('mainstream adoption');
       expect(guidance).toContain('High Reflexivity');
+      expect(guidance).toContain('cheapest possible experiment');
+      expect(guidance).toContain('Rule 7');
     });
 
     it('should provide guidance for step 6 - Strategic Response', () => {

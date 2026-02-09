@@ -83,6 +83,8 @@ describe('ReverseBenchmarkingHandler', () => {
       expect(guidance).toContain('competitors');
       expect(guidance).toContain('universal weaknesses');
       expect(guidance).toContain('11 Madison Park');
+      expect(guidance).toContain('Dare to Be Trivial');
+      expect(guidance).toContain('trivially easy improvement');
     });
 
     it('should provide guidance for step 2 - Vacant Space Analysis', () => {
@@ -107,6 +109,8 @@ describe('ReverseBenchmarkingHandler', () => {
       expect(guidance).toContain('mundane');
       expect(guidance).toContain('world-class execution');
       expect(guidance).toContain('High Reflexivity');
+      expect(guidance).toContain('Costly Signaling');
+      expect(guidance).toContain('costly signaling');
     });
 
     it('should provide guidance for step 5 - Implementation Path', () => {

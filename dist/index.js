@@ -168,7 +168,7 @@ export class LateralThinkingServer {
                 return this.responseBuilder.buildErrorResponse(new Error(validation.errors.join('; ')), 'discovery');
             }
             const data = input;
-            const output = discoverTechniques(data, this.techniqueRegistry, this.complexityAnalyzer);
+            const output = discoverTechniques(data, this.techniqueRegistry, this.complexityAnalyzer, this.sessionManager);
             return this.responseBuilder.buildDiscoveryResponse(output);
         }
         catch (error) {

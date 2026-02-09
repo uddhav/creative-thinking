@@ -8,7 +8,7 @@ import type { Tool } from '../types/index.js';
 export const DISCOVER_TECHNIQUES_TOOL: Tool = {
   name: 'discover_techniques',
   description:
-    'STEP 1 of 3: Analyzes a problem and recommends appropriate lateral thinking techniques. This is the FIRST tool you must call when starting any creative thinking session. Returns recommendations and available techniques that can be used in the next step. MANDATORY PARAMETER: You MUST provide the "problem" parameter as a string describing the challenge to solve. DO NOT call this with an empty object {}. Example: {"problem": "How to improve team communication"}',
+    'STEP 1 of 3: Analyzes a problem and recommends appropriate lateral thinking techniques. This is the FIRST tool you must call when starting any creative thinking session. Returns recommendations and available techniques that can be used in the next step. MANDATORY PARAMETER: You MUST provide the "problem" parameter as a string describing the challenge to solve. DO NOT call this with an empty object {}. Example: {"problem": "How to improve team communication"}. Valid techniques: six_hats, po, random_entry, scamper, concept_extraction, yes_and, design_thinking, triz, neural_state, temporal_work, cultural_integration, collective_intel, disney_method, nine_windows, quantum_superposition, temporal_creativity, paradoxical_problem, meta_learning, biomimetic_path, first_principles, neuro_computational, criteria_based_analysis, linguistic_forensics, competing_hypotheses, reverse_benchmarking, context_reframing, perception_optimization, anecdotal_signal.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -31,6 +31,23 @@ export const DISCOVER_TECHNIQUES_TOOL: Tool = {
         items: { type: 'string' },
         description: 'Any constraints or limitations to consider',
       },
+      persona: {
+        type: 'string',
+        minLength: 1,
+        maxLength: 200,
+        description:
+          'Thinking personality (e.g., "rory_sutherland", "rich_hickey", "custom:Security-minded Rust engineer")',
+      },
+      personas: {
+        type: 'array',
+        items: { type: 'string', minLength: 1, maxLength: 200 },
+        maxItems: 10,
+        description: 'Team of personas for debate mode (max 10)',
+      },
+      debateTopic: {
+        type: 'string',
+        description: 'Specific debate topic (defaults to problem if not provided)',
+      },
     },
     required: ['problem'],
   },
@@ -39,7 +56,7 @@ export const DISCOVER_TECHNIQUES_TOOL: Tool = {
 export const PLAN_THINKING_SESSION_TOOL: Tool = {
   name: 'plan_thinking_session',
   description:
-    'STEP 2 of 3: Creates a structured workflow for applying lateral thinking techniques. This tool MUST be called AFTER discover_techniques and BEFORE execute_thinking_step. Returns a planId that is REQUIRED for the execution step. MANDATORY PARAMETERS: "problem" (string) and "techniques" (array of strings). Valid techniques: six_hats, po, random_entry, scamper, concept_extraction, yes_and, design_thinking, triz, neural_state, temporal_work, cultural_integration, collective_intel, disney_method, nine_windows, quantum_superposition, temporal_creativity, paradoxical_problem, meta_learning, biomimetic_path, first_principles, neuro_computational. Example: {"problem": "How to reduce costs", "techniques": ["six_hats", "scamper"]}',
+    'STEP 2 of 3: Creates a structured workflow for applying lateral thinking techniques. This tool MUST be called AFTER discover_techniques and BEFORE execute_thinking_step. Returns a planId that is REQUIRED for the execution step. MANDATORY PARAMETERS: "problem" (string) and "techniques" (array of strings). Valid techniques: six_hats, po, random_entry, scamper, concept_extraction, yes_and, design_thinking, triz, neural_state, temporal_work, cultural_integration, collective_intel, disney_method, nine_windows, quantum_superposition, temporal_creativity, paradoxical_problem, meta_learning, biomimetic_path, first_principles, neuro_computational, criteria_based_analysis, linguistic_forensics, competing_hypotheses, reverse_benchmarking, context_reframing, perception_optimization, anecdotal_signal. Example: {"problem": "How to reduce costs", "techniques": ["six_hats", "scamper"]}',
   inputSchema: {
     type: 'object',
     properties: {
@@ -74,6 +91,13 @@ export const PLAN_THINKING_SESSION_TOOL: Tool = {
             'biomimetic_path',
             'first_principles',
             'neuro_computational',
+            'criteria_based_analysis',
+            'linguistic_forensics',
+            'competing_hypotheses',
+            'reverse_benchmarking',
+            'context_reframing',
+            'perception_optimization',
+            'anecdotal_signal',
           ],
         },
         description:
@@ -107,6 +131,23 @@ export const PLAN_THINKING_SESSION_TOOL: Tool = {
         minimum: 1,
         maximum: 10,
         default: 3,
+      },
+      persona: {
+        type: 'string',
+        minLength: 1,
+        maxLength: 200,
+        description: 'Thinking personality for this session',
+      },
+      personas: {
+        type: 'array',
+        items: { type: 'string', minLength: 1, maxLength: 200 },
+        maxItems: 10,
+        description: 'Team of personas for debate mode (max 10)',
+      },
+      debateFormat: {
+        type: 'string',
+        enum: ['structured', 'adversarial', 'collaborative'],
+        description: 'Format for debate mode when multiple personas are active',
       },
     },
     required: ['problem', 'techniques'],
@@ -154,6 +195,12 @@ export const EXECUTE_THINKING_STEP_TOOL: Tool = {
       autoSave: {
         type: 'boolean',
         description: 'Whether to automatically save the session after this step',
+      },
+      persona: {
+        type: 'string',
+        minLength: 1,
+        maxLength: 200,
+        description: 'Which persona is speaking (for debate mode)',
       },
       // Six Hats specific
       hatColor: {

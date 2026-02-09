@@ -176,6 +176,11 @@ Collection Framework:
 - What unusual pattern keeps appearing?
 - What story makes experts uncomfortable?
 
+Don't Design for Average (Rule 2):
+Focus on extreme users, not the average. The most valuable signals come from
+people at the edges — power users, non-consumers, workaround inventors.
+Average users reveal nothing; outliers reveal the future.
+
 Sutherland's Principle:
 "The plural of anecdote is not data, but it might be insight"
 
@@ -335,6 +340,12 @@ Enablers for Scaling:
 - Network effects
 - Social proof
 - Crisis catalysts
+
+Good Guess + Empirical Observation = Science (Rule 7):
+Test counterintuitive hypotheses with the cheapest possible experiment.
+Don't wait for perfect data — a good guess validated by a quick observation
+is more valuable than a rigorous study that arrives too late.
+Ask: "What's the fastest, cheapest way to test if this outlier is a signal?"
 
 Real Scaling Examples:
 - Remote work: Fringe → Mainstream (COVID catalyst)

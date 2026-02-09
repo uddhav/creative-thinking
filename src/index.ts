@@ -244,7 +244,12 @@ export class LateralThinkingServer {
       }
 
       const data = input as DiscoverTechniquesInput;
-      const output = discoverTechniques(data, this.techniqueRegistry, this.complexityAnalyzer);
+      const output = discoverTechniques(
+        data,
+        this.techniqueRegistry,
+        this.complexityAnalyzer,
+        this.sessionManager
+      );
 
       return this.responseBuilder.buildDiscoveryResponse(output);
     } catch (error) {

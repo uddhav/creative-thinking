@@ -181,6 +181,12 @@ Key Questions:
 - WHAT alternatives are visible?
 - HOW is information presented?
 
+Rationality Audit (Rule 9):
+"Solving problems with only rationality is like playing golf with one club."
+Before mapping context, ask: Are we only looking through a rational lens?
+What emotional, social, or identity factors shape this context?
+What would a psychologist see that an economist wouldn't?
+
 Real-World Examples:
 - Organ donation: Opt-in vs opt-out countries
 - Retirement savings: Auto-enrollment vs voluntary
@@ -250,6 +256,12 @@ Design Principles:
 - Leverage social dynamics
 - Use defaults wisely
 
+Dare to Be Trivial (Rule 10):
+What absurdly small intervention could have disproportionate impact?
+Sometimes the most powerful reframe is the tiniest one — changing a single
+word, moving one element, adjusting one default. Don't dismiss simple changes.
+The plastic bag charge changed a nation's behavior for 5p.
+
 ⚠️ High Reflexivity: Frame choices create sticky mental models.
 
 Output: Frame shifting strategy with specific interventions`,
@@ -318,6 +330,12 @@ Persistence Mechanisms:
 - Create social reinforcement
 - Build habit formation triggers
 - Celebrate new normal
+
+Cheap Experiment Validation (Rule 7):
+"A good guess plus empirical observation equals science."
+Before scaling, validate with the cheapest possible experiment. Run a
+one-week pilot, A/B test on 1% of traffic, or shadow-deploy the context change.
+A quick empirical observation beats months of theoretical planning.
 
 Real-World Activation:
 - UK pension auto-enrollment: 10% → 90% participation

@@ -27,6 +27,7 @@ import type { ReflexiveEffects } from '../techniques/types.js';
 import { getNLPService } from '../nlp/NLPService.js';
 import type { NLPService } from '../nlp/NLPService.js';
 import type { SamplingManager } from '../sampling/SamplingManager.js';
+import { TelemetryCollector } from '../telemetry/TelemetryCollector.js';
 
 // Constants for memory management
 const MEMORY_THRESHOLD_FOR_GC = 0.8; // Trigger garbage collection when heap usage exceeds 80%
@@ -46,6 +47,7 @@ export class SessionManager {
   private sessionLock: SessionLock;
   private reflexivityTracker: ReflexivityTracker;
   private nlpService: NLPService;
+  private telemetry = TelemetryCollector.getInstance();
 
   // Extracted components
   private sessionCleaner: SessionCleaner;
@@ -56,6 +58,10 @@ export class SessionManager {
 
   // Session index (lazy initialized)
   private sessionIndex: SessionIndex | null = null;
+
+  // Store recommendations for tracking effectiveness (bounded to prevent unbounded growth)
+  private static readonly MAX_RECOMMENDATION_ENTRIES = 100;
+  private lastRecommendations: Map<string, LateralTechnique[]> = new Map();
 
   private config: SessionConfig = {
     maxSessions: parseInt(process.env.MAX_SESSIONS || '100', 10),
@@ -225,6 +231,12 @@ export class SessionManager {
 
     this.sessions.set(sessionId, sessionData);
     this.currentSessionId = sessionId;
+
+    // Track session creation with telemetry
+    this.telemetry
+      .trackSessionStart(sessionId, sessionData.problem.length)
+      .catch(error => console.error('[SessionManager] Failed to track session start:', error));
+
     return sessionId;
   }
 
@@ -424,6 +436,9 @@ export class SessionManager {
 
     // Regular session completion
     session.endTime = Date.now();
+
+    // Note: Telemetry tracking for session completion is handled by
+    // ExecutionResponseBuilder.handleSessionCompletion() which has richer metadata
   }
 
   /**
@@ -577,5 +592,39 @@ export class SessionManager {
         reflexiveEffects
       );
     }
+  }
+
+  /**
+   * Store recommendations for a session (for later comparison with selected techniques)
+   */
+  public setLastRecommendations(
+    problemOrSessionId: string,
+    recommendations: LateralTechnique[]
+  ): void {
+    // Evict oldest entry if at capacity (simple FIFO eviction)
+    if (
+      this.lastRecommendations.size >= SessionManager.MAX_RECOMMENDATION_ENTRIES &&
+      !this.lastRecommendations.has(problemOrSessionId)
+    ) {
+      const oldestKey = this.lastRecommendations.keys().next().value;
+      if (oldestKey !== undefined) {
+        this.lastRecommendations.delete(oldestKey);
+      }
+    }
+    this.lastRecommendations.set(problemOrSessionId, recommendations);
+  }
+
+  /**
+   * Get stored recommendations for a session
+   */
+  public getLastRecommendations(problemOrSessionId: string): LateralTechnique[] | undefined {
+    return this.lastRecommendations.get(problemOrSessionId);
+  }
+
+  /**
+   * Clear stored recommendations for a session
+   */
+  public clearLastRecommendations(problemOrSessionId: string): void {
+    this.lastRecommendations.delete(problemOrSessionId);
   }
 }

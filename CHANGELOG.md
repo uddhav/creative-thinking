@@ -18,12 +18,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   - Non-blocking passive output maintains execution flow
   - Suggestions provided for constraint management
   - Foreclosed paths displayed with warning context
-- **Telemetry Event Types for Complementarity Learning** (#241 - partial)
-  - Added `technique_pair_used` event type for tracking technique combinations
-  - Added `technique_recommended` event type for recommendation effectiveness
-  - New metadata fields: `pairSequence`, `pairCompletionRate`, `pairEffectiveness`
-  - `trackTechniquePair()` and `trackTechniqueRecommendation()` methods in TelemetryCollector
-  - Foundation for future complementarity learning system
+- **Usage Analytics Integration** (#241) - Complete telemetry wiring for technique effectiveness
+  tracking
+  - SessionManager lifecycle tracking (session start/complete with metrics)
+  - Recommendation storage and effectiveness tracking (recommended vs selected techniques)
+  - Automatic technique pair tracking for complementarity learning
+  - Event types: `technique_pair_used`, `technique_recommended`, `session_complete`
+  - Metadata fields: `pairSequence`, `pairCompletionRate`, `pairEffectiveness`,
+    `recommendedTechniques`, `selectedTechnique`
+  - Integrated across all three layers (Discovery, Planning, Execution)
+  - Privacy-preserving telemetry with opt-in/opt-out support
+  - Foundation for data-driven technique recommendations and complementarity learning
 - **PostgreSQL Persistence Adapter** (#237) - Production-ready database storage for session state
   - Multi-server horizontal scaling with shared session state
   - Crash recovery with persistent sessions across server restarts

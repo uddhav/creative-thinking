@@ -102,6 +102,7 @@ export interface ExecuteThinkingStepInput {
     output: string;
     nextStepNeeded: boolean;
     autoSave?: boolean;
+    persona?: string;
     hatColor?: SixHatsColor;
     provocation?: string;
     principles?: string[];
@@ -351,6 +352,7 @@ export interface ThinkingOperationData {
     branchFromStep?: number;
     branchId?: string;
     autoSave?: boolean;
+    persona?: string;
     dominantNetwork?: 'dmn' | 'ecn';
     suppressionDepth?: number;
     switchingRhythm?: string[];
@@ -522,6 +524,9 @@ export interface Tool {
             required?: string[];
             minimum?: number;
             maximum?: number;
+            minLength?: number;
+            maxLength?: number;
+            maxItems?: number;
             default?: unknown;
         }>;
         required?: string[];

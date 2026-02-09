@@ -85,6 +85,8 @@ describe('PerceptionOptimizationHandler', () => {
       expect(guidance).toContain('PERCEIVED');
       expect(guidance).toContain('Uber');
       expect(guidance).toContain('Sutherland');
+      expect(guidance).toContain('Beyond Rationality');
+      expect(guidance).toContain('golf with one club');
     });
 
     it('should provide guidance for step 2 - Value Amplification', () => {
@@ -111,6 +113,8 @@ describe('PerceptionOptimizationHandler', () => {
       expect(guidance).toContain('Identity');
       expect(guidance).toContain('meaning');
       expect(guidance).toContain('High Reflexivity');
+      expect(guidance).toContain('Costly Signaling');
+      expect(guidance).toContain('weed with an advertising budget');
     });
 
     it('should provide guidance for step 5 - Perception Activation', () => {

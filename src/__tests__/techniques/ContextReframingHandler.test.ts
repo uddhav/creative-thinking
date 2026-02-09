@@ -84,6 +84,8 @@ describe('ContextReframingHandler', () => {
       expect(guidance).toContain('Physical Context');
       expect(guidance).toContain('Temporal Context');
       expect(guidance).toContain('behavioral influences');
+      expect(guidance).toContain('Rationality Audit');
+      expect(guidance).toContain('golf with one club');
     });
 
     it('should provide guidance for step 2 - Intervention Points', () => {
@@ -103,6 +105,8 @@ describe('ContextReframingHandler', () => {
       expect(guidance).toContain('Reference Point');
       expect(guidance).toContain('Default');
       expect(guidance).toContain('High Reflexivity');
+      expect(guidance).toContain('Dare to Be Trivial');
+      expect(guidance).toContain('disproportionate impact');
     });
 
     it('should provide guidance for step 4 - Environment Design', () => {
@@ -119,6 +123,8 @@ describe('ContextReframingHandler', () => {
       expect(guidance).toContain('Deploying');
       expect(guidance).toContain('Measurement');
       expect(guidance).toContain('Very High Reflexivity');
+      expect(guidance).toContain('Cheap Experiment Validation');
+      expect(guidance).toContain('cheapest possible experiment');
     });
   });
 

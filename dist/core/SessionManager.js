@@ -15,6 +15,7 @@ import { SkipDetector, } from './session/SkipDetector.js';
 import { getSessionLock } from './session/SessionLock.js';
 import { ReflexivityTracker } from './ReflexivityTracker.js';
 import { getNLPService } from '../nlp/NLPService.js';
+import { TelemetryCollector } from '../telemetry/TelemetryCollector.js';
 // Constants for memory management
 const MEMORY_THRESHOLD_FOR_GC = 0.8; // Trigger garbage collection when heap usage exceeds 80%
 export class SessionManager {
@@ -24,6 +25,7 @@ export class SessionManager {
     sessionLock;
     reflexivityTracker;
     nlpService;
+    telemetry = TelemetryCollector.getInstance();
     // Extracted components
     sessionCleaner;
     sessionPersistence;
@@ -32,6 +34,9 @@ export class SessionManager {
     skipDetector;
     // Session index (lazy initialized)
     sessionIndex = null;
+    // Store recommendations for tracking effectiveness (bounded to prevent unbounded growth)
+    static MAX_RECOMMENDATION_ENTRIES = 100;
+    lastRecommendations = new Map();
     config = {
         maxSessions: parseInt(process.env.MAX_SESSIONS || '100', 10),
         maxSessionSize: parseInt(process.env.MAX_SESSION_SIZE || String(1024 * 1024), 10), // 1MB default
@@ -154,6 +159,10 @@ export class SessionManager {
         }
         this.sessions.set(sessionId, sessionData);
         this.currentSessionId = sessionId;
+        // Track session creation with telemetry
+        this.telemetry
+            .trackSessionStart(sessionId, sessionData.problem.length)
+            .catch(error => console.error('[SessionManager] Failed to track session start:', error));
         return sessionId;
     }
     /**
@@ -298,6 +307,8 @@ export class SessionManager {
         }
         // Regular session completion
         session.endTime = Date.now();
+        // Note: Telemetry tracking for session completion is handled by
+        // ExecutionResponseBuilder.handleSessionCompletion() which has richer metadata
     }
     /**
      * Get all sessions (simplified replacement for group functionality)
@@ -407,6 +418,32 @@ export class SessionManager {
             const actionDescription = `${technique} step ${stepNumber}`;
             this.reflexivityTracker.trackStep(sessionId, technique, stepNumber, stepType, actionDescription, reflexiveEffects);
         }
+    }
+    /**
+     * Store recommendations for a session (for later comparison with selected techniques)
+     */
+    setLastRecommendations(problemOrSessionId, recommendations) {
+        // Evict oldest entry if at capacity (simple FIFO eviction)
+        if (this.lastRecommendations.size >= SessionManager.MAX_RECOMMENDATION_ENTRIES &&
+            !this.lastRecommendations.has(problemOrSessionId)) {
+            const oldestKey = this.lastRecommendations.keys().next().value;
+            if (oldestKey !== undefined) {
+                this.lastRecommendations.delete(oldestKey);
+            }
+        }
+        this.lastRecommendations.set(problemOrSessionId, recommendations);
+    }
+    /**
+     * Get stored recommendations for a session
+     */
+    getLastRecommendations(problemOrSessionId) {
+        return this.lastRecommendations.get(problemOrSessionId);
+    }
+    /**
+     * Clear stored recommendations for a session
+     */
+    clearLastRecommendations(problemOrSessionId) {
+        this.lastRecommendations.delete(problemOrSessionId);
     }
 }
 //# sourceMappingURL=SessionManager.js.map

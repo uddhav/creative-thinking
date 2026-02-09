@@ -140,6 +140,10 @@ export class ExecutionResponseBuilder {
             ...this.extractTechniqueSpecificFields(operationData),
             historyLength: session.history.length,
         };
+        // Add persona context if present (truncate to prevent payload bloat)
+        if (input.persona) {
+            responseData.persona = input.persona.slice(0, 200);
+        }
         // Add optional fields
         if (nextStepGuidance) {
             responseData.nextStepGuidance = nextStepGuidance;
