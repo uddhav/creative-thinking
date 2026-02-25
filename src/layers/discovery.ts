@@ -12,6 +12,7 @@ import { TechniqueRecommender } from './discovery/TechniqueRecommender.js';
 import { WorkflowBuilder } from './discovery/WorkflowBuilder.js';
 import { MemoryContextGenerator } from './discovery/MemoryContextGenerator.js';
 import { PersonaResolver } from '../personas/PersonaResolver.js';
+import { HumanisticQualityCoverage } from './discovery/HumanisticQualityCoverage.js';
 
 // Create singleton instances for proper caching across requests
 // This ensures the techniqueInfoCache and catalog cache are reused, improving performance
@@ -98,6 +99,20 @@ export function discoverTechniques(
     }
   }
 
+  // Humanistic quality coverage: ensure technique set collectively embodies
+  // intelligence, courage, tenacity, curiosity, and justice
+  const {
+    recommendations: coverageAdjusted,
+    coverage: qualityCoverage,
+    adjusted: coverageWasAdjusted,
+  } = HumanisticQualityCoverage.fillCoverageGaps(recommendations);
+  if (coverageWasAdjusted) {
+    recommendations = coverageAdjusted;
+  }
+  const finalQualityCoverage = coverageWasAdjusted
+    ? qualityCoverage
+    : HumanisticQualityCoverage.analyzeCoverage(recommendations.map(r => r.technique));
+
   // Build integration suggestions
   let integrationSuggestions = workflowBuilder.buildIntegrationSuggestions(
     recommendations.map(r => r.technique),
@@ -118,6 +133,20 @@ export function discoverTechniques(
   if (complexityAssessment.level === 'high') {
     warnings.push('High complexity detected - consider sequential thinking approach');
     warnings.push('Breaking down the problem into smaller parts may be beneficial');
+  }
+
+  // Warn about humanistic quality gaps
+  if (!finalQualityCoverage.allCovered) {
+    const gapNames = finalQualityCoverage.gaps.join(', ');
+    if (recommendations.length < 3) {
+      warnings.push(
+        `Humanistic quality gaps detected (${gapNames}). Set is too small to auto-fill — consider adding techniques that cover these qualities.`
+      );
+    } else {
+      warnings.push(
+        `Humanistic quality gaps remain after adjustment: ${gapNames}. Consider supplementing with techniques strong in these areas.`
+      );
+    }
   }
 
   // Check for low flexibility
@@ -183,6 +212,7 @@ export function discoverTechniques(
     },
     complexityAssessment: enhancedComplexityAssessment,
     personaContext,
+    qualityCoverage: finalQualityCoverage,
     problemAnalysis: {
       observation: memoryContextGenerator.generateObservation(
         problem,

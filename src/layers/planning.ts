@@ -16,6 +16,7 @@ import type { TechniqueHandler } from '../techniques/types.js';
 import { ExecutionGraphGenerator } from './planning/ExecutionGraphGenerator.js';
 import { TelemetryCollector } from '../telemetry/TelemetryCollector.js';
 import { PersonaResolver } from '../personas/PersonaResolver.js';
+import { HumanisticQualityCoverage } from './discovery/HumanisticQualityCoverage.js';
 import { PersonaGuidanceInjector } from '../personas/PersonaGuidanceInjector.js';
 import { DebateOrchestrator } from '../personas/DebateOrchestrator.js';
 
@@ -175,6 +176,7 @@ export function planThinkingSession(
             isDebateMode,
           }
         : undefined,
+    qualityCoverage: HumanisticQualityCoverage.analyzeCoverage(techniques),
     debateOutline:
       isDebateMode && debateStructure
         ? {

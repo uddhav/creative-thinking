@@ -52,8 +52,13 @@ describe('Discovery Layer - Persona Integration', () => {
       let foundMatch = false;
 
       for (const technique of biasedTechniques) {
-        const withRec = resultWith.recommendations.find(r => r.technique === technique);
-        const withoutRec = resultWithout.recommendations.find(r => r.technique === technique);
+        // Skip quality fillers — they have effectiveness based on quality scores, not problem-fit
+        const withRec = resultWith.recommendations.find(
+          r => r.technique === technique && !r.isQualityFiller
+        );
+        const withoutRec = resultWithout.recommendations.find(
+          r => r.technique === technique && !r.isQualityFiller
+        );
 
         if (withRec && withoutRec) {
           // With persona bias, the technique should have higher or equal effectiveness

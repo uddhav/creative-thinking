@@ -6,6 +6,7 @@ import { randomUUID } from 'crypto';
 import { ExecutionGraphGenerator } from './planning/ExecutionGraphGenerator.js';
 import { TelemetryCollector } from '../telemetry/TelemetryCollector.js';
 import { PersonaResolver } from '../personas/PersonaResolver.js';
+import { HumanisticQualityCoverage } from './discovery/HumanisticQualityCoverage.js';
 import { PersonaGuidanceInjector } from '../personas/PersonaGuidanceInjector.js';
 import { DebateOrchestrator } from '../personas/DebateOrchestrator.js';
 // Create singleton instances to avoid per-call allocation
@@ -100,6 +101,7 @@ export function planThinkingSession(input, sessionManager, techniqueRegistry) {
                 isDebateMode,
             }
             : undefined,
+        qualityCoverage: HumanisticQualityCoverage.analyzeCoverage(techniques),
         debateOutline: isDebateMode && debateStructure
             ? {
                 personaPlans: debateStructure.personaPlans.map((pp, i) => ({

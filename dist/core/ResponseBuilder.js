@@ -143,6 +143,7 @@ export class ResponseBuilder {
             contextAnalysis: output.contextAnalysis,
             complexityAssessment: output.complexityAssessment,
             problemAnalysis: output.problemAnalysis,
+            qualityCoverage: output.qualityCoverage,
         };
         return this.buildSuccessResponse(transformedOutput);
     }
@@ -178,6 +179,7 @@ export class ResponseBuilder {
             planningInsights: output.planningInsights,
             complexityAssessment: output.complexityAssessment,
             executionMode: output.executionMode,
+            qualityCoverage: output.qualityCoverage,
             // Add execution graph for DAG-based parallel execution documentation
             executionGraph: output.executionGraph,
             // Add execution guidance to help LLMs proceed
