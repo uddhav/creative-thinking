@@ -71,6 +71,7 @@ export interface TechniqueRecommendation {
   effectiveness: number;
   alternativeUses?: string[];
   isWildcard?: boolean;
+  isQualityFiller?: boolean;
 }
 
 export interface DiscoverTechniquesInput {
@@ -156,6 +157,12 @@ export interface DiscoverTechniquesOutput {
     }>;
     blockedActions: string[];
     alternativeApproaches: string[];
+  };
+  qualityCoverage?: {
+    qualities: Record<string, { score: number; covered: boolean; topContributor: string }>;
+    allCovered: boolean;
+    gaps: string[];
+    gapSuggestions: Array<{ quality: string; suggestedTechniques: string[] }>;
   };
 }
 
@@ -308,5 +315,11 @@ export interface PlanThinkingSessionOutput {
   debateOutline?: {
     personaPlans: Array<{ personaId: string; planId: string; techniques: LateralTechnique[] }>;
     synthesisPlanId?: string;
+  };
+  qualityCoverage?: {
+    qualities: Record<string, { score: number; covered: boolean; topContributor: string }>;
+    allCovered: boolean;
+    gaps: string[];
+    gapSuggestions: Array<{ quality: string; suggestedTechniques: string[] }>;
   };
 }
