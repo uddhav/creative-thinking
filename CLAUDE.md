@@ -61,7 +61,8 @@ All new functionality must be integrated into these three tools. This constraint
 src/
 ├── index.ts                  # LateralThinkingServer class + MCP server init
 ├── core/                     # SessionManager, MemoryManager, ResponseBuilder, validation
-│   └── session/              # SessionEncoder, PlanManager, SessionCleaner, SessionLock
+│   ├── session/              # SessionEncoder, PlanManager, SessionCleaner, SessionLock
+│   └── validators/           # ObjectFieldValidator
 ├── layers/
 │   ├── discovery.ts          # Discovery layer + discovery/ subfolder (ProblemAnalyzer, TechniqueScorer)
 │   ├── planning.ts           # Planning layer + planning/ subfolder (ExecutionGraphGenerator)
@@ -69,7 +70,7 @@ src/
 ├── techniques/
 │   ├── BaseTechniqueHandler.ts   # Abstract base class all handlers extend
 │   ├── TechniqueRegistry.ts      # Singleton registry — imports and registers all 28 handlers
-│   └── [TechniqueName]Handler.ts # One file per technique
+│   └── [TechniqueName]Handler.ts # One file per technique (29 files incl. GenericHandler fallback)
 ├── personas/                 # Persona system for personality-driven sessions
 │   ├── types.ts              # PersonaDefinition, DebateConfig, PersonaStepContext
 │   ├── catalog.ts            # BUILTIN_PERSONAS (8 built-in) + external JSON loading
@@ -79,10 +80,17 @@ src/
 │   └── DebateSynthesizer.ts  # Structures debate outcomes: agreements, disagreements, blind spots
 ├── types/
 │   ├── index.ts              # LateralTechnique union type, SessionData, ALL_LATERAL_TECHNIQUES
-│   └── planning.ts           # Input/output types for the three-layer workflow
+│   ├── planning.ts           # Input/output types for the three-layer workflow
+│   ├── enforcement.ts        # Type enforcement utilities
+│   └── guards.ts             # Runtime type guards
 ├── server/
 │   ├── ToolDefinitions.ts    # MCP tool JSON schemas for all three tools
+│   ├── RequestHandlers.ts    # Tool request routing and dispatch
+│   ├── SessionOperationsHandler.ts # Session lifecycle operations
+│   ├── SamplingHandler.ts    # MCP Sampling request handling
 │   └── PromptsHandler.ts     # 9 MCP prompts for guided sessions
+├── config/                   # CompletionEnforcementConfig, timeouts
+├── benchmarks/               # Performance benchmark scripts
 ├── ergodicity/               # Path dependency tracking, early warning system, escape protocols
 ├── persistence/              # Adapter pattern: filesystem (default) and PostgreSQL backends
 ├── errors/                   # ErrorFactory, ErrorContextBuilder, typed error classes
@@ -196,7 +204,7 @@ futureConstraints, and reversibility level. See CONTRIBUTING.md for details.
 
 ## Tests
 
-2,400+ tests across 158 files using Vitest. 10-second timeout per test. Coverage target >80%.
+2,450+ tests across 159 files using Vitest. 10-second timeout per test. Coverage target >80%.
 
 ```
 src/__tests__/
@@ -208,7 +216,15 @@ src/__tests__/
 ├── errors/         # Error handling and recovery
 ├── layers/         # Discovery and planning layer tests
 ├── server/         # Tool definition and prompt handler tests
-└── helpers/        # Shared test utilities
+├── nlp/            # NLP service tests
+├── utils/          # Utility function tests
+├── issues/         # Regression tests for specific bug fixes
+├── persistence/    # Persistence adapter tests
+├── sampling/       # MCP Sampling tests
+├── telemetry/      # Telemetry tests
+├── option-generation/ # Option generation engine tests
+├── helpers/        # Shared test utilities
+└── *.test.ts       # Top-level tests (validation, reflexivity, session encoding, etc.)
 ```
 
 Tests auto-build before running (`pretest` script runs `npm run build`).
