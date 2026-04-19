@@ -3,7 +3,7 @@
  * Tests the MCP server using the official MCP Client from @modelcontextprotocol/sdk
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
 import { MCPClientTestHelper } from '../utils/MCPClientTestHelper.js';
 
 describe('MCP Client Integration', () => {
@@ -212,6 +212,9 @@ describe('MCP Client Integration', () => {
     });
   });
 
+  // Read-only technique checks share one MCP server subprocess. Spawning 16
+  // separate Node processes (one per test) was slow enough to intermittently
+  // blow the 10s per-test timeout under suite-wide parallelism.
   describe('All 16 Techniques', () => {
     const techniques = [
       'six_hats',
@@ -232,11 +235,20 @@ describe('MCP Client Integration', () => {
       'temporal_creativity',
     ];
 
-    it.each(techniques)('should support %s technique', async technique => {
-      await client.connect();
+    let sharedClient: MCPClientTestHelper;
 
-      // Create a plan with this technique
-      const planResult = await client.planThinkingSession(`Testing ${technique} technique`, [
+    beforeAll(async () => {
+      sharedClient = new MCPClientTestHelper();
+      await sharedClient.connect();
+    }, 30000);
+
+    afterAll(async () => {
+      await sharedClient?.disconnect();
+    });
+
+    it.each(techniques)('should support %s technique', async technique => {
+      // Create a plan with this technique against the shared server
+      const planResult = await sharedClient.planThinkingSession(`Testing ${technique} technique`, [
         technique,
       ]);
 
