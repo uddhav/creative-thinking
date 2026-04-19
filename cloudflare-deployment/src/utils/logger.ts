@@ -236,6 +236,20 @@ export class Logger {
   }
 
   /**
+   * Log a performance measurement. Emits a warn when the duration exceeds
+   * `budgetMs`, otherwise debug-level.
+   */
+  logPerformance(operation: string, durationMs: number, budgetMs?: number): void {
+    const overBudget = typeof budgetMs === 'number' && durationMs > budgetMs;
+    const message = `[perf] ${operation}: ${durationMs}ms${overBudget ? ` (budget ${budgetMs}ms)` : ''}`;
+    if (overBudget) {
+      this.warn(message);
+    } else {
+      this.debug(message);
+    }
+  }
+
+  /**
    * Create a child logger with a specific prefix
    */
   child(prefix: string): Logger {
@@ -261,4 +275,25 @@ export function createLogger(
     environment: env.ENVIRONMENT || 'production',
     prefix,
   });
+}
+
+/**
+ * Singleton logger instance used by ported modules from main `src/`.
+ *
+ * Matches the API of main `src/utils/Logger.ts` singleton export. Reads
+ * env config at construction time; call `refreshLoggerSingleton(env)`
+ * after `initPlatform(env)` to pick up Workers bindings.
+ */
+export const logger: Logger = new Logger();
+
+/**
+ * Rebuild the singleton's level/environment from Workers env bindings.
+ * Safe to call multiple times — mutates the existing instance fields.
+ */
+export function refreshLoggerSingleton(env: { ENVIRONMENT?: string; LOG_LEVEL?: string }): void {
+  const level = (env.LOG_LEVEL as LogLevel) || 'info';
+  const environment = env.ENVIRONMENT || 'production';
+  // Reach into the singleton to update private fields.
+  (logger as unknown as { level: number }).level = Logger['levels'][level] ?? Logger['levels'].info;
+  (logger as unknown as { environment: string }).environment = environment;
 }

@@ -16,6 +16,8 @@
     "@cloudflare/workers-oauth-provider": "^0.0.6",
     "@modelcontextprotocol/sdk": "^1.26.0",
     "agents": "^0.0.113",
+    "chalk": "^5.3.0",
+    "compromise": "^14.14.0",
     "zod": "^3.22.0"
   },
   "devDependencies": {

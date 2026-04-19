@@ -85,22 +85,17 @@ export class IdeaStormingMcpAgent extends McpAgent<Env, IdeaStormingState, Props
       debugMode: this.props?.debugMode,
     });
 
-    // Initialize AI components
-    this.samplingManager = new SamplingManager();
+    // Initialize AI components with functional sampling backend.
+    // `server` is exposed lazily because McpAgent initializes it during
+    // `init()`; reading it here via an accessor is safe.
+    this.samplingManager = new SamplingManager({
+      server: () => this.server,
+      ai: this.env.AI as Ai | undefined,
+    });
 
-    // Set sampling capability if AI is available
-    if (this.env.AI) {
-      this.samplingManager.setCapability({
-        supported: true,
-        providers: ['cloudflare-ai'],
-        maxTokens: 1024,
-        defaultPreferences: {
-          intelligencePriority: 0.7,
-          speedPriority: 0.5,
-          costPriority: 0.5,
-        },
-      });
-    }
+    // Populate capability from client handshake + Workers AI availability.
+    // Fire-and-forget: `refreshCapability()` only reads state, no round-trip.
+    void this.samplingManager.refreshCapability();
 
     // Initialize idea enhancer
     this.ideaEnhancer = new IdeaEnhancer(this.samplingManager);

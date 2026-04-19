@@ -1,20 +1,33 @@
 import { McpAgent } from 'agents/mcp';
 import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { SessionAdapter } from './adapters/SessionAdapter.js';
-import { TechniqueAdapter } from './adapters/TechniqueAdapter.js';
 import { formatErrorResponse } from './utils/errors.js';
 import { createLogger, type Logger } from './utils/logger.js';
 import { ResourceProviderRegistry } from './resources/ResourceProvider.js';
 import { SessionResourceProvider } from './resources/SessionResourceProvider.js';
 import { DocumentationResourceProvider } from './resources/DocumentationResourceProvider.js';
-// import { MetricsResourceProvider } from './resources/MetricsResourceProvider.js';
 import { PromptRegistry } from './prompts/PromptRegistry.js';
 import { CreativeWorkshopPrompt } from './prompts/workshop/CreativeWorkshopPrompt.js';
 import { ProblemSolverPrompt } from './prompts/problem/ProblemSolverPrompt.js';
 import { RiskAssessmentPrompt } from './prompts/analysis/RiskAssessmentPrompt.js';
 import { StreamingManager, VisualOutputFormatter } from './streaming/StreamingManager.js';
 import type { StreamingConfig } from './streaming/types.js';
+
+// Ported modules — full feature parity with main src
+import { initPlatform, KVPersistenceAdapter } from './platform/index.js';
+import { SessionManager } from './core/SessionManager.js';
+import { TechniqueRegistry } from './techniques/TechniqueRegistry.js';
+import { HybridComplexityAnalyzer } from './complexity/analyzer.js';
+import { VisualFormatter } from './utils/VisualFormatter.js';
+import { MetricsCollector } from './core/MetricsCollector.js';
+import { ErgodicityManager } from './ergodicity/index.js';
+import { PrivacyManager } from './telemetry/privacy.js';
+import { TelemetryCollector } from './telemetry/TelemetryCollector.js';
+import { discoverTechniques as runDiscovery } from './layers/discovery.js';
+import { planThinkingSession as runPlanning } from './layers/planning.js';
+import { executeThinkingStep as runExecution } from './layers/execution.js';
+import type { DiscoverTechniquesInput, PlanThinkingSessionInput } from './types/planning.js';
+import type { ExecuteThinkingStepInput } from './types/index.js';
 
 export interface Props extends Record<string, unknown> {
   userId?: string;
@@ -23,11 +36,8 @@ export interface Props extends Record<string, unknown> {
   debugMode?: boolean;
 }
 
-export interface Env {
-  KV: KVNamespace;
-  AI?: any;
-  ENVIRONMENT?: string;
-}
+// Env is imported from ./index.js where it's defined with the full binding set.
+import type { Env } from './index.js';
 
 // Define the state interface for our Agent with proper session and plan management
 export interface CreativeThinkingState {
@@ -71,8 +81,14 @@ export interface CreativeThinkingState {
 }
 
 export class CreativeThinkingMcpAgent extends McpAgent<Env, CreativeThinkingState, Props> {
-  private sessionAdapter!: SessionAdapter;
-  private techniqueAdapter!: TechniqueAdapter;
+  private sessionManager!: SessionManager;
+  private techniqueRegistry!: TechniqueRegistry;
+  private complexityAnalyzer!: HybridComplexityAnalyzer;
+  private visualFormatter!: VisualFormatter;
+  private metricsCollector!: MetricsCollector;
+  private ergodicityManager!: ErgodicityManager;
+  private telemetry!: TelemetryCollector;
+  private persistenceAdapter!: KVPersistenceAdapter;
   private resourceRegistry!: ResourceProviderRegistry;
   private promptRegistry!: PromptRegistry;
   private streamingManager!: StreamingManager;
@@ -114,15 +130,29 @@ export class CreativeThinkingMcpAgent extends McpAgent<Env, CreativeThinkingStat
       return;
     }
 
+    // Install Node.js → Workers platform shim (env polyfill, logger, persistence)
+    initPlatform(this.env);
+
     // Initialize logger
     this.logger = createLogger(this.env as any, 'CreativeThinkingMcpAgent');
     this.logger.info('Initializing Creative Thinking MCP Agent');
 
-    // Initialize adapters with environment
-    this.sessionAdapter = new SessionAdapter(this.env.KV);
-    this.techniqueAdapter = new TechniqueAdapter();
+    // KV-backed persistence adapter for sessions
+    this.persistenceAdapter = new KVPersistenceAdapter(this.env.KV as any);
 
-    // Initialize streaming manager (temporarily simplified for debugging)
+    // Instantiate ported modules
+    this.techniqueRegistry = TechniqueRegistry.getInstance();
+    this.complexityAnalyzer = new HybridComplexityAnalyzer();
+    this.visualFormatter = new VisualFormatter(true); // disable stderr thought logging in Workers
+    this.metricsCollector = new MetricsCollector();
+    this.ergodicityManager = new ErgodicityManager();
+    this.sessionManager = new SessionManager(undefined, this.persistenceAdapter as any);
+    this.telemetry = TelemetryCollector.configureInstance(
+      PrivacyManager.getConfigFromEnvironment(),
+      (this.env.KV as any) ?? null
+    );
+
+    // Initialize streaming manager for SSE/WebSocket progress events
     this.streamingManager = new StreamingManager({
       bufferFlushInterval: 50,
       maxConcurrentConnections: 100,
@@ -142,11 +172,15 @@ export class CreativeThinkingMcpAgent extends McpAgent<Env, CreativeThinkingStat
     // Initialize resource providers
     this.resourceRegistry = new ResourceProviderRegistry();
     this.resourceRegistry.register(
-      new SessionResourceProvider(this.sessionAdapter, () => this.state)
+      new SessionResourceProvider(
+        {
+          listSessions: () => this.sessionManager.listSessions().map(([id]) => ({ id })),
+          getSession: (id: string) => this.sessionManager.getSession(id),
+        },
+        () => this.state
+      )
     );
     this.resourceRegistry.register(new DocumentationResourceProvider());
-    // TODO: Fix MetricsResourceProvider compatibility with new session structure
-    // this.resourceRegistry.register(new MetricsResourceProvider(() => this.state));
 
     // Initialize prompt registry and register prompts
     this.promptRegistry = new PromptRegistry();
@@ -185,19 +219,26 @@ export class CreativeThinkingMcpAgent extends McpAgent<Env, CreativeThinkingStat
       {
         problem: z.string().describe('The problem or challenge to analyze'),
         context: z.string().optional().describe('Additional context about the problem'),
+        preferredOutcome: z
+          .enum(['innovative', 'systematic', 'risk-aware', 'collaborative', 'analytical'])
+          .optional()
+          .describe('Preferred outcome style'),
         constraints: z.array(z.string()).optional().describe('Any constraints or requirements'),
-        domain: z.string().optional().describe('The domain or field of the problem'),
+        currentFlexibility: z.number().min(0).max(1).optional(),
+        persona: z.string().optional().describe('Persona to bias technique selection'),
+        personas: z.array(z.string()).optional().describe('Multiple personas for debate mode'),
       },
       async params => {
         try {
-          const result = await this.techniqueAdapter.discoverTechniques(params);
+          const input = params as DiscoverTechniquesInput;
+          const result = runDiscovery(
+            input,
+            this.techniqueRegistry,
+            this.complexityAnalyzer,
+            this.sessionManager
+          );
           return {
-            content: [
-              {
-                type: 'text',
-                text: JSON.stringify(result, null, 2),
-              },
-            ],
+            content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
           };
         } catch (error) {
           return {
@@ -239,84 +280,14 @@ export class CreativeThinkingMcpAgent extends McpAgent<Env, CreativeThinkingStat
       },
       async params => {
         try {
-          const { problem, techniques, objectives, constraints, timeframe, executionMode } = params;
+          const input = params as unknown as PlanThinkingSessionInput;
+          const result = runPlanning(input, this.sessionManager, this.techniqueRegistry);
 
-          // Validate techniques using TechniqueAdapter
-          const validTechniques = [];
-          const invalidTechniques = [];
-
-          for (const technique of techniques) {
-            if (this.techniqueAdapter.getTechnique(technique)) {
-              validTechniques.push(technique);
-            } else {
-              invalidTechniques.push(technique);
-            }
-          }
-
-          if (invalidTechniques.length > 0) {
-            throw new Error(`Invalid techniques: ${invalidTechniques.join(', ')}`);
-          }
-
-          // Generate unique plan ID
-          const planId = this.generatePlanId();
-
-          // Generate steps for all techniques
-          const steps = this.generatePlanSteps(validTechniques);
-
-          // Create plan object
-          const plan = {
-            id: planId,
-            problem,
-            techniques: validTechniques,
-            options: {
-              objectives,
-              constraints,
-              timeframe,
-              executionMode,
-            },
-            createdAt: Date.now(),
-            steps,
-            currentStepIndex: 0,
-          };
-
-          // Store plan in state
-          const newState = {
-            ...this.state,
-            plans: {
-              ...this.state.plans,
-              [planId]: plan,
-            },
-          };
-          this.setState(newState);
-
-          // Generate execution graph
-          const executionGraph = this.generateExecutionGraph(validTechniques, executionMode);
-
-          // Return plan response
-          const result = {
-            planId,
-            problem,
-            techniques: validTechniques,
-            totalSteps: steps.length,
-            executionMode: executionMode || 'sequential',
-            steps,
-            executionGraph,
-            metadata: {
-              createdAt: new Date(plan.createdAt).toISOString(),
-              objectives,
-              constraints,
-              timeframe,
-              estimatedDuration: this.estimateDuration(validTechniques),
-            },
-          };
+          // Async KV backup of the created plan — don't block the response.
+          this.backgroundPersist(`plan:${result.planId}`, result);
 
           return {
-            content: [
-              {
-                type: 'text',
-                text: JSON.stringify(result, null, 2),
-              },
-            ],
+            content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
           };
         } catch (error) {
           return {
@@ -585,207 +556,38 @@ export class CreativeThinkingMcpAgent extends McpAgent<Env, CreativeThinkingStat
       },
       async params => {
         try {
-          const { planId, technique, problem, currentStep, totalSteps, output, nextStepNeeded } =
-            params;
+          const input = params as unknown as ExecuteThinkingStepInput;
+          const result = await runExecution(
+            input,
+            this.sessionManager,
+            this.techniqueRegistry,
+            this.visualFormatter,
+            this.metricsCollector,
+            this.complexityAnalyzer,
+            this.ergodicityManager
+          );
 
-          // Validate required fields
-          if (!planId) {
-            throw new Error('planId is required for executeThinkingStep');
-          }
-          if (!technique) {
-            throw new Error('technique is required for executeThinkingStep');
-          }
-          if (!problem) {
-            throw new Error('problem is required for executeThinkingStep');
-          }
-
-          // Validate currentStep is within bounds
-          if (typeof currentStep !== 'number' || currentStep < 1 || currentStep > totalSteps) {
-            throw new Error(
-              `Invalid step number ${currentStep}. Must be between 1 and ${totalSteps}`
-            );
-          }
-
-          // Validate nextStepNeeded is boolean
-          if (typeof nextStepNeeded !== 'boolean') {
-            throw new Error('nextStepNeeded must be a boolean value');
-          }
-
-          // Get plan from state
-          const plan = this.state.plans[planId];
-          if (!plan) {
-            throw new Error(`Plan not found: ${planId}`);
-          }
-
-          // Get or create session for this plan
-          let sessionId = planId; // Use planId as sessionId for simplicity
-          let session = this.state.sessions[sessionId];
-
-          if (!session) {
-            // Create session if it doesn't exist
-            session = {
-              id: sessionId,
-              planId,
-              technique,
-              problem,
-              history: [],
-              startTime: Date.now(),
-              lastActivityTime: Date.now(),
-              state: {},
-            };
-          }
-
-          // Update session activity
-          session.lastActivityTime = Date.now();
-
-          // Get technique info
-          const techniqueInfo = this.techniqueAdapter.getTechnique(technique);
-          if (!techniqueInfo) {
-            throw new Error(`Unknown technique: ${technique}`);
-          }
-
-          // Calculate technique step based on history
-          const previousSteps = session.history.filter(h => h.technique === technique).length;
-          const techniqueStep = previousSteps + 1;
-
-          // Generate step guidance
-          const guidance = this.generateStepGuidance(technique, techniqueStep, problem);
-
-          // Create step entry
-          const stepEntry = {
-            technique,
-            problem,
-            currentStep,
-            totalSteps,
-            techniqueStep,
-            totalTechniqueSteps: techniqueInfo.stepCount,
-            output,
-            nextStepNeeded,
-            guidance,
-            timestamp: new Date().toISOString(),
-            ...this.extractTechniqueSpecificFields(params),
-          };
-
-          // Add step to session history
-          session.history.push(stepEntry);
-
-          // Update session in state
-          const newState = {
-            ...this.state,
-            sessions: {
-              ...this.state.sessions,
-              [sessionId]: session,
-            },
-            currentSessionId: sessionId,
-          };
-          this.setState(newState);
-
-          // Generate response
-          const response: any = {
-            sessionId,
-            planId,
-            technique,
-            currentStep,
-            totalSteps,
-            techniqueStep,
-            totalTechniqueSteps: techniqueInfo.stepCount,
-            nextStepNeeded,
-            status: 'success',
-          };
-
-          // Add next step guidance if needed
-          if (nextStepNeeded) {
-            const nextTechniqueStep = techniqueStep + 1;
-            if (nextTechniqueStep <= techniqueInfo.stepCount) {
-              // Continue with same technique
-              response.nextStep = {
-                step: currentStep + 1,
-                technique,
-                techniqueStep: nextTechniqueStep,
-                guidance: this.generateStepGuidance(technique, nextTechniqueStep, problem),
-              };
-            } else {
-              // Move to next technique if available
-              if (currentStep < totalSteps) {
-                const nextStepInfo = plan.steps[currentStep];
-                if (nextStepInfo) {
-                  response.nextStep = {
-                    step: currentStep + 1,
-                    technique: nextStepInfo.technique,
-                    techniqueStep: 1,
-                    guidance: this.generateStepGuidance(nextStepInfo.technique, 1, problem),
-                  };
-                }
-              }
-            }
-          }
-
-          // Add completion message if done
-          if (!nextStepNeeded || currentStep >= totalSteps) {
-            response.completion = {
-              message: 'Thinking session completed successfully',
-              totalSteps: currentStep,
-              techniques: this.getUsedTechniques(session),
-              sessionId,
-            };
-          }
-
-          // Stream progress if we have an active session
-          const sessionIdForStreaming = params.planId;
-
-          // Send visual header for step execution
-          await this.streamingManager.broadcast(
+          // Stream a visual header for progress (non-blocking UX)
+          void this.streamingManager.broadcast(
             VisualOutputFormatter.formatHeader(
               `Executing ${params.technique} - Step ${params.currentStep}/${params.totalSteps}`,
-              '🧠'
+              'brain'
             )
           );
 
-          // Send visual output for the step result
-          if (params.output) {
-            await this.streamingManager.broadcast(
-              VisualOutputFormatter.formatTechniqueOutput(
-                params.technique,
-                params.currentStep,
-                params.output
-              )
-            );
-          }
-
-          // Send state change event
-          await this.streamingManager.sendStateChange({
-            sessionId: sessionIdForStreaming,
-            path: ['sessions', sessionIdForStreaming, 'currentStep'],
-            oldValue: params.currentStep - 1,
-            newValue: params.currentStep,
-            source: 'server',
-          });
-
-          // Send completion visual if this is the last step
-          if (!params.nextStepNeeded) {
-            await this.streamingManager.broadcast(VisualOutputFormatter.formatDivider('double'));
-            await this.streamingManager.broadcast(
-              VisualOutputFormatter.formatHeader(`✨ Completed ${params.technique} Technique`, '✅')
-            );
+          // Async KV backup for session state
+          if (params.planId) {
+            this.backgroundPersist(`session:${params.planId}`, result);
           }
 
           return {
-            content: [
-              {
-                type: 'text',
-                text: JSON.stringify(response, null, 2),
-              },
-            ],
+            content: result.content.map(c =>
+              c.type === 'text'
+                ? { type: 'text' as const, text: c.text }
+                : { type: 'text' as const, text: JSON.stringify(c) }
+            ),
           };
         } catch (error) {
-          // Send error as warning
-          await this.streamingManager.sendWarning({
-            level: 'CRITICAL',
-            type: 'performance',
-            message: `Error in ${params.technique} step ${params.currentStep}: ${(error as Error).message}`,
-            details: { error: (error as Error).stack },
-          });
-
           return {
             content: [
               {
@@ -797,6 +599,23 @@ export class CreativeThinkingMcpAgent extends McpAgent<Env, CreativeThinkingStat
         }
       }
     );
+  }
+
+  /**
+   * Fire-and-forget KV backup of session/plan state.
+   * Uses ctx.waitUntil when available so the write completes after the response flushes.
+   */
+  private backgroundPersist(key: string, value: unknown): void {
+    const write = (this.env.KV as KVNamespace)
+      .put(key, JSON.stringify(value), { expirationTtl: 7 * 24 * 60 * 60 })
+      .catch(err => this.logger?.warn('KV backup write failed', { key, err: String(err) }));
+
+    const ctx = (this as any).ctx as { waitUntil?: (p: Promise<unknown>) => void } | undefined;
+    if (ctx?.waitUntil) {
+      ctx.waitUntil(write);
+    } else {
+      void write;
+    }
   }
 
   /**
@@ -959,26 +778,11 @@ export class CreativeThinkingMcpAgent extends McpAgent<Env, CreativeThinkingStat
             timestamp: new Date().toISOString(),
           };
 
-          // Try to read the test session from KV
-          let testSessionData = null;
-          try {
-            testSessionData = await this.sessionAdapter.getSession('test-session-123');
-          } catch (error) {
-            testSessionData = { error: (error as Error).message };
-          }
-
           return {
             content: [
               {
                 type: 'text',
-                text: JSON.stringify(
-                  {
-                    sessionInfo,
-                    testSessionData,
-                  },
-                  null,
-                  2
-                ),
+                text: JSON.stringify({ sessionInfo }, null, 2),
               },
             ],
           };
@@ -1271,214 +1075,5 @@ export class CreativeThinkingMcpAgent extends McpAgent<Env, CreativeThinkingStat
    */
   getMetrics() {
     return this.state.globalMetrics;
-  }
-
-  // Helper methods for internal state management
-
-  /**
-   * Generate a unique plan ID
-   */
-  private generatePlanId(): string {
-    const timestamp = Date.now().toString(36);
-    const uuid = crypto.randomUUID();
-    const random = uuid.replace(/-/g, '').substring(0, 8);
-    return `plan_${timestamp}_${random}`;
-  }
-
-  /**
-   * Generate execution steps for techniques
-   */
-  private generatePlanSteps(techniques: string[]): any[] {
-    const steps: any[] = [];
-    let stepNumber = 1;
-
-    for (const technique of techniques) {
-      const techniqueInfo = this.techniqueAdapter.getTechnique(technique);
-      const stepCount = techniqueInfo ? techniqueInfo.stepCount : 3;
-
-      for (let i = 1; i <= stepCount; i++) {
-        steps.push({
-          stepNumber,
-          technique,
-          techniqueStep: i,
-          totalTechniqueSteps: stepCount,
-          status: 'pending',
-        });
-        stepNumber++;
-      }
-    }
-
-    return steps;
-  }
-
-  /**
-   * Generate execution graph based on techniques and mode
-   */
-  private generateExecutionGraph(techniques: string[], mode?: string): any {
-    if (mode === 'parallel') {
-      return {
-        type: 'parallel',
-        groups: techniques.map(t => {
-          const techniqueInfo = this.techniqueAdapter.getTechnique(t);
-          return {
-            technique: t,
-            steps: techniqueInfo ? techniqueInfo.stepCount : 3,
-          };
-        }),
-      };
-    }
-
-    // Sequential by default
-    let stepNumber = 1;
-    const sequence = [];
-
-    for (const technique of techniques) {
-      const techniqueInfo = this.techniqueAdapter.getTechnique(technique);
-      const stepCount = techniqueInfo ? techniqueInfo.stepCount : 3;
-
-      for (let i = 1; i <= stepCount; i++) {
-        sequence.push({
-          step: stepNumber++,
-          technique,
-          techniqueStep: i,
-          totalTechniqueSteps: stepCount,
-        });
-      }
-    }
-
-    return {
-      type: 'sequential',
-      sequence,
-    };
-  }
-
-  /**
-   * Estimate duration for techniques
-   */
-  private estimateDuration(techniques: string[]): string {
-    let totalMinutes = 0;
-
-    for (const technique of techniques) {
-      const info = this.techniqueAdapter.getTechnique(technique);
-      if (info && info.timeEstimate) {
-        const match = info.timeEstimate.match(/(\d+)-(\d+)/);
-        if (match) {
-          totalMinutes += (parseInt(match[1]) + parseInt(match[2])) / 2;
-        }
-      }
-    }
-
-    if (totalMinutes < 60) {
-      return `${Math.round(totalMinutes)} minutes`;
-    } else {
-      const hours = Math.floor(totalMinutes / 60);
-      const minutes = Math.round(totalMinutes % 60);
-      return `${hours} hour${hours > 1 ? 's' : ''} ${minutes} minutes`;
-    }
-  }
-
-  /**
-   * Generate step-specific guidance for techniques
-   */
-  private generateStepGuidance(technique: string, step: number, problem: string): string {
-    const guidanceMap: Record<string, Record<number, string>> = {
-      six_hats: {
-        1: `Blue Hat: Define the thinking process for "${problem}". What are we trying to achieve?`,
-        2: `White Hat: Gather facts and data about "${problem}". What do we know for certain?`,
-        3: `Red Hat: Express feelings and intuitions about "${problem}". What does your gut say?`,
-        4: `Yellow Hat: Find benefits and positive aspects of "${problem}". What could work well?`,
-        5: `Black Hat: Identify risks and potential problems with "${problem}". What could go wrong?`,
-        6: `Green Hat: Generate creative solutions for "${problem}". What new ideas emerge?`,
-      },
-      po: {
-        1: `Create a provocative statement about "${problem}" that challenges assumptions`,
-        2: `Explore the provocation: What new directions does it suggest?`,
-        3: `Extract practical ideas from the provocative exploration`,
-        4: `Develop the most promising ideas into actionable solutions`,
-      },
-      scamper: {
-        1: `Substitute: What can be substituted in "${problem}"?`,
-        2: `Combine: What can be combined or integrated?`,
-        3: `Adapt: What can be adapted from elsewhere?`,
-        4: `Modify/Magnify: What can be emphasized or enhanced?`,
-        5: `Put to other uses: How else could this be used?`,
-        6: `Eliminate: What can be removed or simplified?`,
-        7: `Reverse: What can be reversed or rearranged?`,
-        8: `Parameterize: What variables can be adjusted?`,
-      },
-      first_principles: {
-        1: `Break down "${problem}" into fundamental components`,
-        2: `Identify the fundamental truths about each component`,
-        3: `Challenge assumptions: What's assumed but not necessarily true?`,
-        4: `Rebuild the solution from fundamental truths`,
-      },
-    };
-
-    const techniqueGuidance = guidanceMap[technique];
-    if (techniqueGuidance && techniqueGuidance[step]) {
-      return techniqueGuidance[step];
-    }
-
-    return `Continue with step ${step} of ${technique} for: "${problem}"`;
-  }
-
-  /**
-   * Extract technique-specific fields from parameters
-   */
-  private extractTechniqueSpecificFields(params: any): any {
-    const techniqueFields: Record<string, string[]> = {
-      six_hats: ['hatColor'],
-      po: ['provocation'],
-      random_entry: ['randomStimulus', 'connections'],
-      scamper: ['scamperAction', 'modifications'],
-      concept_extraction: ['extractedConcepts', 'abstractedPatterns', 'applications'],
-      yes_and: ['initialIdea', 'additions', 'evaluations', 'synthesis'],
-      design_thinking: ['designStage', 'empathyInsights', 'problemStatement', 'ideaList'],
-      triz: ['contradiction', 'inventivePrinciples', 'minimalSolution'],
-      first_principles: ['components', 'fundamentalTruths', 'assumptions', 'reconstruction'],
-      criteria_based_analysis: ['validityScore', 'criteriaAssessments', 'confidenceBounds'],
-      linguistic_forensics: [
-        'pronounRatios',
-        'complexityMetrics',
-        'coherenceScore',
-        'linguisticMarkers',
-      ],
-      competing_hypotheses: [
-        'hypothesisMatrix',
-        'probabilities',
-        'diagnosticValue',
-        'sensitivityFactors',
-      ],
-    };
-
-    const extracted: any = {};
-    const fields = techniqueFields[params.technique] || [];
-
-    for (const field of fields) {
-      if (params[field] !== undefined) {
-        extracted[field] = params[field];
-      }
-    }
-
-    // Common fields
-    if (params.risks) extracted.risks = params.risks;
-    if (params.mitigations) extracted.mitigations = params.mitigations;
-    if (params.antifragileProperties)
-      extracted.antifragileProperties = params.antifragileProperties;
-
-    return extracted;
-  }
-
-  /**
-   * Get list of techniques used in a session
-   */
-  private getUsedTechniques(session: any): string[] {
-    const techniques = new Set<string>();
-    for (const entry of session.history) {
-      if (entry.technique) {
-        techniques.add(entry.technique);
-      }
-    }
-    return Array.from(techniques);
   }
 }
