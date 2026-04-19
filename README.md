@@ -1,5 +1,13 @@
 # Creative Thinking MCP Server
 
+
+## Badges
+
+[![CI Pipeline](https://github.com/uddhav/creative-thinking/actions/workflows/ci.yml/badge.svg)](https://github.com/uddhav/creative-thinking/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/uddhav/creative-thinking/branch/main/graph/badge.svg)](https://codecov.io/gh/uddhav/creative-thinking)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![npm version](https://badge.fury.io/js/creative-thinking.svg)](https://badge.fury.io/js/creative-thinking)
+
 A Model Context Protocol (MCP) server that provides structured creative thinking techniques for
 problem-solving and ideation. This server implements 28 creative thinking techniques through a
 unified framework combining generative creativity with systematic risk assessment, analytical
