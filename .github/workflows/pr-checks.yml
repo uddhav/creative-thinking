@@ -79,6 +79,11 @@ jobs:
       contents: read
       security-events: write
       pull-requests: write
+      # CodeQL's analyze step calls /repos/:owner/:repo/actions/runs/:id to
+      # attach run metadata to telemetry. Without actions:read that call
+      # surfaces as "Resource not accessible by integration" and fails the job
+      # even when the analysis itself succeeded.
+      actions: read
     steps:
       - name: 🛎️ Checkout code
         uses: actions/checkout@v4
