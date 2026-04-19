@@ -6,8 +6,8 @@ compatibility_flags = ["nodejs_compat"]
 # KV namespace for session storage
 [[kv_namespaces]]
 binding = "KV"
-id = "b7dab4a71e584d6f93906082353807f8"
-preview_id = "2c07444e683244e7a5e7aa78d7e7c204"
+id = "657b09e37b7a4be1a97ec4c2512b1f7b"
+preview_id = "861beaa500744472b49684b06d1c3dbd"
 
 # OAuth KV namespace removed - no longer using OAuth
 
@@ -48,7 +48,7 @@ LOG_LEVEL = "info"
 OAUTH_ENABLED = "false"
 OAUTH_REQUIRED = "false"
 OAUTH_PROVIDER = "github"  # Options: github, google, custom
-OAUTH_REDIRECT_URI = "https://creative-thinking-mcp.mbfw8r4d6n.workers.dev/oauth/callback"
+OAUTH_REDIRECT_URI = "https://socketes.munshy.app/oauth/callback"
 
 # Rate Limiting (enabled by default)
 RATE_LIMIT_ENABLED = "true"
@@ -58,6 +58,17 @@ RATE_LIMIT_AUTHENTICATED = "100"  # Requests per minute for authenticated users
 # Performance Monitoring (enabled by default)
 PERFORMANCE_MONITORING = "true"
 METRICS_SAMPLE_RATE = "1.0"
+
+# Telemetry (KV-backed storage, opt-in)
+TELEMETRY_ENABLED = "false"
+TELEMETRY_LEVEL = "basic"
+TELEMETRY_STORAGE = "kv"
+TELEMETRY_FLUSH_INTERVAL = "60000"
+TELEMETRY_BATCH_SIZE = "50"
+TELEMETRY_PRIVACY_MODE = "balanced"
+
+# Visual formatting (chalk)
+SHOW_TECHNIQUE_INDICATORS = "false"
 
 # OAuth Secrets (set via wrangler secret put)
 # OAUTH_CLIENT_ID = "your_oauth_client_id"
@@ -76,10 +87,10 @@ OAUTH_ENABLED = "false"
 RATE_LIMIT_ENABLED = "false"  # Disable rate limiting in development
 PERFORMANCE_MONITORING = "true"
 
-# Route configuration (uncomment when deploying to custom domain)
-# [[routes]]
-# pattern = "creative-thinking.example.com/*"
-# zone_name = "example.com"
+# Custom domain — Cloudflare creates the DNS record and SSL cert automatically
+[[routes]]
+pattern = "socketes.munshy.app"
+custom_domain = true
 
 # Limits - Increased for complex thinking techniques (requires paid plan)
 # [limits]

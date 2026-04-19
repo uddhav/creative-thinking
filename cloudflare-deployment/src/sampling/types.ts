@@ -127,11 +127,20 @@ export interface ModelInfo {
 }
 
 /**
- * Sampling result from client
+ * Sampling result from client.
+ *
+ * `content` is the canonical field read by `NLPService`; `text` is
+ * preserved as a mirror for backward compatibility with any callers that
+ * referenced the older field name.
  */
 export interface SamplingResult {
   /**
-   * The generated text
+   * The generated text content.
+   */
+  content: string;
+
+  /**
+   * Mirror of `content` for legacy callers.
    */
   text: string;
 

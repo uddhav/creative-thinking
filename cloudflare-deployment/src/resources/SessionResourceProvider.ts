@@ -4,12 +4,20 @@
 
 import { BaseResourceProvider } from './ResourceProvider.js';
 import type { ResourceContent, ResourceTemplate, ExportFormat } from './types.js';
-import type { SessionAdapter } from '../adapters/SessionAdapter.js';
 import type { CreativeThinkingState } from '../CreativeThinkingMcpAgent.js';
+
+/**
+ * Minimal read surface needed from a session store — supports both the
+ * async-iterable SessionAdapter of the old CF build and the sync SessionManager.
+ */
+export interface SessionResourceSource {
+  listSessions(): Array<{ id: string }> | Promise<Array<{ id: string }>>;
+  getSession(id: string): unknown | Promise<unknown>;
+}
 
 export class SessionResourceProvider extends BaseResourceProvider {
   constructor(
-    private sessionAdapter: SessionAdapter,
+    private sessionAdapter: SessionResourceSource,
     private getState: () => CreativeThinkingState
   ) {
     super('session://');
@@ -132,7 +140,10 @@ export class SessionResourceProvider extends BaseResourceProvider {
       };
     }
 
-    const session = await this.sessionAdapter.getSession(currentSessionId);
+    const session = (await this.sessionAdapter.getSession(currentSessionId)) as
+      | (Record<string, unknown> & { history?: unknown[] })
+      | null
+      | undefined;
     if (!session) {
       return null;
     }
