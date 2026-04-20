@@ -81,19 +81,83 @@ export interface CreativeThinkingState {
 }
 
 export class CreativeThinkingMcpAgent extends McpAgent<Env, CreativeThinkingState, Props> {
-  private sessionManager!: SessionManager;
-  private techniqueRegistry!: TechniqueRegistry;
-  private complexityAnalyzer!: HybridComplexityAnalyzer;
-  private visualFormatter!: VisualFormatter;
-  private metricsCollector!: MetricsCollector;
-  private ergodicityManager!: ErgodicityManager;
-  private telemetry!: TelemetryCollector;
-  private persistenceAdapter!: KVPersistenceAdapter;
+  // Services that are lazy-instantiated on first tool invocation. Keeping
+  // them out of `init()` is critical: Cloudflare's free-tier Durable Object
+  // CPU budget (~10 ms/request) is blown if we eagerly construct the full
+  // service graph (28 technique handlers, ergodicity engine, NLP service,
+  // telemetry, persistence) on every cold start.
+  private _sessionManager: SessionManager | null = null;
+  private _techniqueRegistry: TechniqueRegistry | null = null;
+  private _complexityAnalyzer: HybridComplexityAnalyzer | null = null;
+  private _visualFormatter: VisualFormatter | null = null;
+  private _metricsCollector: MetricsCollector | null = null;
+  private _ergodicityManager: ErgodicityManager | null = null;
+  private _telemetry: TelemetryCollector | null = null;
+  private _persistenceAdapter: KVPersistenceAdapter | null = null;
   private resourceRegistry!: ResourceProviderRegistry;
   private promptRegistry!: PromptRegistry;
   private streamingManager!: StreamingManager;
   private logger!: Logger;
   private initialized: boolean = false;
+
+  private get persistenceAdapter(): KVPersistenceAdapter {
+    if (!this._persistenceAdapter) {
+      this._persistenceAdapter = new KVPersistenceAdapter(this.env.KV as any);
+    }
+    return this._persistenceAdapter;
+  }
+
+  private get techniqueRegistry(): TechniqueRegistry {
+    if (!this._techniqueRegistry) {
+      this._techniqueRegistry = TechniqueRegistry.getInstance();
+    }
+    return this._techniqueRegistry;
+  }
+
+  private get complexityAnalyzer(): HybridComplexityAnalyzer {
+    if (!this._complexityAnalyzer) {
+      this._complexityAnalyzer = new HybridComplexityAnalyzer();
+    }
+    return this._complexityAnalyzer;
+  }
+
+  private get visualFormatter(): VisualFormatter {
+    if (!this._visualFormatter) {
+      this._visualFormatter = new VisualFormatter(true);
+    }
+    return this._visualFormatter;
+  }
+
+  private get metricsCollector(): MetricsCollector {
+    if (!this._metricsCollector) {
+      this._metricsCollector = new MetricsCollector();
+    }
+    return this._metricsCollector;
+  }
+
+  private get ergodicityManager(): ErgodicityManager {
+    if (!this._ergodicityManager) {
+      this._ergodicityManager = new ErgodicityManager();
+    }
+    return this._ergodicityManager;
+  }
+
+  private get sessionManager(): SessionManager {
+    if (!this._sessionManager) {
+      this._sessionManager = new SessionManager(undefined, this.persistenceAdapter as any);
+    }
+    return this._sessionManager;
+  }
+
+  private get telemetry(): TelemetryCollector {
+    if (!this._telemetry) {
+      this._telemetry = TelemetryCollector.configureInstance(
+        PrivacyManager.getConfigFromEnvironment(),
+        (this.env.KV as any) ?? null
+      );
+    }
+    return this._telemetry;
+  }
 
   // Initial state for the Agent with proper session and plan management
   initialState: CreativeThinkingState = {
@@ -137,20 +201,12 @@ export class CreativeThinkingMcpAgent extends McpAgent<Env, CreativeThinkingStat
     this.logger = createLogger(this.env as any, 'CreativeThinkingMcpAgent');
     this.logger.info('Initializing Creative Thinking MCP Agent');
 
-    // KV-backed persistence adapter for sessions
-    this.persistenceAdapter = new KVPersistenceAdapter(this.env.KV as any);
-
-    // Instantiate ported modules
-    this.techniqueRegistry = TechniqueRegistry.getInstance();
-    this.complexityAnalyzer = new HybridComplexityAnalyzer();
-    this.visualFormatter = new VisualFormatter(true); // disable stderr thought logging in Workers
-    this.metricsCollector = new MetricsCollector();
-    this.ergodicityManager = new ErgodicityManager();
-    this.sessionManager = new SessionManager(undefined, this.persistenceAdapter as any);
-    this.telemetry = TelemetryCollector.configureInstance(
-      PrivacyManager.getConfigFromEnvironment(),
-      (this.env.KV as any) ?? null
-    );
+    // All of the heavy ported modules (TechniqueRegistry, SessionManager,
+    // ErgodicityManager, HybridComplexityAnalyzer, VisualFormatter,
+    // MetricsCollector, TelemetryCollector, KVPersistenceAdapter) are
+    // accessed through lazy getters declared above. They are constructed on
+    // the first tool invocation instead of during DO init(), which keeps
+    // cold-start CPU time under Cloudflare's free-tier Durable Object budget.
 
     // Initialize streaming manager for SSE/WebSocket progress events
     this.streamingManager = new StreamingManager({
@@ -188,13 +244,24 @@ export class CreativeThinkingMcpAgent extends McpAgent<Env, CreativeThinkingStat
     this.promptRegistry.register(new ProblemSolverPrompt());
     this.promptRegistry.register(new RiskAssessmentPrompt());
 
-    // Register the three core MCP tools
+    // Register the three core MCP tools. Tool registration itself is cheap —
+    // it just adds Zod schemas to the McpServer. The per-tool handler bodies
+    // run on invocation, where lazy-init of the service graph is amortized.
     this.registerDiscoverTechniques();
     this.registerPlanThinkingSession();
     this.registerExecuteThinkingStep();
 
-    // Register MCP resources
-    await this.registerResources();
+    // Register MCP resources. Previously this ran `await listAllResources()`
+    // at init time, which walks SessionResourceProvider → SessionManager →
+    // the whole persistence chain, blowing the DO free-tier CPU budget on
+    // cold start. Run the async enumeration in the background so init()
+    // returns promptly; resources still appear before the client needs them
+    // because MCP clients fetch resources/list after initialize completes.
+    this.ctx.waitUntil(
+      this.registerResources().catch(error => {
+        this.logger.warn('Deferred resource registration failed', error);
+      })
+    );
 
     // Register MCP prompts
     this.registerPrompts();

@@ -352,25 +352,11 @@ export class NLPService {
 
   constructor(samplingManager?: SamplingManager) {
     this.samplingManager = samplingManager || null;
-    // Initialize any plugins or extensions here if needed
-    // Warm up the NLP engine to avoid first-use initialization overhead
-    this.warmUp();
-  }
-
-  /**
-   * Warm up the NLP engine to avoid first-use initialization overhead
-   */
-  private warmUp(): void {
-    try {
-      // Do a simple parse to initialize the engine
-      const doc = nlp('warm up test');
-      doc.out('text');
-      // Also warm up common operations
-      doc.match('#Noun');
-      doc.match('#Verb');
-    } catch {
-      // Ignore warm-up errors
-    }
+    // NOTE: We intentionally do NOT warm up compromise.js here. Loading the
+    // compromise lexicon on first `nlp(...)` call costs ~50ms of CPU and is
+    // enough to blow through Cloudflare Durable Objects' free-tier CPU budget
+    // on cold start. Lazy-loading keeps the DO init path fast; warm-up happens
+    // on the first real analyze() call, which runs outside the critical path.
   }
 
   /**
@@ -2146,5 +2132,6 @@ export function resetNLPService(): void {
   nlpServiceInstance = null;
 }
 
-// Export singleton instance for convenience
-export const nlpService = getNLPService();
+// Note: we intentionally do NOT export an eager singleton here. Any module
+// that imports such a const would trigger compromise.js initialization at
+// import time, defeating lazy loading. Callers should use getNLPService().

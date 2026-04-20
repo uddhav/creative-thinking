@@ -11,10 +11,15 @@ import type { ComplexityAssessment, NLPAnalysisResult } from './types.js';
 
 export class HybridComplexityAnalyzer {
   private cache = new ComplexityCache();
-  private nlpService: NLPService;
+  // Lazy: don't touch NLPService (and compromise.js) until the first analyze()
+  // call. Keeps Worker cold-start off the compromise lexicon load path.
+  private _nlpService: NLPService | null = null;
 
-  constructor() {
-    this.nlpService = getNLPService();
+  private get nlpService(): NLPService {
+    if (!this._nlpService) {
+      this._nlpService = getNLPService();
+    }
+    return this._nlpService;
   }
 
   /**

@@ -45,8 +45,13 @@ export class SessionManager {
   private currentSessionId: string | null = null;
   private memoryManager: MemoryManager;
   private sessionLock: SessionLock;
-  private reflexivityTracker: ReflexivityTracker;
-  private nlpService: NLPService;
+  // Lazy: NLPService and ReflexivityTracker both depend on compromise.js.
+  // Keeping them out of the constructor keeps Workers cold-start CPU time
+  // under the Durable Objects free-tier budget. See NLPService.ts for the
+  // warm-up rationale.
+  private _reflexivityTracker: ReflexivityTracker | null = null;
+  private _nlpService: NLPService | null = null;
+  private samplingManagerRef: SamplingManager | undefined;
   private telemetry = TelemetryCollector.getInstance();
 
   // Extracted components
@@ -83,11 +88,9 @@ export class SessionManager {
     // Initialize session lock for concurrent access control
     this.sessionLock = getSessionLock();
 
-    // Initialize NLP service with optional sampling manager
-    this.nlpService = getNLPService(samplingManager);
-
-    // Initialize reflexivity tracker with NLP service
-    this.reflexivityTracker = new ReflexivityTracker(this.nlpService);
+    // NLPService + ReflexivityTracker are lazy — built on first access via
+    // the accessors below. This avoids loading compromise.js during DO init.
+    this.samplingManagerRef = samplingManager;
 
     // Initialize core components only
     this.planManager = new PlanManager();
@@ -124,6 +127,26 @@ export class SessionManager {
       this.sessionIndex = new SessionIndex();
     }
     return this.sessionIndex;
+  }
+
+  /**
+   * Lazy NLP service — defers compromise.js lexicon load until first use.
+   */
+  private get nlpService(): NLPService {
+    if (!this._nlpService) {
+      this._nlpService = getNLPService(this.samplingManagerRef);
+    }
+    return this._nlpService;
+  }
+
+  /**
+   * Lazy reflexivity tracker — avoids eager NLPService instantiation.
+   */
+  private get reflexivityTracker(): ReflexivityTracker {
+    if (!this._reflexivityTracker) {
+      this._reflexivityTracker = new ReflexivityTracker(this.nlpService);
+    }
+    return this._reflexivityTracker;
   }
 
   /**
@@ -172,9 +195,12 @@ export class SessionManager {
       console.error('[SessionManager] Cleared session index');
     }
 
-    // Clean up reflexivity tracker
-    this.reflexivityTracker.destroy();
-    console.error('[SessionManager] Destroyed reflexivity tracker');
+    // Clean up reflexivity tracker only if it was ever created
+    if (this._reflexivityTracker) {
+      this._reflexivityTracker.destroy();
+      this._reflexivityTracker = null;
+      console.error('[SessionManager] Destroyed reflexivity tracker');
+    }
 
     console.error('[SessionManager] Cleanup complete');
   }
