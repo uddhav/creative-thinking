@@ -62,17 +62,31 @@ comprehensive workflows, and maintaining focus throughout the creative process.
 
 ## Installation
 
-### Using npx
+The server ships as a stdio CLI. Once installed, two equivalent binaries are available: `socketes`
+(preferred) and `creative-thinking` (kept for backwards compatibility). The package is distributed
+via GitHub — `dist/` is checked into the repo so `npx` can run the build directly. The package is
+not currently published to the npm registry.
+
+### Using npx (no install)
 
 ```bash
-# Run directly from GitHub
 npx -y github:uddhav/creative-thinking
-
-# Or if published to npm
-npx -y creative-thinking
 ```
 
-### Local Development
+### Global install — both bins land on PATH
+
+```bash
+npm install -g github:uddhav/creative-thinking
+socketes
+```
+
+### Register with an MCP client (Claude Code shown)
+
+```bash
+claude mcp add --transport stdio socketes -- npx -y github:uddhav/creative-thinking
+```
+
+### Local development
 
 ```bash
 # Clone the repository
@@ -1190,46 +1204,13 @@ The server supports environment variables for advanced features:
 
 See [Telemetry in Contributing Guide](./CONTRIBUTING.md#telemetry-system) for details.
 
-## Installation
-
-The server ships as a stdio CLI. The `creative-thinking` npm package installs two equivalent
-binaries: `socketes` (preferred) and `creative-thinking` (kept for backwards compatibility).
-
-```bash
-# One-shot, no install (resolves to the creative-thinking package on the registry)
-npx -y creative-thinking
-
-# Or install globally — both bins land on PATH
-npm install -g creative-thinking
-socketes
-```
-
-Register it with an MCP client (Claude Code shown):
-
-```bash
-claude mcp add --transport stdio socketes -- npx -y creative-thinking
-```
-
 ## Configuration
 
 You can connect to the Creative Thinking MCP Server using either of these methods:
 
-### Option 1: Local Installation via NPX
+### Option 1: Run from GitHub via NPX
 
-Run directly from npm without a global install:
-
-```json
-{
-  "mcpServers": {
-    "socketes": {
-      "command": "npx",
-      "args": ["-y", "creative-thinking"]
-    }
-  }
-}
-```
-
-Or run straight from GitHub:
+No install required — runs the build checked into the repo:
 
 ```json
 {

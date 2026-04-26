@@ -10,6 +10,11 @@ Provides 28 thinking techniques through a unified framework combining generative
 systematic risk assessment, analytical verification, and behavioral economics insights. Supports
 persona-driven sessions and multi-persona debates.
 
+Distributed as a stdio CLI in the `creative-thinking` npm package, which exposes two equivalent
+bins: `socketes` (preferred) and `creative-thinking` (kept for backwards compatibility). Both
+resolve to `dist/index.js`. There is no remote / HTTP / SSE transport — the server speaks stdio
+only.
+
 ## Commands
 
 ```bash
@@ -42,6 +47,48 @@ npx vitest run src/__tests__/core/                                 # Directory
 3. `npm run lint` — zero warnings allowed
 
 A pre-push hook blocks pushes when dist/ is out of sync with src/.
+
+### Running the CLI Locally
+
+After `npm run build`, the stdio server is at `dist/index.js`. Equivalent ways to launch it:
+
+```bash
+node dist/index.js                                        # direct
+npm start                                                 # same, via package script
+npx -y github:uddhav/creative-thinking                    # from GitHub (uses checked-in dist/)
+socketes                                                  # post-`npm install -g github:uddhav/creative-thinking`
+```
+
+The package is not currently published to the npm registry — distribution is via GitHub, which is
+why `dist/` is checked into the repo.
+
+Smoke-test the stdio handshake without an MCP client:
+
+```bash
+echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"t","version":"1"}}}' | node dist/index.js
+```
+
+A correct response advertises capabilities for `tools` and `prompts`. Tool calls go through the same
+JSON-RPC stream — see `src/__tests__/integration/mcp-client-integration.test.ts` for the full
+discover → plan → execute flow exercised by an in-process MCP client.
+
+Register the local development build with Claude Code:
+
+```bash
+claude mcp add --transport stdio socketes-dev -- node /absolute/path/to/dist/index.js
+```
+
+For ephemeral debug logging during development, write to **stderr** only (`process.stderr.write`,
+`console.error`). stdout is reserved for JSON-RPC framing — any stray write to stdout corrupts the
+protocol stream and crashes the client. ESLint enforces this; do not relax the rule.
+
+Useful environment variables when running locally (full list in `README.md` and `src/config/`):
+
+- `PERSISTENCE_TYPE=filesystem|postgres` — session backend (default: in-memory only)
+- `PERSISTENCE_PATH=~/.creative-thinking` — filesystem session directory
+- `PERSONA_CATALOG_PATH=/path/to/personas.json` — merge external personas with the built-in catalog
+- `TELEMETRY_ENABLED=true` — opt-in anonymous analytics
+- `DISABLE_THOUGHT_LOGGING=true` — suppress visual thought-progress output on stderr
 
 ## Architecture
 
