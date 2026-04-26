@@ -1,6 +1,5 @@
 # Creative Thinking MCP Server
 
-
 ## Badges
 
 [![CI Pipeline](https://github.com/uddhav/creative-thinking/actions/workflows/ci.yml/badge.svg)](https://github.com/uddhav/creative-thinking/actions/workflows/ci.yml)
@@ -1191,49 +1190,51 @@ The server supports environment variables for advanced features:
 
 See [Telemetry in Contributing Guide](./CONTRIBUTING.md#telemetry-system) for details.
 
+## Installation
+
+The server ships as a stdio CLI. The `creative-thinking` npm package installs two equivalent
+binaries: `socketes` (preferred) and `creative-thinking` (kept for backwards compatibility).
+
+```bash
+# One-shot, no install (resolves to the creative-thinking package on the registry)
+npx -y creative-thinking
+
+# Or install globally — both bins land on PATH
+npm install -g creative-thinking
+socketes
+```
+
+Register it with an MCP client (Claude Code shown):
+
+```bash
+claude mcp add --transport stdio socketes -- npx -y creative-thinking
+```
+
 ## Configuration
 
-You can connect to the Creative Thinking MCP Server using three different methods:
+You can connect to the Creative Thinking MCP Server using either of these methods:
 
-### Option 1: Cloudflare Workers (Recommended)
+### Option 1: Local Installation via NPX
 
-Connect directly to the hosted server with optional authentication and enhanced features:
+Run directly from npm without a global install:
 
 ```json
 {
   "mcpServers": {
-    "creative-thinking": {
-      "transport": {
-        "type": "sse",
-        "url": "https://creative-thinking-mcp.mbfw8r4d6n.workers.dev"
-      }
+    "socketes": {
+      "command": "npx",
+      "args": ["-y", "creative-thinking"]
     }
   }
 }
 ```
 
-**🚀 Enhanced Features Available:**
-
-- **Rate Limiting**: 30 requests/minute for anonymous users (enabled by default)
-- **Performance Monitoring**: Server-Timing headers with detailed metrics
-- **Optional OAuth Authentication**: Support for GitHub, Google, and custom providers
-- **Health Monitoring**: `/health` endpoint for status checks
-
-**🔐 OAuth Setup (Optional):** To enable OAuth authentication:
-
-1. Contact the server administrator to configure OAuth credentials
-2. Access authorization URL: `https://creative-thinking-mcp.mbfw8r4d6n.workers.dev/oauth/authorize`
-3. Use Bearer tokens in Authorization header for authenticated requests
-4. Higher rate limits (100 requests/minute) for authenticated users
-
-### Option 2: Local Installation via NPX
-
-Run directly from GitHub without installation:
+Or run straight from GitHub:
 
 ```json
 {
   "mcpServers": {
-    "creative-thinking": {
+    "socketes": {
       "command": "npx",
       "args": ["-y", "github:uddhav/creative-thinking"]
     }
@@ -1241,31 +1242,19 @@ Run directly from GitHub without installation:
 }
 ```
 
-### Option 3: Local Development Setup
+### Option 2: Local Development Setup
 
 For local development and customization:
 
 ```json
 {
   "mcpServers": {
-    "creative-thinking": {
+    "socketes": {
       "command": "node",
       "args": ["/path/to/creative-thinking/dist/index.js"]
     }
   }
 }
-```
-
-### Connection Health Check
-
-Test your connection:
-
-```bash
-# For Cloudflare Workers deployment
-curl https://creative-thinking-mcp.mbfw8r4d6n.workers.dev/health
-
-# Expected response:
-# {"status":"healthy","timestamp":"2025-01-23T19:31:58.328Z","version":"1.0.0"}
 ```
 
 ### Auto-Save Feature

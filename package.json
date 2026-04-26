@@ -15,7 +15,8 @@
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "creative-thinking": "dist/index.js"
+    "creative-thinking": "dist/index.js",
+    "socketes": "dist/index.js"
   },
   "files": [
     "dist"
@@ -88,6 +89,7 @@
   "keywords": [
     "mcp",
     "model-context-protocol",
+    "socketes",
     "creative-thinking",
     "problem-solving",
     "ideation",
