@@ -1221,6 +1221,10 @@ See [Telemetry in Contributing Guide](./CONTRIBUTING.md#telemetry-system) for de
 operation and exits. State persists between invocations on the local filesystem under
 `PERSISTENCE_PATH` (default `~/.creative-thinking`) — sessions can span days across many calls.
 
+> **Full operating manual:** see [`SOCKETES.md`](./SOCKETES.md) for the meticulous reference —
+> install paths, every flag, output shapes, parallel execution semantics, and a thorough gotchas
+> section.
+
 Typical end-to-end flow:
 
 ```bash

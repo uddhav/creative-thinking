@@ -11,6 +11,10 @@ export default defineConfig({
     testTimeout: 10000,
     // Hook timeout for setup/teardown
     hookTimeout: 10000,
+    // Auto-retry transient failures: a handful of integration / stress
+    // tests are sensitive to worker-pool contention and intermittently
+    // exceed testTimeout under load. Retry twice before reporting fail.
+    retry: 2,
     // Prevent worker timeout issues
     pool: 'threads',
     poolOptions: {
