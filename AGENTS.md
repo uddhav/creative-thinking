@@ -10,8 +10,6 @@ These instructions apply to the entire repository unless a deeper `AGENTS.md` ov
 - MCP server wiring lives in `src/server/` and `src/index.ts`.
 - Technique implementations live in `src/techniques/`.
 - Tests live in `src/__tests__/` and nearby `__tests__` folders.
-- Cloudflare-specific code lives in `cloudflare-deployment/` and should stay isolated from the main
-  package unless the task is explicitly about that deployment target.
 - Prefer focused changes that preserve the existing three-layer architecture: discovery, planning,
   execution.
 - Do not add new public MCP tools unless the user explicitly requests an intentional API change.
@@ -19,8 +17,8 @@ These instructions apply to the entire repository unless a deeper `AGENTS.md` ov
 - Avoid editing generated artifacts by hand when the corresponding source file is the real point of
   change.
 - Do not remove or untrack `dist/` without explicit user approval.
-- Treat files under `cloudflare-deployment/node_modules/`, top-level `node_modules/`, and coverage
-  output as generated or installed content; do not edit them directly.
+- Treat files under top-level `node_modules/` and coverage output as generated or installed content;
+  do not edit them directly.
 - Install dependencies with `npm ci` for routine agent workflows because this repo checks in
   `package-lock.json`.
 - Use `npm install` only when the task explicitly requires updating dependencies or regenerating the
