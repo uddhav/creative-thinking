@@ -62,28 +62,39 @@ comprehensive workflows, and maintaining focus throughout the creative process.
 
 ## Installation
 
-The server ships as a stdio CLI. Once installed, two equivalent binaries are available: `socketes`
-(preferred) and `creative-thinking` (kept for backwards compatibility). The package is distributed
-via GitHub — `dist/` is checked into the repo so `npx` can run the build directly. The package is
-not currently published to the npm registry.
+The package ships **two binaries with different shapes**:
 
-### Using npx (no install)
+- **`socketes`** — a single-turn CLI. Each invocation runs one operation (`discover` / `plan` /
+  `execute` / `session`) and exits. State persists between invocations on the local filesystem under
+  `PERSISTENCE_PATH` (default `~/.creative-thinking`). Designed to be driven from a skill or shell.
+- **`creative-thinking`** — the long-running stdio MCP server. Speaks JSON-RPC for an MCP client to
+  drive. Same three tools under the hood — kept for backwards compatibility.
 
-```bash
-npx -y github:uddhav/creative-thinking
-```
+Distribution is via GitHub (the package is not currently on the npm registry); `dist/` is checked
+into the repo so `npx` can run the build directly.
 
 ### Global install — both bins land on PATH
 
 ```bash
 npm install -g github:uddhav/creative-thinking
-socketes
+socketes --help            # the CLI
+creative-thinking          # starts the MCP server on stdio
+```
+
+### Run from GitHub via NPX (no install)
+
+```bash
+# MCP server (default bin)
+npx -y github:uddhav/creative-thinking
+
+# CLI — pick the binary by name
+npx -y -p github:uddhav/creative-thinking socketes discover --problem "..."
 ```
 
 ### Register with an MCP client (Claude Code shown)
 
 ```bash
-claude mcp add --transport stdio socketes -- npx -y github:uddhav/creative-thinking
+claude mcp add --transport stdio creative-thinking -- npx -y github:uddhav/creative-thinking
 ```
 
 ### Local development
@@ -1204,18 +1215,69 @@ The server supports environment variables for advanced features:
 
 See [Telemetry in Contributing Guide](./CONTRIBUTING.md#telemetry-system) for details.
 
-## Configuration
+## Using the `socketes` CLI
 
-You can connect to the Creative Thinking MCP Server using either of these methods:
+`socketes` is a single-turn CLI that mirrors the three-tool contract. Each invocation runs one
+operation and exits. State persists between invocations on the local filesystem under
+`PERSISTENCE_PATH` (default `~/.creative-thinking`) — sessions can span days across many calls.
+
+Typical end-to-end flow:
+
+```bash
+# 1. Discover candidate techniques for a problem
+socketes discover --problem "How do we reduce churn in self-serve trials?"
+
+# 2. Build a plan (returns planId, persisted to disk)
+socketes plan --problem "How do we reduce churn in self-serve trials?" \
+              --techniques six_hats --timeframe thorough
+
+# 3. Execute steps. First call mints a sessionId; subsequent calls pass it back.
+socketes execute --plan <planId> --technique six_hats \
+                 --problem "How do we reduce churn in self-serve trials?" \
+                 --step 1 --total-steps 7 \
+                 --output "Process control: define what success looks like…" \
+                 --next-step-needed
+
+socketes execute --plan <planId> --session <sessionId> --technique six_hats \
+                 --problem "..." --step 2 --total-steps 7 \
+                 --output "..." --next-step-needed
+```
+
+Each command also accepts a JSON object on stdin; flags override stdin fields. Use stdin for
+technique-specific long-tail params (`hatColor`, `scamperAction`, `risks`, etc.). See
+`socketes <command> --help` for the full flag set.
+
+### Parallel execution
+
+`socketes plan` returns an `executionGraph` with `parallelizableGroups` and a `recommendedStrategy`
+of `sequential | parallel | hybrid`. The skill or shell driver can fan out N concurrent
+`socketes execute` invocations against parallelizable nodes. Concurrent invocations against
+**different** sessionIds are safe; against the **same** sessionId is last-writer-wins — coordinate
+from the client.
+
+### Session management
+
+```bash
+socketes session list --status active --limit 20
+socketes session save --session-id <sessionId> --name "Strategy Q3" --tags strategy,q3
+socketes session export --session-id <sessionId> --format markdown
+socketes session delete --session-id <sessionId> --confirm
+```
+
+`socketes execute` auto-saves the session after every step; explicit `session save` is for
+labelling/tagging an existing session.
+
+## Using as an MCP Server
+
+The `creative-thinking` binary is the long-running stdio MCP server — same three tools, JSON-RPC
+over stdin/stdout, designed for an MCP client to drive. Two ways to wire it up:
 
 ### Option 1: Run from GitHub via NPX
-
-No install required — runs the build checked into the repo:
 
 ```json
 {
   "mcpServers": {
-    "socketes": {
+    "creative-thinking": {
       "command": "npx",
       "args": ["-y", "github:uddhav/creative-thinking"]
     }
@@ -1223,14 +1285,12 @@ No install required — runs the build checked into the repo:
 }
 ```
 
-### Option 2: Local Development Setup
-
-For local development and customization:
+### Option 2: Local development setup
 
 ```json
 {
   "mcpServers": {
-    "socketes": {
+    "creative-thinking": {
       "command": "node",
       "args": ["/path/to/creative-thinking/dist/index.js"]
     }
@@ -1242,6 +1302,7 @@ For local development and customization:
 
 Sessions can be automatically saved during execution by setting `autoSave: true` in the
 execute_thinking_step input. This ensures progress is preserved even if the session is interrupted.
+The `socketes` CLI defaults this to `true` on every `execute` call.
 
 ## Session Management
 

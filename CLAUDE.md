@@ -10,10 +10,17 @@ Provides 28 thinking techniques through a unified framework combining generative
 systematic risk assessment, analytical verification, and behavioral economics insights. Supports
 persona-driven sessions and multi-persona debates.
 
-Distributed as a stdio CLI in the `creative-thinking` npm package, which exposes two equivalent
-bins: `socketes` (preferred) and `creative-thinking` (kept for backwards compatibility). Both
-resolve to `dist/index.js`. There is no remote / HTTP / SSE transport — the server speaks stdio
-only.
+The `creative-thinking` package ships **two distinct binaries with different shapes**:
+
+- **`socketes`** (`dist/cli.js`) — a single-turn CLI. Each invocation runs one operation (`discover`
+  / `plan` / `execute` / `session`) and exits. State persists between invocations on the local
+  filesystem under `PERSISTENCE_PATH` (defaults to `~/.creative-thinking`). This is the preferred
+  surface for skill-driven and shell use.
+- **`creative-thinking`** (`dist/index.js`) — the long-running stdio MCP server. Speaks JSON-RPC
+  over stdin/stdout for an MCP client to drive. Same three tools, same handlers as the CLI under the
+  hood — kept for backwards compatibility.
+
+There is no remote / HTTP / SSE transport for either binary.
 
 ## Commands
 
@@ -48,19 +55,55 @@ npx vitest run src/__tests__/core/                                 # Directory
 
 A pre-push hook blocks pushes when dist/ is out of sync with src/.
 
-### Running the CLI Locally
+### Running the `socketes` CLI Locally
 
-After `npm run build`, the stdio server is at `dist/index.js`. Equivalent ways to launch it:
+After `npm run build`, the CLI is at `dist/cli.js`. The CLI does one operation per invocation and
+exits — drive it from a skill or shell.
 
 ```bash
-node dist/index.js                                        # direct
-npm start                                                 # same, via package script
-npx -y github:uddhav/creative-thinking                    # from GitHub (uses checked-in dist/)
-socketes                                                  # post-`npm install -g github:uddhav/creative-thinking`
+node dist/cli.js --help                                       # discover what's available
+node dist/cli.js discover --problem "..."                      # → JSON on stdout, exit 0
+node dist/cli.js plan --problem "..." --techniques six_hats    # → planId persisted to disk
+node dist/cli.js execute --plan <planId> --technique six_hats \
+    --problem "..." --step 1 --total-steps 7 --output "..." --next-step-needed
+node dist/cli.js session list --status active --limit 20
 ```
 
-The package is not currently published to the npm registry — distribution is via GitHub, which is
-why `dist/` is checked into the repo.
+State on disk under `PERSISTENCE_PATH` (default `~/.creative-thinking`):
+
+- `state/plans/<planId>.json` — full plan with `techniques` field that the executor needs (the
+  CLI-side plan store mirrors the in-memory `PlanManager` because `ResponseBuilder` strips fields
+  the executor relies on; see `src/cli/planStore.ts`)
+- `state/sessions/<sessionId>.json` — session history (auto-saved every `execute` step via
+  `autoSave: true` defaulted in `src/cli/commands/execute.ts`)
+- `state/metadata/` — filesystem adapter housekeeping
+
+Each command also reads a JSON object on stdin (when piped). Flags override stdin fields. Use the
+flag form for the common 5–6 params and the stdin form for technique-specific long-tail fields (e.g.
+`hatColor`, `scamperAction`, `risks` arrays).
+
+**Cross-process state hydration.** Because each invocation is a fresh process:
+
+- `socketes plan` writes the plan to `state/plans/`
+- `socketes execute --plan X --session Y` first checks if `X` and `Y` are in the in-process
+  `PlanManager` / `SessionManager`. If not, it loads them from disk via `hydratePlan` /
+  `loadSessionFromPersistence`. See `src/cli/commands/execute.ts`.
+
+**Parallel execution.** The plan response includes `executionGraph.parallelizableGroups` that the
+LLM/skill can use to fan out concurrent invocations. Concurrent executions against **different**
+sessionIds are safe. Concurrent executions against the **same** sessionId are last-writer-wins — the
+codebase enforces sequential per-session in-process via `SessionLock`, but cross-process is
+unprotected. Coordinate from the client.
+
+### Running the MCP Server Locally
+
+After `npm run build`, the stdio MCP server is at `dist/index.js`:
+
+```bash
+node dist/index.js                            # direct
+npm start                                     # same, via package script
+npx -y github:uddhav/creative-thinking        # from GitHub (uses checked-in dist/)
+```
 
 Smoke-test the stdio handshake without an MCP client:
 
@@ -75,20 +118,34 @@ discover → plan → execute flow exercised by an in-process MCP client.
 Register the local development build with Claude Code:
 
 ```bash
-claude mcp add --transport stdio socketes-dev -- node /absolute/path/to/dist/index.js
+claude mcp add --transport stdio creative-thinking-dev -- node /absolute/path/to/dist/index.js
 ```
 
+The package is not currently published to the npm registry — distribution is via GitHub, which is
+why `dist/` is checked into the repo.
+
 For ephemeral debug logging during development, write to **stderr** only (`process.stderr.write`,
-`console.error`). stdout is reserved for JSON-RPC framing — any stray write to stdout corrupts the
-protocol stream and crashes the client. ESLint enforces this; do not relax the rule.
+`console.error`). stdout is reserved for JSON-RPC framing in MCP mode and for the JSON result in CLI
+mode — any stray write to stdout corrupts protocol stream / parseable output. ESLint enforces this;
+do not relax the rule.
 
-Useful environment variables when running locally (full list in `README.md` and `src/config/`):
+### Shared Architecture Note
 
-- `PERSISTENCE_TYPE=filesystem|postgres` — session backend (default: in-memory only)
+Both binaries import `LateralThinkingServer` from `src/index.ts`. The MCP-bootstrap code at the
+bottom of `src/index.ts` (signal handlers, `StdioServerTransport`, graceful-shutdown machinery) is
+gated behind an `isMcpEntryPoint` check that compares `import.meta.url` to `process.argv[1]` — so
+importing the class from `src/cli.ts` does **not** start an MCP server or register signal handlers.
+If you add new top-level side effects to `src/index.ts`, gate them the same way.
+
+Useful environment variables (full list in `README.md` and `src/config/`):
+
+- `PERSISTENCE_TYPE=filesystem|postgres` — session backend. **Default for the CLI is `filesystem`**;
+  default for the MCP server is in-memory unless explicitly set.
 - `PERSISTENCE_PATH=~/.creative-thinking` — filesystem session directory
 - `PERSONA_CATALOG_PATH=/path/to/personas.json` — merge external personas with the built-in catalog
 - `TELEMETRY_ENABLED=true` — opt-in anonymous analytics
-- `DISABLE_THOUGHT_LOGGING=true` — suppress visual thought-progress output on stderr
+- `DISABLE_THOUGHT_LOGGING=true` — suppress visual thought-progress output on stderr. **Default-on
+  for the CLI** so stdout stays a single parseable JSON value.
 
 ## Architecture
 

@@ -16,13 +16,13 @@
   "main": "dist/index.js",
   "bin": {
     "creative-thinking": "dist/index.js",
-    "socketes": "dist/index.js"
+    "socketes": "dist/cli.js"
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "tsc && node -e \"require('fs').chmodSync('dist/index.js', '755')\"",
+    "build": "tsc && node -e \"['dist/index.js','dist/cli.js'].forEach(f => require('fs').chmodSync(f, '755'))\"",
     "dev": "tsc --watch",
     "start": "node dist/index.js",
     "test": "vitest",

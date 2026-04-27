@@ -328,33 +328,51 @@ export class LateralThinkingServer {
   }
 }
 
+// MCP bootstrap only runs when this file is the entry point. Importing
+// LateralThinkingServer (e.g. from the CLI in src/cli.ts) must not start a
+// stdio transport or register signal handlers.
+const isMcpEntryPoint = (() => {
+  if (!process.argv[1]) return false;
+  try {
+    const entryUrl = new URL(`file://${process.argv[1]}`).href;
+    return import.meta.url === entryUrl;
+  } catch {
+    return false;
+  }
+})();
+
 // Track active requests for proper shutdown
 const activeRequests = 0;
 
-// Initialize MCP server
-const server = new Server(
-  {
-    name: 'creative-thinking',
-    version: '2.0.0',
-  },
-  {
-    capabilities: {
-      tools: {},
-      prompts: {},
+let server: Server | null = null;
+let lateralServer: LateralThinkingServer | null = null;
+let requestHandlers: RequestHandlers | null = null;
+
+if (isMcpEntryPoint) {
+  // Initialize MCP server
+  server = new Server(
+    {
+      name: 'creative-thinking',
+      version: '2.0.0',
     },
-  }
-);
+    {
+      capabilities: {
+        tools: {},
+        prompts: {},
+      },
+    }
+  );
 
-// Create server instance
-const lateralServer = new LateralThinkingServer();
+  // Create server instance
+  lateralServer = new LateralThinkingServer();
 
-// Set up request handlers
-const requestHandlers = new RequestHandlers(server, lateralServer);
-requestHandlers.setupHandlers();
+  // Set up request handlers
+  requestHandlers = new RequestHandlers(server, lateralServer);
+  requestHandlers.setupHandlers();
+}
 
-// Function to get total active requests
 function getActiveRequests(): number {
-  return requestHandlers.getActiveRequests() + activeRequests;
+  return (requestHandlers?.getActiveRequests() ?? 0) + activeRequests;
 }
 
 // Graceful shutdown handling
@@ -420,7 +438,7 @@ async function gracefulShutdown(signal: string) {
     }
 
     // Destroy the lateral thinking server to clean up resources
-    lateralServer.destroy();
+    lateralServer?.destroy();
     console.error('[Server] Cleaned up server resources');
 
     // Close the transport connection if it exists
@@ -430,8 +448,10 @@ async function gracefulShutdown(signal: string) {
     }
 
     // Disconnect the MCP server
-    await server.close();
-    console.error('[Server] Closed MCP server');
+    if (server) {
+      await server.close();
+      console.error('[Server] Closed MCP server');
+    }
 
     // Explicitly flush stdio streams
     await new Promise<void>(resolve => {
@@ -493,28 +513,11 @@ async function gracefulShutdown(signal: string) {
   }
 }
 
-// Register signal handlers for graceful shutdown
-process.on('SIGINT', () => void gracefulShutdown('SIGINT'));
-process.on('SIGTERM', () => void gracefulShutdown('SIGTERM'));
-process.on('SIGHUP', () => void gracefulShutdown('SIGHUP'));
-
-// Handle uncaught errors
-process.on('uncaughtException', error => {
-  console.error('[Server] Uncaught exception:', error);
-  void gracefulShutdown('uncaughtException').then(() => {
-    process.exitCode = 1;
-  });
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('[Server] Unhandled rejection at:', promise, 'reason:', reason);
-  void gracefulShutdown('unhandledRejection').then(() => {
-    process.exitCode = 1;
-  });
-});
-
 // Start server
 async function main() {
+  if (!server) {
+    throw new Error('MCP server not initialized — bootstrap guard misfired');
+  }
   try {
     transport = new StdioServerTransport();
 
@@ -546,11 +549,33 @@ async function main() {
   }
 }
 
-main().catch(error => {
-  console.error('[Server] Fatal error:', error);
-  if (!isShuttingDown) {
-    void gracefulShutdown('fatal-error').then(() => {
+if (isMcpEntryPoint) {
+  // Register signal handlers for graceful shutdown
+  process.on('SIGINT', () => void gracefulShutdown('SIGINT'));
+  process.on('SIGTERM', () => void gracefulShutdown('SIGTERM'));
+  process.on('SIGHUP', () => void gracefulShutdown('SIGHUP'));
+
+  // Handle uncaught errors
+  process.on('uncaughtException', error => {
+    console.error('[Server] Uncaught exception:', error);
+    void gracefulShutdown('uncaughtException').then(() => {
       process.exitCode = 1;
     });
-  }
-});
+  });
+
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('[Server] Unhandled rejection at:', promise, 'reason:', reason);
+    void gracefulShutdown('unhandledRejection').then(() => {
+      process.exitCode = 1;
+    });
+  });
+
+  main().catch(error => {
+    console.error('[Server] Fatal error:', error);
+    if (!isShuttingDown) {
+      void gracefulShutdown('fatal-error').then(() => {
+        process.exitCode = 1;
+      });
+    }
+  });
+}
