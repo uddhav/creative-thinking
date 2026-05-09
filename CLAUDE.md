@@ -347,6 +347,55 @@ src/__tests__/
 
 Tests auto-build before running (`pretest` script runs `npm run build`).
 
+## Release pipeline
+
+Two workflows on `main`, chained by an explicit dispatch:
+
+1. **`.github/workflows/semantic-release.yml`** — runs on every push to `main`. Calls
+   `npx semantic-release`, which analyzes commits since the last tag, determines the version bump
+   from Conventional Commits (`fix:` → patch, `feat:` → minor, `feat!:` / `BREAKING CHANGE:` →
+   major), updates `CHANGELOG.md` + `package.json`, pushes the new commit and tag, and creates the
+   GitHub Release with auto-generated notes. After `semantic-release` returns, a follow-up step runs
+   `git describe --tags --exact-match HEAD` to detect whether a new tag was created this run; if so,
+   it dispatches `release-binaries.yml` against that tag.
+
+2. **`.github/workflows/release-binaries.yml`** — builds standalone single-file binaries via
+   `bun build --compile`. Triggered by:
+   - `push: tags: ['v*.*.*']` — manual tag pushes by a developer
+     (`git tag v0.7.0 && git push origin v0.7.0`).
+   - `workflow_dispatch` — manual / re-run / called by semantic-release.yml.
+
+   Build topology: matrix with `macos-latest` (builds `socketes-darwin-arm64` and
+   `socketes-darwin-x64`) and `ubuntu-latest` (builds `socketes-linux-arm64` and
+   `socketes-linux-x64`). A `release` job downloads both runners' artifacts, generates `SHA256SUMS`,
+   and uploads everything to the GitHub Release with `--clobber` (works whether the Release already
+   exists from semantic-release or needs to be created from a manual tag push).
+
+**Why the explicit dispatch instead of relying on `push: tags`?** Tags pushed by `GITHUB_TOKEN`
+deliberately don't fire `push: tags` workflows — a GitHub Actions safeguard against runaway loops.
+Without the dispatch step, semantic-release-driven releases would never trigger the binary build.
+
+**Why per-platform runners and not a single cross-compile?** Bun's macOS-to-Linux cross-compile from
+`macos-latest` has been observed to hang while downloading the Linux runtime (~30 minutes with no
+progress). Native runners build their own targets reliably.
+
+**Failure recovery.** If a Release was created but binaries are missing (dispatch failed, build
+failed), re-run the binary workflow manually:
+
+```bash
+gh workflow run release-binaries.yml --ref v0.7.0 -f tag=v0.7.0
+```
+
+The `--clobber` upload step handles re-publishing without needing to delete the existing Release.
+**Never roll back a published Release** — fix forward with the next semantic-release-worthy commit.
+
+**Cutting an ad-hoc release** (bypassing semantic-release): bump the version in `package.json`,
+update `CHANGELOG.md`, then `git tag vX.Y.Z && git push origin vX.Y.Z`. `release-binaries.yml` fires
+from the tag push, creates a new Release with stub notes, and uploads binaries.
+
+For end-user release semantics (Conventional Commit cheat sheet), see `CONTRIBUTING.md` → Release
+Process.
+
 ## Important Constraints
 
 - **dist/ is checked in** — required for `npx github:uddhav/creative-thinking` distribution

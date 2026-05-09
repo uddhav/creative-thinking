@@ -757,13 +757,81 @@ BREAKING CHANGE: The execute_thinking_step tool now requires a planId parameter"
 
 ### Automated Release Process
 
-On push to main branch:
+On push to `main`, `.github/workflows/semantic-release.yml` runs and:
 
-1. Analyze commits since last release
-2. Determine version bump
-3. Update CHANGELOG.md
-4. Create GitHub release
-5. Update package.json version
+1. Analyzes commits since the last release tag.
+2. Determines the version bump (patch / minor / major) per Conventional Commits.
+3. Updates `CHANGELOG.md` and bumps the version in `package.json` / `package-lock.json` via
+   `@semantic-release/git`.
+4. Pushes the new commit and tag (e.g. `v0.7.0`) back to `main`.
+5. Creates the GitHub Release with auto-generated notes via `@semantic-release/github`.
+6. Dispatches `release-binaries.yml` against the new tag (see below). When no commit since the last
+   release warrants a bump, semantic-release no-ops and no tag is pushed.
+
+If no `feat:` / `fix:` / `feat!:` commit landed since the last release, the workflow runs but
+produces no release.
+
+### Standalone binary release pipeline
+
+`.github/workflows/release-binaries.yml` builds single-file `socketes` binaries for four target/arch
+combinations and attaches them to the GitHub Release.
+
+**Triggers:**
+
+- `push: tags: ['v*.*.*']` — direct tag pushes from a developer
+  (`git tag v0.7.0 && git push origin v0.7.0`). Use this for ad-hoc releases or to re-publish if a
+  binary upload failed.
+- `workflow_dispatch` (manual) — run from the Actions UI with a `tag` input. Same effect as a tag
+  push but useful when re-running.
+- Dispatched explicitly from `semantic-release.yml` after that workflow publishes a release.
+  **Why:** tags pushed by `GITHUB_TOKEN` deliberately don't fire `push: tags` workflows (anti-loop
+  safeguard), so the explicit dispatch is necessary to close the auto-release loop.
+
+**Build topology:**
+
+- **macos-latest** runner builds `socketes-darwin-arm64` and `socketes-darwin-x64` via
+  `npm run build:bin:darwin`.
+- **ubuntu-latest** runner builds `socketes-linux-arm64` and `socketes-linux-x64` via
+  `npm run build:bin:linux`.
+
+A separate `release` job downloads both runners' artifacts, generates `SHA256SUMS`, and uploads
+everything to the Release. If the Release already exists (the common path when triggered by
+semantic-release), assets are uploaded with `--clobber`. If not (manual tag push without a Release),
+a new Release is created.
+
+**Cross-platform note.** Per-runner native builds are deliberate: Bun's macOS-to-Linux cross-compile
+has been observed to hang while downloading the Linux runtime. `npm run build:bin:all` is provided
+for local dev convenience on macOS but only the per-platform scripts run in CI.
+
+### Failure recovery
+
+If `semantic-release.yml` succeeds (Release exists with notes) but `release-binaries.yml` fails or
+its dispatch was missed, re-run it manually:
+
+```bash
+gh workflow run release-binaries.yml --ref v0.7.0 -f tag=v0.7.0
+```
+
+The workflow's "if Release exists, upload binaries with `--clobber`" branch handles the partial
+state cleanly. No action needed on the existing Release.
+
+If the binary build itself is broken (TypeScript error, Bun compile failure), fix forward on `main`
+— semantic-release will pick up the next bump on the next release-worthy commit. Do not roll back
+published Releases.
+
+### Cutting a release manually
+
+For ad-hoc releases that bypass semantic-release:
+
+```bash
+# 1. Update CHANGELOG.md and package.json version by hand
+# 2. Tag and push
+git tag v0.7.0
+git push origin v0.7.0
+```
+
+`release-binaries.yml` fires from the tag push, builds binaries, and creates a new Release with stub
+notes. Edit the Release notes after the fact if needed.
 
 ## Code Style Guidelines
 
