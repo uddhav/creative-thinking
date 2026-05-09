@@ -111,7 +111,7 @@ npm install
 npm run build
 
 # Run locally
-node dist/index.js
+node dist/mcp-server-main.js
 ```
 
 ## Sequential Execution Architecture
@@ -1296,7 +1296,7 @@ over stdin/stdout, designed for an MCP client to drive. Two ways to wire it up:
   "mcpServers": {
     "creative-thinking": {
       "command": "node",
-      "args": ["/path/to/creative-thinking/dist/index.js"]
+      "args": ["/path/to/creative-thinking/dist/mcp-server-main.js"]
     }
   }
 }

@@ -33,7 +33,7 @@ export class MCPClientTestHelper {
 
   constructor(options: MCPClientOptions = {}) {
     const {
-      serverPath = path.join(__dirname, '../../../dist/index.js'),
+      serverPath = path.join(__dirname, '../../../dist/mcp-server-main.js'),
       clientName = 'test-client',
       clientVersion = '1.0.0',
     } = options;

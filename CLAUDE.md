@@ -16,9 +16,9 @@ The `creative-thinking` package ships **two distinct binaries with different sha
   / `plan` / `execute` / `session`) and exits. State persists between invocations on the local
   filesystem under `PERSISTENCE_PATH` (defaults to `~/.creative-thinking`). This is the preferred
   surface for skill-driven and shell use.
-- **`creative-thinking`** (`dist/index.js`) — the long-running stdio MCP server. Speaks JSON-RPC
-  over stdin/stdout for an MCP client to drive. Same three tools, same handlers as the CLI under the
-  hood — kept for backwards compatibility.
+- **`creative-thinking`** (`dist/mcp-server-main.js`) — the long-running stdio MCP server. Speaks
+  JSON-RPC over stdin/stdout for an MCP client to drive. Same three tools, same handlers as the CLI
+  under the hood — kept for backwards compatibility.
 
 There is no remote / HTTP / SSE transport for either binary.
 
@@ -97,10 +97,10 @@ unprotected. Coordinate from the client.
 
 ### Running the MCP Server Locally
 
-After `npm run build`, the stdio MCP server is at `dist/index.js`:
+After `npm run build`, the stdio MCP server is at `dist/mcp-server-main.js`:
 
 ```bash
-node dist/index.js                            # direct
+node dist/mcp-server-main.js                            # direct
 npm start                                     # same, via package script
 npx -y github:uddhav/creative-thinking        # from GitHub (uses checked-in dist/)
 ```
@@ -108,7 +108,7 @@ npx -y github:uddhav/creative-thinking        # from GitHub (uses checked-in dis
 Smoke-test the stdio handshake without an MCP client:
 
 ```bash
-echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"t","version":"1"}}}' | node dist/index.js
+echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"t","version":"1"}}}' | node dist/mcp-server-main.js
 ```
 
 A correct response advertises capabilities for `tools` and `prompts`. Tool calls go through the same
@@ -118,7 +118,7 @@ discover → plan → execute flow exercised by an in-process MCP client.
 Register the local development build with Claude Code:
 
 ```bash
-claude mcp add --transport stdio creative-thinking-dev -- node /absolute/path/to/dist/index.js
+claude mcp add --transport stdio creative-thinking-dev -- node /absolute/path/to/dist/mcp-server-main.js
 ```
 
 The package is not currently published to the npm registry — distribution is via GitHub, which is
@@ -131,11 +131,25 @@ do not relax the rule.
 
 ### Shared Architecture Note
 
-Both binaries import `LateralThinkingServer` from `src/index.ts`. The MCP-bootstrap code at the
-bottom of `src/index.ts` (signal handlers, `StdioServerTransport`, graceful-shutdown machinery) is
-gated behind an `isMcpEntryPoint` check that compares `import.meta.url` to `process.argv[1]` — so
-importing the class from `src/cli.ts` does **not** start an MCP server or register signal handlers.
-If you add new top-level side effects to `src/index.ts`, gate them the same way.
+`src/index.ts` exports the `LateralThinkingServer` class and the public types — **no side effects**.
+Both the CLI (`src/cli.ts`) and the MCP server entry (`src/mcp-server-main.ts`) import the class
+from there.
+
+The MCP runtime bootstrap (signal handlers, `StdioServerTransport`, graceful-shutdown machinery,
+`server.connect(transport)`) lives entirely in `src/mcp-server-main.ts`. That file is the
+`creative-thinking` bin's entry point.
+
+The previous `isMcpEntryPoint` guard inside `src/index.ts` worked under plain `node dist/index.js`
+but collapsed under bundlers that inline modules (notably `bun build --compile`, which makes every
+module's `import.meta.url` resolve to the bundle's entry URL — so the guard always returned `true`
+inside a compiled `socketes` binary and accidentally started an MCP server in the background). With
+a dedicated entry file, no detection is needed: side effects are in `mcp-server-main.ts` only,
+importing the class is provably safe, and Bun-compiled CLI binaries contain no MCP server code at
+all (bundle drops from ~970 to ~700 modules).
+
+**Rule:** keep `src/index.ts` import-safe. New top-level side effects belong in
+`src/mcp-server-main.ts` (for MCP-server-only behavior) or in a separate entry file (for new
+distribution shapes).
 
 Useful environment variables (full list in `README.md` and `src/config/`):
 

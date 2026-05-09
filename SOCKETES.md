@@ -55,10 +55,19 @@ or terminal, use `socketes`. Otherwise, the `creative-thinking` MCP server may f
 
 ## Prerequisites
 
+For the npm-based install paths (A, B, C):
+
 - **Node.js 18+** (the build targets ES2022; older Node versions will fail at module load). Check
   with `node --version`.
 - **Git** if you intend to install from GitHub (the package is not currently on the npm registry, so
   npm pulls source via Git).
+
+For the standalone binary install path (D):
+
+- **Nothing.** No Node, no git, no npm. Just `chmod +x` and run.
+
+For all paths:
+
 - **Disk space** under `PERSISTENCE_PATH` (default `~/.creative-thinking`). Sessions are small (a
   few KB each); plans can run from a few KB to ~30 KB for multi-technique workflows.
 
@@ -66,7 +75,8 @@ No databases, no daemons, no network. socketes is purely local.
 
 ## Install
 
-Three install paths, in increasing order of "permanence on your machine".
+Four install paths, in increasing order of "permanence on your machine": A. one-shot `npx`, B.
+global `npm install`, C. local clone, D. standalone single-file binary.
 
 ### A. Run from GitHub via npx (no install)
 
@@ -108,9 +118,60 @@ npm run build
 node dist/cli.js --help
 ```
 
-The build script compiles TypeScript to `dist/` and chmods both `dist/cli.js` and `dist/index.js` to
-`0755`. The repo intentionally checks in `dist/` so `npx`-from-GitHub works without a build step on
-the consumer side.
+The build script compiles TypeScript to `dist/` and chmods both `dist/cli.js` and
+`dist/mcp-server-main.js` to `0755`. The repo intentionally checks in `dist/` so `npx`-from-GitHub
+works without a build step on the consumer side.
+
+### D. Installing the standalone binary
+
+For machines without Node.js or git, prebuilt single-file binaries are attached to each GitHub
+Release at <https://github.com/uddhav/creative-thinking/releases>. No Node, no npm, no dependencies
+— one ~60 MB file.
+
+```bash
+# Pick the asset that matches your platform
+TAG=$(gh release list -R uddhav/creative-thinking -L 1 --json tagName -q '.[0].tagName')
+gh release download "$TAG" -R uddhav/creative-thinking \
+  -p "socketes-darwin-arm64" -p "SHA256SUMS"
+
+# Verify the checksum before running anything
+shasum -a 256 -c SHA256SUMS --ignore-missing
+
+# Install
+chmod +x socketes-darwin-arm64
+sudo mv socketes-darwin-arm64 /usr/local/bin/socketes
+socketes --version
+```
+
+Available targets: `socketes-darwin-arm64`, `socketes-darwin-x64`, `socketes-linux-arm64`,
+`socketes-linux-x64`. Each binary is built by Bun's `--compile` mode from the same source as the
+npm-distributed CLI.
+
+#### macOS Gatekeeper
+
+The binaries are **not code-signed or notarized**, so the first time you run one you'll see:
+
+```
+"socketes-darwin-arm64" cannot be opened because the developer cannot be verified.
+```
+
+Two ways through it:
+
+```bash
+# Option 1 — strip the quarantine attribute (one command, persistent)
+xattr -d com.apple.quarantine /usr/local/bin/socketes
+
+# Option 2 — right-click in Finder, choose Open, confirm the dialog (one-time)
+```
+
+After that the binary runs unattended. If the `creative-thinking` GitHub repository ever publishes
+signed releases, the quarantine step won't be needed.
+
+#### Why a 60 MB binary?
+
+Each binary embeds Bun's runtime (~50 MB) plus the bundled CLI source (~10 MB). The CLI itself is
+small; the runtime is the floor. Trade-off: zero-prereq install vs. larger download. If you want the
+small footprint, use the npm install path (B) instead — it shares your already-installed Node.js.
 
 ## Verify the install
 
