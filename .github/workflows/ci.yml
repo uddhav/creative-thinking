@@ -102,24 +102,46 @@ jobs:
 
       - name: 📂 Verify build output
         run: |
-          if [ ! -f "dist/index.js" ]; then
-            echo "Build failed: dist/index.js not found"
-            exit 1
-          fi
+          for f in dist/mcp-server-main.js dist/cli.js; do
+            if [ ! -f "$f" ]; then
+              echo "Build failed: $f not found"
+              exit 1
+            fi
+          done
         shell: bash
 
-      - name: 🚀 Test CLI execution
+      - name: 🚀 Smoke-test the socketes CLI
         run: |
-          # Test that the CLI starts without errors using a unified approach
-          node dist/index.js &
-          CLI_PID=$!
-          sleep 2
+          # CLI is one-shot — --version exits 0 immediately on success.
+          OUT=$(node dist/cli.js --version)
+          if [ -z "$OUT" ]; then
+            echo "❌ socketes CLI did not print a version"
+            exit 1
+          fi
+          echo "✅ socketes CLI prints version: $OUT"
+        shell: bash
 
-          if kill -0 $CLI_PID 2>/dev/null; then
-            kill $CLI_PID
-            echo "✅ CLI started successfully"
+      - name: 🚀 Smoke-test the MCP server
+        run: |
+          # Portable backstop without `timeout` (not in macOS coreutils, not
+          # reliable in Git Bash on Windows): background the server, send
+          # initialize, then SIGTERM after a short sleep. Capture output to
+          # a file and grep separately so `pipefail` doesn't propagate the
+          # killer's non-zero exit.
+          REQ='{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"ci","version":"1"}}}'
+          TMPLOG=$(mktemp)
+          echo "$REQ" | node dist/mcp-server-main.js > "$TMPLOG" 2>/dev/null &
+          SERVER_PID=$!
+          ( sleep 5; kill -TERM $SERVER_PID 2>/dev/null ) &
+          KILLER_PID=$!
+          wait $SERVER_PID 2>/dev/null || true
+          kill $KILLER_PID 2>/dev/null || true
+          if grep -q '"protocolVersion"' "$TMPLOG"; then
+            echo "✅ MCP server responded to initialize"
           else
-            echo "❌ CLI failed to start"
+            echo "❌ MCP server did not respond to initialize"
+            echo "captured stdout:"
+            cat "$TMPLOG"
             exit 1
           fi
         shell: bash
@@ -224,13 +246,13 @@ jobs:
       - name: 🧪 Run MCP server tests
         run: |
           # Test that the server starts and responds to basic commands
-          timeout 10s node dist/index.js || [ $? -eq 124 ]
+          timeout 10s node dist/mcp-server-main.js || [ $? -eq 124 ]
           echo "MCP server basic startup test passed"
 
       - name: 🔄 Test with Claude Desktop configuration
         run: |
           # Validate that the tool works with Claude Desktop config format
-          echo '{"mcp": {"servers": {"creative-thinking": {"command": "node", "args": ["dist/index.js"]}}}}' > test-config.json
+          echo '{"mcp": {"servers": {"creative-thinking": {"command": "node", "args": ["dist/mcp-server-main.js"]}}}}' > test-config.json
           echo "Configuration validation passed"
 
   # Job 7: Release Preparation (only on main)

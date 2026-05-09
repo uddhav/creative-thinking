@@ -15,16 +15,23 @@
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "creative-thinking": "dist/index.js",
+    "creative-thinking": "dist/mcp-server-main.js",
     "socketes": "dist/cli.js"
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "tsc && node -e \"['dist/index.js','dist/cli.js'].forEach(f => require('fs').chmodSync(f, '755'))\"",
+    "build": "tsc && node -e \"['dist/mcp-server-main.js','dist/cli.js'].forEach(f => require('fs').chmodSync(f, '755'))\"",
+    "build:bin": "bun build --compile --target=bun-darwin-arm64 src/cli.ts --outfile dist/bin/socketes-darwin-arm64",
+    "build:bin:darwin-x64": "bun build --compile --target=bun-darwin-x64 src/cli.ts --outfile dist/bin/socketes-darwin-x64",
+    "build:bin:linux-arm64": "bun build --compile --target=bun-linux-arm64 src/cli.ts --outfile dist/bin/socketes-linux-arm64",
+    "build:bin:linux-x64": "bun build --compile --target=bun-linux-x64 src/cli.ts --outfile dist/bin/socketes-linux-x64",
+    "build:bin:darwin": "npm run build:bin && npm run build:bin:darwin-x64",
+    "build:bin:linux": "npm run build:bin:linux-arm64 && npm run build:bin:linux-x64",
+    "build:bin:all": "npm run build:bin:darwin && npm run build:bin:linux",
     "dev": "tsc --watch",
-    "start": "node dist/index.js",
+    "start": "node dist/mcp-server-main.js",
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",

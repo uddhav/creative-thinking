@@ -16,9 +16,9 @@ The `creative-thinking` package ships **two distinct binaries with different sha
   / `plan` / `execute` / `session`) and exits. State persists between invocations on the local
   filesystem under `PERSISTENCE_PATH` (defaults to `~/.creative-thinking`). This is the preferred
   surface for skill-driven and shell use.
-- **`creative-thinking`** (`dist/index.js`) — the long-running stdio MCP server. Speaks JSON-RPC
-  over stdin/stdout for an MCP client to drive. Same three tools, same handlers as the CLI under the
-  hood — kept for backwards compatibility.
+- **`creative-thinking`** (`dist/mcp-server-main.js`) — the long-running stdio MCP server. Speaks
+  JSON-RPC over stdin/stdout for an MCP client to drive. Same three tools, same handlers as the CLI
+  under the hood — kept for backwards compatibility.
 
 There is no remote / HTTP / SSE transport for either binary.
 
@@ -97,10 +97,10 @@ unprotected. Coordinate from the client.
 
 ### Running the MCP Server Locally
 
-After `npm run build`, the stdio MCP server is at `dist/index.js`:
+After `npm run build`, the stdio MCP server is at `dist/mcp-server-main.js`:
 
 ```bash
-node dist/index.js                            # direct
+node dist/mcp-server-main.js                            # direct
 npm start                                     # same, via package script
 npx -y github:uddhav/creative-thinking        # from GitHub (uses checked-in dist/)
 ```
@@ -108,7 +108,7 @@ npx -y github:uddhav/creative-thinking        # from GitHub (uses checked-in dis
 Smoke-test the stdio handshake without an MCP client:
 
 ```bash
-echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"t","version":"1"}}}' | node dist/index.js
+echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"t","version":"1"}}}' | node dist/mcp-server-main.js
 ```
 
 A correct response advertises capabilities for `tools` and `prompts`. Tool calls go through the same
@@ -118,7 +118,7 @@ discover → plan → execute flow exercised by an in-process MCP client.
 Register the local development build with Claude Code:
 
 ```bash
-claude mcp add --transport stdio creative-thinking-dev -- node /absolute/path/to/dist/index.js
+claude mcp add --transport stdio creative-thinking-dev -- node /absolute/path/to/dist/mcp-server-main.js
 ```
 
 The package is not currently published to the npm registry — distribution is via GitHub, which is
@@ -131,11 +131,25 @@ do not relax the rule.
 
 ### Shared Architecture Note
 
-Both binaries import `LateralThinkingServer` from `src/index.ts`. The MCP-bootstrap code at the
-bottom of `src/index.ts` (signal handlers, `StdioServerTransport`, graceful-shutdown machinery) is
-gated behind an `isMcpEntryPoint` check that compares `import.meta.url` to `process.argv[1]` — so
-importing the class from `src/cli.ts` does **not** start an MCP server or register signal handlers.
-If you add new top-level side effects to `src/index.ts`, gate them the same way.
+`src/index.ts` exports the `LateralThinkingServer` class and the public types — **no side effects**.
+Both the CLI (`src/cli.ts`) and the MCP server entry (`src/mcp-server-main.ts`) import the class
+from there.
+
+The MCP runtime bootstrap (signal handlers, `StdioServerTransport`, graceful-shutdown machinery,
+`server.connect(transport)`) lives entirely in `src/mcp-server-main.ts`. That file is the
+`creative-thinking` bin's entry point.
+
+The previous `isMcpEntryPoint` guard inside `src/index.ts` worked under plain `node dist/index.js`
+but collapsed under bundlers that inline modules (notably `bun build --compile`, which makes every
+module's `import.meta.url` resolve to the bundle's entry URL — so the guard always returned `true`
+inside a compiled `socketes` binary and accidentally started an MCP server in the background). With
+a dedicated entry file, no detection is needed: side effects are in `mcp-server-main.ts` only,
+importing the class is provably safe, and Bun-compiled CLI binaries contain no MCP server code at
+all (bundle drops from ~970 to ~700 modules).
+
+**Rule:** keep `src/index.ts` import-safe. New top-level side effects belong in
+`src/mcp-server-main.ts` (for MCP-server-only behavior) or in a separate entry file (for new
+distribution shapes).
 
 Useful environment variables (full list in `README.md` and `src/config/`):
 
@@ -332,6 +346,55 @@ src/__tests__/
 ```
 
 Tests auto-build before running (`pretest` script runs `npm run build`).
+
+## Release pipeline
+
+Two workflows on `main`, chained by an explicit dispatch:
+
+1. **`.github/workflows/semantic-release.yml`** — runs on every push to `main`. Calls
+   `npx semantic-release`, which analyzes commits since the last tag, determines the version bump
+   from Conventional Commits (`fix:` → patch, `feat:` → minor, `feat!:` / `BREAKING CHANGE:` →
+   major), updates `CHANGELOG.md` + `package.json`, pushes the new commit and tag, and creates the
+   GitHub Release with auto-generated notes. After `semantic-release` returns, a follow-up step runs
+   `git describe --tags --exact-match HEAD` to detect whether a new tag was created this run; if so,
+   it dispatches `release-binaries.yml` against that tag.
+
+2. **`.github/workflows/release-binaries.yml`** — builds standalone single-file binaries via
+   `bun build --compile`. Triggered by:
+   - `push: tags: ['v*.*.*']` — manual tag pushes by a developer
+     (`git tag v0.7.0 && git push origin v0.7.0`).
+   - `workflow_dispatch` — manual / re-run / called by semantic-release.yml.
+
+   Build topology: matrix with `macos-latest` (builds `socketes-darwin-arm64` and
+   `socketes-darwin-x64`) and `ubuntu-latest` (builds `socketes-linux-arm64` and
+   `socketes-linux-x64`). A `release` job downloads both runners' artifacts, generates `SHA256SUMS`,
+   and uploads everything to the GitHub Release with `--clobber` (works whether the Release already
+   exists from semantic-release or needs to be created from a manual tag push).
+
+**Why the explicit dispatch instead of relying on `push: tags`?** Tags pushed by `GITHUB_TOKEN`
+deliberately don't fire `push: tags` workflows — a GitHub Actions safeguard against runaway loops.
+Without the dispatch step, semantic-release-driven releases would never trigger the binary build.
+
+**Why per-platform runners and not a single cross-compile?** Bun's macOS-to-Linux cross-compile from
+`macos-latest` has been observed to hang while downloading the Linux runtime (~30 minutes with no
+progress). Native runners build their own targets reliably.
+
+**Failure recovery.** If a Release was created but binaries are missing (dispatch failed, build
+failed), re-run the binary workflow manually:
+
+```bash
+gh workflow run release-binaries.yml --ref v0.7.0 -f tag=v0.7.0
+```
+
+The `--clobber` upload step handles re-publishing without needing to delete the existing Release.
+**Never roll back a published Release** — fix forward with the next semantic-release-worthy commit.
+
+**Cutting an ad-hoc release** (bypassing semantic-release): bump the version in `package.json`,
+update `CHANGELOG.md`, then `git tag vX.Y.Z && git push origin vX.Y.Z`. `release-binaries.yml` fires
+from the tag push, creates a new Release with stub notes, and uploads binaries.
+
+For end-user release semantics (Conventional Commit cheat sheet), see `CONTRIBUTING.md` → Release
+Process.
 
 ## Important Constraints
 

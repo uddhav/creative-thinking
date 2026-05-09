@@ -1,7 +1,10 @@
-#!/usr/bin/env node
 /**
- * Creative Thinking MCP Server
- * A modular implementation of lateral thinking techniques
+ * Creative Thinking — LateralThinkingServer class + public type re-exports.
+ *
+ * This file is import-safe: it has no side effects and starts no MCP server,
+ * so the socketes CLI and tests can import the class without bootstrapping
+ * stdio transport or signal handlers. The MCP server entry point lives in
+ * `./mcp-server-main.ts`.
  */
 import { SessionManager } from './core/SessionManager.js';
 import { VisualFormatter } from './utils/VisualFormatter.js';

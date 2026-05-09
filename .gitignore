@@ -4,6 +4,9 @@ node_modules/
 # Build output
 # dist/ # Commented out to allow GitHub distribution
 
+# Standalone binaries — too large for git; published via GitHub Releases
+dist/bin/
+
 # Logs
 logs
 *.log

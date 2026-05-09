@@ -1,0 +1,116 @@
+name: Release Binaries
+
+# Builds standalone executables for socketes (CLI) on tag push and uploads
+# them to the GitHub Release. Per-platform runners build their native targets;
+# Bun's macOS-to-Linux cross-compile has been observed to hang while
+# downloading the Linux runtime, so each runner builds only its own platform.
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to build (e.g. v0.7.0). Required for manual runs.'
+        required: true
+        type: string
+
+permissions:
+  contents: write # to create releases and upload assets
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            script: build:bin:darwin
+            artifact-name: socketes-darwin
+          - os: ubuntu-latest
+            script: build:bin:linux
+            artifact-name: socketes-linux
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.2.18'
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Build TypeScript
+        run: npm run build
+
+      - name: Build standalone binaries for this platform
+        run: npm run ${{ matrix.script }}
+
+      - name: List artifacts
+        working-directory: dist/bin
+        run: ls -lh
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact-name }}
+          path: dist/bin/socketes-*
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist/bin
+          merge-multiple: true
+
+      - name: Generate SHA256SUMS
+        working-directory: dist/bin
+        run: |
+          shasum -a 256 socketes-* > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Resolve tag name
+        id: tag
+        run: |
+          if [ -n "${{ github.event.inputs.tag }}" ]; then
+            echo "name=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create or update release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.tag.outputs.name }}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG exists; uploading binaries"
+            gh release upload "$TAG" dist/bin/socketes-* dist/bin/SHA256SUMS --clobber
+          else
+            gh release create "$TAG" \
+              --title "$TAG" \
+              --notes "Standalone \`socketes\` binaries for macOS and Linux. Verify with \`shasum -a 256 -c SHA256SUMS\`. See [SOCKETES.md](https://github.com/${{ github.repository }}/blob/main/SOCKETES.md#installing-the-standalone-binary) for install + Gatekeeper bypass." \
+              dist/bin/socketes-* dist/bin/SHA256SUMS
+          fi
