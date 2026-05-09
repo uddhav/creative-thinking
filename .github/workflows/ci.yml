@@ -123,13 +123,17 @@ jobs:
 
       - name: 🚀 Smoke-test the MCP server
         run: |
-          # MCP server runs until stdin closes. Sending an initialize request
-          # then closing stdin should produce a JSON-RPC response and exit cleanly.
+          # Capture the response separately from the timeout so `pipefail`
+          # doesn't propagate the timeout's exit code 124 (graceful shutdown
+          # takes ~2s after SIGTERM, which exceeds any reasonable wait).
           REQ='{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"ci","version":"1"}}}'
-          if echo "$REQ" | timeout 5s node dist/mcp-server-main.js | grep -q '"protocolVersion"'; then
+          OUT=$(echo "$REQ" | timeout 5s node dist/mcp-server-main.js 2>/dev/null || true)
+          if echo "$OUT" | grep -q '"protocolVersion"'; then
             echo "✅ MCP server responded to initialize"
           else
             echo "❌ MCP server did not respond to initialize"
+            echo "captured stdout:"
+            echo "$OUT"
             exit 1
           fi
         shell: bash
