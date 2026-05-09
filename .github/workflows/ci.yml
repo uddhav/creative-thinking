@@ -123,17 +123,25 @@ jobs:
 
       - name: 🚀 Smoke-test the MCP server
         run: |
-          # Capture the response separately from the timeout so `pipefail`
-          # doesn't propagate the timeout's exit code 124 (graceful shutdown
-          # takes ~2s after SIGTERM, which exceeds any reasonable wait).
+          # Portable backstop without `timeout` (not in macOS coreutils, not
+          # reliable in Git Bash on Windows): background the server, send
+          # initialize, then SIGTERM after a short sleep. Capture output to
+          # a file and grep separately so `pipefail` doesn't propagate the
+          # killer's non-zero exit.
           REQ='{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"ci","version":"1"}}}'
-          OUT=$(echo "$REQ" | timeout 5s node dist/mcp-server-main.js 2>/dev/null || true)
-          if echo "$OUT" | grep -q '"protocolVersion"'; then
+          TMPLOG=$(mktemp)
+          echo "$REQ" | node dist/mcp-server-main.js > "$TMPLOG" 2>/dev/null &
+          SERVER_PID=$!
+          ( sleep 5; kill -TERM $SERVER_PID 2>/dev/null ) &
+          KILLER_PID=$!
+          wait $SERVER_PID 2>/dev/null || true
+          kill $KILLER_PID 2>/dev/null || true
+          if grep -q '"protocolVersion"' "$TMPLOG"; then
             echo "✅ MCP server responded to initialize"
           else
             echo "❌ MCP server did not respond to initialize"
             echo "captured stdout:"
-            echo "$OUT"
+            cat "$TMPLOG"
             exit 1
           fi
         shell: bash
