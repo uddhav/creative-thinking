@@ -11,6 +11,7 @@ permissions:
   issues: write
   pull-requests: write
   id-token: write
+  actions: write # needed to dispatch the release-binaries workflow after publishing
 
 jobs:
   release:
@@ -39,6 +40,30 @@ jobs:
         run: npm run test:run
 
       - name: 🚀 Release
+        id: release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx semantic-release
+        run: |
+          npx semantic-release
+          # Capture the tag semantic-release just created (if any). git
+          # describe --exact-match exits non-zero when HEAD has no tag, in
+          # which case there was nothing to release this run.
+          if TAG=$(git describe --tags --exact-match HEAD 2>/dev/null); then
+            echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+            echo "Released $TAG"
+          else
+            echo "No release this run"
+          fi
+
+      - name: 📦 Trigger binary build
+        # Tags pushed by GITHUB_TOKEN don't fire downstream `push: tags`
+        # workflows by design, so dispatch release-binaries.yml explicitly.
+        # Manual `git tag && git push origin v…` paths still trigger the
+        # workflow directly without going through this step.
+        if: steps.release.outputs.tag != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run release-binaries.yml \
+            --ref "${{ steps.release.outputs.tag }}" \
+            -f tag="${{ steps.release.outputs.tag }}"
