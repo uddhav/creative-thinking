@@ -17,16 +17,35 @@
  * dedicated entry file, no detection is needed.
  */
 
+import { readFileSync } from 'fs';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
+
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 
 import { LateralThinkingServer } from './index.js';
 import { RequestHandlers } from './server/RequestHandlers.js';
 
+// Read version from package.json at startup so the value the MCP client
+// sees in initialize matches what `npm pack` and `npm publish` ship.
+function loadVersion(): string {
+  try {
+    const here = dirname(fileURLToPath(import.meta.url));
+    // dist/mcp-server-main.js → package.json is one level up from dist/
+    const pkg = JSON.parse(readFileSync(join(here, '..', 'package.json'), 'utf8')) as {
+      version?: string;
+    };
+    return pkg.version ?? '0.0.0';
+  } catch {
+    return '0.0.0';
+  }
+}
+
 const server = new Server(
   {
     name: 'creative-thinking',
-    version: '2.0.0',
+    version: loadVersion(),
   },
   {
     capabilities: {
