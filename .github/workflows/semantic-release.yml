@@ -43,6 +43,11 @@ jobs:
         id: release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # The repo's pre-commit hook refuses commits on the main branch
+          # (a guard for human contributors). semantic-release commits the
+          # CHANGELOG + version bump on main; HUSKY=0 disables hooks for
+          # this CI step only without touching the hook file.
+          HUSKY: '0'
         run: |
           npx semantic-release
           # Capture the tag semantic-release just created (if any). git
