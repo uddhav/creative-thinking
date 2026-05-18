@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/uddhav/creative-thinking/compare/v1.0.0...v1.1.0) (2026-05-18)
+
+
+### Features
+
+* surface persona blindSpots in LLM step guidance ([#270](https://github.com/uddhav/creative-thinking/issues/270)) ([d4d0603](https://github.com/uddhav/creative-thinking/commit/d4d0603906774d0d519f62035f170cd13f8d375a))
+
 # 1.0.0 (2026-05-10)
 
 
