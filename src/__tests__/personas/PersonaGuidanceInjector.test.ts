@@ -1,10 +1,28 @@
 import { describe, it, expect } from 'vitest';
 import { PersonaGuidanceInjector } from '../../personas/PersonaGuidanceInjector.js';
 import { BUILTIN_PERSONAS } from '../../personas/catalog.js';
+import type { PersonaDefinition } from '../../personas/types.js';
 
 describe('PersonaGuidanceInjector', () => {
   const richHickey = BUILTIN_PERSONAS.rich_hickey;
   const rorySutherland = BUILTIN_PERSONAS.rory_sutherland;
+
+  const personaWithNoBlindSpots: PersonaDefinition = {
+    id: 'test_no_blind_spots',
+    name: 'Test Persona',
+    tagline: 'For testing',
+    perspective: 'Test perspective.',
+    techniqueBias: {},
+    preferredOutcome: 'analytical',
+    keyPrinciples: ['Principle A', 'Principle B'],
+    evaluationCriteria: ['Criterion A'],
+    challengeQuestions: ['Question A', 'Question B'],
+    thinkingStyle: {
+      approach: 'test',
+      strengths: ['strength'],
+      blindSpots: [],
+    },
+  };
 
   describe('createStepContext()', () => {
     it('should create a step context with persona details', () => {
@@ -37,6 +55,33 @@ describe('PersonaGuidanceInjector', () => {
         10
       );
       expect(context1.principlesReminder).toBe(contextWrapped.principlesReminder);
+    });
+
+    it('should set blindSpotReminder to the first blindSpot at step 1', () => {
+      const context = PersonaGuidanceInjector.createStepContext(richHickey, 1, 5);
+      expect(context.blindSpotReminder).toBe(richHickey.thinkingStyle.blindSpots[0]);
+    });
+
+    it('should rotate through blindSpots based on step number', () => {
+      const context1 = PersonaGuidanceInjector.createStepContext(richHickey, 1, 5);
+      const context2 = PersonaGuidanceInjector.createStepContext(richHickey, 2, 5);
+      expect(context1.blindSpotReminder).not.toBe(context2.blindSpotReminder);
+    });
+
+    it('should wrap around blindSpots when step exceeds array length', () => {
+      const totalBlindSpots = richHickey.thinkingStyle.blindSpots.length;
+      const context1 = PersonaGuidanceInjector.createStepContext(richHickey, 1, 10);
+      const contextWrapped = PersonaGuidanceInjector.createStepContext(
+        richHickey,
+        totalBlindSpots + 1,
+        10
+      );
+      expect(context1.blindSpotReminder).toBe(contextWrapped.blindSpotReminder);
+    });
+
+    it('should leave blindSpotReminder undefined when blindSpots is empty', () => {
+      const context = PersonaGuidanceInjector.createStepContext(personaWithNoBlindSpots, 1, 5);
+      expect(context.blindSpotReminder).toBeUndefined();
     });
   });
 
@@ -77,6 +122,36 @@ describe('PersonaGuidanceInjector', () => {
         expect(result).toContain(persona.tagline);
         expect(result).toContain('Test guidance');
       }
+    });
+
+    it('should emit a "Blind spot to watch" line for personas with blindSpots', () => {
+      const result = PersonaGuidanceInjector.injectGuidance('Test guidance', richHickey, 1, 5);
+      expect(result).toContain('Blind spot to watch:');
+      expect(result).toContain(richHickey.thinkingStyle.blindSpots[0]);
+    });
+
+    it('should emit a different blindSpot on each step', () => {
+      const step1 = PersonaGuidanceInjector.injectGuidance('Test', richHickey, 1, 5);
+      const step2 = PersonaGuidanceInjector.injectGuidance('Test', richHickey, 2, 5);
+      expect(step1).toContain(richHickey.thinkingStyle.blindSpots[0]);
+      expect(step2).toContain(richHickey.thinkingStyle.blindSpots[1]);
+    });
+
+    it('should NOT emit a "Blind spot to watch" line when blindSpots is empty', () => {
+      const result = PersonaGuidanceInjector.injectGuidance(
+        'Test guidance',
+        personaWithNoBlindSpots,
+        1,
+        5
+      );
+      expect(result).not.toContain('Blind spot to watch:');
+      expect(result).toContain('Test guidance');
+    });
+
+    it('should surface a blindSpot on the final step alongside evaluation criteria', () => {
+      const result = PersonaGuidanceInjector.injectGuidance('Final step.', richHickey, 5, 5);
+      expect(result).toContain('Blind spot to watch:');
+      expect(result).toContain("Rich Hickey's Evaluation Criteria");
     });
   });
 
