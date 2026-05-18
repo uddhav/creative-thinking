@@ -16,12 +16,16 @@ export class PersonaGuidanceInjector {
         // Rotate through challenge questions
         const challengeIndex = (step - 1) % persona.challengeQuestions.length;
         const challenge = persona.challengeQuestions[challengeIndex];
+        // Rotate through blind spots so each step surfaces a different one
+        const blindSpots = persona.thinkingStyle.blindSpots;
+        const blindSpotReminder = blindSpots.length > 0 ? blindSpots[(step - 1) % blindSpots.length] : undefined;
         return {
             personaId: persona.id,
             personaName: persona.name,
             voiceGuidance: `Think as ${persona.name} would — ${persona.perspective}`,
             principlesReminder: principle,
             challengeQuestion: challenge,
+            blindSpotReminder,
         };
     }
     /**
@@ -33,9 +37,11 @@ export class PersonaGuidanceInjector {
             `**[Thinking as ${persona.name}]** _${persona.tagline}_`,
             `Core principle: ${context.principlesReminder}`,
             `Challenge: ${context.challengeQuestion}`,
-            '',
-            originalGuidance,
         ];
+        if (context.blindSpotReminder) {
+            parts.push(`Blind spot to watch: ${context.blindSpotReminder}`);
+        }
+        parts.push('', originalGuidance);
         // Add evaluation reminder on final steps
         if (step === totalSteps && persona.evaluationCriteria.length > 0) {
             parts.push('');

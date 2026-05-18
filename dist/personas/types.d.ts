@@ -33,5 +33,6 @@ export interface PersonaStepContext {
     voiceGuidance: string;
     principlesReminder: string;
     challengeQuestion: string;
+    blindSpotReminder?: string;
 }
 //# sourceMappingURL=types.d.ts.map
