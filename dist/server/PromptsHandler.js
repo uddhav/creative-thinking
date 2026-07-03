@@ -145,7 +145,7 @@ export class PromptsHandler {
                     },
                     {
                         name: 'persona',
-                        description: 'Thinking personality: rory_sutherland, rich_hickey, joe_armstrong, tarantino, security_engineer, veritasium, design_thinker, nassim_taleb, or custom:description',
+                        description: 'Thinking personality: rory_sutherland, rich_hickey, joe_armstrong, tarantino, security_engineer, veritasium, design_thinker, nassim_taleb, charlie_munger, or custom:description',
                         required: true,
                     },
                     {
@@ -188,6 +188,38 @@ export class PromptsHandler {
                     {
                         name: 'focus_rules',
                         description: 'Comma-separated rule numbers to focus on (1-11). Leave empty for automatic selection',
+                        required: false,
+                    },
+                ],
+            },
+            {
+                name: 'munger-checklist',
+                description: "Run Charlie Munger's checklist of standard causes of human misjudgment on a decision, then invert it",
+                arguments: [
+                    {
+                        name: 'problem',
+                        description: 'The decision or problem to run through the misjudgment checklist',
+                        required: true,
+                    },
+                    {
+                        name: 'focus_tendencies',
+                        description: 'Comma-separated tendencies to focus on (e.g., "incentive-caused bias, social proof, deprival super-reaction"). Leave empty for automatic selection',
+                        required: false,
+                    },
+                ],
+            },
+            {
+                name: 'invert-problem',
+                description: 'Apply inversion ("invert, always invert") — find everything that would guarantee failure, then design to avoid it',
+                arguments: [
+                    {
+                        name: 'problem',
+                        description: 'The goal or problem to invert',
+                        required: true,
+                    },
+                    {
+                        name: 'success_definition',
+                        description: 'What success looks like, so it can be inverted into concrete failure modes',
                         required: false,
                     },
                 ],
@@ -381,6 +413,46 @@ export class PromptsHandler {
                             content: {
                                 type: 'text',
                                 text: 'I\'ll analyze this through Rory Sutherland\'s 11 Rules of behavioral economics. This is "Rory Mode" — optimizing for perception, not just reality.\n\nStep 1: Call `discover_techniques` with `persona: "rory_sutherland"` to get behavioral economics-aligned techniques (perception_optimization, context_reframing, reverse_benchmarking, random_entry, anecdotal_signal).\nStep 2: Call `plan_thinking_session` with `persona: "rory_sutherland"` and the recommended techniques.\nStep 3: Execute each step. Rory\'s principles will be injected:\n- "The opposite of a good idea can also be a good idea"\n- "A flower is a weed with an advertising budget"\n- "Dare to be trivial"\n- "Solving with only rationality is playing golf with one club"\n\nKey questions at every step: What would an economist hate about this? What tiny change has disproportionate impact? Are we designing for average users?',
+                            },
+                        },
+                    ],
+                };
+            case 'munger-checklist':
+                return {
+                    description: prompt.description || '',
+                    messages: [
+                        {
+                            role: 'user',
+                            content: {
+                                type: 'text',
+                                text: "Run Charlie Munger's psychology-of-misjudgment checklist on: {{problem}}. Focus tendencies: {{focus_tendencies}}.",
+                            },
+                        },
+                        {
+                            role: 'assistant',
+                            content: {
+                                type: 'text',
+                                text: 'I\'ll work this decision the way Charlie Munger would — running the checklist of standard causes of human misjudgment instead of jumping on the most available factor.\n\nStep 1: Call `discover_techniques` with `persona: "charlie_munger"` to get checklist-aligned techniques (cognitive_bias_audit, criteria_based_analysis, competing_hypotheses, reverse_benchmarking).\nStep 2: Call `plan_thinking_session` with `persona: "charlie_munger"` and the recommended techniques (lead with `cognitive_bias_audit`).\nStep 3: Execute each step with `execute_thinking_step`, setting `persona: "charlie_munger"`. Munger\'s checklist gets injected:\n- Incentive-caused bias — "never think about anything else when you should be thinking about the power of incentives"\n- Deprival super-reaction (scarcity/loss), social proof, consistency & commitment, Pavlovian association\n- The lollapalooza effect — watch for four or five tendencies combining toward the same end\n\nDiscipline at every step: invert the problem ("what would guarantee failure?"), seek the disconfirming evidence like Darwin, and check the base rate before trusting a vivid story.',
+                            },
+                        },
+                    ],
+                };
+            case 'invert-problem':
+                return {
+                    description: prompt.description || '',
+                    messages: [
+                        {
+                            role: 'user',
+                            content: {
+                                type: 'text',
+                                text: 'Invert this problem to find the failure modes to avoid: {{problem}}. Success looks like: {{success_definition}}.',
+                            },
+                        },
+                        {
+                            role: 'assistant',
+                            content: {
+                                type: 'text',
+                                text: 'I\'ll invert the problem the way Munger and Jacobi insist — "all I want to know is where I\'m going to die, so I\'ll never go there."\n\nStep 1: Call `discover_techniques` with `persona: "charlie_munger"`, framing the problem as its inverse ("what would guarantee this fails?").\nStep 2: Call `plan_thinking_session` with `persona: "charlie_munger"`, biasing toward `reverse_benchmarking` (anti-patterns) and `cognitive_bias_audit`.\nStep 3: Execute each step with `execute_thinking_step`, setting `persona: "charlie_munger"`. For every candidate path, list what would make it fail, then design to remove those failure modes.\n\nOutput: a ranked list of failure modes to avoid, the incentives pushing toward each, and the minimal moves that eliminate them.',
                             },
                         },
                     ],

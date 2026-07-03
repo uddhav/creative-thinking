@@ -615,6 +615,7 @@ export class SessionCompletionTracker {
       context_reframing: 5,
       perception_optimization: 5,
       anecdotal_signal: 6,
+      cognitive_bias_audit: 9,
     };
 
     return stepCounts[technique] || 5;

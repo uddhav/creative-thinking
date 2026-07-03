@@ -320,6 +320,7 @@ export class VisualFormatter {
       context_reframing: '🖼️',
       perception_optimization: '👁️',
       anecdotal_signal: '🔍',
+      cognitive_bias_audit: '🪞',
     };
     return emojis[technique] || '❓';
   }
@@ -357,6 +358,7 @@ export class VisualFormatter {
       context_reframing: 'Context Reframing',
       perception_optimization: 'Perception Optimization',
       anecdotal_signal: 'Anecdotal Signal Detection',
+      cognitive_bias_audit: 'Cognitive Bias Audit',
     };
     return names[technique] || technique;
   }

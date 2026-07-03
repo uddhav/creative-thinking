@@ -11,7 +11,7 @@ describe('PromptsHandler', () => {
       const handler = new PromptsHandler();
       const prompts = handler.getPrompts();
 
-      expect(prompts).toHaveLength(9);
+      expect(prompts).toHaveLength(11);
 
       // Check first prompt structure
       const problemDiscovery = prompts[0];
@@ -46,6 +46,8 @@ describe('PromptsHandler', () => {
       expect(promptNames).toContain('persona-thinking');
       expect(promptNames).toContain('persona-debate');
       expect(promptNames).toContain('rory-mode');
+      expect(promptNames).toContain('munger-checklist');
+      expect(promptNames).toContain('invert-problem');
     });
   });
 

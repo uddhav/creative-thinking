@@ -72,6 +72,23 @@ describe('Discovery Layer - Persona Integration', () => {
       expect(foundMatch).toBe(true);
     });
 
+    it('should inject the persona signature technique when discovery did not surface it', () => {
+      // charlie_munger's top bias is cognitive_bias_audit (0.95). An emotionally
+      // loaded acquisition decision categorizes as "general" and would not
+      // otherwise recommend it, so the persona must inject its signature method.
+      const input: DiscoverTechniquesInput = {
+        problem: 'Should we acquire this competitor? I really want to do this deal',
+        persona: 'charlie_munger',
+      };
+
+      const result = discoverTechniques(input, techniqueRegistry, complexityAnalyzer);
+      const munger = result.recommendations.find(r => r.technique === 'cognitive_bias_audit');
+
+      expect(munger).toBeDefined();
+      // Proves it was injected as the persona's signature, not surfaced by category match
+      expect(munger?.reasoning).toContain('Signature technique');
+    });
+
     it('should use persona preferredOutcome when no explicit preference given', () => {
       const input: DiscoverTechniquesInput = {
         problem: 'How to improve system reliability',

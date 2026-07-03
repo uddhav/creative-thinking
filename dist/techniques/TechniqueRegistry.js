@@ -30,6 +30,7 @@ import { ReverseBenchmarkingHandler } from './ReverseBenchmarkingHandler.js';
 import { ContextReframingHandler } from './ContextReframingHandler.js';
 import { PerceptionOptimizationHandler } from './PerceptionOptimizationHandler.js';
 import { AnecdotalSignalHandler } from './AnecdotalSignalHandler.js';
+import { CognitiveBiasAuditHandler } from './CognitiveBiasAuditHandler.js';
 // Removed unused imports - GenericHandler and ConvergenceHandler
 export class TechniqueRegistry {
     static instance;
@@ -76,6 +77,7 @@ export class TechniqueRegistry {
         this.handlers.set('context_reframing', new ContextReframingHandler());
         this.handlers.set('perception_optimization', new PerceptionOptimizationHandler());
         this.handlers.set('anecdotal_signal', new AnecdotalSignalHandler());
+        this.handlers.set('cognitive_bias_audit', new CognitiveBiasAuditHandler());
     }
     getHandler(technique) {
         const handler = this.handlers.get(technique);
