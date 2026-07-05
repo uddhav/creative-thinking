@@ -31,7 +31,8 @@ export type LateralTechnique =
   | 'reverse_benchmarking'
   | 'context_reframing'
   | 'perception_optimization'
-  | 'anecdotal_signal';
+  | 'anecdotal_signal'
+  | 'cognitive_bias_audit';
 
 /**
  * Represents input data for a lateral thinking step

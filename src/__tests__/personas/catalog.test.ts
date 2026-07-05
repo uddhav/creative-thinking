@@ -34,7 +34,7 @@ describe('Persona Catalog', () => {
       'thinkingStyle',
     ];
 
-    it('should have all 8 built-in personas', () => {
+    it('should have all 9 built-in personas', () => {
       const expectedIds = [
         'rory_sutherland',
         'rich_hickey',
@@ -44,6 +44,7 @@ describe('Persona Catalog', () => {
         'veritasium',
         'design_thinker',
         'nassim_taleb',
+        'charlie_munger',
       ];
       expect(Object.keys(BUILTIN_PERSONAS).sort()).toEqual(expectedIds.sort());
     });

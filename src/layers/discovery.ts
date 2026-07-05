@@ -4,6 +4,7 @@
  */
 
 import type { DiscoverTechniquesInput, DiscoverTechniquesOutput } from '../types/planning.js';
+import type { LateralTechnique } from '../types/index.js';
 import type { TechniqueRegistry } from '../techniques/TechniqueRegistry.js';
 import type { HybridComplexityAnalyzer } from '../complexity/analyzer.js';
 import type { SessionManager } from '../core/SessionManager.js';
@@ -92,6 +93,29 @@ export function discoverTechniques(
       }
       return rec;
     });
+
+    // A persona's bias can only re-weight techniques that discovery already
+    // surfaced. Inject the persona's single most-defining technique (highest
+    // bias above threshold, not already present) so explicitly invoking a
+    // persona makes its signature method available — e.g. charlie_munger ->
+    // cognitive_bias_audit on a decision that would otherwise miss it.
+    const SIGNATURE_BIAS_THRESHOLD = 0.85;
+    const presentTechniques = new Set<string>(recommendations.map(r => r.technique));
+    const signatureEntry = Object.entries(bias)
+      .filter(
+        ([technique, score]) =>
+          score >= SIGNATURE_BIAS_THRESHOLD && !presentTechniques.has(technique)
+      )
+      .sort(([, a], [, b]) => b - a)[0];
+    if (signatureEntry) {
+      const [technique, score] = signatureEntry;
+      recommendations.push({
+        technique: technique as LateralTechnique,
+        reasoning: `Signature technique for the ${primaryPersona.name} persona`,
+        effectiveness: score,
+      });
+      biasApplied = true;
+    }
 
     // Only re-sort if bias was actually applied
     if (biasApplied) {

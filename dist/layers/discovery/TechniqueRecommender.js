@@ -249,6 +249,11 @@ export class TechniqueRecommender {
                     reasoning: 'Structured thinking to manage cognitive load',
                     effectiveness: 0.7,
                 });
+                recommendations.push({
+                    technique: 'cognitive_bias_audit',
+                    reasoning: "Run Munger's checklist of misjudgment tendencies against the decision",
+                    effectiveness: 0.9,
+                });
                 break;
             case 'strategic':
                 recommendations.push({
@@ -353,6 +358,11 @@ export class TechniqueRecommender {
                     reasoning: 'Consider all perspectives before deciding',
                     effectiveness: 0.8,
                 });
+                recommendations.push({
+                    technique: 'cognitive_bias_audit',
+                    reasoning: 'Audit your own psychology for biases before committing to a decision',
+                    effectiveness: 0.88,
+                });
                 break;
             case 'communication':
             case 'stakeholder':
@@ -405,6 +415,11 @@ export class TechniqueRecommender {
                     technique: 'reverse_benchmarking',
                     reasoning: 'Find opportunities in anti-mimetic behavior',
                     effectiveness: 0.82,
+                });
+                recommendations.push({
+                    technique: 'cognitive_bias_audit',
+                    reasoning: 'Detect lollapalooza confluences of psychological tendencies',
+                    effectiveness: 0.9,
                 });
                 break;
             case 'fundamental':

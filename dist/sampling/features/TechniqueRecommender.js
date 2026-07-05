@@ -489,6 +489,11 @@ Focus on maximizing creative output and maintaining session flow.`;
                 'Learn from outliers and edge cases',
                 'Identify non-ergodic path dependencies',
             ],
+            cognitive_bias_audit: [
+                'Catch the standard causes of misjudgment before deciding',
+                'Detect lollapalooza confluences where biases multiply',
+                'Force inversion and disconfirmation against your own conclusion',
+            ],
         };
         return (benefits[technique] || [
             'Explore new perspectives',

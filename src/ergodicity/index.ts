@@ -574,6 +574,11 @@ export class ErgodicityManager {
         typicalCommitment: 0.3,
         riskProfile: 'Low - Observation without immediate commitment',
       },
+      cognitive_bias_audit: {
+        typicalReversibility: 0.6,
+        typicalCommitment: 0.5,
+        riskProfile: 'Medium - Declaring a debiased verdict re-triggers commitment bias',
+      },
     };
 
     return profiles[technique];

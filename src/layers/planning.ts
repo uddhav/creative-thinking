@@ -369,6 +369,11 @@ function getExpectedOutputs(technique: string): string[] {
       'Signal patterns identified from anecdotes',
       'Early indicators and scalability evaluated',
     ],
+    cognitive_bias_audit: [
+      'Standard psychological tendencies corrupting the judgment identified',
+      'Lollapalooza confluence of stacking tendencies detected',
+      'Inverted, disconfirmation-tested, debiased decision',
+    ],
   };
 
   return outputs[technique] || ['Solution options'];
@@ -637,6 +642,17 @@ function getExpectedOutputForStep(technique: string, step: number): string {
       4: 'Early indicators of emerging trends identified',
       5: 'Scalability potential of signals evaluated',
       6: 'Signal synthesis and actionable insights generated',
+    },
+    cognitive_bias_audit: {
+      1: 'Specific judgment and tentative conclusion framed',
+      2: 'Incentive forces on self and advisors mapped',
+      3: 'Ego, denial, and commitment defenses surfaced',
+      4: 'Social-proof, authority, and reciprocation pressures scanned',
+      5: 'Deprival super-reaction and scarcity overreactions checked',
+      6: 'Perception, association, and base-rate distortions identified',
+      7: 'Lollapalooza confluence of stacking tendencies detected',
+      8: 'Judgment inverted and disconfirming evidence hunted',
+      9: 'Antidotes applied and debiased decision committed',
     },
   };
 

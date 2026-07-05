@@ -32,5 +32,6 @@ export const ALL_LATERAL_TECHNIQUES = [
     'context_reframing',
     'perception_optimization',
     'anecdotal_signal',
+    'cognitive_bias_audit',
 ];
 //# sourceMappingURL=index.js.map

@@ -409,6 +409,20 @@ export class TechniqueScorer {
             },
             stepCount: 6,
         },
+        cognitive_bias_audit: {
+            complexity: 'high',
+            handlesTimeConstraints: false,
+            handlesResourceConstraints: false,
+            handlesCollaborationNeeds: true,
+            outcomeProfiles: {
+                innovative: 0.3,
+                systematic: 0.95,
+                riskAware: 0.95,
+                collaborative: 0.4,
+                analytical: 0.9,
+            },
+            stepCount: 9,
+        },
     };
     constructor(weights) {
         // Store weights internally, using defaults if not provided

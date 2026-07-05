@@ -29,7 +29,7 @@ describe('PersonaResolver', () => {
       expect(persona?.id).toBe('rich_hickey');
     });
 
-    it('should resolve all 8 built-in personas', () => {
+    it('should resolve all 9 built-in personas', () => {
       const ids = [
         'rory_sutherland',
         'rich_hickey',
@@ -39,6 +39,7 @@ describe('PersonaResolver', () => {
         'veritasium',
         'design_thinker',
         'nassim_taleb',
+        'charlie_munger',
       ];
       for (const id of ids) {
         const persona = resolver.resolve(id);

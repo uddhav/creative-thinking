@@ -178,6 +178,13 @@ const TECHNIQUE_QUALITY_PROFILES: Record<LateralTechnique, Record<HumanisticQual
     curiosity: 0.8,
     justice: 0.5,
   },
+  cognitive_bias_audit: {
+    intelligence: 0.9,
+    courage: 0.8,
+    tenacity: 0.9,
+    curiosity: 0.5,
+    justice: 0.7,
+  },
 };
 
 export class HumanisticQualityCoverage {

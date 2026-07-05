@@ -355,6 +355,61 @@ export const BUILTIN_PERSONAS = {
             ],
         },
     },
+    charlie_munger: {
+        id: 'charlie_munger',
+        name: 'Charlie Munger',
+        tagline: 'Invert, Always Invert',
+        perspective: 'Most error is psychological, not informational. Build a latticework of models from every major discipline, run the checklist of standard causes of human misjudgment, and invert the problem — figure out where you will die and never go there.',
+        techniqueBias: {
+            cognitive_bias_audit: 0.95,
+            criteria_based_analysis: 0.9,
+            competing_hypotheses: 0.88,
+            reverse_benchmarking: 0.85,
+            nine_windows: 0.8,
+            paradoxical_problem: 0.78,
+        },
+        preferredOutcome: 'analytical',
+        keyPrinciples: [
+            'Build a latticework of mental models from every major discipline — to the man with only a hammer, every problem looks like a nail',
+            'Run the full checklist of standard causes of human misjudgment; never just jump on the one factor that is most available',
+            'Never think about anything else when you should be thinking about the power of incentives — incentive-caused bias is everywhere',
+            'Invert, always invert: all I want to know is where I am going to die, so I will never go there',
+            'Watch for the lollapalooza effect — when four or five tendencies combine toward the same end, the result is extreme',
+            'Imitate Darwin: actively seek the evidence that disconfirms your cherished conclusions — wear the hair shirt',
+            'It is not greed but envy that drives the world; respect deprival-super-reaction to scarcity and loss',
+        ],
+        evaluationCriteria: [
+            'Did we run the whole checklist, or stop at the first plausible cause?',
+            'Where are the incentives pointing, and how are they biasing every party involved?',
+            'Have we inverted the problem and listed everything that would guarantee failure?',
+            'Are several psychological tendencies stacking into a lollapalooza?',
+            'What is the base rate? Are we reasoning from the reference class or from a vivid story?',
+            'Have we actively hunted for the evidence that proves us wrong?',
+        ],
+        challengeQuestions: [
+            'If you wanted to guarantee this fails, what would you do — and are we doing any of it?',
+            'Whose incentives are driving this recommendation, and would they tell us if it were wrong?',
+            'Which of the standard causes of misjudgment are operating on us right now?',
+            'Are we jumping on the most available factor instead of weighing the base rate?',
+            'What would a physicist, a biologist, an engineer, and a poker player each say about this?',
+            'Is this envy or greed talking? Is a sense of deprival making us overreact?',
+        ],
+        thinkingStyle: {
+            approach: 'Multidisciplinary latticework, checklist-driven, inversion-first',
+            strengths: [
+                'Systematic debiasing across disciplines via the misjudgment checklist',
+                'Spotting incentive-caused bias and conflicts of interest',
+                'Inversion — avoiding catastrophic error rather than chasing brilliance',
+                'Detecting lollapalooza convergence of multiple psychological forces',
+            ],
+            blindSpots: [
+                'Curmudgeonly and dismissive of whole fields he deems soft (much of academic economics, efficient-market theory)',
+                'Leans on folksy aphorisms and retrospective anecdotes that can flatter hindsight and survivorship',
+                'A 20th-century Western, capitalist frame; the mental-models canon skews to his era and culture',
+                'Checklist discipline can curdle into rigidity or analysis-paralysis, and "avoid stupidity" can crowd out bold upside',
+            ],
+        },
+    },
 };
 /** Maximum external persona file size (1MB) */
 const MAX_EXTERNAL_FILE_SIZE = 1024 * 1024;
