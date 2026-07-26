@@ -25,6 +25,12 @@ jobs:
       issues: write
       id-token: write
 
+    # Exposed as env so the step below can gate on its presence. The `secrets`
+    # context is not available in job-level `if:`, so this is the supported way
+    # to skip cleanly when the token is not configured.
+    env:
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -33,6 +39,20 @@ jobs:
 
       - name: Run Claude Code Review
         id: claude-review
+        # This is advisory tooling. Its failure says nothing about whether the
+        # code is correct, so it must not gate a merge — a check that is
+        # permanently red teaches reviewers to ignore red, which is worse than
+        # having no check. Real correctness gates (build, typecheck, lint,
+        # tests, CodeQL) remain blocking.
+        continue-on-error: true
+        # Skip when the token is absent, and honour the PR-title opt-outs.
+        # These conditions previously sat inside `with:` below, where they were
+        # passed to the action as an unrecognised input and never evaluated —
+        # so [WIP] and [skip-review] silently did nothing.
+        if: >-
+          env.CLAUDE_CODE_OAUTH_TOKEN != '' &&
+          !contains(github.event.pull_request.title, '[skip-review]') &&
+          !contains(github.event.pull_request.title, '[WIP]')
         uses: anthropics/claude-code-action@beta
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -72,7 +92,5 @@ jobs:
           # Optional: Add specific tools for running tests or linting
           # allowed_tools: "Bash(npm run test),Bash(npm run lint),Bash(npm run typecheck)"
 
-          # Optional: Skip review for certain conditions
-          if: |
-            !contains(github.event.pull_request.title, '[skip-review]') &&
-            !contains(github.event.pull_request.title, '[WIP]')
+          # Note: the skip conditions that used to live here have moved to the
+          # step-level `if:` above, which is where GitHub actually evaluates them.
