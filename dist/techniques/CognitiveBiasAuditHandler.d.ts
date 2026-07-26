@@ -13,6 +13,14 @@ export declare class CognitiveBiasAuditHandler extends BaseTechniqueHandler {
     getTechniqueInfo(): TechniqueInfo;
     getStepInfo(step: number): StepInfo;
     getStepGuidance(step: number, problem: string): string;
+    /**
+     * Summarise what the audit actually surfaced, labelled by the lens that
+     * surfaced it.
+     *
+     * This reads `entry.output`. Returning fixed strings keyed by step index —
+     * as this once did — reports findings the session may never have produced,
+     * which is fabricated insight dressed as analysis.
+     */
     extractInsights(history: Array<{
         output?: string;
     }>): string[];

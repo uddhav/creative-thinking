@@ -17,8 +17,13 @@ export const ALL_HUMANISTIC_QUALITIES = [
 ];
 const COVERAGE_THRESHOLD = 0.7;
 /**
- * Quality profiles for all 28 techniques.
+ * Quality profiles for every registered technique.
  * Each score (0-1) represents how strongly a technique embodies that quality.
+ *
+ * PROVENANCE: uncalibrated authorial priors, not measurements. Two-decimal
+ * notation overstates the real resolution, which is nearer "low / medium /
+ * high". Useful for spreading coverage across qualities; not evidence about
+ * any technique.
  *
  * Intelligence: analytical rigor, systematic reasoning, evidence-based thinking
  * Courage: willingness to challenge assumptions, take bold positions, provoke

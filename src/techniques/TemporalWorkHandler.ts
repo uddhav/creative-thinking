@@ -125,22 +125,22 @@ export class TemporalWorkHandler extends BaseTechniqueHandler {
   getStepGuidance(step: number, problem: string): string {
     // Handle out of bounds gracefully
     if (step < 1 || step > 5) {
-      return `Complete the Temporal Work Design process for "${problem}"`;
+      return `Complete the Temporal Work Design process for: "${problem}"`;
     }
 
     switch (step) {
       case 1:
         return `🗺️ Map the temporal landscape of "${problem}". What are fixed deadlines vs flexible windows?`;
       case 2:
-        return `🌅 Analyze circadian rhythms and natural patterns. How can the solution align with natural rhythms? When is the best time for different activities?`;
+        return `🌅 Analyze circadian rhythms and natural patterns. How can work on "${problem}" align with natural rhythms? When is the best time for different activities?`;
       case 3:
-        return `💎 Transform time pressure into creative force. How can constraints enhance rather than limit?`;
+        return `💎 Transform time pressure into creative force. How can the constraints on "${problem}" enhance rather than limit?`;
       case 4:
-        return `⚖️ Balance async and sync work. What needs real-time coordination vs independent progress?`;
+        return `⚖️ Balance async and sync work. What parts of "${problem}" need real-time coordination vs independent progress?`;
       case 5:
-        return `🚪 Design temporal escape routes. How can we build in flexibility and recovery time?`;
+        return `🚪 Design temporal escape routes. How can we build flexibility and recovery time into "${problem}"?`;
       default:
-        return `Complete the Temporal Work Design process for "${problem}"`;
+        return `Complete the Temporal Work Design process for: "${problem}"`;
     }
   }
 

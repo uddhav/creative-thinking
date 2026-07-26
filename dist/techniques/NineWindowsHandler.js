@@ -109,23 +109,23 @@ export class NineWindowsHandler extends BaseTechniqueHandler {
     getStepGuidance(step, problem) {
         // Handle out of bounds gracefully
         if (step < 1 || step > 9) {
-            return `Complete the Nine Windows analysis for "${problem}"`;
+            return `Complete the Nine Windows process for: "${problem}"`;
         }
         const guidanceMap = {
             // Past
             1: `🔧 Past Sub-system: What component decisions and developments led to the current "${problem}"?`,
-            2: `⚙️ Past System: How did the overall system evolve to create this situation?`,
-            3: `🌍 Past Super-system: What environmental/contextual factors shaped the development?`,
+            2: `⚙️ Past System: How did the overall system evolve to create "${problem}" as it stands today?`,
+            3: `🌍 Past Super-system: What environmental/contextual factors around "${problem}" shaped the development?`,
             // Present
-            4: `🔩 Present Sub-system: What are the current components and their states?`,
+            4: `🔩 Present Sub-system: What are the current components of "${problem}" and their states?`,
             5: `🎯 Present System: What is the current system state regarding "${problem}"?`,
-            6: `🏞️ Present Super-system: What is the current environment and context?`,
+            6: `🏞️ Present Super-system: What is the current environment and context surrounding "${problem}"?`,
             // Future
-            7: `🚀 Future Sub-system: How might components evolve? What path dependencies exist?`,
-            8: `🎪 Future System: What system futures are possible? Which paths are irreversible?`,
-            9: `🌅 Future Super-system: How might the environment change? What constraints will emerge?`,
+            7: `🚀 Future Sub-system: How might the components of "${problem}" evolve? What path dependencies exist?`,
+            8: `🎪 Future System: What system futures are possible for "${problem}"? Which paths are irreversible?`,
+            9: `🌅 Future Super-system: As "${problem}" plays out, how might the environment change? What constraints will emerge?`,
         };
-        return guidanceMap[step] || `Apply Nine Windows step ${step} to "${problem}"`;
+        return guidanceMap[step] || `Complete the Nine Windows process for: "${problem}"`;
     }
     extractInsights(history) {
         const insights = [];

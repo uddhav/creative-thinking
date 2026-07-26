@@ -44,30 +44,11 @@ export function discoverTechniques(input, techniqueRegistry, complexityAnalyzer,
     const memoryContextGenerator = new MemoryContextGenerator();
     // Categorize the problem
     const problemCategory = problemAnalyzer.categorizeProblem(problem, context);
-    // Get technique recommendations
-    let recommendations = techniqueRecommender.recommendTechniques(problemCategory, effectivePreferredOutcome, constraints, complexityAssessment.level, techniqueRegistry);
-    // Apply persona technique bias to boost/demote recommendations
-    // 70/30 split ensures persona preferences influence but don't dominate recommendations
-    const BASE_WEIGHT = 0.7;
-    const PERSONA_BIAS_WEIGHT = 0.3;
-    if (resolvedPersonas.length > 0) {
-        const primaryPersona = resolvedPersonas[0];
-        const bias = primaryPersona.techniqueBias;
-        let biasApplied = false;
-        recommendations = recommendations.map(rec => {
-            const biasScore = bias[rec.technique];
-            if (biasScore !== undefined) {
-                biasApplied = true;
-                const boosted = rec.effectiveness * BASE_WEIGHT + biasScore * PERSONA_BIAS_WEIGHT;
-                return { ...rec, effectiveness: Math.min(1, boosted) };
-            }
-            return rec;
-        });
-        // Only re-sort if bias was actually applied
-        if (biasApplied) {
-            recommendations.sort((a, b) => b.effectiveness - a.effectiveness);
-        }
-    }
+    // Get technique recommendations. The primary persona's bias is passed in so
+    // it is blended during scoring, before ranking and truncation — applying it
+    // afterwards could only reorder survivors, letting a technique the persona
+    // most favours be truncated away and never recovered.
+    let recommendations = techniqueRecommender.recommendTechniques(problemCategory, effectivePreferredOutcome, constraints, complexityAssessment.level, techniqueRegistry, resolvedPersonas[0]?.techniqueBias);
     // Humanistic quality coverage: ensure technique set collectively embodies
     // intelligence, courage, tenacity, curiosity, and justice
     const { recommendations: coverageAdjusted, coverage: qualityCoverage, adjusted: coverageWasAdjusted, } = HumanisticQualityCoverage.fillCoverageGaps(recommendations);
@@ -77,39 +58,6 @@ export function discoverTechniques(input, techniqueRegistry, complexityAnalyzer,
     const finalQualityCoverage = coverageWasAdjusted
         ? qualityCoverage
         : HumanisticQualityCoverage.analyzeCoverage(recommendations.map(r => r.technique));
-    // A persona's bias can only re-weight techniques discovery already surfaced.
-    // If the persona's single most-defining technique is still absent, append it
-    // so that invoking a persona makes its signature method reachable at all.
-    //
-    // It is scored through the SAME blend as every other recommendation, from a
-    // deliberately conservative base (there is no problem-fit evidence for it),
-    // so it is offered as an extra option and can never outrank a technique that
-    // genuinely matched the problem. Runs after coverage analysis so the quality
-    // coverage above is computed on the honestly-recommended set.
-    if (resolvedPersonas.length > 0) {
-        const primaryPersona = resolvedPersonas[0];
-        const SIGNATURE_BIAS_THRESHOLD = 0.9;
-        const SIGNATURE_BASE_EFFECTIVENESS = 0.5;
-        const topBias = Object.entries(primaryPersona.techniqueBias).sort(([, a], [, b]) => b - a)[0];
-        if (topBias) {
-            const [signatureTechnique, signatureBias] = topBias;
-            const alreadyPresent = recommendations.some(r => r.technique === signatureTechnique);
-            if (signatureBias >= SIGNATURE_BIAS_THRESHOLD && !alreadyPresent) {
-                // Appended, never re-sorted. Re-sorting here would hoist the quality
-                // fillers added just above (flat 0.9, no problem-fit evidence) over
-                // genuinely scored techniques. The append is last by construction
-                // because its blended score is below anything that actually matched.
-                recommendations = [
-                    ...recommendations,
-                    {
-                        technique: signatureTechnique,
-                        reasoning: `Signature technique for the ${primaryPersona.name} persona`,
-                        effectiveness: SIGNATURE_BASE_EFFECTIVENESS * BASE_WEIGHT + signatureBias * PERSONA_BIAS_WEIGHT,
-                    },
-                ];
-            }
-        }
-    }
     // Build integration suggestions
     let integrationSuggestions = workflowBuilder.buildIntegrationSuggestions(recommendations.map(r => r.technique), complexityAssessment.level);
     // Create workflow if multiple techniques recommended

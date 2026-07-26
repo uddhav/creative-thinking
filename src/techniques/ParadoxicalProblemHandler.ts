@@ -104,12 +104,14 @@ export class ParadoxicalProblemHandler extends BaseTechniqueHandler {
   getStepGuidance(step: number, problem: string): string {
     const guidanceMap: Record<number, string> = {
       1: `Identify the core paradox in: "${problem}". What contradictory requirements seem impossible to reconcile? Trace each requirement to its origin - what paths led to these conflicting needs? Map stakeholder journeys that created these tensions. Identify time dependencies and ergodic fallacies.`,
-      2: `Develop Solution A fully on its own path, optimizing for its requirements without compromise. Then develop Solution B independently on its path. Allow each to reach natural completion without forcing premature integration. What does each path look like when pursued to its logical conclusion?`,
-      3: `Find the transcendent synthesis - a meta-path that encompasses both solutions. Create bridges between the endpoints. Design path-switching mechanisms that allow dynamic selection based on context. Build the logic for contextual adaptation.`,
-      4: `Validate the resolution across multiple path contexts. Test with different starting conditions and path histories. Verify the paradox is truly resolved, not just hidden. Check for new paradox creation. Ensure all stakeholder paths remain viable.`,
+      2: `Develop Solution A to "${problem}" fully on its own path, optimizing for its requirements without compromise. Then develop Solution B independently on its path. Allow each to reach natural completion without forcing premature integration. What does each path look like when pursued to its logical conclusion?`,
+      3: `Find the transcendent synthesis for "${problem}" - a meta-path that encompasses both solutions. Create bridges between the endpoints. Design path-switching mechanisms that allow dynamic selection based on context. Build the logic for contextual adaptation.`,
+      4: `Validate the resolution of "${problem}" across multiple path contexts. Test with different starting conditions and path histories. Verify the paradox is truly resolved, not just hidden. Check for new paradox creation. Ensure all stakeholder paths remain viable.`,
     };
 
-    return guidanceMap[step] || `Continue paradoxical problem solving for: "${problem}"`;
+    return (
+      guidanceMap[step] || `Complete the Paradoxical Problem Solving process for: "${problem}"`
+    );
   }
 
   validateStep(step: number, data: unknown): boolean {

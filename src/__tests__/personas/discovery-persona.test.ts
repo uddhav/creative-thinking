@@ -52,16 +52,9 @@ describe('Discovery Layer - Persona Integration', () => {
       let foundMatch = false;
 
       // Only genuinely-scored recommendations carry persona bias. Quality
-      // fillers are scored from quality coverage, and signature appends are a
-      // conservative fallback for techniques discovery did not surface at all —
-      // neither is bias-boosted, so neither belongs in this comparison.
-      //
-      // [tbd] Worth investigating separately: a persona's preferredOutcome
-      // override can drop a technique that same persona most favours out of the
-      // scored set entirely, after which it returns only as a low-scored
-      // append. That interaction predates this test and is not a bias bug.
-      const isScored = (r: { isQualityFiller?: boolean; reasoning: string }): boolean =>
-        !r.isQualityFiller && !r.reasoning.includes('Signature technique');
+      // fillers are scored from quality coverage rather than problem fit, so
+      // they do not belong in this comparison.
+      const isScored = (r: { isQualityFiller?: boolean }): boolean => !r.isQualityFiller;
 
       for (const technique of biasedTechniques) {
         const withRec = resultWith.recommendations.find(
@@ -83,55 +76,11 @@ describe('Discovery Layer - Persona Integration', () => {
       expect(foundMatch).toBe(true);
     });
 
-    it('should append the persona signature technique when discovery did not surface it', () => {
-      // tarantino's top bias is random_entry (0.95). A production-debugging
-      // problem will not surface it on its own merits.
-      const input: DiscoverTechniquesInput = {
-        problem: 'Intermittent 500 errors appear in production only under high load',
-        persona: 'tarantino',
-      };
-
-      const result = discoverTechniques(input, techniqueRegistry, complexityAnalyzer);
-      const signature = result.recommendations.find(
-        r => r.technique === 'random_entry' && r.reasoning.includes('Signature technique')
-      );
-
-      expect(signature).toBeDefined();
-    });
-
-    it('should never let an appended signature technique outrank a genuinely scored one', () => {
-      // The signature is scored from a conservative base through the same 70/30
-      // blend, so it must sit below techniques that actually matched the problem.
-      const input: DiscoverTechniquesInput = {
-        problem: 'Intermittent 500 errors appear in production only under high load',
-        persona: 'tarantino',
-      };
-
-      const result = discoverTechniques(input, techniqueRegistry, complexityAnalyzer);
-      const signatureIndex = result.recommendations.findIndex(r =>
-        r.reasoning.includes('Signature technique')
-      );
-
-      if (signatureIndex >= 0) {
-        // It must not be rank 1 while genuinely-scored recommendations exist
-        expect(result.recommendations.length).toBeGreaterThan(1);
-        expect(signatureIndex).toBeGreaterThan(0);
-
-        const signature = result.recommendations[signatureIndex];
-        const scored = result.recommendations.filter(
-          r => !r.reasoning.includes('Signature technique')
-        );
-        for (const rec of scored) {
-          expect(rec.effectiveness).toBeGreaterThanOrEqual(signature.effectiveness);
-        }
-      }
-    });
-
     it('should never hoist a quality filler above a genuinely scored recommendation', () => {
-      // Regression guard: appending the signature technique must not re-sort the
-      // whole list. Quality fillers are appended at a flat score with no
-      // problem-fit evidence, so a global re-sort promotes them over techniques
-      // that actually matched the problem.
+      // Quality fillers are appended at a flat score with no problem-fit
+      // evidence. Any global re-sort after they are added promotes them over
+      // techniques that actually matched the problem, so nothing downstream of
+      // fillCoverageGaps may re-sort the list.
       const problems = [
         'How to simplify our architecture',
         'Intermittent 500 errors appear in production only under high load',
@@ -146,9 +95,7 @@ describe('Discovery Layer - Persona Integration', () => {
             complexityAnalyzer
           );
 
-          const firstScoredIndex = result.recommendations.findIndex(
-            r => !r.isQualityFiller && !r.reasoning.includes('Signature technique')
-          );
+          const firstScoredIndex = result.recommendations.findIndex(r => !r.isQualityFiller);
           const firstFillerIndex = result.recommendations.findIndex(r => r.isQualityFiller);
 
           if (firstScoredIndex >= 0 && firstFillerIndex >= 0) {
@@ -161,24 +108,19 @@ describe('Discovery Layer - Persona Integration', () => {
       }
     });
 
-    it('should append at most one signature technique and never cascade to a lesser bias', () => {
-      // charlie_munger has several biases >= 0.85. Only the single top entry
-      // may ever be appended — a second/third favourite must not sneak in.
+    it('should recommend a decision technique on merit, without persona machinery', () => {
+      // The case that once motivated injecting a persona's signature technique.
+      // Category routing now surfaces it on its own, so no persona is needed
+      // and nothing is appended out of band.
       const input: DiscoverTechniquesInput = {
         problem: 'Should we acquire this competitor? I really want to do this deal',
-        persona: 'charlie_munger',
       };
 
       const result = discoverTechniques(input, techniqueRegistry, complexityAnalyzer);
-      const appended = result.recommendations.filter(r =>
-        r.reasoning.includes('Signature technique')
-      );
+      const audit = result.recommendations.find(r => r.technique === 'cognitive_bias_audit');
 
-      expect(appended.length).toBeLessThanOrEqual(1);
-      for (const rec of appended) {
-        // Only the persona's single highest-biased technique qualifies
-        expect(rec.technique).toBe('cognitive_bias_audit');
-      }
+      expect(audit).toBeDefined();
+      expect(audit?.isQualityFiller).toBeFalsy();
     });
 
     it('should use persona preferredOutcome when no explicit preference given', () => {

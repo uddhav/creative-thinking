@@ -203,8 +203,8 @@ export class LinguisticForensicsHandler extends BaseTechniqueHandler {
         return this.steps[step - 1];
     }
     getStepGuidance(step, problem) {
-        const stepInfo = this.getStepInfo(step);
-        const markers = stepInfo.markers || [];
+        const stepInfo = this.steps[step - 1];
+        const markers = stepInfo?.markers || [];
         const guidanceTemplates = {
             1: `📝 **Step 1: Content Mapping**
 
@@ -352,7 +352,7 @@ Final Integration:
 
 Output: Complete linguistic forensics report with coherence verdict and confidence level`,
         };
-        return guidanceTemplates[step] || `Step ${step}: ${stepInfo.name}\n\nFocus: ${stepInfo.focus}`;
+        return guidanceTemplates[step] || `Complete the Linguistic Forensics process for: "${problem}"`;
     }
     validateStep(step, data) {
         if (!super.validateStep(step, data)) {

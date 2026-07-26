@@ -130,8 +130,8 @@ export class PerceptionOptimizationHandler extends BaseTechniqueHandler {
         return this.steps[step - 1];
     }
     getStepGuidance(step, problem) {
-        const stepInfo = this.getStepInfo(step);
-        const elements = stepInfo.elements || [];
+        const stepInfo = this.steps[step - 1];
+        const elements = stepInfo?.elements || [];
         const guidanceTemplates = {
             1: `🗺️ **Step 1: Perception Mapping**
 
@@ -330,7 +330,7 @@ Real-World Results:
 
 Output: Complete activation plan with perception metrics and success criteria`,
         };
-        return guidanceTemplates[step] || `Step ${step}: ${stepInfo.name}\n\nFocus: ${stepInfo.focus}`;
+        return (guidanceTemplates[step] || `Complete the Perception Optimization process for: "${problem}"`);
     }
     validateStep(step, data) {
         if (!super.validateStep(step, data)) {

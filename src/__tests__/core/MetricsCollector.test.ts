@@ -229,8 +229,8 @@ describe('MetricsCollector', () => {
       expect(detailed.risksCaught).toBe(5);
       expect(detailed.antifragileFeatures).toBe(3);
       expect(detailed.completionTime).toBeCloseTo(3600000, -4); // ~1 hour
-      expect(detailed.techniqueEffectiveness).toBeGreaterThan(0);
-      expect(detailed.techniqueEffectiveness).toBeLessThanOrEqual(10);
+      expect(detailed.outputCompleteness).toBeGreaterThan(0);
+      expect(detailed.outputCompleteness).toBeLessThanOrEqual(10);
     });
 
     it('should handle session with path memory', () => {
@@ -285,11 +285,11 @@ describe('MetricsCollector', () => {
 
       expect(detailed.completionTime).toBeUndefined();
       expect(detailed.totalSteps).toBe(0);
-      expect(detailed.techniqueEffectiveness).toBeLessThan(5); // Lower score for incomplete
+      expect(detailed.outputCompleteness).toBeLessThan(5); // Lower score for incomplete
     });
   });
 
-  describe('calculateTechniqueEffectiveness', () => {
+  describe('calculateOutputCompleteness', () => {
     it('should give high score to effective sessions', () => {
       mockSession.history = Array.from({ length: 10 }, (_, i) => ({
         technique: 'six_hats' as const,
@@ -310,7 +310,7 @@ describe('MetricsCollector', () => {
 
       const detailed = collector.getDetailedMetrics(mockSession);
 
-      expect(detailed.techniqueEffectiveness).toBeGreaterThan(7);
+      expect(detailed.outputCompleteness).toBeGreaterThan(7);
     });
 
     it('should give low score to ineffective sessions', () => {
@@ -334,7 +334,7 @@ describe('MetricsCollector', () => {
 
       const detailed = collector.getDetailedMetrics(mockSession);
 
-      expect(detailed.techniqueEffectiveness).toBeLessThan(3);
+      expect(detailed.outputCompleteness).toBeLessThan(3);
     });
   });
 
@@ -352,7 +352,7 @@ describe('MetricsCollector', () => {
         constraintsIdentified: 4,
         escapePlanGenerated: false,
         completionTime: 3665000, // 61 minutes 5 seconds
-        techniqueEffectiveness: 8.2,
+        outputCompleteness: 8.2,
       };
 
       const summary = collector.generateMetricsSummary(metrics);
@@ -365,7 +365,7 @@ describe('MetricsCollector', () => {
       expect(summary).toContain('Revisions Made: 2');
       expect(summary).toContain('Flexibility Score: 65%');
       expect(summary).toContain('Completion Time: 61m 5s');
-      expect(summary).toContain('Technique Effectiveness: 8.2/10');
+      expect(summary).toContain('Output Completeness: 8.2/10');
     });
 
     it('should handle partial metrics gracefully', () => {
@@ -395,7 +395,7 @@ describe('MetricsCollector', () => {
         creativityScore: 6,
         risksCaught: 2,
         antifragileFeatures: 1,
-        techniqueEffectiveness: 7,
+        outputCompleteness: 7,
       };
 
       const session2 = {
@@ -406,7 +406,7 @@ describe('MetricsCollector', () => {
         creativityScore: 8,
         risksCaught: 5,
         antifragileFeatures: 3,
-        techniqueEffectiveness: 8.5,
+        outputCompleteness: 8.5,
       };
 
       const comparison = collector.compareMetrics(session1, session2);

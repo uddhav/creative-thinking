@@ -5,7 +5,7 @@
 import type { LateralThinkingResponse, SessionData, ThinkingOperationData } from '../types/index.js';
 import type { DiscoverTechniquesOutput, PlanThinkingSessionOutput } from '../types/planning.js';
 export interface ExecutionMetadata {
-    techniqueEffectiveness: number;
+    outputCompleteness: number;
     pathDependenciesCreated: string[];
     flexibilityImpact: number;
     noteworthyMoment?: string;

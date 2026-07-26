@@ -94,21 +94,21 @@ export class CollectiveIntelHandler extends BaseTechniqueHandler {
     getStepGuidance(step, problem) {
         // Handle out of bounds gracefully
         if (step < 1 || step > 5) {
-            return `Complete the Collective Intelligence Synthesis process for "${problem}"`;
+            return `Complete the Collective Intelligence Synthesis process for: "${problem}"`;
         }
         switch (step) {
             case 1:
                 return `📚 Identify wisdom sources for "${problem}": experts, crowds, databases, cultural knowledge`;
             case 2:
-                return `🎯 Gather specific insights from each source. What does each perspective contribute?`;
+                return `🎯 Gather each source's specific insight on "${problem}". What does that perspective contribute?`;
             case 3:
-                return `🔍 Find patterns across sources. Look for convergence, divergence, and emergence`;
+                return `🔍 Find patterns across the sources on "${problem}". Look for convergence, divergence, and emergence`;
             case 4:
-                return `✨ Create synergistic combinations. How do different insights amplify each other?`;
+                return `✨ Create synergistic combinations for "${problem}". How do different insights amplify each other?`;
             case 5:
                 return `💫 Synthesize collective intelligence into unified, actionable insights for "${problem}"`;
             default:
-                return `Apply Collective Intelligence step ${step} to "${problem}"`;
+                return `Complete the Collective Intelligence Synthesis process for: "${problem}"`;
         }
     }
     extractInsights(history) {

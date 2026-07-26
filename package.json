@@ -119,7 +119,7 @@
       "eslint --max-warnings 0"
     ],
     "*.{js,ts,tsx,json,md}": [
-      "prettier --check"
+      "prettier --write"
     ]
   }
 }

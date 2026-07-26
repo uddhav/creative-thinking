@@ -426,6 +426,13 @@ export class ErgodicityManager {
     typicalCommitment: number;
     riskProfile: string;
   } {
+    // PROVENANCE: uncalibrated authorial priors, not measurements.
+    //
+    // Note also that the two numeric columns are close to collinear:
+    // typicalCommitment is approximately (1.1 - typicalReversibility) for the
+    // large majority of entries, so they carry roughly one number's worth of
+    // information between them rather than two. Treat them as a single coarse
+    // "how locked-in does this technique leave you" signal.
     const profiles: Record<
       LateralTechnique,
       {

@@ -196,8 +196,8 @@ export class CompetingHypothesesHandler extends BaseTechniqueHandler {
         return this.steps[step - 1];
     }
     getStepGuidance(step, problem) {
-        const stepInfo = this.getStepInfo(step);
-        const elements = stepInfo.matrixElements || [];
+        const stepInfo = this.steps[step - 1];
+        const elements = stepInfo?.matrixElements || [];
         const guidanceTemplates = {
             1: `💡 **Step 1: Hypothesis Generation**
 
@@ -407,7 +407,8 @@ Decision Rule:
 
 Output: Complete decision package with conclusion, confidence, actions, and monitoring plan`,
         };
-        return guidanceTemplates[step] || `Step ${step}: ${stepInfo.name}\n\nFocus: ${stepInfo.focus}`;
+        return (guidanceTemplates[step] ||
+            `Complete the Competing Hypotheses Analysis process for: "${problem}"`);
     }
     validateStep(step, data) {
         if (!super.validateStep(step, data)) {

@@ -95,20 +95,20 @@ export class YesAndHandler extends BaseTechniqueHandler {
   getStepGuidance(step: number, problem: string): string {
     // Handle out of bounds gracefully
     if (step < 1 || step > 4) {
-      return `Complete the Yes, And... process for "${problem}"`;
+      return `Complete the Yes, And... process for: "${problem}"`;
     }
 
     switch (step) {
       case 1:
         return `✅ Start with an initial idea for "${problem}" - any idea, even imperfect. Accept it fully without criticism`;
       case 2:
-        return `➕ Say "Yes, and..." then add something to build on the idea. Keep adding constructive elements`;
+        return `➕ Say "Yes, and..." then add something that stretches the idea further into "${problem}". Keep adding constructive elements`;
       case 3:
-        return `⚖️ Evaluate the enhanced ideas positively. What combinations work best? Focus on strengths`;
+        return `⚖️ Evaluate the enhanced ideas positively. Which combinations move "${problem}" furthest? Focus on strengths`;
       case 4:
         return `🔀 Synthesize the additions into a coherent solution for "${problem}". Integrate the best elements`;
       default:
-        return `Apply Yes, And... step ${step} to "${problem}"`;
+        return `Complete the Yes, And... process for: "${problem}"`;
     }
   }
 

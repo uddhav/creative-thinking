@@ -93,19 +93,19 @@ export class POHandler extends BaseTechniqueHandler {
     getStepGuidance(step, problem) {
         // Handle out of bounds gracefully
         if (step < 1 || step > 4) {
-            return `Complete the PO - Provocative Operation process for "${problem}"`;
+            return `Complete the PO - Provocative Operation process for: "${problem}"`;
         }
         switch (step) {
             case 1:
                 return `💥 Create a provocative statement about "${problem}" - start with "Po:" followed by something deliberately unreasonable or impossible`;
             case 2:
-                return `➡️ Movement: From your provocation, extract interesting aspects. What could this lead to? Don't judge - just explore`;
+                return `➡️ Movement: From your provocation, extract aspects that say something about "${problem}". What could this lead to? Don't judge - just explore`;
             case 3:
-                return `🔨 Develop concepts from the movement ideas. How could these translate into practical approaches?`;
+                return `🔨 Develop concepts from the movement ideas. How could these translate into practical approaches to "${problem}"?`;
             case 4:
                 return `✅ Shape your concepts into practical solutions for "${problem}". What's actually implementable?`;
             default:
-                return `Apply PO step ${step} to "${problem}"`;
+                return `Complete the PO - Provocative Operation process for: "${problem}"`;
         }
     }
     extractInsights(history) {

@@ -90,13 +90,16 @@ export class MetaLearningHandler extends BaseTechniqueHandler {
   getStepGuidance(step: number, problem: string): string {
     const guidanceMap: Record<number, string> = {
       1: `Analyze patterns across all techniques used for: "${problem}". What successful path patterns emerge? Which techniques work well together? Identify failure modes and their causes. Look for cross-technique synergies and emergent strategies. What patterns predict success or failure?`,
-      2: `Accumulate learnings from identified patterns. Store effective technique combinations and their contexts. Build an affinity matrix showing which techniques complement each other. Track context-success mappings. Create a learning history that can inform future decisions.`,
-      3: `Evolve your strategy based on accumulated learnings. How should technique selection adapt to this problem type? What execution sequences prove most effective? How can convergence methods be improved? What option generation strategies work best? Design adaptive selection criteria.`,
-      4: `Integrate feedback from all available sources. What do telemetry patterns reveal about technique effectiveness? How do user choices inform better recommendations? What domain-specific patterns emerge? How should visual indicators evolve to better guide the process?`,
-      5: `Synthesize meta-learning insights into improved integration strategies. Generate recommendations for: optimal technique combinations, execution sequences, context adaptations, and failure prevention. Create a self-improving framework that gets better with each use.`,
+      2: `Accumulate learnings from the patterns identified in "${problem}". Store effective technique combinations and their contexts. Build an affinity matrix showing which techniques complement each other. Track context-success mappings. Create a learning history that can inform future decisions.`,
+      3: `Evolve your strategy for "${problem}" based on accumulated learnings. How should technique selection adapt to this problem type? What execution sequences prove most effective? How can convergence methods be improved? What option generation strategies work best? Design adaptive selection criteria.`,
+      4: `Integrate feedback from every source touching "${problem}". What do telemetry patterns reveal about technique effectiveness? How do user choices inform better recommendations? What domain-specific patterns emerge? How should visual indicators evolve to better guide the process?`,
+      5: `Synthesize meta-learning insights from "${problem}" into improved integration strategies. Generate recommendations for: optimal technique combinations, execution sequences, context adaptations, and failure prevention. Create a self-improving framework that gets better with each use.`,
     };
 
-    return guidanceMap[step] || `Continue meta-learning analysis for: "${problem}"`;
+    return (
+      guidanceMap[step] ||
+      `Complete the Meta-Learning from Path Integration process for: "${problem}"`
+    );
   }
 
   validateStep(step: number, data: unknown): boolean {

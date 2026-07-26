@@ -99,7 +99,7 @@ these three tools.
 
 ### Key Components
 
-#### Thinking Techniques (19 total)
+#### Thinking Techniques
 
 - **Six Hats** - Sequential thinking with different perspectives (6 steps)
 - **PO** - Provocative operation for creative disruption (4 steps)
@@ -250,9 +250,53 @@ Enables session resilience through base64 encoding:
 3. **Read ENTIRE review**, especially "Required Fixes"
 4. **Verify MCP integration** for new techniques
 
+### Should this be a new technique at all?
+
+The checklist below answers _how_ to add a technique. This section answers _whether_ to.
+Historically only the former existed, so the catalogue could grow without anything ever arguing
+against a candidate.
+
+A candidate must clear **all four** bars:
+
+1. **Distinct method, not a variation.** It asks the user to do something no existing technique
+   asks. "Same moves, different vocabulary" is a variation — extend the existing handler instead.
+   Read the closest two or three existing handlers in full before claiming novelty; overlap is
+   usually discovered here.
+2. **Distinguishable output.** Run the candidate and its nearest neighbour on the same problem. If
+   the two outputs would be substantially the same, you have one technique, not two.
+3. **Reachable.** It must be recommended by at least one category that
+   `ProblemAnalyzer.categorizeProblem` can actually emit. A technique wired only to an unreachable
+   category is dead on arrival — see `src/__tests__/layers/discovery/category-reachability.test.ts`.
+4. **Clears the guidance bar.** Every step must reference the problem (see the prose rules below).
+   The ratchet in `src/__tests__/evals/guidanceMetrics.test.ts` enforces this for new techniques and
+   will fail the build otherwise.
+
+Disqualifying signs: it exists mainly to name-check a book or author; it is a single cognitive move
+better placed as a step inside an existing technique; its guidance would delegate the real work to
+another technique.
+
+**Removal is allowed.** If a technique fails bar 2 against a newer one, retiring it is a legitimate
+change. A catalogue that only ever grows is not curated.
+
+### Writing step guidance
+
+The guidance strings are the product — they are what the model consumes. Rules:
+
+- **Every step must interpolate `problem`.** Not decoratively appended, but woven into the
+  instruction so the step reads specifically about this problem. Guidance identical for "reduce
+  churn" and "design a bridge" is boilerplate.
+- **Second person, imperative.** "List every constraint acting on X", not "The practitioner should
+  consider constraints."
+- **Keep steps comparable in length** to the rest of the handler. Wild swings between handlers
+  reflect authoring date rather than technique complexity.
+- **Out-of-range steps return** `` `Complete the ${info.name} process for: "${problem}"` `` — one
+  contract across all handlers. Do not throw from `getStepGuidance`.
+- **`extractInsights` must read `entry.output`.** Returning constant strings keyed by index
+  fabricates insight that the session never produced.
+
 ### Adding New Techniques
 
-When adding a new thinking technique, follow this comprehensive checklist:
+Once a candidate clears the bars above, follow this comprehensive checklist:
 
 #### 1. Core Type Definitions (2 files)
 

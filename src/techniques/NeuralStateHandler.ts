@@ -61,20 +61,20 @@ export class NeuralStateHandler extends BaseTechniqueHandler {
   getStepGuidance(step: number, problem: string): string {
     // Handle out of bounds gracefully
     if (step < 1 || step > 4) {
-      return `Complete the Neural State Optimization process for "${problem}"`;
+      return `Complete the Neural State Optimization process for: "${problem}"`;
     }
 
     switch (step) {
       case 1:
         return `🔍 Assess your current neural state for "${problem}". Are you in focused analysis (ECN) or free association (DMN)?`;
       case 2:
-        return `🚫 Which network is suppressed? If highly focused, DMN is suppressed. If wandering, ECN is suppressed`;
+        return `🚫 Which network is suppressed? If you are grinding hard on "${problem}", DMN is suppressed. If wandering, ECN is suppressed`;
       case 3:
         return `🔄 Develop a switching rhythm. Alternate between focused analysis and free exploration of "${problem}"`;
       case 4:
-        return `🔀 Integrate insights from both states. What emerges when analytical and creative insights combine?`;
+        return `🔀 Integrate insights from both states. What emerges for "${problem}" when analytical and creative insights combine?`;
       default:
-        return `Apply Neural State step ${step} to "${problem}"`;
+        return `Complete the Neural State Optimization process for: "${problem}"`;
     }
   }
 

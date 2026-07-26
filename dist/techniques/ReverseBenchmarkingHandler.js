@@ -129,8 +129,8 @@ export class ReverseBenchmarkingHandler extends BaseTechniqueHandler {
         return this.steps[step - 1];
     }
     getStepGuidance(step, problem) {
-        const stepInfo = this.getStepInfo(step);
-        const markers = stepInfo.markers || [];
+        const stepInfo = this.steps[step - 1];
+        const markers = stepInfo?.markers || [];
         const guidanceTemplates = {
             1: `🗺️ **Step 1: Weakness Mapping**
 
@@ -273,7 +273,7 @@ Competitive Response Management:
 
 Output: Complete implementation plan with timeline and success metrics`,
         };
-        return guidanceTemplates[step] || `Step ${step}: ${stepInfo.name}\n\nFocus: ${stepInfo.focus}`;
+        return guidanceTemplates[step] || `Complete the Reverse Benchmarking process for: "${problem}"`;
     }
     validateStep(step, data) {
         if (!super.validateStep(step, data)) {

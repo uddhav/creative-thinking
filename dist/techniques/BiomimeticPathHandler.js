@@ -197,7 +197,7 @@ export class BiomimeticPathHandler extends BaseTechniqueHandler {
             5: `Build resilience patterns for: "${problem}". Apply redundancy at critical points. Create modular components that can be recombined. Design hierarchical organization with fallback levels. Implement adaptive cycles (growth, conservation, release, reorganization). Consider: fault tolerance, graceful degradation, self-healing, and antifragility.`,
             6: `Synthesize natural solutions for: "${problem}". Integrate the best biological strategies from previous steps. Create a hybrid solution that combines immune adaptability, evolutionary fitness, ecosystem balance, swarm coordination, and resilience patterns. Ensure the solution is biomimetic yet practical for implementation. What would nature's ultimate solution look like?`,
         };
-        return guidanceMap[step] || `Continue biomimetic analysis for: "${problem}"`;
+        return guidanceMap[step] || `Complete the Biomimetic Path Management process for: "${problem}"`;
     }
     validateStep(step, data) {
         if (!super.validateStep(step, data)) {

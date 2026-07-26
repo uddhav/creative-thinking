@@ -16,7 +16,7 @@ import { SessionEncoder } from './session/SessionEncoder.js';
 
 // Type for execution metadata
 export interface ExecutionMetadata {
-  techniqueEffectiveness: number;
+  outputCompleteness: number;
   pathDependenciesCreated: string[];
   flexibilityImpact: number;
   noteworthyMoment?: string;

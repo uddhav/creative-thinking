@@ -55,6 +55,17 @@ export class TechniqueScorer {
   private readonly scoreCache = new Map<string, number>();
   private readonly CACHE_MAX_SIZE = 1000;
 
+  /**
+   * PROVENANCE: these scores are uncalibrated authorial priors, not measurements.
+   *
+   * No study, benchmark, or user data produced them; they encode one
+   * practitioner's judgment about which techniques suit which outcomes. They
+   * are written to two decimal places, but the real resolution is closer to
+   * "low / medium / high" — do not read a 0.85 as meaningfully different from
+   * a 0.9, and do not derive further precision from arithmetic on them.
+   *
+   * They are a reasonable starting point for ranking. They are not evidence.
+   */
   private readonly techniqueMetadata: Record<LateralTechnique, TechniqueMetadata> = {
     // Creative Techniques
     six_hats: {

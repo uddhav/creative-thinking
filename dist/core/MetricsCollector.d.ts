@@ -17,7 +17,7 @@ export interface DetailedMetrics extends SessionMetrics {
     constraintsIdentified?: number;
     escapePlanGenerated?: boolean;
     completionTime?: number;
-    techniqueEffectiveness?: number;
+    outputCompleteness?: number;
 }
 export declare class MetricsCollector {
     /**
@@ -41,9 +41,19 @@ export declare class MetricsCollector {
      */
     getDetailedMetrics(session: SessionData): DetailedMetrics;
     /**
-     * Calculate technique effectiveness score
+     * How completely a session populated the outputs its techniques ask for.
+     *
+     * This measures VOLUME and COVERAGE, not quality: it counts insights per
+     * step and whether risk/antifragile fields were filled in. It cannot tell a
+     * sharp insight from a padded one, so it must not be read as evidence that
+     * the thinking was good — only that the session was filled in.
+     *
+     * A previous `revisionRate` factor scored sessions DOWN for containing
+     * revisions. That penalised the exact behaviour this tool exists to
+     * encourage — structured reconsideration — so it has been removed rather
+     * than reweighted, and the remaining factors carry its weight.
      */
-    private calculateTechniqueEffectiveness;
+    private calculateOutputCompleteness;
     /**
      * Generate metrics summary for display
      */

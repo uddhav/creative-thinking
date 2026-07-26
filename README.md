@@ -54,8 +54,8 @@ The three-layer architecture guides you through comprehensive problem-solving:
 3. **Execution Layer** (`execute_thinking_step`) - Guides you through each thinking step while
    maintaining session state and integrating risk assessment.
 
-**📚 New to the techniques? Check out the [Technique Selection Guide](TECHNIQUE_SELECTION.md) for a
-comprehensive overview of all 29 techniques and when to use each one.**
+**📚 New to the techniques? Check out the [Specifications](SPECIFICATIONS.md) for a comprehensive
+overview of all 29 techniques and when to use each one.**
 
 This layered approach ensures efficient problem-solving by matching techniques to problems, creating
 comprehensive workflows, and maintaining focus throughout the creative process.
@@ -389,7 +389,8 @@ All three layers now provide memory-suggestive outputs to enhance contextual und
 
 **Execution Layer**:
 
-- **Technique Effectiveness**: Real-time performance metrics
+- **Output Completeness**: How fully each step populated the fields its technique asks for (a
+  coverage measure, not a quality judgement)
 - **Path Dependencies**: How current choices affect future options
 - **Noteworthy Moments**: Significant insights or turning points
 - **Future Relevance**: Patterns that may apply to future challenges
@@ -461,7 +462,7 @@ Best for: Complex decision-making, handling contradictory evidence, reducing con
 
 - Privacy-first analytics with opt-in by default (disabled unless `TELEMETRY_ENABLED=true`)
 - Three privacy modes: strict, balanced, minimal
-- Technique effectiveness tracking and analysis
+- Output-completeness tracking and analysis
 - Session duration and completion metrics
 - Visualization tools for data analysis
 - Configurable data collection levels
@@ -657,7 +658,8 @@ creative journey:
 
 **Execution Layer:**
 
-- Technique effectiveness scoring (0-1)
+- Output-completeness scoring (0-1) — measures how fully outputs were populated, not how good they
+  were
 - Path dependencies created
 - Flexibility impact measurements
 - Noteworthy moments flagged
@@ -676,7 +678,7 @@ Optional telemetry system for tracking technique effectiveness:
 
 **Insights Available:**
 
-- Technique effectiveness scores
+- Output-completeness scores
 - Insight generation patterns
 - Risk identification rates
 - Session completion analytics

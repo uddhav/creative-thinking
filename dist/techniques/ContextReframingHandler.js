@@ -130,8 +130,8 @@ export class ContextReframingHandler extends BaseTechniqueHandler {
         return this.steps[step - 1];
     }
     getStepGuidance(step, problem) {
-        const stepInfo = this.getStepInfo(step);
-        const dimensions = stepInfo.dimensions || [];
+        const stepInfo = this.steps[step - 1];
+        const dimensions = stepInfo?.dimensions || [];
         const guidanceTemplates = {
             1: `🗺️ **Step 1: Context Analysis**
 
@@ -319,7 +319,7 @@ Real-World Activation:
 
 Output: Complete activation plan with success metrics and scaling strategy`,
         };
-        return guidanceTemplates[step] || `Step ${step}: ${stepInfo.name}\n\nFocus: ${stepInfo.focus}`;
+        return guidanceTemplates[step] || `Complete the Context Reframing process for: "${problem}"`;
     }
     validateStep(step, data) {
         if (!super.validateStep(step, data)) {
