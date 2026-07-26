@@ -72,65 +72,96 @@ incentive-caused bias recurs as both a self-bias (#1) and an advisor-bias (#3). 
 
 ## The Catalog
 
-| #   | Tendency (Munger's term)                                 | Munger's antidote                                                          | Mapped technique(s)                                                                 | Why it maps                                                                                                                                                                                    |
-| --- | -------------------------------------------------------- | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Reward/Punishment Super-Response (incentive-caused bias) | Follow the incentives; apply a windage factor to any advisor who profits   | `cognitive_bias_audit` (step 2), `criteria_based_analysis`                          | FedEx fixed the night shift only by paying per shift, not per hour; Xerox salesmen pushed the worse machine on fat commissions — step 2 asks whose pay, ego, or status moves with each answer. |
-| 2   | Simple Psychological Denial                              | Name the painful fact out loud                                             | `cognitive_bias_audit` (step 3)                                                     | The mother who insisted her dead pilot son was merely "lost at sea" — step 3 forces the painful truth you refuse to register.                                                                  |
-| 3   | Incentive-Caused Bias in advisors (agency costs)         | Discount advice from those who profit from it                              | `cognitive_bias_audit` (step 2), `criteria_based_analysis`                          | The gall-bladder surgeon who removed healthy organs in perfect sincerity — the sincere-but-biased advisor is the dangerous one.                                                                |
-| 4   | Consistency & Commitment Tendency                        | Treat conclusions as hypotheses; don't declare too early; run a pre-mortem | `cognitive_bias_audit` (steps 3, 8), `competing_hypotheses`, `reverse_benchmarking` | Max Planck's old guard never converted, they just died off; "public disclosure pounds it in" — so hold the verdict as a hypothesis and invert before committing.                               |
-| 5   | Pavlovian Association                                    | Ask what really causes the correlation; mistrust mere association          | `cognitive_bias_audit` (step 6), `perception_optimization`                          | Three-quarters of advertising runs on pure association; Coke buys imagery, not argument — step 6 separates causation from a conditioned response.                                              |
-| 6   | Reciprocation Tendency                                   | Beware unearned favors (Sam Walton's no-gifts-from-vendors rule)           | `cognitive_bias_audit` (step 4), `context_reframing`                                | Cialdini's ask-for-a-lot-then-retreat concession trick manufactures obligation — step 4's social scan flags the debt you never chose to incur.                                                 |
-| 7   | Social Proof                                             | Run an independent checklist pass; ignore the crowd under stress           | `cognitive_bias_audit` (step 4), `competing_hypotheses`, `six_hats`                 | Kitty Genovese died as everyone read everyone else's inaction as proof of safety; oil companies bought fertilizer companies because rivals had.                                                |
-| 8   | Math-Elegance / Man-with-a-Hammer                        | Add models; never force one tool onto every problem                        | `nine_windows`, `first_principles`, `cognitive_bias_audit` (whole checklist)        | Economists' love of efficient-market elegance; "better to be roughly right than precisely wrong" — to the man with one hammer every problem is a nail.                                         |
-| 9   | Contrast-Caused Distortion                               | Check the absolute scale; watch for framing by comparison                  | `cognitive_bias_audit` (step 6), `context_reframing`, `perception_optimization`     | Three buckets of water fool the hand; the frog boils because the heat arrived in small contrasting steps.                                                                                      |
-| 10  | Over-Influence by Authority                              | Demand the "why"; let the co-pilot speak                                   | `cognitive_bias_audit` (step 4), `competing_hypotheses`                             | Milgram's subjects shocked on command; roughly a quarter of airline crashes involve a deferential co-pilot who let a known error stand.                                                        |
-| 11  | Deprival Super-Reaction (scarcity/loss)                  | Size the felt loss; refuse to escalate                                     | `cognitive_bias_audit` (step 5), `perception_optimization`, `context_reframing`     | Munger's own dog bit him over food taken away; New Coke; the neighbor's-tree feud — loss looms larger than the merits and reciprocated animosity escalates.                                    |
-| 12  | Envy/Jealousy                                            | Name envy as the driver                                                    | `cognitive_bias_audit` (step 3)                                                     | "It is not greed but envy that drives the world" — step 3 names the motive no one will admit to.                                                                                               |
-| 13  | Chemical Dependency                                      | Recognize the denial it always brings                                      | `cognitive_bias_audit` (step 3)                                                     | Addiction "always involves massive denial" — it couples to the same self-deception machinery step 3 already hunts.                                                                             |
-| 14  | Mis-Gambling Compulsion                                  | Beware variable reinforcement and near-misses                              | `cognitive_bias_audit` (step 5)                                                     | Letting players pick their own lottery numbers lifts sales; slot machines are engineered for near-misses — the deprival/near-miss lens catches the hook.                                       |
-| 15  | Liking/Disliking Distortion                              | Discount love of your own ideas; learn from the disliked                   | `cognitive_bias_audit` (step 3), `competing_hypotheses`                             | We over-like ourselves, our own kind, and our own conclusions, and bend the facts to fit the affection.                                                                                        |
-| 16  | Availability-Misweighing (non-mathematical brain)        | Use base rates; think like Zeckhauser plays bridge                         | `cognitive_bias_audit` (step 6), `competing_hypotheses`, `criteria_based_analysis`  | Kahneman & Tversky; the See's embezzler base rate — weigh the reference class, not whatever springs most readily to mind.                                                                      |
-| 17  | Over-Influence by Extra-Vivid Evidence                   | Down-weight the vivid; weight the base rate                                | `cognitive_bias_audit` (step 6), `anecdotal_signal`                                 | Munger's $30M mistake; Gutfreund who "looked into his eyes" and trusted the man — one vivid impression overrode the math.                                                                      |
-| 18  | No-Theory / "Why?" Confusion                             | Hang facts on theory structures; always explain why (the five W's)         | `cognitive_bias_audit` (step 9), `first_principles`, `concept_extraction`           | Carl Braun mandated the five W's on every communication; "watch one, do one, teach one" — a fact not hung on a why-theory won't stick.                                                         |
-| 19  | Other Sensation/Memory/Cognition Limits                  | Accept the limits; slow down                                               | `cognitive_bias_audit` (step 6)                                                     | "I don't have time for that" — acknowledge the brain's crude shortcuts instead of trusting them as truth.                                                                                      |
-| 20  | Stress-Induced Mental Change                             | Recognize that acute stress distorts judgment                              | `cognitive_bias_audit` (step 4), `neural_state`                                     | Pavlov's dogs suffered permanent breakdowns in the Leningrad flood — manage the cognitive state before trusting a decision made under stress.                                                  |
-| 21  | Decline / Loss of Ability through Disuse                 | Use simulators; keep skills fresh                                          | `meta_learning`, `neural_state` (partial — see gaps)                                | Pilots stay sharp on simulators — skills rot without rehearsal; no single dedicated technique owns this yet.                                                                                   |
-| 22  | Say-Something Syndrome (organizational noise)            | Don't add noise; silence is acceptable                                     | `cognitive_bias_audit` (step 4)                                                     | The honeybee whose garbled find still makes it dance — people talk to fill space; step 4 separates signal from social noise.                                                                   |
+| #   | Tendency (Munger's term)                                 | Munger's antidote                                                          | Mapped technique(s)                                                                 | Why it maps                                                                                                                                                                                                   |
+| --- | -------------------------------------------------------- | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Reward/Punishment Super-Response (incentive-caused bias) | Follow the incentives; apply a windage factor to any advisor who profits   | `cognitive_bias_audit` (step 2), `criteria_based_analysis`                          | FedEx fixed the night shift only by paying per shift, not per hour; Xerox salesmen pushed the worse machine on fat commissions — step 2 asks whose pay, ego, or status moves with each answer.                |
+| 2   | Simple Psychological Denial                              | Name the painful fact out loud                                             | `cognitive_bias_audit` (step 3)                                                     | The mother who insisted her dead pilot son was merely "lost at sea" — step 3 forces the painful truth you refuse to register.                                                                                 |
+| 3   | Incentive-Caused Bias in advisors (agency costs)         | Discount advice from those who profit from it                              | `cognitive_bias_audit` (step 2), `criteria_based_analysis`                          | The gall-bladder surgeon who removed healthy organs in perfect sincerity — the sincere-but-biased advisor is the dangerous one.                                                                               |
+| 4   | Consistency & Commitment Tendency                        | Treat conclusions as hypotheses; don't declare too early; run a pre-mortem | `cognitive_bias_audit` (steps 3, 8), `competing_hypotheses`, `reverse_benchmarking` | Max Planck's old guard never converted, they just died off; "public disclosure pounds it in" — so hold the verdict as a hypothesis and invert before committing.                                              |
+| 5   | Pavlovian Association                                    | Ask what really causes the correlation; mistrust mere association          | `cognitive_bias_audit` (step 6), `perception_optimization`                          | Three-quarters of advertising runs on pure association; Coke buys imagery, not argument — step 6 separates causation from a conditioned response.                                                             |
+| 6   | Reciprocation Tendency                                   | Beware unearned favors (Sam Walton's no-gifts-from-vendors rule)           | `cognitive_bias_audit` (step 4), `context_reframing`                                | Cialdini's ask-for-a-lot-then-retreat concession trick manufactures obligation — step 4's social scan flags the debt you never chose to incur.                                                                |
+| 7   | Social Proof                                             | Run an independent checklist pass; ignore the crowd under stress           | `cognitive_bias_audit` (step 4), `competing_hypotheses`, `six_hats`                 | Kitty Genovese died as everyone read everyone else's inaction as proof of safety; oil companies bought fertilizer companies because rivals had.                                                               |
+| 8   | Math-Elegance / Man-with-a-Hammer                        | Add models; never force one tool onto every problem                        | `latticework` (whole technique), `nine_windows`, `first_principles`                 | Economists' love of efficient-market elegance; "better to be roughly right than precisely wrong" — to the man with one hammer every problem is a nail. `latticework` is the purpose-built latticework answer. |
+| 9   | Contrast-Caused Distortion                               | Check the absolute scale; watch for framing by comparison                  | `cognitive_bias_audit` (step 6), `context_reframing`, `perception_optimization`     | Three buckets of water fool the hand; the frog boils because the heat arrived in small contrasting steps.                                                                                                     |
+| 10  | Over-Influence by Authority                              | Demand the "why"; let the co-pilot speak                                   | `cognitive_bias_audit` (step 4), `competing_hypotheses`                             | Milgram's subjects shocked on command; roughly a quarter of airline crashes involve a deferential co-pilot who let a known error stand.                                                                       |
+| 11  | Deprival Super-Reaction (scarcity/loss)                  | Size the felt loss; refuse to escalate                                     | `cognitive_bias_audit` (step 5), `perception_optimization`, `context_reframing`     | Munger's own dog bit him over food taken away; New Coke; the neighbor's-tree feud — loss looms larger than the merits and reciprocated animosity escalates.                                                   |
+| 12  | Envy/Jealousy                                            | Name envy as the driver                                                    | `cognitive_bias_audit` (step 3)                                                     | "It is not greed but envy that drives the world" — step 3 names the motive no one will admit to.                                                                                                              |
+| 13  | Chemical Dependency                                      | Recognize the denial it always brings                                      | `cognitive_bias_audit` (step 3)                                                     | Addiction "always involves massive denial" — it couples to the same self-deception machinery step 3 already hunts.                                                                                            |
+| 14  | Mis-Gambling Compulsion                                  | Beware variable reinforcement and near-misses                              | `cognitive_bias_audit` (step 5)                                                     | Letting players pick their own lottery numbers lifts sales; slot machines are engineered for near-misses — the deprival/near-miss lens catches the hook.                                                      |
+| 15  | Liking/Disliking Distortion                              | Discount love of your own ideas; learn from the disliked                   | `cognitive_bias_audit` (step 3), `competing_hypotheses`                             | We over-like ourselves, our own kind, and our own conclusions, and bend the facts to fit the affection.                                                                                                       |
+| 16  | Availability-Misweighing (non-mathematical brain)        | Use base rates; think like Zeckhauser plays bridge                         | `cognitive_bias_audit` (step 6), `competing_hypotheses`, `criteria_based_analysis`  | Kahneman & Tversky; the See's embezzler base rate — weigh the reference class, not whatever springs most readily to mind.                                                                                     |
+| 17  | Over-Influence by Extra-Vivid Evidence                   | Down-weight the vivid; weight the base rate                                | `cognitive_bias_audit` (step 6), `anecdotal_signal`                                 | Munger's $30M mistake; Gutfreund who "looked into his eyes" and trusted the man — one vivid impression overrode the math.                                                                                     |
+| 18  | No-Theory / "Why?" Confusion                             | Hang facts on theory structures; always explain why (the five W's)         | `cognitive_bias_audit` (step 9), `first_principles`, `concept_extraction`           | Carl Braun mandated the five W's on every communication; "watch one, do one, teach one" — a fact not hung on a why-theory won't stick.                                                                        |
+| 19  | Other Sensation/Memory/Cognition Limits                  | Accept the limits; slow down                                               | `cognitive_bias_audit` (step 6)                                                     | "I don't have time for that" — acknowledge the brain's crude shortcuts instead of trusting them as truth.                                                                                                     |
+| 20  | Stress-Induced Mental Change                             | Recognize that acute stress distorts judgment                              | `cognitive_bias_audit` (step 4), `neural_state`                                     | Pavlov's dogs suffered permanent breakdowns in the Leningrad flood — manage the cognitive state before trusting a decision made under stress.                                                                 |
+| 21  | Decline / Loss of Ability through Disuse                 | Use simulators; keep skills fresh                                          | `meta_learning`, `neural_state` (partial — see gaps)                                | Pilots stay sharp on simulators — skills rot without rehearsal; no single dedicated technique owns this yet.                                                                                                  |
+| 22  | Say-Something Syndrome (organizational noise)            | Don't add noise; silence is acceptable                                     | `cognitive_bias_audit` (step 4)                                                     | The honeybee whose garbled find still makes it dance — people talk to fill space; step 4 separates signal from social noise.                                                                                  |
 
 ## Cross-Cutting Methods
 
 Munger's three meta-moves are not single tendencies; they are how the checklist defeats all of them.
 Each maps to framework machinery:
 
-● **The latticework of mental models** → `nine_windows`. Munger's antidote to the one-hammer trap is
-a multidisciplinary grid; `nine_windows` is the framework's closest structural analog — it forces
-the problem across system levels and time, the way a latticework forces it across disciplines. ●
-**Inversion ("invert, always invert")** → `reverse_benchmarking` + the `invert-problem` prompt +
-`cognitive_bias_audit` **step 8**. Darwin paid extra attention to the evidence that disconfirmed his
-cherished ideas; step 8 makes you argue the opposite conclusion, `reverse_benchmarking` hunts the
-vacant space rivals avoid, and the `invert-problem` prompt enumerates "everything that guarantees
-failure" so you can refuse to do it. ● **The lollapalooza effect (4–5 tendencies converging)** →
-`cognitive_bias_audit` **step 7**. The single most important move: tendencies do not add, they
-multiply. Step 7 lists which forces from steps 2–6 stack toward the _same_ conclusion — Tupperware
-parties, open-outcry auctions, a dysfunctional board are each several tendencies pulling one way at
-once. ● **The checklist method** → the whole `cognitive_bias_audit` technique. "Mentally run down
-the list instead of jumping on availability." The five scan lenses (steps 2–6) are the checklist
-made structural — you cannot exit the technique having weighed only the one factor that came to mind
-first.
+● **The latticework of mental models** → `latticework` (🧰). Munger's antidote to the one-hammer
+trap is a multidisciplinary grid, and the `latticework` technique is its direct implementation: 7
+steps that force the problem through four named lenses (physics/engineering, biology/evolution,
+psychology, economics/math), then synthesize where they agree, conflict, or stack. `nine_windows`
+remains a useful structural cousin — it forces the problem across system levels and time rather than
+across disciplines. ● **Inversion ("invert, always invert")** → `reverse_benchmarking` + the
+`invert-problem` prompt + `cognitive_bias_audit` **step 8**. Darwin paid extra attention to the
+evidence that disconfirmed his cherished ideas; step 8 makes you argue the opposite conclusion,
+`reverse_benchmarking` hunts the vacant space rivals avoid, and the `invert-problem` prompt
+enumerates "everything that guarantees failure" so you can refuse to do it. ● **The lollapalooza
+effect (4–5 tendencies converging)** → `cognitive_bias_audit` **step 7**. The single most important
+move: tendencies do not add, they multiply. Step 7 lists which forces from steps 2–6 stack toward
+the _same_ conclusion — Tupperware parties, open-outcry auctions, a dysfunctional board are each
+several tendencies pulling one way at once. ● **The checklist method** → the whole
+`cognitive_bias_audit` technique. "Mentally run down the list instead of jumping on availability."
+The five scan lenses (steps 2–6) are the checklist made structural — you cannot exit the technique
+having weighed only the one factor that came to mind first.
+
+## Extensions from the 2008 Caltech Lecture
+
+The 1995 Harvard talk catalogs the _ways you misjudge_. Munger's 2008 Caltech DuBridge lecture is
+more meta-method — _how to think_ — and supplies ideas the catalog above lacks. Those now folded
+into the framework:
+
+● **Latticework of mental models** → the `latticework` technique. The canonical source text: grab
+the big ideas from every discipline and you are a man with multiple tools, so you are less likely to
+twist every problem into a nail. This closed former gap #8. ● **Circle of competence** → added to
+the `charlie_munger` persona and `cognitive_bias_audit` **step 1**. It is not a competency if you do
+not know its edge; Munger would rather deal with someone whose IQ is 130 who thinks it is 125 than
+one at 180 who thinks it is 200 — "that second guy will kill you." ● **False precision** → added to
+the persona and `cognitive_bias_audit` **step 6**. The habit of horribly overweighing whatever can
+be measured while the things that matter go unmeasured; better roughly right than precisely wrong.
+Munger's image is picking up gold nuggets with organized common sense rather than sifting gravel. ●
+**Occam → lollapalooza escalation** → sharpened `cognitive_bias_audit` **step 7**. Prefer the
+simplest sufficient explanation, _but_ when the result is a Lollapalooza (extreme, outsized), the
+rule flips: look for a confluence of multiple causes operating in the same direction.
+
+Two further 2008 ideas are deliberately **not** in the Munger technique, because they belong to the
+framework's risk/ergodicity side rather than to a psychology audit:
+
+● **Common-mode failure** — Munger's hurricane insurer that wrote every policy on one island: "I
+hadn't constructed a hedge at all, I'd constructed a common-mode failure." It appears as a model
+inside `latticework` (physics/engineering lens), and is otherwise the natural territory of the
+ergodicity subsystem and a Taleb-style fragility pass. ● **Margin of safety** — Ben Graham's
+borrowing from engineering; it lands as `latticework` step 7 and as a persona principle rather than
+as a technique of its own.
 
 ## Coverage Gaps & [tbd] Markers
 
-Two tendencies have **no single dedicated technique** and are flagged as future-technique
-candidates:
+One tendency still has **no single dedicated technique** and is flagged as a future-technique
+candidate:
 
-● **#8 Math-Elegance / Man-with-a-Hammer** — [tbd] mapped across `nine_windows` +
-`first_principles` + the whole audit, but none is a purpose-built _multi-model latticework_
-technique. A dedicated `latticework` / `multi_model` technique (force the problem through N named
-disciplinary lenses) would close this. Today it is a composition, not a technique. ● **#21 Decline /
-Loss of Ability through Disuse** — [tbd] only partially served by `meta_learning`
+● **#21 Decline / Loss of Ability through Disuse** — [tbd] only partially served by `meta_learning`
 (learning-to-learn) and `neural_state` (cognitive-state management). Neither targets _skill
-maintenance through deliberate rehearsal_ (Munger's flight simulator). A `deliberate_practice` /
-`skill_maintenance` technique is the clean future home.
+maintenance through deliberate rehearsal_ (Munger's flight simulator, and his 2008 line that you
+must "develop the knack" and keep practicing). A `deliberate_practice` / `skill_maintenance`
+technique is the clean future home.
+
+**Closed since first draft:** #8 Math-Elegance / Man-with-a-Hammer — formerly [tbd], now owned by
+the purpose-built `latticework` latticework technique.
 
 Minor thin spots (mapped, but lightly): **#19 Other Cognition Limits** is a catch-all that lands
 only on step 6, and **#13 Chemical Dependency** rides step 3's denial machinery rather than a lens
@@ -146,10 +177,13 @@ after `nassim_taleb`; its top `techniqueBias` key is `cognitive_bias_audit` (0.9
 handler** —
 [`src/techniques/CognitiveBiasAuditHandler.ts`](../src/techniques/CognitiveBiasAuditHandler.ts). The
 9-step engine; the 24 tendencies are encoded once as an inline `TENDENCIES` const, and step 9
-carries the `ReflexiveEffects` for committing to a verdict.
+carries the `ReflexiveEffects` for committing to a verdict. ● **Latticework handler** —
+[`src/techniques/LatticeworkHandler.ts`](../src/techniques/LatticeworkHandler.ts). The 7-step
+multi-lens technique; the borrowed big ideas are encoded once as an inline `MENTAL_MODELS` const,
+and step 7 commits with a margin of safety.
 
 ---
 
-_Companion to the `cognitive_bias_audit` technique, the `charlie_munger` persona, and the
-`munger-checklist` / `invert-problem` prompts. Source: Charlie Munger, "The Psychology of Human
-Misjudgment," Harvard, June 1995._
+_Companion to the `cognitive_bias_audit` and `latticework` techniques, the `charlie_munger` persona,
+and the `munger-checklist` / `invert-problem` prompts. Sources: Charlie Munger, "The Psychology of
+Human Misjudgment," Harvard, June 1995; and the 2008 DuBridge Distinguished Lecture, Caltech._

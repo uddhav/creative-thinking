@@ -453,6 +453,7 @@ export class SessionCompletionTracker {
             perception_optimization: 5,
             anecdotal_signal: 6,
             cognitive_bias_audit: 9,
+            latticework: 7,
         };
         return stepCounts[technique] || 5;
     }

@@ -449,6 +449,11 @@ export class ErgodicityManager {
                 typicalCommitment: 0.5,
                 riskProfile: 'Medium - Declaring a debiased verdict re-triggers commitment bias',
             },
+            latticework: {
+                typicalReversibility: 0.7,
+                typicalCommitment: 0.4,
+                riskProfile: 'Low - Multi-model analysis with an explicit margin of safety',
+            },
         };
         return profiles[technique];
     }

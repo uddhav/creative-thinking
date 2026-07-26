@@ -434,6 +434,20 @@ export class TechniqueScorer {
             },
             stepCount: 9,
         },
+        latticework: {
+            complexity: 'high',
+            handlesTimeConstraints: false,
+            handlesResourceConstraints: false,
+            handlesCollaborationNeeds: true,
+            outcomeProfiles: {
+                innovative: 0.6,
+                systematic: 0.9,
+                riskAware: 0.8,
+                collaborative: 0.5,
+                analytical: 0.95,
+            },
+            stepCount: 7,
+        },
     };
     constructor(weights) {
         // Store weights internally, using defaults if not provided

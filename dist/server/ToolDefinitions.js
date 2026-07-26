@@ -4,7 +4,7 @@
  */
 export const DISCOVER_TECHNIQUES_TOOL = {
     name: 'discover_techniques',
-    description: 'STEP 1 of 3: Analyzes a problem and recommends appropriate lateral thinking techniques. This is the FIRST tool you must call when starting any creative thinking session. Returns recommendations and available techniques that can be used in the next step. MANDATORY PARAMETER: You MUST provide the "problem" parameter as a string describing the challenge to solve. DO NOT call this with an empty object {}. Example: {"problem": "How to improve team communication"}. Valid techniques: six_hats, po, random_entry, scamper, concept_extraction, yes_and, design_thinking, triz, neural_state, temporal_work, cultural_integration, collective_intel, disney_method, nine_windows, quantum_superposition, temporal_creativity, paradoxical_problem, meta_learning, biomimetic_path, first_principles, neuro_computational, criteria_based_analysis, linguistic_forensics, competing_hypotheses, reverse_benchmarking, context_reframing, perception_optimization, anecdotal_signal, cognitive_bias_audit.',
+    description: 'STEP 1 of 3: Analyzes a problem and recommends appropriate lateral thinking techniques. This is the FIRST tool you must call when starting any creative thinking session. Returns recommendations and available techniques that can be used in the next step. MANDATORY PARAMETER: You MUST provide the "problem" parameter as a string describing the challenge to solve. DO NOT call this with an empty object {}. Example: {"problem": "How to improve team communication"}. Valid techniques: six_hats, po, random_entry, scamper, concept_extraction, yes_and, design_thinking, triz, neural_state, temporal_work, cultural_integration, collective_intel, disney_method, nine_windows, quantum_superposition, temporal_creativity, paradoxical_problem, meta_learning, biomimetic_path, first_principles, neuro_computational, criteria_based_analysis, linguistic_forensics, competing_hypotheses, reverse_benchmarking, context_reframing, perception_optimization, anecdotal_signal, cognitive_bias_audit, latticework.',
     inputSchema: {
         type: 'object',
         properties: {
@@ -48,7 +48,7 @@ export const DISCOVER_TECHNIQUES_TOOL = {
 };
 export const PLAN_THINKING_SESSION_TOOL = {
     name: 'plan_thinking_session',
-    description: 'STEP 2 of 3: Creates a structured workflow for applying lateral thinking techniques. This tool MUST be called AFTER discover_techniques and BEFORE execute_thinking_step. Returns a planId that is REQUIRED for the execution step. MANDATORY PARAMETERS: "problem" (string) and "techniques" (array of strings). Valid techniques: six_hats, po, random_entry, scamper, concept_extraction, yes_and, design_thinking, triz, neural_state, temporal_work, cultural_integration, collective_intel, disney_method, nine_windows, quantum_superposition, temporal_creativity, paradoxical_problem, meta_learning, biomimetic_path, first_principles, neuro_computational, criteria_based_analysis, linguistic_forensics, competing_hypotheses, reverse_benchmarking, context_reframing, perception_optimization, anecdotal_signal, cognitive_bias_audit. Example: {"problem": "How to reduce costs", "techniques": ["six_hats", "scamper"]}',
+    description: 'STEP 2 of 3: Creates a structured workflow for applying lateral thinking techniques. This tool MUST be called AFTER discover_techniques and BEFORE execute_thinking_step. Returns a planId that is REQUIRED for the execution step. MANDATORY PARAMETERS: "problem" (string) and "techniques" (array of strings). Valid techniques: six_hats, po, random_entry, scamper, concept_extraction, yes_and, design_thinking, triz, neural_state, temporal_work, cultural_integration, collective_intel, disney_method, nine_windows, quantum_superposition, temporal_creativity, paradoxical_problem, meta_learning, biomimetic_path, first_principles, neuro_computational, criteria_based_analysis, linguistic_forensics, competing_hypotheses, reverse_benchmarking, context_reframing, perception_optimization, anecdotal_signal, cognitive_bias_audit, latticework. Example: {"problem": "How to reduce costs", "techniques": ["six_hats", "scamper"]}',
     inputSchema: {
         type: 'object',
         properties: {
@@ -90,6 +90,7 @@ export const PLAN_THINKING_SESSION_TOOL = {
                         'perception_optimization',
                         'anecdotal_signal',
                         'cognitive_bias_audit',
+                        'latticework',
                     ],
                 },
                 description: 'REQUIRED: Array of technique names to execute. Each technique will have multiple steps that MUST ALL be completed.',
