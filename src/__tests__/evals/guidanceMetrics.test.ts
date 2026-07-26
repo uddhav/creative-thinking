@@ -28,10 +28,15 @@ interface Baseline {
 }
 
 /**
- * Minimum interpolation rate for a technique that is not yet in the baseline.
- * A brand-new technique whose steps mostly ignore their own input is the defect
- * this file exists to prevent, so new work must clear at least half its steps —
- * a bar 14 existing techniques already meet at 100%.
+ * Absolute floor for a technique not yet in the baseline.
+ *
+ * With the recorded rate currently at 100%, the aggregate check below is the
+ * stricter of the two and will fail first — so this looks redundant. It is not.
+ * The aggregate is measured RELATIVE to baseline.json, and a baseline can be
+ * regenerated. If someone ever re-records it at a degraded state, every
+ * relative check silently re-anchors to that worse number; this floor is
+ * absolute and survives that. It is the backstop against laundering a
+ * regression through a baseline refresh, not a day-to-day gate.
  */
 const NEW_TECHNIQUE_MIN_INTERPOLATION = 0.5;
 
