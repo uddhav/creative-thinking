@@ -5,10 +5,45 @@
  */
 import type { LateralTechnique } from '../../types/index.js';
 import type { TechniqueRegistry } from '../../techniques/TechniqueRegistry.js';
+/**
+ * How well a technique fits the problem category recommending it.
+ *
+ * ORDINAL levels, not measurements. Nothing benchmarks whether `triz` beats
+ * `scamper` on technical problems; this is one practitioner's judgement about
+ * which tool to reach for first.
+ *
+ * The scale exists because these were hand-written decimals spanning SIXTEEN
+ * distinct values — 0.82, 0.83, 0.84, 0.85, 0.86, 0.88, 0.92, 0.98 among them.
+ * There is no basis on which 0.83 differs from 0.84, and a dead
+ * EFFECTIVENESS_SCORES table sat in this class unused while every call site
+ * wrote its own decimal, which is how they accumulated.
+ *
+ * Six tiers, chosen to sit ON the clusters the author actually used so that
+ * naming them preserves the intended ordering rather than flattening it. An
+ * earlier four-tier version moved values by up to 0.08 and changed the top
+ * recommendation in 46 of 396 scenarios — collapsing further destroys real
+ * signal, notably the category-defining entries.
+ *
+ * Change a technique's standing by moving it a TIER, never by inventing a
+ * decimal; `ordinalScale.test.ts` fails the build otherwise.
+ */
+export declare const TECHNIQUE_FIT: {
+    /** The technique this problem category exists for */
+    readonly DEFINING: 0.95;
+    /** A leading choice for this category */
+    readonly PRIMARY: 0.9;
+    /** Strongly applicable */
+    readonly STRONG: 0.85;
+    /** Clearly applicable, not a headline choice */
+    readonly SOLID: 0.8;
+    /** A useful secondary angle */
+    readonly MODERATE: 0.75;
+    /** Occasionally relevant; included for breadth */
+    readonly WEAK: 0.7;
+};
 export declare class TechniqueRecommender {
     private readonly WILDCARD_PROBABILITY;
     private readonly RECOMMENDATION_LIMITS;
-    private readonly EFFECTIVENESS_SCORES;
     private techniqueInfoCache;
     private scorer;
     constructor();

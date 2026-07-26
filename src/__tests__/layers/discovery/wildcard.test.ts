@@ -3,7 +3,10 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { TechniqueRecommender } from '../../../layers/discovery/TechniqueRecommender.js';
+import {
+  TechniqueRecommender,
+  TECHNIQUE_FIT,
+} from '../../../layers/discovery/TechniqueRecommender.js';
 import { TechniqueRegistry } from '../../../techniques/TechniqueRegistry.js';
 
 describe('Wildcard Technique Selection', () => {
@@ -107,7 +110,9 @@ describe('Wildcard Technique Selection', () => {
         /alternative|wildcard|unexpected|complementary|unconventional/i
       );
       expect(wildcard.reasoning).toContain('steps)'); // Should include step count
-      expect(wildcard.effectiveness).toBe(0.65); // Moderate effectiveness
+      // Wildcards are included for breadth, not fit, so they sit at the
+      // bottom of the ordinal scale rather than carrying an invented decimal.
+      expect(wildcard.effectiveness).toBe(TECHNIQUE_FIT.WEAK);
     }
 
     vi.restoreAllMocks();
