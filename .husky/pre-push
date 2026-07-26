@@ -29,12 +29,16 @@ if [ "$LAST_SRC_COMMIT" != "$LAST_DIST_COMMIT" ]; then
   # Exclude test files since they don't affect the dist output
   ALL_SRC_CHANGES=$(git diff --name-only "$LAST_DIST_COMMIT" "$LAST_SRC_COMMIT" -- src/)
   
-  # Filter out test files
+  # Filter out files that never produce dist output: tests, and JSON data
+  # files (tsc does not copy .json into dist, so changing one can never make
+  # dist stale — without this the check false-positives on data like
+  # src/evals/baseline.json and prompts on every push that touches it).
   SRC_CHANGES=""
   for file in $ALL_SRC_CHANGES; do
     case "$file" in
       *__tests__*) continue ;;
       *.test.ts) continue ;;
+      *.json) continue ;;
       *) SRC_CHANGES="${SRC_CHANGES}${file}\n" ;;
     esac
   done
