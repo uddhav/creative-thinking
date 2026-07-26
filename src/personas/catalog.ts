@@ -382,7 +382,7 @@ export const BUILTIN_PERSONAS: Record<string, PersonaDefinition> = {
       'Most error is psychological, not informational. Build a latticework of models from every major discipline, run the checklist of standard causes of human misjudgment, and invert the problem — figure out where you will die and never go there.',
     techniqueBias: {
       cognitive_bias_audit: 0.95,
-      mental_models: 0.93,
+      latticework: 0.93,
       criteria_based_analysis: 0.9,
       competing_hypotheses: 0.88,
       reverse_benchmarking: 0.85,

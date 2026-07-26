@@ -325,7 +325,7 @@ export class PathMemoryManager {
             perception_optimization: 'perceptual',
             anecdotal_signal: 'observational',
             cognitive_bias_audit: 'cognitive',
-            mental_models: 'cognitive',
+            latticework: 'cognitive',
         };
         return techniqueConstraintMap[event.technique] || 'creative';
     }

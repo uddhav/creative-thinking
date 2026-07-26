@@ -101,7 +101,7 @@ describe('WorkflowGuard Techniques Synchronization', () => {
       'perception_optimization',
       'anecdotal_signal',
       'cognitive_bias_audit',
-      'mental_models',
+      'latticework',
     ];
 
     // All type values should be registered

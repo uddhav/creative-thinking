@@ -33,7 +33,7 @@ export type LateralTechnique =
   | 'perception_optimization'
   | 'anecdotal_signal'
   | 'cognitive_bias_audit'
-  | 'mental_models';
+  | 'latticework';
 
 /**
  * Represents input data for a lateral thinking step

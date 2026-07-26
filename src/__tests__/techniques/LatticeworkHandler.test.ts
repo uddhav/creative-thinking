@@ -1,16 +1,16 @@
 /**
- * Tests for MentalModelsHandler
+ * Tests for LatticeworkHandler
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { MentalModelsHandler } from '../../techniques/MentalModelsHandler.js';
+import { LatticeworkHandler } from '../../techniques/LatticeworkHandler.js';
 import { ValidationError } from '../../errors/types.js';
 
-describe('MentalModelsHandler', () => {
-  let handler: MentalModelsHandler;
+describe('LatticeworkHandler', () => {
+  let handler: LatticeworkHandler;
 
   beforeEach(() => {
-    handler = new MentalModelsHandler();
+    handler = new LatticeworkHandler();
   });
 
   describe('getTechniqueInfo', () => {

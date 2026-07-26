@@ -117,7 +117,7 @@ const MODEL_BY_ID = new Map<string, MentalModel>(
   MENTAL_MODELS.map((m): [string, MentalModel] => [m.id, m])
 );
 
-export class MentalModelsHandler extends BaseTechniqueHandler {
+export class LatticeworkHandler extends BaseTechniqueHandler {
   private readonly steps: LatticeworkStep[] = [
     {
       name: 'Frame & Name Your Hammer',

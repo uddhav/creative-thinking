@@ -480,7 +480,7 @@ export class TechniqueScorer {
       },
       stepCount: 9,
     },
-    mental_models: {
+    latticework: {
       complexity: 'high',
       handlesTimeConstraints: false,
       handlesResourceConstraints: false,

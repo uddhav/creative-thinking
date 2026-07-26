@@ -274,7 +274,7 @@ function getExpectedOutputs(technique) {
             'Lollapalooza confluence of stacking tendencies detected',
             'Inverted, disconfirmation-tested, debiased decision',
         ],
-        mental_models: [
+        latticework: [
             'Problem examined through multiple disciplinary lenses',
             'Cross-disciplinary agreements, conflicts, and confluences synthesized',
             'Decision committed with an explicit margin of safety',
@@ -526,7 +526,7 @@ function getExpectedOutputForStep(technique, step) {
             8: 'Judgment inverted and disconfirming evidence hunted',
             9: 'Antidotes applied and debiased decision committed',
         },
-        mental_models: {
+        latticework: {
             1: 'Problem framed and the instinctive one-model bias named',
             2: 'Physics and engineering lens applied (equilibrium, feedback, common-mode failure)',
             3: 'Biology and evolution lens applied (competition, selection, carrying capacity)',

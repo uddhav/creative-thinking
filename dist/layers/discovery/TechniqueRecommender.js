@@ -266,7 +266,7 @@ export class TechniqueRecommender {
                     effectiveness: 0.9,
                 });
                 recommendations.push({
-                    technique: 'mental_models',
+                    technique: 'latticework',
                     reasoning: 'Apply multiple disciplinary lenses instead of one habitual model',
                     effectiveness: 0.85,
                 });
@@ -337,7 +337,7 @@ export class TechniqueRecommender {
                     effectiveness: 0.78,
                 });
                 recommendations.push({
-                    technique: 'mental_models',
+                    technique: 'latticework',
                     reasoning: 'Cross-disciplinary lenses reveal system dynamics one model would miss',
                     effectiveness: 0.84,
                 });
@@ -385,7 +385,7 @@ export class TechniqueRecommender {
                     effectiveness: 0.88,
                 });
                 recommendations.push({
-                    technique: 'mental_models',
+                    technique: 'latticework',
                     reasoning: 'Weigh the decision through several disciplinary lenses before committing',
                     effectiveness: 0.86,
                 });

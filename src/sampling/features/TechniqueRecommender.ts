@@ -545,7 +545,7 @@ Focus on maximizing creative output and maintaining session flow.`;
         'Detect lollapalooza confluences where biases multiply',
         'Force inversion and disconfirmation against your own conclusion',
       ],
-      mental_models: [
+      latticework: [
         'Escape the one-model trap by applying multiple disciplinary lenses',
         'Surface where disciplines disagree and demand synthesis',
         'Decide inside your competence with an explicit margin of safety',

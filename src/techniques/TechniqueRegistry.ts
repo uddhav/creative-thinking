@@ -34,7 +34,7 @@ import { ContextReframingHandler } from './ContextReframingHandler.js';
 import { PerceptionOptimizationHandler } from './PerceptionOptimizationHandler.js';
 import { AnecdotalSignalHandler } from './AnecdotalSignalHandler.js';
 import { CognitiveBiasAuditHandler } from './CognitiveBiasAuditHandler.js';
-import { MentalModelsHandler } from './MentalModelsHandler.js';
+import { LatticeworkHandler } from './LatticeworkHandler.js';
 // Removed unused imports - GenericHandler and ConvergenceHandler
 
 export class TechniqueRegistry {
@@ -86,7 +86,7 @@ export class TechniqueRegistry {
     this.handlers.set('perception_optimization', new PerceptionOptimizationHandler());
     this.handlers.set('anecdotal_signal', new AnecdotalSignalHandler());
     this.handlers.set('cognitive_bias_audit', new CognitiveBiasAuditHandler());
-    this.handlers.set('mental_models', new MentalModelsHandler());
+    this.handlers.set('latticework', new LatticeworkHandler());
   }
 
   getHandler(technique: string): TechniqueHandler {
