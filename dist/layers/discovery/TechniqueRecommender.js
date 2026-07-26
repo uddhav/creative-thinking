@@ -174,8 +174,12 @@ export class TechniqueRecommender {
                 });
                 recommendations.push({
                     technique: 'nine_windows',
+                    // MODERATE, not the arithmetically-nearest SOLID: authored at 0.78,
+                    // deliberately below temporal_work's 0.80. Snapping up tied the two
+                    // and let the systematic multiplier carry nine_windows past scamper,
+                    // which this arm ranks first. Tier chosen to preserve that ordering.
                     reasoning: 'Systematic process analysis across time and scale',
-                    effectiveness: TECHNIQUE_FIT.SOLID,
+                    effectiveness: TECHNIQUE_FIT.MODERATE,
                 });
                 recommendations.push({
                     technique: 'concept_extraction',
@@ -376,8 +380,14 @@ export class TechniqueRecommender {
             case 'truth':
                 recommendations.push({
                     technique: 'criteria_based_analysis',
+                    // DEFINING, not the arithmetically-nearest PRIMARY: authored at 0.92,
+                    // deliberately above competing_hypotheses' 0.88. Both snapping to
+                    // PRIMARY tied them and let the innovative multiplier break the tie
+                    // the wrong way. Promoting rather than demoting keeps the full
+                    // authored order intact (0.92 > 0.88 > 0.85); demoting the runner-up
+                    // would instead tie it with linguistic_forensics.
                     reasoning: 'Systematic truth verification through established criteria',
-                    effectiveness: TECHNIQUE_FIT.PRIMARY,
+                    effectiveness: TECHNIQUE_FIT.DEFINING,
                 });
                 recommendations.push({
                     technique: 'linguistic_forensics',
