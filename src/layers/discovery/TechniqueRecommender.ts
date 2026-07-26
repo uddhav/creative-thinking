@@ -9,6 +9,43 @@ import { ALL_LATERAL_TECHNIQUES } from '../../types/index.js';
 import type { TechniqueRegistry } from '../../techniques/TechniqueRegistry.js';
 import { TechniqueScorer, type ProblemContext } from './TechniqueScorer.js';
 
+/**
+ * How well a technique fits the problem category recommending it.
+ *
+ * ORDINAL levels, not measurements. Nothing benchmarks whether `triz` beats
+ * `scamper` on technical problems; this is one practitioner's judgement about
+ * which tool to reach for first.
+ *
+ * The scale exists because these were hand-written decimals spanning SIXTEEN
+ * distinct values — 0.82, 0.83, 0.84, 0.85, 0.86, 0.88, 0.92, 0.98 among them.
+ * There is no basis on which 0.83 differs from 0.84, and a dead
+ * EFFECTIVENESS_SCORES table sat in this class unused while every call site
+ * wrote its own decimal, which is how they accumulated.
+ *
+ * Six tiers, chosen to sit ON the clusters the author actually used so that
+ * naming them preserves the intended ordering rather than flattening it. An
+ * earlier four-tier version moved values by up to 0.08 and changed the top
+ * recommendation in 46 of 396 scenarios — collapsing further destroys real
+ * signal, notably the category-defining entries.
+ *
+ * Change a technique's standing by moving it a TIER, never by inventing a
+ * decimal; `ordinalScale.test.ts` fails the build otherwise.
+ */
+export const TECHNIQUE_FIT = {
+  /** The technique this problem category exists for */
+  DEFINING: 0.95,
+  /** A leading choice for this category */
+  PRIMARY: 0.9,
+  /** Strongly applicable */
+  STRONG: 0.85,
+  /** Clearly applicable, not a headline choice */
+  SOLID: 0.8,
+  /** A useful secondary angle */
+  MODERATE: 0.75,
+  /** Occasionally relevant; included for breadth */
+  WEAK: 0.7,
+} as const;
+
 export class TechniqueRecommender {
   // Wildcard inclusion probability (20% chance)
   private readonly WILDCARD_PROBABILITY = parseFloat(process.env.WILDCARD_PROBABILITY || '0.20');
@@ -20,17 +57,10 @@ export class TechniqueRecommender {
     high: { min: 5, max: 7, wildcard: 2 },
   };
 
-  // Effectiveness score constants for maintainability
-  private readonly EFFECTIVENESS_SCORES = {
-    EXCELLENT: 0.95,
-    VERY_HIGH: 0.92,
-    HIGH: 0.88,
-    MEDIUM_HIGH: 0.85,
-    MEDIUM: 0.8,
-    MEDIUM_LOW: 0.75,
-    LOW: 0.7,
-    VERY_LOW: 0.65,
-  } as const;
+  // An unused EFFECTIVENESS_SCORES table sat here with eight levels. It was
+  // declared and never referenced once — every call site wrote a raw decimal
+  // instead, which is how sixteen distinct values accumulated. Superseded by
+  // TECHNIQUE_FIT above, which is used and is test-enforced.
 
   // Cache for technique info to avoid repeated lookups
   private techniqueInfoCache = new Map<
@@ -86,12 +116,12 @@ export class TechniqueRecommender {
         recommendations.push({
           technique: 'design_thinking',
           reasoning: 'Human-centered approach ideal for user experience challenges',
-          effectiveness: 0.9,
+          effectiveness: TECHNIQUE_FIT.PRIMARY,
         });
         recommendations.push({
           technique: 'six_hats',
           reasoning: 'Explores user needs from multiple perspectives',
-          effectiveness: 0.7,
+          effectiveness: TECHNIQUE_FIT.WEAK,
         });
         break;
 
@@ -99,28 +129,28 @@ export class TechniqueRecommender {
         recommendations.push({
           technique: 'triz',
           reasoning: 'Systematic innovation for technical contradictions',
-          effectiveness: 0.85,
+          effectiveness: TECHNIQUE_FIT.STRONG,
         });
         recommendations.push({
           technique: 'quantum_superposition',
           reasoning:
             'Maintains multiple contradictory technical solutions until optimal conditions emerge',
-          effectiveness: 0.9,
+          effectiveness: TECHNIQUE_FIT.PRIMARY,
         });
         recommendations.push({
           technique: 'first_principles',
           reasoning: 'Deconstruct technical problems to fundamental components',
-          effectiveness: 0.88,
+          effectiveness: TECHNIQUE_FIT.PRIMARY,
         });
         recommendations.push({
           technique: 'biomimetic_path',
           reasoning: 'Nature-inspired solutions to technical challenges',
-          effectiveness: 0.8,
+          effectiveness: TECHNIQUE_FIT.SOLID,
         });
         recommendations.push({
           technique: 'scamper',
           reasoning: 'Structured modifications for technical improvements',
-          effectiveness: 0.75,
+          effectiveness: TECHNIQUE_FIT.MODERATE,
         });
         break;
 
@@ -128,38 +158,38 @@ export class TechniqueRecommender {
         recommendations.push({
           technique: 'random_entry',
           reasoning: 'Breaks conventional thinking with random stimuli',
-          effectiveness: 0.8,
+          effectiveness: TECHNIQUE_FIT.SOLID,
         });
         recommendations.push({
           technique: 'po',
           reasoning: 'Provocations challenge creative boundaries',
-          effectiveness: 0.85,
+          effectiveness: TECHNIQUE_FIT.STRONG,
         });
         recommendations.push({
           technique: 'perception_optimization',
           reasoning: 'Design subjective experience for creative value',
-          effectiveness: 0.75,
+          effectiveness: TECHNIQUE_FIT.MODERATE,
         });
         recommendations.push({
           technique: 'anecdotal_signal',
           reasoning: 'Draw inspiration from outliers and edge cases',
-          effectiveness: 0.72,
+          effectiveness: TECHNIQUE_FIT.WEAK,
         });
         recommendations.push({
           technique: 'context_reframing',
           reasoning: 'Change environmental context to boost creativity',
-          effectiveness: 0.7,
+          effectiveness: TECHNIQUE_FIT.WEAK,
         });
         recommendations.push({
           technique: 'quantum_superposition',
           reasoning:
             'Explores multiple creative possibilities simultaneously without premature commitment',
-          effectiveness: 0.88,
+          effectiveness: TECHNIQUE_FIT.PRIMARY,
         });
         recommendations.push({
           technique: 'cultural_integration',
           reasoning: 'Synthesizes creative solutions from diverse cultural perspectives',
-          effectiveness: 0.82,
+          effectiveness: TECHNIQUE_FIT.SOLID,
         });
         break;
 
@@ -167,27 +197,27 @@ export class TechniqueRecommender {
         recommendations.push({
           technique: 'scamper',
           reasoning: 'Systematic process improvement through modifications',
-          effectiveness: 0.9,
+          effectiveness: TECHNIQUE_FIT.PRIMARY,
         });
         recommendations.push({
           technique: 'first_principles',
           reasoning: 'Rebuild process from fundamental requirements',
-          effectiveness: 0.85,
+          effectiveness: TECHNIQUE_FIT.STRONG,
         });
         recommendations.push({
           technique: 'temporal_work',
           reasoning: 'Optimize process timing and workflow management',
-          effectiveness: 0.8,
+          effectiveness: TECHNIQUE_FIT.SOLID,
         });
         recommendations.push({
           technique: 'nine_windows',
           reasoning: 'Systematic process analysis across time and scale',
-          effectiveness: 0.78,
+          effectiveness: TECHNIQUE_FIT.SOLID,
         });
         recommendations.push({
           technique: 'concept_extraction',
           reasoning: 'Learn from successful process examples',
-          effectiveness: 0.7,
+          effectiveness: TECHNIQUE_FIT.WEAK,
         });
         break;
 
@@ -195,22 +225,22 @@ export class TechniqueRecommender {
         recommendations.push({
           technique: 'yes_and',
           reasoning: 'Builds collaborative solutions without criticism',
-          effectiveness: 0.85,
+          effectiveness: TECHNIQUE_FIT.STRONG,
         });
         recommendations.push({
           technique: 'collective_intel',
           reasoning: 'Harnesses team wisdom and diverse perspectives',
-          effectiveness: 0.8,
+          effectiveness: TECHNIQUE_FIT.SOLID,
         });
         recommendations.push({
           technique: 'context_reframing',
           reasoning: 'Reshape organizational environment for behavioral change',
-          effectiveness: 0.75,
+          effectiveness: TECHNIQUE_FIT.MODERATE,
         });
         recommendations.push({
           technique: 'cultural_integration',
           reasoning: 'Integrates diverse cultural frameworks respectfully',
-          effectiveness: 0.85,
+          effectiveness: TECHNIQUE_FIT.STRONG,
         });
         break;
 
@@ -220,17 +250,17 @@ export class TechniqueRecommender {
         recommendations.push({
           technique: 'cultural_integration',
           reasoning: 'Primary technique for orchestrating cross-cultural creative synthesis',
-          effectiveness: 0.95,
+          effectiveness: TECHNIQUE_FIT.DEFINING,
         });
         recommendations.push({
           technique: 'collective_intel',
           reasoning: 'Foundational collective intelligence and diverse wisdom integration',
-          effectiveness: 0.9,
+          effectiveness: TECHNIQUE_FIT.PRIMARY,
         });
         recommendations.push({
           technique: 'temporal_work',
           reasoning: 'Integrates time-based cultural evolution and adaptability',
-          effectiveness: 0.85,
+          effectiveness: TECHNIQUE_FIT.STRONG,
         });
         break;
 
@@ -238,17 +268,17 @@ export class TechniqueRecommender {
         recommendations.push({
           technique: 'paradoxical_problem',
           reasoning: 'Transcends contradictions through path-dependent analysis',
-          effectiveness: 0.95,
+          effectiveness: TECHNIQUE_FIT.DEFINING,
         });
         recommendations.push({
           technique: 'quantum_superposition',
           reasoning: 'Maintains contradictory states until optimal collapse',
-          effectiveness: 0.9,
+          effectiveness: TECHNIQUE_FIT.PRIMARY,
         });
         recommendations.push({
           technique: 'triz',
           reasoning: 'Systematic contradiction resolution',
-          effectiveness: 0.85,
+          effectiveness: TECHNIQUE_FIT.STRONG,
         });
         break;
 
@@ -259,17 +289,17 @@ export class TechniqueRecommender {
         recommendations.push({
           technique: 'biomimetic_path',
           reasoning: 'Applies evolutionary strategies and biological patterns to innovation',
-          effectiveness: 0.92,
+          effectiveness: TECHNIQUE_FIT.PRIMARY,
         });
         recommendations.push({
           technique: 'collective_intel',
           reasoning: 'Swarm intelligence and collective behavior patterns',
-          effectiveness: 0.85,
+          effectiveness: TECHNIQUE_FIT.STRONG,
         });
         recommendations.push({
           technique: 'meta_learning',
           reasoning: 'Adaptive learning from patterns',
-          effectiveness: 0.88,
+          effectiveness: TECHNIQUE_FIT.PRIMARY,
         });
         break;
 
@@ -277,17 +307,17 @@ export class TechniqueRecommender {
         recommendations.push({
           technique: 'temporal_creativity',
           reasoning: 'Advanced temporal thinking with path memory integration',
-          effectiveness: 0.98,
+          effectiveness: TECHNIQUE_FIT.DEFINING,
         });
         recommendations.push({
           technique: 'temporal_work',
           reasoning: 'Time management and kairos-chronos integration',
-          effectiveness: 0.85,
+          effectiveness: TECHNIQUE_FIT.STRONG,
         });
         recommendations.push({
           technique: 'scamper',
           reasoning: 'Modify and adapt temporal constraints',
-          effectiveness: 0.7,
+          effectiveness: TECHNIQUE_FIT.WEAK,
         });
         break;
 
@@ -295,22 +325,22 @@ export class TechniqueRecommender {
         recommendations.push({
           technique: 'neural_state',
           reasoning: 'Optimizes brain network switching for enhanced cognitive performance',
-          effectiveness: 0.9,
+          effectiveness: TECHNIQUE_FIT.PRIMARY,
         });
         recommendations.push({
           technique: 'six_hats',
           reasoning: 'Structured thinking to manage cognitive load',
-          effectiveness: 0.7,
+          effectiveness: TECHNIQUE_FIT.WEAK,
         });
         recommendations.push({
           technique: 'cognitive_bias_audit',
           reasoning: "Run Munger's checklist of misjudgment tendencies against the decision",
-          effectiveness: 0.9,
+          effectiveness: TECHNIQUE_FIT.PRIMARY,
         });
         recommendations.push({
           technique: 'latticework',
           reasoning: 'Apply multiple disciplinary lenses instead of one habitual model',
-          effectiveness: 0.85,
+          effectiveness: TECHNIQUE_FIT.STRONG,
         });
         break;
 
@@ -318,32 +348,32 @@ export class TechniqueRecommender {
         recommendations.push({
           technique: 'reverse_benchmarking',
           reasoning: 'Find competitive advantage where all competitors fail',
-          effectiveness: 0.92,
+          effectiveness: TECHNIQUE_FIT.PRIMARY,
         });
         recommendations.push({
           technique: 'anecdotal_signal',
           reasoning: 'Detect early strategic changes from outlier signals',
-          effectiveness: 0.88,
+          effectiveness: TECHNIQUE_FIT.PRIMARY,
         });
         recommendations.push({
           technique: 'perception_optimization',
           reasoning: 'Optimize strategic value perception in market',
-          effectiveness: 0.85,
+          effectiveness: TECHNIQUE_FIT.STRONG,
         });
         recommendations.push({
           technique: 'context_reframing',
           reasoning: 'Reframe competitive environment for strategic advantage',
-          effectiveness: 0.83,
+          effectiveness: TECHNIQUE_FIT.STRONG,
         });
         recommendations.push({
           technique: 'first_principles',
           reasoning: 'Build strategy from fundamental market truths',
-          effectiveness: 0.8,
+          effectiveness: TECHNIQUE_FIT.SOLID,
         });
         recommendations.push({
           technique: 'six_hats',
           reasoning: 'Comprehensive strategic analysis from all angles',
-          effectiveness: 0.9,
+          effectiveness: TECHNIQUE_FIT.PRIMARY,
         });
         break;
 
@@ -351,12 +381,12 @@ export class TechniqueRecommender {
         recommendations.push({
           technique: 'disney_method',
           reasoning: 'Sequential approach from vision to practical implementation',
-          effectiveness: 0.95,
+          effectiveness: TECHNIQUE_FIT.DEFINING,
         });
         recommendations.push({
           technique: 'design_thinking',
           reasoning: 'Prototype and test implementation approaches',
-          effectiveness: 0.8,
+          effectiveness: TECHNIQUE_FIT.SOLID,
         });
         break;
 
@@ -364,27 +394,27 @@ export class TechniqueRecommender {
         recommendations.push({
           technique: 'nine_windows',
           reasoning: 'Systematic analysis across time and system levels',
-          effectiveness: 0.9,
+          effectiveness: TECHNIQUE_FIT.PRIMARY,
         });
         recommendations.push({
           technique: 'triz',
           reasoning: 'System contradictions and evolution patterns',
-          effectiveness: 0.85,
+          effectiveness: TECHNIQUE_FIT.STRONG,
         });
         recommendations.push({
           technique: 'first_principles',
           reasoning: 'Analyze system from fundamental components',
-          effectiveness: 0.82,
+          effectiveness: TECHNIQUE_FIT.SOLID,
         });
         recommendations.push({
           technique: 'meta_learning',
           reasoning: 'Learn from system patterns and behaviors',
-          effectiveness: 0.78,
+          effectiveness: TECHNIQUE_FIT.SOLID,
         });
         recommendations.push({
           technique: 'latticework',
           reasoning: 'Cross-disciplinary lenses reveal system dynamics one model would miss',
-          effectiveness: 0.84,
+          effectiveness: TECHNIQUE_FIT.STRONG,
         });
         break;
 
@@ -394,17 +424,17 @@ export class TechniqueRecommender {
         recommendations.push({
           technique: 'criteria_based_analysis',
           reasoning: 'Systematic truth verification through established criteria',
-          effectiveness: 0.92,
+          effectiveness: TECHNIQUE_FIT.PRIMARY,
         });
         recommendations.push({
           technique: 'linguistic_forensics',
           reasoning: 'Deep analysis of communication patterns for authenticity',
-          effectiveness: 0.85,
+          effectiveness: TECHNIQUE_FIT.STRONG,
         });
         recommendations.push({
           technique: 'competing_hypotheses',
           reasoning: 'Prevent confirmation bias through systematic comparison',
-          effectiveness: 0.88,
+          effectiveness: TECHNIQUE_FIT.PRIMARY,
         });
         break;
 
@@ -414,27 +444,27 @@ export class TechniqueRecommender {
         recommendations.push({
           technique: 'competing_hypotheses',
           reasoning: 'Bayesian approach to handle multiple competing explanations',
-          effectiveness: 0.9,
+          effectiveness: TECHNIQUE_FIT.PRIMARY,
         });
         recommendations.push({
           technique: 'criteria_based_analysis',
           reasoning: 'Structured assessment with confidence scoring',
-          effectiveness: 0.85,
+          effectiveness: TECHNIQUE_FIT.STRONG,
         });
         recommendations.push({
           technique: 'six_hats',
           reasoning: 'Consider all perspectives before deciding',
-          effectiveness: 0.8,
+          effectiveness: TECHNIQUE_FIT.SOLID,
         });
         recommendations.push({
           technique: 'cognitive_bias_audit',
           reasoning: 'Audit your own psychology for biases before committing to a decision',
-          effectiveness: 0.88,
+          effectiveness: TECHNIQUE_FIT.PRIMARY,
         });
         recommendations.push({
           technique: 'latticework',
           reasoning: 'Weigh the decision through several disciplinary lenses before committing',
-          effectiveness: 0.86,
+          effectiveness: TECHNIQUE_FIT.STRONG,
         });
         break;
 
@@ -444,27 +474,27 @@ export class TechniqueRecommender {
         recommendations.push({
           technique: 'linguistic_forensics',
           reasoning: 'Reveal hidden patterns and motivations in communication',
-          effectiveness: 0.88,
+          effectiveness: TECHNIQUE_FIT.PRIMARY,
         });
         recommendations.push({
           technique: 'context_reframing',
           reasoning: 'Change decision environments to influence stakeholder behavior',
-          effectiveness: 0.85,
+          effectiveness: TECHNIQUE_FIT.STRONG,
         });
         recommendations.push({
           technique: 'perception_optimization',
           reasoning: 'Optimize message perception and subjective value',
-          effectiveness: 0.82,
+          effectiveness: TECHNIQUE_FIT.SOLID,
         });
         recommendations.push({
           technique: 'design_thinking',
           reasoning: 'Empathize with stakeholders to understand needs',
-          effectiveness: 0.85,
+          effectiveness: TECHNIQUE_FIT.STRONG,
         });
         recommendations.push({
           technique: 'cultural_integration',
           reasoning: 'Bridge communication gaps across cultural differences',
-          effectiveness: 0.82,
+          effectiveness: TECHNIQUE_FIT.SOLID,
         });
         break;
 
@@ -474,27 +504,27 @@ export class TechniqueRecommender {
         recommendations.push({
           technique: 'perception_optimization',
           reasoning: 'Optimize for subjective experience over objective metrics',
-          effectiveness: 0.92,
+          effectiveness: TECHNIQUE_FIT.PRIMARY,
         });
         recommendations.push({
           technique: 'context_reframing',
           reasoning: 'Change decision environments to influence behavior',
-          effectiveness: 0.9,
+          effectiveness: TECHNIQUE_FIT.PRIMARY,
         });
         recommendations.push({
           technique: 'anecdotal_signal',
           reasoning: 'Detect behavioral patterns from individual outliers',
-          effectiveness: 0.85,
+          effectiveness: TECHNIQUE_FIT.STRONG,
         });
         recommendations.push({
           technique: 'reverse_benchmarking',
           reasoning: 'Find opportunities in anti-mimetic behavior',
-          effectiveness: 0.82,
+          effectiveness: TECHNIQUE_FIT.SOLID,
         });
         recommendations.push({
           technique: 'cognitive_bias_audit',
           reasoning: 'Detect lollapalooza confluences of psychological tendencies',
-          effectiveness: 0.9,
+          effectiveness: TECHNIQUE_FIT.PRIMARY,
         });
         break;
 
@@ -504,17 +534,17 @@ export class TechniqueRecommender {
         recommendations.push({
           technique: 'first_principles',
           reasoning: 'Deconstruct to absolute fundamentals and rebuild',
-          effectiveness: 0.95,
+          effectiveness: TECHNIQUE_FIT.DEFINING,
         });
         recommendations.push({
           technique: 'triz',
           reasoning: 'Apply fundamental innovation principles',
-          effectiveness: 0.85,
+          effectiveness: TECHNIQUE_FIT.STRONG,
         });
         recommendations.push({
           technique: 'concept_extraction',
           reasoning: 'Extract core patterns from successful examples',
-          effectiveness: 0.8,
+          effectiveness: TECHNIQUE_FIT.SOLID,
         });
         break;
 
@@ -524,17 +554,17 @@ export class TechniqueRecommender {
         recommendations.push({
           technique: 'meta_learning',
           reasoning: 'Synthesize patterns across multiple learning experiences',
-          effectiveness: 0.9,
+          effectiveness: TECHNIQUE_FIT.PRIMARY,
         });
         recommendations.push({
           technique: 'biomimetic_path',
           reasoning: 'Apply evolutionary and biological learning strategies',
-          effectiveness: 0.88,
+          effectiveness: TECHNIQUE_FIT.PRIMARY,
         });
         recommendations.push({
           technique: 'temporal_creativity',
           reasoning: 'Learn from historical patterns and future projections',
-          effectiveness: 0.85,
+          effectiveness: TECHNIQUE_FIT.STRONG,
         });
         break;
 
@@ -544,17 +574,17 @@ export class TechniqueRecommender {
         recommendations.push({
           technique: 'neuro_computational',
           reasoning: 'Neural synthesis with computational optimization',
-          effectiveness: 0.92,
+          effectiveness: TECHNIQUE_FIT.PRIMARY,
         });
         recommendations.push({
           technique: 'quantum_superposition',
           reasoning: 'Parallel processing of multiple solution states',
-          effectiveness: 0.88,
+          effectiveness: TECHNIQUE_FIT.PRIMARY,
         });
         recommendations.push({
           technique: 'first_principles',
           reasoning: 'Algorithmic decomposition to basic operations',
-          effectiveness: 0.85,
+          effectiveness: TECHNIQUE_FIT.STRONG,
         });
         break;
 
@@ -562,7 +592,7 @@ export class TechniqueRecommender {
         recommendations.push({
           technique: 'six_hats',
           reasoning: 'Versatile technique for comprehensive exploration',
-          effectiveness: 0.8,
+          effectiveness: TECHNIQUE_FIT.SOLID,
         });
     }
 
@@ -577,7 +607,7 @@ export class TechniqueRecommender {
         recommendations.push({
           technique: 'neural_state',
           reasoning: 'Manages cognitive load in complex problems',
-          effectiveness: 0.7,
+          effectiveness: TECHNIQUE_FIT.WEAK,
         });
       }
     }
@@ -736,7 +766,7 @@ export class TechniqueRecommender {
           recommendations.push({
             technique: 'nine_windows',
             reasoning: 'Systematic multi-dimensional analysis',
-            effectiveness: 0.8,
+            effectiveness: TECHNIQUE_FIT.SOLID,
           });
         }
         break;
@@ -747,7 +777,7 @@ export class TechniqueRecommender {
           recommendations.push({
             technique: 'six_hats',
             reasoning: 'Black hat provides systematic risk analysis',
-            effectiveness: 0.85,
+            effectiveness: TECHNIQUE_FIT.STRONG,
           });
         }
         break;
@@ -764,14 +794,14 @@ export class TechniqueRecommender {
           recommendations.push({
             technique: 'yes_and',
             reasoning: 'Builds on ideas collaboratively',
-            effectiveness: 0.8,
+            effectiveness: TECHNIQUE_FIT.SOLID,
           });
         }
         if (!recommendations.find(r => r.technique === 'collective_intel')) {
           recommendations.push({
             technique: 'collective_intel',
             reasoning: 'Leverages group wisdom for better outcomes',
-            effectiveness: 0.8,
+            effectiveness: TECHNIQUE_FIT.SOLID,
           });
         }
         break;
@@ -820,7 +850,7 @@ export class TechniqueRecommender {
     return {
       technique: wildcardTechnique,
       reasoning: `${reasoning} (${info.totalSteps} steps)`,
-      effectiveness: 0.65, // Moderate effectiveness as it's exploratory
+      effectiveness: TECHNIQUE_FIT.WEAK, // Moderate effectiveness as it's exploratory
     };
   }
 }
