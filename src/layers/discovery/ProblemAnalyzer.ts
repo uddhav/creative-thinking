@@ -171,7 +171,109 @@ export class ProblemAnalyzer {
       return 'strategic';
     }
 
+    // Rescue categories. These run LAST, so they only reclaim problems that
+    // would otherwise fall through to 'general' — no existing categorization
+    // changes. Each maps to a TechniqueRecommender case group that no category
+    // could previously reach, stranding the techniques registered there.
+    if (this.detectDecisionPattern(lowerText)) {
+      return 'decision';
+    }
+
+    if (this.detectCommunicationPattern(lowerText)) {
+      return 'communication';
+    }
+
+    if (this.detectCulturalPattern(lowerText)) {
+      return 'cultural';
+    }
+
+    if (this.detectBiologicalPattern(lowerText)) {
+      return 'biological';
+    }
+
     return 'general';
+  }
+
+  /**
+   * Detect decision/judgment problems — choosing between options, weighing
+   * trade-offs, committing to a course of action.
+   */
+  private detectDecisionPattern(lowerText: string): boolean {
+    const decisionKeywords = [
+      'should we',
+      'should i',
+      'decide',
+      'decision',
+      'choose between',
+      'choice between',
+      'which option',
+      'which approach',
+      'which vendor',
+      'trade-off',
+      'tradeoff',
+      'pros and cons',
+      'weigh the options',
+      'go/no-go',
+      'worth it',
+    ];
+    return decisionKeywords.some(keyword => lowerText.includes(keyword));
+  }
+
+  /**
+   * Detect communication/stakeholder problems — conveying, persuading,
+   * aligning, or explaining to an audience.
+   */
+  private detectCommunicationPattern(lowerText: string): boolean {
+    const communicationKeywords = [
+      'communicate',
+      'communication',
+      'stakeholder',
+      'buy-in',
+      'persuade',
+      'convince',
+      'messaging',
+      'audience',
+      'get alignment',
+      'explain to',
+    ];
+    return communicationKeywords.some(keyword => lowerText.includes(keyword));
+  }
+
+  /**
+   * Detect cultural problems — cross-cultural collaboration, localization,
+   * and globally distributed contexts.
+   */
+  private detectCulturalPattern(lowerText: string): boolean {
+    const culturalKeywords = [
+      'culture',
+      'cultural',
+      'cross-cultural',
+      'multicultural',
+      'localization',
+      'localize',
+      'international team',
+      'global team',
+    ];
+    return culturalKeywords.some(keyword => lowerText.includes(keyword));
+  }
+
+  /**
+   * Detect biological/evolutionary problems — adaptation, selection, and
+   * nature-inspired design.
+   */
+  private detectBiologicalPattern(lowerText: string): boolean {
+    const biologicalKeywords = [
+      'biomimicry',
+      'biomimetic',
+      'organism',
+      'evolutionary',
+      'natural selection',
+      'symbiosis',
+      'swarm',
+      'adapt to survive',
+      'self-healing',
+    ];
+    return biologicalKeywords.some(keyword => lowerText.includes(keyword));
   }
 
   /**

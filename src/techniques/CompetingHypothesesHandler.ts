@@ -213,7 +213,7 @@ export class CompetingHypothesesHandler extends BaseTechniqueHandler {
     if (step < 1 || step > this.steps.length) {
       throw new ValidationError(
         ErrorCode.INVALID_STEP,
-        `Invalid step ${step} for Competing Hypotheses. Valid steps are 1-${this.steps.length}`,
+        `Invalid step ${step} for Competing Hypotheses Analysis. Valid steps are 1-${this.steps.length}`,
         'step',
         { received: step, expected: `1-${this.steps.length}` }
       );

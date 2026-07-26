@@ -94,29 +94,6 @@ export function discoverTechniques(
       return rec;
     });
 
-    // A persona's bias can only re-weight techniques that discovery already
-    // surfaced. Inject the persona's single most-defining technique (highest
-    // bias above threshold, not already present) so explicitly invoking a
-    // persona makes its signature method available — e.g. charlie_munger ->
-    // cognitive_bias_audit on a decision that would otherwise miss it.
-    const SIGNATURE_BIAS_THRESHOLD = 0.85;
-    const presentTechniques = new Set<string>(recommendations.map(r => r.technique));
-    const signatureEntry = Object.entries(bias)
-      .filter(
-        ([technique, score]) =>
-          score >= SIGNATURE_BIAS_THRESHOLD && !presentTechniques.has(technique)
-      )
-      .sort(([, a], [, b]) => b - a)[0];
-    if (signatureEntry) {
-      const [technique, score] = signatureEntry;
-      recommendations.push({
-        technique: technique as LateralTechnique,
-        reasoning: `Signature technique for the ${primaryPersona.name} persona`,
-        effectiveness: score,
-      });
-      biasApplied = true;
-    }
-
     // Only re-sort if bias was actually applied
     if (biasApplied) {
       recommendations.sort((a, b) => b.effectiveness - a.effectiveness);
@@ -136,6 +113,42 @@ export function discoverTechniques(
   const finalQualityCoverage = coverageWasAdjusted
     ? qualityCoverage
     : HumanisticQualityCoverage.analyzeCoverage(recommendations.map(r => r.technique));
+
+  // A persona's bias can only re-weight techniques discovery already surfaced.
+  // If the persona's single most-defining technique is still absent, append it
+  // so that invoking a persona makes its signature method reachable at all.
+  //
+  // It is scored through the SAME blend as every other recommendation, from a
+  // deliberately conservative base (there is no problem-fit evidence for it),
+  // so it is offered as an extra option and can never outrank a technique that
+  // genuinely matched the problem. Runs after coverage analysis so the quality
+  // coverage above is computed on the honestly-recommended set.
+  if (resolvedPersonas.length > 0) {
+    const primaryPersona = resolvedPersonas[0];
+    const SIGNATURE_BIAS_THRESHOLD = 0.9;
+    const SIGNATURE_BASE_EFFECTIVENESS = 0.5;
+
+    const topBias = Object.entries(primaryPersona.techniqueBias).sort(([, a], [, b]) => b - a)[0];
+    if (topBias) {
+      const [signatureTechnique, signatureBias] = topBias;
+      const alreadyPresent = recommendations.some(r => r.technique === signatureTechnique);
+      if (signatureBias >= SIGNATURE_BIAS_THRESHOLD && !alreadyPresent) {
+        // Appended, never re-sorted. Re-sorting here would hoist the quality
+        // fillers added just above (flat 0.9, no problem-fit evidence) over
+        // genuinely scored techniques. The append is last by construction
+        // because its blended score is below anything that actually matched.
+        recommendations = [
+          ...recommendations,
+          {
+            technique: signatureTechnique as LateralTechnique,
+            reasoning: `Signature technique for the ${primaryPersona.name} persona`,
+            effectiveness:
+              SIGNATURE_BASE_EFFECTIVENESS * BASE_WEIGHT + signatureBias * PERSONA_BIAS_WEIGHT,
+          },
+        ];
+      }
+    }
+  }
 
   // Build integration suggestions
   let integrationSuggestions = workflowBuilder.buildIntegrationSuggestions(
