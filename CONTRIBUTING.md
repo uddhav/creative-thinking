@@ -101,25 +101,15 @@ these three tools.
 
 #### Thinking Techniques
 
-- **Six Hats** - Sequential thinking with different perspectives (6 steps)
-- **PO** - Provocative operation for creative disruption (4 steps)
-- **Random Entry** - Lateral connection from random stimuli (3 steps)
-- **SCAMPER** - Systematic transformation checklist (8 steps)
-- **Concept Extraction** - Abstract patterns from success (4 steps)
-- **Yes, And** - Build on ideas collaboratively (4 steps)
-- **Design Thinking** - Human-centered design process (5 steps)
-- **TRIZ** - Systematic innovation methodology (4 steps)
-- **Neural State** - Optimize cognitive states (4 steps)
-- **Temporal Work** - Time-based perspective shifts (5 steps)
-- **Cross-Cultural** - Diverse cultural perspectives (5 steps)
-- **Collective Intelligence** - Harness group wisdom (5 steps)
-- **Disney Method** - Three roles for creative planning (3 steps)
-- **Nine Windows** - Systematic innovation matrix (9 steps)
-- **Quantum Superposition** - Multiple contradictory states until collapse (6 steps)
-- **Temporal Creativity** - Path memory with temporal analysis (6 steps)
-- **Paradoxical Problem Solving** - Breakthrough through contradiction (5 steps)
-- **Meta-Learning** - Self-improving pattern recognition (5 steps)
-- **Biomimetic Path Management** - Biological solutions and evolution (6 steps)
+A hand-maintained list used to live here and had drifted eleven techniques out of date, because
+nothing made it fail when the catalogue grew. The authoritative sources are:
+
+- `ALL_LATERAL_TECHNIQUES` in `src/types/index.ts` — the canonical identifiers
+- `src/techniques/*Handler.ts` — one handler per technique, each carrying its own step count,
+  display name, and focus in `getTechniqueInfo()`
+- [`SPECIFICATIONS.md`](./SPECIFICATIONS.md) — prose descriptions
+
+Prefer reading those over duplicating them. If you do add a summary here, expect it to rot.
 
 #### Support Systems
 
