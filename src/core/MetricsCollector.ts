@@ -20,7 +20,7 @@ export interface DetailedMetrics extends SessionMetrics {
   constraintsIdentified?: number;
   escapePlanGenerated?: boolean;
   completionTime?: number;
-  techniqueEffectiveness?: number;
+  outputCompleteness?: number;
 }
 
 export class MetricsCollector {
@@ -133,8 +133,8 @@ export class MetricsCollector {
     // Check if escape plan was generated
     const escapePlanGenerated = session.escapeRecommendation !== undefined;
 
-    // Calculate technique effectiveness (simple heuristic)
-    const techniqueEffectiveness = this.calculateTechniqueEffectiveness(session);
+    // How fully the session's outputs were populated (coverage, not quality)
+    const outputCompleteness = this.calculateOutputCompleteness(session);
 
     return {
       ...basicMetrics,
@@ -146,31 +146,37 @@ export class MetricsCollector {
       constraintsIdentified,
       escapePlanGenerated,
       completionTime,
-      techniqueEffectiveness,
+      outputCompleteness,
     };
   }
 
   /**
-   * Calculate technique effectiveness score
+   * How completely a session populated the outputs its techniques ask for.
+   *
+   * This measures VOLUME and COVERAGE, not quality: it counts insights per
+   * step and whether risk/antifragile fields were filled in. It cannot tell a
+   * sharp insight from a padded one, so it must not be read as evidence that
+   * the thinking was good — only that the session was filled in.
+   *
+   * A previous `revisionRate` factor scored sessions DOWN for containing
+   * revisions. That penalised the exact behaviour this tool exists to
+   * encourage — structured reconsideration — so it has been removed rather
+   * than reweighted, and the remaining factors carry its weight.
    */
-  private calculateTechniqueEffectiveness(session: SessionData): number {
-    let score = 0;
+  private calculateOutputCompleteness(session: SessionData): number {
     const factors = {
       insightsPerStep: session.insights.length / Math.max(session.history.length, 1),
       risksIdentified: (session.metrics?.risksCaught || 0) > 0 ? 1 : 0,
       antifragileFeatures: (session.metrics?.antifragileFeatures || 0) > 0 ? 1 : 0,
       completed: session.endTime !== undefined ? 1 : 0,
-      revisionRate:
-        1 - session.history.filter(h => h.isRevision).length / Math.max(session.history.length, 1),
     };
 
-    // Weight the factors
-    score =
-      factors.insightsPerStep * 0.3 +
+    // Weight the factors (sums to 1.0)
+    const score =
+      factors.insightsPerStep * 0.4 +
       factors.risksIdentified * 0.2 +
       factors.antifragileFeatures * 0.2 +
-      factors.completed * 0.2 +
-      factors.revisionRate * 0.1;
+      factors.completed * 0.2;
 
     return Math.min(score * 10, 10); // Scale to 0-10
   }
@@ -210,8 +216,8 @@ export class MetricsCollector {
       summary.push(`Completion Time: ${minutes}m ${seconds}s`);
     }
 
-    if (metrics.techniqueEffectiveness !== undefined) {
-      summary.push(`Technique Effectiveness: ${metrics.techniqueEffectiveness.toFixed(1)}/10`);
+    if (metrics.outputCompleteness !== undefined) {
+      summary.push(`Output Completeness: ${metrics.outputCompleteness.toFixed(1)}/10`);
     }
 
     return summary;
@@ -243,13 +249,10 @@ export class MetricsCollector {
         100;
     }
 
-    if (
-      session1.techniqueEffectiveness !== undefined &&
-      session2.techniqueEffectiveness !== undefined
-    ) {
+    if (session1.outputCompleteness !== undefined && session2.outputCompleteness !== undefined) {
       comparison.effectivenessDiff =
-        ((session2.techniqueEffectiveness - session1.techniqueEffectiveness) /
-          session1.techniqueEffectiveness) *
+        ((session2.outputCompleteness - session1.outputCompleteness) /
+          session1.outputCompleteness) *
         100;
     }
 
@@ -319,8 +322,8 @@ export class MetricsCollector {
         flexibilityCount++;
       }
 
-      if (m.techniqueEffectiveness !== undefined) {
-        effectivenessTotal += m.techniqueEffectiveness;
+      if (m.outputCompleteness !== undefined) {
+        effectivenessTotal += m.outputCompleteness;
         effectivenessCount++;
       }
     });
@@ -347,7 +350,7 @@ export class MetricsCollector {
     }
 
     if (effectivenessCount > 0) {
-      averageMetrics.techniqueEffectiveness = effectivenessTotal / effectivenessCount;
+      averageMetrics.outputCompleteness = effectivenessTotal / effectivenessCount;
     }
 
     // Calculate technique distribution

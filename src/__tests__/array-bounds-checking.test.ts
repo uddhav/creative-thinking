@@ -244,7 +244,7 @@ describe('Array Bounds Checking Integration Tests', () => {
       const response = JSON.parse(result.content[0].text) as ExecutionResponse;
 
       // Should hit the default case
-      expect(response.nextStepGuidance).toBe('Complete the Temporal Work Design process');
+      expect(response.nextStepGuidance).toContain('Complete the Temporal Work Design process for:');
     });
   });
 

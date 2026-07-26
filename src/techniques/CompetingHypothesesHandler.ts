@@ -213,7 +213,7 @@ export class CompetingHypothesesHandler extends BaseTechniqueHandler {
     if (step < 1 || step > this.steps.length) {
       throw new ValidationError(
         ErrorCode.INVALID_STEP,
-        `Invalid step ${step} for Competing Hypotheses. Valid steps are 1-${this.steps.length}`,
+        `Invalid step ${step} for Competing Hypotheses Analysis. Valid steps are 1-${this.steps.length}`,
         'step',
         { received: step, expected: `1-${this.steps.length}` }
       );
@@ -222,8 +222,8 @@ export class CompetingHypothesesHandler extends BaseTechniqueHandler {
   }
 
   getStepGuidance(step: number, problem: string): string {
-    const stepInfo = this.getStepInfo(step) as HypothesisStep;
-    const elements = stepInfo.matrixElements || [];
+    const stepInfo = this.steps[step - 1] as HypothesisStep | undefined;
+    const elements = stepInfo?.matrixElements || [];
 
     const guidanceTemplates: Record<number, string> = {
       1: `💡 **Step 1: Hypothesis Generation**
@@ -442,7 +442,10 @@ Decision Rule:
 Output: Complete decision package with conclusion, confidence, actions, and monitoring plan`,
     };
 
-    return guidanceTemplates[step] || `Step ${step}: ${stepInfo.name}\n\nFocus: ${stepInfo.focus}`;
+    return (
+      guidanceTemplates[step] ||
+      `Complete the Competing Hypotheses Analysis process for: "${problem}"`
+    );
   }
 
   validateStep(step: number, data: unknown): boolean {

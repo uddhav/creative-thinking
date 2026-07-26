@@ -79,14 +79,14 @@ export class QuantumSuperpositionHandler extends BaseTechniqueHandler {
   getStepGuidance(step: number, problem: string): string {
     const guidanceMap: Record<number, string> = {
       1: `Generate 3-5 mutually exclusive solution states for: "${problem}". Each state should optimize for different criteria (efficiency, flexibility, robustness, cost, innovation). Maintain all states without choosing.`,
-      2: `Map interference patterns between your solution states. Where do they reinforce each other (constructive interference)? Where do they cancel out (destructive interference)? Identify hybrid possibilities.`,
-      3: `Analyze entanglements: Which aspects of different states are inseparably linked? What dependencies exist between states? How does developing one state affect others?`,
-      4: `Evolve probability amplitudes: Based on emerging constraints and opportunities, how does the likelihood of each state change? Which states gain strength? Which weaken but retain valuable insights?`,
-      5: `Define the measurement context that will force collapse: What are the actual constraints? What criteria matter most now? What future flexibility is needed?`,
-      6: `Collapse to the optimal solution while extracting and preserving insights from non-chosen states. How can elements from abandoned states enhance the chosen path?`,
+      2: `Map interference patterns between your solution states for "${problem}". Where do they reinforce each other (constructive interference)? Where do they cancel out (destructive interference)? Identify hybrid possibilities.`,
+      3: `Analyze entanglements across your states for "${problem}": Which aspects of different states are inseparably linked? What dependencies exist between states? How does developing one state affect others?`,
+      4: `Evolve probability amplitudes: As constraints and opportunities around "${problem}" emerge, how does the likelihood of each state change? Which states gain strength? Which weaken but retain valuable insights?`,
+      5: `Define the measurement context that will force collapse for "${problem}": What are the actual constraints? What criteria matter most now? What future flexibility is needed?`,
+      6: `Collapse to the optimal solution for "${problem}" while extracting and preserving insights from non-chosen states. How can elements from abandoned states enhance the chosen path?`,
     };
 
-    return guidanceMap[step] || `Continue exploring quantum superposition for: "${problem}"`;
+    return guidanceMap[step] || `Complete the Quantum Superposition process for: "${problem}"`;
   }
 
   validateStep(step: number, data: unknown): boolean {

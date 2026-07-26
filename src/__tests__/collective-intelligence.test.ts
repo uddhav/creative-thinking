@@ -218,7 +218,7 @@ describe('Collective Intelligence Orchestration', () => {
 
       expect(planData.workflow).toHaveLength(5);
       expect(planData.workflow[0].description).toContain('Identify wisdom sources');
-      expect(planData.workflow[1].description).toContain('Gather specific insights');
+      expect(planData.workflow[1].description).toContain("Gather each source's specific insight");
       expect(planData.workflow[2].description).toContain('Find patterns');
       expect(planData.workflow[3].description).toContain('Create synergistic combinations');
       expect(planData.workflow[4].description).toContain(
@@ -256,7 +256,7 @@ describe('Collective Intelligence Orchestration', () => {
 
       expect(step1.technique).toBe('collective_intel');
       expect(step1.currentStep).toBe(1);
-      expect(step1.nextStepGuidance).toContain('Gather specific insights');
+      expect(step1.nextStepGuidance).toContain("Gather each source's specific insight");
       expect(step1.contextualInsight).toContain('5 wisdom sources');
 
       // Step 2: Map knowledge landscape

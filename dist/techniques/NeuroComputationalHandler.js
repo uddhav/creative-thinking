@@ -137,7 +137,7 @@ export class NeuroComputationalHandler extends BaseTechniqueHandler {
             5: `Run optimization cycles for: "${problem}". Iterate through: feedforward passes, backpropagation, weight adjustment, architecture evolution. Measure convergence metrics: coherence (internal consistency), novelty (creative distance from existing solutions), utility (practical value). Refine for optimal balance between exploration and exploitation.`,
             6: `Converge to optimal creative solution for: "${problem}". Synthesize all neural-computational processes. Preserve key insights from each pattern. Ensure solution maintains: cognitive plausibility, computational efficiency, creative novelty, practical applicability. Document the emergence path for future learning.`,
         };
-        return guidanceMap[step] || `Continue neuro-computational synthesis for: "${problem}"`;
+        return (guidanceMap[step] || `Complete the Neuro-Computational Synthesis process for: "${problem}"`);
     }
     validateStep(step, data) {
         if (!super.validateStep(step, data)) {

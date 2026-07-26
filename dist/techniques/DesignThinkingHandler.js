@@ -4,38 +4,10 @@
 import { BaseTechniqueHandler } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 export class DesignThinkingHandler extends BaseTechniqueHandler {
-    stages = {
-        empathize: {
-            name: 'Empathize',
-            focus: 'Understand user needs and context',
-            emoji: '❤️',
-            criticalLens: 'Challenge assumptions about user needs',
-        },
-        define: {
-            name: 'Define',
-            focus: 'Frame the problem clearly',
-            emoji: '📍',
-            criticalLens: "Question if you're solving the right problem",
-        },
-        ideate: {
-            name: 'Ideate',
-            focus: 'Generate diverse solutions',
-            emoji: '💡',
-            criticalLens: 'Identify failure modes in each idea',
-        },
-        prototype: {
-            name: 'Prototype',
-            focus: 'Build quick, testable versions',
-            emoji: '🔨',
-            criticalLens: 'Stress-test assumptions early',
-        },
-        test: {
-            name: 'Test',
-            focus: 'Validate with real users',
-            emoji: '🧪',
-            criticalLens: 'Look for unexpected failures and edge cases',
-        },
-    };
+    // Step metadata lives in `stepsWithReflexivity`; per-stage critical lenses are
+    // sourced by the planning layer via getCriticalLensForStep(). A duplicate
+    // `stages` table used to sit here, read by nothing once the out-of-range
+    // fallback was standardised, so it was removed rather than left to drift.
     stageOrder = [
         'empathize',
         'define',
@@ -135,23 +107,22 @@ export class DesignThinkingHandler extends BaseTechniqueHandler {
     getStepGuidance(step, problem) {
         // Handle out of bounds gracefully
         if (step < 1 || step > this.stageOrder.length) {
-            return `Complete the Design Thinking process for "${problem}"`;
+            return `Complete the Design Thinking process for: "${problem}"`;
         }
         const stage = this.stageOrder[step - 1];
-        const info = this.stages[stage];
         switch (stage) {
             case 'empathize':
                 return `❤️ EMPATHIZE: Who is affected by "${problem}"? What are their real needs, fears, and contexts?`;
             case 'define':
-                return `📍 DEFINE: Based on empathy insights, what is the core problem? Frame it as: "How might we..."`;
+                return `📍 DEFINE: Based on empathy insights, what is the core problem hiding inside "${problem}"? Frame it as: "How might we..."`;
             case 'ideate':
-                return `💡 IDEATE: Generate multiple solutions. For each idea, also identify: What could go wrong?`;
+                return `💡 IDEATE: Generate multiple solutions to "${problem}". For each idea, also identify: What could go wrong?`;
             case 'prototype':
-                return `🔨 PROTOTYPE: Create a simple version to test assumptions. Include failure scenarios in the prototype`;
+                return `🔨 PROTOTYPE: Create a simple version to test your assumptions about "${problem}". Include failure scenarios in the prototype`;
             case 'test':
-                return `🧪 TEST: Validate with users. Specifically look for: edge cases, unexpected uses, and failure modes`;
+                return `🧪 TEST: Validate with the people living with "${problem}". Specifically look for: edge cases, unexpected uses, and failure modes`;
             default:
-                return `Apply ${info.name} to "${problem}"`;
+                return `Complete the Design Thinking process for: "${problem}"`;
         }
     }
     extractInsights(history) {

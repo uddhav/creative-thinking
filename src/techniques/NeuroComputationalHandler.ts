@@ -151,7 +151,9 @@ export class NeuroComputationalHandler extends BaseTechniqueHandler {
       6: `Converge to optimal creative solution for: "${problem}". Synthesize all neural-computational processes. Preserve key insights from each pattern. Ensure solution maintains: cognitive plausibility, computational efficiency, creative novelty, practical applicability. Document the emergence path for future learning.`,
     };
 
-    return guidanceMap[step] || `Continue neuro-computational synthesis for: "${problem}"`;
+    return (
+      guidanceMap[step] || `Complete the Neuro-Computational Synthesis process for: "${problem}"`
+    );
   }
 
   validateStep(step: number, data: unknown): boolean {

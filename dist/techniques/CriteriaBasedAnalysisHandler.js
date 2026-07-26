@@ -125,8 +125,8 @@ export class CriteriaBasedAnalysisHandler extends BaseTechniqueHandler {
         return this.steps[step - 1];
     }
     getStepGuidance(step, problem) {
-        const stepInfo = this.getStepInfo(step);
-        const criteria = stepInfo.criteria || [];
+        const stepInfo = this.steps[step - 1];
+        const criteria = stepInfo?.criteria || [];
         const guidanceTemplates = {
             1: `🎯 **Step 1: Baseline Assessment**
 
@@ -217,7 +217,7 @@ Final Assessment Should Include:
 
 Output: Complete validity assessment with confidence score and recommendations`,
         };
-        return guidanceTemplates[step] || `Step ${step}: ${stepInfo.name}\n\nFocus: ${stepInfo.focus}`;
+        return (guidanceTemplates[step] || `Complete the Criteria-Based Analysis process for: "${problem}"`);
     }
     validateStep(step, data) {
         if (!super.validateStep(step, data)) {

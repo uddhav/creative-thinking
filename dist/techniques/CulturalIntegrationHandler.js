@@ -109,7 +109,7 @@ export class CulturalIntegrationHandler extends BaseTechniqueHandler {
     getStepGuidance(step, problem) {
         // Handle out-of-bounds steps as per test expectations
         if (step < 1 || step > this.steps.length) {
-            return `Complete the Cultural Integration analysis for: "${problem}"`;
+            return `Complete the Cultural Integration process for: "${problem}"`;
         }
         const guidanceMap = {
             1: `For "${problem}": What cultural frameworks are at play? What historical contexts matter? What power dynamics exist? What constraints or taboos should be respected?`,
@@ -118,7 +118,7 @@ export class CulturalIntegrationHandler extends BaseTechniqueHandler {
             4: `For "${problem}": How can perspectives combine creatively? How do you ensure proper attribution? What novel combinations honor all sources?`,
             5: `For "${problem}": How can insights become solutions? How do you maintain authenticity? How can solutions adapt to different contexts? Remember: This creates precedents.`,
         };
-        return (guidanceMap[step] || `Continue exploring "${problem}" with cultural integration mindfully.`);
+        return guidanceMap[step] || `Complete the Cultural Integration process for: "${problem}"`;
     }
     validateStep(step, data) {
         if (step < 1 || step > this.steps.length) {

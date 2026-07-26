@@ -296,6 +296,13 @@ export class ErgodicityManager {
      * Analyze a specific technique for its path impact
      */
     analyzeTechniqueImpact(technique) {
+        // PROVENANCE: uncalibrated authorial priors, not measurements.
+        //
+        // Note also that the two numeric columns are close to collinear:
+        // typicalCommitment is approximately (1.1 - typicalReversibility) for the
+        // large majority of entries, so they carry roughly one number's worth of
+        // information between them rather than two. Treat them as a single coarse
+        // "how locked-in does this technique leave you" signal.
         const profiles = {
             six_hats: {
                 typicalReversibility: 0.9,

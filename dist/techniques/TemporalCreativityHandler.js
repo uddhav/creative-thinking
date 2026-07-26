@@ -147,13 +147,13 @@ export class TemporalCreativityHandler extends BaseTechniqueHandler {
     getStepGuidance(step, problem) {
         const guidanceMap = {
             1: `Excavate the decision history for: "${problem}". What past decisions created current constraints? What patterns emerge from historical choices? What lessons can be extracted from previous attempts?`,
-            2: `Map the present state: What constraints currently exist? What options remain open? What is the current flexibility score? What immediate actions are possible without foreclosing future paths?`,
-            3: `Project future paths across multiple time horizons (1, 5, 10 units): What's the best case scenario? Most probable path? Worst case with maximum constraints? Potential black swans? How to design for antifragility?`,
-            4: `Create temporal options: What can be delayed to buy more information? What should be accelerated to capture time-sensitive opportunities? How can we resequence for better paths? What can run in parallel timelines?`,
-            5: `Perform cyclical refinement: Integrate historical lessons into current strategy. How does the strategy evolve based on path learning? What retrospective insights update our projections?`,
-            6: `Integrate all temporal insights while preserving maximum future flexibility. What synthesis maintains the most options? How do we build bridges between different timeline scenarios?`,
+            2: `Map the present state of "${problem}": What constraints currently exist? What options remain open? What is the current flexibility score? What immediate actions are possible without foreclosing future paths?`,
+            3: `Project future paths for "${problem}" across multiple time horizons (1, 5, 10 units): What's the best case scenario? Most probable path? Worst case with maximum constraints? Potential black swans? How to design for antifragility?`,
+            4: `Create temporal options for "${problem}": What can be delayed to buy more information? What should be accelerated to capture time-sensitive opportunities? How can we resequence for better paths? What can run in parallel timelines?`,
+            5: `Perform cyclical refinement on "${problem}": Integrate historical lessons into current strategy. How does the strategy evolve based on path learning? What retrospective insights update our projections?`,
+            6: `Integrate all temporal insights about "${problem}" while preserving maximum future flexibility. What synthesis maintains the most options? How do we build bridges between different timeline scenarios?`,
         };
-        return guidanceMap[step] || `Continue temporal creativity analysis for: "${problem}"`;
+        return guidanceMap[step] || `Complete the Temporal Creativity process for: "${problem}"`;
     }
     validateStep(step, data) {
         if (!super.validateStep(step, data)) {

@@ -4,7 +4,6 @@
 import type { DesignThinkingStage } from '../types/index.js';
 import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
 export declare class DesignThinkingHandler extends BaseTechniqueHandler {
-    private readonly stages;
     private readonly stageOrder;
     private readonly stepsWithReflexivity;
     getTechniqueInfo(): TechniqueInfo;

@@ -36,7 +36,18 @@ export class TechniqueRecommender {
      * Recommend techniques based on problem category and other factors
      * Now enhanced with multi-factor scoring
      */
-    recommendTechniques(problemCategory, preferredOutcome, constraints, complexity, techniqueRegistry) {
+    /**
+     * Weighting used when a persona is active. The 70/30 split lets a persona's
+     * preferences influence ranking without letting them dominate problem fit.
+     *
+     * The bias is applied during scoring, BEFORE sorting and truncation. Applying
+     * it afterwards would only reorder the survivors, so a technique the persona
+     * most favours could be truncated away and never recovered — which is exactly
+     * what happened when preferredOutcome boosted competing techniques past it.
+     */
+    PERSONA_BASE_WEIGHT = 0.7;
+    PERSONA_BIAS_WEIGHT = 0.3;
+    recommendTechniques(problemCategory, preferredOutcome, constraints, complexity, techniqueRegistry, techniqueBias) {
         const recommendations = [];
         // Category-based recommendations
         switch (problemCategory) {
@@ -517,13 +528,19 @@ export class TechniqueRecommender {
                 problemCategory === 'organizational',
             preferredOutcome,
         };
-        // Apply multi-factor scoring to all recommendations
+        // Apply multi-factor scoring to all recommendations, blending in persona
+        // bias here so it participates in ranking rather than merely reordering
+        // whatever survived truncation.
         const scoredRecommendations = recommendations.map(rec => {
             const multiFactorScore = this.scorer.calculateScore(rec.technique, problemContext, rec.effectiveness // Use initial effectiveness as category score
             );
+            const biasScore = techniqueBias?.[rec.technique];
+            const effectiveness = biasScore === undefined
+                ? multiFactorScore
+                : Math.min(1, multiFactorScore * this.PERSONA_BASE_WEIGHT + biasScore * this.PERSONA_BIAS_WEIGHT);
             return {
                 ...rec,
-                effectiveness: multiFactorScore, // Replace with multi-factor score
+                effectiveness,
             };
         });
         // Sort by multi-factor score

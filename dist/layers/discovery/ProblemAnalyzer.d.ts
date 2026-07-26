@@ -12,6 +12,26 @@ export declare class ProblemAnalyzer {
      */
     categorizeProblem(problem: string, context?: string): string;
     /**
+     * Detect decision/judgment problems — choosing between options, weighing
+     * trade-offs, committing to a course of action.
+     */
+    private detectDecisionPattern;
+    /**
+     * Detect communication/stakeholder problems — conveying, persuading,
+     * aligning, or explaining to an audience.
+     */
+    private detectCommunicationPattern;
+    /**
+     * Detect cultural problems — cross-cultural collaboration, localization,
+     * and globally distributed contexts.
+     */
+    private detectCulturalPattern;
+    /**
+     * Detect biological/evolutionary problems — adaptation, selection, and
+     * nature-inspired design.
+     */
+    private detectBiologicalPattern;
+    /**
      * Detect paradoxical patterns using enhanced NLP
      * Note: Now called ONLY when needed since categorizeProblem handles most cases
      */

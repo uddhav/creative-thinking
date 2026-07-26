@@ -44,49 +44,11 @@ export function discoverTechniques(input, techniqueRegistry, complexityAnalyzer,
     const memoryContextGenerator = new MemoryContextGenerator();
     // Categorize the problem
     const problemCategory = problemAnalyzer.categorizeProblem(problem, context);
-    // Get technique recommendations
-    let recommendations = techniqueRecommender.recommendTechniques(problemCategory, effectivePreferredOutcome, constraints, complexityAssessment.level, techniqueRegistry);
-    // Apply persona technique bias to boost/demote recommendations
-    // 70/30 split ensures persona preferences influence but don't dominate recommendations
-    const BASE_WEIGHT = 0.7;
-    const PERSONA_BIAS_WEIGHT = 0.3;
-    if (resolvedPersonas.length > 0) {
-        const primaryPersona = resolvedPersonas[0];
-        const bias = primaryPersona.techniqueBias;
-        let biasApplied = false;
-        recommendations = recommendations.map(rec => {
-            const biasScore = bias[rec.technique];
-            if (biasScore !== undefined) {
-                biasApplied = true;
-                const boosted = rec.effectiveness * BASE_WEIGHT + biasScore * PERSONA_BIAS_WEIGHT;
-                return { ...rec, effectiveness: Math.min(1, boosted) };
-            }
-            return rec;
-        });
-        // A persona's bias can only re-weight techniques that discovery already
-        // surfaced. Inject the persona's single most-defining technique (highest
-        // bias above threshold, not already present) so explicitly invoking a
-        // persona makes its signature method available — e.g. charlie_munger ->
-        // cognitive_bias_audit on a decision that would otherwise miss it.
-        const SIGNATURE_BIAS_THRESHOLD = 0.85;
-        const presentTechniques = new Set(recommendations.map(r => r.technique));
-        const signatureEntry = Object.entries(bias)
-            .filter(([technique, score]) => score >= SIGNATURE_BIAS_THRESHOLD && !presentTechniques.has(technique))
-            .sort(([, a], [, b]) => b - a)[0];
-        if (signatureEntry) {
-            const [technique, score] = signatureEntry;
-            recommendations.push({
-                technique: technique,
-                reasoning: `Signature technique for the ${primaryPersona.name} persona`,
-                effectiveness: score,
-            });
-            biasApplied = true;
-        }
-        // Only re-sort if bias was actually applied
-        if (biasApplied) {
-            recommendations.sort((a, b) => b.effectiveness - a.effectiveness);
-        }
-    }
+    // Get technique recommendations. The primary persona's bias is passed in so
+    // it is blended during scoring, before ranking and truncation — applying it
+    // afterwards could only reorder survivors, letting a technique the persona
+    // most favours be truncated away and never recovered.
+    let recommendations = techniqueRecommender.recommendTechniques(problemCategory, effectivePreferredOutcome, constraints, complexityAssessment.level, techniqueRegistry, resolvedPersonas[0]?.techniqueBias);
     // Humanistic quality coverage: ensure technique set collectively embodies
     // intelligence, courage, tenacity, curiosity, and justice
     const { recommendations: coverageAdjusted, coverage: qualityCoverage, adjusted: coverageWasAdjusted, } = HumanisticQualityCoverage.fillCoverageGaps(recommendations);

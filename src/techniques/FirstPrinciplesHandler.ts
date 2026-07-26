@@ -159,7 +159,7 @@ export class FirstPrinciplesHandler extends BaseTechniqueHandler {
       5: `Synthesize breakthrough for: "${problem}". Combine your reconstructed solution with practical constraints. How does your first-principles solution differ from conventional approaches? What new possibilities emerge? What radical simplifications are possible? Create a solution that's both grounded in fundamental truth and practically revolutionary.`,
     };
 
-    return guidanceMap[step] || `Continue first principles analysis for: "${problem}"`;
+    return guidanceMap[step] || `Complete the First Principles Thinking process for: "${problem}"`;
   }
 
   validateStep(step: number, data: unknown): boolean {

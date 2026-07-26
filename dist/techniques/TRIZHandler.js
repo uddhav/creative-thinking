@@ -90,19 +90,19 @@ export class TRIZHandler extends BaseTechniqueHandler {
     getStepGuidance(step, problem) {
         // Handle out of bounds gracefully
         if (step < 1 || step > 4) {
-            return `Complete the TRIZ process for "${problem}"`;
+            return `Complete the TRIZ process for: "${problem}"`;
         }
         switch (step) {
             case 1:
                 return `⚔️ Identify the contradiction in "${problem}". What improves when something else gets worse?`;
             case 2:
-                return `🚫 Challenge the compromise. Why must we accept this trade-off? What assumptions create it?`;
+                return `🚫 Challenge the compromise. Why must "${problem}" accept this trade-off? What assumptions create it?`;
             case 3:
-                return `🔧 Apply inventive principles: Separation, Asymmetry, Dynamics, etc. How can both requirements be satisfied?`;
+                return `🔧 Apply inventive principles: Separation, Asymmetry, Dynamics, etc. How can both sides of the contradiction in "${problem}" be satisfied at once?`;
             case 4:
-                return `✂️ Minimize the solution. What can be removed while maintaining functionality?`;
+                return `✂️ Minimize the solution. What can be removed while still resolving "${problem}"?`;
             default:
-                return `Apply TRIZ step ${step} to "${problem}"`;
+                return `Complete the TRIZ process for: "${problem}"`;
         }
     }
     extractInsights(history) {

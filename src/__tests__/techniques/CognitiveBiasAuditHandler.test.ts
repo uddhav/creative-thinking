@@ -66,12 +66,35 @@ describe('CognitiveBiasAuditHandler', () => {
   });
 
   describe('extractInsights', () => {
-    it('surfaces the lollapalooza, inversion, and decision insights', () => {
-      const history = Array.from({ length: 9 }, (_, i) => ({ output: `step ${i + 1} output` }));
+    it('reports what the session actually recorded, labelled by step', () => {
+      const history = [
+        { output: 'The board wants this acquisition closed by Q3.' },
+        { output: 'My bonus is tied to deal volume, not deal quality.' },
+      ];
+
       const insights = handler.extractInsights(history);
-      expect(insights.some(i => i.toLowerCase().includes('confluence'))).toBe(true);
-      expect(insights.some(i => i.toLowerCase().includes('inversion'))).toBe(true);
-      expect(insights.some(i => i.toLowerCase().includes('debiased'))).toBe(true);
+
+      expect(insights).toHaveLength(2);
+      expect(insights[0]).toContain('Frame the Judgment');
+      expect(insights[0]).toContain('The board wants this acquisition closed by Q3.');
+      expect(insights[1]).toContain('Follow the Incentives');
+      expect(insights[1]).toContain('My bonus is tied to deal volume');
+    });
+
+    it('derives insights from the output rather than emitting canned text', () => {
+      // The regression guard that matters: identical step positions with
+      // different content must produce different insights. Fixed strings keyed
+      // by step index would report findings the session never contained.
+      const first = handler.extractInsights([{ output: 'Incentives point at closing fast.' }]);
+      const second = handler.extractInsights([{ output: 'Nobody here gains from saying no.' }]);
+
+      expect(first[0]).not.toEqual(second[0]);
+      expect(first[0]).toContain('Incentives point at closing fast.');
+      expect(second[0]).toContain('Nobody here gains from saying no.');
+    });
+
+    it('skips steps with no recorded output', () => {
+      expect(handler.extractInsights([{ output: '' }, { output: '   ' }, {}])).toEqual([]);
     });
   });
 });

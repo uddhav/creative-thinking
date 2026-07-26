@@ -107,7 +107,7 @@ export class SixHatsHandler extends BaseTechniqueHandler {
   getStepGuidance(step: number, problem: string): string {
     // Handle out of bounds gracefully
     if (step < 1 || step > this.hatOrder.length) {
-      return `Complete the Six Thinking Hats process for "${problem}"`;
+      return `Complete the Six Thinking Hats process for: "${problem}"`;
     }
 
     const hat = this.getStepInfo(step);
@@ -140,7 +140,7 @@ export class SixHatsHandler extends BaseTechniqueHandler {
 • How can we preserve optionality and build escape routes?`;
 
       default:
-        return `Apply ${hat.name} thinking to "${problem}"`;
+        return `Complete the Six Thinking Hats process for: "${problem}"`;
     }
   }
 

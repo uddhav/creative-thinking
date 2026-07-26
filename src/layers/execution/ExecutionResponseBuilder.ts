@@ -183,7 +183,7 @@ export class ExecutionResponseBuilder {
       this.handleSessionCompletion(response, session);
 
       // Track technique completion
-      const effectiveness = this.assessTechniqueEffectiveness(input, session, currentInsights);
+      const effectiveness = this.assessOutputCompleteness(input, session, currentInsights);
       this.telemetry
         .trackTechniqueComplete(sessionId, input.technique, effectiveness, {
           insightCount: currentInsights.length,
@@ -455,7 +455,9 @@ export class ExecutionResponseBuilder {
 
     // Ensure next step is valid
     if (nextStep < 1 || nextStep > input.totalSteps) {
-      return `Complete the ${handler.getTechniqueInfo().name} process`;
+      // Same contract the handlers use for an out-of-range step, so callers see
+      // one shape rather than two near-identical ones.
+      return `Complete the ${handler.getTechniqueInfo().name} process for: "${input.problem}"`;
     }
 
     // Check completion status and add assertive guidance if needed
@@ -532,7 +534,7 @@ export class ExecutionResponseBuilder {
     currentFlexibility: number
   ): ExecutionMetadata {
     const metadata: ExecutionMetadata = {
-      techniqueEffectiveness: this.assessTechniqueEffectiveness(input, session, insights),
+      outputCompleteness: this.assessOutputCompleteness(input, session, insights),
       pathDependenciesCreated: this.extractPathDependencies(input, pathMemory),
       flexibilityImpact: this.calculateFlexibilityImpact(input, session),
     };
@@ -874,29 +876,38 @@ export class ExecutionResponseBuilder {
     return fields;
   }
 
-  // Helper methods for metadata generation
-  private assessTechniqueEffectiveness(
+  /**
+   * How completely a step filled in the outputs its technique asks for.
+   *
+   * This counts whether optional fields were populated — insights, risks,
+   * antifragile properties, provocation/principles. It is a COMPLETENESS
+   * measure, not a quality one: four vacuous insights score higher than two
+   * excellent ones, and nothing here inspects what was actually written.
+   * Named accordingly so it is not mistaken for evidence that a technique
+   * worked. Measuring real quality needs the guidance eval, not this.
+   */
+  private assessOutputCompleteness(
     input: ExecuteThinkingStepInput,
     session: SessionData,
     insights: string[]
   ): number {
-    let effectiveness = 0.5; // Base effectiveness
+    let completeness = 0.5; // Base: a step that produced output at all
 
-    if (insights.length > 3) effectiveness += 0.2;
-    else if (insights.length > 1) effectiveness += 0.1;
+    if (insights.length > 3) completeness += 0.2;
+    else if (insights.length > 1) completeness += 0.1;
 
-    if (input.risks && input.risks.length > 0) effectiveness += 0.1;
+    if (input.risks && input.risks.length > 0) completeness += 0.1;
     if (input.antifragileProperties && input.antifragileProperties.length > 0) {
-      effectiveness += 0.15;
+      completeness += 0.15;
     }
 
     if (input.technique === 'scamper' && input.pathImpact) {
-      if (input.pathImpact.flexibilityRetention > 0.5) effectiveness += 0.1;
+      if (input.pathImpact.flexibilityRetention > 0.5) completeness += 0.1;
     }
 
-    if (input.provocation && input.principles) effectiveness += 0.2;
+    if (input.provocation && input.principles) completeness += 0.2;
 
-    return Math.min(1, effectiveness);
+    return Math.min(1, completeness);
   }
 
   private extractPathDependencies(

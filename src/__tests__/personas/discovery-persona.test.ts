@@ -51,13 +51,17 @@ describe('Discovery Layer - Persona Integration', () => {
       ];
       let foundMatch = false;
 
+      // Only genuinely-scored recommendations carry persona bias. Quality
+      // fillers are scored from quality coverage rather than problem fit, so
+      // they do not belong in this comparison.
+      const isScored = (r: { isQualityFiller?: boolean }): boolean => !r.isQualityFiller;
+
       for (const technique of biasedTechniques) {
-        // Skip quality fillers — they have effectiveness based on quality scores, not problem-fit
         const withRec = resultWith.recommendations.find(
-          r => r.technique === technique && !r.isQualityFiller
+          r => r.technique === technique && isScored(r)
         );
         const withoutRec = resultWithout.recommendations.find(
-          r => r.technique === technique && !r.isQualityFiller
+          r => r.technique === technique && isScored(r)
         );
 
         if (withRec && withoutRec) {
@@ -72,21 +76,51 @@ describe('Discovery Layer - Persona Integration', () => {
       expect(foundMatch).toBe(true);
     });
 
-    it('should inject the persona signature technique when discovery did not surface it', () => {
-      // charlie_munger's top bias is cognitive_bias_audit (0.95). An emotionally
-      // loaded acquisition decision categorizes as "general" and would not
-      // otherwise recommend it, so the persona must inject its signature method.
+    it('should never hoist a quality filler above a genuinely scored recommendation', () => {
+      // Quality fillers are appended at a flat score with no problem-fit
+      // evidence. Any global re-sort after they are added promotes them over
+      // techniques that actually matched the problem, so nothing downstream of
+      // fillCoverageGaps may re-sort the list.
+      const problems = [
+        'How to simplify our architecture',
+        'Intermittent 500 errors appear in production only under high load',
+        'How do we grow enterprise market share next year?',
+      ];
+
+      for (const persona of ['rich_hickey', 'charlie_munger', 'tarantino']) {
+        for (const problem of problems) {
+          const result = discoverTechniques(
+            { problem, persona },
+            techniqueRegistry,
+            complexityAnalyzer
+          );
+
+          const firstScoredIndex = result.recommendations.findIndex(r => !r.isQualityFiller);
+          const firstFillerIndex = result.recommendations.findIndex(r => r.isQualityFiller);
+
+          if (firstScoredIndex >= 0 && firstFillerIndex >= 0) {
+            expect(
+              firstScoredIndex,
+              `quality filler outranked a scored technique for ${persona} / "${problem}"`
+            ).toBeLessThan(firstFillerIndex);
+          }
+        }
+      }
+    });
+
+    it('should recommend a decision technique on merit, without persona machinery', () => {
+      // The case that once motivated injecting a persona's signature technique.
+      // Category routing now surfaces it on its own, so no persona is needed
+      // and nothing is appended out of band.
       const input: DiscoverTechniquesInput = {
         problem: 'Should we acquire this competitor? I really want to do this deal',
-        persona: 'charlie_munger',
       };
 
       const result = discoverTechniques(input, techniqueRegistry, complexityAnalyzer);
-      const munger = result.recommendations.find(r => r.technique === 'cognitive_bias_audit');
+      const audit = result.recommendations.find(r => r.technique === 'cognitive_bias_audit');
 
-      expect(munger).toBeDefined();
-      // Proves it was injected as the persona's signature, not surfaced by category match
-      expect(munger?.reasoning).toContain('Signature technique');
+      expect(audit).toBeDefined();
+      expect(audit?.isQualityFiller).toBeFalsy();
     });
 
     it('should use persona preferredOutcome when no explicit preference given', () => {

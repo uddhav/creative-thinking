@@ -215,18 +215,17 @@ export class CognitiveBiasAuditHandler extends BaseTechniqueHandler {
         const guidance = {
             1: `🎯 **Step 1: Frame the Judgment**\n\nDecision under audit: "${problem}"\n\nDon't audit in the abstract. Name the specific decision and the answer you're already leaning toward — out loud or on paper. You cannot disarm a bias you won't name, and the man who says "I'm being objective" is usually the one being played.`,
             2: `🎣 **Step 2: Follow the Incentives**\n\nNever, ever think about anything else when you should be thinking about the power of incentives. For "${problem}", ask whose pay, ego, or status moves with each possible answer — yours, and your trusted advisors'. Remember the gall-bladder surgeon: the sincere-but-biased advisor is the dangerous one, so apply a windage factor to anyone who profits from your conclusion.`,
-            3: `🧠 **Step 3: Ego & Commitment Defenses**\n\nSimple psychological denial — the dead pilot's mother — and consistency-commitment are a superpower working against you. Have you already declared this conclusion publicly? Then it's been pounded into your head. Ask what hard-won or stated view you're now defending, and whether envy, or liking your own kind and your own ideas, is doing the steering.`,
-            4: `👥 **Step 4: Social Pressure Scan**\n\nUnder uncertainty and stress we ape the crowd and obey authority — that's a lollapalooza all by itself. Kitty Genovese died because everyone took everyone else's inaction as proof. Are you deferring because the boss, the market price, or the consensus says so, and is somebody doing an incoherent honeybee dance just to have something to say?`,
-            5: `🐶 **Step 5: Deprival & Scarcity Check**\n\nTake away something a man almost has and watch him bite — I learned it from my own dog. New Coke, feuds over a neighbor's tree, escalation through reciprocated animosity: deprival super-reaction makes us irrational about loss and near-misses. Is your judgment about the merits, or about not losing something you'd half-counted as yours?`,
-            6: `🔬 **Step 6: Perception & Math Distortions**\n\nThe brain runs on crude heuristics — Pavlovian association, contrast, and the availability of one vivid story. Three buckets of water teach you that contrast distorts cognition, and the frog boils because it came in small pieces. Where's the base rate (think like Zeckhauser plays bridge), and are you over-weighting one vivid fact the way I once wrote off thirty million dollars?`,
-            7: `🎰 **Step 7: Lollapalooza Check**\n\nNow the most important step: the tendencies don't add, they multiply. Tupperware parties, open-outcry auctions, a Moonie conversion, a dysfunctional board — each is four or five tendencies pulling the same way at once. List which forces from steps 2-6 are stacking toward the same conclusion; that confluence, not any single factor, is what blows up judgment.`,
-            8: `🔄 **Step 8: Invert & Seek Disconfirmation**\n\nInvert, always invert. State the opposite conclusion and argue it hard. Darwin paid extra attention to evidence that disconfirmed his cherished ideas and wore little hair shirts to force it — so go hunt the facts that would prove your preferred answer a disaster, and weight them more, not less, because your consistency bias wants to wave them off.`,
-            9: `✅ **Step 9: Debias & Decide**\n\n⚠️ Medium Reflexivity: declaring the verdict re-triggers commitment bias — write down what would make you reverse.\n\nInstall the antidotes and commit. Explain the why with the five W's (a fact not hung on a theory that answers "why?" won't stick), use base rates, apply granny's rule, and schedule the post-mortem the way J&J revisits its failed acquisitions. Then decide.`,
+            3: `🧠 **Step 3: Ego & Commitment Defenses**\n\nSimple psychological denial — the dead pilot's mother — and consistency-commitment are a superpower working against you. Have you already declared your answer on "${problem}" out loud, in a memo, or to a room? Then it's been pounded into your head. Ask what hard-won or stated view you're now defending, and whether envy, or liking your own kind and your own ideas, is doing the steering.`,
+            4: `👥 **Step 4: Social Pressure Scan**\n\nUnder uncertainty and stress we ape the crowd and obey authority — that's a lollapalooza all by itself. Kitty Genovese died because everyone took everyone else's inaction as proof. On "${problem}", are you deferring because the boss, the market price, or the consensus says so, and is somebody doing an incoherent honeybee dance just to have something to say?`,
+            5: `🐶 **Step 5: Deprival & Scarcity Check**\n\nTake away something a man almost has and watch him bite — I learned it from my own dog. New Coke, feuds over a neighbor's tree, escalation through reciprocated animosity: deprival super-reaction makes us irrational about loss and near-misses. Is your judgment on "${problem}" about the merits, or about not losing something you'd half-counted as yours?`,
+            6: `🔬 **Step 6: Perception & Math Distortions**\n\nThe brain runs on crude heuristics — Pavlovian association, contrast, and the availability of one vivid story. Three buckets of water teach you that contrast distorts cognition, and the frog boils because it came in small pieces. Where's the base rate for "${problem}" (think like Zeckhauser plays bridge), and are you over-weighting one vivid fact the way I once wrote off thirty million dollars?`,
+            7: `🎰 **Step 7: Lollapalooza Check**\n\nNow the most important step: the tendencies don't add, they multiply. Tupperware parties, open-outcry auctions, a Moonie conversion, a dysfunctional board — each is four or five tendencies pulling the same way at once. List which forces from steps 2-6 are stacking toward the same answer on "${problem}"; that confluence, not any single factor, is what blows up judgment.`,
+            8: `🔄 **Step 8: Invert & Seek Disconfirmation**\n\nInvert, always invert. State the opposite conclusion on "${problem}" and argue it hard. Darwin paid extra attention to evidence that disconfirmed his cherished ideas and wore little hair shirts to force it — so go hunt the facts that would prove your preferred answer a disaster, and weight them more, not less, because your consistency bias wants to wave them off.`,
+            9: `✅ **Step 9: Debias & Decide**\n\n⚠️ Medium Reflexivity: declaring the verdict re-triggers commitment bias — write down what would make you reverse.\n\nInstall the antidotes and commit on "${problem}". Explain the why with the five W's (a fact not hung on a theory that answers "why?" won't stick), use base rates, apply granny's rule, and schedule the post-mortem the way J&J revisits its failed acquisitions. Then decide.`,
         };
         const base = guidance[step];
         if (!base) {
-            const info = this.getStepInfo(step);
-            return `Step ${step}: ${info.name}\n\nFocus: ${info.focus}`;
+            return `Complete the Cognitive Bias Audit process for: "${problem}"`;
         }
         // Append the structured tendency checklist for scan steps (data-driven).
         const ids = this.steps[step - 1]?.tendencyIds;
@@ -240,21 +239,27 @@ export class CognitiveBiasAuditHandler extends BaseTechniqueHandler {
         }
         return base;
     }
+    /**
+     * Summarise what the audit actually surfaced, labelled by the lens that
+     * surfaced it.
+     *
+     * This reads `entry.output`. Returning fixed strings keyed by step index —
+     * as this once did — reports findings the session may never have produced,
+     * which is fabricated insight dressed as analysis.
+     */
     extractInsights(history) {
         const insights = [];
         history.forEach((entry, index) => {
-            if (!entry.output) {
+            const output = entry.output?.trim();
+            const stepName = this.steps[index]?.name;
+            if (!output || !stepName) {
                 return;
             }
-            if (index === 6) {
-                const stepName = this.steps[index]?.name ?? 'Lollapalooza Check';
-                insights.push(`${stepName}: confluence of stacking tendencies assessed`);
-            }
-            else if (index === 7) {
-                insights.push('Inversion: argued the opposite and hunted disconfirming evidence');
-            }
-            else if (index === 8) {
-                insights.push('Debiased decision committed with explicit reversal criteria');
+            // Lead with the first complete thought the thinker recorded for this lens
+            const [firstSentence] = output.split(/(?<=[.!?])\s+/);
+            const summary = (firstSentence ?? output).trim();
+            if (summary.length > 0) {
+                insights.push(`${stepName}: ${summary}`);
             }
         });
         return insights;

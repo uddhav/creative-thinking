@@ -172,7 +172,7 @@ describe('NeuroComputationalHandler', () => {
 
     it('should provide default guidance for invalid steps', () => {
       const guidance = handler.getStepGuidance(10, problem);
-      expect(guidance).toContain('Continue neuro-computational synthesis');
+      expect(guidance).toContain('Complete the Neuro-Computational Synthesis process');
       expect(guidance).toContain(problem);
     });
   });

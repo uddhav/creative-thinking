@@ -81,7 +81,7 @@ export class SixHatsHandler extends BaseTechniqueHandler {
     getStepGuidance(step, problem) {
         // Handle out of bounds gracefully
         if (step < 1 || step > this.hatOrder.length) {
-            return `Complete the Six Thinking Hats process for "${problem}"`;
+            return `Complete the Six Thinking Hats process for: "${problem}"`;
         }
         const hat = this.getStepInfo(step);
         const hatColor = this.hatOrder[step - 1];
@@ -105,7 +105,7 @@ export class SixHatsHandler extends BaseTechniqueHandler {
 • Is this domain ergodic (can recover from failures) or non-ergodic (one failure = permanent ruin)?
 • How can we preserve optionality and build escape routes?`;
             default:
-                return `Apply ${hat.name} thinking to "${problem}"`;
+                return `Complete the Six Thinking Hats process for: "${problem}"`;
         }
     }
     validateStep(step, data) {

@@ -65,17 +65,17 @@ export class DisneyMethodHandler extends BaseTechniqueHandler {
     getStepGuidance(step, problem) {
         // Handle out of bounds gracefully
         if (step < 1 || step > 3) {
-            return `Complete the Disney Method process for "${problem}"`;
+            return `Complete the Disney Method process for: "${problem}"`;
         }
         switch (step) {
             case 1:
                 return `🌟 DREAMER: Imagine the ideal solution to "${problem}" with no constraints. What would be amazing? Dream big!`;
             case 2:
-                return `🔨 REALIST: Now be practical. How could we implement the dream? What resources, steps, and timeline would we need?`;
+                return `🔨 REALIST: Now be practical about "${problem}". How could we implement the dream? What resources, steps, and timeline would we need?`;
             case 3:
-                return `🔍 CRITIC: Constructively evaluate the plan. What could go wrong? What risks need mitigation? How can we strengthen the solution?`;
+                return `🔍 CRITIC: Constructively evaluate the plan for "${problem}". What could go wrong? What risks need mitigation? How can we strengthen the solution?`;
             default:
-                return `Apply Disney Method step ${step} to "${problem}"`;
+                return `Complete the Disney Method process for: "${problem}"`;
         }
     }
     extractInsights(history) {

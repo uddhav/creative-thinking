@@ -150,8 +150,8 @@ export class AnecdotalSignalHandler extends BaseTechniqueHandler {
         return this.steps[step - 1];
     }
     getStepGuidance(step, problem) {
-        const stepInfo = this.getStepInfo(step);
-        const elements = stepInfo.analysisElements || [];
+        const stepInfo = this.steps[step - 1];
+        const elements = stepInfo?.analysisElements || [];
         const guidanceTemplates = {
             1: `📚 **Step 1: Anecdote Collection**
 
@@ -405,7 +405,7 @@ Success Criteria:
 
 Output: Complete strategic response plan with monitoring systems`,
         };
-        return guidanceTemplates[step] || `Step ${step}: ${stepInfo.name}\n\nFocus: ${stepInfo.focus}`;
+        return (guidanceTemplates[step] || `Complete the Anecdotal Signal Detection process for: "${problem}"`);
     }
     validateStep(step, data) {
         if (!super.validateStep(step, data)) {

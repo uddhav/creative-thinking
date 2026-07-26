@@ -84,7 +84,7 @@ describe('MetaLearningHandler', () => {
 
     it('should provide default guidance for invalid step', () => {
       const guidance = handler.getStepGuidance(99, problem);
-      expect(guidance).toContain('Continue meta-learning');
+      expect(guidance).toContain('Complete the Meta-Learning');
       expect(guidance).toContain(problem);
     });
   });

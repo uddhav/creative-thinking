@@ -1,0 +1,7 @@
+# dist/ is checked in so `npx github:uddhav/creative-thinking` works without a
+# build step, but it is entirely generated from src/. Marking it generated keeps
+# it collapsed in GitHub diffs and out of language stats, so reviewers see the
+# ~30% of a technique PR that is actually authored rather than the ~70% that is
+# compiler output.
+dist/** linguist-generated=true
+dist/** -diff

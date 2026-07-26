@@ -146,11 +146,11 @@ export async function executeThinkingStep(
 
         let nextStepGuidance: string | undefined;
         if (input.nextStepNeeded) {
-          nextStepGuidance = `Complete the ${techniqueInfo.name} process`;
+          nextStepGuidance = `Complete the ${techniqueInfo.name} process for: "${input.problem}"`;
         }
 
         const minimalMetadata = {
-          techniqueEffectiveness: 0.5,
+          outputCompleteness: 0.5,
           pathDependenciesCreated: [],
           flexibilityImpact: -0.05,
           errorContext,

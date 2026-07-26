@@ -147,10 +147,10 @@ describe('NineWindowsHandler', () => {
     it('should handle out of bounds gracefully', () => {
       const problem = 'test problem';
       const guidance0 = handler.getStepGuidance(0, problem);
-      expect(guidance0).toContain('Complete the Nine Windows analysis');
+      expect(guidance0).toContain('Complete the Nine Windows process');
 
       const guidance10 = handler.getStepGuidance(10, problem);
-      expect(guidance10).toContain('Complete the Nine Windows analysis');
+      expect(guidance10).toContain('Complete the Nine Windows process');
     });
 
     it('should mention path dependencies in future steps', () => {

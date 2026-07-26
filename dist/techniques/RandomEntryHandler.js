@@ -107,7 +107,7 @@ export class RandomEntryHandler extends BaseTechniqueHandler {
     getStepGuidance(step, problem, context) {
         // Handle out of bounds gracefully
         if (step < 1 || step > 3) {
-            return `Complete the Random Entry process for "${problem}"`;
+            return `Complete the Random Entry process for: "${problem}"`;
         }
         const isRoryMode = context?.roryMode || false;
         switch (step) {
@@ -211,7 +211,7 @@ Which associations lead to viable solutions?
 How can the forced connections become real innovations?`;
                 }
             default:
-                return `Apply Random Entry step ${step} to "${problem}"`;
+                return `Complete the Random Entry process for: "${problem}"`;
         }
     }
     getRandomRoryStimulus() {

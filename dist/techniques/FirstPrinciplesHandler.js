@@ -134,7 +134,7 @@ export class FirstPrinciplesHandler extends BaseTechniqueHandler {
             4: `Reconstruct solution for: "${problem}". Using ONLY the fundamental truths identified, build a solution from scratch. How would you solve this if you were the first person ever encountering it? What's the simplest possible solution that satisfies the fundamental requirements? Don't reference existing solutions - create from pure logic and fundamentals.`,
             5: `Synthesize breakthrough for: "${problem}". Combine your reconstructed solution with practical constraints. How does your first-principles solution differ from conventional approaches? What new possibilities emerge? What radical simplifications are possible? Create a solution that's both grounded in fundamental truth and practically revolutionary.`,
         };
-        return guidanceMap[step] || `Continue first principles analysis for: "${problem}"`;
+        return guidanceMap[step] || `Complete the First Principles Thinking process for: "${problem}"`;
     }
     validateStep(step, data) {
         if (!super.validateStep(step, data)) {

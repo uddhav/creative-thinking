@@ -276,7 +276,7 @@ export class ScamperHandler extends BaseTechniqueHandler {
     getStepGuidance(step, problem) {
         // Handle out of bounds gracefully
         if (step < 1 || step > this.actionOrder.length) {
-            return `Complete the SCAMPER+P process for "${problem}"`;
+            return `Complete the SCAMPER+P process for: "${problem}"`;
         }
         const action = this.actionOrder[step - 1];
         const info = this.actions[action];

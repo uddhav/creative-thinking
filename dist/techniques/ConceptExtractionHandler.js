@@ -70,19 +70,19 @@ export class ConceptExtractionHandler extends BaseTechniqueHandler {
     getStepGuidance(step, problem) {
         // Handle out of bounds gracefully
         if (step < 1 || step > 4) {
-            return `Complete the Concept Extraction process for "${problem}"`;
+            return `Complete the Concept Extraction process for: "${problem}"`;
         }
         switch (step) {
             case 1:
                 return `🏆 Identify a successful example from any domain - what works brilliantly? (doesn't need to relate to "${problem}" yet)`;
             case 2:
-                return `🔍 Extract the key concepts that make this example successful. What are the underlying principles?`;
+                return `🔍 Extract the key concepts that make this example successful. What are the underlying principles - stated so they could travel to "${problem}"?`;
             case 3:
-                return `🔄 Abstract these concepts into general patterns. Remove domain-specific details`;
+                return `🔄 Abstract these concepts into general patterns. Remove domain-specific details so nothing ties them to their origin rather than to "${problem}"`;
             case 4:
                 return `🎯 Apply these abstracted patterns to "${problem}". How can these principles solve your challenge?`;
             default:
-                return `Apply Concept Extraction step ${step} to "${problem}"`;
+                return `Complete the Concept Extraction process for: "${problem}"`;
         }
     }
     extractInsights(history) {
