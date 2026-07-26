@@ -236,6 +236,7 @@ export class VisualFormatter {
             perception_optimization: '👁️',
             anecdotal_signal: '🔍',
             cognitive_bias_audit: '🪞',
+            mental_models: '🧰',
         };
         return emojis[technique] || '❓';
     }
@@ -273,6 +274,7 @@ export class VisualFormatter {
             perception_optimization: 'Perception Optimization',
             anecdotal_signal: 'Anecdotal Signal Detection',
             cognitive_bias_audit: 'Cognitive Bias Audit',
+            mental_models: 'Latticework of Mental Models',
         };
         return names[technique] || technique;
     }

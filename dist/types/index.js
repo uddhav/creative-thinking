@@ -33,5 +33,6 @@ export const ALL_LATERAL_TECHNIQUES = [
     'perception_optimization',
     'anecdotal_signal',
     'cognitive_bias_audit',
+    'mental_models',
 ];
 //# sourceMappingURL=index.js.map

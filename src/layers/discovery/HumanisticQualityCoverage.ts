@@ -190,6 +190,13 @@ const TECHNIQUE_QUALITY_PROFILES: Record<LateralTechnique, Record<HumanisticQual
     curiosity: 0.5,
     justice: 0.7,
   },
+  mental_models: {
+    intelligence: 0.95,
+    courage: 0.6,
+    tenacity: 0.8,
+    curiosity: 0.9,
+    justice: 0.6,
+  },
 };
 
 export class HumanisticQualityCoverage {

@@ -55,7 +55,7 @@ The three-layer architecture guides you through comprehensive problem-solving:
    maintaining session state and integrating risk assessment.
 
 **📚 New to the techniques? Check out the [Specifications](SPECIFICATIONS.md) for a comprehensive
-overview of all 29 techniques and when to use each one.**
+overview of all 30 techniques and when to use each one.**
 
 This layered approach ensures efficient problem-solving by matching techniques to problems, creating
 comprehensive workflows, and maintaining focus throughout the creative process.

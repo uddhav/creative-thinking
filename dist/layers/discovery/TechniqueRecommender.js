@@ -265,6 +265,11 @@ export class TechniqueRecommender {
                     reasoning: "Run Munger's checklist of misjudgment tendencies against the decision",
                     effectiveness: 0.9,
                 });
+                recommendations.push({
+                    technique: 'mental_models',
+                    reasoning: 'Apply multiple disciplinary lenses instead of one habitual model',
+                    effectiveness: 0.85,
+                });
                 break;
             case 'strategic':
                 recommendations.push({
@@ -331,6 +336,11 @@ export class TechniqueRecommender {
                     reasoning: 'Learn from system patterns and behaviors',
                     effectiveness: 0.78,
                 });
+                recommendations.push({
+                    technique: 'mental_models',
+                    reasoning: 'Cross-disciplinary lenses reveal system dynamics one model would miss',
+                    effectiveness: 0.84,
+                });
                 break;
             case 'validation':
             case 'verification':
@@ -373,6 +383,11 @@ export class TechniqueRecommender {
                     technique: 'cognitive_bias_audit',
                     reasoning: 'Audit your own psychology for biases before committing to a decision',
                     effectiveness: 0.88,
+                });
+                recommendations.push({
+                    technique: 'mental_models',
+                    reasoning: 'Weigh the decision through several disciplinary lenses before committing',
+                    effectiveness: 0.86,
                 });
                 break;
             case 'communication':
