@@ -14,6 +14,13 @@ export declare class LatticeworkHandler extends BaseTechniqueHandler {
     getTechniqueInfo(): TechniqueInfo;
     getStepInfo(step: number): StepInfo;
     getStepGuidance(step: number, problem: string): string;
+    /**
+     * Report what each lens actually surfaced, labelled by the lens.
+     *
+     * This reads `entry.output`. Emitting fixed strings keyed by step index — as
+     * this once did — claims each lens produced a finding whether or not it did,
+     * which is fabricated insight dressed as analysis.
+     */
     extractInsights(history: Array<{
         output?: string;
     }>): string[];

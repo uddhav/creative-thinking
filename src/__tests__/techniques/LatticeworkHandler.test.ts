@@ -75,12 +75,34 @@ describe('LatticeworkHandler', () => {
   });
 
   describe('extractInsights', () => {
-    it('surfaces lens application, synthesis, and the final decision', () => {
-      const history = Array.from({ length: 7 }, (_, i) => ({ output: `step ${i + 1} output` }));
+    it('reports what each lens actually recorded, labelled by the lens', () => {
+      const history = [
+        { output: 'We always reach for a rewrite.' },
+        { output: 'The retry loop is a positive feedback loop under load.' },
+      ];
+
       const insights = handler.extractInsights(history);
-      expect(insights.some(i => i.toLowerCase().includes('lens'))).toBe(true);
-      expect(insights.some(i => i.toLowerCase().includes('synthesis'))).toBe(true);
-      expect(insights.some(i => i.toLowerCase().includes('margin of safety'))).toBe(true);
+
+      expect(insights).toHaveLength(2);
+      expect(insights[0]).toContain('Frame & Name Your Hammer');
+      expect(insights[0]).toContain('We always reach for a rewrite.');
+      expect(insights[1]).toContain('Physics & Engineering Lens');
+      expect(insights[1]).toContain('positive feedback loop under load');
+    });
+
+    it('derives insights from the output rather than emitting canned text', () => {
+      const first = handler.extractInsights([{ output: 'Scale is the binding constraint.' }]);
+      const second = handler.extractInsights([
+        { output: 'Incentives are the binding constraint.' },
+      ]);
+
+      expect(first[0]).not.toEqual(second[0]);
+      expect(first[0]).toContain('Scale is the binding constraint.');
+      expect(second[0]).toContain('Incentives are the binding constraint.');
+    });
+
+    it('skips steps with no recorded output', () => {
+      expect(handler.extractInsights([{ output: '' }, { output: '  ' }, {}])).toEqual([]);
     });
   });
 });

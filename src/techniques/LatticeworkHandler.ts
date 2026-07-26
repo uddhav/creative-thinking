@@ -223,17 +223,16 @@ export class LatticeworkHandler extends BaseTechniqueHandler {
     const guidance: Record<number, string> = {
       1: `🔨 **Step 1: Frame & Name Your Hammer**\n\nProblem: "${problem}"\n\nBefore reaching for a model, name the one you would instinctively reach for — the tool your training makes cheapest. To the man with a hammer, every problem looks pretty much like a nail, and that syndrome does not exempt bright people. Say which discipline you are about to over-apply, and note where the edge of your competence sits.`,
       2: `⚙️ **Step 2: Physics & Engineering Lens**\n\nAsk what an engineer would see in "${problem}". What forces are in equilibrium and what happens when one gives? Where are the feedback loops, the thresholds, the breakpoints? And check the hard one: are the risks genuinely independent, or have you built a common-mode failure — insuring every house on one island against the same hurricane?`,
-      3: `🧬 **Step 3: Biology & Evolution Lens**\n\nAsk what a biologist would see. What is competing here, and what is actually being selected for over time? Where is the uncontested niche? What carrying capacity does the surrounding system impose — the limit an ecologist would see and an economist would wave away?`,
-      4: `🧠 **Step 4: Psychology Lens**\n\nAsk what the standard causes of human misjudgment are doing to this problem — and to you. Never think about anything else when you should be thinking about the power of incentives: whose behavior follows the money, the status, or the ego? For a full pass, run the \`cognitive_bias_audit\` technique; here, take the two big ones.`,
-      5: `📐 **Step 5: Economics & Math Lens**\n\nAsk what scales and what compounds. What is the base rate before this particular case? What is the opportunity cost — the best alternative you are giving up? Apply Occam's razor: the simplest sufficient explanation. Then invert: what would guarantee failure, and are you doing any of it?`,
-      6: `🕸️ **Step 6: Synthesize the Lattice**\n\nNow put the lenses side by side. Where do they agree — that is your confident ground. Where do they conflict, synthesis is demanded: do not retreat into whatever orthodoxy you came from. And where several lenses point the same way at once, you have a confluence — a lollapalooza — which is far stronger than any single factor. Reality must respect all of reality; inconsistencies have to be resolved.`,
-      7: `🛡️ **Step 7: Decide with a Margin of Safety**\n\n⚠️ Medium Reflexivity: the models you name become the frame others inherit.\n\nCommit — but inside your circle of competence, and with a margin of safety, the concept Ben Graham borrowed from engineering. Better to be roughly right than precisely wrong, so do not overweigh what is merely measurable. State which lens governed, which you overruled, and what would make you revisit.`,
+      3: `🧬 **Step 3: Biology & Evolution Lens**\n\nAsk what a biologist would see in "${problem}". What is competing here, and what is actually being selected for over time? Where is the uncontested niche? What carrying capacity does the surrounding system impose — the limit an ecologist would see and an economist would wave away?`,
+      4: `🧠 **Step 4: Psychology Lens**\n\nAsk what the standard causes of human misjudgment are doing to "${problem}" — and to you. Never think about anything else when you should be thinking about the power of incentives: whose behavior follows the money, the status, or the ego? For a full pass, run the \`cognitive_bias_audit\` technique; here, take the two big ones.`,
+      5: `📐 **Step 5: Economics & Math Lens**\n\nAsk what scales and what compounds in "${problem}". What is the base rate before this particular case? What is the opportunity cost — the best alternative you are giving up? Apply Occam's razor: the simplest sufficient explanation. Then invert: what would guarantee failure, and are you doing any of it?`,
+      6: `🕸️ **Step 6: Synthesize the Lattice**\n\nPut the lenses on "${problem}" side by side. Where do they agree — that is your confident ground. Where do they conflict, synthesis is demanded: do not retreat into whatever orthodoxy you came from. And where several lenses point the same way at once, you have a confluence — a lollapalooza — which is far stronger than any single factor. Reality must respect all of reality; inconsistencies have to be resolved.`,
+      7: `🛡️ **Step 7: Decide with a Margin of Safety**\n\n⚠️ Medium Reflexivity: the models you name become the frame others inherit.\n\nCommit on "${problem}" — but inside your circle of competence, and with a margin of safety, the concept Ben Graham borrowed from engineering. Better to be roughly right than precisely wrong, so do not overweigh what is merely measurable. State which lens governed, which you overruled, and what would make you revisit.`,
     };
 
     const base = guidance[step];
     if (!base) {
-      const info = this.getStepInfo(step);
-      return `Step ${step}: ${info.name}\n\nFocus: ${info.focus}`;
+      return `Complete the ${this.getTechniqueInfo().name} process for: "${problem}"`;
     }
 
     // Append the structured model checklist for lens steps (data-driven).
@@ -249,21 +248,30 @@ export class LatticeworkHandler extends BaseTechniqueHandler {
     return base;
   }
 
+  /**
+   * Report what each lens actually surfaced, labelled by the lens.
+   *
+   * This reads `entry.output`. Emitting fixed strings keyed by step index — as
+   * this once did — claims each lens produced a finding whether or not it did,
+   * which is fabricated insight dressed as analysis.
+   */
   extractInsights(history: Array<{ output?: string }>): string[] {
     const insights: string[] = [];
+
     history.forEach((entry, index) => {
-      if (!entry.output) {
+      const output = entry.output?.trim();
+      const stepName = this.steps[index]?.name;
+      if (!output || !stepName) {
         return;
       }
-      if (index >= 1 && index <= 4) {
-        const stepName = this.steps[index]?.name ?? `Lens ${index}`;
-        insights.push(`${stepName}: applied to the problem`);
-      } else if (index === 5) {
-        insights.push('Lattice synthesis: agreements, conflicts, and confluence identified');
-      } else if (index === 6) {
-        insights.push('Decision committed with an explicit margin of safety');
+
+      const [firstSentence] = output.split(/(?<=[.!?])\s+/);
+      const summary = (firstSentence ?? output).trim();
+      if (summary.length > 0) {
+        insights.push(`${stepName}: ${summary}`);
       }
     });
+
     return insights;
   }
 }
