@@ -1,0 +1,333 @@
+{
+  "generatedFrom": "384423f",
+  "summary": {
+    "techniqueCount": 29,
+    "totalSteps": 157,
+    "stepsReferencingProblem": 102,
+    "overallProblemInterpolationRate": 0.65,
+    "meanLengthSpreadRatio": 18.9,
+    "techniquesUsingEmoji": 21,
+    "techniquesUsingMarkdownBold": 9
+  },
+  "techniques": [
+    {
+      "technique": "anecdotal_signal",
+      "totalSteps": 6,
+      "stepsReferencingProblem": 6,
+      "problemInterpolationRate": 1,
+      "meanGuidanceLength": 1585,
+      "minGuidanceLength": 1344,
+      "maxGuidanceLength": 1873,
+      "usesEmoji": true,
+      "usesMarkdownBold": true
+    },
+    {
+      "technique": "biomimetic_path",
+      "totalSteps": 6,
+      "stepsReferencingProblem": 6,
+      "problemInterpolationRate": 1,
+      "meanGuidanceLength": 378,
+      "minGuidanceLength": 363,
+      "maxGuidanceLength": 392,
+      "usesEmoji": false,
+      "usesMarkdownBold": false
+    },
+    {
+      "technique": "cognitive_bias_audit",
+      "totalSteps": 9,
+      "stepsReferencingProblem": 2,
+      "problemInterpolationRate": 0.22,
+      "meanGuidanceLength": 577,
+      "minGuidanceLength": 332,
+      "maxGuidanceLength": 862,
+      "usesEmoji": true,
+      "usesMarkdownBold": true
+    },
+    {
+      "technique": "collective_intel",
+      "totalSteps": 5,
+      "stepsReferencingProblem": 2,
+      "problemInterpolationRate": 0.4,
+      "meanGuidanceLength": 93,
+      "minGuidanceLength": 80,
+      "maxGuidanceLength": 111,
+      "usesEmoji": true,
+      "usesMarkdownBold": false
+    },
+    {
+      "technique": "competing_hypotheses",
+      "totalSteps": 8,
+      "stepsReferencingProblem": 8,
+      "problemInterpolationRate": 1,
+      "meanGuidanceLength": 1004,
+      "minGuidanceLength": 780,
+      "maxGuidanceLength": 1189,
+      "usesEmoji": true,
+      "usesMarkdownBold": true
+    },
+    {
+      "technique": "concept_extraction",
+      "totalSteps": 4,
+      "stepsReferencingProblem": 2,
+      "problemInterpolationRate": 0.5,
+      "meanGuidanceLength": 109,
+      "minGuidanceLength": 80,
+      "maxGuidanceLength": 139,
+      "usesEmoji": true,
+      "usesMarkdownBold": false
+    },
+    {
+      "technique": "context_reframing",
+      "totalSteps": 5,
+      "stepsReferencingProblem": 5,
+      "problemInterpolationRate": 1,
+      "meanGuidanceLength": 1513,
+      "minGuidanceLength": 1369,
+      "maxGuidanceLength": 1673,
+      "usesEmoji": true,
+      "usesMarkdownBold": true
+    },
+    {
+      "technique": "criteria_based_analysis",
+      "totalSteps": 5,
+      "stepsReferencingProblem": 5,
+      "problemInterpolationRate": 1,
+      "meanGuidanceLength": 740,
+      "minGuidanceLength": 663,
+      "maxGuidanceLength": 814,
+      "usesEmoji": true,
+      "usesMarkdownBold": true
+    },
+    {
+      "technique": "cultural_integration",
+      "totalSteps": 5,
+      "stepsReferencingProblem": 5,
+      "problemInterpolationRate": 1,
+      "meanGuidanceLength": 179,
+      "minGuidanceLength": 159,
+      "maxGuidanceLength": 188,
+      "usesEmoji": false,
+      "usesMarkdownBold": false
+    },
+    {
+      "technique": "design_thinking",
+      "totalSteps": 5,
+      "stepsReferencingProblem": 1,
+      "problemInterpolationRate": 0.2,
+      "meanGuidanceLength": 100,
+      "minGuidanceLength": 90,
+      "maxGuidanceLength": 114,
+      "usesEmoji": true,
+      "usesMarkdownBold": false
+    },
+    {
+      "technique": "disney_method",
+      "totalSteps": 3,
+      "stepsReferencingProblem": 1,
+      "problemInterpolationRate": 0.33,
+      "meanGuidanceLength": 124,
+      "minGuidanceLength": 114,
+      "maxGuidanceLength": 129,
+      "usesEmoji": true,
+      "usesMarkdownBold": false
+    },
+    {
+      "technique": "first_principles",
+      "totalSteps": 5,
+      "stepsReferencingProblem": 5,
+      "problemInterpolationRate": 1,
+      "meanGuidanceLength": 374,
+      "minGuidanceLength": 368,
+      "maxGuidanceLength": 386,
+      "usesEmoji": false,
+      "usesMarkdownBold": false
+    },
+    {
+      "technique": "linguistic_forensics",
+      "totalSteps": 6,
+      "stepsReferencingProblem": 6,
+      "problemInterpolationRate": 1,
+      "meanGuidanceLength": 839,
+      "minGuidanceLength": 702,
+      "maxGuidanceLength": 917,
+      "usesEmoji": true,
+      "usesMarkdownBold": true
+    },
+    {
+      "technique": "meta_learning",
+      "totalSteps": 5,
+      "stepsReferencingProblem": 1,
+      "problemInterpolationRate": 0.2,
+      "meanGuidanceLength": 276,
+      "minGuidanceLength": 265,
+      "maxGuidanceLength": 300,
+      "usesEmoji": false,
+      "usesMarkdownBold": false
+    },
+    {
+      "technique": "neural_state",
+      "totalSteps": 4,
+      "stepsReferencingProblem": 2,
+      "problemInterpolationRate": 0.5,
+      "meanGuidanceLength": 114,
+      "minGuidanceLength": 99,
+      "maxGuidanceLength": 134,
+      "usesEmoji": true,
+      "usesMarkdownBold": false
+    },
+    {
+      "technique": "neuro_computational",
+      "totalSteps": 6,
+      "stepsReferencingProblem": 6,
+      "problemInterpolationRate": 1,
+      "meanGuidanceLength": 348,
+      "minGuidanceLength": 333,
+      "maxGuidanceLength": 367,
+      "usesEmoji": false,
+      "usesMarkdownBold": false
+    },
+    {
+      "technique": "nine_windows",
+      "totalSteps": 9,
+      "stepsReferencingProblem": 2,
+      "problemInterpolationRate": 0.22,
+      "meanGuidanceLength": 84,
+      "minGuidanceLength": 70,
+      "maxGuidanceLength": 114,
+      "usesEmoji": true,
+      "usesMarkdownBold": false
+    },
+    {
+      "technique": "paradoxical_problem",
+      "totalSteps": 4,
+      "stepsReferencingProblem": 1,
+      "problemInterpolationRate": 0.25,
+      "meanGuidanceLength": 272,
+      "minGuidanceLength": 239,
+      "maxGuidanceLength": 311,
+      "usesEmoji": false,
+      "usesMarkdownBold": false
+    },
+    {
+      "technique": "perception_optimization",
+      "totalSteps": 5,
+      "stepsReferencingProblem": 5,
+      "problemInterpolationRate": 1,
+      "meanGuidanceLength": 1563,
+      "minGuidanceLength": 1376,
+      "maxGuidanceLength": 1884,
+      "usesEmoji": true,
+      "usesMarkdownBold": true
+    },
+    {
+      "technique": "po",
+      "totalSteps": 4,
+      "stepsReferencingProblem": 2,
+      "problemInterpolationRate": 0.5,
+      "meanGuidanceLength": 120,
+      "minGuidanceLength": 97,
+      "maxGuidanceLength": 153,
+      "usesEmoji": true,
+      "usesMarkdownBold": false
+    },
+    {
+      "technique": "quantum_superposition",
+      "totalSteps": 6,
+      "stepsReferencingProblem": 1,
+      "problemInterpolationRate": 0.17,
+      "meanGuidanceLength": 185,
+      "minGuidanceLength": 155,
+      "maxGuidanceLength": 231,
+      "usesEmoji": false,
+      "usesMarkdownBold": false
+    },
+    {
+      "technique": "random_entry",
+      "totalSteps": 3,
+      "stepsReferencingProblem": 3,
+      "problemInterpolationRate": 1,
+      "meanGuidanceLength": 248,
+      "minGuidanceLength": 214,
+      "maxGuidanceLength": 294,
+      "usesEmoji": true,
+      "usesMarkdownBold": true
+    },
+    {
+      "technique": "reverse_benchmarking",
+      "totalSteps": 5,
+      "stepsReferencingProblem": 5,
+      "problemInterpolationRate": 1,
+      "meanGuidanceLength": 1190,
+      "minGuidanceLength": 990,
+      "maxGuidanceLength": 1394,
+      "usesEmoji": true,
+      "usesMarkdownBold": true
+    },
+    {
+      "technique": "scamper",
+      "totalSteps": 8,
+      "stepsReferencingProblem": 8,
+      "problemInterpolationRate": 1,
+      "meanGuidanceLength": 125,
+      "minGuidanceLength": 111,
+      "maxGuidanceLength": 158,
+      "usesEmoji": true,
+      "usesMarkdownBold": false
+    },
+    {
+      "technique": "six_hats",
+      "totalSteps": 7,
+      "stepsReferencingProblem": 7,
+      "problemInterpolationRate": 1,
+      "meanGuidanceLength": 168,
+      "minGuidanceLength": 112,
+      "maxGuidanceLength": 396,
+      "usesEmoji": true,
+      "usesMarkdownBold": false
+    },
+    {
+      "technique": "temporal_creativity",
+      "totalSteps": 6,
+      "stepsReferencingProblem": 1,
+      "problemInterpolationRate": 0.17,
+      "meanGuidanceLength": 200,
+      "minGuidanceLength": 181,
+      "maxGuidanceLength": 217,
+      "usesEmoji": false,
+      "usesMarkdownBold": false
+    },
+    {
+      "technique": "temporal_work",
+      "totalSteps": 5,
+      "stepsReferencingProblem": 1,
+      "problemInterpolationRate": 0.2,
+      "meanGuidanceLength": 106,
+      "minGuidanceLength": 84,
+      "maxGuidanceLength": 147,
+      "usesEmoji": true,
+      "usesMarkdownBold": false
+    },
+    {
+      "technique": "triz",
+      "totalSteps": 4,
+      "stepsReferencingProblem": 1,
+      "problemInterpolationRate": 0.25,
+      "meanGuidanceLength": 97,
+      "minGuidanceLength": 78,
+      "maxGuidanceLength": 112,
+      "usesEmoji": true,
+      "usesMarkdownBold": false
+    },
+    {
+      "technique": "yes_and",
+      "totalSteps": 4,
+      "stepsReferencingProblem": 2,
+      "problemInterpolationRate": 0.5,
+      "meanGuidanceLength": 107,
+      "minGuidanceLength": 90,
+      "maxGuidanceLength": 127,
+      "usesEmoji": true,
+      "usesMarkdownBold": false
+    }
+  ]
+}
