@@ -545,6 +545,11 @@ Focus on maximizing creative output and maintaining session flow.`;
         'Detect lollapalooza confluences where biases multiply',
         'Force inversion and disconfirmation against your own conclusion',
       ],
+      keeper_test: [
+        'Re-decide what you already hold instead of defending it',
+        'Separate carrying cost from switching cost, with sunk cost struck out',
+        'End with a verdict and a tripwire rather than an opinion',
+      ],
       latticework: [
         'Escape the one-model trap by applying multiple disciplinary lenses',
         'Surface where disciplines disagree and demand synthesis',

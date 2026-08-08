@@ -322,6 +322,7 @@ export class VisualFormatter {
       anecdotal_signal: '🔍',
       cognitive_bias_audit: '🪞',
       latticework: '🧰',
+      keeper_test: '🛒',
     };
     return emojis[technique] || '❓';
   }
@@ -361,6 +362,7 @@ export class VisualFormatter {
       anecdotal_signal: 'Anecdotal Signal Detection',
       cognitive_bias_audit: 'Cognitive Bias Audit',
       latticework: 'Latticework of Mental Models',
+      keeper_test: 'Keeper Test',
     };
     return names[technique] || technique;
   }

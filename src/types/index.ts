@@ -43,7 +43,8 @@ export type LateralTechnique =
   | 'perception_optimization'
   | 'anecdotal_signal'
   | 'cognitive_bias_audit'
-  | 'latticework';
+  | 'latticework'
+  | 'keeper_test';
 
 // Single source of truth for all lateral techniques
 // This ensures consistency across the codebase when iterating over all techniques
@@ -78,6 +79,7 @@ export const ALL_LATERAL_TECHNIQUES: readonly LateralTechnique[] = [
   'anecdotal_signal',
   'cognitive_bias_audit',
   'latticework',
+  'keeper_test',
 ] as const;
 
 export type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green' | 'purple';

@@ -429,6 +429,26 @@ export class TechniqueRecommender {
                     effectiveness: TECHNIQUE_FIT.STRONG,
                 });
                 break;
+            // Deliberately three entries, no more. Low-complexity problems get three
+            // recommendation slots, so a fourth would be invisible in exactly the way
+            // latticework is invisible in the crowded `decision` group above.
+            case 'retention':
+                recommendations.push({
+                    technique: 'keeper_test',
+                    reasoning: 'Re-decide the incumbent: would you take it on today, at the current price?',
+                    effectiveness: TECHNIQUE_FIT.DEFINING,
+                });
+                recommendations.push({
+                    technique: 'cognitive_bias_audit',
+                    reasoning: 'Surface the endowment, sunk-cost and status-quo pull toward keeping it',
+                    effectiveness: TECHNIQUE_FIT.PRIMARY,
+                });
+                recommendations.push({
+                    technique: 'nine_windows',
+                    reasoning: 'Its past row reconstructs why the thing exists before you judge it',
+                    effectiveness: TECHNIQUE_FIT.STRONG,
+                });
+                break;
             case 'communication':
             case 'stakeholder':
             case 'understanding':

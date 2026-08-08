@@ -35,6 +35,7 @@ const PRODUCIBLE_CATEGORIES = [
   'organizational',
   'paradoxical',
   'process',
+  'retention',
   'strategic',
   'systems',
   'technical',
@@ -92,6 +93,24 @@ describe('Discovery category reachability', () => {
         ],
       },
       {
+        category: 'retention',
+        problems: [
+          'Do we still need the QA task group?',
+          'Is the design review process still earning its keep?',
+          'We built an internal dashboard nobody opens',
+          'Keep or cut the quarterly offsite?',
+          // These reach retention only via the early end-of-life pass. Without
+          // it they are claimed by technical, organizational and decision
+          // respectively, on what the subject is rather than what is asked
+          // about it — which is how latticework ended up invisible.
+          'Can we decommission the staging cluster?',
+          'Time to retire the old Jenkins pipeline?',
+          'Should we sunset the v1 public API?',
+          'Should I cancel my Adobe subscription?',
+          'Nobody uses the legacy reporting service any more',
+        ],
+      },
+      {
         category: 'biological',
         problems: [
           'What can biomimicry teach us here?',
@@ -108,6 +127,40 @@ describe('Discovery category reachability', () => {
         });
       }
     }
+  });
+
+  describe('retention routing stays high-precision', () => {
+    // The end-of-life pass runs ahead of every topic detector, so a loose term
+    // reroutes unrelated problems. These are near-misses of the retention
+    // vocabulary — each contains a substring of a term it matches on. The
+    // cancellation case is why bare 'cancel' was removed from both lists.
+    const mustNotBeRetention = [
+      'How do we restructure the employee retirement plan?',
+      'The deprecated API is throwing warnings in production logs',
+      'Write a cancellation policy for the billing flow',
+      'How do we keep the p99 latency under 100ms?',
+      'Plan the migration so the team can renew focus on the roadmap',
+    ];
+
+    for (const problem of mustNotBeRetention) {
+      it(`leaves "${problem.slice(0, 40)}..." alone`, () => {
+        expect(analyzer.categorizeProblem(problem)).not.toBe('retention');
+      });
+    }
+  });
+
+  it('surfaces the keeper test for retention problems', () => {
+    // Appearing in the case group is not enough: low-complexity problems get
+    // three slots, which is why latticework is invisible in the crowded
+    // `decision` group. Assert on the truncated output, not the raw group.
+    const recommendations = recommender.recommendTechniques(
+      'retention',
+      undefined,
+      undefined,
+      'low',
+      registry
+    );
+    expect(recommendations.map(r => r.technique)).toContain('keeper_test');
   });
 
   it('surfaces the cognitive bias audit for decision problems', () => {

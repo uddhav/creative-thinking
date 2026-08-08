@@ -190,6 +190,13 @@ const TECHNIQUE_QUALITY_PROFILES: Record<LateralTechnique, Record<HumanisticQual
     curiosity: 0.5,
     justice: 0.7,
   },
+  keeper_test: {
+    intelligence: 0.8,
+    courage: 0.9,
+    tenacity: 0.6,
+    curiosity: 0.5,
+    justice: 0.6,
+  },
   latticework: {
     intelligence: 0.95,
     courage: 0.6,

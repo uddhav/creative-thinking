@@ -274,6 +274,11 @@ function getExpectedOutputs(technique) {
             'Lollapalooza confluence of stacking tendencies detected',
             'Inverted, disconfirmation-tested, debiased decision',
         ],
+        keeper_test: [
+            'The incumbent named, with what a further period of keeping it costs',
+            'A yes or no on re-acquiring it at the current price',
+            'A verdict with an owner and the tripwire that reopens it',
+        ],
         latticework: [
             'Problem examined through multiple disciplinary lenses',
             'Cross-disciplinary agreements, conflicts, and confluences synthesized',
@@ -525,6 +530,13 @@ function getExpectedOutputForStep(technique, step) {
             7: 'Lollapalooza confluence of stacking tendencies detected',
             8: 'Judgment inverted and disconfirming evidence hunted',
             9: 'Antidotes applied and debiased decision committed',
+        },
+        keeper_test: {
+            1: 'Incumbent named, its edges drawn, and the per-period cost of keeping it',
+            2: 'Original purpose reconstructed and tested for whether it is still live',
+            3: 'A plain yes or no on taking it on today, with the flip condition named',
+            4: 'Carrying, switching and opportunity cost separated; sunk cost struck out',
+            5: 'Verdict committed with an owner and the tripwire that forces a re-decision',
         },
         latticework: {
             1: 'Problem framed and the instinctive one-model bias named',

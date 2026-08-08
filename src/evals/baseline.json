@@ -1,13 +1,13 @@
 {
-  "generatedFrom": "5b15a08",
+  "generatedFrom": "cdc7ee9",
   "summary": {
-    "techniqueCount": 30,
-    "totalSteps": 164,
-    "stepsReferencingProblem": 164,
+    "techniqueCount": 31,
+    "totalSteps": 169,
+    "stepsReferencingProblem": 169,
     "overallProblemInterpolationRate": 1,
     "meanLengthSpreadRatio": 13.9,
-    "techniquesUsingEmoji": 22,
-    "techniquesUsingMarkdownBold": 10
+    "techniquesUsingEmoji": 23,
+    "techniquesUsingMarkdownBold": 11
   },
   "techniques": [
     {
@@ -141,6 +141,17 @@
       "maxGuidanceLength": 386,
       "usesEmoji": false,
       "usesMarkdownBold": false
+    },
+    {
+      "technique": "keeper_test",
+      "totalSteps": 5,
+      "stepsReferencingProblem": 5,
+      "problemInterpolationRate": 1,
+      "meanGuidanceLength": 651,
+      "minGuidanceLength": 601,
+      "maxGuidanceLength": 716,
+      "usesEmoji": true,
+      "usesMarkdownBold": true
     },
     {
       "technique": "latticework",

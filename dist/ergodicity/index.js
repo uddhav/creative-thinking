@@ -454,6 +454,11 @@ export class ErgodicityManager {
                 typicalCommitment: 0.4,
                 riskProfile: 'Low - Multi-model analysis with an explicit margin of safety',
             },
+            keeper_test: {
+                typicalReversibility: 0.3,
+                typicalCommitment: 0.7,
+                riskProfile: 'High - A verdict to cut may not be recoverable',
+            },
         };
         return profiles[technique];
     }
