@@ -161,6 +161,27 @@ describe('Discovery category reachability', () => {
     }
   });
 
+  describe('a stated alternative does not disqualify a retention decision', () => {
+    // The constructive-ask veto above must not reach the decisive verbs. The
+    // most natural way to ask a keep-or-cut question states the alternative as
+    // the other arm — "sunset it or migrate?" — and an earlier version of the
+    // veto read that alternative as the ask and rejected all of these.
+    const mustBeRetention = [
+      'Should we sunset the v1 API or migrate users to v2?',
+      'Do we decommission the staging cluster or fix it?',
+      'Should we retire the old pipeline or improve it?',
+      'Do we drop support for Java 11 or build a compatibility shim?',
+      'Phase out manual QA or improve the existing process?',
+      'Nobody uses the dashboard we built — keep it or drop it?',
+    ];
+
+    for (const problem of mustBeRetention) {
+      it(`keeps "${problem.slice(0, 40)}..." in retention`, () => {
+        expect(analyzer.categorizeProblem(problem)).toBe('retention');
+      });
+    }
+  });
+
   it('surfaces the keeper test for retention problems', () => {
     // Appearing in the case group is not enough: low-complexity problems get
     // three slots, which is why latticework is invisible in the crowded

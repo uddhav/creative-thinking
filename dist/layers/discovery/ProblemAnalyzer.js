@@ -165,26 +165,31 @@ export class ProblemAnalyzer {
      * detector, or appear here only paired with a thing being held.
      */
     detectExplicitEndOfLife(lowerText) {
-        // Retention vocabulary also shows up in problems that ask for something to
-        // be built, written or repaired — "draft the cancellation policy",
-        // "nobody reads our documentation, how do we fix it?". Those are
-        // constructive asks that merely mention an incumbent, and taking the early
-        // exit on them would outrank the topic detector that gets them right.
-        // Claiming priority requires that no constructive ask is present.
-        if (/\b(write|writing|draft|drafting|design|designing|build|building|create|creating|fix|fixing|improve|improving|redesign|rewrite|migrate|launch)\b/.test(lowerText)) {
-            return false;
-        }
-        // Unambiguous on their own: each names the retirement of an existing thing
-        // and has no common second sense.
+        // Decisive signals. Each names the retirement of an existing thing and has
+        // no common second sense, so nothing else in the sentence can outweigh it.
         const terminalVerbs = ['decommission', 'drop support', 'phase out', 'phasing out', 'mothball'];
         if (terminalVerbs.some(v => lowerText.includes(v))) {
             return true;
         }
-        // These read as end-of-life too, but each has a common non-retention sense
-        // — a retirement plan, a deprecated API throwing warnings, a sunset-themed
-        // campaign. Require an article so the word is doing verb work on a thing.
+        // Also decisive, but each has a common non-retention sense — a retirement
+        // plan, a deprecated API throwing warnings, a sunset-themed campaign. The
+        // article is what separates the verb from the adjective, so require it.
         if (/\b(retire|retiring|deprecate|deprecating|sunset|sunsetting)\s+(the|this|that|our|its|all)\b/.test(lowerText)) {
             return true;
+        }
+        // Everything below is weaker: it suggests an incumbent is in play without
+        // naming a decision about it. A constructive ask outweighs it, because
+        // "nobody reads our documentation — how do we fix it?" wants the docs
+        // improved, not retired, and the topic detectors route that better.
+        //
+        // The veto is scoped to these weak signals on purpose. Applying it to the
+        // decisive verbs above cost recall in the most natural phrasing of a
+        // keep-or-cut question, where the alternative is stated as the other arm:
+        // "sunset the v1 API or migrate users to v2?" is a retention decision, and
+        // the mention of migrating is the option being weighed, not the ask.
+        const constructiveAsk = /\b(write|writing|draft|drafting|design|designing|build|building|create|creating|fix|fixing|improve|improving|redesign|rewrite)\b/.test(lowerText);
+        if (constructiveAsk) {
+            return false;
         }
         // Stated disuse is evidence about an incumbent, not a defect report.
         // "Nobody uses the legacy reporting service" routed to `technical` on what
