@@ -13,8 +13,10 @@ import { ValidationError, ErrorCode } from '../errors/types.js';
 
 interface Tendency {
   id: string;
-  mungerName: string;
+  name: string;
   antidote: string;
+  /** True for tendencies added beyond Munger's 1995 list — see TENDENCIES. */
+  supplementary?: boolean;
 }
 
 interface BiasAuditStep extends StepInfo {
@@ -22,101 +24,132 @@ interface BiasAuditStep extends StepInfo {
 }
 
 /**
- * Single source of truth for Munger's standard causes of misjudgment. Inline
- * for now; promote to src/techniques/data/mungerTendencies.ts when a second
- * consumer (e.g. a generated catalog) appears.
+ * The tendencies this audit walks. Inline for now; promote to a shared data
+ * module when a second consumer (e.g. a generated catalog) appears.
+ *
+ * Entries without `supplementary` are Munger's own, from the 1995 talk. Those
+ * marked `supplementary: true` are not his — they are Kahneman-family, added
+ * because his taxonomy has no entry for the biases that attach to something you
+ * already hold. The flag is not decoration: the guidance renders the two groups
+ * under separate headings, so a reader is never shown a borrowed bias inside a
+ * list narrated in Munger's voice.
  */
 const TENDENCIES: readonly Tendency[] = [
   {
     id: 'incentives',
-    mungerName: 'Reward/punishment super-response',
+    name: 'Reward/punishment super-response',
     antidote: 'Follow the incentives; distrust the conclusion that pays you',
   },
   {
     id: 'agency',
-    mungerName: 'Incentive-caused bias in advisors',
+    name: 'Incentive-caused bias in advisors',
     antidote: 'Apply a windage factor to anyone who profits from your conclusion',
   },
   {
     id: 'denial',
-    mungerName: 'Simple psychological denial',
+    name: 'Simple psychological denial',
     antidote: 'Name the painful fact out loud',
   },
   {
     id: 'consistency',
-    mungerName: 'Consistency & commitment tendency',
+    name: 'Consistency & commitment tendency',
     antidote: 'Treat your conclusions as hypotheses; do not declare too early',
   },
-  { id: 'envy', mungerName: 'Envy / jealousy', antidote: 'Name envy as a driver and discount it' },
+  { id: 'envy', name: 'Envy / jealousy', antidote: 'Name envy as a driver and discount it' },
   {
     id: 'chemical',
-    mungerName: 'Chemical dependency',
+    name: 'Chemical dependency',
     antidote: 'Recognize the denial it always brings',
   },
   {
     id: 'liking_disliking',
-    mungerName: 'Liking / disliking distortion',
+    name: 'Liking / disliking distortion',
     antidote: 'Discount love of your own ideas; learn from the disliked',
   },
   {
     id: 'social_proof',
-    mungerName: 'Social proof',
+    name: 'Social proof',
     antidote: 'Run an independent pass; ignore the crowd under stress',
   },
   {
     id: 'authority',
-    mungerName: 'Over-influence by authority',
+    name: 'Over-influence by authority',
     antidote: 'Demand the why; let the co-pilot speak',
   },
   {
     id: 'reciprocation',
-    mungerName: 'Reciprocation tendency',
+    name: 'Reciprocation tendency',
     antidote: 'Beware unearned favors (Sam Walton took no gifts)',
   },
   {
     id: 'stress',
-    mungerName: 'Stress-induced mental change',
+    name: 'Stress-induced mental change',
     antidote: 'Recognize that stress distorts judgment; slow down',
   },
   {
     id: 'say_something',
-    mungerName: 'Say-something syndrome',
+    name: 'Say-something syndrome',
     antidote: 'Do not add noise; silence is acceptable',
   },
   {
     id: 'deprival',
-    mungerName: 'Deprival super-reaction',
+    name: 'Deprival super-reaction',
     antidote: 'Size the felt loss; refuse to escalate',
   },
   {
     id: 'gambling',
-    mungerName: 'Mis-gambling compulsion',
+    name: 'Mis-gambling compulsion',
     antidote: 'Beware variable reinforcement and near-misses',
   },
   {
     id: 'pavlovian',
-    mungerName: 'Pavlovian association',
+    name: 'Pavlovian association',
     antidote: 'Ask what really causes the correlation',
   },
   {
     id: 'contrast',
-    mungerName: 'Contrast-caused distortion',
+    name: 'Contrast-caused distortion',
     antidote: 'Check the absolute scale, not the comparison',
   },
   {
     id: 'availability',
-    mungerName: 'Availability-misweighing',
+    name: 'Availability-misweighing',
     antidote: 'Use base rates; think like Zeckhauser plays bridge',
   },
   {
     id: 'vivid',
-    mungerName: 'Over-influence by extra-vivid evidence',
+    name: 'Over-influence by extra-vivid evidence',
     antidote: 'Down-weight the vivid; weight the base rate',
   },
   {
     id: 'sensory_limits',
-    mungerName: 'Other sensation/cognition limits',
+    name: 'Other sensation/cognition limits',
     antidote: 'Accept the limits; array the facts on a theory structure',
+  },
+
+  // --- Supplementary: not on Munger's 1995 list ---
+  // These three are the specific distortions that attach to an incumbent — to
+  // something already owned, already paid for, already the default. Munger's
+  // taxonomy covers deprival (losing what you nearly have) but has no entry for
+  // the mirror cases, which is why a retention decision could pass the whole
+  // checklist untouched.
+  {
+    id: 'endowment',
+    name: 'Endowment effect',
+    antidote: 'Price it as a stranger would, not as the owner',
+    supplementary: true,
+  },
+  {
+    id: 'sunk_cost',
+    name: 'Sunk-cost commitment',
+    antidote: 'What is already spent is gone; decide on the costs still ahead',
+    supplementary: true,
+  },
+  {
+    id: 'status_quo',
+    name: 'Status-quo bias',
+    antidote: 'Ask whether you would choose this if it were not already the default',
+    supplementary: true,
   },
 ];
 
@@ -144,7 +177,15 @@ export class CognitiveBiasAuditHandler extends BaseTechniqueHandler {
       focus: 'Surface denial, commitment lock-in, envy, liking bias',
       emoji: '🧠',
       type: 'thinking',
-      tendencyIds: ['denial', 'consistency', 'envy', 'chemical', 'liking_disliking'],
+      tendencyIds: [
+        'denial',
+        'consistency',
+        'sunk_cost',
+        'status_quo',
+        'envy',
+        'chemical',
+        'liking_disliking',
+      ],
     },
     {
       name: 'Social Pressure Scan',
@@ -158,7 +199,7 @@ export class CognitiveBiasAuditHandler extends BaseTechniqueHandler {
       focus: 'Check deprival super-reaction and near-miss gambling',
       emoji: '🐶',
       type: 'thinking',
-      tendencyIds: ['deprival', 'gambling'],
+      tendencyIds: ['deprival', 'endowment', 'gambling'],
     },
     {
       name: 'Perception & Math Distortions',
@@ -259,12 +300,24 @@ export class CognitiveBiasAuditHandler extends BaseTechniqueHandler {
     // Append the structured tendency checklist for scan steps (data-driven).
     const ids = this.steps[step - 1]?.tendencyIds;
     if (ids && ids.length > 0) {
-      const lines = ids
+      const tendencies = ids
         .map(id => TENDENCY_BY_ID.get(id))
-        .filter((t): t is Tendency => t !== undefined)
-        .map(t => `- ${t.mungerName} → ${t.antidote}`)
-        .join('\n');
-      return `${base}\n\nRun the checklist for this lens:\n${lines}`;
+        .filter((t): t is Tendency => t !== undefined);
+      const render = (list: Tendency[]): string =>
+        list.map(t => `- ${t.name} → ${t.antidote}`).join('\n');
+
+      const mungers = tendencies.filter(t => !t.supplementary);
+      const borrowed = tendencies.filter(t => t.supplementary);
+
+      let checklist = '';
+      if (mungers.length > 0) {
+        checklist += `\n\nRun the checklist for this lens:\n${render(mungers)}`;
+      }
+      // Rendered separately so a borrowed bias is never presented as Munger's.
+      if (borrowed.length > 0) {
+        checklist += `\n\nNot on Munger's list, but they bite here too:\n${render(borrowed)}`;
+      }
+      return `${base}${checklist}`;
     }
     return base;
   }

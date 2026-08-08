@@ -65,7 +65,13 @@ export class ScamperHandler extends BaseTechniqueHandler {
     eliminate: {
       description: 'Remove elements',
       emoji: '❌',
-      riskQuestion: 'What is permanently lost through elimination?',
+      // Two-sided by design. This asked only what removal costs, which quietly
+      // made keeping the free option — the cost of retention never appeared in
+      // the question at all. The reversibility rating below is NOT softened:
+      // deletion genuinely is harder to undo than addition, and the staged
+      // alternatives are sound engineering rather than bias.
+      riskQuestion:
+        'What is permanently lost through elimination — and what does keeping it continue to cost?',
       pathIndicator: '🔒 Irreversible',
       commitmentLevel: 'irreversible',
       typicalReversibilityCost: 0.85,
