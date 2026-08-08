@@ -135,11 +135,23 @@ describe('Discovery category reachability', () => {
     // vocabulary — each contains a substring of a term it matches on. The
     // cancellation case is why bare 'cancel' was removed from both lists.
     const mustNotBeRetention = [
+      // Substring near-misses of the vocabulary.
       'How do we restructure the employee retirement plan?',
       'The deprecated API is throwing warnings in production logs',
       'Write a cancellation policy for the billing flow',
       'How do we keep the p99 latency under 100ms?',
       'Plan the migration so the team can renew focus on the roadmap',
+      'Draft marketing copy for the sunset-themed campaign',
+      'Customers keep asking about seats pricing on the contract page',
+      // Constructive asks that merely mention an incumbent. The end-of-life
+      // pass must yield to the topic detectors on these — the ask is to build
+      // or repair the thing, not to decide whether to keep it.
+      'Nobody reads our documentation — how do we fix it?',
+      'We need an end of life support page for customers',
+      'Build a license key validation service',
+      // A service that shuts down on its own is an outage, not a decision.
+      'Our service will shut down if memory pressure keeps climbing',
+      'The database shut down unexpectedly during peak traffic',
     ];
 
     for (const problem of mustNotBeRetention) {

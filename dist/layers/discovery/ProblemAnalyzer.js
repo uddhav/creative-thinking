@@ -165,33 +165,32 @@ export class ProblemAnalyzer {
      * detector, or appear here only paired with a thing being held.
      */
     detectExplicitEndOfLife(lowerText) {
-        const terminalVerbs = [
-            'sunset',
-            'decommission',
-            'drop support',
-            'phase out',
-            'phasing out',
-            'wind down',
-            'winding down',
-            'end of life',
-            'end-of-life',
-            'mothball',
-            // Stated disuse is evidence about an incumbent, not a defect report.
-            // "Nobody uses the legacy reporting service" routed to `technical`
-            // because of what the service is, not what is being asked about it.
-            'nobody uses',
-            'nobody opens',
-            'nobody reads',
-            'no one uses',
-            'no longer used',
-        ];
+        // Retention vocabulary also shows up in problems that ask for something to
+        // be built, written or repaired — "draft the cancellation policy",
+        // "nobody reads our documentation, how do we fix it?". Those are
+        // constructive asks that merely mention an incumbent, and taking the early
+        // exit on them would outrank the topic detector that gets them right.
+        // Claiming priority requires that no constructive ask is present.
+        if (/\b(write|writing|draft|drafting|design|designing|build|building|create|creating|fix|fixing|improve|improving|redesign|rewrite|migrate|launch)\b/.test(lowerText)) {
+            return false;
+        }
+        // Unambiguous on their own: each names the retirement of an existing thing
+        // and has no common second sense.
+        const terminalVerbs = ['decommission', 'drop support', 'phase out', 'phasing out', 'mothball'];
         if (terminalVerbs.some(v => lowerText.includes(v))) {
             return true;
         }
-        // 'retire' and 'deprecate' also read as end-of-life, but both have common
-        // non-retention senses — a retirement plan, a deprecated API throwing
-        // warnings. Require an article so the word is doing verb work on a thing.
-        if (/\b(retire|retiring|deprecate|deprecating)\s+(the|this|that|our|its|all)\b/.test(lowerText)) {
+        // These read as end-of-life too, but each has a common non-retention sense
+        // — a retirement plan, a deprecated API throwing warnings, a sunset-themed
+        // campaign. Require an article so the word is doing verb work on a thing.
+        if (/\b(retire|retiring|deprecate|deprecating|sunset|sunsetting)\s+(the|this|that|our|its|all)\b/.test(lowerText)) {
+            return true;
+        }
+        // Stated disuse is evidence about an incumbent, not a defect report.
+        // "Nobody uses the legacy reporting service" routed to `technical` on what
+        // the service is, rather than on what is being asked about it.
+        const disuse = ['nobody uses', 'nobody opens', 'nobody reads', 'no one uses', 'no longer used'];
+        if (disuse.some(d => lowerText.includes(d))) {
             return true;
         }
         // 'cancel' and 'renew' only mean retention next to something being held.
@@ -239,10 +238,12 @@ export class ProblemAnalyzer {
             'worth keeping',
             'worth maintaining',
             // Ending it. The unambiguous verbs are matched earlier, in
-            // detectExplicitEndOfLife; only 'shut down' is left here, because it
-            // reads as an outage as often as a retirement and should not outrank
-            // the topic detectors.
-            'shut down',
+            // detectExplicitEndOfLife; only 'shut down' is left here, because a
+            // service that shuts down on its own is an outage, not a decision. The
+            // article is what separates the two, so it is required.
+            'shut down the',
+            'shut it down',
+            'shutting down the',
             // Cancelling and renewing are matched earlier, paired with the thing
             // being held. Bare 'cancel' belongs in neither list: as a substring it
             // also fires on "write a cancellation policy", which is a writing task.
