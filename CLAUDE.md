@@ -206,7 +206,7 @@ src/
 │   ├── RequestHandlers.ts    # Tool request routing and dispatch
 │   ├── SessionOperationsHandler.ts # Session lifecycle operations
 │   ├── SamplingHandler.ts    # MCP Sampling request handling
-│   └── PromptsHandler.ts     # 9 MCP prompts for guided sessions
+│   └── PromptsHandler.ts     # 12 MCP prompts for guided sessions
 ├── config/                   # CompletionEnforcementConfig, timeouts
 ├── benchmarks/               # Performance benchmark scripts
 ├── ergodicity/               # Path dependency tracking, early warning system, escape protocols

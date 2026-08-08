@@ -224,6 +224,27 @@ export class PromptsHandler {
                     },
                 ],
             },
+            {
+                name: 'keeper-test',
+                description: 'Re-decide something already in place — a role, a team, a library, a subscription — by asking whether you would take it on today rather than whether it has failed badly enough to remove',
+                arguments: [
+                    {
+                        name: 'incumbent',
+                        description: 'The thing being re-decided. Name the unit that would actually stop if you said no',
+                        required: true,
+                    },
+                    {
+                        name: 'cost_per_period',
+                        description: 'What one more period of keeping it costs in money, attention and calendar',
+                        required: false,
+                    },
+                    {
+                        name: 'alternatives',
+                        description: 'What you would use instead, at what price, if it were not already here',
+                        required: false,
+                    },
+                ],
+            },
         ];
     }
     /**
@@ -453,6 +474,26 @@ export class PromptsHandler {
                             content: {
                                 type: 'text',
                                 text: 'I\'ll invert the problem the way Munger and Jacobi insist — "all I want to know is where I\'m going to die, so I\'ll never go there."\n\nStep 1: Call `discover_techniques` with `persona: "charlie_munger"`, framing the problem as its inverse ("what would guarantee this fails?").\nStep 2: Call `plan_thinking_session` with `persona: "charlie_munger"`, biasing toward `reverse_benchmarking` (anti-patterns), `cognitive_bias_audit`, and `latticework` (whose economics lens carries the inversion model).\nStep 3: Execute each step with `execute_thinking_step`, setting `persona: "charlie_munger"`. For every candidate path, list what would make it fail, then design to remove those failure modes.\n\nOutput: a ranked list of failure modes to avoid, the incentives pushing toward each, and the minimal moves that eliminate them.',
+                            },
+                        },
+                    ],
+                };
+            case 'keeper-test':
+                return {
+                    description: prompt.description || '',
+                    messages: [
+                        {
+                            role: 'user',
+                            content: {
+                                type: 'text',
+                                text: 'Re-decide whether to keep this: {{incumbent}}. Keeping it costs {{cost_per_period}} per period. The alternatives are {{alternatives}}.',
+                            },
+                        },
+                        {
+                            role: 'assistant',
+                            content: {
+                                type: 'text',
+                                text: "I'll run the Keeper Test, which re-decides an incumbent instead of defending it. The question is not whether it has failed badly enough to remove — it is whether, if it weren't already here, I would take it on today at today's price.\n\nStep 1: Call `discover_techniques` with the problem framed as a retention decision.\nStep 2: Call `plan_thinking_session` with `techniques: [\"keeper_test\"]`, adding `cognitive_bias_audit` if the decision has an owner with something at stake.\nStep 3: Execute all five steps with `execute_thinking_step`:\n- Name the incumbent and draw its edges, so it can be re-decided rather than defended\n- Reconstruct the fence — what it was adopted to solve, and whether that problem is still live\n- Run the re-acquisition test, answering yes or no before giving the reason\n- Price it honestly: carrying cost per period, switching cost paid once, opportunity cost of the freed resource, with sunk cost struck out\n- Commit to keep, trim, replace or drop, with an owner and a tripwire\n\nOutput: a verdict with an owner and a date, plus the condition that forces the next re-decision. Retention with no tripwire is a default, not a decision.",
                             },
                         },
                     ],

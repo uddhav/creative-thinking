@@ -412,10 +412,18 @@ export class ExecutionResponseBuilder {
     session: SessionData,
     input: ExecuteThinkingStepInput
   ): string[] {
+    // Only this technique's own steps. Handlers label insights by position —
+    // `this.steps[index]` — so in a multi-technique plan the preceding
+    // technique's entries shift every label onto the wrong step and push the
+    // final step off the end of the array, discarding it. A session running
+    // disney_method before keeper_test reported keeper_test's "Reconstruct the
+    // Fence" output under "Decide and Set the Trigger" and dropped the verdict.
+    const techniqueHistory = session.history.filter(entry => entry.technique === input.technique);
+
     const currentInsights = monitorCriticalSection(
       'extract_insights',
-      () => handler.extractInsights(session.history),
-      { technique: input.technique, historyLength: session.history.length }
+      () => handler.extractInsights(techniqueHistory),
+      { technique: input.technique, historyLength: techniqueHistory.length }
     );
 
     currentInsights.forEach((insight: string) => {

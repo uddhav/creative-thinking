@@ -11,7 +11,7 @@ describe('PromptsHandler', () => {
       const handler = new PromptsHandler();
       const prompts = handler.getPrompts();
 
-      expect(prompts).toHaveLength(11);
+      expect(prompts).toHaveLength(12);
 
       // Check first prompt structure
       const problemDiscovery = prompts[0];
