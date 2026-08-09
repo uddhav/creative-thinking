@@ -3,6 +3,7 @@
  * Extracted from index.ts to improve maintainability
  */
 import { CallToolRequestSchema, ListToolsRequestSchema, ListPromptsRequestSchema, GetPromptRequestSchema, } from '@modelcontextprotocol/sdk/types.js';
+import { ALL_LATERAL_TECHNIQUES } from '../types/index.js';
 import { workflowGuard } from '../core/WorkflowGuard.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 import { getAllTools } from './ToolDefinitions.js';
@@ -151,9 +152,12 @@ export class RequestHandlers {
                         `  "problem": "Your problem here",\n` +
                         `  "techniques": ["six_hats", "scamper"]\n` +
                         `}\n\n` +
-                        `Valid techniques: six_hats, po, random_entry, scamper, concept_extraction, ` +
-                        `yes_and, design_thinking, triz, neural_state, temporal_work, cross_cultural, ` +
-                        `collective_intel, disney_method, nine_windows`);
+                        // Built from the source of truth. The hand-written list this
+                        // replaced named 14 techniques and still offered `cross_cultural`,
+                        // which has not existed since it was consolidated into
+                        // cultural_integration — so the error told callers to retry with an
+                        // invalid name.
+                        `Valid techniques: ${ALL_LATERAL_TECHNIQUES.join(', ')}`);
                 }
                 break;
             case 'execute_thinking_step': {

@@ -2,6 +2,7 @@
  * Response Builder
  * Constructs formatted responses for MCP tools
  */
+import { ALL_LATERAL_TECHNIQUES } from '../types/index.js';
 import { CreativeThinkingError, ValidationError, ErrorCode } from '../errors/types.js';
 import { JsonOptimizer } from '../utils/JsonOptimizer.js';
 import { SessionEncoder } from './session/SessionEncoder.js';
@@ -111,23 +112,11 @@ export class ResponseBuilder {
             reasoning: this.buildReasoningString(output),
             suggestedWorkflow: this.buildSuggestedWorkflow(output),
             nextStepGuidance: this.buildNextStepGuidance(output),
-            // Include all available techniques for LLM reference
-            availableTechniques: [
-                'six_hats',
-                'po',
-                'random_entry',
-                'scamper',
-                'concept_extraction',
-                'yes_and',
-                'design_thinking',
-                'triz',
-                'neural_state',
-                'temporal_work',
-                'cultural_integration',
-                'collective_intel',
-                'disney_method',
-                'nine_windows',
-            ],
+            // Include all available techniques for LLM reference. Read from the
+            // source of truth rather than copied: the copy this replaced had drifted
+            // to 14 entries, so the discovery response told the model that 18 of the
+            // techniques it is allowed to plan with did not exist.
+            availableTechniques: [...ALL_LATERAL_TECHNIQUES],
             workflowReminder: {
                 currentStep: 1,
                 totalSteps: 3,

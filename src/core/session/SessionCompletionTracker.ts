@@ -5,6 +5,7 @@
 
 import type { SessionData, LateralTechnique } from '../../types/index.js';
 import type { PlanThinkingSessionOutput } from '../../types/planning.js';
+import { TechniqueRegistry } from '../../techniques/TechniqueRegistry.js';
 
 /**
  * Technique completion status
@@ -583,45 +584,20 @@ export class SessionCompletionTracker {
   }
 
   /**
-   * Get estimated steps for a technique
+   * Get the step count for a technique.
+   *
+   * Asks the registry. This used to be a hand-copied table of every technique's
+   * totalSteps, which nothing compared against the handlers — a technique whose
+   * step count changed left the table stale, and the `|| 5` fallback turned a
+   * missing entry into a plausible wrong number rather than an error. Progress
+   * is reported as completedSteps / this, so a stale entry silently misreports
+   * how far along a session is.
    */
   private getEstimatedStepsForTechnique(technique: LateralTechnique): number {
-    const stepCounts: Record<LateralTechnique, number> = {
-      six_hats: 7,
-      po: 4,
-      random_entry: 3,
-      scamper: 8,
-      concept_extraction: 4,
-      yes_and: 4,
-      design_thinking: 5,
-      triz: 4,
-      neural_state: 3,
-      temporal_work: 5,
-      cultural_integration: 5,
-      collective_intel: 5,
-      disney_method: 3,
-      nine_windows: 9,
-      quantum_superposition: 4,
-      temporal_creativity: 6,
-      paradoxical_problem: 4,
-      meta_learning: 4,
-      biomimetic_path: 6,
-      first_principles: 5,
-      neuro_computational: 5,
-      criteria_based_analysis: 5,
-      linguistic_forensics: 6,
-      competing_hypotheses: 8,
-      reverse_benchmarking: 5,
-      context_reframing: 5,
-      perception_optimization: 5,
-      anecdotal_signal: 6,
-      cognitive_bias_audit: 9,
-      latticework: 7,
-      keeper_test: 5,
-      steelman_red_team: 7,
-    };
-
-    return stepCounts[technique] || 5;
+    const registry = TechniqueRegistry.getInstance();
+    // A persisted session can name a technique this build no longer registers;
+    // report a neutral estimate rather than throwing on load.
+    return registry.isValidTechnique(technique) ? registry.getTechniqueSteps(technique) : 5;
   }
 
   /**

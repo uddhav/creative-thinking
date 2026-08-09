@@ -188,7 +188,7 @@ src/
 ├── techniques/
 │   ├── BaseTechniqueHandler.ts   # Abstract base class all handlers extend
 │   ├── TechniqueRegistry.ts      # Singleton registry — imports and registers all 32 handlers
-│   └── [TechniqueName]Handler.ts # One file per technique (33 files incl. GenericHandler fallback)
+│   └── [TechniqueName]Handler.ts # One per technique (33 files: 32 registered + unwired GenericHandler)
 ├── personas/                 # Persona system for personality-driven sessions
 │   ├── types.ts              # PersonaDefinition, DebateConfig, PersonaStepContext
 │   ├── catalog.ts            # BUILTIN_PERSONAS (8 built-in) + external JSON loading
@@ -300,12 +300,13 @@ Comprehensive checklist in [CONTRIBUTING.md](./CONTRIBUTING.md) — the key touc
    `src/persistence/types.ts`, declared there to avoid a circular import
 2. **Handler**: `src/techniques/[Name]Handler.ts` extending `BaseTechniqueHandler`
 3. **Registry**: `src/techniques/TechniqueRegistry.ts` — import and register
-4. **Eight exhaustive `Record<LateralTechnique, …>` maps** — `tsc` fails until all are present,
-   which is the completeness check: `SessionCompletionTracker` (`stepCounts`), `ergodicity/index.ts`
-   (`profiles`, function-local), `ergodicity/pathMemory.ts` (`techniqueConstraintMap`),
-   `discovery/TechniqueScorer.ts` (`techniqueMetadata`), `discovery/HumanisticQualityCoverage.ts`
-   (`TECHNIQUE_QUALITY_PROFILES`), `sampling/features/TechniqueRecommender.ts` (`benefits`), and
-   **two** in `utils/VisualFormatter.ts` (`emojis`, `names`)
+4. **Seven exhaustive `Record<LateralTechnique, …>` maps** — `tsc` fails until all are present,
+   which is the completeness check: `ergodicity/index.ts` (`profiles`, function-local),
+   `ergodicity/pathMemory.ts` (`techniqueConstraintMap`), `discovery/TechniqueScorer.ts`
+   (`techniqueMetadata`), `discovery/HumanisticQualityCoverage.ts` (`TECHNIQUE_QUALITY_PROFILES`),
+   `sampling/features/TechniqueRecommender.ts` (`benefits`), and **two** in
+   `utils/VisualFormatter.ts` (`emojis`, `names`). Step counts are **not** among them —
+   `SessionCompletionTracker` asks the registry, so a new technique needs nothing there
 5. **Planning integration**: `src/layers/planning.ts` — `getExpectedOutputs()`,
    `getExpectedOutputForStep()` (no typecheck; silently absent if skipped)
 6. **Recommender**: `src/layers/discovery/TechniqueRecommender.ts` — a case group whose category
