@@ -55,7 +55,8 @@
     "release:minor": "standard-version --release-as minor",
     "release:major": "standard-version --release-as major",
     "commit": "cz",
-    "prepare": "husky"
+    "prepare": "husky",
+    "evals:baseline": "node scripts/generate-evals-baseline.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",

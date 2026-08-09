@@ -268,6 +268,21 @@ another technique.
 **Removal is allowed.** If a technique fails bar 2 against a newer one, retiring it is a legitimate
 change. A catalogue that only ever grows is not curated.
 
+**Record bar 2 in the handler's header.** Every handler's file comment must name its nearest
+neighbour and the observable difference between their outputs — not the difference in intent, the
+difference a reader would see in two finished sessions. `SteelmanRedTeamHandler.ts` is the worked
+example: it names four neighbours, runs one case (consolidating onto a single observability vendor)
+through two of them, and supplies the control that separates them — hand both to a new hire with no
+stake, and the bias audit finds nothing while the red team still returns the missing price-cap
+clause, because the adversary's leverage is a property of the contract rather than of anyone's
+psychology.
+
+Write it while you still have the alternative in mind. A catalogue-wide pass over 32 techniques
+found that every claim of distinctness made in a description held up, and every one made only in a
+commit message did not — the description is where the claim gets checked, and the header is where
+the evidence for it belongs. It is also what makes a later removal decidable: a header that names a
+neighbour turns "these feel similar" into a comparison someone can actually run.
+
 ### Writing step guidance
 
 The guidance strings are the product — they are what the model consumes. Rules:
