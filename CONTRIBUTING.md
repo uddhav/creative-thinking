@@ -791,16 +791,31 @@ BREAKING CHANGE: The execute_thinking_step tool now requires a planId parameter"
 
 ### Automated Release Process
 
+Two workflows split the work, because a repository ruleset on `main` requires every change to arrive
+through a pull request. `@semantic-release/git` used to commit the version bump straight to `main`
+and was rejected every time (`GH013`), which is why nothing released between May and August 2026. It
+has been removed from `.releaserc.json`.
+
+On merge of any PR to `main`, `.github/workflows/pr-version-bump.yml` runs and:
+
+1. Determines the bump (patch / minor / major) from the PR title, body and commits.
+2. Bumps `package.json` / `package-lock.json` and prepends a `CHANGELOG.md` entry.
+3. Opens a `chore(release):` pull request with the result — satisfying the ruleset rather than
+   fighting it. Its own `if:` guard skips `chore(release)` titles, so merging that PR cannot loop.
+
 On push to `main`, `.github/workflows/semantic-release.yml` runs and:
 
 1. Analyzes commits since the last release tag.
 2. Determines the version bump (patch / minor / major) per Conventional Commits.
-3. Updates `CHANGELOG.md` and bumps the version in `package.json` / `package-lock.json` via
-   `@semantic-release/git`.
-4. Pushes the new commit and tag (e.g. `v0.7.0`) back to `main`.
-5. Creates the GitHub Release with auto-generated notes via `@semantic-release/github`.
-6. Dispatches `release-binaries.yml` against the new tag (see below). When no commit since the last
+3. Creates the tag (e.g. `v0.7.0`) and the GitHub Release with auto-generated notes via
+   `@semantic-release/github`. It no longer writes to `main` — tags are not covered by the
+   pull-request rule.
+4. Dispatches `release-binaries.yml` against the new tag (see below). When no commit since the last
    release warrants a bump, semantic-release no-ops and no tag is pushed.
+
+Both derive the bump from Conventional Commits and should agree, but they compute it independently
+and nothing enforces a match. If `package.json` and the newest tag ever disagree, the tag is the
+released artifact and `package.json` is what needs correcting.
 
 If no `feat:` / `fix:` / `feat!:` commit landed since the last release, the workflow runs but
 produces no release.

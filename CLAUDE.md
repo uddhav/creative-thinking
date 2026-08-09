@@ -349,17 +349,30 @@ Tests auto-build before running (`pretest` script runs `npm run build`).
 
 ## Release pipeline
 
-Two workflows on `main`, chained by an explicit dispatch:
+Three workflows, because a repository ruleset on `main` requires every change to arrive through a
+pull request. `@semantic-release/git` used to push the version commit directly and was rejected
+every time (`GH013: changes must be made through a pull request`), which is why nothing released
+between May and August 2026. Version bumps now go through a PR; semantic-release only tags.
 
-1. **`.github/workflows/semantic-release.yml`** — runs on every push to `main`. Calls
+1. **`.github/workflows/pr-version-bump.yml`** — runs when any PR merges to `main`. Determines the
+   bump from the PR title/body/commits, updates `package.json` + `CHANGELOG.md`, and opens a
+   `chore(release):` PR with the result. Its `if:` guard skips `chore(release)` titles so merging
+   that PR cannot re-trigger it.
+
+   Everything user-controlled (PR title, body, author login, merging actor) reaches the shell via
+   `env:`, never by interpolating `${{ … }}` into a `run:` block. Interpolation puts the text into
+   the script _before_ bash parses it, so backticks in a PR description execute — that is what made
+   this workflow fail every run until August 2026. Keep new steps to the same rule.
+
+2. **`.github/workflows/semantic-release.yml`** — runs on every push to `main`. Calls
    `npx semantic-release`, which analyzes commits since the last tag, determines the version bump
    from Conventional Commits (`fix:` → patch, `feat:` → minor, `feat!:` / `BREAKING CHANGE:` →
-   major), updates `CHANGELOG.md` + `package.json`, pushes the new commit and tag, and creates the
-   GitHub Release with auto-generated notes. After `semantic-release` returns, a follow-up step runs
-   `git describe --tags --exact-match HEAD` to detect whether a new tag was created this run; if so,
-   it dispatches `release-binaries.yml` against that tag.
+   major), and creates the tag plus the GitHub Release with auto-generated notes. It does **not**
+   write to `main` — tags are not covered by the pull-request rule. After `semantic-release`
+   returns, a follow-up step runs `git describe --tags --exact-match HEAD` to detect whether a new
+   tag was created this run; if so, it dispatches `release-binaries.yml` against that tag.
 
-2. **`.github/workflows/release-binaries.yml`** — builds standalone single-file binaries via
+3. **`.github/workflows/release-binaries.yml`** — builds standalone single-file binaries via
    `bun build --compile`. Triggered by:
    - `push: tags: ['v*.*.*']` — manual tag pushes by a developer
      (`git tag v0.7.0 && git push origin v0.7.0`).
