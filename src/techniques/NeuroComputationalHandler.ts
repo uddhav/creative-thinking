@@ -16,6 +16,22 @@
 import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 
+/**
+ * Named convergence ratings, so callers report a judgement instead of copying a
+ * decimal out of an error message.
+ *
+ * Same problem the discovery layer's effectiveness scale had: the numbers were
+ * invented, they looked measured, and worked examples carrying values like 0.85
+ * taught every caller to invent their own to matching precision. Naming the
+ * tiers keeps the wire format numeric while making it plain that only a few
+ * levels are meaningful, and that the rating needs a stated basis.
+ */
+export const CONVERGENCE_RATING = {
+  STRONG: 0.9,
+  MODERATE: 0.7,
+  WEAK: 0.5,
+} as const;
+
 export class NeuroComputationalHandler extends BaseTechniqueHandler {
   private readonly steps: StepInfo[] = [
     {
@@ -25,15 +41,13 @@ export class NeuroComputationalHandler extends BaseTechniqueHandler {
       type: 'thinking',
     },
     {
+      // Generation and interference analysis are one step. Splitting them asked
+      // the same question twice — which of these patterns reinforce and which
+      // cancel — and the second half duplicated quantum_superposition's
+      // interference step almost word for word.
       name: 'Pattern Generation',
-      focus: 'Generate diverse solution patterns',
+      focus: 'Generate diverse solution patterns and analyze how they interact',
       emoji: '🌊',
-      type: 'thinking',
-    },
-    {
-      name: 'Interference Analysis',
-      focus: 'Analyze pattern interactions',
-      emoji: '⚡',
       type: 'thinking',
     },
     {
@@ -114,7 +128,7 @@ export class NeuroComputationalHandler extends BaseTechniqueHandler {
     return {
       name: 'Neuro-Computational Synthesis',
       emoji: '⚛️',
-      totalSteps: 6,
+      totalSteps: 5,
       description:
         'Generate solutions using ARTIFICIAL neural network algorithms and computational models (NOT human cognition)',
       focus:
@@ -144,11 +158,10 @@ export class NeuroComputationalHandler extends BaseTechniqueHandler {
   getStepGuidance(step: number, problem: string): string {
     const guidanceMap: Record<number, string> = {
       1: `Map "${problem}" to neural representations. Identify cognitive components: perception, memory, attention, executive control. Map connections between components. Define activation patterns and thresholds. Consider both serial and parallel processing pathways. What neural architectures best represent this problem space?`,
-      2: `Generate diverse solution patterns for: "${problem}". Activate multiple neural pathways simultaneously. Create variations through: random initialization, different connection weights, varied activation functions, alternative architectures. Generate at least 5-10 distinct patterns. Allow emergent properties to arise from interactions.`,
-      3: `Analyze interference between solution patterns for: "${problem}". Identify constructive interference (patterns that reinforce each other) and destructive interference (patterns that cancel out). Map synergies and conflicts. Calculate interference coefficients. Which combinations produce the most creative emergence?`,
-      4: `Synthesize patterns computationally for: "${problem}". Apply computational models: neural networks, genetic algorithms, evolutionary computation, swarm intelligence. Combine biological inspiration with computational efficiency. Create hybrid models that leverage both approaches. Generate novel combinations through computational synthesis.`,
-      5: `Run optimization cycles for: "${problem}". Iterate through: feedforward passes, backpropagation, weight adjustment, architecture evolution. Measure convergence metrics: coherence (internal consistency), novelty (creative distance from existing solutions), utility (practical value). Refine for optimal balance between exploration and exploitation.`,
-      6: `Converge to optimal creative solution for: "${problem}". Synthesize all neural-computational processes. Preserve key insights from each pattern. Ensure solution maintains: cognitive plausibility, computational efficiency, creative novelty, practical applicability. Document the emergence path for future learning.`,
+      2: `Generate diverse solution patterns for: "${problem}". Activate multiple neural pathways simultaneously. Create variations through: random initialization, different connection weights, varied activation functions, alternative architectures. Generate at least 5-10 distinct patterns. Then analyze how they interact: which reinforce each other (constructive interference), which cancel out (destructive interference), and which combinations produce the most creative emergence?`,
+      3: `Synthesize patterns computationally for: "${problem}". Apply computational models: neural networks, genetic algorithms, evolutionary computation, swarm intelligence. Combine biological inspiration with computational efficiency. Create hybrid models that leverage both approaches. Generate novel combinations through computational synthesis.`,
+      4: `Run optimization cycles for: "${problem}". Iterate through: feedforward passes, backpropagation, weight adjustment, architecture evolution. Rate convergence on each of coherence (internal consistency), novelty (creative distance from existing solutions) and utility (practical value), and say what the rating is based on. Refine for optimal balance between exploration and exploitation.`,
+      5: `Converge to optimal creative solution for: "${problem}". Synthesize all neural-computational processes. Preserve key insights from each pattern. Ensure solution maintains: cognitive plausibility, computational efficiency, creative novelty, practical applicability. Document the emergence path for future learning.`,
     };
 
     return (
@@ -177,8 +190,8 @@ export class NeuroComputationalHandler extends BaseTechniqueHandler {
             );
           }
           break;
-        case 2:
-          // Validate pattern generation
+        case 2: {
+          // Pattern generation now carries the interference analysis too.
           if (!stepData.patternGenerations) {
             throw new ValidationError(
               ErrorCode.MISSING_REQUIRED_FIELD,
@@ -187,13 +200,10 @@ export class NeuroComputationalHandler extends BaseTechniqueHandler {
               { step, technique: 'neuro_computational' }
             );
           }
-          break;
-        case 3: {
-          // Validate interference analysis - require both constructive and destructive
           if (!stepData.interferenceAnalysis) {
             throw new ValidationError(
               ErrorCode.MISSING_REQUIRED_FIELD,
-              'Step 3 (Interference Analysis) requires analyzing pattern interactions. ' +
+              'Step 2 (Pattern Generation) requires analyzing how the generated patterns interact. ' +
                 'Provide "interferenceAnalysis" object with BOTH constructive AND destructive arrays. ' +
                 'Example: { "interferenceAnalysis": { "constructive": ["synergy 1", "reinforcement 2"], "destructive": ["conflict 1", "cancellation 2"] }, "output": "..." }',
               'interferenceAnalysis',
@@ -214,7 +224,7 @@ export class NeuroComputationalHandler extends BaseTechniqueHandler {
           if (!analysis.constructive || !analysis.destructive) {
             throw new ValidationError(
               ErrorCode.MISSING_REQUIRED_FIELD,
-              'Step 3 (Interference Analysis) requires BOTH constructive AND destructive interference patterns. ' +
+              'Step 2 (Pattern Generation) requires BOTH constructive AND destructive interference patterns. ' +
                 'The interferenceAnalysis object must contain both "constructive" and "destructive" arrays. ' +
                 'Example: { "interferenceAnalysis": { "constructive": ["synergy 1"], "destructive": ["conflict 1"] }, "output": "..." }',
               'interferenceAnalysis',
@@ -233,12 +243,12 @@ export class NeuroComputationalHandler extends BaseTechniqueHandler {
           }
           break;
         }
-        case 4:
+        case 3:
           // Validate computational synthesis
           if (!stepData.computationalModels) {
             throw new ValidationError(
               ErrorCode.MISSING_REQUIRED_FIELD,
-              'Step 4 (Computational Synthesis) requires synthesizing patterns using computational models. ' +
+              'Step 3 (Computational Synthesis) requires synthesizing patterns using computational models. ' +
                 'Provide "computationalModels" (array) describing the models used. ' +
                 'Example: { "computationalModels": ["neural network", "genetic algorithm", "swarm optimization"], "output": "..." }',
               'computationalModels',
@@ -251,14 +261,15 @@ export class NeuroComputationalHandler extends BaseTechniqueHandler {
             );
           }
           break;
-        case 5:
+        case 4:
           // Validate optimization cycles - require both cycles and metrics
           if (!stepData.optimizationCycles || !stepData.convergenceMetrics) {
             throw new ValidationError(
               ErrorCode.MISSING_REQUIRED_FIELD,
-              'Step 5 (Optimization) requires iterating to improve solution quality with measured progress. ' +
-                'Provide BOTH "optimizationCycles" (number) AND "convergenceMetrics" (object with coherence, novelty, utility). ' +
-                'Example: { "optimizationCycles": 10, "convergenceMetrics": { "coherence": 0.85, "novelty": 0.7, "utility": 0.9 }, "output": "..." }',
+              'Step 4 (Optimization) requires iterating to improve solution quality with rated progress. ' +
+                'Provide BOTH "optimizationCycles" (number) AND "convergenceMetrics" (object rating coherence, novelty and utility). ' +
+                'Rate each as strong (0.9), moderate (0.7) or weak (0.5), and say in "output" what the rating is based on. ' +
+                'Example: { "optimizationCycles": 10, "convergenceMetrics": { "coherence": 0.9, "novelty": 0.7, "utility": 0.9 }, "output": "..." }',
               'optimizationCycles',
               {
                 step,
@@ -266,20 +277,25 @@ export class NeuroComputationalHandler extends BaseTechniqueHandler {
                 requiredFields: ['optimizationCycles', 'convergenceMetrics'],
                 example: {
                   optimizationCycles: 10,
-                  convergenceMetrics: { coherence: 0.85, novelty: 0.7, utility: 0.9 },
+                  convergenceMetrics: {
+                    coherence: CONVERGENCE_RATING.STRONG,
+                    novelty: CONVERGENCE_RATING.MODERATE,
+                    utility: CONVERGENCE_RATING.STRONG,
+                  },
                 },
               }
             );
           }
           break;
-        case 6:
+        case 5:
           // Validate convergence - require synthesis and final metrics
           if (!stepData.finalSynthesis || !stepData.convergenceMetrics) {
             throw new ValidationError(
               ErrorCode.MISSING_REQUIRED_FIELD,
-              'Step 6 (Convergence) requires achieving optimal solution with final metrics. ' +
-                'Provide BOTH "finalSynthesis" (string) AND "convergenceMetrics" (object with final scores). ' +
-                'Example: { "finalSynthesis": "Optimized solution achieving target performance", "convergenceMetrics": { "coherence": 0.95, "novelty": 0.8, "utility": 0.92 }, "output": "..." }',
+              'Step 5 (Convergence) requires achieving optimal solution with final ratings. ' +
+                'Provide BOTH "finalSynthesis" (string) AND "convergenceMetrics" (object rating coherence, novelty and utility). ' +
+                'Rate each as strong (0.9), moderate (0.7) or weak (0.5), and say in "output" what the rating is based on. ' +
+                'Example: { "finalSynthesis": "Optimized solution achieving target performance", "convergenceMetrics": { "coherence": 0.9, "novelty": 0.7, "utility": 0.9 }, "output": "..." }',
               'finalSynthesis',
               {
                 step,
@@ -287,7 +303,11 @@ export class NeuroComputationalHandler extends BaseTechniqueHandler {
                 requiredFields: ['finalSynthesis', 'convergenceMetrics'],
                 example: {
                   finalSynthesis: 'Final optimized neural-computational solution',
-                  convergenceMetrics: { coherence: 0.95, novelty: 0.8, utility: 0.92 },
+                  convergenceMetrics: {
+                    coherence: CONVERGENCE_RATING.STRONG,
+                    novelty: CONVERGENCE_RATING.MODERATE,
+                    utility: CONVERGENCE_RATING.STRONG,
+                  },
                 },
               }
             );

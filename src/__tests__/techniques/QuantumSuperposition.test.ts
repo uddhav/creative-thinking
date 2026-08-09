@@ -19,7 +19,7 @@ describe('QuantumSuperpositionHandler', () => {
 
       expect(info.name).toBe('Quantum Superposition');
       expect(info.emoji).toBe('⚛️');
-      expect(info.totalSteps).toBe(6);
+      expect(info.totalSteps).toBe(4);
       expect(info.description).toContain('multiple contradictory solution states');
       expect(info.focus).toContain('Simultaneous exploration');
       expect(info.enhancedFocus).toContain('quantum principles');
@@ -31,9 +31,7 @@ describe('QuantumSuperpositionHandler', () => {
     it('should return correct step information for each step', () => {
       const steps = [
         { name: 'State Generation', emoji: '⚛️' },
-        { name: 'Interference Mapping', emoji: '🌊' },
-        { name: 'Entanglement Analysis', emoji: '🔗' },
-        { name: 'Amplitude Evolution', emoji: '📈' },
+        { name: 'State Interaction', emoji: '🌊' },
         { name: 'Measurement Context', emoji: '📏' },
         { name: 'State Collapse', emoji: '💫' },
       ];
@@ -46,9 +44,44 @@ describe('QuantumSuperpositionHandler', () => {
       });
     });
 
+    it('should fold interference, entanglement and amplitude into step 2', () => {
+      // Interference Mapping, Entanglement Analysis and Amplitude Evolution were
+      // merged into a single State Interaction step; none survives standalone.
+      const step2 = handler.getStepInfo(2);
+      expect(step2.name).toBe('State Interaction');
+      expect(step2.focus).toBe(
+        'Map how the states reinforce, cancel, depend on each other, and gain or lose ground'
+      );
+
+      const stepNames = [1, 2, 3, 4].map(step => handler.getStepInfo(step).name);
+      expect(stepNames).toEqual([
+        'State Generation',
+        'State Interaction',
+        'Measurement Context',
+        'State Collapse',
+      ]);
+      expect(stepNames).not.toContain('Interference Mapping');
+      expect(stepNames).not.toContain('Entanglement Analysis');
+      expect(stepNames).not.toContain('Amplitude Evolution');
+    });
+
+    it('should mark State Collapse as an action step with reflexive effects', () => {
+      const collapse = handler.getStepInfo(4);
+      expect(collapse.name).toBe('State Collapse');
+      expect(collapse.type).toBe('action');
+      expect(collapse.reflexiveEffects?.reversibility).toBe('low');
+      expect(collapse.reflexiveEffects?.triggers).toContain(
+        'Choosing one state and standing down the others'
+      );
+      expect(collapse.reflexiveEffects?.realityChanges).toContain(
+        'The chosen state becomes the plan of record'
+      );
+      expect(collapse.reflexiveEffects?.futureConstraints.length).toBeGreaterThan(0);
+    });
+
     it('should throw error for invalid step number', () => {
       expect(() => handler.getStepInfo(0)).toThrow(ValidationError);
-      expect(() => handler.getStepInfo(7)).toThrow(ValidationError);
+      expect(() => handler.getStepInfo(5)).toThrow(ValidationError);
       expect(() => handler.getStepInfo(-1)).toThrow(ValidationError);
     });
   });
@@ -63,40 +96,48 @@ describe('QuantumSuperpositionHandler', () => {
       expect(guidance1).toContain(problem);
       expect(guidance1).toContain('efficiency, flexibility, robustness');
 
-      // Step 2: Interference Mapping
+      // Step 2: State Interaction
       const guidance2 = handler.getStepGuidance(2, problem);
-      expect(guidance2).toContain('interference patterns');
-      expect(guidance2).toContain('constructive');
-      expect(guidance2).toContain('destructive');
+      expect(guidance2).toContain('Map how your solution states');
+      expect(guidance2).toContain(problem);
 
-      // Step 3: Entanglement Analysis
+      // Step 3: Measurement Context
       const guidance3 = handler.getStepGuidance(3, problem);
-      expect(guidance3).toContain('entanglements');
-      expect(guidance3).toContain('dependencies');
+      expect(guidance3).toContain('measurement context');
+      expect(guidance3).toContain('constraints');
 
-      // Step 4: Amplitude Evolution
+      // Step 4: State Collapse
       const guidance4 = handler.getStepGuidance(4, problem);
-      expect(guidance4).toContain('probability amplitudes');
-      expect(guidance4).toContain('likelihood');
+      expect(guidance4).toContain('Collapse to the optimal solution');
+      expect(guidance4).toContain('preserving insights');
+    });
 
-      // Step 5: Measurement Context
-      const guidance5 = handler.getStepGuidance(5, problem);
-      expect(guidance5).toContain('measurement context');
-      expect(guidance5).toContain('constraints');
+    it('should ask the interference, entanglement and amplitude questions in step 2', () => {
+      // Was three separate guidance assertions for steps 2, 3 and 4; the merged
+      // State Interaction step must still pose all three questions.
+      const problem = 'How to balance performance and flexibility';
+      const guidance2 = handler.getStepGuidance(2, problem);
 
-      // Step 6: State Collapse
-      const guidance6 = handler.getStepGuidance(6, problem);
-      expect(guidance6).toContain('Collapse to the optimal solution');
-      expect(guidance6).toContain('preserving insights');
+      // Interference: constructive vs destructive relationships between states
+      expect(guidance2).toContain('Where do they reinforce each other');
+      expect(guidance2).toContain('where do they cancel out');
+
+      // Entanglement: dependencies where moving one state moves another
+      expect(guidance2).toContain('Which aspects are inseparably linked');
+      expect(guidance2).toContain('developing one state moves another');
+
+      // Amplitude evolution: which states gain and which lose ground
+      expect(guidance2).toContain('which states are gaining ground');
+      expect(guidance2).toContain('which are weakening but still hold something worth keeping');
     });
   });
 
   describe('validateStep', () => {
     it('should validate basic step parameters', () => {
       expect(handler.validateStep(1, {})).toBe(true);
-      expect(handler.validateStep(6, {})).toBe(true);
+      expect(handler.validateStep(4, {})).toBe(true);
       expect(handler.validateStep(0, {})).toBe(false);
-      expect(handler.validateStep(7, {})).toBe(false);
+      expect(handler.validateStep(5, {})).toBe(false);
     });
 
     it('should validate step 1 specific fields', () => {
@@ -126,19 +167,21 @@ describe('QuantumSuperpositionHandler', () => {
       expect(handler.validateStep(2, invalidData)).toBe(false);
     });
 
-    it('should validate step 3 entanglements', () => {
+    it('should validate step 2 entanglements', () => {
+      // Entanglement Analysis was merged into step 2, which still validates the field.
       const validData = {
         entanglements: [{ states: ['State 1', 'State 2'], dependency: 'Shared resource' }],
       };
-      expect(handler.validateStep(3, validData)).toBe(true);
+      expect(handler.validateStep(2, validData)).toBe(true);
 
       const invalidData = {
         entanglements: 'not an array',
       };
-      expect(handler.validateStep(3, invalidData)).toBe(false);
+      expect(handler.validateStep(2, invalidData)).toBe(false);
     });
 
-    it('should validate step 4 amplitudes', () => {
+    it('should validate step 2 amplitudes', () => {
+      // Amplitude Evolution was merged into step 2, which still validates the field.
       const validData = {
         amplitudes: {
           'State 1': 0.5,
@@ -146,42 +189,54 @@ describe('QuantumSuperpositionHandler', () => {
           'State 3': 0.2,
         },
       };
-      expect(handler.validateStep(4, validData)).toBe(true);
+      expect(handler.validateStep(2, validData)).toBe(true);
 
       const invalidData = {
         amplitudes: 'not an object',
       };
-      expect(handler.validateStep(4, invalidData)).toBe(false);
+      expect(handler.validateStep(2, invalidData)).toBe(false);
     });
 
-    it('should validate step 5 measurement criteria', () => {
+    it('should validate all three merged field families together on step 2', () => {
+      const validData = {
+        interferencePatterns: {
+          constructive: ['Pattern 1'],
+          destructive: ['Pattern 2'],
+        },
+        entanglements: [{ states: ['State 1', 'State 2'], dependency: 'Shared resource' }],
+        amplitudes: { 'State 1': 0.6, 'State 2': 0.4 },
+      };
+      expect(handler.validateStep(2, validData)).toBe(true);
+    });
+
+    it('should validate step 3 measurement criteria', () => {
       const validData = {
         measurementCriteria: ['Performance', 'Cost', 'Maintainability'],
       };
-      expect(handler.validateStep(5, validData)).toBe(true);
+      expect(handler.validateStep(3, validData)).toBe(true);
 
       const invalidData = {
         measurementCriteria: 'not an array',
       };
-      expect(handler.validateStep(5, invalidData)).toBe(false);
+      expect(handler.validateStep(3, invalidData)).toBe(false);
     });
 
-    it('should validate step 6 collapse fields', () => {
+    it('should validate step 4 collapse fields', () => {
       const validData = {
         chosenState: 'State 2',
         preservedInsights: ['Insight from State 1', 'Insight from State 3'],
       };
-      expect(handler.validateStep(6, validData)).toBe(true);
+      expect(handler.validateStep(4, validData)).toBe(true);
 
       const invalidChosenState = {
         chosenState: 123, // Not a string
       };
-      expect(handler.validateStep(6, invalidChosenState)).toBe(false);
+      expect(handler.validateStep(4, invalidChosenState)).toBe(false);
 
       const invalidInsights = {
         preservedInsights: 'not an array',
       };
-      expect(handler.validateStep(6, invalidInsights)).toBe(false);
+      expect(handler.validateStep(4, invalidInsights)).toBe(false);
     });
   });
 

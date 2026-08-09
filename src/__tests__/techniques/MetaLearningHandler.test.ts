@@ -19,7 +19,7 @@ describe('MetaLearningHandler', () => {
 
       expect(info.name).toBe('Meta-Learning from Path Integration');
       expect(info.emoji).toBe('🧠');
-      expect(info.totalSteps).toBe(5);
+      expect(info.totalSteps).toBe(4);
       expect(info.description).toContain('path patterns');
       expect(info.focus).toContain('Self-improving integration');
       expect(info.parallelSteps.canParallelize).toBe(false);
@@ -32,7 +32,6 @@ describe('MetaLearningHandler', () => {
         { name: 'Pattern Recognition', emoji: '🔍' },
         { name: 'Learning Accumulation', emoji: '📊' },
         { name: 'Strategy Evolution', emoji: '🔄' },
-        { name: 'Feedback Integration', emoji: '📈' },
         { name: 'Meta-Synthesis', emoji: '🧠' },
       ];
 
@@ -44,15 +43,28 @@ describe('MetaLearningHandler', () => {
       });
     });
 
+    it('should no longer expose a Feedback Integration step', () => {
+      // Feedback Integration was removed deliberately: it asked what telemetry
+      // revealed, but getStepGuidance receives no telemetry to answer from.
+      // Meta-Synthesis took over step 4 and is now the last step.
+      const stepNames = [1, 2, 3, 4].map(step => handler.getStepInfo(step).name);
+      expect(stepNames).not.toContain('Feedback Integration');
+      expect(handler.getStepInfo(4).name).toBe('Meta-Synthesis');
+      expect(handler.getStepInfo(4).focus).toBe('Generate improved integration strategies');
+      expect(handler.getStepInfo(4).type).toBe('action');
+      expect(handler.getStepInfo(4).reflexiveEffects?.reversibility).toBe('medium');
+      expect(() => handler.getStepInfo(5)).toThrow();
+    });
+
     it('should throw error for invalid step number', () => {
       expect(() => handler.getStepInfo(0)).toThrow();
-      expect(() => handler.getStepInfo(6)).toThrow();
+      expect(() => handler.getStepInfo(5)).toThrow();
 
       try {
         handler.getStepInfo(10);
       } catch (error: any) {
         expect(error.code).toBe(ErrorCode.INVALID_STEP);
-        expect(error.message).toContain('Valid steps are 1-5');
+        expect(error.message).toContain('Valid steps are 1-4');
       }
     });
   });
@@ -74,12 +86,20 @@ describe('MetaLearningHandler', () => {
       expect(guidance3).toContain('execution sequences');
 
       const guidance4 = handler.getStepGuidance(4, problem);
-      expect(guidance4).toContain('feedback');
-      expect(guidance4).toContain('telemetry');
+      expect(guidance4).toContain('meta-learning insights');
+      expect(guidance4).toContain('self-improving framework');
+    });
 
-      const guidance5 = handler.getStepGuidance(5, problem);
-      expect(guidance5).toContain('meta-learning insights');
-      expect(guidance5).toContain('self-improving framework');
+    it('should not ask any step for telemetry-derived feedback', () => {
+      // Replaces the Feedback Integration guidance assertions: no step can ask
+      // for telemetry, because getStepGuidance is given only (step, problem).
+      const allGuidance = [1, 2, 3, 4].map(step => handler.getStepGuidance(step, problem));
+      allGuidance.forEach(guidance => {
+        expect(guidance).not.toContain('telemetry');
+      });
+      expect(handler.getStepGuidance(5, problem)).toBe(
+        `Complete the Meta-Learning from Path Integration process for: "${problem}"`
+      );
     });
 
     it('should provide default guidance for invalid step', () => {
@@ -135,7 +155,7 @@ describe('MetaLearningHandler', () => {
       }
     });
 
-    it('should validate step 4 requires feedbackInsights', () => {
+    it('should validate step 4 requires metaSynthesis', () => {
       const data = {
         output: 'test output',
       };
@@ -146,23 +166,30 @@ describe('MetaLearningHandler', () => {
         handler.validateStep(4, data);
       } catch (error: any) {
         expect(error.code).toBe(ErrorCode.MISSING_REQUIRED_FIELD);
-        expect(error.message).toContain('Feedback Integration');
+        expect(error.message).toContain('Meta-Synthesis');
       }
     });
 
-    it('should validate step 5 requires metaSynthesis', () => {
-      const data = {
-        output: 'test output',
-      };
-
-      expect(() => handler.validateStep(5, data)).toThrow();
-
+    it('should no longer demand feedbackInsights on any step', () => {
+      // Replaces "step 4 requires feedbackInsights": the Feedback Integration
+      // step is gone, so feedbackInsights satisfies no step's validation and
+      // step 4 asks for the meta-synthesis instead.
       try {
-        handler.validateStep(5, data);
+        handler.validateStep(4, { output: 'test output' });
       } catch (error: any) {
-        expect(error.code).toBe(ErrorCode.MISSING_REQUIRED_FIELD);
-        expect(error.message).toContain('Meta-Synthesis');
+        expect(error.message).not.toContain('Feedback Integration');
+        expect(error.message).toContain('Step 4 (Meta-Synthesis)');
       }
+
+      // feedbackInsights alone no longer satisfies step 4
+      expect(() =>
+        handler.validateStep(4, { output: 'test', feedbackInsights: ['feedback1'] })
+      ).toThrow();
+
+      // and step 5 is out of range entirely
+      expect(handler.validateStep(5, { output: 'test', metaSynthesis: ['synthesis1'] })).toBe(
+        false
+      );
     });
 
     it('should pass validation with required fields', () => {
@@ -170,8 +197,7 @@ describe('MetaLearningHandler', () => {
         1: { output: 'test', patternRecognition: ['pattern1'] },
         2: { output: 'test', learningHistory: ['learning1'] },
         3: { output: 'test', strategyAdaptations: ['strategy1'] },
-        4: { output: 'test', feedbackInsights: ['feedback1'] },
-        5: { output: 'test', metaSynthesis: ['synthesis1'] },
+        4: { output: 'test', metaSynthesis: ['synthesis1'] },
       };
 
       Object.entries(validData).forEach(([step, data]) => {
@@ -182,7 +208,7 @@ describe('MetaLearningHandler', () => {
 
   describe('getPromptContext', () => {
     it('should return comprehensive context for each step', () => {
-      for (let step = 1; step <= 5; step++) {
+      for (let step = 1; step <= 4; step++) {
         const context = handler.getPromptContext(step);
 
         expect(context.technique).toBe('meta_learning');

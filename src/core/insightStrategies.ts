@@ -85,17 +85,30 @@ export class NeuralStateInsightStrategy implements InsightStrategy {
   technique = 'neural_state';
 
   generateInsight(input: ThinkingOperationData): string | undefined {
-    if (input.currentStep === 1 && input.dominantNetwork === 'ecn') {
-      return 'Executive Control Network dominance detected';
-    }
-    if (input.currentStep === 1 && input.dominantNetwork === 'dmn') {
-      return 'Default Mode Network dominance detected';
-    }
-    if (input.currentStep === 2 && input.suppressionDepth !== undefined) {
-      if (input.suppressionDepth >= 8) {
-        return `Network suppression depth: ${input.suppressionDepth}/10 - High rigidity detected`;
+    // Step 1 carries both halves of the assessment — which network dominates,
+    // and how deeply the other is suppressed. They report together because the
+    // first matching branch returns: keyed separately, whichever came second
+    // could never be reached once the other matched.
+    if (input.currentStep === 1) {
+      const parts: string[] = [];
+
+      if (input.dominantNetwork === 'ecn') {
+        parts.push('Executive Control Network dominance detected');
+      } else if (input.dominantNetwork === 'dmn') {
+        parts.push('Default Mode Network dominance detected');
       }
-      return `Network suppression depth: ${input.suppressionDepth}/10`;
+
+      if (input.suppressionDepth !== undefined) {
+        parts.push(
+          input.suppressionDepth >= 8
+            ? `Network suppression depth: ${input.suppressionDepth}/10 - High rigidity detected`
+            : `Network suppression depth: ${input.suppressionDepth}/10`
+        );
+      }
+
+      if (parts.length > 0) {
+        return parts.join('. ');
+      }
     }
     if (input.dominantNetwork && input.suppressionDepth && input.suppressionDepth > 7) {
       return 'Deep neural state manipulation achieved - breakthrough potential high';

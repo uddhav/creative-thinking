@@ -579,11 +579,9 @@ function getExpectedOutputForStep(technique: string, step: number): string {
     },
     quantum_superposition: {
       1: 'Multiple contradictory solution states generated',
-      2: 'Interference patterns mapped',
-      3: 'State entanglements identified',
-      4: 'Probability amplitudes evolved',
-      5: 'Measurement context defined',
-      6: 'Optimal state collapsed with preserved insights',
+      2: 'State interactions mapped: reinforcement, cancellation, dependencies, trajectory',
+      3: 'Measurement context defined',
+      4: 'Optimal state collapsed with preserved insights',
     },
     temporal_creativity: {
       1: 'Decision history excavated with patterns',
@@ -603,8 +601,7 @@ function getExpectedOutputForStep(technique: string, step: number): string {
       1: 'Successful patterns recognized across techniques',
       2: 'Learning history accumulated with affinity matrix',
       3: 'Strategy adaptations evolved from patterns',
-      4: 'Feedback insights integrated from all sources',
-      5: 'Meta-synthesis generated for improved integration',
+      4: 'Meta-synthesis generated for improved integration',
     },
     biomimetic_path: {
       1: 'Threat patterns identified with adaptive responses',
@@ -623,11 +620,10 @@ function getExpectedOutputForStep(technique: string, step: number): string {
     },
     neuro_computational: {
       1: 'Neural representations mapped with cognitive components',
-      2: 'Diverse solution patterns generated through parallel processing',
-      3: 'Interference patterns analyzed for constructive/destructive effects',
-      4: 'Computational models synthesized from neural patterns',
-      5: 'Optimization cycles completed with convergence metrics',
-      6: 'Optimal creative solution converged with preserved insights',
+      2: 'Diverse solution patterns generated, with constructive/destructive interference analyzed',
+      3: 'Computational models synthesized from neural patterns',
+      4: 'Optimization cycles completed with convergence ratings',
+      5: 'Optimal creative solution converged with preserved insights',
     },
     reverse_benchmarking: {
       1: 'Universal competitor weaknesses mapped',
@@ -744,7 +740,7 @@ function getRisksForStep(technique: string, step: number): string[] | undefined 
   if (technique === 'neural_state' && step === 1) {
     return ['Individual variation in neural patterns', 'Misidentifying dominant network'];
   }
-  if (technique === 'neural_state' && step === 3) {
+  if (technique === 'neural_state' && step === 2) {
     return ['Avoid forced switching that disrupts flow', 'Over-scheduling cognitive states'];
   }
   if (technique === 'collective_intel' && step === 1) {

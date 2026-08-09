@@ -188,65 +188,56 @@ describe('Neural State Optimization', () => {
       expect(result.isError).toBeFalsy();
       const planData = JSON.parse(result.content[0]?.text || '{}') as PlanResponse;
 
-      expect(planData.workflow).toHaveLength(4);
+      expect(planData.workflow).toHaveLength(3);
       expect(planData.workflow[0].description).toContain('Assess your current neural state');
-      expect(planData.workflow[1].description).toContain('Which network is suppressed');
-      expect(planData.workflow[2].description).toContain('Develop a switching rhythm');
-      expect(planData.workflow[3].description).toContain('Integrate insights');
+      // The suppression question was merged into step 1 alongside the assessment
+      expect(planData.workflow[0].description).toContain(
+        'the other is the one being suppressed — name it, and say how deeply'
+      );
+      expect(planData.workflow[1].description).toContain('Develop a switching rhythm');
+      expect(planData.workflow[2].description).toContain('Integrate insights');
 
       // Check risk considerations
       expect(planData.workflow[0].riskConsiderations).toContain(
         'Individual variation in neural patterns'
       );
-      expect(planData.workflow[2].riskConsiderations).toContain(
+      expect(planData.workflow[1].riskConsiderations).toContain(
         'Avoid forced switching that disrupts flow'
       );
     });
   });
 
   describe('Execution Phase', () => {
-    it('should execute all four Neural State steps', async () => {
+    it('should execute all three Neural State steps', async () => {
       const planId = createPlan('Overcome cognitive rigidity in problem-solving', ['neural_state']);
 
-      // Step 1: Assess current state
+      // Step 1: Assess current state — now also names the suppressed network and its depth
       const step1 = await executeStep(planId, {
         technique: 'neural_state',
         problem: 'Overcome cognitive rigidity in problem-solving',
         currentStep: 1,
-        totalSteps: 4,
-        output: 'Currently experiencing high focus but low creativity',
+        totalSteps: 3,
+        output: 'Currently experiencing high focus but low creativity, DMN heavily suppressed',
         dominantNetwork: 'ecn',
+        suppressionDepth: 8,
         nextStepNeeded: true,
       });
 
       expect(step1.technique).toBe('neural_state');
       expect(step1.currentStep).toBe(1);
-      expect(step1.nextStepGuidance).toContain('Which network is suppressed?');
+      expect(step1.nextStepGuidance).toContain('Develop a switching rhythm');
       expect(step1.contextualInsight).toContain('Executive Control Network dominance detected');
+      // The suppression half of the merged step is reported from step 1's own data
+      expect(step1.insights).toContain('Dominant network: ECN');
+      expect(step1.insights).toContain('Suppression depth: 8/10');
 
-      // Step 2: Identify suppression
+      // Step 2: Develop switching rhythm
       const step2 = await executeStep(planId, {
         sessionId: step1.sessionId,
         technique: 'neural_state',
         problem: 'Overcome cognitive rigidity in problem-solving',
         currentStep: 2,
-        totalSteps: 4,
-        output: 'High suppression of DMN, stuck in analytical mode',
-        suppressionDepth: 8,
-        nextStepNeeded: true,
-      });
-
-      expect(step2.currentStep).toBe(2);
-      expect(step2.contextualInsight).toContain('Network suppression depth: 8/10');
-      expect(step2.contextualInsight).toContain('High rigidity detected');
-
-      // Step 3: Develop switching rhythm
-      const step3 = await executeStep(planId, {
-        sessionId: step1.sessionId,
-        technique: 'neural_state',
-        problem: 'Overcome cognitive rigidity in problem-solving',
-        currentStep: 3,
-        totalSteps: 4,
+        totalSteps: 3,
         output: 'Implementing 90-min focus / 20-min wandering cycles',
         switchingRhythm: [
           '90-minute deep work sessions',
@@ -257,16 +248,17 @@ describe('Neural State Optimization', () => {
         nextStepNeeded: true,
       });
 
-      expect(step3.currentStep).toBe(3);
-      expect(step3.historyLength).toBe(3);
+      expect(step2.currentStep).toBe(2);
+      expect(step2.historyLength).toBe(2);
+      expect(step2.insights).toContain('Switching pattern: 90-minute deep work sessions');
 
-      // Step 4: Integrate insights
-      const step4 = await executeStep(planId, {
+      // Step 3: Integrate insights
+      const step3 = await executeStep(planId, {
         sessionId: step1.sessionId,
         technique: 'neural_state',
         problem: 'Overcome cognitive rigidity in problem-solving',
-        currentStep: 4,
-        totalSteps: 4,
+        currentStep: 3,
+        totalSteps: 3,
         output: 'Achieved balanced cognitive flexibility',
         integrationInsights: [
           'ECN for complex analysis phases',
@@ -277,12 +269,63 @@ describe('Neural State Optimization', () => {
         nextStepNeeded: false,
       });
 
-      expect(step4.currentStep).toBe(4);
-      expect(step4.completed).toBe(true);
-      expect(step4.insights).toBeDefined();
-      expect(step4.insights?.length).toBeGreaterThan(0);
-      expect(step4.insights?.some(i => i.includes('Neural State Optimization completed'))).toBe(
-        true
+      expect(step3.currentStep).toBe(3);
+      expect(step3.historyLength).toBe(3);
+      expect(step3.completed).toBe(true);
+      expect(step3.insights).toBeDefined();
+      expect(step3.insights?.length).toBeGreaterThan(0);
+      expect(step3.insights).toContain('Integration: ECN for complex analysis phases');
+    });
+
+    it('should report only session-derived insights, never a canned completion banner', async () => {
+      // Replaces the assertion that a fixed 'Neural State Optimization completed
+      // for enhanced cognitive flexibility' string was appended on the last step.
+      // That banner reported an insight the session never produced, so it was
+      // removed; every insight must now trace back to data the caller supplied.
+      const planId = createPlan('Overcome cognitive rigidity in problem-solving', ['neural_state']);
+
+      const step1 = await executeStep(planId, {
+        technique: 'neural_state',
+        problem: 'Overcome cognitive rigidity in problem-solving',
+        currentStep: 1,
+        totalSteps: 3,
+        output: 'High focus, low creativity',
+        dominantNetwork: 'ecn',
+        suppressionDepth: 8,
+        nextStepNeeded: true,
+      });
+
+      await executeStep(planId, {
+        sessionId: step1.sessionId,
+        technique: 'neural_state',
+        problem: 'Overcome cognitive rigidity in problem-solving',
+        currentStep: 2,
+        totalSteps: 3,
+        output: 'Cycles established',
+        switchingRhythm: ['90-minute deep work sessions'],
+        nextStepNeeded: true,
+      });
+
+      const finalStep = await executeStep(planId, {
+        sessionId: step1.sessionId,
+        technique: 'neural_state',
+        problem: 'Overcome cognitive rigidity in problem-solving',
+        currentStep: 3,
+        totalSteps: 3,
+        output: 'Achieved balanced cognitive flexibility',
+        integrationInsights: ['Integration leads to innovative solutions'],
+        nextStepNeeded: false,
+      });
+
+      expect(finalStep.completed).toBe(true);
+      expect(finalStep.insights).toEqual([
+        'Dominant network: ECN',
+        'Suppression depth: 8/10',
+        'Switching pattern: 90-minute deep work sessions',
+        'Integration: Integration leads to innovative solutions',
+      ]);
+      expect(finalStep.insights?.some(i => i.includes('Neural State Optimization completed'))).toBe(
+        false
       );
     });
 
@@ -293,7 +336,7 @@ describe('Neural State Optimization', () => {
         technique: 'neural_state',
         problem: 'Focus issues due to excessive mind wandering',
         currentStep: 1,
-        totalSteps: 4,
+        totalSteps: 3,
         output: 'Excessive DMN activity, difficulty maintaining focus',
         dominantNetwork: 'dmn',
         nextStepNeeded: true,
@@ -305,18 +348,18 @@ describe('Neural State Optimization', () => {
     it('should track path impact for neural state changes', async () => {
       const planId = createPlan('Optimize mental performance', ['neural_state']);
 
-      const step3 = await executeStep(planId, {
+      const switchingStep = await executeStep(planId, {
         technique: 'neural_state',
         problem: 'Optimize mental performance',
-        currentStep: 3,
-        totalSteps: 4,
+        currentStep: 2,
+        totalSteps: 3,
         output: 'Establishing new cognitive patterns',
         switchingRhythm: ['Pomodoro technique', 'Meditation breaks', 'Physical movement triggers'],
         nextStepNeeded: true,
       });
 
       // Path impact should be relatively low as neural state changes are reversible
-      expect(step3.sessionId).toBeDefined();
+      expect(switchingStep.sessionId).toBeDefined();
     });
 
     it('should generate memory-suggestive outputs for neural state sessions', async () => {
@@ -327,19 +370,9 @@ describe('Neural State Optimization', () => {
         technique: 'neural_state',
         problem: 'Enhance cognitive flexibility',
         currentStep: 1,
-        totalSteps: 4,
-        output: 'ECN dominance identified',
+        totalSteps: 3,
+        output: 'ECN dominance identified with moderate suppression detected',
         dominantNetwork: 'ecn',
-        nextStepNeeded: true,
-      });
-
-      await executeStep(planId, {
-        sessionId: step1.sessionId,
-        technique: 'neural_state',
-        problem: 'Enhance cognitive flexibility',
-        currentStep: 2,
-        totalSteps: 4,
-        output: 'Moderate suppression detected',
         suppressionDepth: 6,
         nextStepNeeded: true,
       });
@@ -348,8 +381,8 @@ describe('Neural State Optimization', () => {
         sessionId: step1.sessionId,
         technique: 'neural_state',
         problem: 'Enhance cognitive flexibility',
-        currentStep: 3,
-        totalSteps: 4,
+        currentStep: 2,
+        totalSteps: 3,
         output: 'Rhythm established',
         switchingRhythm: ['Time-based switching', 'Task-based transitions'],
         nextStepNeeded: true,
@@ -359,8 +392,8 @@ describe('Neural State Optimization', () => {
         sessionId: step1.sessionId,
         technique: 'neural_state',
         problem: 'Enhance cognitive flexibility',
-        currentStep: 4,
-        totalSteps: 4,
+        currentStep: 3,
+        totalSteps: 3,
         output: 'Integration complete',
         integrationInsights: ['Balanced cognition achieved'],
         nextStepNeeded: false,
@@ -417,8 +450,8 @@ describe('Neural State Optimization', () => {
         planId,
         technique: 'neural_state',
         problem: 'Test neural state validation',
-        currentStep: 2,
-        totalSteps: 4,
+        currentStep: 1,
+        totalSteps: 3,
         output: 'Testing invalid suppression depth',
         suppressionDepth: 15, // Should be 0-10
         nextStepNeeded: true,
@@ -437,7 +470,7 @@ describe('Neural State Optimization', () => {
         technique: 'neural_state',
         problem: 'Test missing fields',
         currentStep: 1,
-        totalSteps: 4,
+        totalSteps: 3,
         output: 'Assessing state without specific network identification',
         nextStepNeeded: true,
       });

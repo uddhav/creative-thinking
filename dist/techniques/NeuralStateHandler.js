@@ -8,7 +8,7 @@ export class NeuralStateHandler extends BaseTechniqueHandler {
         return {
             name: 'Neural State Optimization',
             emoji: '🧠',
-            totalSteps: 4,
+            totalSteps: 3,
             description: "Optimize YOUR BRAIN's cognitive states for creative thinking by managing biological neural networks",
             focus: 'Balance human Default Mode Network (DMN) and Executive Control Network (ECN) for peak creativity',
             parallelSteps: {
@@ -18,16 +18,14 @@ export class NeuralStateHandler extends BaseTechniqueHandler {
         };
     }
     getStepInfo(step) {
+        // Assessment and suppression are one step, not two: naming the dominant
+        // network fixes the answer to which one is suppressed — grinding means DMN,
+        // wandering means ECN — so the second step had no question left to ask.
         const steps = [
             {
                 name: 'Assess Current State',
-                focus: 'Identify dominant neural network (DMN vs ECN)',
+                focus: 'Identify the dominant neural network (DMN vs ECN) and the one it suppresses',
                 emoji: '🔍',
-            },
-            {
-                name: 'Identify Suppression',
-                focus: 'Find which network is being suppressed',
-                emoji: '🚫',
             },
             {
                 name: 'Develop Switching',
@@ -47,17 +45,15 @@ export class NeuralStateHandler extends BaseTechniqueHandler {
     }
     getStepGuidance(step, problem) {
         // Handle out of bounds gracefully
-        if (step < 1 || step > 4) {
+        if (step < 1 || step > 3) {
             return `Complete the Neural State Optimization process for: "${problem}"`;
         }
         switch (step) {
             case 1:
-                return `🔍 Assess your current neural state for "${problem}". Are you in focused analysis (ECN) or free association (DMN)?`;
+                return `🔍 Assess your current neural state for "${problem}". Are you in focused analysis (ECN) or free association (DMN)? Whichever is running, the other is the one being suppressed — name it, and say how deeply.`;
             case 2:
-                return `🚫 Which network is suppressed? If you are grinding hard on "${problem}", DMN is suppressed. If wandering, ECN is suppressed`;
-            case 3:
                 return `🔄 Develop a switching rhythm. Alternate between focused analysis and free exploration of "${problem}"`;
-            case 4:
+            case 3:
                 return `🔀 Integrate insights from both states. What emerges for "${problem}" when analytical and creative insights combine?`;
             default:
                 return `Complete the Neural State Optimization process for: "${problem}"`;
@@ -66,26 +62,26 @@ export class NeuralStateHandler extends BaseTechniqueHandler {
     extractInsights(history) {
         const insights = [];
         history.forEach(entry => {
+            // Step 1 now carries both halves of the assessment.
             if (entry.currentStep === 1 && entry.dominantNetwork) {
                 insights.push(`Dominant network: ${entry.dominantNetwork.toUpperCase()}`);
             }
-            if (entry.currentStep === 2 && entry.suppressionDepth !== undefined) {
+            if (entry.currentStep === 1 && entry.suppressionDepth !== undefined) {
                 insights.push(`Suppression depth: ${entry.suppressionDepth}/10`);
             }
-            if (entry.currentStep === 3 && entry.switchingRhythm && entry.switchingRhythm.length > 0) {
+            if (entry.currentStep === 2 && entry.switchingRhythm && entry.switchingRhythm.length > 0) {
                 insights.push(`Switching pattern: ${entry.switchingRhythm[0]}`);
             }
-            if (entry.currentStep === 4 &&
+            if (entry.currentStep === 3 &&
                 entry.integrationInsights &&
                 entry.integrationInsights.length > 0) {
                 insights.push(`Integration: ${entry.integrationInsights[0]}`);
             }
         });
-        // Check if neural state optimization is complete
-        const hasCompleteSession = history.some(entry => entry.currentStep === 4 && !entry.nextStepNeeded);
-        if (hasCompleteSession) {
-            insights.push('Neural State Optimization completed for enhanced cognitive flexibility');
-        }
+        // No completion banner here. Pushing a fixed string because the last step
+        // ran reports an insight the session never produced, which is what
+        // CONTRIBUTING.md rules out; reaching the end is already visible from the
+        // step count.
         return insights;
     }
 }

@@ -13,6 +13,21 @@
  * explicit computational models for enhanced creative problem solving.
  */
 import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
+/**
+ * Named convergence ratings, so callers report a judgement instead of copying a
+ * decimal out of an error message.
+ *
+ * Same problem the discovery layer's effectiveness scale had: the numbers were
+ * invented, they looked measured, and worked examples carrying values like 0.85
+ * taught every caller to invent their own to matching precision. Naming the
+ * tiers keeps the wire format numeric while making it plain that only a few
+ * levels are meaningful, and that the rating needs a stated basis.
+ */
+export declare const CONVERGENCE_RATING: {
+    readonly STRONG: 0.9;
+    readonly MODERATE: 0.7;
+    readonly WEAK: 0.5;
+};
 export declare class NeuroComputationalHandler extends BaseTechniqueHandler {
     private readonly steps;
     getTechniqueInfo(): TechniqueInfo;
