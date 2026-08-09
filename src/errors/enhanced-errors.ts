@@ -487,7 +487,9 @@ export class ErrorFactory {
     // and never tracked the catalogue, so both the hint below and the
     // validTechniques handed back on the error context named 18 fewer
     // techniques than the server actually accepts.
-    const validTechniques = ALL_LATERAL_TECHNIQUES;
+    // Copied, not referenced: this array is handed out on the error context,
+    // and ALL_LATERAL_TECHNIQUES is the module-level source of truth.
+    const validTechniques = [...ALL_LATERAL_TECHNIQUES];
     return new ValidationError(
       ErrorCodes.INVALID_TYPE,
       `Invalid technique: '${technique}'`,

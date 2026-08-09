@@ -25,9 +25,13 @@ describe('SteelmanRedTeamHandler', () => {
     it('refuses to parallelize, because both gates judge earlier work', () => {
       const info = handler.getTechniqueInfo();
       expect(info.parallelSteps?.canParallelize).toBe(false);
-      // The Turing test judges step 2; the consequence check judges step 5.
+      // Fully sequential. The Turing test judges step 2 and the consequence
+      // check judges step 5, so neither can be reached early.
       expect(info.parallelSteps?.dependencies).toEqual([
+        [1, 2],
         [2, 3],
+        [3, 4],
+        [4, 5],
         [5, 6],
         [6, 7],
       ]);

@@ -220,6 +220,13 @@ describe('Discovery category reachability', () => {
       'Fix the blind spot in the rear camera UI',
       'Redesign the critique widget',
       'Build a dashboard that surfaces failure modes to on-call',
+      // "What am I missing" reads as a blind-spot check only when nothing
+      // concrete is on the table. Naming an artefact under inspection makes it
+      // a debugging question, and this pass must not preempt the category that
+      // should claim it.
+      'What am I missing in the nginx config file?',
+      'What could go wrong here? The stack trace makes no sense',
+      'What am I missing, the compiler rejects this syntax',
     ];
 
     for (const problem of mustNotBeAdversarial) {
@@ -239,6 +246,13 @@ describe('Discovery category reachability', () => {
       'Poke holes in this before we ship',
       'Steelman the case for rewriting it',
       'Red team our plan to sunset the v1 API',
+      // Past tense counts: asking what a completed pass missed is still asking
+      // to be argued with.
+      'I poked holes in this already, what else?',
+      'We red-teamed it and found nothing',
+      // 'log' is not a debugging-artefact veto term, because a log retention
+      // policy is a legitimate thing to be argued with about.
+      'What could go wrong if we change the audit log retention policy?',
     ];
 
     for (const problem of mustStayAdversarial) {

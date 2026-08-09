@@ -258,7 +258,7 @@ const nextResult = await executeThinkingStep({
 
 Each technique integrates creative generation with systematic verification and post-action
 reflexivity tracking. The collection includes 21 core creative techniques, 3 analytical verification
-techniques, 4 behavioral economics techniques inspired by Rory Sutherland, 2 judgment and retention
+techniques, 4 behavioral economics techniques inspired by Rory Sutherland, 3 judgment and retention
 techniques, and 1 adversarial review technique:
 
 **Note**: The discovery layer includes a wildcard technique selection feature (17.5% probability by

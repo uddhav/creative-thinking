@@ -114,8 +114,14 @@ export class SteelmanRedTeamHandler extends BaseTechniqueHandler {
         'Gated at both halves: a caricatured opponent fails the Turing test, and findings that could not have changed the decision fail the consequence check',
       parallelSteps: {
         canParallelize: false,
+        // The full chain, because the technique really is step-by-step. The
+        // two that matter most are 2→3 and 5→6: a gate can only judge work
+        // that already exists.
         dependencies: [
+          [1, 2],
           [2, 3],
+          [3, 4],
+          [4, 5],
           [5, 6],
           [6, 7],
         ],

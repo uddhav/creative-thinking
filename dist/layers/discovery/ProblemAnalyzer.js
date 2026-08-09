@@ -332,8 +332,12 @@ export class ProblemAnalyzer {
             'talk us out of',
             'prove me wrong',
             'prove us wrong',
-            'what am i missing',
-            'what are we missing',
+            // 'what am i missing' is deliberately NOT here. It reads as a request for
+            // a blind-spot check only when nothing concrete is on the table; "what am
+            // I missing in the nginx config file?" is debugging, and this pass runs
+            // ahead of every topic detector, so an ambiguous term here preempts the
+            // category that should have claimed it. It sits in the broad detector
+            // below instead, where it can only reclaim what nothing else wanted.
             'challenge my assumptions',
             'challenge our assumptions',
             'tear it apart',
@@ -368,7 +372,7 @@ export class ProblemAnalyzer {
             positionNouns.some(noun => lowerText.includes(noun));
         // Verb-gated, because the bare noun phrase is a defect report: 'there are
         // holes in the coverage report' is not a request to be argued with.
-        const pokesHoles = /\b(poke|poking|pick|picking|punch|punching|shoot)\s+(some\s+|any\s+|a\s+few\s+)?holes\b/.test(lowerText);
+        const pokesHoles = /\b(poke[ds]?|poking|pick(ed|s)?|picking|punch(ed|es)?|punching|shoot|shot)\s+(some\s+|any\s+|a\s+few\s+)?holes\b/.test(lowerText);
         const convinceMeWrong = /\bconvince\s+(me|us)\s+(i'?m|we'?re|i am|we are)\s+wrong\b/.test(lowerText);
         if (!hasDecisiveTerm && !stressTestsAPosition && !pokesHoles && !convinceMeWrong) {
             return false;
@@ -421,6 +425,8 @@ export class ProblemAnalyzer {
             'change my mind',
             'change our mind',
             // Asking what the room missed
+            'what am i missing',
+            'what are we missing',
             'blind spot',
             'blind spots',
             'weakness in',
@@ -443,6 +449,17 @@ export class ProblemAnalyzer {
         // the worst case latency under load?' reached here and was reclaimed. So
         // the performance sense of 'worst case' is vetoed explicitly.
         if (/\b(latency|throughput|rps|qps|requests per second|concurrency|load|benchmark|soak|p95|p99)\b/.test(lowerText)) {
+            return false;
+        }
+        // Naming a concrete artefact under inspection makes these phrases a
+        // debugging question rather than a request for opposition. "What am I
+        // missing in the nginx config file?" wants the config read, not the
+        // decision attacked.
+        //
+        // 'log' is deliberately absent: an audit log or a retention policy for logs
+        // is a subject you can legitimately be argued with about, and the debugging
+        // sense is already carried by the terms below.
+        if (/\b(config|configuration|stack trace|traceback|error message|compiler|syntax|typo)\b/.test(lowerText)) {
             return false;
         }
         // A constructive ask outweighs these weak signals, the same way it does in
