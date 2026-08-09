@@ -6,6 +6,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { LateralThinkingServer } from '../index.js';
 import type { ExecuteThinkingStepInput } from '../index.js';
+import { ALL_LATERAL_TECHNIQUES } from '../types/index.js';
 
 describe('LLM Workflow Validation', () => {
   let server: LateralThinkingServer;
@@ -113,11 +114,13 @@ describe('LLM Workflow Validation', () => {
       });
       const response = JSON.parse(result.content[0].text);
 
-      // Should include available techniques
+      // Should include available techniques — every one of them. Asserting a
+      // literal count let this drift: the response advertised 14 while the
+      // server accepted far more, and the test held the wrong number in place.
       expect(response.availableTechniques).toBeDefined();
       expect(response.availableTechniques).toContain('six_hats');
       expect(response.availableTechniques).toContain('disney_method');
-      expect(response.availableTechniques).toHaveLength(14);
+      expect([...response.availableTechniques].sort()).toEqual([...ALL_LATERAL_TECHNIQUES].sort());
 
       // Should include workflow reminder
       expect(response.workflowReminder).toBeDefined();

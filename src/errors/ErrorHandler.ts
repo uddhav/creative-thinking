@@ -5,6 +5,7 @@
  */
 
 import type { LateralThinkingResponse } from '../types/index.js';
+import { ALL_LATERAL_TECHNIQUES } from '../types/index.js';
 import { ResponseBuilder } from '../core/ResponseBuilder.js';
 import {
   CreativeThinkingError as EnhancedError,
@@ -358,7 +359,11 @@ export class ErrorHandler {
         category: 'validation',
         severity: 'medium',
         recovery: [
-          'Use one of: six_hats, po, random_entry, scamper, concept_extraction, yes_and, design_thinking, triz, neural_state, temporal_work, cross_cultural, collective_intel, disney_method, nine_windows',
+          // Built from the source of truth. The hand-written list this replaced
+          // named 14 techniques and still offered `cross_cultural`, which has
+          // not existed since it was consolidated into cultural_integration —
+          // so the recovery hint told callers to retry with an invalid name.
+          `Use one of: ${ALL_LATERAL_TECHNIQUES.join(', ')}`,
           'Call discover_techniques first to get personalized recommendations',
           'Techniques must match those specified in your plan',
         ],
