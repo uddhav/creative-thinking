@@ -344,7 +344,7 @@ Deception Analysis:
 4. Look for patterns too perfect to be natural
 5. Assess manipulation cost/difficulty
 
-Red Team Questions:
+Deception Probes:
 - If someone wanted us to believe X, what evidence would they plant?
 - What evidence is surprisingly absent?
 - Are there patterns suggesting orchestration?

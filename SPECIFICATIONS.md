@@ -45,6 +45,7 @@ path dependence, non-ergodic systems, absorbing barriers, antifragility, Model C
     - 33. Latticework of Mental Models - Escaping the One-Model Trap
     - 34. Cognitive Bias Audit - Munger's Checklist of Misjudgment
     - 35. Keeper Test - The Counterfactual Retention Re-Decision
+    - 36. Steelman & Red Team - Occupying the Position That Is Not Yours
 
 ## Introduction: The Duality of Creative Intelligence in Non-Ergodic Reality
 
@@ -2925,7 +2926,7 @@ class CollectiveIntelligenceOrchestrator:
 
 - **Brainwriting Before Speaking**: Written rounds precede verbal
 - **Rotating Leadership**: Different people guide different phases
-- **Devil's Advocate Rotation**: Assigned critical roles
+- **Devil's Advocate Rotation**: Assigned critical roles (see technique 36, Steelman & Red Team)
 - **Minority Reports**: Dissenting views get equal time
 
 **4. Convergence Management**:
@@ -4850,7 +4851,7 @@ moment.
 
 - Risks: Analysis paralysis, false precision
 - Failure modes: Incomplete hypothesis space
-- Mitigations: Devil's advocate, red team review
+- Mitigations: Devil's advocate, red team review (see technique 36, Steelman & Red Team)
 - Antifragile properties: Strengthens with contradictory evidence
 
 ### Integration with Creative Thinking Workflow
@@ -5143,11 +5144,13 @@ The orchestration framework ensures that diverse cultural approaches to creativi
 than dilute each other, creating richer solution spaces while maintaining the integrity and wisdom
 of each tradition.
 
-## Part IX: Judgment, Mental Models, and Retention
+## Part IX: Judgment, Mental Models, Retention, and Adversarial Review
 
-The three techniques in this part all operate on a decision that has already been made, or is about
+The four techniques in this part all operate on a decision that has already been made, or is about
 to be made under the influence of the decider's own habits. Where Parts I–III generate options,
-these interrogate the judgment producing them.
+these interrogate the judgment producing them. The last of the four differs from the other three in
+where it stands: the first three examine the decider, while Steelman & Red Team examines the plan
+from outside it, through a position the decider does not hold.
 
 ### 33. Latticework of Mental Models - Escaping the One-Model Trap
 
@@ -5292,6 +5295,60 @@ argument versus a ledger.
   forcing an all-or-nothing answer
 - Antifragile properties: Each re-decision leaves an explicit record of why the incumbent survived,
   which makes the next pass cheaper
+
+### 36. Steelman & Red Team - Occupying the Position That Is Not Yours
+
+**Overview**: A 7-step adversarial review with two halves and two gates. The first half is
+cooperative: reconstruct the opposing position at its strongest, in the terms its own holders would
+use. The second is hostile: appoint a named adversary with a motive and a budget, and let them plan
+the defeat of the plan. Steelmanning is not a peer technique here but the construction phase of the
+attack — an opponent you invented is one you were always going to beat.
+
+**Theoretical foundation**: The principle of charity in analytic philosophy (Quine, Davidson,
+Blackburn), rendered as procedure by Anatol Rapoport's rules for criticism — restate the position
+until its holder says "I wish I'd put it that way", list what you agree with, name what you learned,
+and only then object. The adversarial half descends from Prussian Kriegsspiel (1812), where blue
+denoted home forces and red the enemy, through Cold War wargaming at RAND to the CIA Red Cell and
+the Army's University of Foreign Military and Cultural Studies. Step 3's gate is Bryan Caplan's
+Ideological Turing Test (2011); step 5's pre-mortem framing is Gary Klein's prospective hindsight
+(2007).
+
+**Steps**:
+
+1. **Name the Target and the Stake** - State what is under review in a form someone could disagree
+   with, record where you stand, and name what changes if the attack lands
+2. **Build the Strongest Opposing Case** - Restate, concede, learn, then strengthen: drop what is
+   easy to refute and add the argument the opponent has not made but should
+3. **Ideological Turing Test** - _Gate._ Name a real holder of the view and ask whether they would
+   sign your version. Guards against the tinman (calling it a steelman while making them stupider)
+   and the weakman (treating their worst advocate as typical)
+4. **Appoint the Adversary** - A concrete opponent with motive, budget, patience, and knowledge of
+   you. Generic prompts produce generic risk
+5. **Run the Attack** - Cheapest attack first, then the post-mortem written from twelve months out.
+   Every finding carries severity, plausibility, and an earliest observable
+6. **Independence and Consequence Check** - _Gate._ Was the reviewer independent of the plan, and
+   can any finding actually change the decision? Millennium Challenge 2002, where the Red Team's
+   victory was refloated and rescripted, is the canonical failure
+7. **Amend and Commit** - A four-way disposition, amendments with owners, monitors on the earliest
+   observables, and the objections knowingly accepted recorded by name
+
+**Reflexivity**: Steps 1–6 are thinking steps. Step 7 is the only action step, at
+`reversibility: 'medium'` and `primaryCommitmentType: 'relationship'` — the durable change this
+technique makes is to who has told whom that their plan is weak.
+
+- Risks: A review whose findings could never have overturned the decision is decoration, and reads
+  afterwards as diligence performed
+- Failure modes: Tinmanning and weakmanning at step 2; a constrained or captured red team at step 5;
+  a team that shares one bias, which is the documented Team B (1976) error
+- Mitigations: The two gates. Step 3 refuses to proceed on a case its own holders would disown, and
+  step 6 refuses to record a pass unless some finding could have changed the outcome
+- Antifragile properties: Objections knowingly accepted are recorded by name, so a failure that
+  arrives later meets a decision that had already priced it rather than one that never saw it
+
+**Distinction from neighbours**: `cognitive_bias_audit` diagnoses the decider and returns nothing
+when the decider is disinterested; this returns the adversary's leverage regardless, because that
+leverage is a property of the plan. `competing_hypotheses` asks which explanation of the past is
+true and ends in a posterior; this plans a defeat that has not happened yet.
 
 ## References
 

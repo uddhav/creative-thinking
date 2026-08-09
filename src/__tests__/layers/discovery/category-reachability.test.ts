@@ -20,6 +20,7 @@ import { TechniqueRegistry } from '../../../techniques/TechniqueRegistry.js';
  * recommender actually handles it.
  */
 const PRODUCIBLE_CATEGORIES = [
+  'adversarial',
   'behavioral',
   'biological',
   'cognitive',
@@ -118,6 +119,35 @@ describe('Discovery category reachability', () => {
           'Look for symbiosis between the two products',
         ],
       },
+      {
+        category: 'adversarial',
+        problems: [
+          // Reachable via the broad detector, at the end of the chain.
+          'What could go wrong with the rollout?',
+          'What are the failure modes of this design?',
+          'Sanity check my reasoning on the pricing tiers',
+          // These reach adversarial only via the early explicit pass. Without
+          // it they are claimed by technical, validation and general on what
+          // the problem is about, rather than on what is being asked of it.
+          'Red team our incident response process',
+          'Steelman the case for staying multi-vendor',
+          "Play devil's advocate on the hiring freeze",
+          'Prove me wrong about dropping the mobile app',
+          "Convince me I'm wrong about consolidating vendors",
+          'Poke holes in our migration plan',
+          'Tear apart my proposal for the new pricing model',
+          'Talk me out of signing the three-year contract',
+          'Challenge my assumptions about the roadmap',
+          'Run a pre-mortem on the Q3 launch',
+          'What am I missing here?',
+          'Argue the other side of this',
+          'The strongest case against rewriting in Rust',
+          // The explicit pass sits above the temporal check on purpose: a
+          // deadline in the sentence is context, not the ask. This routed
+          // temporal on 'before' alone until the pass was moved up.
+          'Stress test the plan before we commit',
+        ],
+      },
     ];
 
     for (const { category, problems } of cases) {
@@ -161,6 +191,63 @@ describe('Discovery category reachability', () => {
     }
   });
 
+  describe('adversarial routing stays high-precision', () => {
+    // The explicit pass runs ahead of every topic detector and even ahead of
+    // the temporal check, so a loose term here reroutes a lot. Each of these
+    // contains vocabulary the detectors match on, in a sense that is not a
+    // request to be argued with.
+    const mustNotBeAdversarial = [
+      // 'stress test' in its engineering sense. It counts only next to the
+      // thing being argued with, which is why the position-noun allowlist
+      // exists rather than a blocklist of load vocabulary.
+      'Stress test the database at 10k requests per second',
+      'Stress test the checkout service and record p99 latency',
+      // 'holes' as a noun is a defect report, not a request for opposition.
+      'There are holes in the coverage report',
+      // Authoring a document *about* red teaming is a writing task. This is
+      // the one veto the explicit pass carries, and it needs both an authoring
+      // verb and a document noun so that 'red team the design before we build
+      // it' still survives.
+      'Write the red team engagement report template',
+      'Draft the pre-mortem checklist for the onboarding docs',
+      // Broad-detector vocabulary in its performance sense.
+      'What is the worst case latency under load?',
+      'Reduce worst case throughput variance on the ingest path',
+      // Broad-detector vocabulary under a constructive ask. The verb has to be
+      // in verb position: 'what are the failure modes of this design' must
+      // still route adversarial, and did not while the veto matched any
+      // occurrence of the word.
+      'Fix the blind spot in the rear camera UI',
+      'Redesign the critique widget',
+      'Build a dashboard that surfaces failure modes to on-call',
+    ];
+
+    for (const problem of mustNotBeAdversarial) {
+      it(`leaves "${problem.slice(0, 40)}..." alone`, () => {
+        expect(analyzer.categorizeProblem(problem)).not.toBe('adversarial');
+      });
+    }
+  });
+
+  describe('adversarial asks survive a constructive verb in the same sentence', () => {
+    // The retention detector's general constructive-ask veto cannot be reused
+    // in the explicit pass: these are the natural phrasings of a genuine
+    // request, and every one of them contains a constructive verb. Applying
+    // the veto there cost recall immediately.
+    const mustStayAdversarial = [
+      'Red team the design before we build it',
+      'Poke holes in this before we ship',
+      'Steelman the case for rewriting it',
+      'Red team our plan to sunset the v1 API',
+    ];
+
+    for (const problem of mustStayAdversarial) {
+      it(`keeps "${problem.slice(0, 40)}..."`, () => {
+        expect(analyzer.categorizeProblem(problem)).toBe('adversarial');
+      });
+    }
+  });
+
   describe('a stated alternative does not disqualify a retention decision', () => {
     // The constructive-ask veto above must not reach the decisive verbs. The
     // most natural way to ask a keep-or-cut question states the alternative as
@@ -194,6 +281,20 @@ describe('Discovery category reachability', () => {
       registry
     );
     expect(recommendations.map(r => r.technique)).toContain('keeper_test');
+  });
+
+  it('surfaces the steelman and red team for adversarial problems', () => {
+    // Same guard as above, and the same reason: routing to `adversarial` while
+    // being truncated out of the three low-complexity slots would look like a
+    // pass and deliver nothing.
+    const recommendations = recommender.recommendTechniques(
+      'adversarial',
+      undefined,
+      undefined,
+      'low',
+      registry
+    );
+    expect(recommendations.map(r => r.technique)).toContain('steelman_red_team');
   });
 
   it('surfaces the cognitive bias audit for decision problems', () => {

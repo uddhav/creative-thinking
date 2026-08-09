@@ -36,6 +36,7 @@ import { AnecdotalSignalHandler } from './AnecdotalSignalHandler.js';
 import { CognitiveBiasAuditHandler } from './CognitiveBiasAuditHandler.js';
 import { LatticeworkHandler } from './LatticeworkHandler.js';
 import { KeeperTestHandler } from './KeeperTestHandler.js';
+import { SteelmanRedTeamHandler } from './SteelmanRedTeamHandler.js';
 // Removed unused imports - GenericHandler and ConvergenceHandler
 
 export class TechniqueRegistry {
@@ -89,6 +90,7 @@ export class TechniqueRegistry {
     this.handlers.set('cognitive_bias_audit', new CognitiveBiasAuditHandler());
     this.handlers.set('latticework', new LatticeworkHandler());
     this.handlers.set('keeper_test', new KeeperTestHandler());
+    this.handlers.set('steelman_red_team', new SteelmanRedTeamHandler());
   }
 
   getHandler(technique: string): TechniqueHandler {

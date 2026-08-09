@@ -41,6 +41,28 @@ export class ProblemAnalyzer {
                 return 'paradoxical';
             }
         }
+        // 1b. Explicit requests to be argued with, ahead of everything except the
+        // paradox check. Same shape and same reason as the end-of-life pass below:
+        // these phrasings say what is being asked *of* the problem, which outranks
+        // what the problem is about. 'Red team our incident response process' is a
+        // request for opposition that happens to concern infrastructure, and was
+        // claimed by `technical`; 'prove me wrong about dropping the mobile app'
+        // was claimed by `validation`.
+        //
+        // Placed above the temporal check deliberately, and measured: a deadline in
+        // the sentence is context, not the ask. 'Stress test the plan before we
+        // commit' routed `temporal` on 'before' alone. Moving this pass up reclaims
+        // it and recategorises nothing — 288 unique problem strings from the test
+        // suite route identically either way.
+        //
+        // It also runs ahead of the end-of-life pass, so 'poke holes in the plan to
+        // decommission the cluster' is adversarial rather than retention. That is
+        // the intended precedence: the user asked to be argued with, and a
+        // keep-or-cut question they have not asked to be attacked ('should we
+        // decommission the staging cluster') still reaches `retention` untouched.
+        if (this.detectExplicitAdversarialAsk(lowerText)) {
+            return 'adversarial';
+        }
         // 2. Check temporal using NLP results (no redundant string matching)
         if (nlpAnalysis.temporal.hasDeadline ||
             nlpAnalysis.temporal.urgency !== 'none' ||
@@ -146,6 +168,9 @@ export class ProblemAnalyzer {
         }
         if (this.detectRetentionPattern(lowerText)) {
             return 'retention';
+        }
+        if (this.detectAdversarialPattern(lowerText)) {
+            return 'adversarial';
         }
         return 'general';
     }
@@ -265,6 +290,178 @@ export class ProblemAnalyzer {
             'has not been updated',
         ];
         return retentionKeywords.some(keyword => lowerText.includes(keyword));
+    }
+    /**
+     * Explicit requests to be argued with, checked ahead of the topic detectors.
+     *
+     * The broad detector below runs last, so it can only reclaim problems that
+     * would otherwise fall through to 'general'. That placement is additive by
+     * design, but measurement showed it leaves the most explicit phrasings
+     * stranded: 'red team our incident response process' is claimed by
+     * `technical`, 'prove me wrong about dropping the mobile app' by
+     * `validation`, and 'convince me I am wrong about consolidating vendors' by
+     * `technical` — all long before the rescue block is reached. Those are
+     * mis-routes on what the problem is *about* rather than what is being asked
+     * of it. An incident response process is the subject; being argued with is
+     * the subject matter.
+     *
+     * Terms here must be near-unambiguous: each one asks for opposition, and
+     * means little else.
+     */
+    detectExplicitAdversarialAsk(lowerText) {
+        // Naming the discipline, or asking for its characteristic move. None of
+        // these has a common second sense that survives the whole phrase.
+        const decisiveTerms = [
+            'red team',
+            'red-team',
+            'steelman',
+            'steel-man',
+            'steel man',
+            "devil's advocate",
+            'devils advocate',
+            'play devil',
+            'pre-mortem',
+            'premortem',
+            'argue the other side',
+            'argue against',
+            'strongest case against',
+            'strongest argument against',
+            'best case against',
+            'make the case against',
+            'talk me out of',
+            'talk us out of',
+            'prove me wrong',
+            'prove us wrong',
+            'what am i missing',
+            'what are we missing',
+            'challenge my assumptions',
+            'challenge our assumptions',
+            'tear it apart',
+            'tear this apart',
+            'tear apart',
+        ];
+        const hasDecisiveTerm = decisiveTerms.some(term => lowerText.includes(term));
+        // 'stress test' is the one borrowed term with a healthy engineering sense,
+        // so it does not join the list above. It counts only next to the thing
+        // being tested: a plan can be stress tested adversarially, a database is
+        // being load tested. An allowlist of position nouns is safer here than a
+        // blocklist of load vocabulary, because the ways to describe load are
+        // open-ended and the things you can argue with are not.
+        const positionNouns = [
+            'plan',
+            'decision',
+            'argument',
+            'case',
+            'assumption',
+            'assumptions',
+            'position',
+            'proposal',
+            'thesis',
+            'strategy',
+            'roadmap',
+            'design',
+            'contract',
+            'forecast',
+            'reasoning',
+        ];
+        const stressTestsAPosition = /\bstress[- ]test(ing|ed|s)?\b/.test(lowerText) &&
+            positionNouns.some(noun => lowerText.includes(noun));
+        // Verb-gated, because the bare noun phrase is a defect report: 'there are
+        // holes in the coverage report' is not a request to be argued with.
+        const pokesHoles = /\b(poke|poking|pick|picking|punch|punching|shoot)\s+(some\s+|any\s+|a\s+few\s+)?holes\b/.test(lowerText);
+        const convinceMeWrong = /\bconvince\s+(me|us)\s+(i'?m|we'?re|i am|we are)\s+wrong\b/.test(lowerText);
+        if (!hasDecisiveTerm && !stressTestsAPosition && !pokesHoles && !convinceMeWrong) {
+            return false;
+        }
+        // One veto, and it is narrow on purpose. Writing a document *about*
+        // adversarial review is an authoring task: 'write the red team engagement
+        // report template' wants a template, not an attack. The general
+        // constructive-ask veto used by the retention detector cannot be reused
+        // here — 'red team the design before we build it' and 'poke holes in this
+        // before we ship' are the natural phrasings of a genuine request and both
+        // contain constructive verbs. So the veto requires an authoring verb *and*
+        // a document noun together.
+        const authoringVerb = /\b(write|writing|draft|drafting|document|documenting|author|authoring)\b/.test(lowerText);
+        const documentNoun = /\b(template|templates|report|reports|playbook|policy|charter|checklist|guide|guideline|guidelines|curriculum|training|doc|docs|documentation|runbook|handbook)\b/.test(lowerText);
+        if (authoringVerb && documentNoun) {
+            return false;
+        }
+        return true;
+    }
+    /**
+     * Softer requests for opposition, placed in the rescue block.
+     *
+     * Everything here has a plausible non-adversarial reading somewhere, which is
+     * why it runs immediately before the fall-through to 'general' and can only
+     * reclaim problems no other category wanted. 'worst case' is the clearest
+     * example: paired with latency or throughput it is a performance question,
+     * and `technical` and `computational` both claim it many lines earlier. By
+     * the time control reaches here, the phrase has already failed every topic
+     * detector, and what is left really is someone asking what could go wrong.
+     */
+    detectAdversarialPattern(lowerText) {
+        const adversarialKeywords = [
+            // Asking for the failure directly
+            'what could go wrong',
+            'what might go wrong',
+            'how could this fail',
+            'how might this fail',
+            'how would this fail',
+            'why might this be wrong',
+            'failure mode',
+            'failure modes',
+            'worst case',
+            'worst-case',
+            // Asking to be opposed
+            'counterargument',
+            'counter-argument',
+            'other side of the argument',
+            'push back on',
+            'pushback on',
+            'change my mind',
+            'change our mind',
+            // Asking what the room missed
+            'blind spot',
+            'blind spots',
+            'weakness in',
+            'weaknesses in',
+            'everyone agreed',
+            'agreed too quickly',
+            'sanity check',
+            // Pre-commitment framing
+            'before we commit',
+            'before committing',
+            'what would have to be true',
+        ];
+        if (!adversarialKeywords.some(keyword => lowerText.includes(keyword))) {
+            return false;
+        }
+        // Two vetoes, both measured rather than guessed.
+        //
+        // The comment above predicted that `technical` and `computational` would
+        // claim performance phrasings long before this point. They do not: 'what is
+        // the worst case latency under load?' reached here and was reclaimed. So
+        // the performance sense of 'worst case' is vetoed explicitly.
+        if (/\b(latency|throughput|rps|qps|requests per second|concurrency|load|benchmark|soak|p95|p99)\b/.test(lowerText)) {
+            return false;
+        }
+        // A constructive ask outweighs these weak signals, the same way it does in
+        // the retention detector: 'fix the blind spot in the rear camera UI' wants
+        // the camera fixed, not the plan attacked. This veto is safe here and not
+        // in the explicit pass above, where 'red team the design before we build
+        // it' is the natural phrasing of a genuine request.
+        //
+        // The verb has to be in verb position, which a bare word list cannot tell.
+        // Matching anywhere cost a true positive immediately: 'what are the failure
+        // modes of this design' was vetoed on the noun. So require the verb to open
+        // the request, or to follow one of the few markers that force a verb
+        // reading.
+        const constructiveVerb = 'write|draft|design|build|create|fix|implement|improve|redesign|rewrite|add';
+        if (new RegExp(`^\\s*(${constructiveVerb})\\b`).test(lowerText) ||
+            new RegExp(`\\b(to|should|help me|help us|how do we|how can we|can you|need to|want to|trying to)\\s+(${constructiveVerb})\\b`).test(lowerText)) {
+            return false;
+        }
+        return true;
     }
     /**
      * Detect decision/judgment problems — choosing between options, weighing
@@ -460,6 +657,14 @@ export class ProblemAnalyzer {
             'neuro computational': 'computational',
             'neuro-computational': 'computational',
             'quantum superposition': 'computational',
+            // 'steelman' and 'red team' deliberately absent. This map is a
+            // substring fast-path with no vetoes, and it runs before everything —
+            // so 'write the red team engagement report template', an authoring
+            // task, would be routed as a request to be attacked. The explicit pass
+            // in detectExplicitAdversarialAsk catches the same phrasings and carries
+            // the veto, so the fast-path buys nothing but the false positive.
+            // keeper_test, cognitive_bias_audit and latticework are absent for
+            // their own reasons; this map has not tracked the catalogue since.
         };
         // Check for explicit technique requests
         for (const [technique, category] of Object.entries(techniqueMap)) {

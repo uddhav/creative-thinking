@@ -449,6 +449,30 @@ export class TechniqueRecommender {
                     effectiveness: TECHNIQUE_FIT.STRONG,
                 });
                 break;
+            // Three entries, for the reason given above the retention group: low
+            // complexity truncates to three slots, and a fourth would be invisible.
+            // Declined deliberately: registering this technique in `implementation`
+            // as well. That group has room at two entries and red-teaming a launch
+            // plan is on point, but it is unreachable from adversarial phrasings
+            // (it needs intent `request_action` plus an implement/deploy/launch
+            // verb), so the only effect would be to reshuffle existing rankings.
+            case 'adversarial':
+                recommendations.push({
+                    technique: 'steelman_red_team',
+                    reasoning: 'Build the opposing case until its holders would sign it, then attack the plan through it',
+                    effectiveness: TECHNIQUE_FIT.DEFINING,
+                });
+                recommendations.push({
+                    technique: 'competing_hypotheses',
+                    reasoning: 'Generate the alternatives the plan assumes away, and price the deception case',
+                    effectiveness: TECHNIQUE_FIT.PRIMARY,
+                });
+                recommendations.push({
+                    technique: 'cognitive_bias_audit',
+                    reasoning: 'Name the tendencies that made the plan feel safe, and that will resist the findings',
+                    effectiveness: TECHNIQUE_FIT.STRONG,
+                });
+                break;
             case 'communication':
             case 'stakeholder':
             case 'understanding':

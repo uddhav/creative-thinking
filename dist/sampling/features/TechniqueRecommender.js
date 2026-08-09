@@ -499,6 +499,11 @@ Focus on maximizing creative output and maintaining session flow.`;
                 'Separate carrying cost from switching cost, with sunk cost struck out',
                 'End with a verdict and a tripwire rather than an opinion',
             ],
+            steelman_red_team: [
+                'State the opposing case until its own holders would sign it, rather than a version you can beat',
+                'Attack the plan from a named adversary with a motive and a budget, not from generic worry',
+                'Gate the exercise on whether any finding could actually have changed the decision',
+            ],
             latticework: [
                 'Escape the one-model trap by applying multiple disciplinary lenses',
                 'Surface where disciplines disagree and demand synthesis',

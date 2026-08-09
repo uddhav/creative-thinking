@@ -384,6 +384,11 @@ function getExpectedOutputs(technique: string): string[] {
       'Cross-disciplinary agreements, conflicts, and confluences synthesized',
       'Decision committed with an explicit margin of safety',
     ],
+    steelman_red_team: [
+      'The opposing case stated strongly enough that a named holder would sign it',
+      'Ranked failure modes from a named adversary, each with an earliest observable',
+      'A disposition with amendments, owners, and the objections knowingly accepted',
+    ],
   };
 
   return outputs[technique] || ['Solution options'];
@@ -679,6 +684,15 @@ function getExpectedOutputForStep(technique: string, step: number): string {
       5: 'Economics and math lens applied (scale, compounding, base rates, inversion)',
       6: 'Lattice synthesized: agreements, conflicts, and confluences identified',
       7: 'Decision committed with an explicit margin of safety',
+    },
+    steelman_red_team: {
+      1: 'Target stated in a form someone could disagree with, plus your position and the stake',
+      2: 'The opposing case built at its strongest, with agreements and concessions named',
+      3: 'Gate: a named holder identified and asked whether they would sign your version',
+      4: 'A concrete adversary appointed, with motive, budget, and what they know about you',
+      5: 'Ranked failure modes, cheapest attack first, each with its earliest observable',
+      6: 'Gate: independence assessed and at least one decision-changing finding named',
+      7: 'Disposition committed, amendments owned, and accepted objections put on record',
     },
   };
 

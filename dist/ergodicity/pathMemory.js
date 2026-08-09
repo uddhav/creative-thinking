@@ -327,6 +327,7 @@ export class PathMemoryManager {
             cognitive_bias_audit: 'cognitive',
             latticework: 'cognitive',
             keeper_test: 'strategic',
+            steelman_red_team: 'relational',
         };
         return techniqueConstraintMap[event.technique] || 'creative';
     }

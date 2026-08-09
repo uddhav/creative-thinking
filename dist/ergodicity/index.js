@@ -459,6 +459,11 @@ export class ErgodicityManager {
                 typicalCommitment: 0.7,
                 riskProfile: 'High - A verdict to cut may not be recoverable',
             },
+            steelman_red_team: {
+                typicalReversibility: 0.6,
+                typicalCommitment: 0.5,
+                riskProfile: 'Low - The cheapest place to meet a failure mode is before committing; the residual risk is chilling a proposal that was sound',
+            },
         };
         return profiles[technique];
     }

@@ -177,6 +177,16 @@ const TECHNIQUE_QUALITY_PROFILES = {
         curiosity: 0.9,
         justice: 0.6,
     },
+    // Courage and justice are the highest in this table, and deliberately so:
+    // inviting an attack on your own plan is the courage entry, and stating an
+    // opponent's case until they would sign it is what justice means here.
+    steelman_red_team: {
+        intelligence: 0.85,
+        courage: 0.95,
+        tenacity: 0.7,
+        curiosity: 0.7,
+        justice: 0.9,
+    },
 };
 export class HumanisticQualityCoverage {
     /**

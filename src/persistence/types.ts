@@ -34,7 +34,8 @@ export type LateralTechnique =
   | 'anecdotal_signal'
   | 'cognitive_bias_audit'
   | 'latticework'
-  | 'keeper_test';
+  | 'keeper_test'
+  | 'steelman_red_team';
 
 /**
  * Represents input data for a lateral thinking step
