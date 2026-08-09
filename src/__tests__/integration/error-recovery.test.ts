@@ -16,13 +16,20 @@ import { ErgodicityManager } from '../../ergodicity/index.js';
 import { safeJsonParse } from '../helpers/types.js';
 
 /**
- * Helper function to extract error context from execution response
+ * Helper function to extract the error payload from an execution response.
+ *
+ * An out-of-range step is rejected outright, so the response is error-shaped and
+ * carries the offending step and the valid range in error.context.
  */
-function extractErrorContext(result: any): any {
-  const response = safeJsonParse<{ executionMetadata?: { errorContext?: any } }>(
-    result.content[0].text
-  );
-  return response.executionMetadata?.errorContext;
+function extractStepError(result: any): any {
+  const response = safeJsonParse<{
+    error?: {
+      code: string;
+      message: string;
+      context?: { technique?: string; providedStep?: number; validRange?: string };
+    };
+  }>(result.content[0].text);
+  return response.error;
 }
 
 describe('Error Recovery Integration Tests', () => {
@@ -153,11 +160,18 @@ describe('Error Recovery Integration Tests', () => {
         ergodicityManager
       );
 
-      // The system handles invalid steps by returning success with error context in metadata
-      expect(negativeStepResult.isError).not.toBe(true);
-      const errorContext = extractErrorContext(negativeStepResult);
-      expect(errorContext).toBeTruthy();
-      expect(errorContext.providedStep).toBe(-1);
+      // The system rejects invalid steps outright rather than recording nothing and
+      // reporting success
+      expect(negativeStepResult.isError).toBe(true);
+      const negativeError = extractStepError(negativeStepResult);
+      expect(negativeError).toBeTruthy();
+      expect(negativeError.code).toBe('E206');
+      expect(negativeError.message).toBe(
+        'Step -1 is invalid. Steps must be positive integers starting from 1.'
+      );
+      expect(negativeError.context.technique).toBe('po');
+      expect(negativeError.context.providedStep).toBe(-1);
+      expect(negativeError.context.validRange).toBe('1-4');
 
       // Test step number exceeding total
       const exceedStepResult = await executeThinkingStep(
@@ -178,11 +192,15 @@ describe('Error Recovery Integration Tests', () => {
         ergodicityManager
       );
 
-      // The system handles invalid steps by returning success with error context in metadata
-      expect(exceedStepResult.isError).not.toBe(true);
-      const exceedErrorContext = extractErrorContext(exceedStepResult);
-      expect(exceedErrorContext).toBeTruthy();
-      expect(exceedErrorContext.providedStep).toBe(10);
+      // Same for a step past the end of the plan
+      expect(exceedStepResult.isError).toBe(true);
+      const exceedError = extractStepError(exceedStepResult);
+      expect(exceedError).toBeTruthy();
+      expect(exceedError.code).toBe('E206');
+      expect(exceedError.message).toBe('Step 10 exceeds total steps (4) for the plan.');
+      expect(exceedError.context.technique).toBe('po');
+      expect(exceedError.context.providedStep).toBe(10);
+      expect(exceedError.context.validRange).toBe('1-4');
     });
   });
 
@@ -425,11 +443,15 @@ describe('Error Recovery Integration Tests', () => {
         ergodicityManager
       );
 
-      // Invalid steps return success with error context
-      expect(invalidStepResult.isError).not.toBe(true);
-      const invalidErrorContext = extractErrorContext(invalidStepResult);
-      expect(invalidErrorContext).toBeTruthy();
-      expect(invalidErrorContext.providedStep).toBe(10);
+      // Invalid steps are rejected with an error and leave the session untouched
+      expect(invalidStepResult.isError).toBe(true);
+      const invalidStepError = extractStepError(invalidStepResult);
+      expect(invalidStepError).toBeTruthy();
+      expect(invalidStepError.code).toBe('E206');
+      expect(invalidStepError.message).toBe('Step 10 exceeds total steps (4) for the plan.');
+      expect(invalidStepError.context.technique).toBe('triz');
+      expect(invalidStepError.context.providedStep).toBe(10);
+      expect(invalidStepError.context.validRange).toBe('1-4');
 
       // Now execute valid step 2 - session should still be valid
       const step2Result = await executeThinkingStep(

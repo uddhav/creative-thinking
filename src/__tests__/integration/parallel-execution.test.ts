@@ -252,14 +252,17 @@ describe('Parallel Execution Integration', () => {
     const lastResult = MCPClientTestHelper.parseToolResult(results[6]) as any;
     expect(lastResult.sessionId).toBe(sessionId);
 
-    // Execute one more step to verify session integrity
+    // Execute one more step to verify session integrity. Re-issue the last step of the
+    // plan — scamper has 8 steps, so step 9 is out of range and would tell us nothing
+    // about whether the session survived the parallel writes.
     const finalStep = await client.executeThinkingStep({
       planId: plan.planId,
       sessionId,
       technique: 'scamper',
       problem: 'Test data consistency',
-      currentStep: 9,
+      currentStep: 8,
       totalSteps: 8,
+      scamperAction: 'parameterize',
       output: 'Final verification step',
       nextStepNeeded: false,
     });

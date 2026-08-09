@@ -2,9 +2,7 @@
  * Execution Layer
  * Handles the execution of thinking steps
  */
-// Most ergodicity imports are now handled by orchestrators
-import { ResponseBuilder } from '../core/ResponseBuilder.js';
-import { ErrorCode, PersistenceError } from '../errors/types.js';
+import { ErrorCode, PersistenceError, ValidationError } from '../errors/types.js';
 import { monitorCriticalSectionAsync, addPerformanceSummary, } from '../utils/PerformanceIntegration.js';
 import { ErrorContextBuilder } from '../core/ErrorContextBuilder.js';
 import { ErrorHandler } from '../errors/ErrorHandler.js';
@@ -19,7 +17,6 @@ import { EscalationPromptGenerator } from '../ergodicity/escalationPrompts.js';
 // Import completion tracking components
 import { CompletionGatekeeper } from './execution/CompletionGatekeeper.js';
 export async function executeThinkingStep(input, sessionManager, techniqueRegistry, visualFormatter, metricsCollector, complexityAnalyzer, ergodicityManager) {
-    const responseBuilder = new ResponseBuilder();
     const errorContextBuilder = new ErrorContextBuilder();
     const errorHandler = new ErrorHandler();
     const sessionLock = sessionManager.getSessionLock();
@@ -80,21 +77,21 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
                     globalStep: input.currentStep,
                     message: errorMessage,
                 });
-                const operationData = {
-                    ...input,
-                    sessionId,
-                };
-                let nextStepGuidance;
-                if (input.nextStepNeeded) {
-                    nextStepGuidance = `Complete the ${techniqueInfo.name} process for: "${input.problem}"`;
-                }
-                const minimalMetadata = {
-                    outputCompleteness: 0.5,
-                    pathDependenciesCreated: [],
-                    flexibilityImpact: -0.05,
-                    errorContext,
-                };
-                return responseBuilder.buildExecutionResponse(sessionId, operationData, [], nextStepGuidance, session.history.length, minimalMetadata);
+                // Fail, rather than record nothing and report success.
+                //
+                // This used to return a success-shaped response with the problem buried
+                // in executionMetadata.errorContext, while the history push further down
+                // never ran. The caller saw exit 0, their output was discarded, the
+                // session could never reach complete, and progress rendered above 100%
+                // for the steps that had been saved. A step count that shrinks between
+                // runs lands here — a technique trimmed, or a plan hydrated from disk by
+                // a newer build.
+                throw new ValidationError(ErrorCode.INVALID_STEP, errorMessage, 'currentStep', {
+                    ...errorContext,
+                    technique: input.technique,
+                    providedStep: input.currentStep,
+                    validRange: `1-${techniqueInfo.totalSteps}`,
+                });
             }
             const { stepInfo, normalizedStep: techniqueLocalStep } = stepValidation;
             // Check for ergodicity prompts
