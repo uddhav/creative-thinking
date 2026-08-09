@@ -91,4 +91,29 @@ describe('Out-of-bounds step handling', () => {
       expect(message).toContain('discover_techniques');
     }
   });
+
+  describe('tryGetHandler', () => {
+    it('returns undefined for an unknown technique instead of throwing', () => {
+      expect(() => registry.tryGetHandler('unknown_technique')).not.toThrow();
+      expect(registry.tryGetHandler('unknown_technique')).toBeUndefined();
+    });
+
+    it('returns the same handler as getHandler for a known technique', () => {
+      expect(registry.tryGetHandler('six_hats')).toBe(registry.getHandler('six_hats'));
+    });
+
+    it('is what a caller with its own fallback needs', () => {
+      // The transition hint in ExecutionResponseBuilder degrades to naming the
+      // next technique when it has no handler. Written against getHandler, that
+      // fallback is unreachable and the throw fails the *previous* technique's
+      // final step, which had already succeeded.
+      const nextTechnique = 'retired_technique';
+      const handler = registry.tryGetHandler(nextTechnique);
+      const hint = handler
+        ? `Transitioning to ${nextTechnique}. ${handler.getStepGuidance(1, 'x')}`
+        : `Transitioning to ${nextTechnique}`;
+
+      expect(hint).toBe('Transitioning to retired_technique');
+    });
+  });
 });
