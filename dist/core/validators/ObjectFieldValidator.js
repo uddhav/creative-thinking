@@ -356,7 +356,7 @@ export class ObjectFieldValidator {
         // Map of technique to its array fields
         const techniqueArrayFields = {
             disney_method: ['dreamerVision', 'realistPlan', 'criticRisks'],
-            cross_cultural: [
+            cultural_integration: [
                 'culturalFrameworks',
                 'bridgeBuilding',
                 'respectfulSynthesis',

@@ -148,7 +148,7 @@ export const PLAN_THINKING_SESSION_TOOL = {
 };
 export const EXECUTE_THINKING_STEP_TOOL = {
     name: 'execute_thinking_step',
-    description: 'STEP 3 of 3: Executes a single step in the lateral thinking process. CRITICAL: You MUST execute EVERY SINGLE STEP for EACH technique in the plan. DO NOT skip any steps - each step builds on previous insights. Steps must be executed sequentially (1, 2, 3, etc.) without gaps. WARNING: This tool REQUIRES a valid planId from plan_thinking_session. The workflow is: 1) discover_techniques, 2) plan_thinking_session (get planId), 3) execute_thinking_step repeatedly until ALL steps are complete. Set nextStepNeeded=true until the FINAL step of the FINAL technique. MANDATORY PARAMETERS: planId, technique, problem, currentStep, totalSteps, output, nextStepNeeded.',
+    description: 'STEP 3 of 3: Executes a single step in the lateral thinking process. CRITICAL: You MUST execute EVERY SINGLE STEP for EACH technique in the plan. DO NOT skip any steps - each step builds on previous insights. Steps must be executed sequentially (1, 2, 3, etc.) without gaps. WARNING: This tool REQUIRES a valid planId from plan_thinking_session. DO NOT call this tool directly - you MUST first call discover_techniques, then plan_thinking_session to get a planId. The workflow is: 1) discover_techniques, 2) plan_thinking_session (get planId), 3) execute_thinking_step repeatedly until ALL steps are complete. Set nextStepNeeded=true until the FINAL step of the FINAL technique. MANDATORY PARAMETERS: planId, technique, problem, currentStep, totalSteps, output, nextStepNeeded.',
     inputSchema: {
         type: 'object',
         properties: {
