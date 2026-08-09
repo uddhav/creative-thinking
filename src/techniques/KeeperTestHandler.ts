@@ -14,7 +14,7 @@
  * recurring-versus-one-time cost split, while a bias audit finds nothing.
  */
 
-import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
+import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo, firstSentence } from './types.js';
 
 export class KeeperTestHandler extends BaseTechniqueHandler {
   private readonly steps: StepInfo[] = [
@@ -117,35 +117,42 @@ export class KeeperTestHandler extends BaseTechniqueHandler {
   }
 
   /**
-   * Reports what the session actually recorded, labelled by step.
+   * Report what each step recorded, labelled by the step.
    *
-   * Diverges from sibling handlers in one place: the final step is reported
-   * whole rather than truncated to its first sentence. That step's output is
-   * the verdict, its owner, and the tripwire — truncating it would discard the
-   * two things that make the decision hold.
+   * Keyed on `entry.currentStep`, not on position in the array. Position looks
+   * equivalent and is not: `execute` appends a history entry for every call
+   * including revisions, so one revision shifts every later entry and the last
+   * step falls off the end — of a session reporting `completed: true`. Keying on
+   * the step also means a revision supersedes the entry it revises rather than
+   * reporting twice.
    */
-  extractInsights(history: Array<{ output?: string }>): string[] {
-    const insights: string[] = [];
-    const lastIndex = this.steps.length - 1;
+  extractInsights(history: Array<{ currentStep?: number; output?: string }>): string[] {
+    const totalSteps = this.steps.length;
+    const latestByStep = new Map<number, (typeof history)[number]>();
 
     history.forEach((entry, index) => {
-      const output = entry.output?.trim();
-      const stepName = this.steps[index]?.name;
+      // Fall back to position only when the caller sent no step number.
+      const step = entry.currentStep ?? index + 1;
+      if (step >= 1 && step <= totalSteps) {
+        latestByStep.set(step, entry);
+      }
+    });
+
+    const insights: string[] = [];
+
+    for (let step = 1; step <= totalSteps; step++) {
+      const output = latestByStep.get(step)?.output?.trim();
+      const stepName = this.steps[step - 1]?.name;
       if (!output || !stepName) {
-        return;
+        continue;
       }
 
-      if (index === lastIndex) {
-        insights.push(`${stepName}: ${output}`);
-        return;
-      }
-
-      const [firstSentence] = output.split(/(?<=[.!?])\s+/);
-      const summary = (firstSentence ?? output).trim();
+      // The final step carries the verdict, the owner and the tripwire; truncating it to one sentence drops the decision.
+      const summary = step === totalSteps ? output : firstSentence(output);
       if (summary.length > 0) {
         insights.push(`${stepName}: ${summary}`);
       }
-    });
+    }
 
     return insights;
   }
