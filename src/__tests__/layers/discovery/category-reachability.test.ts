@@ -9,7 +9,7 @@
  * category were never recommended.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { TechniqueRecommender } from '../../../layers/discovery/TechniqueRecommender.js';
 import { ProblemAnalyzer } from '../../../layers/discovery/ProblemAnalyzer.js';
 import { TechniqueRegistry } from '../../../techniques/TechniqueRegistry.js';
@@ -50,10 +50,33 @@ describe('Discovery category reachability', () => {
   let analyzer: ProblemAnalyzer;
   let registry: TechniqueRegistry;
 
+  const SAVED_ENV = {
+    MAX_TECHNIQUE_RECOMMENDATIONS: process.env.MAX_TECHNIQUE_RECOMMENDATIONS,
+    WILDCARD_PROBABILITY: process.env.WILDCARD_PROBABILITY,
+  };
+
   beforeEach(() => {
+    // The anchors and floors below are calibrated to the built-in limits. Both
+    // are overridable from the environment (TechniqueRecommender reads
+    // MAX_TECHNIQUE_RECOMMENDATIONS and WILDCARD_PROBABILITY), so a CI runner
+    // or shell that exports either turns these red for a reason unrelated to
+    // the code under test. Clear them here rather than debugging that later.
+    delete process.env.MAX_TECHNIQUE_RECOMMENDATIONS;
+    delete process.env.WILDCARD_PROBABILITY;
+
     recommender = new TechniqueRecommender();
     analyzer = new ProblemAnalyzer();
     registry = TechniqueRegistry.getInstance();
+  });
+
+  afterEach(() => {
+    for (const [key, value] of Object.entries(SAVED_ENV)) {
+      if (value === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = value;
+      }
+    }
   });
 
   it('recommends at least one technique for every producible category', () => {

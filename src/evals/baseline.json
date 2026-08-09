@@ -202,9 +202,9 @@
       "totalSteps": 5,
       "stepsReferencingProblem": 5,
       "problemInterpolationRate": 1,
-      "meanGuidanceLength": 392,
+      "meanGuidanceLength": 405,
       "minGuidanceLength": 333,
-      "maxGuidanceLength": 494,
+      "maxGuidanceLength": 558,
       "usesEmoji": false,
       "usesMarkdownBold": false
     },
@@ -257,9 +257,9 @@
       "totalSteps": 4,
       "stepsReferencingProblem": 4,
       "problemInterpolationRate": 1,
-      "meanGuidanceLength": 274,
+      "meanGuidanceLength": 287,
       "minGuidanceLength": 192,
-      "maxGuidanceLength": 476,
+      "maxGuidanceLength": 526,
       "usesEmoji": false,
       "usesMarkdownBold": false
     },

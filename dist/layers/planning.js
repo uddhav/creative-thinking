@@ -486,7 +486,7 @@ function getExpectedOutputForStep(technique, step) {
             5: 'Revolutionary breakthrough synthesized',
         },
         neuro_computational: {
-            1: 'Neural representations mapped with cognitive components',
+            1: 'Network representation mapped: components that hold, transform, route and gate state',
             2: 'Diverse solution patterns generated, with constructive/destructive interference analyzed',
             3: 'Computational models synthesized from neural patterns',
             4: 'Optimization cycles completed with convergence ratings',

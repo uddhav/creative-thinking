@@ -3,7 +3,7 @@
  */
 
 import type { SixHatsColor } from '../types/index.js';
-import { BaseTechniqueHandler, type TechniqueInfo } from './types.js';
+import { BaseTechniqueHandler, firstSentence, type TechniqueInfo } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 
 interface HatInfo {
@@ -184,8 +184,7 @@ export class SixHatsHandler extends BaseTechniqueHandler {
 
       const output = entry.output?.trim();
       if (output) {
-        const [firstSentence] = output.split(/(?<=[.!?])\s+/);
-        const summary = (firstSentence ?? output).trim();
+        const summary = firstSentence(output);
         if (summary.length > 0) {
           insights.push(`${hat.name}: ${summary}`);
         }

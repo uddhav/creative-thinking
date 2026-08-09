@@ -102,18 +102,10 @@ describe('Out-of-bounds step handling', () => {
       expect(registry.tryGetHandler('six_hats')).toBe(registry.getHandler('six_hats'));
     });
 
-    it('is what a caller with its own fallback needs', () => {
-      // The transition hint in ExecutionResponseBuilder degrades to naming the
-      // next technique when it has no handler. Written against getHandler, that
-      // fallback is unreachable and the throw fails the *previous* technique's
-      // final step, which had already succeeded.
-      const nextTechnique = 'retired_technique';
-      const handler = registry.tryGetHandler(nextTechnique);
-      const hint = handler
-        ? `Transitioning to ${nextTechnique}. ${handler.getStepGuidance(1, 'x')}`
-        : `Transitioning to ${nextTechnique}`;
-
-      expect(hint).toBe('Transitioning to retired_technique');
-    });
+    // The behaviour this exists for — a plan naming an unregistered technique
+    // not failing the step before it — is covered end to end in
+    // src/__tests__/issues/unregistered-next-technique.test.ts, which drives the
+    // real executor. Re-implementing that call site here would assert on the
+    // test's own copy of the logic and would pass with the fix reverted.
   });
 });

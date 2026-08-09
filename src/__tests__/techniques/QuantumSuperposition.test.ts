@@ -119,8 +119,12 @@ describe('QuantumSuperpositionHandler', () => {
       const guidance2 = handler.getStepGuidance(2, problem);
 
       // Interference: constructive vs destructive relationships between states
-      expect(guidance2).toContain('where do they reinforce each other');
+      expect(guidance2).toContain('Where do they reinforce each other');
       expect(guidance2).toContain('where do they cancel out');
+
+      // And the hybrids those reinforcements make possible, which the merge
+      // dropped once and which is the point of holding the states together.
+      expect(guidance2).toContain('What hybrids do those reinforcements make possible');
 
       // Entanglement: dependencies where moving one state moves another
       expect(guidance2).toContain('Which aspects are inseparably linked');
