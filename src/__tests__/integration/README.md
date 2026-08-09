@@ -105,13 +105,13 @@ npm run test:run -- -t "should complete full six hats workflow"
 
 ## Test Helpers
 
-The `helpers/integration.ts` file provides utilities for:
+There is no shared integration-helper module. `helpers/integration.ts` used to provide one, but
+nothing ever imported it: over 357 lines it accumulated a step-count table that drifted to 14 of the
+32 techniques and still named `cross_cultural`, a technique that no longer exists. A helper nobody
+calls is a second source of truth that only rots, so it was deleted rather than repaired.
 
-- Creating sessions with pre-populated steps
-- Generating technique-specific test data
-- Performance measurement utilities
-- Session verification helpers
-- MCP request/response mocking
+The integration tests each build what they need inline. If a genuine duplication appears across
+several of them, extract it then — and make sure the extraction is actually imported.
 
 ## Test Suite Status
 
@@ -136,11 +136,10 @@ avoid CI/CD flakiness.
 
 When adding integration tests:
 
-1. Use the helper functions from `helpers/integration.ts`
-2. Follow the existing test structure patterns
-3. Test both success and error scenarios
-4. Include performance considerations
-5. Verify MCP protocol compliance
+1. Follow the existing test structure patterns
+2. Test both success and error scenarios
+3. Include performance considerations
+4. Verify MCP protocol compliance
 
 ## Test Data
 

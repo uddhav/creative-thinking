@@ -82,7 +82,7 @@ describe('CSVExporter', () => {
     startTime: 1705338000000,
     endTime: 1705338600000,
     metrics: {
-      creativityScore: 88,
+      outputCompleteness: 0.88,
       risksCaught: 0,
       antifragileFeatures: 1,
     },
@@ -158,7 +158,7 @@ describe('CSVExporter', () => {
       'Technique',
       'Duration',
       'Steps',
-      'CreativityScore',
+      'OutputCompleteness',
       'RisksIdentified',
       'Insights',
     ]);
@@ -166,7 +166,7 @@ describe('CSVExporter', () => {
     expect(lines[1]).toContain('How to increase innovation');
     expect(lines[1]).toContain('Random Entry');
     expect(lines[1]).toContain('10'); // 10 minutes duration
-    expect(lines[1]).toContain('88'); // creativity score
+    expect(lines[1]).toContain('0.88'); // output completeness
   });
 
   it('should handle technique-specific fields correctly', async () => {

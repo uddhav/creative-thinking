@@ -57,7 +57,7 @@ export class MarkdownExporter extends BaseExporter {
             const valueStr = value !== null && value !== undefined ? String(value) : '';
             result = result.replace(regex, valueStr);
         });
-        // Handle nested properties (e.g., metrics.creativityScore)
+        // Handle nested properties (e.g., metrics.outputCompleteness)
         if (metrics && typeof metrics === 'object') {
             Object.entries(metrics).forEach(([key, value]) => {
                 const regex = new RegExp(`{{metrics\\.${key}}}`, 'g');

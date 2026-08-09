@@ -210,7 +210,7 @@ export class CSVExporter extends BaseExporter {
         this.getTechniqueDisplayName(session.technique),
         duration.toString(),
         `${session.currentStep}/${session.totalSteps}`,
-        (session.metrics?.creativityScore || 0).toString(),
+        (session.metrics?.outputCompleteness || 0).toString(),
         (session.metrics?.risksCaught || 0).toString(),
         session.insights.length.toString(),
       ];

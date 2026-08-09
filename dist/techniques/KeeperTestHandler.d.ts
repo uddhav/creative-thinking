@@ -20,14 +20,17 @@ export declare class KeeperTestHandler extends BaseTechniqueHandler {
     getStepInfo(step: number): StepInfo;
     getStepGuidance(step: number, problem: string): string;
     /**
-     * Reports what the session actually recorded, labelled by step.
+     * Report what each step recorded, labelled by the step.
      *
-     * Diverges from sibling handlers in one place: the final step is reported
-     * whole rather than truncated to its first sentence. That step's output is
-     * the verdict, its owner, and the tripwire — truncating it would discard the
-     * two things that make the decision hold.
+     * Keyed on `entry.currentStep`, not on position in the array. Position looks
+     * equivalent and is not: `execute` appends a history entry for every call
+     * including revisions, so one revision shifts every later entry and the last
+     * step falls off the end — of a session reporting `completed: true`. Keying on
+     * the step also means a revision supersedes the entry it revises rather than
+     * reporting twice.
      */
     extractInsights(history: Array<{
+        currentStep?: number;
         output?: string;
     }>): string[];
 }

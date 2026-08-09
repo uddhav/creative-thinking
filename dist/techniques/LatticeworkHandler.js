@@ -8,7 +8,7 @@
  * four named disciplinary lenses, then synthesizes where they agree,
  * conflict, or stack.
  */
-import { BaseTechniqueHandler } from './types.js';
+import { BaseTechniqueHandler, firstSentence } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 /**
  * The big ideas worth borrowing from each discipline. Inline for now;
@@ -218,26 +218,37 @@ export class LatticeworkHandler extends BaseTechniqueHandler {
         return base;
     }
     /**
-     * Report what each lens actually surfaced, labelled by the lens.
+     * Report what each step recorded, labelled by the step.
      *
-     * This reads `entry.output`. Emitting fixed strings keyed by step index — as
-     * this once did — claims each lens produced a finding whether or not it did,
-     * which is fabricated insight dressed as analysis.
+     * Keyed on `entry.currentStep`, not on position in the array. Position looks
+     * equivalent and is not: `execute` appends a history entry for every call
+     * including revisions, so one revision shifts every later entry and the last
+     * step falls off the end — of a session reporting `completed: true`. Keying on
+     * the step also means a revision supersedes the entry it revises rather than
+     * reporting twice.
      */
     extractInsights(history) {
-        const insights = [];
+        const totalSteps = this.steps.length;
+        const latestByStep = new Map();
         history.forEach((entry, index) => {
-            const output = entry.output?.trim();
-            const stepName = this.steps[index]?.name;
-            if (!output || !stepName) {
-                return;
+            // Fall back to position only when the caller sent no step number.
+            const step = entry.currentStep ?? index + 1;
+            if (step >= 1 && step <= totalSteps) {
+                latestByStep.set(step, entry);
             }
-            const [firstSentence] = output.split(/(?<=[.!?])\s+/);
-            const summary = (firstSentence ?? output).trim();
+        });
+        const insights = [];
+        for (let step = 1; step <= totalSteps; step++) {
+            const output = latestByStep.get(step)?.output?.trim();
+            const stepName = this.steps[step - 1]?.name;
+            if (!output || !stepName) {
+                continue;
+            }
+            const summary = firstSentence(output);
             if (summary.length > 0) {
                 insights.push(`${stepName}: ${summary}`);
             }
-        });
+        }
         return insights;
     }
 }

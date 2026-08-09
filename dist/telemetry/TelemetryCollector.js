@@ -261,7 +261,7 @@ export class TelemetryCollector {
             'insightCount',
             'riskCount',
             'flexibilityScore',
-            'creativityScore',
+            'outputCompleteness',
             'revisionCount',
         ];
         const allowedFields = this.config.level === 'basic' ? basicFields : detailedFields;

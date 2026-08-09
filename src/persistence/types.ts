@@ -178,7 +178,12 @@ export interface SessionState {
   startTime?: number;
   endTime?: number;
   metrics?: {
-    creativityScore?: number;
+    /**
+     * 0-1 coverage of the outputs the technique asks for.
+     * Sessions persisted before this replaced `creativityScore` simply lack the
+     * field; consumers read it with `?? 0`, and it is recomputed on load.
+     */
+    outputCompleteness?: number;
     risksCaught?: number;
     antifragileFeatures?: number;
   };
@@ -204,7 +209,8 @@ export interface SessionMetadata {
   insights: number;
   branches: number;
   metrics?: {
-    creativityScore?: number;
+    /** 0-1 coverage of the outputs the technique asks for. */
+    outputCompleteness?: number;
     risksCaught?: number;
     antifragileFeatures?: number;
   };

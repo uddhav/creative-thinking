@@ -70,7 +70,8 @@ export declare class VisualFormatter {
      * Format session summary
      */
     formatSessionSummary(technique: LateralTechnique, problem: string, insights: string[], metrics?: {
-        creativityScore?: number;
+        /** 0-1 coverage of the outputs the technique asks for. */
+        outputCompleteness?: number;
         risksCaught?: number;
         antifragileFeatures?: number;
     }): string;

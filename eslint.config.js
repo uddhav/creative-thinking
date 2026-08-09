@@ -153,7 +153,7 @@ export default [
   },
   // JavaScript files configuration (e.g., scripts)
   {
-    files: ['scripts/**/*.js'],
+    files: ['scripts/**/*.js', 'scripts/**/*.mjs'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'module',

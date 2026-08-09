@@ -63,7 +63,7 @@ describe('MarkdownExporter', () => {
     insights: ['Async communication is critical', 'Time zone awareness needed'],
     startTime: 1705316400000,
     metrics: {
-      creativityScore: 75,
+      outputCompleteness: 0.75,
       risksCaught: 2,
       antifragileFeatures: 1,
     },
@@ -139,7 +139,7 @@ describe('MarkdownExporter', () => {
 
     const content = result.content.toString();
     expect(content).toContain('## Performance Metrics');
-    expect(content).toContain('**Creativity Score**: 75');
+    expect(content).toContain('**Output Completeness**: 0.75');
     expect(content).toContain('**Risks Identified**: 2');
   });
 

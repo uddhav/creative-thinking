@@ -123,8 +123,15 @@ describe('Parallel Execution Bug Fixes', () => {
       });
 
       const data = safeJsonParse(result.content[0].text);
-      // Should not crash and should normalize to at least step 1
-      expect(data.sessionId).toBeDefined();
+      // Should not crash, and should reject step 0 rather than silently normalizing it to 1
+      expect(result.isError).toBe(true);
+      expect(data.error.code).toBe('E206');
+      expect(data.error.message).toBe(
+        'Step 0 is invalid. Steps must be positive integers starting from 1.'
+      );
+      expect(data.error.context.technique).toBe('random_entry');
+      expect(data.error.context.providedStep).toBe(0);
+      expect(data.error.context.validRange).toBe('1-3');
     });
 
     it('should handle out-of-bounds steps gracefully', async () => {
@@ -146,8 +153,14 @@ describe('Parallel Execution Bug Fixes', () => {
       });
 
       const data = safeJsonParse(result.content[0].text);
-      // Should handle gracefully without crashing
-      expect(data.sessionId).toBeDefined();
+      // Should handle gracefully without crashing: a clean E206 rejection, not a throw
+      // and not a success response that discards the output
+      expect(result.isError).toBe(true);
+      expect(data.error.code).toBe('E206');
+      expect(data.error.message).toBe('Step 10 exceeds total steps (4) for the plan.');
+      expect(data.error.context.technique).toBe('yes_and');
+      expect(data.error.context.providedStep).toBe(10);
+      expect(data.error.context.validRange).toBe('1-4');
     });
   });
 
@@ -307,8 +320,13 @@ describe('Parallel Execution Bug Fixes', () => {
       });
 
       const data = safeJsonParse(result.content[0].text);
-      // Should complete but with adjusted step
-      expect(data.sessionId).toBeDefined();
+      // The error message names the offending step, the technique and the valid range
+      expect(result.isError).toBe(true);
+      expect(data.error.code).toBe('E206');
+      expect(data.error.message).toBe('Step 15 exceeds total steps (4) for the plan.');
+      expect(data.error.context.technique).toBe('triz');
+      expect(data.error.context.providedStep).toBe(15);
+      expect(data.error.context.validRange).toBe('1-4');
     });
   });
 });

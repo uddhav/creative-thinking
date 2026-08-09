@@ -64,7 +64,8 @@ export interface SessionData {
     planId?: string;
     totalSteps?: number;
     metrics?: {
-        creativityScore?: number;
+        /** 0-1 coverage of the outputs the technique asks for. See MetricsCollector. */
+        outputCompleteness?: number;
         risksCaught?: number;
         antifragileFeatures?: number;
     };

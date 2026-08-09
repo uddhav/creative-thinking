@@ -2,7 +2,7 @@
  * Disney Method technique handler
  */
 
-import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
+import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo, firstSentence } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 import type { DisneyRole } from '../types/index.js';
 
@@ -94,6 +94,16 @@ export class DisneyMethodHandler extends BaseTechniqueHandler {
     }
   }
 
+  /**
+   * Report what each step actually recorded, labelled by the step.
+   *
+   * Keyed on `entry.currentStep`, not on position in the array. Position looks
+   * equivalent and is not: `execute` appends a history entry for every call
+   * including revisions, so one revision shifts every later entry and the last
+   * step falls off the end — a session reporting `completed: true` silently
+   * loses its final output. Keying on the step also means a revision supersedes
+   * the entry it revises rather than reporting twice.
+   */
   extractInsights(
     history: Array<{
       currentStep?: number;
@@ -105,26 +115,46 @@ export class DisneyMethodHandler extends BaseTechniqueHandler {
       output?: string;
     }>
   ): string[] {
-    const insights: string[] = [];
+    const totalSteps = this.getTechniqueInfo().totalSteps;
+    const latestByStep = new Map<number, (typeof history)[number]>();
 
-    history.forEach(entry => {
-      if (entry.currentStep === 1 && entry.dreamerVision && entry.dreamerVision.length > 0) {
-        insights.push(`Vision: ${entry.dreamerVision[0]}`);
-      }
-      if (entry.currentStep === 2 && entry.realistPlan && entry.realistPlan.length > 0) {
-        insights.push(`Key action: ${entry.realistPlan[0]}`);
-      }
-      if (entry.currentStep === 3 && entry.criticRisks && entry.criticRisks.length > 0) {
-        insights.push(`Critical risk: ${entry.criticRisks[0]}`);
+    history.forEach((entry, index) => {
+      // Fall back to position only when the caller sent no step number.
+      const step = entry.currentStep ?? index + 1;
+      if (step >= 1 && step <= totalSteps) {
+        latestByStep.set(step, entry);
       }
     });
 
-    // Check if Disney Method is complete
-    const hasCompleteSession = history.some(
-      entry => entry.currentStep === 3 && !entry.nextStepNeeded
-    );
-    if (hasCompleteSession) {
-      insights.push('Disney Method completed - vision transformed into actionable plan');
+    const insights: string[] = [];
+
+    for (let step = 1; step <= totalSteps; step++) {
+      const entry = latestByStep.get(step);
+      if (!entry) {
+        continue;
+      }
+      const stepName = this.steps[step - 1].name;
+
+      const output = entry.output?.trim();
+      if (output) {
+        const summary = firstSentence(output);
+        if (summary.length > 0) {
+          insights.push(`${stepName}: ${summary}`);
+        }
+      }
+
+      // Each field belongs to one role.
+      const structured =
+        step === 1
+          ? entry.dreamerVision
+          : step === 2
+            ? entry.realistPlan
+            : step === 3
+              ? entry.criticRisks
+              : undefined;
+      if (structured && structured.length > 0) {
+        insights.push(`${stepName} recorded: ${structured.join(', ')}`);
+      }
     }
 
     return insights;

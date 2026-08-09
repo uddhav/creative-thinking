@@ -14,14 +14,17 @@ export declare class CognitiveBiasAuditHandler extends BaseTechniqueHandler {
     getStepInfo(step: number): StepInfo;
     getStepGuidance(step: number, problem: string): string;
     /**
-     * Summarise what the audit actually surfaced, labelled by the lens that
-     * surfaced it.
+     * Report what each step recorded, labelled by the step.
      *
-     * This reads `entry.output`. Returning fixed strings keyed by step index —
-     * as this once did — reports findings the session may never have produced,
-     * which is fabricated insight dressed as analysis.
+     * Keyed on `entry.currentStep`, not on position in the array. Position looks
+     * equivalent and is not: `execute` appends a history entry for every call
+     * including revisions, so one revision shifts every later entry and the last
+     * step falls off the end — of a session reporting `completed: true`. Keying on
+     * the step also means a revision supersedes the entry it revises rather than
+     * reporting twice.
      */
     extractInsights(history: Array<{
+        currentStep?: number;
         output?: string;
     }>): string[];
 }

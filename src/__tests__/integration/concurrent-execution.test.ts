@@ -46,7 +46,7 @@ describe('Concurrent Request Handling', () => {
       technique: 'six_hats',
       problem: 'Concurrent test problem',
       currentStep: 1,
-      totalSteps: 6,
+      totalSteps: 7,
       hatColor: 'blue',
       output: 'Initial step',
       nextStepNeeded: true,
@@ -55,20 +55,22 @@ describe('Concurrent Request Handling', () => {
     const sessionId = firstStep.sessionId;
     expect(sessionId).toBeDefined();
 
-    // Now send 10 concurrent requests for steps 2-11
+    // six_hats has 7 steps, so the remaining steps are 2-7. Cycle over them to keep 10
+    // concurrent requests in flight — the repeats put two writers on the same step at
+    // once, which is the contention this test exists to check.
+    const hatOrder = ['blue', 'white', 'red', 'yellow', 'black', 'green', 'purple'];
     const promises = Array.from({ length: 10 }, (_, i) => {
-      const stepNum = i + 2;
+      const stepNum = 2 + (i % 6);
       return server.executeThinkingStep({
         sessionId,
         planId: plan.planId,
         technique: 'six_hats',
         problem: 'Concurrent test problem',
         currentStep: stepNum,
-        totalSteps: 6,
-        hatColor:
-          stepNum <= 6 ? ['blue', 'white', 'red', 'yellow', 'black', 'green'][stepNum - 1] : 'blue',
+        totalSteps: 7,
+        hatColor: hatOrder[stepNum - 1],
         output: `Concurrent step ${stepNum}`,
-        nextStepNeeded: stepNum < 6,
+        nextStepNeeded: stepNum < 7,
       });
     });
 

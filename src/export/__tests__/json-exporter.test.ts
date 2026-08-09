@@ -55,7 +55,7 @@ describe('JSONExporter', () => {
     startTime: 1705330800000,
     endTime: 1705332600000,
     metrics: {
-      creativityScore: 82,
+      outputCompleteness: 0.82,
       risksCaught: 1,
       antifragileFeatures: 2,
     },
@@ -142,17 +142,17 @@ describe('JSONExporter', () => {
 
     const data = JSON.parse(result.content.toString()) as {
       metrics: {
-        creativityScore: number;
+        outputCompleteness: number;
         risksCaught: number;
         summary: {
-          overallCreativity: string;
+          outputCompleteness: string;
           riskAwareness: string;
         };
       };
     };
-    expect(data.metrics.creativityScore).toBe(82);
+    expect(data.metrics.outputCompleteness).toBe(0.82);
     expect(data.metrics.risksCaught).toBe(1);
-    expect(data.metrics.summary.overallCreativity).toBe('Highly Creative');
+    expect(data.metrics.summary.outputCompleteness).toBe('Highly Complete');
     expect(data.metrics.summary.riskAwareness).toBe('Limited Risk Awareness');
   });
 
@@ -212,7 +212,7 @@ describe('JSONExporter', () => {
         output: unknown;
       }>;
       metrics?: {
-        creativityScore?: number;
+        outputCompleteness?: number;
         risksCaught?: number;
         antifragileFeatures?: number;
       };
@@ -230,7 +230,7 @@ describe('JSONExporter', () => {
     const result = await exporter.export(session, { format: 'json' });
     const data = JSON.parse(result.content.toString()) as {
       metrics?: {
-        creativityScore?: number;
+        outputCompleteness?: number;
         risksCaught?: number;
         antifragileFeatures?: number;
       };

@@ -89,7 +89,7 @@ describe('CSVExporter - Edge Cases', () => {
     startTime: 1705318800000,
     endTime: 1705320600000,
     metrics: {
-      creativityScore: 95,
+      outputCompleteness: 0.95,
       risksCaught: 5,
       antifragileFeatures: 3,
     },
@@ -330,7 +330,7 @@ describe('CSVExporter - Edge Cases', () => {
         ...createMinimalSession(),
         id: 'third-session',
         metrics: {
-          creativityScore: 75,
+          outputCompleteness: 0.75,
           risksCaught: 2,
           antifragileFeatures: 1,
         },

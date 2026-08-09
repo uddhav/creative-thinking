@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { LateralThinkingServer } from '../index.js';
 import type { ExecuteThinkingStepInput } from '../index.js';
+import { TemporalWorkHandler } from '../techniques/TemporalWorkHandler.js';
 
 interface PlanResponse {
   planId: string;
@@ -23,6 +24,23 @@ interface ExecutionResponse {
   error?: string;
 }
 
+/**
+ * An out-of-range step is rejected outright: no history entry is recorded and the
+ * caller gets an E206 error response rather than a success-shaped payload with the
+ * problem buried in executionMetadata.errorContext.
+ */
+interface StepErrorResponse {
+  error: {
+    code: string;
+    message: string;
+    context: {
+      technique: string;
+      providedStep: number;
+      validRange: string;
+    };
+  };
+}
+
 describe('Array Bounds Checking Integration Tests', () => {
   let server: LateralThinkingServer;
 
@@ -33,17 +51,19 @@ describe('Array Bounds Checking Integration Tests', () => {
   });
 
   describe('getNextStepGuidance bounds checking', () => {
+    // maxSteps is what the caller declares as totalSteps; handlerSteps is the number of
+    // steps the handler actually defines, which is what the error's validRange reports.
     const techniquesWithArrays = [
-      { technique: 'triz' as const, maxSteps: 4 },
-      { technique: 'neural_state' as const, maxSteps: 4 },
-      { technique: 'temporal_work' as const, maxSteps: 5 },
-      { technique: 'cultural_integration' as const, maxSteps: 5 },
-      { technique: 'collective_intel' as const, maxSteps: 5 },
+      { technique: 'triz' as const, maxSteps: 4, handlerSteps: 4 },
+      { technique: 'neural_state' as const, maxSteps: 4, handlerSteps: 3 },
+      { technique: 'temporal_work' as const, maxSteps: 5, handlerSteps: 5 },
+      { technique: 'cultural_integration' as const, maxSteps: 5, handlerSteps: 5 },
+      { technique: 'collective_intel' as const, maxSteps: 5, handlerSteps: 5 },
     ];
 
-    techniquesWithArrays.forEach(({ technique, maxSteps }) => {
+    techniquesWithArrays.forEach(({ technique, maxSteps, handlerSteps }) => {
       describe(`${technique} technique`, () => {
-        it('should handle negative step numbers gracefully', async () => {
+        it('should reject negative step numbers with an error', async () => {
           const planResult = server.planThinkingSession({
             problem: 'Test problem',
             techniques: [technique],
@@ -61,20 +81,21 @@ describe('Array Bounds Checking Integration Tests', () => {
           };
 
           const result = await server.executeThinkingStep(input);
-          const response = JSON.parse(result.content[0].text) as ExecutionResponse;
+          const response = JSON.parse(result.content[0].text) as StepErrorResponse;
 
-          // Should contain "Complete the" and handle technique name transformation
-          expect(response.nextStepGuidance).toContain('Complete the');
-          // Handle technique name variations (cross-cultural vs cultural_integration, etc)
-          // Check if the response contains some part of the technique identifier
-          const techniqueWords = technique.split('_');
-          const foundWord = techniqueWords.some(word =>
-            response.nextStepGuidance?.toLowerCase().includes(word.toLowerCase())
+          // A step below 1 is rejected, not silently normalized into step 1 guidance
+          expect(result.isError).toBe(true);
+          expect(response.error.code).toBe('E206');
+          expect(response.error.message).toBe(
+            'Step -1 is invalid. Steps must be positive integers starting from 1.'
           );
-          expect(foundWord).toBe(true);
+          // The error names the technique and the range the caller should have used
+          expect(response.error.context.technique).toBe(technique);
+          expect(response.error.context.providedStep).toBe(-1);
+          expect(response.error.context.validRange).toBe(`1-${handlerSteps}`);
         });
 
-        it('should handle step numbers beyond array bounds', async () => {
+        it('should reject step numbers beyond array bounds with an error', async () => {
           const planResult = server.planThinkingSession({
             problem: 'Test problem',
             techniques: [technique],
@@ -92,13 +113,20 @@ describe('Array Bounds Checking Integration Tests', () => {
           };
 
           const result = await server.executeThinkingStep(input);
-          const response = JSON.parse(result.content[0].text) as ExecutionResponse;
+          const response = JSON.parse(result.content[0].text) as StepErrorResponse;
 
-          expect(response.nextStepGuidance).toContain('Complete the');
-          expect(response.nextStepGuidance).not.toContain('undefined');
+          expect(result.isError).toBe(true);
+          expect(response.error.code).toBe('E206');
+          expect(response.error.message).toBe(
+            `Step ${maxSteps + 5} exceeds total steps (${maxSteps}) for the plan.`
+          );
+          expect(response.error.message).not.toContain('undefined');
+          expect(response.error.context.technique).toBe(technique);
+          expect(response.error.context.providedStep).toBe(maxSteps + 5);
+          expect(response.error.context.validRange).toBe(`1-${handlerSteps}`);
         });
 
-        it('should handle zero step number', async () => {
+        it('should reject step number zero with an error', async () => {
           const planResult = server.planThinkingSession({
             problem: 'Test problem',
             techniques: [technique],
@@ -116,12 +144,19 @@ describe('Array Bounds Checking Integration Tests', () => {
           };
 
           const result = await server.executeThinkingStep(input);
-          const response = JSON.parse(result.content[0].text) as ExecutionResponse;
+          const response = JSON.parse(result.content[0].text) as StepErrorResponse;
 
-          // For step 0, next step is 1, which should be valid
-          expect(response.nextStepGuidance).toBeDefined();
-          expect(response.nextStepGuidance).not.toContain('undefined');
-          expect(response.nextStepGuidance).not.toContain('Unknown');
+          // Step 0 is not quietly rounded up to step 1 — steps are 1-indexed and 0 is an error
+          expect(result.isError).toBe(true);
+          expect(response.error.code).toBe('E206');
+          expect(response.error.message).toBe(
+            'Step 0 is invalid. Steps must be positive integers starting from 1.'
+          );
+          expect(response.error.message).not.toContain('undefined');
+          expect(response.error.message).not.toContain('Unknown');
+          expect(response.error.context.technique).toBe(technique);
+          expect(response.error.context.providedStep).toBe(0);
+          expect(response.error.context.validRange).toBe(`1-${handlerSteps}`);
         });
       });
     });
@@ -129,16 +164,16 @@ describe('Array Bounds Checking Integration Tests', () => {
 
   describe('formatOutput bounds checking', () => {
     const techniquesWithArrays = [
-      { technique: 'triz' as const, maxSteps: 4 },
-      { technique: 'neural_state' as const, maxSteps: 4 },
-      { technique: 'temporal_work' as const, maxSteps: 5 },
-      { technique: 'cultural_integration' as const, maxSteps: 5 },
-      { technique: 'collective_intel' as const, maxSteps: 5 },
+      { technique: 'triz' as const, maxSteps: 4, handlerSteps: 4 },
+      { technique: 'neural_state' as const, maxSteps: 4, handlerSteps: 3 },
+      { technique: 'temporal_work' as const, maxSteps: 5, handlerSteps: 5 },
+      { technique: 'cultural_integration' as const, maxSteps: 5, handlerSteps: 5 },
+      { technique: 'collective_intel' as const, maxSteps: 5, handlerSteps: 5 },
     ];
 
-    techniquesWithArrays.forEach(({ technique, maxSteps }) => {
+    techniquesWithArrays.forEach(({ technique, maxSteps, handlerSteps }) => {
       describe(`${technique} technique formatting`, () => {
-        it('should display unknown step message for invalid step numbers', async () => {
+        it('should return an error for invalid step numbers', async () => {
           const planResult = server.planThinkingSession({
             problem: 'Test problem',
             techniques: [technique],
@@ -157,16 +192,18 @@ describe('Array Bounds Checking Integration Tests', () => {
           };
 
           const result = await server.executeThinkingStep(input);
-          const response = JSON.parse(result.content[0].text);
+          const response = JSON.parse(result.content[0].text) as StepErrorResponse;
 
-          // Should return error context for invalid step
-          expect(response.executionMetadata).toBeDefined();
-          expect(response.executionMetadata.errorContext).toBeDefined();
-          expect(response.executionMetadata.errorContext.providedStep).toBe(-5);
-          expect(response.executionMetadata.errorContext.message).toContain('invalid');
+          // Should return an E206 error for an invalid step, not a success-shaped payload
+          expect(result.isError).toBe(true);
+          expect(response.error.code).toBe('E206');
+          expect(response.error.message).toContain('invalid');
+          expect(response.error.context.technique).toBe(technique);
+          expect(response.error.context.providedStep).toBe(-5);
+          expect(response.error.context.validRange).toBe(`1-${handlerSteps}`);
         });
 
-        it('should display unknown step message for steps beyond bounds', async () => {
+        it('should return an error for steps beyond bounds', async () => {
           const planResult = server.planThinkingSession({
             problem: 'Test problem',
             techniques: [technique],
@@ -184,13 +221,18 @@ describe('Array Bounds Checking Integration Tests', () => {
           };
 
           const result = await server.executeThinkingStep(input);
-          const response = JSON.parse(result.content[0].text);
+          const response = JSON.parse(result.content[0].text) as StepErrorResponse;
 
-          // Should return error context for out of bounds step
-          expect(response.executionMetadata).toBeDefined();
-          expect(response.executionMetadata.errorContext).toBeDefined();
-          expect(response.executionMetadata.errorContext.providedStep).toBe(999);
-          expect(response.executionMetadata.errorContext.message).toContain('exceeds');
+          // Should return an E206 error for an out of bounds step
+          expect(result.isError).toBe(true);
+          expect(response.error.code).toBe('E206');
+          expect(response.error.message).toContain('exceeds');
+          expect(response.error.message).toBe(
+            `Step 999 exceeds total steps (${maxSteps}) for the plan.`
+          );
+          expect(response.error.context.technique).toBe(technique);
+          expect(response.error.context.providedStep).toBe(999);
+          expect(response.error.context.validRange).toBe(`1-${handlerSteps}`);
         });
       });
     });
@@ -223,28 +265,19 @@ describe('Array Bounds Checking Integration Tests', () => {
       expect(response.nextStepGuidance).not.toContain('undefined');
     });
 
-    it('should handle temporal_work steps beyond case statements', async () => {
-      const planResult = server.planThinkingSession({
-        problem: 'Test temporal problem',
-        techniques: ['temporal_work'],
-      });
-      const planResponse = JSON.parse(planResult.content[0].text) as PlanResponse;
+    // executeThinkingStep rejects a step of 10 before any guidance is produced, so this
+    // fallback is only reachable by calling the handler directly. Tested at that level so
+    // the coverage of the out-of-range guidance arm survives.
+    it('should handle temporal_work steps beyond case statements', () => {
+      const handler = new TemporalWorkHandler();
 
-      const input: ExecuteThinkingStepInput = {
-        planId: planResponse.planId,
-        technique: 'temporal_work',
-        problem: 'Test temporal problem',
-        currentStep: 10, // Beyond the switch cases (1-5)
-        totalSteps: 5,
-        output: 'Step beyond normal range',
-        nextStepNeeded: true,
-      };
+      const guidance = handler.getStepGuidance(10, 'Test temporal problem');
 
-      const result = await server.executeThinkingStep(input);
-      const response = JSON.parse(result.content[0].text) as ExecutionResponse;
-
-      // Should hit the default case
-      expect(response.nextStepGuidance).toContain('Complete the Temporal Work Design process for:');
+      // Should hit the out-of-range fallback
+      expect(guidance).toContain('Complete the Temporal Work Design process for:');
+      expect(guidance).toBe(
+        'Complete the Temporal Work Design process for: "Test temporal problem"'
+      );
     });
   });
 

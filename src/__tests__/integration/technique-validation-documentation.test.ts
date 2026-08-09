@@ -205,24 +205,24 @@ describe('Technique Validation Documentation', () => {
       const planId = planResult.content[0].text.match(/"planId":\s*"([^"]+)"/)?.[1];
       if (!planId) throw new Error('Plan ID not found');
 
-      // Step 5 with alternative field
-      const step5Input: ExecuteThinkingStepInput = {
+      // Meta-synthesis is the last step of meta_learning, which has 4 steps
+      const metaSynthesisStepInput: ExecuteThinkingStepInput = {
         planId,
         technique: 'meta_learning',
         problem: 'Test problem',
-        currentStep: 5,
-        totalSteps: 5,
+        currentStep: 4,
+        totalSteps: 4,
         output: 'Meta-synthesis complete',
         nextStepNeeded: false,
         synthesisStrategy: 'Adaptive meta-learning strategy', // Alternative to metaSynthesis
       };
 
-      const result = await server.executeThinkingStep(step5Input);
+      const result = await server.executeThinkingStep(metaSynthesisStepInput);
       const response = JSON.parse(result.content[0].text);
 
       // Should NOT get an error when using alternative field name
       expect(response.error).toBeUndefined();
-      expect(response.currentStep).toBe(5);
+      expect(response.currentStep).toBe(4);
       expect(response.technique).toBe('meta_learning');
     });
   });

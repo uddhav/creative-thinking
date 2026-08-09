@@ -35,7 +35,8 @@ export function registerExecute(yargs: Argv): Argv {
         .option('next-step-needed', {
           type: 'boolean',
           default: undefined,
-          describe: 'Whether more steps follow (defaults true unless flag is explicitly set)',
+          describe:
+            'Whether more steps follow. Required on every step — there is no default. Pass it while steps remain, and --no-next-step-needed on the last one.',
         })
         .option('no-auto-save', {
           type: 'boolean',

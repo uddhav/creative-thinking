@@ -22,7 +22,6 @@ import {
 } from '../../evals/guidanceMetrics.js';
 
 interface Baseline {
-  generatedFrom: string;
   summary: GuidanceMetricsSummary;
   techniques: TechniqueGuidanceMetrics[];
 }
@@ -106,5 +105,46 @@ describe('Guidance quality ratchet', () => {
       expect(metric.meanGuidanceLength).toBeGreaterThan(0);
       expect(metric.stepsReferencingProblem).toBeLessThanOrEqual(metric.totalSteps);
     }
+  });
+
+  describe('the baseline is structurally current', () => {
+    /**
+     * The quality numbers in baseline.json are a ratchet and are meant to lag.
+     * Its structural facts are not: which techniques exist, and how many steps
+     * each has, describe the catalogue as it is today.
+     *
+     * That distinction had no enforcement. Everything except the interpolation
+     * rate was read by nothing and compared against nothing, so the file was
+     * hand-edited twice during a catalogue pass and nothing would have caught a
+     * wrong number. Regenerate with `npm run build && npm run evals:baseline`.
+     */
+    it('records every registered technique, and only those', () => {
+      const recorded = baseline.techniques.map(t => t.technique).sort();
+      const registered = TechniqueRegistry.getInstance().getAllTechniques().slice().sort();
+
+      expect(recorded).toEqual(registered);
+    });
+
+    it('records each technique’s real step count', () => {
+      const stale: string[] = [];
+
+      for (const recorded of baseline.techniques) {
+        const actual = TechniqueRegistry.getInstance()
+          .getHandler(recorded.technique)
+          .getTechniqueInfo().totalSteps;
+        if (recorded.totalSteps !== actual) {
+          stale.push(`${recorded.technique}: baseline ${recorded.totalSteps}, handler ${actual}`);
+        }
+      }
+
+      expect(stale, 'run `npm run evals:baseline` to refresh').toEqual([]);
+    });
+
+    it('agrees with itself on the totals', () => {
+      const summed = baseline.techniques.reduce((total, t) => total + t.totalSteps, 0);
+
+      expect(baseline.summary.techniqueCount).toBe(baseline.techniques.length);
+      expect(baseline.summary.totalSteps).toBe(summed);
+    });
   });
 });

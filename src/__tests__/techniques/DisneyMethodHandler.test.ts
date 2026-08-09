@@ -127,11 +127,18 @@ describe('DisneyMethodHandler', () => {
       ];
 
       const insights = handler.extractInsights(history);
-      expect(insights).toContain('Vision: Create an AI-powered onboarding assistant');
+      expect(insights).toContain('Dreamer: Dreamer phase complete');
+      expect(insights).toContain(
+        'Dreamer recorded: Create an AI-powered onboarding assistant, Personalized learning paths'
+      );
     });
 
     it('should extract insights from realist plan', () => {
       const history = [
+        {
+          currentStep: 1,
+          output: 'Dreamer phase complete',
+        },
         {
           currentStep: 2,
           realistPlan: ['Build MVP with core features', 'Integrate with existing systems'],
@@ -140,11 +147,22 @@ describe('DisneyMethodHandler', () => {
       ];
 
       const insights = handler.extractInsights(history);
-      expect(insights).toContain('Key action: Build MVP with core features');
+      expect(insights).toContain('Realist: Realist phase complete');
+      expect(insights).toContain(
+        'Realist recorded: Build MVP with core features, Integrate with existing systems'
+      );
     });
 
     it('should extract insights from critic risks', () => {
       const history = [
+        {
+          currentStep: 1,
+          output: 'Dreamer phase complete',
+        },
+        {
+          currentStep: 2,
+          output: 'Realist phase complete',
+        },
         {
           currentStep: 3,
           criticRisks: ['Data privacy concerns', 'Integration complexity'],
@@ -153,32 +171,50 @@ describe('DisneyMethodHandler', () => {
       ];
 
       const insights = handler.extractInsights(history);
-      expect(insights).toContain('Critical risk: Data privacy concerns');
+      expect(insights).toContain('Critic: Critic phase complete');
+      expect(insights).toContain('Critic recorded: Data privacy concerns, Integration complexity');
     });
 
-    it('should recognize completed Disney Method session', () => {
+    it("should report each role's content for a completed session, with no fixed banner", () => {
       const history = [
         {
           currentStep: 1,
           dreamerVision: ['Amazing vision'],
+          output: 'Onboarding that finishes itself. No forms at all.',
           nextStepNeeded: true,
         },
         {
           currentStep: 2,
           realistPlan: ['Practical plan'],
+          output: 'Ship a guided importer first. Two engineers, one quarter.',
           nextStepNeeded: true,
         },
         {
           currentStep: 3,
           criticRisks: ['Some risks'],
+          output: 'Import mapping breaks on legacy exports.',
           nextStepNeeded: false,
         },
       ];
 
       const insights = handler.extractInsights(history);
-      expect(insights).toContain(
-        'Disney Method completed - vision transformed into actionable plan'
-      );
+
+      // A finished session reports what each role actually said, not the fact
+      // that it finished — the step count already carries that.
+      expect(insights).toEqual([
+        'Dreamer: Onboarding that finishes itself.',
+        'Dreamer recorded: Amazing vision',
+        'Realist: Ship a guided importer first.',
+        'Realist recorded: Practical plan',
+        'Critic: Import mapping breaks on legacy exports.',
+        'Critic recorded: Some risks',
+      ]);
+      expect(
+        insights.some(
+          i => i === 'Disney Method completed - vision transformed into actionable plan'
+        )
+      ).toBe(false);
+      expect(insights.some(i => /completed/i.test(i))).toBe(false);
     });
 
     it('should handle empty history', () => {
@@ -195,7 +231,8 @@ describe('DisneyMethodHandler', () => {
       ];
 
       const insights = handler.extractInsights(history);
-      expect(insights).toHaveLength(0);
+      expect(insights).toEqual(['Dreamer: Just some output without specific fields']);
+      expect(insights.some(i => i.includes('recorded:'))).toBe(false);
     });
   });
 });

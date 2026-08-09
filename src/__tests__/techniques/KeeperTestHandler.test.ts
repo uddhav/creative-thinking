@@ -118,4 +118,50 @@ describe('KeeperTestHandler', () => {
       expect(handler.extractInsights([{ output: '' }, { output: '   ' }, {}])).toEqual([]);
     });
   });
+
+  describe('extractInsights across revisions', () => {
+    it('lets a revision supersede its step without shifting the later labels', () => {
+      // execute appends a history entry for every call, revisions included.
+      // Labelled by array position, one revision shifted every later label and
+      // pushed step 5 — the verdict, the owner and the tripwire — off the end.
+      const insights = handler.extractInsights([
+        { currentStep: 1, output: 'The QA task group.' },
+        { currentStep: 1, output: 'Correction: the QA group and its tooling budget.' },
+        { currentStep: 2, output: 'Adopted after the 2023 escape.' },
+        { currentStep: 3, output: 'No, we would not take it on today.' },
+        { currentStep: 4, output: 'Carrying cost is 0.4 FTE per quarter.' },
+        { currentStep: 5, output: 'Verdict: trim. Owner: Dana. Tripwire: the next escape.' },
+      ]);
+
+      expect(insights).toHaveLength(5);
+      expect(insights[0]).toBe(
+        'Name the Incumbent: Correction: the QA group and its tooling budget.'
+      );
+      expect(insights[4]).toBe(
+        'Decide and Set the Trigger: Verdict: trim. Owner: Dana. Tripwire: the next escape.'
+      );
+    });
+
+    it('still reports the final step whole, so the verdict survives', () => {
+      const insights = handler.extractInsights([
+        { currentStep: 5, output: 'Verdict: drop. Owner: Sam. Tripwire: renewal in March.' },
+      ]);
+
+      // Every other step truncates to its first sentence; this one must not,
+      // or the owner and the tripwire are lost.
+      expect(insights[0]).toContain('Owner: Sam');
+      expect(insights[0]).toContain('Tripwire: renewal in March.');
+    });
+
+    it('does not cut a finding short at an abbreviation', () => {
+      const insights = handler.extractInsights([
+        {
+          currentStep: 4,
+          output: 'Carrying runs approx. 0.4 FTE a quarter. Switching is one-off.',
+        },
+      ]);
+
+      expect(insights[0]).toBe('Price It Honestly: Carrying runs approx. 0.4 FTE a quarter.');
+    });
+  });
 });

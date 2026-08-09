@@ -66,8 +66,15 @@ node dist/cli.js discover --problem "..."                      # → JSON on std
 node dist/cli.js plan --problem "..." --techniques six_hats    # → planId persisted to disk
 node dist/cli.js execute --plan <planId> --technique six_hats \
     --problem "..." --step 1 --total-steps 7 --output "..." --next-step-needed
+node dist/cli.js execute --plan <planId> --technique six_hats \
+    --problem "..." --step 7 --total-steps 7 --output "..." --no-next-step-needed
 node dist/cli.js session list --status active --limit 20
 ```
+
+**`--next-step-needed` is required on every `execute` call and has no default.** Omitting it fails
+with `nextStepNeeded must be a boolean` — on any step, not just the last. Pass it while steps
+remain, and `--no-next-step-needed` on the final step. A session that never receives the negated
+form never completes, and an incomplete session emits no final synthesis.
 
 State on disk under `PERSISTENCE_PATH` (default `~/.creative-thinking`):
 

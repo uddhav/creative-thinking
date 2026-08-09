@@ -383,7 +383,7 @@ export class TelemetryCollector {
       'insightCount',
       'riskCount',
       'flexibilityScore',
-      'creativityScore',
+      'outputCompleteness',
       'revisionCount',
     ];
 

@@ -9,6 +9,7 @@ import { JsonOptimizer } from '../../utils/JsonOptimizer.js';
 import { monitorCriticalSection } from '../../utils/PerformanceIntegration.js';
 import { TelemetryCollector } from '../../telemetry/TelemetryCollector.js';
 import { SessionCompletionTracker } from '../../core/session/SessionCompletionTracker.js';
+import { MetricsCollector } from '../../core/MetricsCollector.js';
 export class ExecutionResponseBuilder {
     complexityAnalyzer;
     escalationGenerator;
@@ -19,6 +20,7 @@ export class ExecutionResponseBuilder {
     jsonOptimizer;
     telemetry = TelemetryCollector.getInstance();
     completionTracker = new SessionCompletionTracker();
+    metricsCollector = new MetricsCollector();
     constructor(complexityAnalyzer, escalationGenerator, techniqueRegistry, sessionManager) {
         this.complexityAnalyzer = complexityAnalyzer;
         this.escalationGenerator = escalationGenerator;
@@ -47,6 +49,10 @@ export class ExecutionResponseBuilder {
             .catch(console.error);
         // Build core response object (not JSON) with insights and metadata
         const { responseData, currentInsights } = this.buildCoreResponseData(input, session, sessionId, handler, techniqueLocalStep, techniqueIndex, plan, currentFlexibility);
+        // buildCoreResponseData is where this step's insights land in the session,
+        // so the completeness metric is only current once it has returned. The
+        // completion summary and the session-complete telemetry below both read it.
+        this.metricsCollector.refreshOutputCompleteness(session);
         // Track insights if generated
         if (currentInsights.length > 0) {
             this.telemetry
@@ -318,7 +324,7 @@ export class ExecutionResponseBuilder {
     }
     generateExecutionMetadata(input, session, insights, pathMemory, currentFlexibility) {
         const metadata = {
-            outputCompleteness: this.assessOutputCompleteness(input, session, insights),
+            stepCompleteness: this.assessOutputCompleteness(input, session, insights),
             pathDependenciesCreated: this.extractPathDependencies(input, pathMemory),
             flexibilityImpact: this.calculateFlexibilityImpact(input, session),
         };
@@ -492,6 +498,12 @@ export class ExecutionResponseBuilder {
     }
     handleSessionCompletion(response, session) {
         session.endTime = Date.now();
+        // Recompute once more now that endTime is set: completion is one of the
+        // metric's four factors, and it is only true from this line onward. Both
+        // the completion summary built below and the effectiveness reported to
+        // telemetry read the stored value, so computing it before this point
+        // reported every finished session as unfinished.
+        this.metricsCollector.refreshOutputCompleteness(session);
         // Optimize: Parse once, modify, and use optimizer to stringify
         const responseData = JSON.parse(response.content[0].text);
         const completedData = this.responseBuilder.addCompletionData(responseData, session);
@@ -509,7 +521,9 @@ export class ExecutionResponseBuilder {
             revisionCount: session.history.filter(h => h.isRevision).length,
             branchCount: Object.keys(session.branches).length,
             flexibilityScore: session.pathMemory?.currentFlexibility?.flexibilityScore,
-            effectiveness: session.metrics?.creativityScore || 0.5,
+            // effectiveness is 0-1 throughout this file (cf. assessOutputCompleteness).
+            // 0.5 is the fallback for sessions persisted before outputCompleteness existed.
+            effectiveness: session.metrics?.outputCompleteness ?? 0.5,
         })
             .catch(console.error);
     }

@@ -2,7 +2,7 @@
  * Collective Intelligence technique handler with reflexivity tracking
  */
 
-import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
+import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo, firstSentence } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 
 export class CollectiveIntelHandler extends BaseTechniqueHandler {
@@ -124,6 +124,16 @@ export class CollectiveIntelHandler extends BaseTechniqueHandler {
     }
   }
 
+  /**
+   * Report what each step actually recorded, labelled by the step.
+   *
+   * Keyed on `entry.currentStep`, not on position in the array. Position looks
+   * equivalent and is not: `execute` appends a history entry for every call
+   * including revisions, so one revision shifts every later entry and the last
+   * step falls off the end — a session reporting `completed: true` silently
+   * loses its final output. Keying on the step also means a revision supersedes
+   * the entry it revises rather than reporting twice.
+   */
   extractInsights(
     history: Array<{
       currentStep?: number;
@@ -134,37 +144,49 @@ export class CollectiveIntelHandler extends BaseTechniqueHandler {
       output?: string;
     }>
   ): string[] {
-    const insights: string[] = [];
+    const totalSteps = this.getTechniqueInfo().totalSteps;
+    const latestByStep = new Map<number, (typeof history)[number]>();
 
-    history.forEach(entry => {
-      if (entry.currentStep === 1 && entry.wisdomSources && entry.wisdomSources.length > 0) {
-        insights.push(`Wisdom source: ${entry.wisdomSources[0]}`);
-      }
-      if (entry.currentStep === 2 && entry.emergentPatterns && entry.emergentPatterns.length > 0) {
-        insights.push(`Pattern found: ${entry.emergentPatterns[0]}`);
-      }
-      if (
-        entry.currentStep === 3 &&
-        entry.synergyCombinations &&
-        entry.synergyCombinations.length > 0
-      ) {
-        insights.push(`Synergy: ${entry.synergyCombinations[0]}`);
-      }
-      if (
-        entry.currentStep === 4 &&
-        entry.collectiveInsights &&
-        entry.collectiveInsights.length > 0
-      ) {
-        insights.push(`Collective insight: ${entry.collectiveInsights[0]}`);
+    history.forEach((entry, index) => {
+      // Fall back to position only when the caller sent no step number.
+      const step = entry.currentStep ?? index + 1;
+      if (step >= 1 && step <= totalSteps) {
+        latestByStep.set(step, entry);
       }
     });
 
-    // Check if collective intelligence synthesis is complete
-    const hasCompleteSession = history.some(
-      entry => entry.currentStep === 5 && 'nextStepNeeded' in entry && !entry.nextStepNeeded
-    );
-    if (hasCompleteSession) {
-      insights.push('Collective Intelligence synthesis completed - wisdom of many integrated');
+    const insights: string[] = [];
+
+    for (let step = 1; step <= totalSteps; step++) {
+      const entry = latestByStep.get(step);
+      if (!entry) {
+        continue;
+      }
+      const stepName = this.getStepInfo(step).name;
+
+      const output = entry.output?.trim();
+      if (output) {
+        const summary = firstSentence(output);
+        if (summary.length > 0) {
+          insights.push(`${stepName}: ${summary}`);
+        }
+      }
+
+      // Each field belongs to one step. Selecting by whichever happened to be
+      // present reported the wrong one when an entry carried two.
+      const structured =
+        step === 1
+          ? entry.wisdomSources
+          : step === 3
+            ? entry.emergentPatterns
+            : step === 4
+              ? entry.synergyCombinations
+              : step === 5
+                ? entry.collectiveInsights
+                : undefined;
+      if (structured && structured.length > 0) {
+        insights.push(`${stepName} recorded: ${structured.join(', ')}`);
+      }
     }
 
     return insights;

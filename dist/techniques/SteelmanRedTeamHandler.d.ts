@@ -43,15 +43,17 @@ export declare class SteelmanRedTeamHandler extends BaseTechniqueHandler {
     getStepInfo(step: number): StepInfo;
     getStepGuidance(step: number, problem: string): string;
     /**
-     * Reports what the session actually recorded, labelled by step.
+     * Report what each step recorded, labelled by the step.
      *
-     * Follows the sibling handlers in truncating to a first sentence, with the
-     * final step reported whole: step 7 carries the disposition, the amendments
-     * and the objections knowingly accepted, and truncation would keep only the
-     * first of the three. The accepted-objection list is the whole reason the
-     * technique ends in a record rather than an opinion.
+     * Keyed on `entry.currentStep`, not on position in the array. Position looks
+     * equivalent and is not: `execute` appends a history entry for every call
+     * including revisions, so one revision shifts every later entry and the last
+     * step falls off the end — of a session reporting `completed: true`. Keying on
+     * the step also means a revision supersedes the entry it revises rather than
+     * reporting twice.
      */
     extractInsights(history: Array<{
+        currentStep?: number;
         output?: string;
     }>): string[];
 }
