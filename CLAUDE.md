@@ -357,6 +357,12 @@ Tests auto-build before running (`pretest` script runs `npm run build`).
 
 ## Release pipeline
 
+The version line jumps from v1.1.0 to v2.0.0 for a reason that is not a breaking change: a commit
+body written while fixing the bump logic carried `BREAKING CHANGE:` as the first non-whitespace on a
+line, inside an indented example, and semantic-release read it as a footer. Per the never-roll-back
+rule below, it was left in place rather than re-tagged. See the commit-body rule under Important
+Constraints.
+
 Three workflows, because a repository ruleset on `main` requires every change to arrive through a
 pull request. `@semantic-release/git` used to push the version commit directly and was rejected
 every time (`GH013: changes must be made through a pull request`), which is why nothing released
@@ -422,6 +428,26 @@ Process.
 - **dist/ is checked in** — required for `npx github:uddhav/creative-thinking` distribution
 - **Sequential execution only** — steps execute in order for coherence (no parallel execution)
 - **Conventional Commits** required — `fix:` (patch), `feat:` (minor), `feat!:` (major)
+- **Never let `BREAKING CHANGE` begin a line in a commit body unless you mean it.** semantic-release
+  parses the body, not just the subject. The table below comes from running the resolved parser
+  (`conventional-changelog-angular` v8 + `conventional-commits-parser` v6) over each form, not from
+  reading its regex — a transcription of that regex got the `BREAKING-CHANGE:` row backwards.
+
+  | Form                       | Matched? |                                                                                      |
+  | -------------------------- | -------- | ------------------------------------------------------------------------------------ |
+  | indented four spaces       | **yes**  | the original failure; `\s` is stripped                                               |
+  | markdown bullet `* …`      | **yes**  | `*` is stripped                                                                      |
+  | table pipe `\| …`          | **yes**  | `\|` is stripped                                                                     |
+  | line start, no colon       | **yes**  | the separator is `[:\s]+`, so a space suffices                                       |
+  | `BREAKING-CHANGE:`         | **yes**  | the parser normalises the hyphen, though the keyword list holds only the spaced form |
+  | inline mid-sentence        | no       | the `^` anchor cannot reach it                                                       |
+  | plural `BREAKING CHANGES:` | no       | `S` is neither colon nor space                                                       |
+  | `BREAKING_CHANGE:`         | no       | not the configured keyword                                                           |
+
+  So indentation, bullets, table cells and dropping the colon all fail to protect. Use an inline
+  mention, the plural, or an underscored token. A **pull request description** is also safe — squash
+  bodies here are assembled from commit messages, not the PR body.
+
 - **Never log to stdout** — it breaks MCP protocol
 - **Never add a 4th tool** — all functionality fits within the three-tool workflow
 - Do what has been asked; nothing more, nothing less
