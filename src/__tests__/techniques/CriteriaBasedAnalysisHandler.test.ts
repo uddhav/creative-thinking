@@ -149,7 +149,15 @@ describe('CriteriaBasedAnalysisHandler', () => {
       ];
 
       const insights = handler.extractInsights(history);
-      expect(insights.some(i => i.includes('Inconsistencies detected'))).toBe(true);
+      expect(insights).toContain(
+        'Baseline Assessment: Initial assessment shows consistency in the data'
+      );
+      expect(insights).toContain(
+        'Cognitive Criteria Analysis: Analysis reveals some contradictions in claims'
+      );
+      expect(insights).toContain('Motivational Analysis: Stakeholder motivations appear aligned');
+      expect(insights).toContain('Reality Monitoring: External verification confirmed most claims');
+      expect(insights).toContain('Validity Synthesis: Final assessment complete');
       expect(insights).toContain('Validity Score: 75%');
       expect(insights).toContain('Moderate validity - Proceed with appropriate caution');
     });

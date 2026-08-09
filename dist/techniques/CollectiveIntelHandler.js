@@ -111,31 +111,39 @@ export class CollectiveIntelHandler extends BaseTechniqueHandler {
                 return `Complete the Collective Intelligence Synthesis process for: "${problem}"`;
         }
     }
+    /**
+     * Report what each step actually recorded, labelled by the step.
+     *
+     * This reads `entry.output`. Reading only the structured fields meant a full
+     * five-step session returned nothing but a completion banner, because the CLI
+     * flag path never populates them — and the step indices were off by one
+     * against the step names, so a "Find Patterns" output was labelled Synergy.
+     * The structured fields still report when a caller supplies them.
+     */
     extractInsights(history) {
         const insights = [];
-        history.forEach(entry => {
-            if (entry.currentStep === 1 && entry.wisdomSources && entry.wisdomSources.length > 0) {
-                insights.push(`Wisdom source: ${entry.wisdomSources[0]}`);
+        const totalSteps = this.getTechniqueInfo().totalSteps;
+        history.forEach((entry, index) => {
+            if (index >= totalSteps) {
+                return;
             }
-            if (entry.currentStep === 2 && entry.emergentPatterns && entry.emergentPatterns.length > 0) {
-                insights.push(`Pattern found: ${entry.emergentPatterns[0]}`);
+            const stepName = this.getStepInfo(index + 1).name;
+            const output = entry.output?.trim();
+            if (output) {
+                const [firstSentence] = output.split(/(?<=[.!?])\s+/);
+                const summary = (firstSentence ?? output).trim();
+                if (summary.length > 0) {
+                    insights.push(`${stepName}: ${summary}`);
+                }
             }
-            if (entry.currentStep === 3 &&
-                entry.synergyCombinations &&
-                entry.synergyCombinations.length > 0) {
-                insights.push(`Synergy: ${entry.synergyCombinations[0]}`);
-            }
-            if (entry.currentStep === 4 &&
-                entry.collectiveInsights &&
-                entry.collectiveInsights.length > 0) {
-                insights.push(`Collective insight: ${entry.collectiveInsights[0]}`);
+            const structured = entry.wisdomSources ??
+                entry.emergentPatterns ??
+                entry.synergyCombinations ??
+                entry.collectiveInsights;
+            if (structured && structured.length > 0) {
+                insights.push(`${stepName} recorded: ${structured.join(', ')}`);
             }
         });
-        // Check if collective intelligence synthesis is complete
-        const hasCompleteSession = history.some(entry => entry.currentStep === 5 && 'nextStepNeeded' in entry && !entry.nextStepNeeded);
-        if (hasCompleteSession) {
-            insights.push('Collective Intelligence synthesis completed - wisdom of many integrated');
-        }
         return insights;
     }
 }

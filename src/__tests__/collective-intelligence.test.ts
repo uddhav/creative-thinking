@@ -332,9 +332,13 @@ describe('Collective Intelligence Orchestration', () => {
       expect(step5.completed).toBe(true);
       expect(step5.insights).toBeDefined();
       expect(step5.insights?.length).toBeGreaterThan(0);
+      // The synthesis step's own content, not a fixed completion banner. The
+      // banner reported an insight the session never produced, and reaching the
+      // last step is already visible from the step count.
+      expect(step5.insights?.some(i => i.startsWith('Synthesize Insight:'))).toBe(true);
       expect(
         step5.insights?.some(i => i.includes('Collective Intelligence synthesis completed'))
-      ).toBe(true);
+      ).toBe(false);
     });
 
     it('should handle complex wisdom source integration', async () => {
@@ -461,9 +465,10 @@ describe('Collective Intelligence Orchestration', () => {
 
       expect(finalStep.sessionFingerprint).toBeDefined();
       expect(finalStep.sessionFingerprint?.solutionPattern).toBeDefined();
+      expect(finalStep.insights?.some(i => i.startsWith('Synthesize Insight:'))).toBe(true);
       expect(
         finalStep.insights?.some(i => i.includes('Collective Intelligence synthesis completed'))
-      ).toBe(true);
+      ).toBe(false);
     });
   });
 

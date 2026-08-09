@@ -78,24 +78,34 @@ export class DisneyMethodHandler extends BaseTechniqueHandler {
                 return `Complete the Disney Method process for: "${problem}"`;
         }
     }
+    /**
+     * Report what each role actually produced, labelled by the role.
+     *
+     * This reads `entry.output`. Reading only the structured fields meant a
+     * session of three substantive rooms returned a single fixed string
+     * announcing the method had completed — an insight the session never
+     * produced. Reaching the last step is already visible from the step count.
+     */
     extractInsights(history) {
         const insights = [];
-        history.forEach(entry => {
-            if (entry.currentStep === 1 && entry.dreamerVision && entry.dreamerVision.length > 0) {
-                insights.push(`Vision: ${entry.dreamerVision[0]}`);
+        history.forEach((entry, index) => {
+            const stepName = this.steps[index]?.name;
+            if (!stepName) {
+                return;
             }
-            if (entry.currentStep === 2 && entry.realistPlan && entry.realistPlan.length > 0) {
-                insights.push(`Key action: ${entry.realistPlan[0]}`);
+            const output = entry.output?.trim();
+            if (output) {
+                const [firstSentence] = output.split(/(?<=[.!?])\s+/);
+                const summary = (firstSentence ?? output).trim();
+                if (summary.length > 0) {
+                    insights.push(`${stepName}: ${summary}`);
+                }
             }
-            if (entry.currentStep === 3 && entry.criticRisks && entry.criticRisks.length > 0) {
-                insights.push(`Critical risk: ${entry.criticRisks[0]}`);
+            const structured = entry.dreamerVision ?? entry.realistPlan ?? entry.criticRisks;
+            if (structured && structured.length > 0) {
+                insights.push(`${stepName} recorded: ${structured.join(', ')}`);
             }
         });
-        // Check if Disney Method is complete
-        const hasCompleteSession = history.some(entry => entry.currentStep === 3 && !entry.nextStepNeeded);
-        if (hasCompleteSession) {
-            insights.push('Disney Method completed - vision transformed into actionable plan');
-        }
         return insights;
     }
 }

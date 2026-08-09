@@ -258,32 +258,40 @@ Output: Complete validity assessment with confidence score and recommendations`,
     return true;
   }
 
+  /**
+   * Report what each step actually assessed, labelled by the step.
+   *
+   * This reads `entry.output`. Gating on vocabulary — reporting a finding only
+   * when the text happened to contain "consistent", "inconsistent" or
+   * "contradiction" — meant a full five-step credibility assessment phrased any
+   * other way returned nothing at all. The validity score, when supplied, is
+   * real structured data and still reports, including its banded reading.
+   */
   extractInsights(history: Array<{ output?: string; validityScore?: number }>): string[] {
     const insights: string[] = [];
 
     history.forEach((entry, index) => {
-      if (entry.output) {
-        // Extract key findings from each step
-        const stepNumber = index + 1;
-        const stepName = this.steps[index]?.name || `Step ${stepNumber}`;
+      const stepName = this.steps[index]?.name;
+      if (!stepName) {
+        return;
+      }
 
-        // Look for validity indicators
-        if (entry.output.toLowerCase().includes('consistent')) {
-          insights.push(`${stepName}: Consistency indicators found`);
+      const output = entry.output?.trim();
+      if (output) {
+        const [firstSentence] = output.split(/(?<=[.!?])\s+/);
+        const summary = (firstSentence ?? output).trim();
+        if (summary.length > 0) {
+          insights.push(`${stepName}: ${summary}`);
         }
-        if (
-          entry.output.toLowerCase().includes('inconsistent') ||
-          entry.output.toLowerCase().includes('contradiction')
-        ) {
-          insights.push(`${stepName}: Inconsistencies detected`);
-        }
-        if (entry.validityScore !== undefined) {
-          insights.push(`Validity Score: ${entry.validityScore}%`);
-        }
+      }
+
+      if (entry.validityScore !== undefined) {
+        insights.push(`Validity Score: ${entry.validityScore}%`);
       }
     });
 
-    // Add summary insight if we have enough data
+    // The banded reading of the final score, which is a judgement the score
+    // itself does not carry.
     if (history.length >= this.steps.length) {
       const finalEntry = history[history.length - 1];
       if (finalEntry.validityScore !== undefined) {
