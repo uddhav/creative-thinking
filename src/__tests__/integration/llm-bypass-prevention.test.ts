@@ -7,6 +7,12 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { LateralThinkingServer } from '../../index.js';
 import type { ExecuteThinkingStepInput } from '../../types/index.js';
 import { workflowGuard } from '../../core/WorkflowGuard.js';
+import {
+  DISCOVER_TECHNIQUES_TOOL,
+  PLAN_THINKING_SESSION_TOOL,
+  EXECUTE_THINKING_STEP_TOOL,
+} from '../../server/ToolDefinitions.js';
+import { ALL_LATERAL_TECHNIQUES } from '../../types/index.js';
 
 describe('LLM Bypass Prevention', () => {
   let lateralServer: LateralThinkingServer;
@@ -138,16 +144,48 @@ describe('LLM Bypass Prevention', () => {
     });
   });
 
+  describe('Tool definitions do not drift from the technique union', () => {
+    // The stale copy this suite used to assert against listed `cross_cultural`
+    // long after it left the union, and nothing failed. These read the shipped
+    // definitions, so adding a technique without wiring the tool surface — or
+    // removing one and leaving it advertised — breaks the build.
+    it('advertises exactly the techniques that exist', () => {
+      const enumerated = PLAN_THINKING_SESSION_TOOL.inputSchema.properties.techniques.items
+        .enum as string[];
+
+      expect([...enumerated].sort()).toEqual([...ALL_LATERAL_TECHNIQUES].sort());
+    });
+
+    it('names every technique in both descriptions that list them', () => {
+      const missingFromPlan = ALL_LATERAL_TECHNIQUES.filter(
+        t => !PLAN_THINKING_SESSION_TOOL.description.includes(t)
+      );
+      const missingFromDiscover = ALL_LATERAL_TECHNIQUES.filter(
+        t => !DISCOVER_TECHNIQUES_TOOL.description.includes(t)
+      );
+
+      expect(missingFromPlan).toEqual([]);
+      expect(missingFromDiscover).toEqual([]);
+    });
+
+    it('advertises no technique that has left the union', () => {
+      const described = `${DISCOVER_TECHNIQUES_TOOL.description} ${PLAN_THINKING_SESSION_TOOL.description}`;
+
+      expect(described).not.toContain('cross_cultural');
+    });
+  });
+
   describe('Tool Description Clarity', () => {
     it('should have clear workflow indicators in tool descriptions', () => {
-      // Tool descriptions are defined in index.ts
+      // Read the real tool definitions. This block used to declare its own copy
+      // of these strings and assert against that copy, which cannot fail for any
+      // reason connected to the shipped tools. The copy had drifted to a stale
+      // 14-technique list naming `cross_cultural`, a technique that no longer
+      // exists in the union, and the suite stayed green the whole time.
       const toolDescriptions = {
-        discover_techniques:
-          'STEP 1 of 3: Analyzes a problem and recommends appropriate lateral thinking techniques. This is the FIRST tool you must call when starting any creative thinking session. Returns recommendations and available techniques that can be used in the next step.',
-        plan_thinking_session:
-          'STEP 2 of 3: Creates a structured workflow for applying lateral thinking techniques. This tool MUST be called AFTER discover_techniques and BEFORE execute_thinking_step. Returns a planId that is REQUIRED for the execution step. Valid techniques: six_hats, po, random_entry, scamper, concept_extraction, yes_and, design_thinking, triz, neural_state, temporal_work, cross_cultural, collective_intel, disney_method, nine_windows',
-        execute_thinking_step:
-          'STEP 3 of 3: Executes a single step in the lateral thinking process. WARNING: This tool REQUIRES a valid planId from plan_thinking_session. DO NOT call this tool directly - you MUST first call discover_techniques, then plan_thinking_session to get a planId. Attempting to use this tool without following the proper workflow (discover → plan → execute) will result in an error.',
+        discover_techniques: DISCOVER_TECHNIQUES_TOOL.description,
+        plan_thinking_session: PLAN_THINKING_SESSION_TOOL.description,
+        execute_thinking_step: EXECUTE_THINKING_STEP_TOOL.description,
       };
 
       // Verify tool descriptions emphasize the workflow

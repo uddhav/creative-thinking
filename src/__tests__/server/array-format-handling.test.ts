@@ -91,7 +91,7 @@ describe('Array Format Error Handling', () => {
           ],
         },
         {
-          name: 'cross_cultural',
+          name: 'cultural_integration',
           fields: ['culturalFrameworks', 'bridgeBuilding', 'respectfulSynthesis', 'parallelPaths'],
         },
         {

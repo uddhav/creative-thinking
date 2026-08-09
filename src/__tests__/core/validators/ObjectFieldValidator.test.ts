@@ -197,7 +197,10 @@ describe('ObjectFieldValidator', () => {
         respectfulSynthesis: ['synthesis1'],
         parallelPaths: ['path1', 'path2'],
       };
-      const result = ObjectFieldValidator.validateTechniqueArrayFields('cross_cultural', params);
+      const result = ObjectFieldValidator.validateTechniqueArrayFields(
+        'cultural_integration',
+        params
+      );
       expect(result.isValid).toBe(true);
     });
 
@@ -464,14 +467,17 @@ describe('ObjectFieldValidator', () => {
     it('should handle malformed array fields in parallel tool calls', () => {
       // Simulating what happens with parallel tool calls
       const params = {
-        technique: 'cross_cultural',
+        technique: 'cultural_integration',
         culturalFrameworks: { framework: 'test' }, // Object instead of array
         bridgeBuilding: 'single string', // String instead of array
         respectfulSynthesis: null, // Null instead of array
         parallelPaths: undefined, // Undefined (should be ignored)
       };
 
-      const result = ObjectFieldValidator.validateTechniqueArrayFields('cross_cultural', params);
+      const result = ObjectFieldValidator.validateTechniqueArrayFields(
+        'cultural_integration',
+        params
+      );
       expect(result.isValid).toBe(false);
       // Should fail on the first invalid field
       expect(result.error).toContain('culturalFrameworks');
@@ -513,7 +519,7 @@ describe('ObjectFieldValidator', () => {
         'triz',
         'neural_state',
         'temporal_work',
-        'cross_cultural',
+        'cultural_integration',
         'collective_intel',
         'disney_method',
         'nine_windows',
