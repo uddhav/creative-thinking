@@ -295,19 +295,27 @@ Error code ranges: E100 (validation), E200 (workflow), E300 (state), E400 (syste
 
 Comprehensive checklist in [CONTRIBUTING.md](./CONTRIBUTING.md) — the key touchpoints:
 
-1. **Type union**: `src/types/index.ts` — add to `LateralTechnique` and `ALL_LATERAL_TECHNIQUES`
-2. **Persistence type**: `src/persistence/types.ts` — add to `TechniqueType`
-3. **Handler**: `src/techniques/[Name]Handler.ts` extending `BaseTechniqueHandler`
-4. **Registry**: `src/techniques/TechniqueRegistry.ts` — import and register
+1. **Type unions (two)**: `src/types/index.ts` — `LateralTechnique` **and**
+   `ALL_LATERAL_TECHNIQUES`; plus the **second, independent `LateralTechnique` union** in
+   `src/persistence/types.ts`, declared there to avoid a circular import
+2. **Handler**: `src/techniques/[Name]Handler.ts` extending `BaseTechniqueHandler`
+3. **Registry**: `src/techniques/TechniqueRegistry.ts` — import and register
+4. **Eight exhaustive `Record<LateralTechnique, …>` maps** — `tsc` fails until all are present,
+   which is the completeness check: `SessionCompletionTracker` (`stepCounts`), `ergodicity/index.ts`
+   (`profiles`, function-local), `ergodicity/pathMemory.ts` (`techniqueConstraintMap`),
+   `discovery/TechniqueScorer.ts` (`techniqueMetadata`), `discovery/HumanisticQualityCoverage.ts`
+   (`TECHNIQUE_QUALITY_PROFILES`), `sampling/features/TechniqueRecommender.ts` (`benefits`), and
+   **two** in `utils/VisualFormatter.ts` (`emojis`, `names`)
 5. **Planning integration**: `src/layers/planning.ts` — `getExpectedOutputs()`,
-   `getExpectedOutputForStep()`
-6. **Session tracking**: `src/core/session/SessionCompletionTracker.ts` — `techniqueStepCounts`
-7. **Ergodicity**: `src/ergodicity/index.ts` and `src/ergodicity/pathMemory.ts` — step maps
-8. **Visual**: `src/utils/VisualFormatter.ts` — `techniqueEmojis`
-9. **Recommender**: `src/layers/discovery/TechniqueRecommender.ts`
-10. **Tool schema enum**: `src/server/ToolDefinitions.ts` — add to `plan_thinking_session` technique
-    enum
-11. **Tests**: `src/__tests__/techniques/[Name]Handler.test.ts`
+   `getExpectedOutputForStep()` (no typecheck; silently absent if skipped)
+6. **Recommender**: `src/layers/discovery/TechniqueRecommender.ts` — a case group whose category
+   `ProblemAnalyzer` can actually emit, scored with a `TECHNIQUE_FIT` tier (never a raw decimal)
+7. **Tool schema (three edits)**: `src/server/ToolDefinitions.ts` — the `enum` array **and** the
+   hardcoded technique list in **both** tool description strings
+8. **Tests**: `src/__tests__/techniques/[Name]Handler.test.ts`; bump the two counts and the manual
+   array in `workflow-techniques-sync.test.ts`; add a `toContain` assertion in
+   `category-reachability.test.ts`; regenerate `src/evals/baseline.json` last — the interpolation
+   ratchet sits at 1.0, so **every step must reference the problem**
 
 For ACTION steps (vs THINKING steps), define `ReflexiveEffects` with triggers, realityChanges,
 futureConstraints, and reversibility level. See CONTRIBUTING.md for details.

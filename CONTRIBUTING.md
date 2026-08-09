@@ -290,8 +290,12 @@ Once a candidate clears the bars above, follow this comprehensive checklist:
 
 #### 1. Core Type Definitions (2 files)
 
-- [ ] `src/types/index.ts`: Add to `LateralTechnique` type union
-- [ ] `src/persistence/types.ts`: Add to `TechniqueType` type union
+- [ ] `src/types/index.ts`: Add to the `LateralTechnique` union **and** to the
+      `ALL_LATERAL_TECHNIQUES` array — two edits in one file, and they must stay in sync
+- [ ] `src/persistence/types.ts`: Add to the **second, independent `LateralTechnique` union**
+      declared there to avoid a circular import. Miss it and you get ~7 cascading `TS2322` errors in
+      `SessionPersistence`, `ErgodicityOrchestrator` and `ergodicity/index.ts` rather than one
+      obvious failure
 
 #### 2. Technique Handler Implementation (2 files)
 
@@ -348,23 +352,40 @@ Consider the technique's overall reflexivity profile:
 - [ ] Add to `getRisksForStep()` function (optional, technique-specific risks)
 - [ ] Add to `getSuccessCriteriaForStep()` function (optional)
 
-#### 5. Session Tracking (`src/core/session/SessionCompletionTracker.ts`)
+#### 5. The eight exhaustive maps (compiler-enforced)
 
-- [ ] Add to `techniqueStepCounts` Record with correct step count
+Each is a `Record<LateralTechnique, …>`, so **`npm run typecheck` fails until all eight have an
+entry**. That is the safety net — you cannot silently forget one. Verified by adding a probe member
+to the union and counting the errors.
 
-#### 6. Ergodicity Integration (2 files)
+- [ ] `src/core/session/SessionCompletionTracker.ts`: `stepCounts` — step count
+- [ ] `src/ergodicity/index.ts`: `profiles` — reversibility/commitment/risk profile.
+      **Function-local**, inside `getTechniqueRiskProfile`; grepping for a module-level constant
+      name will not find it
+- [ ] `src/ergodicity/pathMemory.ts`: `techniqueConstraintMap` — constraint type
+- [ ] `src/layers/discovery/TechniqueScorer.ts`: `techniqueMetadata` — complexity, outcome profiles,
+      step count
+- [ ] `src/layers/discovery/HumanisticQualityCoverage.ts`: `TECHNIQUE_QUALITY_PROFILES`
+- [ ] `src/sampling/features/TechniqueRecommender.ts`: `benefits`
+- [ ] `src/utils/VisualFormatter.ts`: `emojis` — **and** the separate `names` map. Two edits in one
+      file
 
-- [ ] `src/ergodicity/index.ts`: Add to `TECHNIQUE_STEP_MAP` constant
-- [ ] `src/ergodicity/pathMemory.ts`: Add to `TECHNIQUE_STEPS` constant
+#### 6. Discovery and recommendation
 
-#### 6. Visual Formatting (`src/utils/VisualFormatter.ts`)
+- [ ] `src/layers/discovery/TechniqueRecommender.ts`: add the technique to at least one case group
+      whose category `ProblemAnalyzer.categorizeProblem` can actually emit — see bar 3 above. Scores
+      must use a `TECHNIQUE_FIT` tier, never a raw decimal; `ordinalScale.test.ts` fails the build
+      otherwise
+- [ ] Check the group is not already full. Low-complexity problems get **3 slots**, so a sixth entry
+      in a crowded group is invisible in practice even though every test passes
 
-- [ ] Add to `techniqueEmojis` mapping with appropriate emoji
+#### 7. MCP surface (`src/server/ToolDefinitions.ts`) — three separate edits
 
-#### 7. Recommendation Systems (2 files)
+Easy to miss, and omitting the enum makes the technique unusable at the protocol boundary.
 
-- [ ] `src/layers/discovery/TechniqueRecommender.ts`: Add recommendation logic
-- [ ] `src/sampling/features/TechniqueRecommender.ts`: Add to sampling logic
+- [ ] The `enum` array in the `plan_thinking_session` schema
+- [ ] The hardcoded technique list inside the `discover_techniques` description string
+- [ ] The same hardcoded list inside the `plan_thinking_session` description string
 
 #### 8. Test Coverage (3+ files)
 
@@ -375,7 +396,17 @@ Consider the technique's overall reflexivity profile:
   - Test `validateStep()` accepts valid data and rejects invalid data
   - Test `getPromptContext()` returns proper context
   - Test error handling for invalid steps
-- [ ] `src/__tests__/core/workflow-techniques-sync.test.ts`: Update technique count
+- [ ] `src/__tests__/core/workflow-techniques-sync.test.ts`: bump the count in **two**
+      `expect(...).toBe(N)` assertions **and** add the id to the manually-maintained technique array
+      below them
+- [ ] `src/__tests__/layers/discovery/category-reachability.test.ts`: add a
+      `toContain('<technique>')` assertion proving discovery actually surfaces it. If you added a
+      new category to `ProblemAnalyzer`, add it to `PRODUCIBLE_CATEGORIES` and add routing
+      assertions
+- [ ] `src/evals/baseline.json`: regenerate **last**, after everything else is in place, so it
+      records the post-change state. Note the aggregate ratchet sits at `1.0` — **every step of the
+      new technique must interpolate the problem**, or the build fails. The documented 50% floor is
+      a dormant backstop, not the operative bar
 - [ ] `src/__tests__/sampling/IdeaEnhancer.test.ts`: Update if needed
 
 #### 9. Documentation Updates (4 files)
