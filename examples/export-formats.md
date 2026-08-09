@@ -56,7 +56,7 @@ insights with others.
 
 ## Performance Metrics
 
-- **Creativity Score**: 75
+- **Output Completeness**: 0.75
 - **Risks Identified**: 8
 - **Antifragile Features**: 3
 
@@ -169,11 +169,11 @@ and analysis.
     ]
   },
   "metrics": {
-    "creativityScore": 75,
+    "outputCompleteness": 0.75,
     "risksCaught": 8,
     "antifragileFeatures": 3,
     "summary": {
-      "overallCreativity": "Creative",
+      "outputCompleteness": "Complete",
       "riskAwareness": "Good Risk Awareness",
       "robustness": "Somewhat Robust"
     }
@@ -225,10 +225,10 @@ Step,Timestamp,Technique,Hat Color,Output,Risks,Mitigations
 When exporting metrics only, each session becomes a row:
 
 ```csv
-SessionID,Problem,Technique,Duration,Steps,CreativityScore,RisksIdentified,Insights
-session_123,Team collaboration,Six Thinking Hats,45,6/6,75,8,5
-session_456,Product innovation,SCAMPER,60,7/7,88,12,8
-session_789,Cost reduction,Random Entry,30,3/3,65,4,3
+SessionID,Problem,Technique,Duration,Steps,OutputCompleteness,RisksIdentified,Insights
+session_123,Team collaboration,Six Thinking Hats,45,6/6,0.75,8,5
+session_456,Product innovation,SCAMPER,60,7/7,0.88,12,8
+session_789,Cost reduction,Random Entry,30,3/3,0.65,4,3
 ```
 
 ### Features

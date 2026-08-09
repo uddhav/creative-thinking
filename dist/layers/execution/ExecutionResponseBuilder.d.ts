@@ -20,6 +20,7 @@ export declare class ExecutionResponseBuilder {
     private jsonOptimizer;
     private telemetry;
     private completionTracker;
+    private metricsCollector;
     constructor(complexityAnalyzer: HybridComplexityAnalyzer, escalationGenerator: EscalationPromptGenerator, techniqueRegistry?: TechniqueRegistry | undefined, sessionManager?: SessionManager | undefined);
     /**
      * Build comprehensive execution response

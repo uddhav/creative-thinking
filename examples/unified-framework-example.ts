@@ -119,7 +119,7 @@ const _completedSessionResponse = {
   summary: 'Lateral thinking session completed using concept_extraction technique',
   metrics: {
     duration: 180000, // 3 minutes
-    creativityScore: 8.5,
+    outputCompleteness: 0.85,
     risksCaught: 6,
     antifragileFeatures: 3,
   },

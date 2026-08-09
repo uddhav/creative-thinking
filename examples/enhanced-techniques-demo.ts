@@ -244,7 +244,7 @@ const _completedEnhancedSession = {
   summary: 'Lateral thinking session completed using po technique',
   metrics: {
     duration: 240000, // 4 minutes
-    creativityScore: 7.8,
+    outputCompleteness: 0.78,
     risksCaught: 8,
     antifragileFeatures: 3,
   },

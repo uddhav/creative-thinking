@@ -140,21 +140,22 @@ export class JSONExporter extends BaseExporter {
     }
     generateMetricsSummary(metrics) {
         return {
-            overallCreativity: this.categorizeScore(metrics.creativityScore ?? 0, 'creativity'),
+            outputCompleteness: this.categorizeScore(metrics.outputCompleteness ?? 0, 'completeness'),
             riskAwareness: this.categorizeScore(metrics.risksCaught ?? 0, 'risk'),
             robustness: this.categorizeScore(metrics.antifragileFeatures ?? 0, 'robustness'),
         };
     }
     categorizeScore(score, type) {
         switch (type) {
-            case 'creativity':
-                if (score >= 80)
-                    return 'Highly Creative';
-                if (score >= 60)
-                    return 'Creative';
-                if (score >= 40)
-                    return 'Moderately Creative';
-                return 'Developing';
+            // outputCompleteness is a 0-1 fraction, not a 0-100 score.
+            case 'completeness':
+                if (score >= 0.8)
+                    return 'Highly Complete';
+                if (score >= 0.6)
+                    return 'Complete';
+                if (score >= 0.4)
+                    return 'Partially Complete';
+                return 'Sparse';
             case 'risk':
                 if (score >= 10)
                     return 'Excellent Risk Awareness';

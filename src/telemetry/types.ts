@@ -61,7 +61,8 @@ export interface TelemetryMetadata {
   insightCount?: number;
   riskCount?: number;
   effectiveness?: number;
-  creativityScore?: number;
+  /** 0-1 coverage of the outputs the technique asks for. */
+  outputCompleteness?: number;
 
   // Timing information
   duration?: number;

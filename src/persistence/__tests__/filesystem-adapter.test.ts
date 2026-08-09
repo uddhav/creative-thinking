@@ -171,7 +171,7 @@ describe('FilesystemAdapter', () => {
         insights: ['Initial insight'],
         startTime: Date.now(),
         metrics: {
-          creativityScore: 5,
+          outputCompleteness: 0.5,
           risksCaught: 2,
           antifragileFeatures: 1,
         },

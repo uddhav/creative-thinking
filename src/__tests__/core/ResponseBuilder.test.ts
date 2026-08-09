@@ -490,7 +490,8 @@ describe('ResponseBuilder', () => {
         startTime: Date.now() - 3600000,
         endTime: Date.now(),
         metrics: {
-          creativityScore: 8.5,
+          // 0-1 fraction, not a 0-10 rating.
+          outputCompleteness: 0.85,
           risksCaught: 5,
           antifragileFeatures: 3,
         },
@@ -596,7 +597,7 @@ describe('ResponseBuilder', () => {
         problem: 'Test problem',
         stepsCompleted: 6,
         insightsGenerated: 3,
-        creativityScore: 8.5,
+        outputCompleteness: 0.85,
         risksCaught: 5,
       });
       expect(enhanced.pathAnalysis).toEqual({

@@ -17,7 +17,7 @@ export const DEFAULT_MARKDOWN_TEMPLATE = `# {{problem}}
 
 {{#if metrics}}
 ## Performance Metrics
-- **Creativity Score**: {{metrics.creativityScore}}
+- **Output Completeness**: {{metrics.outputCompleteness}}
 - **Risks Identified**: {{metrics.risksCaught}}
 - **Antifragile Features**: {{metrics.antifragileFeatures}}
 {{/if}}
@@ -59,7 +59,7 @@ export const CSV_HEADERS = {
         'Technique',
         'Duration',
         'Steps',
-        'CreativityScore',
+        'OutputCompleteness',
         'RisksIdentified',
         'Insights',
     ],

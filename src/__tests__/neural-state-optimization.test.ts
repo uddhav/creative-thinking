@@ -40,7 +40,7 @@ interface ExecutionResponse {
   summary?: string;
   metrics?: {
     duration: number;
-    creativityScore: number;
+    outputCompleteness: number;
     risksCaught?: number;
     antifragileFeatures?: number;
   };

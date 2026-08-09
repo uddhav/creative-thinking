@@ -39,11 +39,12 @@ describe('MetricsCollector', () => {
 
       expect(metrics.risksCaught).toBe(0);
       expect(metrics.antifragileFeatures).toBe(0);
-      expect(typeof metrics.creativityScore).toBe('number');
-      expect(metrics.creativityScore).toBeGreaterThan(0);
+      expect(typeof metrics.outputCompleteness).toBe('number');
+      // Empty session: no insights, no risks, no antifragile features, not ended.
+      expect(metrics.outputCompleteness).toBe(0);
     });
 
-    it('should update creativity score based on output', () => {
+    it('should set output completeness from session state', () => {
       const input: ThinkingOperationData = {
         technique: 'six_hats',
         problem: 'Test',
@@ -53,16 +54,20 @@ describe('MetricsCollector', () => {
           'This is a very creative and diverse output with many unique ideas and concepts that span multiple domains and perspectives',
         nextStepNeeded: true,
       };
+      // updateMetrics runs after the step is pushed onto history (execution.ts).
+      mockSession.history = [{ ...input, timestamp: new Date().toISOString() }];
+      mockSession.insights = ['Insight 1', 'Insight 2'];
 
       const metrics = collector.updateMetrics(mockSession, input);
 
-      expect(metrics.creativityScore).toBeGreaterThan(0);
-      expect(metrics.creativityScore).toBeLessThanOrEqual(10);
+      // 2 insights / 1 step = 2 -> clamped to 1 by insightsPerStep * 0.4 = 0.8
+      expect(metrics.outputCompleteness).toBeCloseTo(0.8, 5);
+      expect(metrics.outputCompleteness).toBeLessThanOrEqual(1);
     });
 
     it('should accumulate risks caught', () => {
       mockSession.metrics = {
-        creativityScore: 5,
+        outputCompleteness: 0,
         risksCaught: 2,
         antifragileFeatures: 0,
       };
@@ -84,7 +89,7 @@ describe('MetricsCollector', () => {
 
     it('should accumulate antifragile features', () => {
       mockSession.metrics = {
-        creativityScore: 5,
+        outputCompleteness: 0,
         risksCaught: 0,
         antifragileFeatures: 1,
       };
@@ -105,57 +110,100 @@ describe('MetricsCollector', () => {
     });
   });
 
-  describe('calculateCreativityScore', () => {
-    it('should return higher scores for diverse vocabulary', () => {
-      const repetitiveOutput = 'test test test test test';
-      const diverseOutput = 'innovative creative unique novel original';
-
-      const repetitiveScore = collector.calculateCreativityScore(repetitiveOutput, 0);
-      const diverseScore = collector.calculateCreativityScore(diverseOutput, 0);
-
-      expect(diverseScore).toBeGreaterThan(repetitiveScore);
+  // These cases previously covered `calculateCreativityScore`, which scored
+  // lexical diversity x verbosity and rendered as X/10 on a scale it could not
+  // reach. It has been replaced by outputCompleteness — 0-1 coverage of the
+  // fields a technique asks for — so the coverage carries over to that metric.
+  describe('outputCompleteness on updateMetrics', () => {
+    const makeStep = (output: string) => ({
+      technique: 'six_hats' as const,
+      problem: 'Test',
+      currentStep: 1,
+      totalSteps: 6,
+      output,
+      nextStepNeeded: true,
+      timestamp: new Date().toISOString(),
     });
 
-    it('should cap creativity score at 10', () => {
-      const veryLongDiverseOutput = Array(1000)
-        .fill(0)
-        .map((_, i) => `unique_word_${i}`)
-        .join(' ');
-
-      const score = collector.calculateCreativityScore(veryLongDiverseOutput, 9.5);
-
-      expect(score).toBeLessThanOrEqual(10);
-      expect(score).toBeGreaterThan(9.5);
+    const makeInput = (): ThinkingOperationData => ({
+      technique: 'six_hats',
+      problem: 'Test',
+      currentStep: 1,
+      totalSteps: 6,
+      output: 'Step output',
+      nextStepNeeded: true,
     });
 
-    it('should handle empty output gracefully', () => {
-      const score = collector.calculateCreativityScore('', 5);
+    it('should return higher scores for more insights per step', () => {
+      const steps = [makeStep('a'), makeStep('b'), makeStep('c'), makeStep('d')];
 
-      expect(score).toBe(5); // No change from current score
+      const sparse = collector.updateMetrics(
+        { ...mockSession, history: [...steps], insights: ['One'] },
+        makeInput()
+      );
+      const rich = collector.updateMetrics(
+        { ...mockSession, history: [...steps], insights: ['One', 'Two', 'Three', 'Four'] },
+        makeInput()
+      );
+
+      expect(sparse.outputCompleteness).toBeCloseTo(0.1, 5); // 1/4 insights per step * 0.4
+      expect(rich.outputCompleteness).toBeCloseTo(0.4, 5); // 4/4 insights per step * 0.4
+      expect(rich.outputCompleteness).toBeGreaterThan(sparse.outputCompleteness as number);
     });
 
-    it('should handle whitespace-only output', () => {
-      const score = collector.calculateCreativityScore('   \n\t  ', 5);
+    it('should cap output completeness at 1', () => {
+      const session: SessionData = {
+        ...mockSession,
+        history: [makeStep('only step')],
+        insights: Array.from({ length: 20 }, (_, i) => `Insight ${i + 1}`),
+        endTime: Date.now(),
+        metrics: { outputCompleteness: 0, risksCaught: 4, antifragileFeatures: 2 },
+      };
 
-      expect(score).toBe(5); // No change for whitespace-only
+      const metrics = collector.updateMetrics(session, makeInput());
+
+      // 20 insights over 1 step alone would score 8.0 before weighting.
+      expect(metrics.outputCompleteness).toBeLessThanOrEqual(1);
+      expect(metrics.outputCompleteness).toBe(1);
     });
 
-    it('should incrementally increase score', () => {
-      let score = 0;
-      const outputs = [
-        'First creative thought',
-        'Second innovative idea with different concepts',
-        'Third unique perspective bringing novel approaches',
-      ];
+    it('should return 0 for a session that produced nothing', () => {
+      const metrics = collector.updateMetrics({ ...mockSession }, makeInput());
 
-      outputs.forEach(output => {
-        const newScore = collector.calculateCreativityScore(output, score);
-        expect(newScore).toBeGreaterThan(score);
-        score = newScore;
+      expect(metrics.outputCompleteness).toBe(0); // no insights, risks, features, or end
+    });
+
+    it('should ignore the wording of step outputs', () => {
+      const terse = collector.updateMetrics(
+        { ...mockSession, history: [makeStep('x')], insights: ['One'] },
+        makeInput()
+      );
+      const verbose = collector.updateMetrics(
+        {
+          ...mockSession,
+          history: [makeStep('a florid and extravagantly varied restatement of x')],
+          insights: ['One'],
+        },
+        makeInput()
+      );
+
+      // The old creativityScore rewarded exactly this difference; this one must not.
+      expect(verbose.outputCompleteness).toBe(terse.outputCompleteness);
+    });
+
+    it('should increase as the session accumulates insights', () => {
+      const session: SessionData = { ...mockSession, history: [makeStep('one step')] };
+      let previous = -1;
+
+      ['Insight 1', 'Insight 2'].forEach(insight => {
+        session.insights = [...session.insights, insight];
+        const metrics = collector.updateMetrics(session, makeInput());
+        expect(metrics.outputCompleteness).toBeGreaterThan(previous);
+        previous = metrics.outputCompleteness as number;
       });
 
-      expect(score).toBeGreaterThan(0);
-      expect(score).toBeLessThanOrEqual(10);
+      expect(previous).toBeGreaterThan(0);
+      expect(previous).toBeLessThanOrEqual(1);
     });
   });
 
@@ -191,7 +239,7 @@ describe('MetricsCollector', () => {
       mockSession.startTime = Date.now() - 3600000; // 1 hour ago
       mockSession.endTime = Date.now();
       mockSession.metrics = {
-        creativityScore: 7.5,
+        outputCompleteness: 0,
         risksCaught: 5,
         antifragileFeatures: 3,
       };
@@ -225,12 +273,13 @@ describe('MetricsCollector', () => {
       expect(detailed.revisionsCount).toBe(1);
       expect(detailed.branchesCount).toBe(1);
       expect(detailed.insightsGenerated).toBe(3);
-      expect(detailed.creativityScore).toBe(7.5);
+      // 3 insights / 2 steps = 1.5 -> 0.6, +0.2 risks +0.2 antifragile +0.2 completed = 1.2, capped
+      expect(detailed.outputCompleteness).toBe(1);
       expect(detailed.risksCaught).toBe(5);
       expect(detailed.antifragileFeatures).toBe(3);
       expect(detailed.completionTime).toBeCloseTo(3600000, -4); // ~1 hour
       expect(detailed.outputCompleteness).toBeGreaterThan(0);
-      expect(detailed.outputCompleteness).toBeLessThanOrEqual(10);
+      expect(detailed.outputCompleteness).toBeLessThanOrEqual(1);
     });
 
     it('should handle session with path memory', () => {
@@ -285,7 +334,7 @@ describe('MetricsCollector', () => {
 
       expect(detailed.completionTime).toBeUndefined();
       expect(detailed.totalSteps).toBe(0);
-      expect(detailed.outputCompleteness).toBeLessThan(5); // Lower score for incomplete
+      expect(detailed.outputCompleteness).toBeLessThan(0.5); // Lower score for incomplete
     });
   });
 
@@ -302,7 +351,7 @@ describe('MetricsCollector', () => {
       }));
       mockSession.insights = Array.from({ length: 8 }, (_, i) => `Insight ${i + 1}`);
       mockSession.metrics = {
-        creativityScore: 8,
+        outputCompleteness: 0,
         risksCaught: 5,
         antifragileFeatures: 3,
       };
@@ -310,7 +359,7 @@ describe('MetricsCollector', () => {
 
       const detailed = collector.getDetailedMetrics(mockSession);
 
-      expect(detailed.outputCompleteness).toBeGreaterThan(7);
+      expect(detailed.outputCompleteness).toBeGreaterThan(0.7);
     });
 
     it('should give low score to ineffective sessions', () => {
@@ -326,7 +375,7 @@ describe('MetricsCollector', () => {
       }));
       mockSession.insights = []; // No insights
       mockSession.metrics = {
-        creativityScore: 2,
+        outputCompleteness: 0,
         risksCaught: 0,
         antifragileFeatures: 0,
       };
@@ -334,7 +383,7 @@ describe('MetricsCollector', () => {
 
       const detailed = collector.getDetailedMetrics(mockSession);
 
-      expect(detailed.outputCompleteness).toBeLessThan(3);
+      expect(detailed.outputCompleteness).toBeLessThan(0.3);
     });
   });
 
@@ -345,27 +394,26 @@ describe('MetricsCollector', () => {
         revisionsCount: 2,
         branchesCount: 1,
         insightsGenerated: 5,
-        creativityScore: 7.5,
         risksCaught: 3,
         antifragileFeatures: 2,
         flexibilityScore: 0.65,
         constraintsIdentified: 4,
         escapePlanGenerated: false,
         completionTime: 3665000, // 61 minutes 5 seconds
-        outputCompleteness: 8.2,
+        outputCompleteness: 0.82,
       };
 
       const summary = collector.generateMetricsSummary(metrics);
 
       expect(summary).toContain('Total Steps: 10');
       expect(summary).toContain('Insights Generated: 5');
-      expect(summary).toContain('Creativity Score: 7.5/10');
+      expect(summary.join('\n')).not.toContain('Creativity Score'); // Metric removed
       expect(summary).toContain('Risks Identified: 3');
       expect(summary).toContain('Antifragile Features: 2');
       expect(summary).toContain('Revisions Made: 2');
       expect(summary).toContain('Flexibility Score: 65%');
       expect(summary).toContain('Completion Time: 61m 5s');
-      expect(summary).toContain('Output Completeness: 8.2/10');
+      expect(summary).toContain('Output Completeness: 82%');
     });
 
     it('should handle partial metrics gracefully', () => {
@@ -380,7 +428,7 @@ describe('MetricsCollector', () => {
 
       expect(summary).toContain('Total Steps: 5');
       expect(summary).toContain('Insights Generated: 2');
-      expect(summary).not.toContain('Creativity Score'); // Undefined
+      expect(summary.join('\n')).not.toContain('Output Completeness'); // Undefined
       expect(summary).not.toContain('Revisions Made'); // Zero
     });
   });
@@ -392,10 +440,9 @@ describe('MetricsCollector', () => {
         revisionsCount: 2,
         branchesCount: 1,
         insightsGenerated: 4,
-        creativityScore: 6,
         risksCaught: 2,
         antifragileFeatures: 1,
-        outputCompleteness: 7,
+        outputCompleteness: 0.7,
       };
 
       const session2 = {
@@ -403,18 +450,17 @@ describe('MetricsCollector', () => {
         revisionsCount: 1,
         branchesCount: 2,
         insightsGenerated: 8,
-        creativityScore: 8,
         risksCaught: 5,
         antifragileFeatures: 3,
-        outputCompleteness: 8.5,
+        outputCompleteness: 0.85,
       };
 
       const comparison = collector.compareMetrics(session1, session2);
 
-      expect(comparison.creativityScoreDiff).toBeCloseTo(33.33, 1); // (8-6)/6 * 100
+      expect(comparison.creativityScoreDiff).toBeUndefined(); // Metric removed
       expect(comparison.risksCaughtDiff).toBeCloseTo(150, 1); // (5-2)/2 * 100
       expect(comparison.insightsGeneratedDiff).toBeCloseTo(100, 1); // (8-4)/4 * 100
-      expect(comparison.effectivenessDiff).toBeCloseTo(21.43, 1); // (8.5-7)/7 * 100
+      expect(comparison.effectivenessDiff).toBeCloseTo(21.43, 1); // (0.85-0.7)/0.7 * 100
     });
 
     it('should handle zero baseline values', () => {
@@ -480,7 +526,7 @@ describe('MetricsCollector', () => {
           insights: ['Insight 1', 'Insight 2'],
           lastActivityTime: Date.now(),
           metrics: {
-            creativityScore: 6,
+            outputCompleteness: 0,
             risksCaught: 2,
             antifragileFeatures: 1,
           },
@@ -502,7 +548,7 @@ describe('MetricsCollector', () => {
           insights: ['Insight 3', 'Insight 4', 'Insight 5'],
           lastActivityTime: Date.now(),
           metrics: {
-            creativityScore: 8,
+            outputCompleteness: 0,
             risksCaught: 3,
             antifragileFeatures: 2,
           },
@@ -515,7 +561,9 @@ describe('MetricsCollector', () => {
       expect(aggregated.totalSessions).toBe(2);
       expect(aggregated.averageMetrics.totalSteps).toBe(6.5); // (5+8)/2
       expect(aggregated.averageMetrics.insightsGenerated).toBe(2.5); // (2+3)/2
-      expect(aggregated.averageMetrics.creativityScore).toBe(7); // (6+8)/2
+      // Recomputed per session, not read off session.metrics:
+      // s1 = 2/5*0.4 + 0.2 + 0.2 + 0.2 = 0.76, s2 = 3/8*0.4 + 0.2 + 0.2 + 0.2 = 0.75
+      expect(aggregated.averageMetrics.outputCompleteness).toBeCloseTo(0.755, 5);
       expect(aggregated.averageMetrics.risksCaught).toBe(2.5); // (2+3)/2
       expect(aggregated.techniqueDistribution).toEqual({
         six_hats: 1,

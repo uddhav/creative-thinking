@@ -509,7 +509,7 @@ export class CognitiveAssessor extends Sensor {
 
     // Simple: check if metrics exist and are positive
     const hasPositiveMetrics =
-      (sessionData.metrics.creativityScore || 0) > 0 ||
+      (sessionData.metrics.outputCompleteness || 0) > 0 ||
       (sessionData.metrics.risksCaught || 0) > 0 ||
       (sessionData.metrics.antifragileFeatures || 0) > 0;
 

@@ -373,7 +373,7 @@ export class ResponseBuilder {
         problem: session.problem,
         stepsCompleted: session.history.length,
         insightsGenerated: session.insights.length,
-        creativityScore: session.metrics?.creativityScore || 0,
+        outputCompleteness: session.metrics?.outputCompleteness || 0,
         risksCaught: session.metrics?.risksCaught || 0,
       },
     };

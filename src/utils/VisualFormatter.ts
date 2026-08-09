@@ -534,7 +534,8 @@ export class VisualFormatter {
     problem: string,
     insights: string[],
     metrics?: {
-      creativityScore?: number;
+      /** 0-1 coverage of the outputs the technique asks for. */
+      outputCompleteness?: number;
       risksCaught?: number;
       antifragileFeatures?: number;
     }
@@ -589,11 +590,12 @@ export class VisualFormatter {
           chalk.green('║')
       );
 
-      if (metrics.creativityScore !== undefined) {
+      if (metrics.outputCompleteness !== undefined) {
         lines.push(
           chalk.green('║') +
             chalk.yellow(
-              `  Creativity Score: ${metrics.creativityScore.toFixed(1)}/10`.padEnd(
+              // 0-1 fraction, shown as a percentage so it is not read as a rating.
+              `  Output Completeness: ${(metrics.outputCompleteness * 100).toFixed(0)}%`.padEnd(
                 borderLength - 2
               )
             ) +
