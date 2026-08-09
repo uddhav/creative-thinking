@@ -357,6 +357,11 @@ Tests auto-build before running (`pretest` script runs `npm run build`).
 
 ## Release pipeline
 
+The version line jumps from v1.1.0 to v2.0.0 for a reason that is not a breaking change: a commit
+body written while fixing the bump logic contained `BREAKING CHANGE:` at the start of a line as an
+example, and semantic-release read it as a footer. Per the never-roll-back rule below, it was left
+in place rather than re-tagged. See the commit-body constraint at the end of this file.
+
 Three workflows, because a repository ruleset on `main` requires every change to arrive through a
 pull request. `@semantic-release/git` used to push the version commit directly and was rejected
 every time (`GH013: changes must be made through a pull request`), which is why nothing released
@@ -422,6 +427,12 @@ Process.
 - **dist/ is checked in** — required for `npx github:uddhav/creative-thinking` distribution
 - **Sequential execution only** — steps execute in order for coherence (no parallel execution)
 - **Conventional Commits** required — `fix:` (patch), `feat:` (minor), `feat!:` (major)
+- **Never start a line in a commit body with `BREAKING CHANGE:` or a `type!:` marker unless you mean
+  it.** semantic-release parses the body, not just the subject, and does not care that the line was
+  an example. A commit whose body demonstrated the string cut a spurious major: v2.0.0 came from a
+  `fix(ci):` change, and its release notes read
+  `### BREAKING CHANGES / * ci: footer in body -> major` — the literal test-case row. Indent such
+  examples inside a fenced block, or write the marker with a placeholder
 - **Never log to stdout** — it breaks MCP protocol
 - **Never add a 4th tool** — all functionality fits within the three-tool workflow
 - Do what has been asked; nothing more, nothing less
