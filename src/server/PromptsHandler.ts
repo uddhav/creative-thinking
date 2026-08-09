@@ -263,6 +263,29 @@ export class PromptsHandler {
           },
         ] as PromptArgument[],
       },
+      {
+        name: 'red-team-plan',
+        description:
+          'Attack a plan or belief before committing to it: build the opposing case until its holders would sign it, then let a named adversary try to defeat the plan',
+        arguments: [
+          {
+            name: 'plan',
+            description: 'What is under review, stated in a form someone could disagree with',
+            required: true,
+          },
+          {
+            name: 'who_owns_it',
+            description:
+              'Who authored or is accountable for it — the independence check needs to know whether that is you',
+            required: false,
+          },
+          {
+            name: 'what_would_change_your_mind',
+            description: 'The evidence you would accept as decisive, stated before you see any',
+            required: false,
+          },
+        ] as PromptArgument[],
+      },
     ];
   }
 
@@ -536,6 +559,27 @@ export class PromptsHandler {
               content: {
                 type: 'text' as const,
                 text: "I'll run the Keeper Test, which re-decides an incumbent instead of defending it. The question is not whether it has failed badly enough to remove — it is whether, if it weren't already here, I would take it on today at today's price.\n\nStep 1: Call `discover_techniques` with the problem framed as a retention decision.\nStep 2: Call `plan_thinking_session` with `techniques: [\"keeper_test\"]`, adding `cognitive_bias_audit` if the decision has an owner with something at stake.\nStep 3: Execute all five steps with `execute_thinking_step`:\n- Name the incumbent and draw its edges, so it can be re-decided rather than defended\n- Reconstruct the fence — what it was adopted to solve, and whether that problem is still live\n- Run the re-acquisition test, answering yes or no before giving the reason\n- Price it honestly: carrying cost per period, switching cost paid once, opportunity cost of the freed resource, with sunk cost struck out\n- Commit to keep, trim, replace or drop, with an owner and a tripwire\n\nOutput: a verdict with an owner and a date, plus the condition that forces the next re-decision. Retention with no tripwire is a default, not a decision.",
+              },
+            },
+          ],
+        };
+
+      case 'red-team-plan':
+        return {
+          description: prompt.description || '',
+          messages: [
+            {
+              role: 'user' as const,
+              content: {
+                type: 'text' as const,
+                text: 'Attack this before I commit to it: {{plan}}. It is owned by {{who_owns_it}}. What would change my mind: {{what_would_change_your_mind}}.',
+              },
+            },
+            {
+              role: 'assistant' as const,
+              content: {
+                type: 'text' as const,
+                text: 'I\'ll run Steelman & Red Team. It has two halves — first cooperative, building the opposing case until the people who hold it would sign it, then hostile, attacking the plan from someone who wants it to fail. Both halves are gated, because both collapse into theatre without a gate.\n\nStep 1: Call `discover_techniques` with the problem framed as a request to be argued with.\nStep 2: Call `plan_thinking_session` with `techniques: ["steelman_red_team"]`, adding `cognitive_bias_audit` when the plan\'s owner is the one running the review.\nStep 3: Execute all seven steps with `execute_thinking_step`:\n- Name the target in a form someone could disagree with, plus where you stand and what is at stake\n- Build the opposing case at its strongest, conceding what is genuinely right about it\n- Gate: name a real holder of that view and ask whether they would sign your version. If not, rewrite before going on\n- Appoint a concrete adversary with a motive, a budget, and knowledge of you\n- Run the attack, cheapest first, then write the post-mortem from twelve months out. Every finding gets an earliest observable\n- Gate: was the reviewer independent, and could any finding actually change the decision?\n- Commit to proceed, proceed-with-changes, hold or abandon, with amendments owned and accepted objections recorded by name\n\nOutput: a disposition, amendments with owners, monitors pointed at the earliest observables, and the list of objections knowingly accepted — because accepting a risk and never having seen it look identical afterwards unless you wrote it down.',
               },
             },
           ],

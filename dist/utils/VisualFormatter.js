@@ -238,6 +238,7 @@ export class VisualFormatter {
             cognitive_bias_audit: '🪞',
             latticework: '🧰',
             keeper_test: '🛒',
+            steelman_red_team: '🥊',
         };
         return emojis[technique] || '❓';
     }
@@ -277,6 +278,7 @@ export class VisualFormatter {
             cognitive_bias_audit: 'Cognitive Bias Audit',
             latticework: 'Latticework of Mental Models',
             keeper_test: 'Keeper Test',
+            steelman_red_team: 'Steelman & Red Team',
         };
         return names[technique] || technique;
     }

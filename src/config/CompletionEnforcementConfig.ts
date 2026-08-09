@@ -4,7 +4,7 @@
  */
 
 import { EnforcementLevel, type CompletionGatekeeperConfig } from '../types/enforcement.js';
-import type { LateralTechnique } from '../types/index.js';
+import { ALL_LATERAL_TECHNIQUES, type LateralTechnique } from '../types/index.js';
 
 /**
  * Predefined enforcement profiles
@@ -175,26 +175,11 @@ export function validateEnforcementConfig(config: CompletionGatekeeperConfig): {
     errors.push(`Invalid enforcement level: ${config.enforcementLevel}`);
   }
 
-  // Validate critical techniques
-  const validTechniques: LateralTechnique[] = [
-    'six_hats',
-    'po',
-    'random_entry',
-    'scamper',
-    'concept_extraction',
-    'yes_and',
-    'design_thinking',
-    'triz',
-    'neural_state',
-    'temporal_work',
-    'cultural_integration',
-    'collective_intel',
-    'disney_method',
-    'nine_windows',
-  ];
-
+  // Validate critical techniques. Derived, not hand-maintained: this list was
+  // copied out at 14 techniques and never tracked the catalogue, so naming any
+  // of the 18 added since as critical was rejected as invalid.
   for (const technique of config.criticalTechniques) {
-    if (!validTechniques.includes(technique as LateralTechnique)) {
+    if (!ALL_LATERAL_TECHNIQUES.includes(technique as LateralTechnique)) {
       errors.push(`Invalid critical technique: ${technique}`);
     }
   }

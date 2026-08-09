@@ -6,7 +6,7 @@ repository.
 ## Project Overview
 
 Creative Thinking MCP Server — a three-layer tool architecture for structured problem-solving.
-Provides 31 thinking techniques through a unified framework combining generative creativity with
+Provides 32 thinking techniques through a unified framework combining generative creativity with
 systematic risk assessment, analytical verification, and behavioral economics insights. Supports
 persona-driven sessions and multi-persona debates.
 
@@ -187,8 +187,8 @@ src/
 │   └── execution.ts          # Execution layer + execution/ subfolder (validators, orchestrators)
 ├── techniques/
 │   ├── BaseTechniqueHandler.ts   # Abstract base class all handlers extend
-│   ├── TechniqueRegistry.ts      # Singleton registry — imports and registers all 31 handlers
-│   └── [TechniqueName]Handler.ts # One file per technique (32 files incl. GenericHandler fallback)
+│   ├── TechniqueRegistry.ts      # Singleton registry — imports and registers all 32 handlers
+│   └── [TechniqueName]Handler.ts # One file per technique (33 files incl. GenericHandler fallback)
 ├── personas/                 # Persona system for personality-driven sessions
 │   ├── types.ts              # PersonaDefinition, DebateConfig, PersonaStepContext
 │   ├── catalog.ts            # BUILTIN_PERSONAS (8 built-in) + external JSON loading
@@ -206,7 +206,7 @@ src/
 │   ├── RequestHandlers.ts    # Tool request routing and dispatch
 │   ├── SessionOperationsHandler.ts # Session lifecycle operations
 │   ├── SamplingHandler.ts    # MCP Sampling request handling
-│   └── PromptsHandler.ts     # 12 MCP prompts for guided sessions
+│   └── PromptsHandler.ts     # 13 MCP prompts for guided sessions
 ├── config/                   # CompletionEnforcementConfig, timeouts
 ├── benchmarks/               # Performance benchmark scripts
 ├── ergodicity/               # Path dependency tracking, early warning system, escape protocols
@@ -281,7 +281,7 @@ sequentially, then runs synthesis steps. `DebateSynthesizer` formats outcomes.
 
 ### Type System
 
-The `LateralTechnique` union type in `src/types/index.ts` defines all 31 valid technique
+The `LateralTechnique` union type in `src/types/index.ts` defines all 32 valid technique
 identifiers. When adding a technique, this type and the `ALL_LATERAL_TECHNIQUES` array must both be
 updated.
 

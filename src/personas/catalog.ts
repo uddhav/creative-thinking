@@ -202,6 +202,10 @@ export const BUILTIN_PERSONAS: Record<string, PersonaDefinition> = {
     perspective:
       'Every system will be attacked. Think like an adversary. Defense in depth. Trust nothing, verify everything. The question is not if, but when.',
     techniqueBias: {
+      // "Think like an adversary" is this persona's first sentence, and until
+      // steelman_red_team existed competing_hypotheses was the closest the
+      // catalogue came. It leads now.
+      steelman_red_team: 0.97,
       competing_hypotheses: 0.95,
       criteria_based_analysis: 0.9,
       six_hats: 0.8,
@@ -336,6 +340,13 @@ export const BUILTIN_PERSONAS: Record<string, PersonaDefinition> = {
     techniqueBias: {
       biomimetic_path: 0.95,
       paradoxical_problem: 0.9,
+      // Via negativa is in this persona's principles, its challenge questions
+      // and its stated strengths ("subtractive problem solving"), yet it had no
+      // bias toward the one technique in the catalogue that subtracts: the
+      // keeper test moves the burden of proof onto keeping the thing. Hunting
+      // hidden fragility is what the red team half does, so that leads.
+      steelman_red_team: 0.92,
+      keeper_test: 0.88,
       anecdotal_signal: 0.85,
       first_principles: 0.8,
     },
@@ -383,7 +394,13 @@ export const BUILTIN_PERSONAS: Record<string, PersonaDefinition> = {
     techniqueBias: {
       cognitive_bias_audit: 0.95,
       latticework: 0.93,
+      // "Argue better against that view than the smartest man who holds it"
+      // is this persona's own bar for being entitled to an opinion, and the
+      // keeper test is opportunity cost plus inversion applied to something
+      // already held. Neither had a bias entry.
+      steelman_red_team: 0.91,
       criteria_based_analysis: 0.9,
+      keeper_test: 0.89,
       competing_hypotheses: 0.88,
       reverse_benchmarking: 0.85,
       nine_windows: 0.8,

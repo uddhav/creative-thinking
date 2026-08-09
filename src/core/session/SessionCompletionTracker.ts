@@ -618,6 +618,7 @@ export class SessionCompletionTracker {
       cognitive_bias_audit: 9,
       latticework: 7,
       keeper_test: 5,
+      steelman_red_team: 7,
     };
 
     return stepCounts[technique] || 5;

@@ -105,6 +105,10 @@ export class PersonaResolver {
       techniqueBias.first_principles = 0.9;
     }
     if (lower.includes('security') || lower.includes('threat')) {
+      // Same correction as the built-in security_engineer persona: an explicit
+      // adversary is what this keyword is asking for, and competing_hypotheses
+      // was standing in for it until steelman_red_team existed.
+      techniqueBias.steelman_red_team = 0.92;
       techniqueBias.competing_hypotheses = 0.9;
       techniqueBias.criteria_based_analysis = 0.85;
     }

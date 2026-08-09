@@ -508,6 +508,22 @@ export class TechniqueScorer {
       },
       stepCount: 7,
     },
+    steelman_red_team: {
+      complexity: 'medium',
+      handlesTimeConstraints: false,
+      handlesResourceConstraints: false,
+      // Both gates ask who else was in the room: step 3 needs a named holder of
+      // the opposing view, step 6 needs a reviewer who does not own the plan.
+      handlesCollaborationNeeds: true,
+      outcomeProfiles: {
+        innovative: 0.3,
+        systematic: 0.85,
+        riskAware: 0.95,
+        collaborative: 0.7,
+        analytical: 0.9,
+      },
+      stepCount: 7,
+    },
   };
 
   constructor(weights?: ScoringWeights) {

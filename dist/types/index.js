@@ -35,5 +35,6 @@ export const ALL_LATERAL_TECHNIQUES = [
     'cognitive_bias_audit',
     'latticework',
     'keeper_test',
+    'steelman_red_team',
 ];
 //# sourceMappingURL=index.js.map

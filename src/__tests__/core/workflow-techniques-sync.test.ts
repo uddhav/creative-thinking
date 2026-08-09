@@ -53,8 +53,8 @@ describe('WorkflowGuard Techniques Synchronization', () => {
     expect([...validTechniques].sort()).toEqual([...registeredTechniques].sort());
 
     // Also verify the count matches what we expect (31 techniques with behavioral economics)
-    expect(registeredTechniques.length).toBe(31);
-    expect(validTechniques.length).toBe(31);
+    expect(registeredTechniques.length).toBe(32);
+    expect(validTechniques.length).toBe(32);
 
     // Explicitly check for the three techniques that were missing
     expect(validTechniques).toContain('quantum_superposition');
@@ -103,6 +103,7 @@ describe('WorkflowGuard Techniques Synchronization', () => {
       'cognitive_bias_audit',
       'latticework',
       'keeper_test',
+      'steelman_red_team',
     ];
 
     // All type values should be registered

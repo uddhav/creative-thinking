@@ -8,7 +8,7 @@
 [![npm version](https://badge.fury.io/js/creative-thinking.svg)](https://badge.fury.io/js/creative-thinking)
 
 A Model Context Protocol (MCP) server that provides structured creative thinking techniques for
-problem-solving and ideation. This server implements 31 creative thinking techniques through a
+problem-solving and ideation. This server implements 32 creative thinking techniques through a
 unified framework combining generative creativity with systematic risk assessment, analytical
 verification, and post-action reflexivity tracking.
 
@@ -55,7 +55,7 @@ The three-layer architecture guides you through comprehensive problem-solving:
    maintaining session state and integrating risk assessment.
 
 **📚 New to the techniques? Check out the [Specifications](SPECIFICATIONS.md) for a comprehensive
-overview of all 31 techniques and when to use each one.**
+overview of all 32 techniques and when to use each one.**
 
 This layered approach ensures efficient problem-solving by matching techniques to problems, creating
 comprehensive workflows, and maintaining focus throughout the creative process.
@@ -254,11 +254,12 @@ const nextResult = await executeThinkingStep({
 - **Persistence Architecture**: Adapter pattern supporting filesystem and memory backends
 - **MCP Sampling Integration**: AI-powered enhancement with graceful degradation when unavailable
 
-### 31 Creative Thinking Techniques
+### 32 Creative Thinking Techniques
 
 Each technique integrates creative generation with systematic verification and post-action
 reflexivity tracking. The collection includes 21 core creative techniques, 3 analytical verification
-techniques, and 4 behavioral economics techniques inspired by Rory Sutherland:
+techniques, 4 behavioral economics techniques inspired by Rory Sutherland, 3 judgment and retention
+techniques, and 1 adversarial review technique:
 
 **Note**: The discovery layer includes a wildcard technique selection feature (17.5% probability by
 default, configurable via `WILDCARD_PROBABILITY` environment variable) that randomly includes an
@@ -267,7 +268,7 @@ additional technique to prevent algorithmic pigeonholing and encourage unexpecte
 - **Six Thinking Hats Plus** - Multi-perspective analysis with meta-uncertainty awareness
 - **Provocative Operation (PO)** - Pattern-breaking through systematic verification
 - **Random Entry** - Creative connections validated through systematic doubt
-- **SCAMPER** - Systematic transformations with integrated pre-mortem analysis
+- **SCAMPER** - Systematic transformations, each action carrying its own risk question
 - **Concept Extraction** - Cross-domain pattern transfer with boundary awareness
 - **Yes, And** - Collaborative ideation with built-in critical evaluation
 - **Design Thinking** - Human-centered innovation with embedded risk management
@@ -302,6 +303,13 @@ additional technique to prevent algorithmic pigeonholing and encourage unexpecte
 
 - **Keeper Test** - Re-decides something already in place by asking whether you would take it on
   today, at today's price, rather than whether it has failed badly enough to remove (5 steps)
+
+**Adversarial Techniques:**
+
+- **Steelman & Red Team** - Builds the opposing case until its own holders would sign it, then
+  attacks the plan from a named adversary who wants it to fail. Gated at both halves: a caricatured
+  opponent fails the Ideological Turing Test, and findings that could not have changed the decision
+  fail the consequence check (7 steps)
 
 ### MCP Prompts Support (NEW)
 

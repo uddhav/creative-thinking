@@ -39,6 +39,36 @@ export declare class ProblemAnalyzer {
      */
     private detectRetentionPattern;
     /**
+     * Explicit requests to be argued with, checked ahead of the topic detectors.
+     *
+     * The broad detector below runs last, so it can only reclaim problems that
+     * would otherwise fall through to 'general'. That placement is additive by
+     * design, but measurement showed it leaves the most explicit phrasings
+     * stranded: 'red team our incident response process' is claimed by
+     * `technical`, 'prove me wrong about dropping the mobile app' by
+     * `validation`, and 'convince me I am wrong about consolidating vendors' by
+     * `technical` — all long before the rescue block is reached. Those are
+     * mis-routes on what the problem is *about* rather than what is being asked
+     * of it. An incident response process is the subject; being argued with is
+     * the subject matter.
+     *
+     * Terms here must be near-unambiguous: each one asks for opposition, and
+     * means little else.
+     */
+    private detectExplicitAdversarialAsk;
+    /**
+     * Softer requests for opposition, placed in the rescue block.
+     *
+     * Everything here has a plausible non-adversarial reading somewhere, which is
+     * why it runs immediately before the fall-through to 'general' and can only
+     * reclaim problems no other category wanted. 'worst case' is the clearest
+     * example: paired with latency or throughput it is a performance question,
+     * and `technical` and `computational` both claim it many lines earlier. By
+     * the time control reaches here, the phrase has already failed every topic
+     * detector, and what is left really is someone asking what could go wrong.
+     */
+    private detectAdversarialPattern;
+    /**
      * Detect decision/judgment problems — choosing between options, weighing
      * trade-offs, committing to a course of action.
      */

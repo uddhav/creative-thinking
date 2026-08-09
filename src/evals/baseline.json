@@ -1,13 +1,13 @@
 {
-  "generatedFrom": "aad9775",
+  "generatedFrom": "c600809",
   "summary": {
-    "techniqueCount": 31,
-    "totalSteps": 169,
-    "stepsReferencingProblem": 169,
+    "techniqueCount": 32,
+    "totalSteps": 176,
+    "stepsReferencingProblem": 176,
     "overallProblemInterpolationRate": 1,
     "meanLengthSpreadRatio": 13.9,
-    "techniquesUsingEmoji": 23,
-    "techniquesUsingMarkdownBold": 11
+    "techniquesUsingEmoji": 24,
+    "techniquesUsingMarkdownBold": 12
   },
   "techniques": [
     {
@@ -37,9 +37,9 @@
       "totalSteps": 9,
       "stepsReferencingProblem": 9,
       "problemInterpolationRate": 1,
-      "meanGuidanceLength": 666,
+      "meanGuidanceLength": 703,
       "minGuidanceLength": 431,
-      "maxGuidanceLength": 1073,
+      "maxGuidanceLength": 1083,
       "usesEmoji": true,
       "usesMarkdownBold": true
     },
@@ -290,7 +290,7 @@
       "totalSteps": 8,
       "stepsReferencingProblem": 8,
       "problemInterpolationRate": 1,
-      "meanGuidanceLength": 125,
+      "meanGuidanceLength": 130,
       "minGuidanceLength": 111,
       "maxGuidanceLength": 158,
       "usesEmoji": true,
@@ -306,6 +306,17 @@
       "maxGuidanceLength": 396,
       "usesEmoji": true,
       "usesMarkdownBold": false
+    },
+    {
+      "technique": "steelman_red_team",
+      "totalSteps": 7,
+      "stepsReferencingProblem": 7,
+      "problemInterpolationRate": 1,
+      "meanGuidanceLength": 799,
+      "minGuidanceLength": 753,
+      "maxGuidanceLength": 872,
+      "usesEmoji": true,
+      "usesMarkdownBold": true
     },
     {
       "technique": "temporal_creativity",
