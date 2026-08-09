@@ -39,22 +39,23 @@ Automated checks specifically for pull requests.
 - Dependency license review
 - Preview documentation generation
 
-### 3. **Release** (`release.yml`)
+### 3. **Release** (`semantic-release.yml`, `pr-version-bump.yml`, `release-binaries.yml`)
 
-Automated release process for version tags.
+The release path is split across three workflows because a repository ruleset requires every change
+to `main` to arrive through a pull request. Nothing may push to `main` directly.
 
-**Steps:**
+1. `pr-version-bump.yml` — on any PR merging to `main`, works out the bump from Conventional
+   Commits, updates `package.json` and `CHANGELOG.md`, and opens a `chore(release):` PR with the
+   result.
+2. `semantic-release.yml` — on push to `main`, creates the tag and the GitHub Release. It does not
+   write to `main`; tags are not covered by the pull-request rule. Requires Node 22+
+   (semantic-release v25).
+3. `release-binaries.yml` — on `v*.*.*` tag push, builds the standalone `socketes` binaries for
+   macOS and Linux and uploads them with `SHA256SUMS`.
 
-1. Generate release notes from commits
-2. Create GitHub release
-3. Build platform-specific assets
-4. Publish to npm registry
-5. Build and push Docker images
-
-**Triggers:**
-
-- Push of version tags (v*.*.\*)
-- Manual workflow dispatch
+**Not part of this project:** npm publishing and Docker images. `release.yml` described both and was
+deleted — the package is distributed via GitHub only (see `CLAUDE.md` and `README.md`), and its
+Release-creation jobs raced `release-binaries.yml` on the same tag trigger.
 
 ### 4. **Security** (`security.yml`)
 
