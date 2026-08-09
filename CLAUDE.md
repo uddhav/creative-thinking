@@ -198,7 +198,7 @@ src/
 │   └── [TechniqueName]Handler.ts # One per technique (33 files: 32 registered + unwired GenericHandler)
 ├── personas/                 # Persona system for personality-driven sessions
 │   ├── types.ts              # PersonaDefinition, DebateConfig, PersonaStepContext
-│   ├── catalog.ts            # BUILTIN_PERSONAS (8 built-in) + external JSON loading
+│   ├── catalog.ts            # BUILTIN_PERSONAS (9 built-in) + external JSON loading
 │   ├── PersonaResolver.ts    # String → PersonaDefinition resolution (built-in, custom:, external)
 │   ├── PersonaGuidanceInjector.ts # Injects persona voice into technique step guidance
 │   ├── DebateOrchestrator.ts # Creates per-persona parallel plans + synthesis plan
@@ -271,10 +271,10 @@ through the existing three tools via optional parameters — no 4th tool.
   `competing_hypotheses`.
 - `execute_thinking_step` accepts `persona` to identify which persona is speaking during debate.
 
-**Built-in personas** (8): `rory_sutherland`, `rich_hickey`, `joe_armstrong`, `tarantino`,
-`security_engineer`, `veritasium`, `design_thinker`, `nassim_taleb`. Each has `techniqueBias`,
-`keyPrinciples`, `challengeQuestions`, `evaluationCriteria`, and `thinkingStyle` with strengths and
-blind spots.
+**Built-in personas** (9): `rory_sutherland`, `rich_hickey`, `joe_armstrong`, `tarantino`,
+`security_engineer`, `veritasium`, `design_thinker`, `nassim_taleb`, `charlie_munger`. Each has
+`techniqueBias`, `keyPrinciples`, `challengeQuestions`, `evaluationCriteria`, and `thinkingStyle`
+with strengths and blind spots.
 
 **Custom personas**: `custom:Security-minded Rust engineer` — dynamically generated via keyword
 analysis from NLPService.
@@ -338,7 +338,7 @@ futureConstraints, and reversibility level. See CONTRIBUTING.md for details.
 
 ## Tests
 
-2,450+ tests across 159 files using Vitest. 10-second timeout per test. Coverage target >80%.
+2,650+ tests across 163 files using Vitest. 10-second timeout per test. Coverage target >80%.
 
 ```
 src/__tests__/

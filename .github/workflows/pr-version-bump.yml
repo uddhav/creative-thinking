@@ -91,33 +91,44 @@ jobs:
           git checkout -b $BRANCH_NAME
           echo "branch_name=$BRANCH_NAME" >> $GITHUB_ENV
 
+      # package.json mirrors the newest tag rather than being a second opinion.
+      # semantic-release decides the version and publishes it; incrementing a
+      # local value in parallel produced two independent estimates that drifted
+      # apart -- package.json sat at 1.1.0 from May while the tags reached
+      # v2.1.3, and the bump PR proposed 1.1.1 for work released as v2.1.3.
+      #
+      # If this job wins the race against semantic-release the tag is still the
+      # previous release, package.json lands one behind, and the next merge
+      # closes the gap. Eventually correct beats independently wrong.
       - name: Bump version
         id: bump
         env:
           BUMP_TYPE: ${{ steps.analyze.outputs.bump_type }}
         run: |
-          # Get current version
           CURRENT_VERSION=$(node -p "require('./package.json').version")
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || true)
+          TAG_VERSION="${LATEST_TAG#v}"
 
-          # Bump version based on type
-          case "$BUMP_TYPE" in
-            major)
-              npm version major --no-git-tag-version
-              ;;
-            minor)
-              npm version minor --no-git-tag-version
-              ;;
-            patch)
-              npm version patch --no-git-tag-version
-              ;;
-          esac
+          if [ -z "$TAG_VERSION" ]; then
+            # No tags yet, so there is nothing to mirror. Fall back to the
+            # Conventional Commits bump so a first release can still be cut.
+            npm version "$BUMP_TYPE" --no-git-tag-version
+            NEW_VERSION=$(node -p "require('./package.json').version")
+            echo "No tags found; bumped $CURRENT_VERSION -> $NEW_VERSION ($BUMP_TYPE)"
+          elif [ "$TAG_VERSION" = "$CURRENT_VERSION" ]; then
+            echo "package.json already matches the newest tag ($TAG_VERSION); nothing to do"
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0
+          else
+            npm version "$TAG_VERSION" --no-git-tag-version --allow-same-version
+            NEW_VERSION="$TAG_VERSION"
+            echo "Aligned $CURRENT_VERSION -> $NEW_VERSION (newest tag $LATEST_TAG)"
+          fi
 
-          # Get new version
-          NEW_VERSION=$(node -p "require('./package.json').version")
-          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "Bumped version from $CURRENT_VERSION to $NEW_VERSION"
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT"
 
       - name: Generate changelog entry
+        if: steps.bump.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NEW_VERSION: ${{ steps.bump.outputs.new_version }}
@@ -154,6 +165,7 @@ jobs:
           rm -f CHANGELOG.entry
 
       - name: Commit changes
+        if: steps.bump.outputs.skip != 'true'
         env:
           NEW_VERSION: ${{ steps.bump.outputs.new_version }}
           BUMP_TYPE: ${{ steps.analyze.outputs.bump_type }}
@@ -166,10 +178,12 @@ jobs:
           git commit -F /tmp/bump-commit-msg
 
       - name: Push branch
+        if: steps.bump.outputs.skip != 'true'
         run: |
           git push origin "$branch_name"
 
       - name: Create Pull Request
+        if: steps.bump.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NEW_VERSION: ${{ steps.bump.outputs.new_version }}
