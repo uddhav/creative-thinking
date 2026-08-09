@@ -27,7 +27,10 @@ jobs:
       - name: 🏗️ Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20.x'
+          # semantic-release v25 requires ^22.14.0 || >= 24.10.0. Dependabot
+          # bumped it from v24 in #284 and this pin stayed at 20.x, so every
+          # run since exited 1 before reaching the release step.
+          node-version: '22.x'
           cache: 'npm'
 
       - name: 📦 Install dependencies

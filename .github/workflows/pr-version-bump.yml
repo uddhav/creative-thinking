@@ -48,28 +48,38 @@ jobs:
           PR_BODY: ${{ github.event.pull_request.body }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          # Initialize bump type
-          BUMP_TYPE="patch"
-
-          # Check for conventional commit patterns
-          if printf '%s' "$PR_TITLE" | grep -qE "^(feat|feature)(\(.+\))?:"; then
-            BUMP_TYPE="minor"
-          fi
-
-          # Check for breaking changes in PR body
-          if printf '%s' "$PR_BODY" | grep -qi "breaking change"; then
-            BUMP_TYPE="major"
-          fi
-
-          # Check commit messages in PR
           COMMITS=$(gh pr view "$PR_NUMBER" --json commits -q '.commits[].commit.message')
 
-          if echo "$COMMITS" | grep -qE "^(feat|feature)(\(.+\))?:"; then
-            BUMP_TYPE="minor"
+          # Collect the signals first and decide once at the end. Deciding as we
+          # went let a later `feat:` check overwrite an earlier major with minor,
+          # so a breaking change announced in the PR body but implemented in a
+          # `feat:` commit was released as a minor.
+          IS_MAJOR=""
+          IS_MINOR=""
+
+          # Conventional Commits marks a breaking change with `!` before the
+          # colon, or a `BREAKING CHANGE:` footer at the start of a line — never
+          # in running prose. The previous unanchored `grep -qi "breaking
+          # change"` matched any mention: #285 documented the detection in a
+          # table and was scored 2.0.0 for what was a `fix(ci):` change.
+          if printf '%s\n' "$PR_TITLE" "$COMMITS" | grep -qE "^[a-z]+(\(.+\))?!:"; then
+            IS_MAJOR=1
           fi
 
-          if echo "$COMMITS" | grep -qi "BREAKING CHANGE"; then
+          if printf '%s\n' "$PR_BODY" "$COMMITS" | grep -qE "^BREAKING[ -]CHANGE:"; then
+            IS_MAJOR=1
+          fi
+
+          if printf '%s\n' "$PR_TITLE" "$COMMITS" | grep -qE "^(feat|feature)(\(.+\))?!?:"; then
+            IS_MINOR=1
+          fi
+
+          if [ -n "$IS_MAJOR" ]; then
             BUMP_TYPE="major"
+          elif [ -n "$IS_MINOR" ]; then
+            BUMP_TYPE="minor"
+          else
+            BUMP_TYPE="patch"
           fi
 
           echo "bump_type=$BUMP_TYPE" >> $GITHUB_OUTPUT
@@ -125,7 +135,12 @@ jobs:
             gh pr view "$PR_NUMBER" --json commits -q '.commits[].commit.message' \
               | head -5 \
               | while IFS= read -r commit; do
-                  [ -n "$commit" ] && printf -- '  - %s\n' "$commit"
+                  # `[ -n "$c" ] && printf` leaves the loop's exit status at 1
+                  # whenever the last line read is blank, and this step runs
+                  # under `bash -e`, which failed the job on every merge.
+                  if [ -n "$commit" ]; then
+                    printf -- '  - %s\n' "$commit"
+                  fi
                 done
             printf '\n'
           } > CHANGELOG.entry
