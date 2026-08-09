@@ -66,8 +66,15 @@ node dist/cli.js discover --problem "..."                      # → JSON on std
 node dist/cli.js plan --problem "..." --techniques six_hats    # → planId persisted to disk
 node dist/cli.js execute --plan <planId> --technique six_hats \
     --problem "..." --step 1 --total-steps 7 --output "..." --next-step-needed
+node dist/cli.js execute --plan <planId> --technique six_hats \
+    --problem "..." --step 7 --total-steps 7 --output "..." --no-next-step-needed
 node dist/cli.js session list --status active --limit 20
 ```
+
+**Ending a session takes `--no-next-step-needed`, not the absence of the flag.**
+`--next-step-needed` defaults to true, so dropping it on the final step fails with
+`nextStepNeeded must be a boolean` rather than completing the session — and a session that never
+completes emits no final synthesis.
 
 State on disk under `PERSISTENCE_PATH` (default `~/.creative-thinking`):
 
