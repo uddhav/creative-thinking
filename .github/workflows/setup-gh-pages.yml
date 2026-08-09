@@ -37,28 +37,28 @@ jobs:
           
           # Create index.html for GitHub Pages
           cat > index.html << 'EOF'
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Creative Thinking MCP Server - Performance Benchmarks</title>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="https://benchmarkjs-chart.github.io/themes/default/style.css">
-</head>
-<body>
-    <div class="container">
-        <h1>Creative Thinking MCP Server</h1>
-        <h2>Performance Benchmarks</h2>
-        <div id="chart"></div>
-    </div>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
-    <script src="https://benchmarkjs-chart.github.io/dist/benchmarkjs-chart.min.js"></script>
-    <script>
-        window.BENCHMARK_DATA = 'benchmarks/data.json';
-    </script>
-</body>
-</html>
-EOF
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>Creative Thinking MCP Server - Performance Benchmarks</title>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <link rel="stylesheet" href="https://benchmarkjs-chart.github.io/themes/default/style.css">
+          </head>
+          <body>
+              <div class="container">
+                  <h1>Creative Thinking MCP Server</h1>
+                  <h2>Performance Benchmarks</h2>
+                  <div id="chart"></div>
+              </div>
+              <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+              <script src="https://benchmarkjs-chart.github.io/dist/benchmarkjs-chart.min.js"></script>
+              <script>
+                  window.BENCHMARK_DATA = 'benchmarks/data.json';
+              </script>
+          </body>
+          </html>
+          EOF
           
           # Add files and commit
           git add .
