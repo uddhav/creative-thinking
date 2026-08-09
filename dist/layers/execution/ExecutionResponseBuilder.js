@@ -324,7 +324,7 @@ export class ExecutionResponseBuilder {
     }
     generateExecutionMetadata(input, session, insights, pathMemory, currentFlexibility) {
         const metadata = {
-            outputCompleteness: this.assessOutputCompleteness(input, session, insights),
+            stepCompleteness: this.assessOutputCompleteness(input, session, insights),
             pathDependenciesCreated: this.extractPathDependencies(input, pathMemory),
             flexibilityImpact: this.calculateFlexibilityImpact(input, session),
         };

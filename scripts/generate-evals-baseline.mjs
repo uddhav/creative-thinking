@@ -20,33 +20,27 @@
  */
 
 import { writeFileSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const dist = new URL('../dist/', import.meta.url);
 const { analyzeAllTechniques, summarize } = await import(new URL('evals/guidanceMetrics.js', dist));
 const { TechniqueRegistry } = await import(new URL('techniques/TechniqueRegistry.js', dist));
 
-function currentCommit() {
-  try {
-    return execFileSync('git', ['rev-parse', '--short', 'HEAD'], { encoding: 'utf8' }).trim();
-  } catch {
-    // Not a git checkout, or git is unavailable. The field is provenance only.
-    return 'unknown';
-  }
-}
+// No provenance stamp. The file recorded the commit it was generated from,
+// which could never name the commit it ships in — the baseline is committed
+// inside that commit. It was always one behind, nothing read it, and a number
+// that cannot be right is worse than no number.
 
 const registry = TechniqueRegistry.getInstance();
 const techniques = analyzeAllTechniques(registry);
 const summary = summarize(techniques);
 
 const target = fileURLToPath(new URL('../src/evals/baseline.json', import.meta.url));
-const baseline = { generatedFrom: currentCommit(), summary, techniques };
+const baseline = { summary, techniques };
 
 writeFileSync(target, `${JSON.stringify(baseline, null, 2)}\n`);
 
 process.stderr.write(
-  `baseline regenerated from ${baseline.generatedFrom}: ` +
-    `${summary.techniqueCount} techniques, ${summary.totalSteps} steps, ` +
-    `interpolation ${summary.overallProblemInterpolationRate}\n`
+  `baseline regenerated: ${summary.techniqueCount} techniques, ` +
+    `${summary.totalSteps} steps, interpolation ${summary.overallProblemInterpolationRate}\n`
 );

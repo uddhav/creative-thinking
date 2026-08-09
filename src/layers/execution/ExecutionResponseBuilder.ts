@@ -553,7 +553,7 @@ export class ExecutionResponseBuilder {
     currentFlexibility: number
   ): ExecutionMetadata {
     const metadata: ExecutionMetadata = {
-      outputCompleteness: this.assessOutputCompleteness(input, session, insights),
+      stepCompleteness: this.assessOutputCompleteness(input, session, insights),
       pathDependenciesCreated: this.extractPathDependencies(input, pathMemory),
       flexibilityImpact: this.calculateFlexibilityImpact(input, session),
     };

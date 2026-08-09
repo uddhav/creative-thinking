@@ -17,7 +17,15 @@ import { SessionEncoder } from './session/SessionEncoder.js';
 
 // Type for execution metadata
 export interface ExecutionMetadata {
-  outputCompleteness: number;
+  /**
+   * How complete THIS step's output was, 0-1.
+   *
+   * Distinct from `metrics.outputCompleteness`, which scores the whole session.
+   * Both used to be called outputCompleteness and appeared in the same response
+   * inches apart, reporting different numbers — an invitation to compare two
+   * things that are not comparable.
+   */
+  stepCompleteness: number;
   pathDependenciesCreated: string[];
   flexibilityImpact: number;
   noteworthyMoment?: string;

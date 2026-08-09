@@ -268,9 +268,15 @@ another technique.
 **Removal is allowed.** If a technique fails bar 2 against a newer one, retiring it is a legitimate
 change. A catalogue that only ever grows is not curated.
 
-**Record bar 2 in the handler's header.** Every handler's file comment must name its nearest
-neighbour and the observable difference between their outputs — not the difference in intent, the
-difference a reader would see in two finished sessions. `SteelmanRedTeamHandler.ts` is the worked
+**Record bar 2 in the handler's header.** A new handler, or one whose guidance you change
+materially, must name its nearest neighbour in its file comment along with the observable difference
+between their outputs — not the difference in intent, the difference a reader would see in two
+finished sessions.
+
+This binds going forward rather than retroactively. Most existing handlers do not carry it, and
+backfilling all of them at once would produce prose written to satisfy a rule rather than from a
+comparison anyone ran — which is the failure this bar exists to prevent, not a way of meeting it.
+Write the header when you have just done the comparison. `SteelmanRedTeamHandler.ts` is the worked
 example: it names four neighbours, runs one case (consolidating onto a single observability vendor)
 through two of them, and supplies the control that separates them — hand both to a new hire with no
 stake, and the bias audit finds nothing while the red team still returns the missing price-cap

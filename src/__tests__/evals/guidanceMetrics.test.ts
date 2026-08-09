@@ -22,7 +22,6 @@ import {
 } from '../../evals/guidanceMetrics.js';
 
 interface Baseline {
-  generatedFrom: string;
   summary: GuidanceMetricsSummary;
   techniques: TechniqueGuidanceMetrics[];
 }
