@@ -2,7 +2,7 @@
  * Enhanced Error System with Recovery Patterns
  * Provides detailed error information with recovery suggestions
  */
-import type { LateralTechnique } from '../types/index.js';
+import { type LateralTechnique } from '../types/index.js';
 /**
  * Error severity levels
  */

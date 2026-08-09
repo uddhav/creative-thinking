@@ -3,6 +3,7 @@
  * Provides different strictness levels for session completion requirements
  */
 import { EnforcementLevel } from '../types/enforcement.js';
+import { ALL_LATERAL_TECHNIQUES } from '../types/index.js';
 /**
  * Predefined enforcement profiles
  */
@@ -147,25 +148,11 @@ export function validateEnforcementConfig(config) {
     if (!Object.values(EnforcementLevel).includes(config.enforcementLevel)) {
         errors.push(`Invalid enforcement level: ${config.enforcementLevel}`);
     }
-    // Validate critical techniques
-    const validTechniques = [
-        'six_hats',
-        'po',
-        'random_entry',
-        'scamper',
-        'concept_extraction',
-        'yes_and',
-        'design_thinking',
-        'triz',
-        'neural_state',
-        'temporal_work',
-        'cultural_integration',
-        'collective_intel',
-        'disney_method',
-        'nine_windows',
-    ];
+    // Validate critical techniques. Derived, not hand-maintained: this list was
+    // copied out at 14 techniques and never tracked the catalogue, so naming any
+    // of the 18 added since as critical was rejected as invalid.
     for (const technique of config.criticalTechniques) {
-        if (!validTechniques.includes(technique)) {
+        if (!ALL_LATERAL_TECHNIQUES.includes(technique)) {
             errors.push(`Invalid critical technique: ${technique}`);
         }
     }

@@ -2,6 +2,7 @@
  * Enhanced Error System with Recovery Patterns
  * Provides detailed error information with recovery suggestions
  */
+import { ALL_LATERAL_TECHNIQUES } from '../types/index.js';
 /**
  * Base class for enhanced errors
  */
@@ -295,22 +296,11 @@ export class ErrorFactory {
      * Create an invalid technique error
      */
     static invalidTechnique(technique) {
-        const validTechniques = [
-            'six_hats',
-            'po',
-            'random_entry',
-            'scamper',
-            'concept_extraction',
-            'yes_and',
-            'design_thinking',
-            'triz',
-            'neural_state',
-            'temporal_work',
-            'cultural_integration',
-            'collective_intel',
-            'disney_method',
-            'nine_windows',
-        ];
+        // Derived, not hand-maintained: this list was copied out at 14 techniques
+        // and never tracked the catalogue, so both the hint below and the
+        // validTechniques handed back on the error context named 18 fewer
+        // techniques than the server actually accepts.
+        const validTechniques = ALL_LATERAL_TECHNIQUES;
         return new ValidationError(ErrorCodes.INVALID_TYPE, `Invalid technique: '${technique}'`, [
             'Use one of the valid techniques',
             `Valid techniques: ${validTechniques.slice(0, 5).join(', ')}, ...`,
