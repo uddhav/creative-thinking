@@ -71,10 +71,10 @@ node dist/cli.js execute --plan <planId> --technique six_hats \
 node dist/cli.js session list --status active --limit 20
 ```
 
-**Ending a session takes `--no-next-step-needed`, not the absence of the flag.**
-`--next-step-needed` defaults to true, so dropping it on the final step fails with
-`nextStepNeeded must be a boolean` rather than completing the session — and a session that never
-completes emits no final synthesis.
+**`--next-step-needed` is required on every `execute` call and has no default.** Omitting it fails
+with `nextStepNeeded must be a boolean` — on any step, not just the last. Pass it while steps
+remain, and `--no-next-step-needed` on the final step. A session that never receives the negated
+form never completes, and an incomplete session emits no final synthesis.
 
 State on disk under `PERSISTENCE_PATH` (default `~/.creative-thinking`):
 

@@ -14,13 +14,15 @@ export declare class CriteriaBasedAnalysisHandler extends BaseTechniqueHandler {
     /**
      * Report what each step actually assessed, labelled by the step.
      *
-     * This reads `entry.output`. Gating on vocabulary — reporting a finding only
-     * when the text happened to contain "consistent", "inconsistent" or
-     * "contradiction" — meant a full five-step credibility assessment phrased any
-     * other way returned nothing at all. The validity score, when supplied, is
-     * real structured data and still reports, including its banded reading.
+     * Keyed on `entry.currentStep`, not on position in the array. Position looks
+     * equivalent and is not: `execute` appends a history entry for every call
+     * including revisions, so one revision shifts every later entry and the last
+     * step falls off the end — a session reporting `completed: true` silently
+     * loses its final output. Keying on the step also means a revision supersedes
+     * the entry it revises rather than reporting twice.
      */
     extractInsights(history: Array<{
+        currentStep?: number;
         output?: string;
         validityScore?: number;
     }>): string[];

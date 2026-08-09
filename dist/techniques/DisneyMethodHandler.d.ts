@@ -9,12 +9,14 @@ export declare class DisneyMethodHandler extends BaseTechniqueHandler {
     getStepInfo(step: number): StepInfo;
     getStepGuidance(step: number, problem: string): string;
     /**
-     * Report what each role actually produced, labelled by the role.
+     * Report what each step actually recorded, labelled by the step.
      *
-     * This reads `entry.output`. Reading only the structured fields meant a
-     * session of three substantive rooms returned a single fixed string
-     * announcing the method had completed — an insight the session never
-     * produced. Reaching the last step is already visible from the step count.
+     * Keyed on `entry.currentStep`, not on position in the array. Position looks
+     * equivalent and is not: `execute` appends a history entry for every call
+     * including revisions, so one revision shifts every later entry and the last
+     * step falls off the end — a session reporting `completed: true` silently
+     * loses its final output. Keying on the step also means a revision supersedes
+     * the entry it revises rather than reporting twice.
      */
     extractInsights(history: Array<{
         currentStep?: number;

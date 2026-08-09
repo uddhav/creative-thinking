@@ -4,7 +4,7 @@
  * A 5-step technique for evaluating authenticity and validity
  * based on established criteria from deception detection research
  */
-import { BaseTechniqueHandler } from './types.js';
+import { BaseTechniqueHandler, firstSentence } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 export class CriteriaBasedAnalysisHandler extends BaseTechniqueHandler {
     steps = [
@@ -234,49 +234,57 @@ Output: Complete validity assessment with confidence score and recommendations`,
     /**
      * Report what each step actually assessed, labelled by the step.
      *
-     * This reads `entry.output`. Gating on vocabulary — reporting a finding only
-     * when the text happened to contain "consistent", "inconsistent" or
-     * "contradiction" — meant a full five-step credibility assessment phrased any
-     * other way returned nothing at all. The validity score, when supplied, is
-     * real structured data and still reports, including its banded reading.
+     * Keyed on `entry.currentStep`, not on position in the array. Position looks
+     * equivalent and is not: `execute` appends a history entry for every call
+     * including revisions, so one revision shifts every later entry and the last
+     * step falls off the end — a session reporting `completed: true` silently
+     * loses its final output. Keying on the step also means a revision supersedes
+     * the entry it revises rather than reporting twice.
      */
     extractInsights(history) {
-        const insights = [];
+        const totalSteps = this.getTechniqueInfo().totalSteps;
+        const latestByStep = new Map();
         history.forEach((entry, index) => {
-            const stepName = this.steps[index]?.name;
-            if (!stepName) {
-                return;
+            const step = entry.currentStep ?? index + 1;
+            if (step >= 1 && step <= totalSteps) {
+                latestByStep.set(step, entry);
             }
+        });
+        const insights = [];
+        let finalValidityScore;
+        for (let step = 1; step <= totalSteps; step++) {
+            const entry = latestByStep.get(step);
+            if (!entry) {
+                continue;
+            }
+            const stepName = this.steps[step - 1].name;
             const output = entry.output?.trim();
             if (output) {
-                const [firstSentence] = output.split(/(?<=[.!?])\s+/);
-                const summary = (firstSentence ?? output).trim();
+                const summary = firstSentence(output);
                 if (summary.length > 0) {
                     insights.push(`${stepName}: ${summary}`);
                 }
             }
             if (entry.validityScore !== undefined) {
                 insights.push(`Validity Score: ${entry.validityScore}%`);
+                finalValidityScore = entry.validityScore;
             }
-        });
+        }
         // The banded reading of the final score, which is a judgement the score
         // itself does not carry.
-        if (history.length >= this.steps.length) {
-            const finalEntry = history[history.length - 1];
-            if (finalEntry.validityScore !== undefined) {
-                const score = finalEntry.validityScore;
-                if (score >= 80) {
-                    insights.push('High validity - Strong confidence in findings');
-                }
-                else if (score >= 60) {
-                    insights.push('Moderate validity - Proceed with appropriate caution');
-                }
-                else if (score >= 40) {
-                    insights.push('Low validity - Significant concerns identified');
-                }
-                else {
-                    insights.push('Very low validity - Major red flags present');
-                }
+        if (latestByStep.size >= totalSteps && finalValidityScore !== undefined) {
+            const score = finalValidityScore;
+            if (score >= 80) {
+                insights.push('High validity - Strong confidence in findings');
+            }
+            else if (score >= 60) {
+                insights.push('Moderate validity - Proceed with appropriate caution');
+            }
+            else if (score >= 40) {
+                insights.push('Low validity - Significant concerns identified');
+            }
+            else {
+                insights.push('Very low validity - Major red flags present');
             }
         }
         return insights;

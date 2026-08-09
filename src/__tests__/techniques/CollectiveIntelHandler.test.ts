@@ -229,4 +229,44 @@ describe('CollectiveIntelHandler', () => {
       expect(insights.some(i => i.includes('Stray sixth entry'))).toBe(false);
     });
   });
+
+  describe('extractInsights regressions', () => {
+    it('lets a revision supersede the step it revises, without shifting later labels', () => {
+      // execute appends a history entry for every call, revisions included. Keyed
+      // on array position, one revision shifted every later label and pushed the
+      // final step off the end — of a session reporting completed: true.
+      const insights = handler.extractInsights([
+        { currentStep: 1, output: 'Support tickets are the source.' },
+        { currentStep: 1, output: 'Correction: churn survey is the source.' },
+        { currentStep: 2, output: 'The survey says imports fail.' },
+        { currentStep: 3, output: 'Both point at the importer.' },
+        { currentStep: 4, output: 'Pair the fix with a migration guide.' },
+        { currentStep: 5, output: 'Fix the importer first.' },
+      ]);
+
+      expect(insights).toEqual([
+        'Identify Sources: Correction: churn survey is the source.',
+        'Gather Wisdom: The survey says imports fail.',
+        'Find Patterns: Both point at the importer.',
+        'Create Synergy: Pair the fix with a migration guide.',
+        'Synthesize Insight: Fix the importer first.',
+      ]);
+    });
+
+    it('reports the structured field belonging to the step, not the first one present', () => {
+      // Selecting by whichever field happened to be set reported wisdomSources
+      // under Find Patterns and dropped the patterns entirely.
+      const insights = handler.extractInsights([
+        {
+          currentStep: 3,
+          output: 'Both sources agree.',
+          wisdomSources: ['SRC-belongs-to-step-1'],
+          emergentPatterns: ['REAL-PATTERN'],
+        },
+      ]);
+
+      expect(insights).toContain('Find Patterns recorded: REAL-PATTERN');
+      expect(insights.some(i => i.includes('SRC-belongs-to-step-1'))).toBe(false);
+    });
+  });
 });

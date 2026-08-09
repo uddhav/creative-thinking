@@ -2,7 +2,7 @@
  * Disney Method technique handler
  */
 
-import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
+import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo, firstSentence } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 import type { DisneyRole } from '../types/index.js';
 
@@ -95,12 +95,14 @@ export class DisneyMethodHandler extends BaseTechniqueHandler {
   }
 
   /**
-   * Report what each role actually produced, labelled by the role.
+   * Report what each step actually recorded, labelled by the step.
    *
-   * This reads `entry.output`. Reading only the structured fields meant a
-   * session of three substantive rooms returned a single fixed string
-   * announcing the method had completed — an insight the session never
-   * produced. Reaching the last step is already visible from the step count.
+   * Keyed on `entry.currentStep`, not on position in the array. Position looks
+   * equivalent and is not: `execute` appends a history entry for every call
+   * including revisions, so one revision shifts every later entry and the last
+   * step falls off the end — a session reporting `completed: true` silently
+   * loses its final output. Keying on the step also means a revision supersedes
+   * the entry it revises rather than reporting twice.
    */
   extractInsights(
     history: Array<{
@@ -113,28 +115,47 @@ export class DisneyMethodHandler extends BaseTechniqueHandler {
       output?: string;
     }>
   ): string[] {
-    const insights: string[] = [];
+    const totalSteps = this.getTechniqueInfo().totalSteps;
+    const latestByStep = new Map<number, (typeof history)[number]>();
 
     history.forEach((entry, index) => {
-      const stepName = this.steps[index]?.name;
-      if (!stepName) {
-        return;
+      // Fall back to position only when the caller sent no step number.
+      const step = entry.currentStep ?? index + 1;
+      if (step >= 1 && step <= totalSteps) {
+        latestByStep.set(step, entry);
       }
+    });
+
+    const insights: string[] = [];
+
+    for (let step = 1; step <= totalSteps; step++) {
+      const entry = latestByStep.get(step);
+      if (!entry) {
+        continue;
+      }
+      const stepName = this.steps[step - 1].name;
 
       const output = entry.output?.trim();
       if (output) {
-        const [firstSentence] = output.split(/(?<=[.!?])\s+/);
-        const summary = (firstSentence ?? output).trim();
+        const summary = firstSentence(output);
         if (summary.length > 0) {
           insights.push(`${stepName}: ${summary}`);
         }
       }
 
-      const structured = entry.dreamerVision ?? entry.realistPlan ?? entry.criticRisks;
+      // Each field belongs to one role.
+      const structured =
+        step === 1
+          ? entry.dreamerVision
+          : step === 2
+            ? entry.realistPlan
+            : step === 3
+              ? entry.criticRisks
+              : undefined;
       if (structured && structured.length > 0) {
         insights.push(`${stepName} recorded: ${structured.join(', ')}`);
       }
-    });
+    }
 
     return insights;
   }
