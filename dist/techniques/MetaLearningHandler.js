@@ -24,12 +24,13 @@ export class MetaLearningHandler extends BaseTechniqueHandler {
             emoji: '🔄',
             type: 'thinking',
         },
-        {
-            name: 'Feedback Integration',
-            focus: 'Incorporate telemetry data and user choices',
-            emoji: '📈',
-            type: 'thinking',
-        },
+        // No 'Feedback Integration' step. It asked what telemetry revealed about
+        // technique effectiveness, and getStepGuidance receives only (step, problem)
+        // — no telemetry, no session history, no list of techniques used. The step
+        // could only ever be answered by inventing the data, and validateStep would
+        // accept the invention because it checked that an array existed. Wiring it
+        // is a real change (see the session-history enrichment in
+        // ExecutionResponseBuilder), not a guidance edit.
         {
             name: 'Meta-Synthesis',
             focus: 'Generate improved integration strategies',
@@ -59,7 +60,7 @@ export class MetaLearningHandler extends BaseTechniqueHandler {
         return {
             name: 'Meta-Learning from Path Integration',
             emoji: '🧠',
-            totalSteps: 5,
+            totalSteps: 4,
             description: 'Learn from path patterns across techniques to improve integration capabilities',
             focus: 'Self-improving integration through pattern recognition and adaptive strategies',
             enhancedFocus: 'System learns how to learn from paths, recognizing successful patterns and evolving strategies based on accumulated knowledge',
@@ -81,8 +82,7 @@ export class MetaLearningHandler extends BaseTechniqueHandler {
             1: `Analyze patterns across all techniques used for: "${problem}". What successful path patterns emerge? Which techniques work well together? Identify failure modes and their causes. Look for cross-technique synergies and emergent strategies. What patterns predict success or failure?`,
             2: `Accumulate learnings from the patterns identified in "${problem}". Store effective technique combinations and their contexts. Build an affinity matrix showing which techniques complement each other. Track context-success mappings. Create a learning history that can inform future decisions.`,
             3: `Evolve your strategy for "${problem}" based on accumulated learnings. How should technique selection adapt to this problem type? What execution sequences prove most effective? How can convergence methods be improved? What option generation strategies work best? Design adaptive selection criteria.`,
-            4: `Integrate feedback from every source touching "${problem}". What do telemetry patterns reveal about technique effectiveness? How do user choices inform better recommendations? What domain-specific patterns emerge? How should visual indicators evolve to better guide the process?`,
-            5: `Synthesize meta-learning insights from "${problem}" into improved integration strategies. Generate recommendations for: optimal technique combinations, execution sequences, context adaptations, and failure prevention. Create a self-improving framework that gets better with each use.`,
+            4: `Synthesize meta-learning insights from "${problem}" into improved integration strategies. Generate recommendations for: optimal technique combinations, execution sequences, context adaptations, and failure prevention. Create a self-improving framework that gets better with each use.`,
         };
         return (guidanceMap[step] ||
             `Complete the Meta-Learning from Path Integration process for: "${problem}"`);
@@ -153,28 +153,9 @@ export class MetaLearningHandler extends BaseTechniqueHandler {
                     }
                     break;
                 case 4:
-                    // Validate feedback integration
-                    if (!stepData.feedbackInsights && !stepData.lessonIntegration) {
-                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 4 (Feedback Integration) requires incorporating telemetry and user choices. ' +
-                            'Provide "feedbackInsights" (array) or "lessonIntegration" (array) describing integrated feedback. ' +
-                            'Example: { "feedbackInsights": ["Users prefer visual approaches", "Time constraints favor rapid techniques"], "output": "..." }', 'feedbackInsights', {
-                            step,
-                            technique: 'meta_learning',
-                            acceptedFields: ['feedbackInsights', 'lessonIntegration'],
-                            example: {
-                                feedbackInsights: [
-                                    'feedback insight 1',
-                                    'user preference 2',
-                                    'telemetry finding 3',
-                                ],
-                            },
-                        });
-                    }
-                    break;
-                case 5:
                     // Validate meta-synthesis
                     if (!stepData.metaSynthesis && !stepData.synthesisStrategy) {
-                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 5 (Meta-Synthesis) requires generating self-improving integration strategies. ' +
+                        throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'Step 4 (Meta-Synthesis) requires generating self-improving integration strategies. ' +
                             'Provide "metaSynthesis" (string) or "synthesisStrategy" (string) describing the meta-level synthesis. ' +
                             'Example: { "metaSynthesis": "Combine divergent exploration with convergent refinement based on problem complexity", "output": "..." }', 'metaSynthesis', {
                             step,

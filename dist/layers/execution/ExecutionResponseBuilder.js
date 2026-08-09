@@ -284,7 +284,11 @@ export class ExecutionResponseBuilder {
                     this.telemetry
                         .trackWorkflowTransition(input.sessionId || '', input.technique, nextTechnique)
                         .catch(console.error);
-                    const nextHandler = this.techniqueRegistry?.getHandler(nextTechnique);
+                    // tryGetHandler, not getHandler: the fallback below is the whole point
+                    // of this branch, and getHandler throws on an unknown id. With a plan
+                    // naming a technique the registry does not hold, throwing here fails
+                    // the *previous* technique's final step, which had already succeeded.
+                    const nextHandler = this.techniqueRegistry?.tryGetHandler(nextTechnique);
                     return nextHandler
                         ? `Transitioning to ${nextTechnique}. ${nextHandler.getStepGuidance(1, input.problem)}`
                         : `Transitioning to ${nextTechnique}`;

@@ -91,4 +91,21 @@ describe('Out-of-bounds step handling', () => {
       expect(message).toContain('discover_techniques');
     }
   });
+
+  describe('tryGetHandler', () => {
+    it('returns undefined for an unknown technique instead of throwing', () => {
+      expect(() => registry.tryGetHandler('unknown_technique')).not.toThrow();
+      expect(registry.tryGetHandler('unknown_technique')).toBeUndefined();
+    });
+
+    it('returns the same handler as getHandler for a known technique', () => {
+      expect(registry.tryGetHandler('six_hats')).toBe(registry.getHandler('six_hats'));
+    });
+
+    // The behaviour this exists for — a plan naming an unregistered technique
+    // not failing the step before it — is covered end to end in
+    // src/__tests__/issues/unregistered-next-technique.test.ts, which drives the
+    // real executor. Re-implementing that call site here would assert on the
+    // test's own copy of the logic and would pass with the fix reverted.
+  });
 });

@@ -512,9 +512,12 @@ export class ErgodicityManager {
         riskProfile: 'Low - Analysis without action commitment',
       },
       quantum_superposition: {
-        typicalReversibility: 0.95,
-        typicalCommitment: 0.1,
-        riskProfile: 'Very Low - Maintains all options until collapse',
+        // The first three steps commit to nothing, but the technique ends in a
+        // collapse that stands the other states down — an action step with low
+        // reversibility. A profile claiming 0.95 described only the first half.
+        typicalReversibility: 0.7,
+        typicalCommitment: 0.4,
+        riskProfile: 'Low while states are held open; the collapse step commits',
       },
       temporal_creativity: {
         typicalReversibility: 0.85,

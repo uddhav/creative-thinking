@@ -5,6 +5,7 @@
  * Step types for reflexivity tracking
  */
 export type StepType = 'thinking' | 'action';
+export declare function firstSentence(text: string): string;
 /**
  * Reflexive effects that occur after action steps
  */

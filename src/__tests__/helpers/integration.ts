@@ -12,6 +12,7 @@ import type {
   DesignThinkingStage,
 } from '../../index.js';
 import { safeJsonParse } from './types.js';
+import { TechniqueRegistry } from '../../techniques/TechniqueRegistry.js';
 
 /**
  * Create a session with a specified number of steps already executed
@@ -71,26 +72,15 @@ export async function createSessionWithSteps(
 }
 
 /**
- * Get total steps for a technique
+ * Get total steps for a technique.
+ *
+ * Asks the registry rather than keeping a table. The table this replaced had
+ * drifted to 14 of the 32 techniques, still listed `cross_cultural` — a name
+ * that no longer exists — and recorded collective_intel as 4 steps when the
+ * handler says 5. Everything it did not list silently fell through to 4.
  */
 export function getTotalSteps(technique: LateralTechnique): number {
-  const stepCounts: Record<LateralTechnique, number> = {
-    six_hats: 7,
-    po: 4,
-    random_entry: 3,
-    scamper: 8,
-    concept_extraction: 4,
-    yes_and: 4,
-    design_thinking: 5,
-    triz: 4,
-    neural_state: 4,
-    temporal_work: 5,
-    cross_cultural: 4,
-    collective_intel: 4,
-    disney_method: 3,
-    nine_windows: 9,
-  };
-  return stepCounts[technique] || 4;
+  return TechniqueRegistry.getInstance().getTechniqueSteps(technique);
 }
 
 /**

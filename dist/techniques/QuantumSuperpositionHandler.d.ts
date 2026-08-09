@@ -2,16 +2,11 @@
  * Quantum Superposition technique handler
  * Maintains multiple contradictory solution states simultaneously until optimal collapse
  */
-import { BaseTechniqueHandler, type TechniqueInfo } from './types.js';
-interface SuperpositionStep {
-    name: string;
-    focus: string;
-    emoji: string;
-}
+import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
 export declare class QuantumSuperpositionHandler extends BaseTechniqueHandler {
     private readonly steps;
     getTechniqueInfo(): TechniqueInfo;
-    getStepInfo(step: number): SuperpositionStep;
+    getStepInfo(step: number): StepInfo;
     getStepGuidance(step: number, problem: string): string;
     validateStep(step: number, data: unknown): boolean;
     extractInsights(history: Array<{
@@ -20,5 +15,4 @@ export declare class QuantumSuperpositionHandler extends BaseTechniqueHandler {
         preservedInsights?: string[];
     }>): string[];
 }
-export {};
 //# sourceMappingURL=QuantumSuperpositionHandler.d.ts.map

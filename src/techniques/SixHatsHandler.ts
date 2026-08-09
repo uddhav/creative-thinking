@@ -3,7 +3,7 @@
  */
 
 import type { SixHatsColor } from '../types/index.js';
-import { BaseTechniqueHandler, type TechniqueInfo } from './types.js';
+import { BaseTechniqueHandler, firstSentence, type TechniqueInfo } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 
 interface HatInfo {
@@ -159,6 +159,15 @@ export class SixHatsHandler extends BaseTechniqueHandler {
     return true;
   }
 
+  /**
+   * Report what each hat actually surfaced, labelled by the hat.
+   *
+   * This reads `entry.output`. Gating on vocabulary — reporting a Green Hat
+   * finding only when the text happens to contain "could" or "might", a Red Hat
+   * one only on "concern" or "worry" — silently drops everything phrased another
+   * way, so a session of substantive hat outputs can return nothing at all. The
+   * absence of a keyword is not the absence of a finding.
+   */
   extractInsights(
     history: Array<{
       hatColor?: string;
@@ -168,40 +177,23 @@ export class SixHatsHandler extends BaseTechniqueHandler {
   ): string[] {
     const insights: string[] = [];
 
-    // Extract insights based on hat colors
     history.forEach(entry => {
-      if (!entry.hatColor || !entry.output) return;
+      const color = entry.hatColor as SixHatsColor | undefined;
+      const hat = color ? this.hats[color] : undefined;
+      if (!hat) return;
 
-      switch (entry.hatColor) {
-        case 'white':
-          if (entry.output.includes('missing') || entry.output.includes('need to know')) {
-            insights.push(`Information gap identified: ${entry.output.slice(0, 100)}...`);
-          }
-          break;
+      const output = entry.output?.trim();
+      if (output) {
+        const summary = firstSentence(output);
+        if (summary.length > 0) {
+          insights.push(`${hat.name}: ${summary}`);
+        }
+      }
 
-        case 'red':
-          if (entry.output.includes('concern') || entry.output.includes('worry')) {
-            insights.push(`Emotional concern: ${entry.output.slice(0, 100)}...`);
-          }
-          break;
-
-        case 'black':
-          if (entry.risks && entry.risks.length > 0) {
-            insights.push(`Critical risks identified: ${entry.risks.join(', ')}`);
-          }
-          break;
-
-        case 'green':
-          if (entry.output.includes('could') || entry.output.includes('might')) {
-            insights.push(`Creative possibility: ${entry.output.slice(0, 100)}...`);
-          }
-          break;
-
-        case 'purple':
-          if (entry.output.includes('irreversible') || entry.output.includes('lock')) {
-            insights.push(`Path dependency warning: ${entry.output.slice(0, 100)}...`);
-          }
-          break;
+      // The Black Hat carries structured risks alongside its prose, and the
+      // enumerated list is worth reporting separately from the narrative.
+      if (color === 'black' && entry.risks && entry.risks.length > 0) {
+        insights.push(`Critical risks identified: ${entry.risks.join(', ')}`);
       }
     });
 

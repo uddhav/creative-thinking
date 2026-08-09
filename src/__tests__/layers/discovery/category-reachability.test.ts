@@ -9,7 +9,7 @@
  * category were never recommended.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { TechniqueRecommender } from '../../../layers/discovery/TechniqueRecommender.js';
 import { ProblemAnalyzer } from '../../../layers/discovery/ProblemAnalyzer.js';
 import { TechniqueRegistry } from '../../../techniques/TechniqueRegistry.js';
@@ -50,10 +50,33 @@ describe('Discovery category reachability', () => {
   let analyzer: ProblemAnalyzer;
   let registry: TechniqueRegistry;
 
+  const SAVED_ENV = {
+    MAX_TECHNIQUE_RECOMMENDATIONS: process.env.MAX_TECHNIQUE_RECOMMENDATIONS,
+    WILDCARD_PROBABILITY: process.env.WILDCARD_PROBABILITY,
+  };
+
   beforeEach(() => {
+    // The anchors and floors below are calibrated to the built-in limits. Both
+    // are overridable from the environment (TechniqueRecommender reads
+    // MAX_TECHNIQUE_RECOMMENDATIONS and WILDCARD_PROBABILITY), so a CI runner
+    // or shell that exports either turns these red for a reason unrelated to
+    // the code under test. Clear them here rather than debugging that later.
+    delete process.env.MAX_TECHNIQUE_RECOMMENDATIONS;
+    delete process.env.WILDCARD_PROBABILITY;
+
     recommender = new TechniqueRecommender();
     analyzer = new ProblemAnalyzer();
     registry = TechniqueRegistry.getInstance();
+  });
+
+  afterEach(() => {
+    for (const [key, value] of Object.entries(SAVED_ENV)) {
+      if (value === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = value;
+      }
+    }
   });
 
   it('recommends at least one technique for every producible category', () => {
@@ -69,6 +92,80 @@ describe('Discovery category reachability', () => {
         recommendations.length,
         `category "${category}" produced no recommendations — its case group may be missing`
       ).toBeGreaterThan(0);
+    }
+  });
+
+  /**
+   * The anchor each category exists to reach, and how many recommendations
+   * survive truncation there today.
+   *
+   * `length > 0` above cannot see an arm hollow out. Drop two of a group's three
+   * techniques and the last one still returns a recommendation, so that check
+   * stays green while the category quietly stops recommending anything on point
+   * — which is exactly how a technique removal degrades discovery without
+   * failing a test. These are floors, not exact counts: adding to an arm is
+   * fine, losing its anchor or falling below the floor is the regression.
+   *
+   * A wildcard slot fires at random, so it can only add to these numbers.
+   */
+  const CATEGORY_ANCHORS: Record<string, { anchor: string; minCount: number }> = {
+    adversarial: { anchor: 'steelman_red_team', minCount: 3 },
+    behavioral: { anchor: 'perception_optimization', minCount: 5 },
+    biological: { anchor: 'biomimetic_path', minCount: 3 },
+    cognitive: { anchor: 'cognitive_bias_audit', minCount: 4 },
+    communication: { anchor: 'context_reframing', minCount: 5 },
+    computational: { anchor: 'neuro_computational', minCount: 3 },
+    creative: { anchor: 'po', minCount: 5 },
+    cultural: { anchor: 'cultural_integration', minCount: 3 },
+    decision: { anchor: 'criteria_based_analysis', minCount: 5 },
+    fundamental: { anchor: 'first_principles', minCount: 3 },
+    general: { anchor: 'six_hats', minCount: 1 },
+    implementation: { anchor: 'disney_method', minCount: 2 },
+    learning: { anchor: 'meta_learning', minCount: 3 },
+    organizational: { anchor: 'cultural_integration', minCount: 4 },
+    paradoxical: { anchor: 'paradoxical_problem', minCount: 3 },
+    process: { anchor: 'scamper', minCount: 5 },
+    retention: { anchor: 'keeper_test', minCount: 3 },
+    strategic: { anchor: 'reverse_benchmarking', minCount: 5 },
+    systems: { anchor: 'nine_windows', minCount: 5 },
+    technical: { anchor: 'quantum_superposition', minCount: 5 },
+    temporal: { anchor: 'temporal_creativity', minCount: 3 },
+    'user-centered': { anchor: 'design_thinking', minCount: 2 },
+    validation: { anchor: 'criteria_based_analysis', minCount: 3 },
+  };
+
+  it('covers every producible category with an anchor expectation', () => {
+    // Keeps the two lists from drifting apart: a new category with no anchor
+    // entry would otherwise be guarded only by the toothless length check.
+    expect(Object.keys(CATEGORY_ANCHORS).sort()).toEqual([...PRODUCIBLE_CATEGORIES].sort());
+  });
+
+  describe('each category keeps its anchor technique and does not hollow out', () => {
+    for (const [category, { anchor, minCount }] of Object.entries(CATEGORY_ANCHORS)) {
+      it(`"${category}" still recommends ${anchor}`, () => {
+        // Several draws, because one recommendation slot is a random wildcard.
+        // The anchor is a top-tier entry and must survive every draw.
+        for (let draw = 0; draw < 10; draw++) {
+          const recommendations = recommender.recommendTechniques(
+            category,
+            undefined,
+            undefined,
+            'medium',
+            registry
+          );
+          const techniques = recommendations.map(r => r.technique);
+
+          expect(
+            techniques,
+            `category "${category}" lost its anchor "${anchor}" — its case group was emptied or outranked`
+          ).toContain(anchor);
+
+          expect(
+            techniques.length,
+            `category "${category}" returned ${techniques.length} recommendations, below its floor of ${minCount} — the case group has hollowed out`
+          ).toBeGreaterThanOrEqual(minCount);
+        }
+      });
     }
   });
 
@@ -157,6 +254,35 @@ describe('Discovery category reachability', () => {
         });
       }
     }
+  });
+
+  describe('the biological detector carries no keyword the learning branch already owns', () => {
+    // Why 'evolutionary' and 'adapt to survive' are absent from
+    // detectBiologicalPattern: each contains a substring the learning detector
+    // matches ('evolution', 'adapt'), and learning is checked well before the
+    // biological rescue, so neither could ever fire. Listing them there reads
+    // like coverage while contributing nothing. If a future change moves
+    // biological ahead of learning, these expectations flip and should be
+    // rewritten deliberately rather than deleted.
+    const ownedByLearning = [
+      'Design an evolutionary approach to our schema',
+      'Our product must adapt to survive the new entrant',
+    ];
+
+    for (const problem of ownedByLearning) {
+      it(`routes "${problem.slice(0, 40)}..." to learning, not biological`, () => {
+        expect(analyzer.categorizeProblem(problem)).toBe('learning');
+      });
+    }
+
+    it('still reaches biological on terms learning does not claim', () => {
+      expect(analyzer.categorizeProblem('Apply biomimicry to our load balancing')).toBe(
+        'biological'
+      );
+      expect(analyzer.categorizeProblem('Build symbiosis between the two teams')).toBe(
+        'biological'
+      );
+    });
   });
 
   describe('retention routing stays high-precision', () => {

@@ -113,22 +113,24 @@ describe('Technique Validation Documentation', () => {
       const planId = planResult.content[0].text.match(/"planId":\s*"([^"]+)"/)?.[1];
       if (!planId) throw new Error('Plan ID not found');
 
-      // Step 3 with missing destructive field in interferenceAnalysis
-      const step3Input: ExecuteThinkingStepInput = {
+      // Interference Analysis was merged into step 2 (Pattern Generation),
+      // which still rejects a half-filled interferenceAnalysis object.
+      const step2Input: ExecuteThinkingStepInput = {
         planId,
         technique: 'neuro_computational',
         problem: 'Test problem',
-        currentStep: 3,
-        totalSteps: 6,
+        currentStep: 2,
+        totalSteps: 5,
         output: 'Analyzing interference',
         nextStepNeeded: true,
+        patternGenerations: ['Pattern A', 'Pattern B'],
         interferenceAnalysis: {
           constructive: ['Synergy found'],
           // destructive field missing entirely to test validation
         } as any,
       };
 
-      const result = await server.executeThinkingStep(step3Input);
+      const result = await server.executeThinkingStep(step2Input);
       const response = JSON.parse(result.content[0].text);
 
       expect(response.error).toBeDefined();
