@@ -113,7 +113,14 @@ export declare class SessionCompletionTracker {
      */
     private calculateSingleTechniqueCompletion;
     /**
-     * Get estimated steps for a technique
+     * Get the step count for a technique.
+     *
+     * Asks the registry. This used to be a hand-copied table of every technique's
+     * totalSteps, which nothing compared against the handlers — a technique whose
+     * step count changed left the table stale, and the `|| 5` fallback turned a
+     * missing entry into a plausible wrong number rather than an error. Progress
+     * is reported as completedSteps / this, so a stale entry silently misreports
+     * how far along a session is.
      */
     private getEstimatedStepsForTechnique;
     /**
