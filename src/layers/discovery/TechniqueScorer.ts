@@ -480,6 +480,20 @@ export class TechniqueScorer {
       },
       stepCount: 9,
     },
+    keeper_test: {
+      complexity: 'medium',
+      handlesTimeConstraints: true,
+      handlesResourceConstraints: true,
+      handlesCollaborationNeeds: false,
+      outcomeProfiles: {
+        innovative: 0.3,
+        systematic: 0.9,
+        riskAware: 0.8,
+        collaborative: 0.3,
+        analytical: 0.9,
+      },
+      stepCount: 5,
+    },
     latticework: {
       complexity: 'high',
       handlesTimeConstraints: false,

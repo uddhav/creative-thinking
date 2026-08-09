@@ -52,9 +52,9 @@ describe('WorkflowGuard Techniques Synchronization', () => {
     // All registered techniques should be valid in WorkflowGuard
     expect([...validTechniques].sort()).toEqual([...registeredTechniques].sort());
 
-    // Also verify the count matches what we expect (30 techniques with behavioral economics)
-    expect(registeredTechniques.length).toBe(30);
-    expect(validTechniques.length).toBe(30);
+    // Also verify the count matches what we expect (31 techniques with behavioral economics)
+    expect(registeredTechniques.length).toBe(31);
+    expect(validTechniques.length).toBe(31);
 
     // Explicitly check for the three techniques that were missing
     expect(validTechniques).toContain('quantum_superposition');
@@ -102,6 +102,7 @@ describe('WorkflowGuard Techniques Synchronization', () => {
       'anecdotal_signal',
       'cognitive_bias_audit',
       'latticework',
+      'keeper_test',
     ];
 
     // All type values should be registered

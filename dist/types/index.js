@@ -34,5 +34,6 @@ export const ALL_LATERAL_TECHNIQUES = [
     'anecdotal_signal',
     'cognitive_bias_audit',
     'latticework',
+    'keeper_test',
 ];
 //# sourceMappingURL=index.js.map

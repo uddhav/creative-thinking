@@ -56,7 +56,14 @@ export class ProblemAnalyzer {
       return 'temporal';
     }
 
-    // 3. Check organizational/collaborative using NLP entities
+    // 3. Explicit end-of-life language outranks the topic detectors below.
+    // "Decommission the staging cluster" is a retention re-decision that
+    // happens to be about infrastructure, not an infrastructure problem.
+    if (this.detectExplicitEndOfLife(lowerText)) {
+      return 'retention';
+    }
+
+    // 4. Check organizational/collaborative using NLP entities
     if (
       nlpAnalysis.entities.people.length > 2 ||
       nlpAnalysis.topics.categories.includes('people')
@@ -64,7 +71,7 @@ export class ProblemAnalyzer {
       return 'organizational';
     }
 
-    // 4. Check for specific pattern categories FIRST (higher priority)
+    // 5. Check for specific pattern categories FIRST (higher priority)
     // These should take precedence over general categories
     // Pass lowerText to detection methods to avoid repeated toLowerCase calls
 
@@ -93,7 +100,7 @@ export class ProblemAnalyzer {
       return 'computational';
     }
 
-    // 5. Use NLP topic categories for general classification
+    // 6. Use NLP topic categories for general classification
     const topicCategories = nlpAnalysis.topics.categories;
     const entities = nlpAnalysis.entities;
     const verbs = nlpAnalysis.entities.verbs;
@@ -191,7 +198,146 @@ export class ProblemAnalyzer {
       return 'biological';
     }
 
+    if (this.detectRetentionPattern(lowerText)) {
+      return 'retention';
+    }
+
     return 'general';
+  }
+
+  /**
+   * End-of-life vocabulary, checked ahead of the broad category detectors.
+   *
+   * The broad retention detector below runs last, so it can only reclaim
+   * problems that would otherwise fall through to 'general'. That placement is
+   * deliberately additive, but it leaves the most explicit retention phrasings
+   * stranded: "decommission the staging cluster" is claimed by `technical` and
+   * "retire the old pipeline" by `organizational` long before it is reached.
+   * Those are mis-routes — a cluster is the subject, not the subject matter.
+   *
+   * Terms here must be near-unambiguous: each one means ending something that
+   * already exists, and means little else. Ambiguous words that carry retention
+   * meaning only in context ('keep', 'cancel', 'renew') stay in the broad
+   * detector, or appear here only paired with a thing being held.
+   */
+  private detectExplicitEndOfLife(lowerText: string): boolean {
+    // Decisive signals. Each names the retirement of an existing thing and has
+    // no common second sense, so nothing else in the sentence can outweigh it.
+    const terminalVerbs = ['decommission', 'drop support', 'phase out', 'phasing out', 'mothball'];
+
+    if (terminalVerbs.some(v => lowerText.includes(v))) {
+      return true;
+    }
+
+    // Also decisive, but each has a common non-retention sense — a retirement
+    // plan, a deprecated API throwing warnings, a sunset-themed campaign. The
+    // article is what separates the verb from the adjective, so require it.
+    if (
+      /\b(retire|retiring|deprecate|deprecating|sunset|sunsetting)\s+(the|this|that|our|its|all)\b/.test(
+        lowerText
+      )
+    ) {
+      return true;
+    }
+
+    // Everything below is weaker: it suggests an incumbent is in play without
+    // naming a decision about it. A constructive ask outweighs it, because
+    // "nobody reads our documentation — how do we fix it?" wants the docs
+    // improved, not retired, and the topic detectors route that better.
+    //
+    // The veto is scoped to these weak signals on purpose. Applying it to the
+    // decisive verbs above cost recall in the most natural phrasing of a
+    // keep-or-cut question, where the alternative is stated as the other arm:
+    // "sunset the v1 API or migrate users to v2?" is a retention decision, and
+    // the mention of migrating is the option being weighed, not the ask.
+    const constructiveAsk =
+      /\b(write|writing|draft|drafting|design|designing|build|building|create|creating|fix|fixing|improve|improving|redesign|rewrite)\b/.test(
+        lowerText
+      );
+
+    if (constructiveAsk) {
+      return false;
+    }
+
+    // Stated disuse is evidence about an incumbent, not a defect report.
+    // "Nobody uses the legacy reporting service" routed to `technical` on what
+    // the service is, rather than on what is being asked about it.
+    const disuse = ['nobody uses', 'nobody opens', 'nobody reads', 'no one uses', 'no longer used'];
+    if (disuse.some(d => lowerText.includes(d))) {
+      return true;
+    }
+
+    // 'cancel' and 'renew' only mean retention next to something being held.
+    const heldThings = [
+      'subscription',
+      'subscriptions',
+      'contract',
+      'membership',
+      'licence',
+      'license',
+      'seats',
+    ];
+    if (
+      /\b(cancel|cancelling|canceling|renew|renewal|unsubscribe)\b/.test(lowerText) &&
+      heldThings.some(t => lowerText.includes(t))
+    ) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Detect retention re-decisions — whether to keep something already in place.
+   *
+   * Distinct from `decision`, which is about choosing forward between options.
+   * These problems name an incumbent: a subscription, a module, a meeting, a
+   * role. Measured against 20 realistic phrasings, 12 previously fell through
+   * to 'general' (which recommends only six_hats) because the decision keyword
+   * list contains none of keep, cut, retire, sunset, still need, renew, or
+   * earning its keep.
+   */
+  private detectRetentionPattern(lowerText: string): boolean {
+    const retentionKeywords = [
+      // Is it still pulling its weight?
+      'still need',
+      'still needed',
+      'still worth',
+      'still using',
+      'still get value',
+      'still earning',
+      'earning its keep',
+      'do we still',
+      'pulling its weight',
+      // Keep-or-cut framing
+      'keep or cut',
+      'keep paying',
+      'keep using',
+      'worth keeping',
+      'worth maintaining',
+      // Ending it. The unambiguous verbs are matched earlier, in
+      // detectExplicitEndOfLife; only 'shut down' is left here, because a
+      // service that shuts down on its own is an outage, not a decision. The
+      // article is what separates the two, so it is required.
+      'shut down the',
+      'shut it down',
+      'shutting down the',
+      // Cancelling and renewing are matched earlier, paired with the thing
+      // being held. Bare 'cancel' belongs in neither list: as a substring it
+      // also fires on "write a cancellation policy", which is a writing task.
+      // Softer evidence of disuse. The blunt phrasings ('nobody uses') are
+      // matched earlier; these are hedged enough to stay behind the topic
+      // detectors, where they only reclaim what would fall through anyway.
+      'nobody attends',
+      'barely use',
+      'rarely use',
+      'hardly ever',
+      // Age as a prompt to re-decide
+      'has been in place',
+      'been running for',
+      'has not been updated',
+    ];
+    return retentionKeywords.some(keyword => lowerText.includes(keyword));
   }
 
   /**

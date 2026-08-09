@@ -12,6 +12,33 @@ export declare class ProblemAnalyzer {
      */
     categorizeProblem(problem: string, context?: string): string;
     /**
+     * End-of-life vocabulary, checked ahead of the broad category detectors.
+     *
+     * The broad retention detector below runs last, so it can only reclaim
+     * problems that would otherwise fall through to 'general'. That placement is
+     * deliberately additive, but it leaves the most explicit retention phrasings
+     * stranded: "decommission the staging cluster" is claimed by `technical` and
+     * "retire the old pipeline" by `organizational` long before it is reached.
+     * Those are mis-routes — a cluster is the subject, not the subject matter.
+     *
+     * Terms here must be near-unambiguous: each one means ending something that
+     * already exists, and means little else. Ambiguous words that carry retention
+     * meaning only in context ('keep', 'cancel', 'renew') stay in the broad
+     * detector, or appear here only paired with a thing being held.
+     */
+    private detectExplicitEndOfLife;
+    /**
+     * Detect retention re-decisions — whether to keep something already in place.
+     *
+     * Distinct from `decision`, which is about choosing forward between options.
+     * These problems name an incumbent: a subscription, a module, a meeting, a
+     * role. Measured against 20 realistic phrasings, 12 previously fell through
+     * to 'general' (which recommends only six_hats) because the decision keyword
+     * list contains none of keep, cut, retire, sunset, still need, renew, or
+     * earning its keep.
+     */
+    private detectRetentionPattern;
+    /**
      * Detect decision/judgment problems — choosing between options, weighing
      * trade-offs, committing to a course of action.
      */

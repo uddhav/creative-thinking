@@ -41,6 +41,10 @@ path dependence, non-ergodic systems, absorbing barriers, antifragility, Model C
     - 17. Context Reframing with Decision Environment Design
     - 18. Perception Optimization with Subjective Value Creation
     - 19. Anecdotal Signal Detection with Non-Ergodic Path Analysis
+13. Part IX: Judgment, Mental Models, and Retention
+    - 33. Latticework of Mental Models - Escaping the One-Model Trap
+    - 34. Cognitive Bias Audit - Munger's Checklist of Misjudgment
+    - 35. Keeper Test - The Counterfactual Retention Re-Decision
 
 ## Introduction: The Duality of Creative Intelligence in Non-Ergodic Reality
 
@@ -5138,6 +5142,156 @@ synthesis = ParallelPathOrchestrator(
 The orchestration framework ensures that diverse cultural approaches to creativity enhance rather
 than dilute each other, creating richer solution spaces while maintaining the integrity and wisdom
 of each tradition.
+
+## Part IX: Judgment, Mental Models, and Retention
+
+The three techniques in this part all operate on a decision that has already been made, or is about
+to be made under the influence of the decider's own habits. Where Parts I–III generate options,
+these interrogate the judgment producing them.
+
+### 33. Latticework of Mental Models - Escaping the One-Model Trap
+
+**Overview**: A 7-step pass that forces a problem through named disciplinary lenses — physics,
+biology, psychology, economics — rather than the single model the thinker instinctively reaches for.
+"To the man with only a hammer, every problem looks like a nail."
+
+**Path-Dependent Enhancement**: The model you reach for first is itself path-dependent — it is the
+one your training and recent successes made available. Naming that hammer in step 1 is what makes
+the remaining lenses discoveries rather than confirmations.
+
+**Steps with Reflexivity**:
+
+1. **Frame & Name Your Hammer** (Thinking)
+   - State the problem and the one model you instinctively reach for
+   - Reflexivity: Low - naming a bias does not yet act on it
+
+2. **Physics & Engineering Lens** (Thinking)
+   - Equilibrium, feedback, thresholds, margin of safety, common-mode failure
+   - Reflexivity: Low - analytical reframing
+
+3. **Biology & Evolution Lens** (Thinking)
+   - Competition, niches, adaptation, selection pressure, carrying capacity
+   - Reflexivity: Low - analytical reframing
+
+4. **Psychology Lens** (Thinking)
+   - Incentives and the standard causes of human misjudgment
+   - Reflexivity: Low - overlaps deliberately with technique 34
+
+5. **Economics & Math Lens** (Thinking)
+   - Scale, compounding, base rates, opportunity cost, Occam, inversion
+   - Reflexivity: Low - analytical reframing
+
+6. **Synthesize the Lattice** (Thinking)
+   - Where the lenses agree, conflict, or stack into a confluence
+   - Reflexivity: Low - confluence across independent lenses is the signal
+
+7. **Decide with a Margin of Safety** (Action)
+   - Commit inside your competence, with slack for being wrong
+   - Reflexivity: Medium - the commitment is sized to the uncertainty admitted
+
+**Unified Framework Integration**:
+
+- Risks: Lens theatre — running all five and weighting only the familiar one
+- Failure modes: Treating agreement between correlated lenses as confluence
+- Mitigations: Record each lens's verdict before synthesising
+- Antifragile properties: A lens that keeps producing nothing is itself information about the
+  problem
+
+### 34. Cognitive Bias Audit - Munger's Checklist of Misjudgment
+
+**Overview**: A 9-step run through the standard causes of human misjudgment, ending in inversion and
+a committed decision with stated reversal criteria. Distinct from a generic bias list in that it
+hunts for **lollapalooza** effects — several tendencies stacking multiplicatively toward one
+conclusion.
+
+**Path-Dependent Enhancement**: Commitment and consistency bias is explicitly path-dependent — the
+positions already taken are what make the next judgment hard to reverse. Step 3 surfaces that
+lock-in before it is priced.
+
+**Steps with Reflexivity**:
+
+1. **Frame the Judgment** (Thinking) — Name the specific decision and your tentative answer
+2. **Follow the Incentives** (Thinking) — Map incentive forces on self and advisors
+3. **Ego & Commitment Defenses** (Thinking) — Surface denial, commitment lock-in, envy, liking bias
+4. **Social Pressure Scan** (Thinking) — Social proof, authority, reciprocation, stress, noise
+5. **Deprival & Scarcity Check** (Thinking) — Deprival super-reaction and near-miss gambling
+6. **Perception & Math Distortions** (Thinking) — Association, contrast, availability, base-rate
+   neglect, vividness
+7. **Lollapalooza Check** (Thinking) — Find tendencies stacking multiplicatively toward one
+   conclusion
+8. **Invert & Seek Disconfirmation** (Thinking) — Argue the opposite; hunt evidence that proves you
+   wrong
+9. **Debias & Decide** (Action) — Apply antidotes and commit with reversal criteria
+
+Steps 1–8 are Thinking with Low reflexivity: naming a bias does not commit to anything. Step 9 is
+the sole Action, at Medium reflexivity, because the reversal criteria set there govern when the
+decision may be reopened.
+
+**Unified Framework Integration**:
+
+- Risks: Bias-spotting as procrastination; auditing forever and never deciding
+- Failure modes: Applying the checklist to others' judgments rather than one's own
+- Mitigations: Step 1 fixes a tentative answer first, so the audit has a target
+- Antifragile properties: Each run adds calibration data on which tendencies bite for this decider
+
+### 35. Keeper Test - The Counterfactual Retention Re-Decision
+
+**Overview**: A 5-step re-decision for something already in place — a role, a task group, a library,
+a subscription. It replaces the elimination question ("has this failed badly enough to remove?")
+with the acquisition question ("if it weren't already here, would I take it on today, at today's
+price?"), moving the burden of proof onto retention rather than removal.
+
+**Path-Dependent Enhancement**: An incumbent is pure path dependence — it exists because of a
+decision made under conditions that no longer hold. Step 2 reconstructs those conditions before
+judging them, which is Chesterton's fence stated as a procedure rather than an aphorism.
+
+**Distinction from technique 34**: The decisive test is to run both where there is no bias to audit.
+A new maintainer with zero attachment to an inherited library gives the bias audit nothing to find,
+while the Keeper Test still reaches "replace" by reconstructing what the library was for and
+noticing that migration cost recurs at every major version while removal is paid once. The two
+invert different things: 34 inverts the **conclusion**, 35 inverts the **burden of proof**. An
+argument versus a ledger.
+
+**Steps with Reflexivity**:
+
+1. **Name the Incumbent** (Thinking)
+   - State the unit being re-decided and what one more period of keeping it costs
+   - Grain matters: too coarse gets defended wholesale, too fine lets you cut parts while the whole
+     survives
+   - Reflexivity: Low - scoping only
+
+2. **Reconstruct the Fence** (Thinking)
+   - Recover why it exists, then test whether that reason is still live
+   - A reason nobody remembers is not the same as no reason
+   - Reflexivity: Low - historical reconstruction
+
+3. **The Re-Acquisition Test** (Thinking)
+   - Would you take it on today, at today's price, against today's alternatives?
+   - Reasons that are really about the pain of removal are rejected here and priced in step 4
+   - Reflexivity: Low - counterfactual, not yet a commitment
+
+4. **Price It Honestly** (Thinking)
+   - Carrying cost per period, switching cost paid once, opportunity cost of the freed resource
+   - Sunk cost struck out; costs marked as recurring or one-time, because a recurring cost outruns a
+     one-time one given enough periods
+   - Reflexivity: Low - accounting
+
+5. **Decide and Set the Trigger** (Action)
+   - Commit to keep, trim, replace or drop, with an owner and a date
+   - Name the **tripwire** that forces the next re-decision — a price rise, a usage drop, the owner
+     moving on. A review date is not durable state; a stated condition is
+   - Reflexivity: Medium, reversibility Low - the verdict becomes the new incumbent and will defend
+     itself next time
+
+**Unified Framework Integration**:
+
+- Risks: A verdict to cut may not be recoverable; step 4's unrecoverable-cost clause is what
+  triggers the staged version of the verdict instead of a clean cut
+- Failure modes: Retention with no tripwire, which is a default rather than a decision
+- Mitigations: The four-way verdict (keep, trim, replace, drop) prevents a binary framing from
+  forcing an all-or-nothing answer
+- Antifragile properties: Each re-decision leaves an explicit record of why the incumbent survived,
+  which makes the next pass cheaper
 
 ## References
 

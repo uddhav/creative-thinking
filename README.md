@@ -8,7 +8,7 @@
 [![npm version](https://badge.fury.io/js/creative-thinking.svg)](https://badge.fury.io/js/creative-thinking)
 
 A Model Context Protocol (MCP) server that provides structured creative thinking techniques for
-problem-solving and ideation. This server implements 28 creative thinking techniques through a
+problem-solving and ideation. This server implements 31 creative thinking techniques through a
 unified framework combining generative creativity with systematic risk assessment, analytical
 verification, and post-action reflexivity tracking.
 
@@ -55,7 +55,7 @@ The three-layer architecture guides you through comprehensive problem-solving:
    maintaining session state and integrating risk assessment.
 
 **📚 New to the techniques? Check out the [Specifications](SPECIFICATIONS.md) for a comprehensive
-overview of all 30 techniques and when to use each one.**
+overview of all 31 techniques and when to use each one.**
 
 This layered approach ensures efficient problem-solving by matching techniques to problems, creating
 comprehensive workflows, and maintaining focus throughout the creative process.
@@ -254,7 +254,7 @@ const nextResult = await executeThinkingStep({
 - **Persistence Architecture**: Adapter pattern supporting filesystem and memory backends
 - **MCP Sampling Integration**: AI-powered enhancement with graceful degradation when unavailable
 
-### 28 Creative Thinking Techniques
+### 31 Creative Thinking Techniques
 
 Each technique integrates creative generation with systematic verification and post-action
 reflexivity tracking. The collection includes 21 core creative techniques, 3 analytical verification
@@ -297,6 +297,11 @@ additional technique to prevent algorithmic pigeonholing and encourage unexpecte
 - **Linguistic Forensics** - Deep analysis of communication patterns for hidden insights (6 steps)
 - **Competing Hypotheses Analysis** - Systematic evaluation of multiple explanations using evidence
   matrices and Bayesian reasoning (8 steps)
+
+**Decision & Retention Techniques:**
+
+- **Keeper Test** - Re-decides something already in place by asking whether you would take it on
+  today, at today's price, rather than whether it has failed badly enough to remove (5 steps)
 
 ### MCP Prompts Support (NEW)
 

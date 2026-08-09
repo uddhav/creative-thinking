@@ -396,6 +396,7 @@ export class PathMemoryManager {
       anecdotal_signal: 'observational',
       cognitive_bias_audit: 'cognitive',
       latticework: 'cognitive',
+      keeper_test: 'strategic',
     };
 
     return techniqueConstraintMap[event.technique] || 'creative';

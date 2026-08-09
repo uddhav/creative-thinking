@@ -32,6 +32,7 @@ import { PerceptionOptimizationHandler } from './PerceptionOptimizationHandler.j
 import { AnecdotalSignalHandler } from './AnecdotalSignalHandler.js';
 import { CognitiveBiasAuditHandler } from './CognitiveBiasAuditHandler.js';
 import { LatticeworkHandler } from './LatticeworkHandler.js';
+import { KeeperTestHandler } from './KeeperTestHandler.js';
 // Removed unused imports - GenericHandler and ConvergenceHandler
 export class TechniqueRegistry {
     static instance;
@@ -80,6 +81,7 @@ export class TechniqueRegistry {
         this.handlers.set('anecdotal_signal', new AnecdotalSignalHandler());
         this.handlers.set('cognitive_bias_audit', new CognitiveBiasAuditHandler());
         this.handlers.set('latticework', new LatticeworkHandler());
+        this.handlers.set('keeper_test', new KeeperTestHandler());
     }
     getHandler(technique) {
         const handler = this.handlers.get(technique);
