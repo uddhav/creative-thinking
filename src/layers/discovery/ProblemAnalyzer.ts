@@ -670,15 +670,19 @@ export class ProblemAnalyzer {
    * nature-inspired design.
    */
   private detectBiologicalPattern(lowerText: string): boolean {
+    // No 'evolutionary' or 'adapt to survive' here. Both contain a substring the
+    // learning detector already matches ('evolution', 'adapt'), and learning is
+    // checked well before this rescue detector, so neither keyword could ever
+    // fire — "design an evolutionary approach" categorizes as learning. Adding
+    // them back only works if biological moves ahead of learning in the chain,
+    // which redirects traffic that currently reaches learning on purpose.
     const biologicalKeywords = [
       'biomimicry',
       'biomimetic',
       'organism',
-      'evolutionary',
       'natural selection',
       'symbiosis',
       'swarm',
-      'adapt to survive',
       'self-healing',
     ];
     return biologicalKeywords.some(keyword => lowerText.includes(keyword));
