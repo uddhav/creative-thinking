@@ -50,7 +50,7 @@ describe('QuantumSuperpositionHandler', () => {
       const step2 = handler.getStepInfo(2);
       expect(step2.name).toBe('State Interaction');
       expect(step2.focus).toBe(
-        'Map how the states reinforce, cancel, depend on each other, and gain or lose ground'
+        'Map which states are coupled, which are gaining ground, and where they reinforce'
       );
 
       const stepNames = [1, 2, 3, 4].map(step => handler.getStepInfo(step).name);
@@ -119,7 +119,7 @@ describe('QuantumSuperpositionHandler', () => {
       const guidance2 = handler.getStepGuidance(2, problem);
 
       // Interference: constructive vs destructive relationships between states
-      expect(guidance2).toContain('Where do they reinforce each other');
+      expect(guidance2).toContain('where do they reinforce each other');
       expect(guidance2).toContain('where do they cancel out');
 
       // Entanglement: dependencies where moving one state moves another

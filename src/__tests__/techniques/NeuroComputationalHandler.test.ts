@@ -121,11 +121,15 @@ describe('NeuroComputationalHandler', () => {
 
     it('should provide guidance for step 1 - Neural Mapping', () => {
       const guidance = handler.getStepGuidance(1, problem);
-      expect(guidance).toContain('Map "' + problem + '" to neural representations');
-      expect(guidance).toContain('cognitive components');
-      expect(guidance).toContain('perception, memory, attention, executive control');
-      expect(guidance).toContain('activation patterns');
-      expect(guidance).toContain('neural architectures');
+      expect(guidance).toContain('Map "' + problem + '" to a network representation');
+      // Not 'cognitive components: perception, memory, attention, executive
+      // control'. This technique's description shouts NOT human cognition, and
+      // step 1 was asking for human-cognition constructs anyway.
+      expect(guidance).not.toContain('perception, memory, attention, executive control');
+      expect(guidance).toContain('which hold state');
+      expect(guidance).toContain('which route it');
+      expect(guidance).toContain('what activates each one and at what threshold');
+      expect(guidance).toContain('architecture best represents this problem space');
     });
 
     it('should provide guidance for step 2 - Pattern Generation', () => {

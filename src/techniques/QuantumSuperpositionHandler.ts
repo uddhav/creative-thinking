@@ -20,7 +20,12 @@ export class QuantumSuperpositionHandler extends BaseTechniqueHandler {
     },
     {
       name: 'State Interaction',
-      focus: 'Map how the states reinforce, cancel, depend on each other, and gain or lose ground',
+      // Coupling and trajectory lead, reinforce/cancel trails. Run against
+      // neuro_computational on one problem, reinforce/cancel is the half both
+      // techniques produce; the coupling question — developing one state moves
+      // another, and asymmetrically — is what only this one asks. Ordering the
+      // shared half first buries the part that earns the step.
+      focus: 'Map which states are coupled, which are gaining ground, and where they reinforce',
       emoji: '🌊',
       type: 'thinking',
     },
@@ -87,7 +92,7 @@ export class QuantumSuperpositionHandler extends BaseTechniqueHandler {
   getStepGuidance(step: number, problem: string): string {
     const guidanceMap: Record<number, string> = {
       1: `Generate 3-5 mutually exclusive solution states for: "${problem}". Each state should optimize for different criteria (efficiency, flexibility, robustness, cost, innovation). Maintain all states without choosing.`,
-      2: `Map how your solution states for "${problem}" relate. Where do they reinforce each other, and where do they cancel out? Which aspects are inseparably linked, so that developing one state moves another? And as constraints emerge, which states are gaining ground and which are weakening but still hold something worth keeping?`,
+      2: `Map how your solution states for "${problem}" relate. Which aspects are inseparably linked, so that developing one state moves another — and is that coupling symmetric, or does one direction leave the others cheaper and the reverse leave them dearer? As constraints emerge, which states are gaining ground, and which are weakening but still hold something worth keeping? Then, more cheaply: where do they reinforce each other, and where do they cancel out?`,
       3: `Define the measurement context that will force collapse for "${problem}": What are the actual constraints? What criteria matter most now? What future flexibility is needed?`,
       4: `Collapse to the optimal solution for "${problem}" while extracting and preserving insights from non-chosen states. How can elements from abandoned states enhance the chosen path?`,
     };
