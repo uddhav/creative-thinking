@@ -50,7 +50,7 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
             // Get technique handler
             const handler = techniqueRegistry.getHandler(input.technique);
             // Calculate technique-local step
-            const { techniqueLocalStep: calculatedTechniqueLocalStep, techniqueIndex, originalStep, wasNormalized, } = executionValidator.calculateTechniqueLocalStep(input, plan);
+            const { techniqueLocalStep: calculatedTechniqueLocalStep, techniqueIndex, stepsBeforeThisTechnique, originalStep, wasNormalized, } = executionValidator.calculateTechniqueLocalStep(input, plan);
             // Validate step and get step info
             const stepValidation = executionValidator.validateStepAndGetInfo(input, calculatedTechniqueLocalStep, handler);
             // Check if we need to handle invalid step - either validation failed or step was normalized
@@ -67,7 +67,13 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
                     errorMessage = `Step ${originalStep} exceeds total steps (${input.totalSteps}) for the plan.`;
                 }
                 else {
-                    errorMessage = `Step ${originalStep} is invalid for ${techniqueInfo.name}. Valid range is 1-${techniqueInfo.totalSteps} (technique-local) or ${techniqueIndex * techniqueInfo.totalSteps + 1}-${(techniqueIndex + 1) * techniqueInfo.totalSteps} (global).`;
+                    // Derive the global range from where this technique's block actually
+                    // starts. Multiplying the block index by this technique's own step
+                    // count assumes every technique in the plan is the same length, so a
+                    // plan of mixed techniques reported a range the step could never fall
+                    // in — the second block of ['triz','scamper','triz'] was reported as
+                    // 9-12 when it is really 13-16.
+                    errorMessage = `Step ${originalStep} is invalid for ${techniqueInfo.name}. Valid range is 1-${techniqueInfo.totalSteps} (technique-local) or ${stepsBeforeThisTechnique + 1}-${stepsBeforeThisTechnique + techniqueInfo.totalSteps} (global).`;
                 }
                 const errorContext = errorContextBuilder.buildStepErrorContext({
                     providedStep: input.currentStep,

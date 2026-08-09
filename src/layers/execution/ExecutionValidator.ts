@@ -341,20 +341,36 @@ export class ExecutionValidator {
     let wasNormalized = false;
 
     if (input.planId && plan) {
-      // Find which technique we're on and calculate total steps
+      // Collect every block this technique occupies, with where each one starts.
+      //
+      // A plan may name the same technique twice — planThinkingSession accepts
+      // it and lays out separate blocks for each. The previous walk assigned
+      // techniqueIndex on every match, so it ended on the *last* occurrence,
+      // while stepsBeforeThisTechnique stopped accumulating at the *first*. The
+      // two halves then described different blocks, and a step in the second
+      // one landed in neither range: ['triz','scamper','triz'] produced a
+      // 16-step workflow whose steps 13-16 could not be executed at all.
+      const occurrences: Array<{ index: number; stepsBefore: number; steps: number }> = [];
       let totalPlanSteps = 0;
-      let foundTechnique = false;
 
       for (let i = 0; i < plan.workflow.length; i++) {
+        const steps = plan.workflow[i].steps.length;
         if (plan.workflow[i].technique === input.technique) {
-          techniqueIndex = i;
-          foundTechnique = true;
-        } else if (!foundTechnique) {
-          // Accumulate steps before finding our technique
-          stepsBeforeThisTechnique += plan.workflow[i].steps.length;
+          occurrences.push({ index: i, stepsBefore: totalPlanSteps, steps });
         }
-        totalPlanSteps += plan.workflow[i].steps.length;
+        totalPlanSteps += steps;
       }
+
+      // Prefer the block whose global range contains this step. A technique-local
+      // number cannot distinguish one occurrence from another — nothing in the
+      // input says which — so it resolves to the first, which is also what a
+      // plan naming the technique once has always done.
+      const containing = occurrences.find(
+        o => input.currentStep > o.stepsBefore && input.currentStep <= o.stepsBefore + o.steps
+      );
+      const block = containing ?? occurrences[0];
+      techniqueIndex = block?.index ?? 0;
+      stepsBeforeThisTechnique = block?.stepsBefore ?? 0;
 
       // Determine if input.currentStep is global or technique-local
       // Global steps are in range 1 to totalPlanSteps

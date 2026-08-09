@@ -101,6 +101,7 @@ export async function executeThinkingStep(
       const {
         techniqueLocalStep: calculatedTechniqueLocalStep,
         techniqueIndex,
+        stepsBeforeThisTechnique,
         originalStep,
         wasNormalized,
       } = executionValidator.calculateTechniqueLocalStep(input, plan);
@@ -125,7 +126,13 @@ export async function executeThinkingStep(
         } else if (originalStep > input.totalSteps) {
           errorMessage = `Step ${originalStep} exceeds total steps (${input.totalSteps}) for the plan.`;
         } else {
-          errorMessage = `Step ${originalStep} is invalid for ${techniqueInfo.name}. Valid range is 1-${techniqueInfo.totalSteps} (technique-local) or ${techniqueIndex * techniqueInfo.totalSteps + 1}-${(techniqueIndex + 1) * techniqueInfo.totalSteps} (global).`;
+          // Derive the global range from where this technique's block actually
+          // starts. Multiplying the block index by this technique's own step
+          // count assumes every technique in the plan is the same length, so a
+          // plan of mixed techniques reported a range the step could never fall
+          // in — the second block of ['triz','scamper','triz'] was reported as
+          // 9-12 when it is really 13-16.
+          errorMessage = `Step ${originalStep} is invalid for ${techniqueInfo.name}. Valid range is 1-${techniqueInfo.totalSteps} (technique-local) or ${stepsBeforeThisTechnique + 1}-${stepsBeforeThisTechnique + techniqueInfo.totalSteps} (global).`;
         }
 
         const errorContext = errorContextBuilder.buildStepErrorContext({
