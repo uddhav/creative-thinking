@@ -18,6 +18,16 @@ export class ProblemAnalyzer {
         const fullText = `${problem} ${context || ''}`;
         // Cache toLowerCase result for performance
         const lowerText = fullText.toLowerCase();
+        // The two high-precision passes below read this instead of lowerText. They
+        // run ahead of every topic detector, so matching on the context as well let
+        // a passing mention there outrank the whole problem statement: "optimise
+        // the Postgres query planner" with context "this came out of our red team
+        // exercise" routed adversarial, and the same shape rerouted problems to
+        // retention on a context that merely mentioned decommissioning something.
+        // Both passes detect what is being asked OF the problem, and that ask is in
+        // the problem. Every other detector still sees the full text, where context
+        // is evidence about the subject matter and belongs.
+        const lowerProblem = problem.toLowerCase();
         // OPTIMIZATION: Fast-path for explicit technique requests (skip NLP)
         const explicitTechnique = this.checkExplicitTechniqueRequest(fullText, lowerText);
         if (explicitTechnique) {
@@ -60,7 +70,7 @@ export class ProblemAnalyzer {
         // the intended precedence: the user asked to be argued with, and a
         // keep-or-cut question they have not asked to be attacked ('should we
         // decommission the staging cluster') still reaches `retention` untouched.
-        if (this.detectExplicitAdversarialAsk(lowerText)) {
+        if (this.detectExplicitAdversarialAsk(lowerProblem)) {
             return 'adversarial';
         }
         // 2. Check temporal using NLP results (no redundant string matching)
@@ -72,7 +82,7 @@ export class ProblemAnalyzer {
         // 3. Explicit end-of-life language outranks the topic detectors below.
         // "Decommission the staging cluster" is a retention re-decision that
         // happens to be about infrastructure, not an infrastructure problem.
-        if (this.detectExplicitEndOfLife(lowerText)) {
+        if (this.detectExplicitEndOfLife(lowerProblem)) {
             return 'retention';
         }
         // 4. Check organizational/collaborative using NLP entities
@@ -189,17 +199,17 @@ export class ProblemAnalyzer {
      * meaning only in context ('keep', 'cancel', 'renew') stay in the broad
      * detector, or appear here only paired with a thing being held.
      */
-    detectExplicitEndOfLife(lowerText) {
+    detectExplicitEndOfLife(lowerProblem) {
         // Decisive signals. Each names the retirement of an existing thing and has
         // no common second sense, so nothing else in the sentence can outweigh it.
         const terminalVerbs = ['decommission', 'drop support', 'phase out', 'phasing out', 'mothball'];
-        if (terminalVerbs.some(v => lowerText.includes(v))) {
+        if (terminalVerbs.some(v => lowerProblem.includes(v))) {
             return true;
         }
         // Also decisive, but each has a common non-retention sense — a retirement
         // plan, a deprecated API throwing warnings, a sunset-themed campaign. The
         // article is what separates the verb from the adjective, so require it.
-        if (/\b(retire|retiring|deprecate|deprecating|sunset|sunsetting)\s+(the|this|that|our|its|all)\b/.test(lowerText)) {
+        if (/\b(retire|retiring|deprecate|deprecating|sunset|sunsetting)\s+(the|this|that|our|its|all)\b/.test(lowerProblem)) {
             return true;
         }
         // Everything below is weaker: it suggests an incumbent is in play without
@@ -212,7 +222,7 @@ export class ProblemAnalyzer {
         // keep-or-cut question, where the alternative is stated as the other arm:
         // "sunset the v1 API or migrate users to v2?" is a retention decision, and
         // the mention of migrating is the option being weighed, not the ask.
-        const constructiveAsk = /\b(write|writing|draft|drafting|design|designing|build|building|create|creating|fix|fixing|improve|improving|redesign|rewrite)\b/.test(lowerText);
+        const constructiveAsk = /\b(write|writing|draft|drafting|design|designing|build|building|create|creating|fix|fixing|improve|improving|redesign|rewrite)\b/.test(lowerProblem);
         if (constructiveAsk) {
             return false;
         }
@@ -220,7 +230,7 @@ export class ProblemAnalyzer {
         // "Nobody uses the legacy reporting service" routed to `technical` on what
         // the service is, rather than on what is being asked about it.
         const disuse = ['nobody uses', 'nobody opens', 'nobody reads', 'no one uses', 'no longer used'];
-        if (disuse.some(d => lowerText.includes(d))) {
+        if (disuse.some(d => lowerProblem.includes(d))) {
             return true;
         }
         // 'cancel' and 'renew' only mean retention next to something being held.
@@ -233,8 +243,8 @@ export class ProblemAnalyzer {
             'license',
             'seats',
         ];
-        if (/\b(cancel|cancelling|canceling|renew|renewal|unsubscribe)\b/.test(lowerText) &&
-            heldThings.some(t => lowerText.includes(t))) {
+        if (/\b(cancel|cancelling|canceling|renew|renewal|unsubscribe)\b/.test(lowerProblem) &&
+            heldThings.some(t => lowerProblem.includes(t))) {
             return true;
         }
         return false;
@@ -308,7 +318,7 @@ export class ProblemAnalyzer {
      * Terms here must be near-unambiguous: each one asks for opposition, and
      * means little else.
      */
-    detectExplicitAdversarialAsk(lowerText) {
+    detectExplicitAdversarialAsk(lowerProblem) {
         // Naming the discipline, or asking for its characteristic move. None of
         // these has a common second sense that survives the whole phrase.
         const decisiveTerms = [
@@ -344,7 +354,7 @@ export class ProblemAnalyzer {
             'tear this apart',
             'tear apart',
         ];
-        const hasDecisiveTerm = decisiveTerms.some(term => lowerText.includes(term));
+        const hasDecisiveTerm = decisiveTerms.some(term => lowerProblem.includes(term));
         // 'stress test' is the one borrowed term with a healthy engineering sense,
         // so it does not join the list above. It counts only next to the thing
         // being tested: a plan can be stress tested adversarially, a database is
@@ -368,12 +378,12 @@ export class ProblemAnalyzer {
             'forecast',
             'reasoning',
         ];
-        const stressTestsAPosition = /\bstress[- ]test(ing|ed|s)?\b/.test(lowerText) &&
-            positionNouns.some(noun => lowerText.includes(noun));
+        const stressTestsAPosition = /\bstress[- ]test(ing|ed|s)?\b/.test(lowerProblem) &&
+            positionNouns.some(noun => lowerProblem.includes(noun));
         // Verb-gated, because the bare noun phrase is a defect report: 'there are
         // holes in the coverage report' is not a request to be argued with.
-        const pokesHoles = /\b(poke[ds]?|poking|pick(ed|s)?|picking|punch(ed|es)?|punching|shoot|shot)\s+(some\s+|any\s+|a\s+few\s+)?holes\b/.test(lowerText);
-        const convinceMeWrong = /\bconvince\s+(me|us)\s+(i'?m|we'?re|i am|we are)\s+wrong\b/.test(lowerText);
+        const pokesHoles = /\b(poke[ds]?|poking|pick(ed|s)?|picking|punch(ed|es)?|punching|shoot|shot)\s+(some\s+|any\s+|a\s+few\s+)?holes\b/.test(lowerProblem);
+        const convinceMeWrong = /\bconvince\s+(me|us)\s+(i'?m|we'?re|i am|we are)\s+wrong\b/.test(lowerProblem);
         if (!hasDecisiveTerm && !stressTestsAPosition && !pokesHoles && !convinceMeWrong) {
             return false;
         }
@@ -385,8 +395,8 @@ export class ProblemAnalyzer {
         // before we ship' are the natural phrasings of a genuine request and both
         // contain constructive verbs. So the veto requires an authoring verb *and*
         // a document noun together.
-        const authoringVerb = /\b(write|writing|draft|drafting|document|documenting|author|authoring)\b/.test(lowerText);
-        const documentNoun = /\b(template|templates|report|reports|playbook|policy|charter|checklist|guide|guideline|guidelines|curriculum|training|doc|docs|documentation|runbook|handbook)\b/.test(lowerText);
+        const authoringVerb = /\b(write|writing|draft|drafting|document|documenting|author|authoring)\b/.test(lowerProblem);
+        const documentNoun = /\b(template|templates|report|reports|playbook|policy|charter|checklist|guide|guideline|guidelines|curriculum|training|doc|docs|documentation|runbook|handbook)\b/.test(lowerProblem);
         if (authoringVerb && documentNoun) {
             return false;
         }

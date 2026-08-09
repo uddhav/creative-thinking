@@ -283,6 +283,53 @@ describe('Discovery category reachability', () => {
     }
   });
 
+  describe('the high-precision passes read the problem, not the context', () => {
+    // Both passes run ahead of the topic detectors, so matching the context too
+    // let a passing mention there outrank the entire problem statement. The ask
+    // they detect is in the problem; the context is evidence about the subject
+    // matter, which is what every other detector still reads.
+    const mustIgnoreContext: Array<[string, string, string]> = [
+      [
+        'Optimise the Postgres query planner for our reporting workload',
+        'This came out of our red team exercise last quarter',
+        'adversarial',
+      ],
+      [
+        'Design a caching layer for the product catalogue',
+        'Follow-up from the pre-mortem we ran in March',
+        'adversarial',
+      ],
+      [
+        'Design a caching layer for the product catalogue',
+        'We decommissioned the old one last year',
+        'retention',
+      ],
+      [
+        'Optimise the Postgres query planner',
+        'Nobody uses the legacy reporting service any more',
+        'retention',
+      ],
+    ];
+
+    for (const [problem, context, mustNotBe] of mustIgnoreContext) {
+      it(`does not route "${problem.slice(0, 34)}..." to ${mustNotBe} on context alone`, () => {
+        expect(analyzer.categorizeProblem(problem, context)).not.toBe(mustNotBe);
+      });
+    }
+
+    it('still lets context inform the categories that are meant to read it', () => {
+      // Guards the opposite failure: scoping the two early passes must not turn
+      // context into dead weight everywhere else.
+      const withoutContext = analyzer.categorizeProblem('What should we do here?');
+      const withContext = analyzer.categorizeProblem(
+        'What should we do here?',
+        'We need to verify whether the vendor claims are actually true'
+      );
+      expect(withContext).not.toBe(withoutContext);
+      expect(withContext).toBe('validation');
+    });
+  });
+
   it('surfaces the keeper test for retention problems', () => {
     // Appearing in the case group is not enough: low-complexity problems get
     // three slots, which is why latticework is invisible in the crowded
