@@ -216,7 +216,14 @@ describe('ContextReframingHandler', () => {
       // Step 1 reports what contextAnalysis held, not a sentence saying it held
       // something. The old string was true of every run that reached step 1.
       expect(insights.some(i => i.includes('Context Analysis recorded:'))).toBe(true);
-      expect(insights.some(i => i.includes('2 high-impact context interventions'))).toBe(true);
+      // expectedImpact is required on every intervention and reached nothing,
+      // so the record kept what would change and dropped what it was expected
+      // to change.
+      expect(insights.some(i => i.includes('2 of 2 interventions rated easy or moderate'))).toBe(
+        true
+      );
+      expect(insights.some(i => i.includes('expected: Medium'))).toBe(true);
+      expect(insights.some(i => i.includes('temporal'))).toBe(true);
       // Steps 3, 4 and 5 report the content they recorded, not a constant that
       // fires whenever the field is merely present.
       expect(insights.some(i => i.includes('Frame Shifting: newFrame: Health as default'))).toBe(

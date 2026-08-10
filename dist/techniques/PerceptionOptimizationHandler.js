@@ -403,20 +403,21 @@ Output: Complete activation plan with perception metrics and success criteria`,
             }
             // Each structured field belongs to one step; report it there.
             if (step === 1 && Array.isArray(entryObj.perceptionGaps)) {
-                const largeGaps = entryObj.perceptionGaps.filter((g) => {
-                    if (typeof g === 'object' && g !== null) {
-                        const gapObj = g;
-                        return gapObj.gapSize === 'large' || gapObj.gapSize === 'massive';
-                    }
-                    return false;
-                });
+                const gaps = entryObj.perceptionGaps.filter((g) => typeof g === 'object' && g !== null);
+                const largeGaps = gaps.filter(g => g.gapSize === 'large' || g.gapSize === 'massive');
                 if (largeGaps.length > 0) {
-                    insights.push(`${stepName}: Found ${largeGaps.length} major perception gaps to exploit — ${largeGaps
+                    // leverageOpportunity is required on every gap and was read by
+                    // nothing. Gap size says how wide the gap is; leverage says whether
+                    // it is worth crossing, and only the first was surviving.
+                    const described = largeGaps
                         .map(g => {
-                        const gap = g;
-                        return `${gap.objective} seen as ${gap.perceived}`;
+                        const base = `${g.objective} seen as ${g.perceived}`;
+                        return g.leverageOpportunity ? `${base} (${g.leverageOpportunity} leverage)` : base;
                     })
-                        .join(', ')}`);
+                        .join('; ');
+                    const smaller = gaps.length - largeGaps.length;
+                    const remainder = smaller > 0 ? ` ${smaller} smaller gap(s) also recorded.` : '';
+                    insights.push(`${stepName}: ${largeGaps.length} of ${gaps.length} perception gaps rated large or massive — ${described}.${remainder}`);
                 }
             }
             // Each of these used to be a constant fired by the field's mere presence,
@@ -440,10 +441,9 @@ Output: Complete activation plan with perception metrics and success criteria`,
                 }
             }
             if (step === 5 && typeof entryObj.perceptionROI === 'number') {
+                // One line, not two. The second was a fixed judgement above a
+                // threshold that restated the same number the first line carried.
                 insights.push(`${stepName}: perception ROI ${entryObj.perceptionROI}x traditional ROI`);
-                if (entryObj.perceptionROI > 10) {
-                    insights.push(`Exceptional perception ROI: ${entryObj.perceptionROI}x traditional ROI`);
-                }
             }
         }
         // No completion banner. Reaching the last step is already visible from the

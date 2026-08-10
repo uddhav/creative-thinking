@@ -19,8 +19,14 @@ export declare class TemporalWorkHandler extends BaseTechniqueHandler {
         currentStep?: number;
         temporalLandscape?: {
             fixedDeadlines?: string[];
+            flexibleWindows?: string[];
+            pressurePoints?: string[];
+            deadZones?: string[];
             kairosOpportunities?: string[];
         };
+        circadianAlignment?: string[];
+        pressureTransformation?: string[];
+        asyncSyncBalance?: string[];
         temporalEscapeRoutes?: string[];
         output?: string;
     }>): string[];

@@ -259,7 +259,6 @@ interface ExecuteThinkingStepInput {
   patternRecognition?: unknown;
   learningHistory?: unknown;
   strategyAdaptations?: unknown;
-  feedbackInsights?: unknown;
   metaSynthesis?: unknown;
 }
 
@@ -621,14 +620,6 @@ export class ExecutionValidator extends BaseValidator {
           this.validateArray<string>(
             data.strategyAdaptations,
             'strategyAdaptations',
-            errors,
-            item => typeof item === 'string'
-          );
-        }
-        if (data.feedbackInsights !== undefined) {
-          this.validateArray<string>(
-            data.feedbackInsights,
-            'feedbackInsights',
             errors,
             item => typeof item === 'string'
           );

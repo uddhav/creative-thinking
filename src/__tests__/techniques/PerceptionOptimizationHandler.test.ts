@@ -231,7 +231,14 @@ describe('PerceptionOptimizationHandler', () => {
       ];
 
       const insights = handler.extractInsights(history);
-      expect(insights.some(i => i.includes('2 major perception gaps'))).toBe(true);
+      // leverageOpportunity is required on every gap and reached nothing. Gap
+      // size says how wide the gap is; leverage says whether it is worth
+      // crossing, and only the first survived.
+      expect(insights.some(i => i.includes('2 of 3 perception gaps rated large or massive'))).toBe(
+        true
+      );
+      expect(insights.some(i => i.includes('very_high leverage'))).toBe(true);
+      expect(insights.some(i => i.includes('1 smaller gap(s) also recorded'))).toBe(true);
       // Steps 2, 3 and 4 report the content they recorded, not a constant that
       // fires whenever the field is merely present.
       expect(
@@ -243,7 +250,10 @@ describe('PerceptionOptimizationHandler', () => {
       expect(
         insights.some(i => i.includes('Psychological Value Creation: layers: Status and belonging'))
       ).toBe(true);
-      expect(insights.some(i => i.includes('Exceptional perception ROI: 25x'))).toBe(true);
+      // One line for the ROI, not two. The second was a fixed judgement above a
+      // threshold that restated the number the first line already carried.
+      expect(insights.some(i => i.includes('perception ROI 25x traditional ROI'))).toBe(true);
+      expect(insights.some(i => i.includes('Exceptional perception ROI'))).toBe(false);
       // No completion banner: reaching the last step is not a finding.
       expect(insights.some(i => i.includes('subjective value dramatically enhanced'))).toBe(false);
     });

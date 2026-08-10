@@ -16,10 +16,19 @@ import type { TechniqueRegistry } from '../../techniques/TechniqueRegistry.js';
 import type { ExecutionMetadata } from '../../core/ResponseBuilder.js';
 import { ResponseBuilder } from '../../core/ResponseBuilder.js';
 import { MemoryAnalyzer } from '../../core/MemoryAnalyzer.js';
+
+/**
+ * Carry forward the flags that change what the next step should say. Without
+ * this, random_entry's Rory Mode guidance was unreachable: the branch took a
+ * third argument no call site supplied.
+ */
+function guidanceContext(input: ExecuteThinkingStepInput): StepGuidanceContext {
+  return { roryMode: input.roryMode };
+}
 import type { MemoryOutputs } from '../../core/MemoryAnalyzer.js';
 import { RealityIntegration } from '../../reality/integration.js';
 import { JsonOptimizer } from '../../utils/JsonOptimizer.js';
-import type { TechniqueHandler } from '../../techniques/types.js';
+import type { StepGuidanceContext, TechniqueHandler } from '../../techniques/types.js';
 import type { EscalationPromptGenerator } from '../../ergodicity/escalationPrompts.js';
 import type { HybridComplexityAnalyzer } from '../../complexity/analyzer.js';
 import { monitorCriticalSection } from '../../utils/PerformanceIntegration.js';
@@ -509,14 +518,14 @@ export class ExecutionResponseBuilder {
           // the *previous* technique's final step, which had already succeeded.
           const nextHandler = this.techniqueRegistry?.tryGetHandler(nextTechnique);
           return nextHandler
-            ? `Transitioning to ${nextTechnique}. ${nextHandler.getStepGuidance(1, input.problem)}`
+            ? `Transitioning to ${nextTechnique}. ${nextHandler.getStepGuidance(1, input.problem, guidanceContext(input))}`
             : `Transitioning to ${nextTechnique}`;
         }
       }
     } else {
       // Still in the same technique
       const nextLocalStep = techniqueLocalStep + 1;
-      let guidance = handler.getStepGuidance(nextLocalStep, input.problem);
+      let guidance = handler.getStepGuidance(nextLocalStep, input.problem, guidanceContext(input));
 
       // Add contextual guidance for temporal_work
       if (input.technique === 'temporal_work' && nextStep === 3) {
@@ -540,7 +549,7 @@ export class ExecutionResponseBuilder {
     nextLocalStep: number,
     input: ExecuteThinkingStepInput
   ): string {
-    return handler.getStepGuidance(nextLocalStep, input.problem);
+    return handler.getStepGuidance(nextLocalStep, input.problem, guidanceContext(input));
   }
 
   private generateExecutionMetadata(

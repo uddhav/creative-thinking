@@ -154,8 +154,14 @@ export class TemporalWorkHandler extends BaseTechniqueHandler {
       currentStep?: number;
       temporalLandscape?: {
         fixedDeadlines?: string[];
+        flexibleWindows?: string[];
+        pressurePoints?: string[];
+        deadZones?: string[];
         kairosOpportunities?: string[];
       };
+      circadianAlignment?: string[];
+      pressureTransformation?: string[];
+      asyncSyncBalance?: string[];
       temporalEscapeRoutes?: string[];
       output?: string;
     }>
@@ -193,14 +199,33 @@ export class TemporalWorkHandler extends BaseTechniqueHandler {
 
       // Each structured field belongs to one step; report it there.
       if (step === 1 && entry.temporalLandscape) {
-        const deadlines = entry.temporalLandscape.fixedDeadlines;
-        if (deadlines && deadlines.length > 0) {
-          insights.push(`Fixed deadlines: ${deadlines.join(', ')}`);
+        // All five keys, not the two that happened to be read. A landscape
+        // whose dead zones and pressure points were recorded and dropped is
+        // half a landscape.
+        const landscape: Array<[string, string[] | undefined]> = [
+          ['Fixed deadlines', entry.temporalLandscape.fixedDeadlines],
+          ['Flexible windows', entry.temporalLandscape.flexibleWindows],
+          ['Pressure points', entry.temporalLandscape.pressurePoints],
+          ['Dead zones', entry.temporalLandscape.deadZones],
+          ['Opportunity windows', entry.temporalLandscape.kairosOpportunities],
+        ];
+        for (const [label, values] of landscape) {
+          if (values && values.length > 0) {
+            insights.push(`${label}: ${values.join(', ')}`);
+          }
         }
-        const windows = entry.temporalLandscape.kairosOpportunities;
-        if (windows && windows.length > 0) {
-          insights.push(`Opportunity windows: ${windows.join(', ')}`);
-        }
+      }
+      // Steps 2, 3 and 4 are array-validated on the way in and were read by
+      // nothing on the way out, so the three middle steps of a six-step
+      // technique contributed no structured content at all.
+      if (step === 2 && entry.circadianAlignment?.length) {
+        insights.push(`${stepName}: ${entry.circadianAlignment.join(', ')}`);
+      }
+      if (step === 3 && entry.pressureTransformation?.length) {
+        insights.push(`${stepName}: ${entry.pressureTransformation.join(', ')}`);
+      }
+      if (step === 4 && entry.asyncSyncBalance?.length) {
+        insights.push(`${stepName}: ${entry.asyncSyncBalance.join(', ')}`);
       }
       if (step === totalSteps && entry.temporalEscapeRoutes?.length) {
         insights.push(`Escape routes: ${entry.temporalEscapeRoutes.join(', ')}`);

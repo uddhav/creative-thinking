@@ -266,7 +266,13 @@ describe('AnecdotalSignalHandler', () => {
 
       const insights = handler.extractInsights(history);
       expect(insights.some(i => i.includes('Collected 15 significant anecdotes'))).toBe(true);
-      expect(insights.some(i => i.includes('2 strong signals'))).toBe(true);
+      // divergenceLevel and precedentType are required on every signal and
+      // reached nothing, so the report kept the anecdote and dropped the two
+      // judgements that made it a signal. The weak one is counted, not erased.
+      expect(insights.some(i => i.includes('2 of 3 signals rated strong or critical'))).toBe(true);
+      expect(insights.some(i => i.includes('extreme divergence'))).toBe(true);
+      expect(insights.some(i => i.includes('first precedent'))).toBe(true);
+      expect(insights.some(i => i.includes('1 weaker signal(s) also recorded'))).toBe(true);
       // Steps 3, 5 and 6 report the content they recorded, not a constant that
       // fires whenever the field is merely present.
       expect(insights.some(i => i.includes('Trajectory Analysis: nonErgodic: true'))).toBe(true);
@@ -317,8 +323,10 @@ describe('AnecdotalSignalHandler', () => {
       ];
 
       const insights = handler.extractInsights(history);
-      expect(insights.some(i => i.includes('1 strong signals'))).toBe(true);
+      expect(insights.some(i => i.includes('1 of 1 signals rated strong or critical'))).toBe(true);
       expect(insights.some(i => i.includes('Critical discovery'))).toBe(true);
+      // Nothing to say about weaker signals when there were none.
+      expect(insights.some(i => i.includes('weaker signal'))).toBe(false);
     });
   });
 });

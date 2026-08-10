@@ -137,10 +137,24 @@ export interface TechniqueInfo {
   };
 }
 
+/**
+ * What the session has already established, for handlers whose guidance depends
+ * on it. Optional throughout: a handler that ignores it — which is all but one —
+ * needs no change, and a caller that omits it gets the guidance it got before.
+ *
+ * It exists because `random_entry` carried some ninety lines of Rory Mode
+ * guidance behind a third parameter that no call site passed. The branch was
+ * unreachable while `roryMode` stayed a documented, strictly-validated input
+ * and its own insight extraction read the flag.
+ */
+export interface StepGuidanceContext {
+  roryMode?: boolean;
+}
+
 export interface TechniqueHandler {
   getTechniqueInfo(): TechniqueInfo;
   getStepInfo(step: number): StepInfo;
-  getStepGuidance(step: number, problem: string): string;
+  getStepGuidance(step: number, problem: string, context?: StepGuidanceContext): string;
   validateStep(step: number, data: unknown): boolean;
   extractInsights(history: Array<{ output?: string }>): string[];
 }
@@ -148,7 +162,7 @@ export interface TechniqueHandler {
 export abstract class BaseTechniqueHandler implements TechniqueHandler {
   abstract getTechniqueInfo(): TechniqueInfo;
   abstract getStepInfo(step: number): StepInfo;
-  abstract getStepGuidance(step: number, problem: string): string;
+  abstract getStepGuidance(step: number, problem: string, context?: StepGuidanceContext): string;
 
   validateStep(step: number, _data: unknown): boolean {
     const info = this.getTechniqueInfo();

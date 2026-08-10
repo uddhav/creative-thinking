@@ -343,11 +343,25 @@ Output: Complete implementation plan with timeline and success metrics`,
                 }
             }
             if (step === 2 && Array.isArray(entry.vacantSpaces)) {
-                const highValue = entry.vacantSpaces.filter((s) => s.opportunityValue === 'very_high' || s.opportunityValue === 'high');
+                const spaces = entry.vacantSpaces;
+                const highValue = spaces.filter((s) => s.opportunityValue === 'very_high' || s.opportunityValue === 'high');
                 if (highValue.length > 0) {
-                    insights.push(`${stepName}: Found ${highValue.length} high-value vacant spaces — ${highValue
-                        .map(s => s.space)
-                        .join(', ')}`);
+                    // whyVacant and implementationDifficulty are required on every entry
+                    // and were read by nothing. whyVacant is the load-bearing one: a
+                    // vacant space with no account of why it is empty is a space nobody
+                    // has yet checked for a reason.
+                    const described = highValue
+                        .map(s => {
+                        const qualifiers = [
+                            s.implementationDifficulty ? `${s.implementationDifficulty} difficulty` : undefined,
+                            s.whyVacant ? `vacant because ${s.whyVacant}` : undefined,
+                        ].filter(Boolean);
+                        return qualifiers.length > 0 ? `${s.space} (${qualifiers.join('; ')})` : s.space;
+                    })
+                        .join('; ');
+                    const lower = spaces.length - highValue.length;
+                    const remainder = lower > 0 ? ` ${lower} lower-value space(s) also recorded.` : '';
+                    insights.push(`${stepName}: ${highValue.length} of ${spaces.length} vacant spaces rated high or very high — ${described}.${remainder}`);
                 }
             }
             if (step === 3) {

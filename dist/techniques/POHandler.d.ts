@@ -21,6 +21,7 @@ export declare class POHandler extends BaseTechniqueHandler {
     extractInsights(history: Array<{
         currentStep?: number;
         provocation?: string;
+        principles?: string[];
         output?: string;
     }>): string[];
 }

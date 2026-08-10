@@ -212,6 +212,8 @@ export interface ExecuteThinkingStepInput {
   provocation?: string;
   principles?: string[];
   randomStimulus?: string;
+  /** Draw the stimulus from the behavioural-economics catalogue. */
+  roryMode?: boolean;
   connections?: string[];
   scamperAction?: ScamperAction;
   modificationHistory?: ScamperModificationHistory[];
@@ -353,21 +355,10 @@ export interface ExecuteThinkingStepInput {
   learningHistory?: string[];
   accumulatedLearning?: string[]; // Alternative to learningHistory
   strategyAdaptations?: string[];
-  feedbackInsights?: string[];
   metaSynthesis?: string;
 
   // Reality assessment
   realityAssessment?: RealityAssessment;
-
-  // Cultural Creativity specific
-  culturalContexts?: string[];
-  powerDynamics?: string[];
-  naturalConnections?: string[];
-  frictionZones?: string[];
-  translationProtocols?: string[];
-  trustMechanisms?: string[];
-  attributionMap?: Record<string, string>;
-  authenticityMeasures?: string[];
 
   // Ergodicity awareness fields
   ergodicityCheck?: {
@@ -470,6 +461,8 @@ export interface ThinkingOperationData {
   provocation?: string;
   principles?: string[];
   randomStimulus?: string;
+  /** Draw the stimulus from the behavioural-economics catalogue. */
+  roryMode?: boolean;
   connections?: string[];
   scamperAction?: ScamperAction;
   modificationHistory?: ScamperModificationHistory[];
@@ -617,21 +610,10 @@ export interface ThinkingOperationData {
   learningHistory?: string[];
   accumulatedLearning?: string[]; // Alternative to learningHistory
   strategyAdaptations?: string[];
-  feedbackInsights?: string[];
   metaSynthesis?: string;
 
   // Reality assessment
   realityAssessment?: RealityAssessment;
-
-  // Cultural Creativity specific
-  culturalContexts?: string[];
-  powerDynamics?: string[];
-  naturalConnections?: string[];
-  frictionZones?: string[];
-  translationProtocols?: string[];
-  trustMechanisms?: string[];
-  attributionMap?: Record<string, string>;
-  authenticityMeasures?: string[];
 
   // Ergodicity awareness fields
   ergodicityCheck?: {

@@ -138,6 +138,7 @@ export class POHandler extends BaseTechniqueHandler {
     history: Array<{
       currentStep?: number;
       provocation?: string;
+      principles?: string[];
       output?: string;
     }>
   ): string[] {
@@ -175,6 +176,13 @@ export class POHandler extends BaseTechniqueHandler {
         if (provocation) {
           insights.push(`Provocation explored: ${provocation}`);
         }
+      }
+
+      // Step 2's own field. It was schema-declared and echoed back, but the
+      // only thing that read it said "Provocation successfully challenged N
+      // core assumptions" — the count, never which ones.
+      if (step === 2 && entry.principles?.length) {
+        insights.push(`Principles extracted: ${entry.principles.join(', ')}`);
       }
     }
 

@@ -489,18 +489,30 @@ Output: Complete strategic response plan with monitoring systems`,
                 insights.push(`${stepName}: Collected ${entryObj.anecdoteCount} significant anecdotes`);
             }
             if (step === 2 && Array.isArray(entryObj.signals)) {
-                const strongSignals = entryObj.signals.filter((s) => {
-                    if (typeof s === 'object' && s !== null) {
-                        const signalObj = s;
-                        return signalObj.signalStrength === 'strong' || signalObj.signalStrength === 'critical';
-                    }
-                    return false;
-                });
+                const signals = entryObj.signals.filter((s) => typeof s === 'object' && s !== null);
+                const strongSignals = signals.filter(s => s.signalStrength === 'strong' || s.signalStrength === 'critical');
                 if (strongSignals.length > 0) {
-                    insights.push(`${stepName}: Identified ${strongSignals.length} strong signals from anecdotal evidence — ${strongSignals
-                        .map(s => s.story)
-                        .filter(story => typeof story === 'string' && story.length > 0)
-                        .join(', ')}`);
+                    // divergenceLevel and precedentType are required on every signal —
+                    // the step is rejected without them — and were read by nothing. They
+                    // are the two judgements that say why an anecdote is signal rather
+                    // than noise, so reporting the story alone kept the anecdote and
+                    // discarded the reasoning that promoted it.
+                    const described = strongSignals
+                        .map(s => {
+                        const story = typeof s.story === 'string' ? s.story : 'unnamed signal';
+                        const qualifiers = [
+                            s.divergenceLevel ? `${s.divergenceLevel} divergence` : undefined,
+                            s.precedentType ? `${s.precedentType} precedent` : undefined,
+                        ].filter(Boolean);
+                        return qualifiers.length > 0 ? `${story} (${qualifiers.join(', ')})` : story;
+                    })
+                        .join('; ');
+                    // And say what the rest were. A session that recorded five signals
+                    // and rated one strong reported "1 signal", as though four had never
+                    // been written down.
+                    const weaker = signals.length - strongSignals.length;
+                    const remainder = weaker > 0 ? ` ${weaker} weaker signal(s) also recorded.` : '';
+                    insights.push(`${stepName}: ${strongSignals.length} of ${signals.length} signals rated strong or critical — ${described}.${remainder}`);
                 }
             }
             if (step === 3) {

@@ -24,8 +24,18 @@ export declare class SixHatsHandler extends BaseTechniqueHandler {
      * one only on "concern" or "worry" — silently drops everything phrased another
      * way, so a session of substantive hat outputs can return nothing at all. The
      * absence of a keyword is not the absence of a finding.
+     *
+     * The hat is derived from the step, not demanded from the caller. `hatColor`
+     * is optional, and `validateStep` accepts it only when it equals
+     * `hatOrder[step - 1]` — so the step already determines the hat. Yet a
+     * session that omitted the field got no insights at all, from any hat,
+     * including the Black Hat's enumerated risks. A caller should not lose the
+     * whole technique for withholding a value the server can compute. An
+     * explicit `hatColor` still wins, which keeps a history that carries no step
+     * numbers working as before.
      */
     extractInsights(history: Array<{
+        currentStep?: number;
         hatColor?: string;
         risks?: string[];
         output?: string;

@@ -108,6 +108,8 @@ export interface ExecuteThinkingStepInput {
     provocation?: string;
     principles?: string[];
     randomStimulus?: string;
+    /** Draw the stimulus from the behavioural-economics catalogue. */
+    roryMode?: boolean;
     connections?: string[];
     scamperAction?: ScamperAction;
     modificationHistory?: ScamperModificationHistory[];
@@ -219,17 +221,8 @@ export interface ExecuteThinkingStepInput {
     learningHistory?: string[];
     accumulatedLearning?: string[];
     strategyAdaptations?: string[];
-    feedbackInsights?: string[];
     metaSynthesis?: string;
     realityAssessment?: RealityAssessment;
-    culturalContexts?: string[];
-    powerDynamics?: string[];
-    naturalConnections?: string[];
-    frictionZones?: string[];
-    translationProtocols?: string[];
-    trustMechanisms?: string[];
-    attributionMap?: Record<string, string>;
-    authenticityMeasures?: string[];
     ergodicityCheck?: {
         prompt: string;
         followUp?: string;
@@ -316,6 +309,8 @@ export interface ThinkingOperationData {
     provocation?: string;
     principles?: string[];
     randomStimulus?: string;
+    /** Draw the stimulus from the behavioural-economics catalogue. */
+    roryMode?: boolean;
     connections?: string[];
     scamperAction?: ScamperAction;
     modificationHistory?: ScamperModificationHistory[];
@@ -429,17 +424,8 @@ export interface ThinkingOperationData {
     learningHistory?: string[];
     accumulatedLearning?: string[];
     strategyAdaptations?: string[];
-    feedbackInsights?: string[];
     metaSynthesis?: string;
     realityAssessment?: RealityAssessment;
-    culturalContexts?: string[];
-    powerDynamics?: string[];
-    naturalConnections?: string[];
-    frictionZones?: string[];
-    translationProtocols?: string[];
-    trustMechanisms?: string[];
-    attributionMap?: Record<string, string>;
-    authenticityMeasures?: string[];
     ergodicityCheck?: {
         prompt: string;
         followUp?: string;

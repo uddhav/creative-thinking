@@ -205,7 +205,14 @@ describe('ReverseBenchmarkingHandler', () => {
 
       const insights = handler.extractInsights(history);
       expect(insights.some(i => i.includes('2 universal competitor weaknesses'))).toBe(true);
-      expect(insights.some(i => i.includes('2 high-value vacant spaces'))).toBe(true);
+      // whyVacant and implementationDifficulty are required on every entry and
+      // reached nothing. whyVacant is the load-bearing one — a vacant space
+      // with no account of why it is empty is one nobody has checked yet.
+      expect(insights.some(i => i.includes('2 of 2 vacant spaces rated high or very high'))).toBe(
+        true
+      );
+      expect(insights.some(i => i.includes('vacant because Ignored'))).toBe(true);
+      expect(insights.some(i => i.includes('low difficulty'))).toBe(true);
       // Step 3 reports the strategy it recorded, not a constant announcing that
       // one exists — and its own output alongside it.
       expect(insights.some(i => i.includes('Anti-Mimetic Strategy: UX focus'))).toBe(true);

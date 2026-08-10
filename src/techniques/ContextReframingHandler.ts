@@ -448,22 +448,33 @@ Output: Complete activation plan with success metrics and scaling strategy`,
       }
 
       if (step === 2 && Array.isArray(entryObj.interventions)) {
-        const highImpact = entryObj.interventions.filter((i: unknown) => {
-          if (typeof i === 'object' && i !== null) {
-            const interventionObj = i as ContextIntervention;
-            return (
-              interventionObj.implementationEase === 'easy' ||
-              interventionObj.implementationEase === 'moderate'
-            );
-          }
-          return false;
-        });
+        const interventions = entryObj.interventions.filter(
+          (i): i is ContextIntervention => typeof i === 'object' && i !== null
+        );
+        const highImpact = interventions.filter(
+          i => i.implementationEase === 'easy' || i.implementationEase === 'moderate'
+        );
         if (highImpact.length > 0) {
+          // expectedImpact is required on every intervention and was read by
+          // nothing, so the record kept what would be changed and dropped what
+          // it was expected to change.
+          const described = highImpact
+            .map(i => {
+              const description =
+                typeof i.description === 'string' ? i.description : 'unnamed intervention';
+              const qualifiers = [
+                i.type,
+                i.expectedImpact ? `expected: ${i.expectedImpact}` : undefined,
+              ].filter(Boolean);
+              return qualifiers.length > 0
+                ? `${description} (${qualifiers.join('; ')})`
+                : description;
+            })
+            .join('; ');
+          const harder = interventions.length - highImpact.length;
+          const remainder = harder > 0 ? ` ${harder} harder intervention(s) also recorded.` : '';
           insights.push(
-            `${stepName}: Identified ${highImpact.length} high-impact context interventions — ${highImpact
-              .map(i => (i as ContextIntervention).description)
-              .filter(d => typeof d === 'string' && d.length > 0)
-              .join(', ')}`
+            `${stepName}: ${highImpact.length} of ${interventions.length} interventions rated easy or moderate — ${described}.${remainder}`
           );
         }
       }

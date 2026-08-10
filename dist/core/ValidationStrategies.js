@@ -402,9 +402,6 @@ export class ExecutionValidator extends BaseValidator {
                 if (data.strategyAdaptations !== undefined) {
                     this.validateArray(data.strategyAdaptations, 'strategyAdaptations', errors, item => typeof item === 'string');
                 }
-                if (data.feedbackInsights !== undefined) {
-                    this.validateArray(data.feedbackInsights, 'feedbackInsights', errors, item => typeof item === 'string');
-                }
                 if (data.metaSynthesis !== undefined) {
                     this.validateArray(data.metaSynthesis, 'metaSynthesis', errors, item => typeof item === 'string');
                 }
