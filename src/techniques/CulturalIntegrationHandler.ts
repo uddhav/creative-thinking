@@ -16,7 +16,13 @@
  * 5. Synthesizing solutions that honor all sources
  */
 
-import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
+import {
+  BaseTechniqueHandler,
+  describeStructuredField,
+  firstSentence,
+  type TechniqueInfo,
+  type StepInfo,
+} from './types.js';
 
 export class CulturalIntegrationHandler extends BaseTechniqueHandler {
   private readonly steps: StepInfo[] = [
@@ -142,5 +148,85 @@ export class CulturalIntegrationHandler extends BaseTechniqueHandler {
     }
 
     return false;
+  }
+
+  /**
+   * Report what each step actually recorded, labelled by the step.
+   *
+   * Keyed on `entry.currentStep`, not on position in the array: `execute`
+   * appends a history entry for every call including revisions, so one revision
+   * shifts every later entry. Keying on the step also means a revision
+   * supersedes the entry it revises rather than reporting twice.
+   *
+   * The four cultural fields are reported wherever they arrive rather than
+   * pinned to a step, unlike every other technique here. Two reasons: this
+   * handler's `validateStep` requires no field on any step, so nothing in the
+   * technique says which step a field belongs to; and the one place that does
+   * assert a mapping — CrossCulturalInsightStrategy — disagrees with the step
+   * names, reading `bridgeBuilding` at step 2 while the step named Bridge
+   * Building is step 3. Binding to a step would encode one of those two
+   * orderings as fact. Naming the field alongside the step keeps the report
+   * true either way.
+   *
+   * They are reported by content, not by count. "3 cultural perspectives
+   * identified" says a field had three entries and nothing about which three,
+   * which is exactly the information a synthesis needs.
+   */
+  extractInsights(history: unknown[]): string[] {
+    const totalSteps = this.steps.length;
+    const latestByStep = new Map<number, Record<string, unknown>>();
+
+    history.forEach((entry, index) => {
+      if (typeof entry !== 'object' || entry === null) {
+        return;
+      }
+      const entryObj = entry as Record<string, unknown>;
+      // Fall back to position only when the caller sent no step number.
+      const step = typeof entryObj.currentStep === 'number' ? entryObj.currentStep : index + 1;
+      if (step >= 1 && step <= totalSteps) {
+        latestByStep.set(step, entryObj);
+      }
+    });
+
+    const culturalFields: Array<[string, string]> = [
+      ['culturalFrameworks', 'frameworks in play'],
+      ['bridgeBuilding', 'bridges built'],
+      ['respectfulSynthesis', 'synthesized approaches'],
+      ['parallelPaths', 'parallel paths'],
+    ];
+
+    const insights: string[] = [];
+
+    for (let step = 1; step <= totalSteps; step++) {
+      const entryObj = latestByStep.get(step);
+      if (!entryObj) {
+        continue;
+      }
+      const stepName = this.steps[step - 1]?.name;
+      if (!stepName) {
+        continue;
+      }
+
+      const output = typeof entryObj.output === 'string' ? entryObj.output.trim() : '';
+      if (output) {
+        const summary = firstSentence(output);
+        if (summary.length > 0) {
+          insights.push(`${stepName}: ${summary}`);
+        }
+      }
+
+      for (const [field, label] of culturalFields) {
+        const recorded = describeStructuredField(entryObj[field]);
+        if (recorded.length > 0) {
+          insights.push(`${stepName}: ${label} — ${recorded}`);
+        }
+      }
+    }
+
+    // No completion banner. Reaching step 5 is already visible from the step
+    // count, and a fixed "culturally respectful solution achieved" asserts the
+    // one finding this technique must never assert on the caller's behalf.
+
+    return insights;
   }
 }

@@ -266,6 +266,7 @@ describe('QuantumSuperpositionHandler', () => {
     it('should extract preserved insights from history', () => {
       const history = [
         {
+          currentStep: 4,
           output: 'Final collapsed state',
           preservedInsights: [
             'Performance optimization techniques from State 1',
@@ -282,10 +283,12 @@ describe('QuantumSuperpositionHandler', () => {
     it('should combine multiple sources of insights', () => {
       const history = [
         {
+          currentStep: 1,
           output: 'Initial exploration phase with multiple possibilities',
           solutionStates: ['State A', 'State B'],
         },
         {
+          currentStep: 4,
           output: 'Collapse phase preserving key insights from abandoned states',
           preservedInsights: ['Key insight 1', 'Key insight 2'],
         },
@@ -297,23 +300,96 @@ describe('QuantumSuperpositionHandler', () => {
       expect(insights).toContain('Preserved: Key insight 1');
     });
 
-    it('should limit insights to 10 and remove duplicates', () => {
-      const history = [];
-
-      // Add many duplicate insights
-      for (let i = 0; i < 20; i++) {
-        history.push({
-          output: `Very long output that should be extracted as an insight because it's quite detailed and comprehensive. ${i % 3}`,
-          solutionStates: ['Duplicate State', `Unique State ${i}`],
-        });
-      }
+    it('should report step 2 coupling, which was validated and read by nothing', () => {
+      const history = [
+        {
+          currentStep: 2,
+          interferencePatterns: {
+            constructive: ['Caching helps both the fast and the cheap state'],
+            destructive: ['Strong consistency cancels the low-latency state'],
+            hybrid: ['Read-through cache with bounded staleness'],
+          },
+          entanglements: [
+            {
+              states: ['Low latency', 'Low cost'],
+              dependency: 'Both need the same edge deployment budget',
+            },
+          ],
+          amplitudes: { 'Low latency': 0.6, 'Low cost': 0.3, Robust: 0.1 },
+        },
+      ];
 
       const insights = handler.extractInsights(history);
-      expect(insights.length).toBeLessThanOrEqual(10);
+      expect(insights).toContain(
+        'Constructive interference: Caching helps both the fast and the cheap state'
+      );
+      expect(insights).toContain(
+        'Destructive interference: Strong consistency cancels the low-latency state'
+      );
+      expect(insights).toContain('Hybrid possibility: Read-through cache with bounded staleness');
+      expect(insights).toContain(
+        'Entangled: Low latency ↔ Low cost — Both need the same edge deployment budget'
+      );
+      expect(insights).toContain(
+        'State Interaction: Amplitudes, strongest first — Low latency 0.6, Low cost 0.3, Robust 0.1'
+      );
+      expect(insights).toContain('Gaining ground: Low latency (0.6)');
+    });
 
-      // Check for no duplicates
+    it('should report the measurement criteria and the state collapsed to', () => {
+      const history = [
+        {
+          currentStep: 3,
+          measurementCriteria: ['Cost ceiling of $8k a month', 'p99 under 200ms'],
+        },
+        {
+          currentStep: 4,
+          chosenState: 'Low latency, accepting the higher run cost',
+        },
+      ];
+
+      const insights = handler.extractInsights(history);
+      expect(insights).toContain('Measurement criterion: Cost ceiling of $8k a month');
+      expect(insights).toContain('Measurement criterion: p99 under 200ms');
+      expect(insights).toContain('Collapsed to: Low latency, accepting the higher run cost');
+    });
+
+    it('should remove duplicates without silently capping the count', () => {
+      // Replaces the assertion that the result was cut to ten. The cut was
+      // silent: a session could not tell whether its eleventh state had been
+      // dropped or never recorded.
+      const states = Array.from({ length: 20 }, (_, i) => `Unique State ${i}`);
+      const history = [
+        {
+          currentStep: 1,
+          output: 'Twenty mutually exclusive states, plus one repeated for good measure.',
+          solutionStates: ['Duplicate State', 'Duplicate State', ...states],
+        },
+      ];
+
+      const insights = handler.extractInsights(history);
+
+      // The step output, the deduplicated state, and all twenty unique states.
+      expect(insights).toHaveLength(22);
+      expect(insights.length).toBeGreaterThan(10);
+      expect(insights).toContain('Solution state: Unique State 19');
+
       const uniqueInsights = new Set(insights);
       expect(uniqueInsights.size).toBe(insights.length);
+    });
+
+    it('should key on currentStep so a revision supersedes what it revises', () => {
+      const history = [
+        { currentStep: 1, output: 'The first set of states considered.' },
+        { currentStep: 3, output: 'The measurement context as first defined.' },
+        { currentStep: 1, output: 'The corrected set of states considered.' },
+      ];
+
+      const insights = handler.extractInsights(history);
+      expect(insights).toEqual([
+        'State Generation: The corrected set of states considered.',
+        'Measurement Context: The measurement context as first defined.',
+      ]);
     });
   });
 });

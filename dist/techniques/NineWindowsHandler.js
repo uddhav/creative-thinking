@@ -1,7 +1,7 @@
 /**
  * Nine Windows (System Operator) technique handler with reflexivity for future projections
  */
-import { BaseTechniqueHandler } from './types.js';
+import { BaseTechniqueHandler, firstSentence } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 export class NineWindowsHandler extends BaseTechniqueHandler {
     getTechniqueInfo() {
@@ -127,33 +127,76 @@ export class NineWindowsHandler extends BaseTechniqueHandler {
         };
         return guidanceMap[step] || `Complete the Nine Windows process for: "${problem}"`;
     }
+    /**
+     * Report every window, labelled by the cell it belongs to.
+     *
+     * Only steps 2, 5 and 8 — the middle column — were read before, so the six
+     * sub-system and super-system cells produced nothing however much was written
+     * in them. That is most of the grid: the technique's whole claim is that the
+     * system reads differently at three scales, and two of the three scales were
+     * discarded on the way out.
+     */
     extractInsights(history) {
-        const insights = [];
-        history.forEach(entry => {
-            // Extract key insights from specific cells
-            if (entry.currentStep === 2 && entry.output) {
-                // Past System evolution
-                insights.push(`Historical pattern: ${entry.output.split('.')[0]}`);
-            }
-            if (entry.currentStep === 5 && entry.output) {
-                // Present System state
-                insights.push(`Current reality: ${entry.output.split('.')[0]}`);
-            }
-            if (entry.currentStep === 8 && entry.output) {
-                // Future System possibilities
-                insights.push(`Future possibility: ${entry.output.split('.')[0]}`);
-            }
-            // Extract interdependencies if found
-            if (entry.interdependencies && entry.interdependencies.length > 0) {
-                insights.push(`Key dependency: ${entry.interdependencies[0]}`);
+        const totalSteps = this.getTechniqueInfo().totalSteps;
+        const latestByStep = new Map();
+        history.forEach((entry, index) => {
+            // `currentCell` names the same window as `currentStep`; use it when the
+            // caller sent coordinates instead of a step, and position only if neither.
+            const step = entry.currentStep ??
+                (entry.currentCell
+                    ? this.getCellByCoordinates(entry.currentCell.timeFrame, entry.currentCell.systemLevel)
+                    : index + 1);
+            if (step >= 1 && step <= totalSteps) {
+                latestByStep.set(step, entry);
             }
         });
-        // Check if Nine Windows is complete
-        const hasCompleteSession = history.some(entry => entry.currentStep === 9 && !entry.nextStepNeeded);
-        if (hasCompleteSession) {
-            insights.push('Nine Windows completed - systemic understanding achieved across time and scale');
+        const insights = [];
+        for (let step = 1; step <= totalSteps; step++) {
+            const entry = latestByStep.get(step);
+            if (!entry) {
+                continue;
+            }
+            const stepName = this.getStepInfo(step).name;
+            const output = entry.output?.trim();
+            if (output) {
+                const summary = firstSentence(output);
+                if (summary.length > 0) {
+                    insights.push(`${stepName}: ${summary}`);
+                }
+            }
+            // Every dependency the caller listed, not just the first.
+            if (Array.isArray(entry.interdependencies)) {
+                entry.interdependencies.forEach(dependency => {
+                    if (typeof dependency === 'string' && dependency.trim().length > 0) {
+                        insights.push(`${stepName}: Key dependency: ${dependency.trim()}`);
+                    }
+                });
+            }
+            // The matrix is declared by the tool schema, validated cell by cell by
+            // ObjectFieldValidator, and was then read by nothing.
+            if (Array.isArray(entry.nineWindowsMatrix)) {
+                entry.nineWindowsMatrix.forEach(cell => {
+                    if (!cell || typeof cell.content !== 'string' || cell.content.trim().length === 0) {
+                        return;
+                    }
+                    const notes = [];
+                    if (Array.isArray(cell.pathDependencies) && cell.pathDependencies.length > 0) {
+                        notes.push(`path dependencies: ${cell.pathDependencies.join(', ')}`);
+                    }
+                    if (cell.irreversible) {
+                        notes.push('irreversible');
+                    }
+                    const suffix = notes.length > 0 ? ` (${notes.join('; ')})` : '';
+                    insights.push(`Matrix ${cell.timeFrame} ${cell.systemLevel}: ${cell.content.trim()}${suffix}`);
+                });
+            }
         }
-        return insights;
+        // No completion banner. "Systemic understanding achieved across time and
+        // scale" was appended whenever the last step ran, asserting a finding the
+        // session never made; reaching step 9 is already visible from the step count.
+        // A caller that repeats the whole matrix on every step should not have it
+        // reported nine times.
+        return [...new Set(insights)];
     }
     /**
      * Helper method to get cell info by coordinates

@@ -4,6 +4,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { LateralThinkingServer } from '../index.js';
+import { NeuralStateHandler } from '../techniques/NeuralStateHandler.js';
 import type {
   ExecuteThinkingStepInput,
   PlanThinkingSessionInput,
@@ -318,10 +319,16 @@ describe('Neural State Optimization', () => {
       });
 
       expect(finalStep.completed).toBe(true);
+      // Each step's own output is now reported under its step name. `output` was
+      // declared on the extractInsights parameter and read by nothing, so a step
+      // whose finding was prose reported nothing at all.
       expect(finalStep.insights).toEqual([
+        'Assess Current State: High focus, low creativity',
         'Dominant network: ECN',
         'Suppression depth: 8/10',
+        'Develop Switching: Cycles established',
         'Switching pattern: 90-minute deep work sessions',
+        'Integrate Insights: Achieved balanced cognitive flexibility',
         'Integration: Integration leads to innovative solutions',
       ]);
       expect(finalStep.insights?.some(i => i.includes('Neural State Optimization completed'))).toBe(
@@ -477,6 +484,68 @@ describe('Neural State Optimization', () => {
 
       expect(result.technique).toBe('neural_state');
       // No specific insight expected without neural state data
+    });
+  });
+
+  describe('Insight extraction', () => {
+    let handler: NeuralStateHandler;
+
+    beforeEach(() => {
+      handler = new NeuralStateHandler();
+    });
+
+    it('should report the whole switching rhythm and every integration insight', () => {
+      // Both arrays used to be reduced to their first element, so a four-part
+      // rhythm reported one part and the synthesis step reported one finding.
+      const history = [
+        {
+          currentStep: 2,
+          switchingRhythm: [
+            '90-minute deep work sessions',
+            '20-minute mindful breaks',
+            'Morning meditation for DMN activation',
+            'Evening reflection for integration',
+          ],
+        },
+        {
+          currentStep: 3,
+          integrationInsights: [
+            'ECN for complex analysis phases',
+            'DMN for creative insight generation',
+            'Rhythmic switching prevents burnout',
+          ],
+        },
+      ];
+
+      const insights = handler.extractInsights(history);
+      expect(insights).toEqual([
+        'Switching pattern: 90-minute deep work sessions',
+        'Switching pattern: 20-minute mindful breaks',
+        'Switching pattern: Morning meditation for DMN activation',
+        'Switching pattern: Evening reflection for integration',
+        'Integration: ECN for complex analysis phases',
+        'Integration: DMN for creative insight generation',
+        'Integration: Rhythmic switching prevents burnout',
+      ]);
+    });
+
+    it('should report nothing for a step that recorded nothing', () => {
+      expect(handler.extractInsights([])).toEqual([]);
+      expect(handler.extractInsights([{ currentStep: 2, output: '   ' }])).toEqual([]);
+    });
+
+    it('should key on currentStep so a revision supersedes what it revises', () => {
+      const history = [
+        { currentStep: 1, output: 'The first assessment of the dominant network.' },
+        { currentStep: 2, output: 'The rhythm as first designed.' },
+        { currentStep: 1, output: 'The corrected assessment of the dominant network.' },
+      ];
+
+      const insights = handler.extractInsights(history);
+      expect(insights).toEqual([
+        'Assess Current State: The corrected assessment of the dominant network.',
+        'Develop Switching: The rhythm as first designed.',
+      ]);
     });
   });
 });

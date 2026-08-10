@@ -430,6 +430,124 @@ describe('NeuroComputationalHandler', () => {
     });
   });
 
+  describe('extractInsights', () => {
+    it('reports every required field under its own step name', () => {
+      const insights = handler.extractInsights([
+        {
+          currentStep: 1,
+          output: 'The queue is the only stateful node.',
+          neuralMappings: ['queue holds state', 'router gates by tenant'],
+        },
+        {
+          currentStep: 2,
+          patternGenerations: ['batch-then-fan-out', 'fan-out-then-batch'],
+          interferenceAnalysis: {
+            constructive: ['batching amplifies tenant isolation'],
+            destructive: ['fan-out first defeats batching'],
+          },
+        },
+        { currentStep: 3, computationalModels: ['genetic algorithm', 'swarm optimization'] },
+        {
+          currentStep: 4,
+          optimizationCycles: 12,
+          convergenceMetrics: { coherence: 0.9, novelty: 0.7, utility: 0.5 },
+        },
+        {
+          currentStep: 5,
+          finalSynthesis: 'Batch inside the tenant boundary, fan out across it',
+          convergenceMetrics: { coherence: 0.9, novelty: 0.9, utility: 0.9 },
+        },
+      ]);
+
+      expect(insights).toContain('Neural Mapping: queue holds state, router gates by tenant');
+      expect(insights).toContain('Pattern Generation: batch-then-fan-out, fan-out-then-batch');
+      expect(insights).toContain(
+        'Pattern Generation: patterns that reinforce — batching amplifies tenant isolation'
+      );
+      expect(insights).toContain(
+        'Pattern Generation: patterns that cancel — fan-out first defeats batching'
+      );
+      expect(insights).toContain('Computational Synthesis: genetic algorithm, swarm optimization');
+      expect(insights).toContain('Optimization Cycles: 12 optimization cycles run');
+      expect(insights).toContain(
+        'Convergence: Batch inside the tenant boundary, fan out across it'
+      );
+      // No banner: reaching step 5 is not itself a finding.
+      expect(insights.some(i => /optimal solution converged|synthesis complete/i.test(i))).toBe(
+        false
+      );
+    });
+
+    it('names the convergence ratings the caller was offered', () => {
+      const insights = handler.extractInsights([
+        {
+          currentStep: 4,
+          optimizationCycles: 3,
+          convergenceMetrics: { coherence: 0.9, novelty: 0.7, utility: 0.5 },
+        },
+      ]);
+
+      expect(insights).toContain(
+        'Optimization Cycles: rated coherence strong, novelty moderate, utility weak'
+      );
+      // The bare decimals are what made every caller invent their own.
+      expect(insights.some(i => i.includes('0.9'))).toBe(false);
+    });
+
+    it('passes an off-scale rating through as its number rather than bucketing it', () => {
+      const insights = handler.extractInsights([
+        { currentStep: 4, optimizationCycles: 1, convergenceMetrics: { coherence: 0.83 } },
+      ]);
+
+      expect(insights).toContain('Optimization Cycles: rated coherence 0.83');
+      expect(insights.some(i => /strong|moderate|weak/.test(i))).toBe(false);
+    });
+
+    it('reports a weak final rating rather than only the strong ones', () => {
+      const insights = handler.extractInsights([
+        {
+          currentStep: 5,
+          finalSynthesis: 'Converged on the incumbent design',
+          convergenceMetrics: { coherence: 0.9, novelty: 0.5, utility: 0.7 },
+        },
+      ]);
+
+      expect(insights).toContain(
+        'Convergence: rated coherence strong, novelty weak, utility moderate'
+      );
+    });
+
+    it('lets a revision supersede the step it revises', () => {
+      const insights = handler.extractInsights([
+        { currentStep: 1, neuralMappings: ['the first reading'] },
+        { currentStep: 3, computationalModels: ['a later step'] },
+        { currentStep: 1, neuralMappings: ['the corrected reading'] },
+      ]);
+
+      expect(insights).toContain('Neural Mapping: the corrected reading');
+      expect(insights).not.toContain('Neural Mapping: the first reading');
+      expect(insights).toContain('Computational Synthesis: a later step');
+      expect(insights.some(i => i.startsWith('Pattern Generation'))).toBe(false);
+    });
+
+    it('reports nothing for a step that recorded nothing', () => {
+      expect(handler.extractInsights([])).toEqual([]);
+      expect(handler.extractInsights([{ currentStep: 1, output: '   ' }])).toEqual([]);
+      expect(handler.extractInsights([{ currentStep: 3, computationalModels: [] }])).toEqual([]);
+    });
+
+    it('does not cut the output summary at an abbreviation', () => {
+      const insights = handler.extractInsights([
+        {
+          currentStep: 1,
+          output: 'Depth is 3 layers vs. 12 before. The router is what collapsed.',
+        },
+      ]);
+
+      expect(insights[0]).toContain('vs. 12 before.');
+    });
+  });
+
   describe('getPromptContext', () => {
     it('should return correct context for step 1', () => {
       const context = handler.getPromptContext(1);

@@ -2,7 +2,7 @@
  * Temporal Creativity with Path Memory Integration technique handler
  * Extends temporal thinking with deep path memory and option preservation
  */
-import { BaseTechniqueHandler } from './types.js';
+import { BaseTechniqueHandler, firstSentence } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 export class TemporalCreativityHandler extends BaseTechniqueHandler {
     steps = [
@@ -224,67 +224,106 @@ export class TemporalCreativityHandler extends BaseTechniqueHandler {
         }
         return true;
     }
+    /**
+     * Report what each step recorded, keyed on `entry.currentStep`.
+     *
+     * Every field below is validated by validateStep, so a caller that sent one
+     * was told it was accepted. The previous version dropped most of them: the
+     * whole of step 4, the three surviving branches of step 3's projection,
+     * step 2's constraints, step 5's strategy and step 6's synthesis were
+     * validated and then read by nothing. What did survive was filtered on
+     * `length > 10` / `length > 5` — a test of how long a string is, not of
+     * whether it is content — and the result was silently cut to twelve.
+     */
     extractInsights(history) {
-        const insights = [];
-        history.forEach(entry => {
-            // Extract path history insights
-            if (entry.pathHistory && Array.isArray(entry.pathHistory)) {
-                entry.pathHistory.forEach(path => {
-                    if (path.decision && path.impact) {
-                        insights.push(`Path decision: ${path.decision} → ${path.impact}`);
-                    }
-                });
-            }
-            // Extract decision patterns
-            if (entry.decisionPatterns && Array.isArray(entry.decisionPatterns)) {
-                entry.decisionPatterns.forEach(pattern => {
-                    if (pattern && pattern.length > 10) {
-                        insights.push(`Pattern: ${pattern}`);
-                    }
-                });
-            }
-            // Extract active options that were preserved
-            if (entry.activeOptions && Array.isArray(entry.activeOptions)) {
-                entry.activeOptions.forEach(option => {
-                    if (option && option.length > 5) {
-                        insights.push(`Active option: ${option}`);
-                    }
-                });
-            }
-            // Step 3 rejects blackSwanScenarios unless it is an array, then nothing
-            // read it — the one part of the projection the caller cannot derive from
-            // the other three was the part that got discarded.
-            if (Array.isArray(entry.blackSwanScenarios)) {
-                entry.blackSwanScenarios.forEach(scenario => {
-                    if (scenario && scenario.trim()) {
-                        insights.push(`Black swan: ${scenario}`);
-                    }
-                });
-            }
-            // Extract integrated lessons
-            if (entry.lessonIntegration && Array.isArray(entry.lessonIntegration)) {
-                entry.lessonIntegration.forEach(lesson => {
-                    if (lesson && lesson.length > 10) {
-                        insights.push(`Lesson: ${lesson}`);
-                    }
-                });
-            }
-            // Extract preserved options from final integration
-            if (entry.preservedOptions && Array.isArray(entry.preservedOptions)) {
-                entry.preservedOptions.forEach(option => {
-                    if (option && option.length > 5) {
-                        insights.push(`Preserved: ${option}`);
-                    }
-                });
-            }
-            // Also use base extraction for general output
-            if (entry.output) {
-                const baseInsights = super.extractInsights([{ output: entry.output }]);
-                insights.push(...baseInsights);
+        const totalSteps = this.stepsWithReflexivity.length;
+        const latestByStep = new Map();
+        history.forEach((entry, index) => {
+            // Fall back to position only when the caller sent no step number.
+            const step = entry.currentStep ?? index + 1;
+            if (step >= 1 && step <= totalSteps) {
+                latestByStep.set(step, entry);
             }
         });
-        // Remove duplicates and limit to meaningful insights
-        return [...new Set(insights)].slice(0, 12);
+        const insights = [];
+        const pushEach = (prefix, values) => {
+            if (!Array.isArray(values)) {
+                return;
+            }
+            values.forEach(value => {
+                if (typeof value === 'string' && value.trim().length > 0) {
+                    insights.push(`${prefix}: ${value.trim()}`);
+                }
+            });
+        };
+        for (let step = 1; step <= totalSteps; step++) {
+            const entry = latestByStep.get(step);
+            if (!entry) {
+                continue;
+            }
+            const stepName = this.stepsWithReflexivity[step - 1].name;
+            const output = entry.output?.trim();
+            if (output) {
+                const summary = firstSentence(output);
+                if (summary.length > 0) {
+                    insights.push(`${stepName}: ${summary}`);
+                }
+            }
+            if (step === 1) {
+                if (Array.isArray(entry.pathHistory)) {
+                    entry.pathHistory.forEach(path => {
+                        if (!path?.decision || !path.impact) {
+                            return;
+                        }
+                        const consequences = [];
+                        if (Array.isArray(path.constraintsCreated) && path.constraintsCreated.length > 0) {
+                            consequences.push(`constraints created: ${path.constraintsCreated.join(', ')}`);
+                        }
+                        if (Array.isArray(path.optionsClosed) && path.optionsClosed.length > 0) {
+                            consequences.push(`options closed: ${path.optionsClosed.join(', ')}`);
+                        }
+                        const suffix = consequences.length > 0 ? ` (${consequences.join('; ')})` : '';
+                        insights.push(`Path decision: ${path.decision} → ${path.impact}${suffix}`);
+                    });
+                }
+                pushEach('Pattern', entry.decisionPatterns);
+            }
+            if (step === 2) {
+                pushEach('Constraint', entry.currentConstraints);
+                pushEach('Active option', entry.activeOptions);
+            }
+            if (step === 3) {
+                const projections = entry.timelineProjections;
+                pushEach('Best case', projections?.bestCase);
+                pushEach('Probable case', projections?.probableCase);
+                pushEach('Worst case', projections?.worstCase);
+                pushEach('Antifragile design', projections?.antifragileDesign);
+                // The tool schema declares blackSwanScenarios both nested inside the
+                // projection and at the top level; callers send either.
+                pushEach('Black swan', projections?.blackSwanScenarios);
+                pushEach('Black swan', entry.blackSwanScenarios);
+            }
+            if (step === 4) {
+                pushEach('Delay option', entry.delayOptions);
+                pushEach('Acceleration option', entry.accelerationOptions);
+                pushEach('Parallel timeline', entry.parallelTimelines);
+            }
+            if (step === 5) {
+                pushEach('Lesson', entry.lessonIntegration);
+                if (entry.strategyEvolution?.trim()) {
+                    insights.push(`Strategy evolution: ${entry.strategyEvolution.trim()}`);
+                }
+            }
+            if (step === 6) {
+                if (entry.synthesisStrategy?.trim()) {
+                    insights.push(`Synthesis strategy: ${entry.synthesisStrategy.trim()}`);
+                }
+                pushEach('Preserved', entry.preservedOptions);
+            }
+        }
+        // Duplicates are removed — the same option preserved twice is one insight —
+        // but nothing is dropped for being the thirteenth thing the session said.
+        return [...new Set(insights)];
     }
     /**
      * Track a decision in path memory

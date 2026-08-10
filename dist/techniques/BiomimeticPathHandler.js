@@ -2,47 +2,12 @@
  * Biomimetic Path Management technique handler
  * Applies biological solutions and evolutionary strategies to innovation challenges
  */
-import { BaseTechniqueHandler } from './types.js';
+import { BaseTechniqueHandler, describeStructuredField, firstSentence, } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 export class BiomimeticPathHandler extends BaseTechniqueHandler {
-    steps = [
-        {
-            name: 'Immune Response',
-            focus: 'Threat detection and adaptive response generation',
-            emoji: '🦠',
-            description: 'Apply immune system principles to identify threats and generate diverse antibody-like solutions with memory patterns',
-        },
-        {
-            name: 'Evolutionary Variation',
-            focus: 'Mutation and selection pressure simulation',
-            emoji: '🧬',
-            description: 'Generate solution mutations and apply selection pressures to evolve optimal traits through fitness testing',
-        },
-        {
-            name: 'Ecosystem Dynamics',
-            focus: 'Symbiotic relationships and resource competition',
-            emoji: '🌿',
-            description: 'Map symbiotic relationships between components and balance resource flows for ecological stability',
-        },
-        {
-            name: 'Swarm Intelligence',
-            focus: 'Emergent collective behavior patterns',
-            emoji: '🐜',
-            description: 'Design simple rules that lead to complex emergent behaviors through collective decision-making',
-        },
-        {
-            name: 'Resilience Patterns',
-            focus: 'Redundancy and modularity application',
-            emoji: '🔄',
-            description: 'Build resilience through redundancy, modularity, and adaptive cycles for antifragile systems',
-        },
-        {
-            name: 'Natural Synthesis',
-            focus: 'Integration of biological solutions',
-            emoji: '🌱',
-            description: 'Synthesize the best biological strategies into a unified, practical solution inspired by nature',
-        },
-    ];
+    // The `steps` array that used to sit here — same six names and foci, plus a
+    // `description` nothing read — was superseded by `stepsWithReflexivity` and
+    // had no remaining reader in src/.
     stepsWithReflexivity = [
         {
             name: 'Immune Response',
@@ -312,6 +277,86 @@ export class BiomimeticPathHandler extends BaseTechniqueHandler {
             }
         }
         return true;
+    }
+    /**
+     * The first alias that actually carries content, rendered.
+     *
+     * `validateStep` accepts either name for each step, so both have to report
+     * the same thing — a session that sent `antibodies` instead of
+     * `immuneResponse` passed validation and must not then be reported as having
+     * recorded nothing. `a ?? b` is not enough: an empty array is neither null
+     * nor undefined, so it would win over a populated alias.
+     */
+    renderAlias(entry, ...names) {
+        for (const name of names) {
+            const rendered = describeStructuredField(entry[name]);
+            if (rendered.length > 0) {
+                return rendered;
+            }
+        }
+        return '';
+    }
+    /**
+     * Report what each step actually recorded, labelled by the step.
+     *
+     * Keyed on `entry.currentStep`, not on position in the array: `execute`
+     * appends a history entry for every call including revisions, so one revision
+     * shifts every later entry. Keying on the step also means a revision
+     * supersedes the entry it revises rather than reporting twice.
+     *
+     * `validateStep` rejects a step that omits its field, so a session that got
+     * this far recorded antibodies, mutations, symbioses, swarm rules, resilience
+     * patterns and a synthesis; reporting none of them was the defect this fixes.
+     */
+    extractInsights(history) {
+        const totalSteps = this.stepsWithReflexivity.length;
+        const latestByStep = new Map();
+        history.forEach((entry, index) => {
+            if (typeof entry !== 'object' || entry === null) {
+                return;
+            }
+            const entryObj = entry;
+            // Fall back to position only when the caller sent no step number.
+            const step = typeof entryObj.currentStep === 'number' ? entryObj.currentStep : index + 1;
+            if (step >= 1 && step <= totalSteps) {
+                latestByStep.set(step, entryObj);
+            }
+        });
+        // Each step's own required field, under every name validateStep accepts.
+        const fieldsByStep = {
+            1: ['immuneResponse', 'antibodies'],
+            2: ['mutations', 'selectionPressure'],
+            3: ['symbioticRelationships', 'ecosystemBalance'],
+            4: ['swarmBehavior', 'emergentPatterns'],
+            5: ['resiliencePatterns', 'redundancy'],
+            6: ['naturalSynthesis', 'integratedSolution', 'biologicalStrategies'],
+        };
+        const insights = [];
+        for (let step = 1; step <= totalSteps; step++) {
+            const entryObj = latestByStep.get(step);
+            if (!entryObj) {
+                continue;
+            }
+            const stepName = this.stepsWithReflexivity[step - 1]?.name;
+            if (!stepName) {
+                continue;
+            }
+            const output = typeof entryObj.output === 'string' ? entryObj.output.trim() : '';
+            if (output) {
+                const summary = firstSentence(output);
+                if (summary.length > 0) {
+                    insights.push(`${stepName}: ${summary}`);
+                }
+            }
+            const recorded = this.renderAlias(entryObj, ...(fieldsByStep[step] ?? []));
+            if (recorded.length > 0) {
+                insights.push(`${stepName}: ${recorded}`);
+            }
+        }
+        // No completion banner. Reaching step 6 is already visible from the step
+        // count, and a fixed "nature-inspired solution achieved" asserts a finding
+        // the session never made — it would fire on any six entries.
+        return insights;
     }
     getPromptContext(step) {
         const stepInfo = this.getStepInfo(step);

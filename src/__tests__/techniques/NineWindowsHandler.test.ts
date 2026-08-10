@@ -194,35 +194,21 @@ describe('NineWindowsHandler', () => {
   });
 
   describe('extractInsights', () => {
-    it('should extract insights from past system evolution (step 2)', () => {
+    it('should label each window with its own cell name, keeping the full first sentence', () => {
+      // Replaces the assertions for 'Historical pattern: …', 'Current reality: …'
+      // and 'Future possibility: …'. Those three labels named the middle column
+      // only, and were built with output.split('.')[0], which drops the
+      // terminating period and cuts inside abbreviations.
       const history = [
         {
           currentStep: 2,
           output:
             'Manual processes evolved into semi-automated systems. This created technical debt.',
         },
-      ];
-
-      const insights = handler.extractInsights(history);
-      expect(insights).toContain(
-        'Historical pattern: Manual processes evolved into semi-automated systems'
-      );
-    });
-
-    it('should extract insights from present system state (step 5)', () => {
-      const history = [
         {
           currentStep: 5,
           output: 'System is at 70% capacity. Performance degradation visible.',
         },
-      ];
-
-      const insights = handler.extractInsights(history);
-      expect(insights).toContain('Current reality: System is at 70% capacity');
-    });
-
-    it('should extract insights from future possibilities (step 8)', () => {
-      const history = [
         {
           currentStep: 8,
           output:
@@ -232,11 +218,52 @@ describe('NineWindowsHandler', () => {
 
       const insights = handler.extractInsights(history);
       expect(insights).toContain(
-        'Future possibility: Quantum computing could revolutionize our approach'
+        'Past System: Manual processes evolved into semi-automated systems.'
+      );
+      expect(insights).toContain('Present System: System is at 70% capacity.');
+      expect(insights).toContain(
+        'Future System: Quantum computing could revolutionize our approach.'
+      );
+
+      // The old labels are gone, and so is the truncation they were built with.
+      expect(insights.some(i => i.startsWith('Historical pattern:'))).toBe(false);
+      expect(insights.some(i => i.startsWith('Current reality:'))).toBe(false);
+      expect(insights.some(i => i.startsWith('Future possibility:'))).toBe(false);
+    });
+
+    it('should report every window, not only the middle column', () => {
+      // The six sub-system and super-system cells produced nothing before,
+      // however much was written in them.
+      const history = [
+        { currentStep: 1, output: 'Components began as three hand-rolled scripts.' },
+        { currentStep: 3, output: 'The market tolerated hour-long batch latency.' },
+        { currentStep: 4, output: 'Four services share one database connection pool.' },
+        { currentStep: 6, output: 'Customers now expect sub-second responses.' },
+        { currentStep: 7, output: 'The pool becomes the first component to be replaced.' },
+        { currentStep: 9, output: 'Regulation will constrain where the data may live.' },
+      ];
+
+      const insights = handler.extractInsights(history);
+      expect(insights).toContain('Past Sub-system: Components began as three hand-rolled scripts.');
+      expect(insights).toContain(
+        'Past Super-system: The market tolerated hour-long batch latency.'
+      );
+      expect(insights).toContain(
+        'Present Sub-system: Four services share one database connection pool.'
+      );
+      expect(insights).toContain(
+        'Present Super-system: Customers now expect sub-second responses.'
+      );
+      expect(insights).toContain(
+        'Future Sub-system: The pool becomes the first component to be replaced.'
+      );
+      expect(insights).toContain(
+        'Future Super-system: Regulation will constrain where the data may live.'
       );
     });
 
-    it('should extract interdependencies when found', () => {
+    it('should report every interdependency, labelled by its window', () => {
+      // Replaces the assertion for the bare 'Key dependency: <first element>'.
       const history = [
         {
           currentStep: 5,
@@ -245,10 +272,47 @@ describe('NineWindowsHandler', () => {
       ];
 
       const insights = handler.extractInsights(history);
-      expect(insights).toContain('Key dependency: System A depends on System B');
+      expect(insights).toContain('Present System: Key dependency: System A depends on System B');
+      expect(insights).toContain('Present System: Key dependency: External API dependency');
+
+      // The second dependency is no longer discarded, and the label now says
+      // which window the dependency was found in.
+      expect(insights).not.toContain('Key dependency: System A depends on System B');
     });
 
-    it('should recognize completed Nine Windows session', () => {
+    it('should report the nine windows matrix cells the caller supplied', () => {
+      const history = [
+        {
+          currentStep: 9,
+          nineWindowsMatrix: [
+            {
+              timeFrame: 'past' as const,
+              systemLevel: 'sub-system' as const,
+              content: 'Single-threaded parser',
+            },
+            {
+              timeFrame: 'future' as const,
+              systemLevel: 'system' as const,
+              content: 'Event-driven pipeline',
+              pathDependencies: ['Schema registry must land first'],
+              irreversible: true,
+            },
+          ],
+        },
+      ];
+
+      const insights = handler.extractInsights(history);
+      expect(insights).toContain('Matrix past sub-system: Single-threaded parser');
+      expect(insights).toContain(
+        'Matrix future system: Event-driven pipeline (path dependencies: Schema registry must land first; irreversible)'
+      );
+    });
+
+    it('should report what the last steps recorded, never a canned completion banner', () => {
+      // Replaces the assertion that the fixed string 'Nine Windows completed -
+      // systemic understanding achieved across time and scale' was appended
+      // whenever step 9 ran with nextStepNeeded false. It asserted a finding the
+      // session never made; reaching step 9 is visible from the step count.
       const history = [
         {
           currentStep: 8,
@@ -263,9 +327,11 @@ describe('NineWindowsHandler', () => {
       ];
 
       const insights = handler.extractInsights(history);
-      expect(insights).toContain(
-        'Nine Windows completed - systemic understanding achieved across time and scale'
-      );
+      expect(insights).toEqual([
+        'Future System: Some analysis',
+        'Future Super-system: Final cell analysis',
+      ]);
+      expect(insights.some(i => i.includes('Nine Windows completed'))).toBe(false);
     });
 
     it('should handle empty history', () => {
@@ -273,20 +339,25 @@ describe('NineWindowsHandler', () => {
       expect(insights).toEqual([]);
     });
 
-    it('should handle history without relevant steps', () => {
-      const history = [
-        {
-          currentStep: 1,
-          output: 'Component analysis',
-        },
-        {
-          currentStep: 3,
-          output: 'Environmental factors',
-        },
-      ];
+    it('should report nothing for a step that recorded nothing', () => {
+      const history = [{ currentStep: 1 }, { currentStep: 3, output: '   ' }];
 
       const insights = handler.extractInsights(history);
       expect(insights).toHaveLength(0);
+    });
+
+    it('should key on currentStep so a revision supersedes what it revises', () => {
+      const history = [
+        { currentStep: 1, output: 'The first reading of the component history.' },
+        { currentStep: 2, output: 'System evolution as first told.' },
+        { currentStep: 1, output: 'The corrected reading of the component history.' },
+      ];
+
+      const insights = handler.extractInsights(history);
+      expect(insights).toEqual([
+        'Past Sub-system: The corrected reading of the component history.',
+        'Past System: System evolution as first told.',
+      ]);
     });
   });
 });

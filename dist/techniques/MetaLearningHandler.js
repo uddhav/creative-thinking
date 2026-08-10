@@ -2,7 +2,7 @@
  * Meta-Learning from Path Integration technique handler with reflexivity
  * Improves integration capabilities by learning from path patterns across all techniques
  */
-import { BaseTechniqueHandler } from './types.js';
+import { BaseTechniqueHandler, describeStructuredField, firstSentence, } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 export class MetaLearningHandler extends BaseTechniqueHandler {
     steps = [
@@ -170,6 +170,83 @@ export class MetaLearningHandler extends BaseTechniqueHandler {
             }
         }
         return true;
+    }
+    /**
+     * The first alias that actually carries content, rendered.
+     *
+     * `validateStep` accepts either name of each pair, so both have to report the
+     * same thing — a session that sent `patterns` instead of `patternRecognition`
+     * passed validation and must not then be reported as having recorded nothing.
+     * `a ?? b` is not enough: an empty array is neither null nor undefined, so it
+     * would win over a populated alias and silently swallow the content.
+     */
+    renderAlias(entry, ...names) {
+        for (const name of names) {
+            const rendered = describeStructuredField(entry[name]);
+            if (rendered.length > 0) {
+                return rendered;
+            }
+        }
+        return '';
+    }
+    /**
+     * Report what each step actually recorded, labelled by the step.
+     *
+     * Keyed on `entry.currentStep`, not on position in the array: `execute`
+     * appends a history entry for every call including revisions, so one revision
+     * shifts every later entry. Keying on the step also means a revision
+     * supersedes the entry it revises rather than reporting twice.
+     *
+     * `validateStep` rejects a step that omits its field, so a session that got
+     * this far has all four; reporting none of them was the defect this fixes.
+     */
+    extractInsights(history) {
+        const totalSteps = this.steps.length;
+        const latestByStep = new Map();
+        history.forEach((entry, index) => {
+            if (typeof entry !== 'object' || entry === null) {
+                return;
+            }
+            const entryObj = entry;
+            // Fall back to position only when the caller sent no step number.
+            const step = typeof entryObj.currentStep === 'number' ? entryObj.currentStep : index + 1;
+            if (step >= 1 && step <= totalSteps) {
+                latestByStep.set(step, entryObj);
+            }
+        });
+        // Each step's own required field, under either accepted name.
+        const fieldsByStep = {
+            1: ['patternRecognition', 'patterns'],
+            2: ['learningHistory', 'accumulatedLearning'],
+            3: ['strategyAdaptations', 'strategyEvolution'],
+            4: ['metaSynthesis', 'synthesisStrategy'],
+        };
+        const insights = [];
+        for (let step = 1; step <= totalSteps; step++) {
+            const entryObj = latestByStep.get(step);
+            if (!entryObj) {
+                continue;
+            }
+            const stepName = this.steps[step - 1]?.name;
+            if (!stepName) {
+                continue;
+            }
+            const output = typeof entryObj.output === 'string' ? entryObj.output.trim() : '';
+            if (output) {
+                const summary = firstSentence(output);
+                if (summary.length > 0) {
+                    insights.push(`${stepName}: ${summary}`);
+                }
+            }
+            const recorded = this.renderAlias(entryObj, ...(fieldsByStep[step] ?? []));
+            if (recorded.length > 0) {
+                insights.push(`${stepName}: ${recorded}`);
+            }
+        }
+        // No completion banner. Reaching step 4 is already visible from the step
+        // count, and a fixed "self-improving framework established" asserts a
+        // finding the session never made — it would fire on any four entries.
+        return insights;
     }
     getPromptContext(step) {
         const stepInfo = this.getStepInfo(step);

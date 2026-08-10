@@ -200,6 +200,112 @@ describe('ParadoxicalProblemHandler', () => {
     });
   });
 
+  describe('extractInsights', () => {
+    it('reports every required field under its own step name', () => {
+      const insights = handler.extractInsights([
+        {
+          currentStep: 1,
+          output: 'Speed and auditability pull opposite ways.',
+          paradox: 'Every audit hook costs the latency budget it protects',
+        },
+        {
+          currentStep: 2,
+          solutionA: 'Synchronous audit on the write path',
+          solutionB: 'Asynchronous audit from the change log',
+        },
+        { currentStep: 3, synthesis: 'Route by tenant risk tier at admission' },
+        {
+          currentStep: 4,
+          validation: 'Held across three replay histories',
+          pathContexts: ['cold start', 'backfill', 'steady state'],
+          resolutionVerified: true,
+        },
+      ]);
+
+      expect(insights).toContain(
+        'Paradox Identification: Every audit hook costs the latency budget it protects'
+      );
+      expect(insights).toContain(
+        'Parallel Path Development: path A — Synchronous audit on the write path'
+      );
+      expect(insights).toContain(
+        'Parallel Path Development: path B — Asynchronous audit from the change log'
+      );
+      expect(insights).toContain('Transcendent Synthesis: Route by tenant risk tier at admission');
+      expect(insights).toContain('Non-Ergodic Validation: Held across three replay histories');
+      expect(insights).toContain(
+        'Non-Ergodic Validation: tested against cold start, backfill, steady state'
+      );
+      expect(insights).toContain('Non-Ergodic Validation: resolution verified');
+      // No banner: reaching step 4 is not itself a finding.
+      expect(insights.some(i => /paradox transcended|successfully resolved/i.test(i))).toBe(false);
+    });
+
+    it('reports a failed validation instead of dropping it', () => {
+      const insights = handler.extractInsights([
+        { currentStep: 4, validation: 'Broke under backfill', resolutionVerified: false },
+      ]);
+
+      expect(insights).toContain(
+        'Non-Ergodic Validation: resolution NOT verified — the paradox is hidden, not resolved'
+      );
+      expect(insights).not.toContain('Non-Ergodic Validation: resolution verified');
+    });
+
+    it('reports the alias fields identically to the primary names', () => {
+      const primary = handler.extractInsights([
+        { currentStep: 1, paradox: 'a' },
+        { currentStep: 3, synthesis: 'c' },
+        { currentStep: 4, validation: 'd' },
+      ]);
+      const aliases = handler.extractInsights([
+        { currentStep: 1, contradictions: ['a'] },
+        { currentStep: 3, metaPath: 'c' },
+        { currentStep: 4, finalSynthesis: 'd' },
+      ]);
+
+      expect(aliases).toEqual(primary);
+      expect(aliases).toContain('Paradox Identification: a');
+      expect(aliases).toContain('Non-Ergodic Validation: d');
+    });
+
+    it('reports parallelPaths when the caller sent the array form', () => {
+      expect(
+        handler.extractInsights([{ currentStep: 2, parallelPaths: ['fast path', 'safe path'] }])
+      ).toEqual(['Parallel Path Development: fast path, safe path']);
+    });
+
+    it('lets a revision supersede the step it revises', () => {
+      const insights = handler.extractInsights([
+        { currentStep: 1, paradox: 'the first reading' },
+        { currentStep: 3, synthesis: 'a later step' },
+        { currentStep: 1, paradox: 'the corrected reading' },
+      ]);
+
+      expect(insights).toContain('Paradox Identification: the corrected reading');
+      expect(insights).not.toContain('Paradox Identification: the first reading');
+      expect(insights).toContain('Transcendent Synthesis: a later step');
+      expect(insights.some(i => i.startsWith('Parallel Path Development'))).toBe(false);
+    });
+
+    it('reports nothing for a step that recorded nothing', () => {
+      expect(handler.extractInsights([])).toEqual([]);
+      expect(handler.extractInsights([{ currentStep: 1, output: '   ' }])).toEqual([]);
+      expect(handler.extractInsights([{ currentStep: 2, parallelPaths: [] }])).toEqual([]);
+    });
+
+    it('does not cut the output summary at an abbreviation', () => {
+      const insights = handler.extractInsights([
+        {
+          currentStep: 1,
+          output: 'Audit adds 12ms vs. 2ms budget. That gap is the whole paradox.',
+        },
+      ]);
+
+      expect(insights[0]).toContain('vs. 2ms budget.');
+    });
+  });
+
   describe('getPathDependencyPrompt', () => {
     it('should provide path dependency prompts for each step', () => {
       const path1 = handler.getPathDependencyPrompt(1);

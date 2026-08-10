@@ -13,7 +13,13 @@
  * explicit computational models for enhanced creative problem solving.
  */
 
-import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
+import {
+  BaseTechniqueHandler,
+  describeStructuredField,
+  firstSentence,
+  type TechniqueInfo,
+  type StepInfo,
+} from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 
 /**
@@ -317,6 +323,152 @@ export class NeuroComputationalHandler extends BaseTechniqueHandler {
     }
 
     return true;
+  }
+
+  /**
+   * A convergence rating as the caller was asked to give it.
+   *
+   * `getStepGuidance` and the step-4/5 validation errors offer exactly three
+   * ratings — strong, moderate, weak — so a value that is one of them is
+   * reported by its name, which is what the caller chose. Anything else is
+   * reported as the bare number: the handler defines no scale between the
+   * tiers, so bucketing 0.83 into "moderate" would invent a judgement the
+   * session never made, which is the same fault the named tiers exist to
+   * prevent.
+   */
+  private renderConvergenceMetrics(value: unknown): string {
+    if (typeof value !== 'object' || value === null) {
+      return describeStructuredField(value);
+    }
+    const names = new Map<number, string>([
+      [CONVERGENCE_RATING.STRONG, 'strong'],
+      [CONVERGENCE_RATING.MODERATE, 'moderate'],
+      [CONVERGENCE_RATING.WEAK, 'weak'],
+    ]);
+    return Object.entries(value)
+      .map(([metric, rating]) => {
+        if (typeof rating === 'number') {
+          return `${metric} ${names.get(rating) ?? String(rating)}`;
+        }
+        const rendered = describeStructuredField(rating);
+        return rendered.length > 0 ? `${metric} ${rendered}` : '';
+      })
+      .filter(part => part.length > 0)
+      .join(', ');
+  }
+
+  /**
+   * Report what each step actually recorded, labelled by the step.
+   *
+   * Keyed on `entry.currentStep`, not on position in the array: `execute`
+   * appends a history entry for every call including revisions, so one revision
+   * shifts every later entry. Keying on the step also means a revision
+   * supersedes the entry it revises rather than reporting twice.
+   *
+   * `validateStep` rejects a step that omits its field, so a session that got
+   * this far named its mappings, its patterns, which of them reinforce and
+   * which cancel, its models and its ratings; reporting none of them was the
+   * defect this fixes.
+   */
+  extractInsights(history: unknown[]): string[] {
+    const totalSteps = this.steps.length;
+    const latestByStep = new Map<number, Record<string, unknown>>();
+
+    history.forEach((entry, index) => {
+      if (typeof entry !== 'object' || entry === null) {
+        return;
+      }
+      const entryObj = entry as Record<string, unknown>;
+      // Fall back to position only when the caller sent no step number.
+      const step = typeof entryObj.currentStep === 'number' ? entryObj.currentStep : index + 1;
+      if (step >= 1 && step <= totalSteps) {
+        latestByStep.set(step, entryObj);
+      }
+    });
+
+    const insights: string[] = [];
+
+    for (let step = 1; step <= totalSteps; step++) {
+      const entryObj = latestByStep.get(step);
+      if (!entryObj) {
+        continue;
+      }
+      const stepName = this.steps[step - 1]?.name;
+      if (!stepName) {
+        continue;
+      }
+
+      const output = typeof entryObj.output === 'string' ? entryObj.output.trim() : '';
+      if (output) {
+        const summary = firstSentence(output);
+        if (summary.length > 0) {
+          insights.push(`${stepName}: ${summary}`);
+        }
+      }
+
+      if (step === 1) {
+        const mappings = describeStructuredField(entryObj.neuralMappings);
+        if (mappings.length > 0) {
+          insights.push(`${stepName}: ${mappings}`);
+        }
+      }
+
+      if (step === 2) {
+        const patterns = describeStructuredField(entryObj.patternGenerations);
+        if (patterns.length > 0) {
+          insights.push(`${stepName}: ${patterns}`);
+        }
+        // interferenceAnalysis has known keys, so name what each one means
+        // rather than emitting "constructive: a, b; destructive: c".
+        const analysis = entryObj.interferenceAnalysis;
+        if (typeof analysis === 'object' && analysis !== null) {
+          const { constructive, destructive } = analysis as Record<string, unknown>;
+          const reinforcing = describeStructuredField(constructive);
+          const cancelling = describeStructuredField(destructive);
+          if (reinforcing.length > 0) {
+            insights.push(`${stepName}: patterns that reinforce — ${reinforcing}`);
+          }
+          if (cancelling.length > 0) {
+            insights.push(`${stepName}: patterns that cancel — ${cancelling}`);
+          }
+        }
+      }
+
+      if (step === 3) {
+        const models = describeStructuredField(entryObj.computationalModels);
+        if (models.length > 0) {
+          insights.push(`${stepName}: ${models}`);
+        }
+      }
+
+      if (step === 4 && typeof entryObj.optimizationCycles === 'number') {
+        insights.push(`${stepName}: ${entryObj.optimizationCycles} optimization cycles run`);
+      }
+
+      if (step === 5) {
+        const synthesis = describeStructuredField(entryObj.finalSynthesis);
+        if (synthesis.length > 0) {
+          insights.push(`${stepName}: ${synthesis}`);
+        }
+      }
+
+      // Steps 4 and 5 both require convergenceMetrics; report it on whichever
+      // one carried it rather than only at the end, so a step-4 rating that a
+      // later step revised downward is still visible.
+      if (step === 4 || step === 5) {
+        const metrics = this.renderConvergenceMetrics(entryObj.convergenceMetrics);
+        if (metrics.length > 0) {
+          insights.push(`${stepName}: rated ${metrics}`);
+        }
+      }
+    }
+
+    // No completion banner. Reaching step 5 is already visible from the step
+    // count, and a fixed "optimal solution converged" asserts a finding the
+    // session never made — the convergence ratings above are the finding, and
+    // they can say weak.
+
+    return insights;
   }
 
   getPromptContext(step: number): Record<string, unknown> {

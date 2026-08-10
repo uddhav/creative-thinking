@@ -2,41 +2,12 @@
  * First Principles Thinking technique handler
  * Break down to fundamental truths and rebuild from the ground up
  */
-import { BaseTechniqueHandler } from './types.js';
+import { BaseTechniqueHandler, describeStructuredField, firstSentence, } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 export class FirstPrinciplesHandler extends BaseTechniqueHandler {
-    steps = [
-        {
-            name: 'Deconstruction',
-            focus: 'Break down into fundamental components',
-            emoji: '🔨',
-            description: 'Systematically break down the problem into its most basic components and identify all constituent parts',
-        },
-        {
-            name: 'Foundation Identification',
-            focus: 'Identify fundamental truths',
-            emoji: '🏛️',
-            description: 'Identify the fundamental truths that cannot be reduced further - the bedrock principles that must be true',
-        },
-        {
-            name: 'Assumption Challenging',
-            focus: 'Question and eliminate assumptions',
-            emoji: '❓',
-            description: 'Challenge every assumption and convention, keeping only what can be proven from fundamental truths',
-        },
-        {
-            name: 'Reconstruction',
-            focus: 'Build up from first principles',
-            emoji: '🏗️',
-            description: 'Reconstruct the solution from the ground up using only fundamental truths and logical reasoning',
-        },
-        {
-            name: 'Solution Synthesis',
-            focus: 'Create novel solution',
-            emoji: '💡',
-            description: 'Synthesize a novel solution that emerges naturally from first principles, often radically different from conventional approaches',
-        },
-    ];
+    // The `steps` array that used to sit here — same five names and foci, plus a
+    // `description` nothing read — was superseded by `stepsWithReflexivity` and
+    // had no remaining reader in src/.
     stepsWithReflexivity = [
         {
             name: 'Deconstruction',
@@ -222,6 +193,87 @@ export class FirstPrinciplesHandler extends BaseTechniqueHandler {
             }
         }
         return true;
+    }
+    /**
+     * The first alias that actually carries content, rendered.
+     *
+     * `validateStep` accepts any of the names listed for a step, so all of them
+     * have to report the same thing — a session that sent `foundations` instead
+     * of `fundamentalTruths` passed validation and must not then be reported as
+     * having recorded nothing. `a ?? b` is not enough: an empty array is neither
+     * null nor undefined, so it would win over a populated alias.
+     */
+    renderAlias(entry, ...names) {
+        for (const name of names) {
+            const rendered = describeStructuredField(entry[name]);
+            if (rendered.length > 0) {
+                return rendered;
+            }
+        }
+        return '';
+    }
+    /**
+     * Report what each step actually recorded, labelled by the step.
+     *
+     * Keyed on `entry.currentStep`, not on position in the array: `execute`
+     * appends a history entry for every call including revisions, so one revision
+     * shifts every later entry. Keying on the step also means a revision
+     * supersedes the entry it revises rather than reporting twice.
+     *
+     * `validateStep` rejects a step that omits its field, so a session that got
+     * this far named its components, its fundamental truths, the assumptions it
+     * challenged and what it rebuilt; reporting none of them was the defect this
+     * fixes.
+     */
+    extractInsights(history) {
+        const totalSteps = this.stepsWithReflexivity.length;
+        const latestByStep = new Map();
+        history.forEach((entry, index) => {
+            if (typeof entry !== 'object' || entry === null) {
+                return;
+            }
+            const entryObj = entry;
+            // Fall back to position only when the caller sent no step number.
+            const step = typeof entryObj.currentStep === 'number' ? entryObj.currentStep : index + 1;
+            if (step >= 1 && step <= totalSteps) {
+                latestByStep.set(step, entryObj);
+            }
+        });
+        // Each step's own required field, under every name validateStep accepts.
+        const fieldsByStep = {
+            1: ['components', 'breakdown'],
+            2: ['fundamentalTruths', 'foundations', 'principles'],
+            3: ['assumptions', 'challenges'],
+            4: ['reconstruction', 'rebuilding'],
+            5: ['solution', 'synthesis'],
+        };
+        const insights = [];
+        for (let step = 1; step <= totalSteps; step++) {
+            const entryObj = latestByStep.get(step);
+            if (!entryObj) {
+                continue;
+            }
+            const stepName = this.stepsWithReflexivity[step - 1]?.name;
+            if (!stepName) {
+                continue;
+            }
+            const output = typeof entryObj.output === 'string' ? entryObj.output.trim() : '';
+            if (output) {
+                const summary = firstSentence(output);
+                if (summary.length > 0) {
+                    insights.push(`${stepName}: ${summary}`);
+                }
+            }
+            const recorded = this.renderAlias(entryObj, ...(fieldsByStep[step] ?? []));
+            if (recorded.length > 0) {
+                insights.push(`${stepName}: ${recorded}`);
+            }
+        }
+        // No completion banner. Reaching step 5 is already visible from the step
+        // count, and a fixed "breakthrough solution reached from first principles"
+        // asserts a finding the session never made — it would fire on any five
+        // entries, including five that reproduced the conventional answer.
+        return insights;
     }
     getPromptContext(step) {
         const stepInfo = this.getStepInfo(step);

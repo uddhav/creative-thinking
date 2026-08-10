@@ -1,7 +1,7 @@
 /**
  * Design Thinking technique handler
  */
-import { BaseTechniqueHandler } from './types.js';
+import { BaseTechniqueHandler, firstSentence } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 export class DesignThinkingHandler extends BaseTechniqueHandler {
     // Step metadata lives in `stepsWithReflexivity`; per-stage critical lenses are
@@ -125,43 +125,79 @@ export class DesignThinkingHandler extends BaseTechniqueHandler {
                 return `Complete the Design Thinking process for: "${problem}"`;
         }
     }
+    /**
+     * Report what each stage recorded, keyed on `entry.currentStep`.
+     *
+     * The whole extraction used to hang off `entry.designStage`, which nothing
+     * requires and the schema does not mark required — a session that ran all
+     * five stages without naming them reported nothing at all. `currentStep` is
+     * always present, so it decides the stage and `designStage` is treated as the
+     * confirmation it is: used only when the caller sent no step number.
+     */
     extractInsights(history) {
-        const insights = [];
-        history.forEach(entry => {
-            switch (entry.designStage) {
-                case 'empathize':
-                    if (entry.empathyInsights && entry.empathyInsights.length > 0) {
-                        insights.push(`User need: ${entry.empathyInsights[0]}`);
-                    }
-                    break;
-                case 'define':
-                    if (entry.problemStatement) {
-                        insights.push(`Problem defined: ${entry.problemStatement}`);
-                    }
-                    break;
-                case 'ideate':
-                    if (entry.ideaList && entry.ideaList.length > 0) {
-                        insights.push(`${entry.ideaList.length} ideas generated`);
-                    }
-                    if (entry.failureModesPredicted && entry.failureModesPredicted.length > 0) {
-                        insights.push(`Risk identified: ${entry.failureModesPredicted[0]}`);
-                    }
-                    break;
-                case 'prototype':
-                    if (entry.prototypeDescription) {
-                        insights.push(`Prototype: ${entry.prototypeDescription.slice(0, 100)}...`);
-                    }
-                    break;
-                case 'test':
-                    if (entry.userFeedback && entry.userFeedback.length > 0) {
-                        insights.push(`User feedback: ${entry.userFeedback[0]}`);
-                    }
-                    if (entry.failureInsights && entry.failureInsights.length > 0) {
-                        insights.push(`Failure insight: ${entry.failureInsights[0]}`);
-                    }
-                    break;
+        const totalSteps = this.stepsWithReflexivity.length;
+        const latestByStep = new Map();
+        history.forEach((entry, index) => {
+            const stageStep = entry.designStage
+                ? this.stageOrder.indexOf(entry.designStage) + 1
+                : 0;
+            const step = entry.currentStep ?? (stageStep > 0 ? stageStep : index + 1);
+            if (step >= 1 && step <= totalSteps) {
+                latestByStep.set(step, entry);
             }
         });
+        const insights = [];
+        const pushEach = (prefix, values) => {
+            if (!Array.isArray(values)) {
+                return;
+            }
+            values.forEach(value => {
+                if (typeof value === 'string' && value.trim().length > 0) {
+                    insights.push(`${prefix}: ${value.trim()}`);
+                }
+            });
+        };
+        for (let step = 1; step <= totalSteps; step++) {
+            const entry = latestByStep.get(step);
+            if (!entry) {
+                continue;
+            }
+            const stepName = this.stepsWithReflexivity[step - 1].name;
+            // `entry.output` was declared on the parameter and read by nothing.
+            const output = entry.output?.trim();
+            if (output) {
+                const summary = firstSentence(output);
+                if (summary.length > 0) {
+                    insights.push(`${stepName}: ${summary}`);
+                }
+            }
+            switch (step) {
+                case 1:
+                    pushEach('User need', entry.empathyInsights);
+                    break;
+                case 2:
+                    if (entry.problemStatement?.trim()) {
+                        insights.push(`Problem defined: ${entry.problemStatement.trim()}`);
+                    }
+                    break;
+                case 3:
+                    // The ideas themselves, not a count of them.
+                    pushEach('Idea', entry.ideaList);
+                    pushEach('Risk identified', entry.failureModesPredicted);
+                    break;
+                case 4:
+                    if (entry.prototypeDescription?.trim()) {
+                        insights.push(`Prototype: ${entry.prototypeDescription.trim()}`);
+                    }
+                    // Declared, whitelisted by ObjectFieldValidator, and read by nothing.
+                    pushEach('Stress test', entry.stressTestResults);
+                    break;
+                case 5:
+                    pushEach('User feedback', entry.userFeedback);
+                    pushEach('Failure insight', entry.failureInsights);
+                    break;
+            }
+        }
         return insights;
     }
     getStage(step) {

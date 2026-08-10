@@ -3,6 +3,7 @@
  */
 import { BaseTechniqueHandler, type TechniqueInfo } from './types.js';
 export declare class NeuralStateHandler extends BaseTechniqueHandler {
+    private readonly steps;
     getTechniqueInfo(): TechniqueInfo;
     getStepInfo(step: number): {
         name: string;

@@ -3,7 +3,7 @@
  * Maintains multiple contradictory solution states simultaneously until optimal collapse
  */
 
-import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
+import { BaseTechniqueHandler, firstSentence, type TechniqueInfo, type StepInfo } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 
 export class QuantumSuperpositionHandler extends BaseTechniqueHandler {
@@ -151,38 +151,112 @@ export class QuantumSuperpositionHandler extends BaseTechniqueHandler {
     return true;
   }
 
+  /**
+   * Report what each step recorded, keyed on `entry.currentStep`.
+   *
+   * Step 2 is the step this technique exists for — the coupling question no
+   * other technique asks — and all three of its fields were validated and then
+   * read by nothing, as were the measurement criteria and the chosen state.
+   * What survived was cut to ten without saying so.
+   */
   extractInsights(
-    history: Array<{ output?: string; solutionStates?: string[]; preservedInsights?: string[] }>
+    history: Array<{
+      currentStep?: number;
+      output?: string;
+      solutionStates?: string[];
+      interferencePatterns?: {
+        constructive?: string[];
+        destructive?: string[];
+        hybrid?: string[];
+      };
+      entanglements?: Array<{ states: string[]; dependency: string }>;
+      amplitudes?: Record<string, number>;
+      measurementCriteria?: string[];
+      chosenState?: string;
+      preservedInsights?: string[];
+    }>
   ): string[] {
-    const insights: string[] = [];
+    const totalSteps = this.steps.length;
+    const latestByStep = new Map<number, (typeof history)[number]>();
 
-    history.forEach(entry => {
-      // Extract solution states from step 1
-      if (entry.solutionStates && Array.isArray(entry.solutionStates)) {
-        entry.solutionStates.forEach(state => {
-          if (state && state.length > 0) {
-            insights.push(`Solution state: ${state}`);
-          }
-        });
-      }
-
-      // Extract preserved insights from the collapse step
-      if (entry.preservedInsights && Array.isArray(entry.preservedInsights)) {
-        entry.preservedInsights.forEach(insight => {
-          if (insight && insight.length > 0) {
-            insights.push(`Preserved: ${insight}`);
-          }
-        });
-      }
-
-      // Also use base extraction
-      if (entry.output) {
-        const baseInsights = super.extractInsights([{ output: entry.output }]);
-        insights.push(...baseInsights);
+    history.forEach((entry, index) => {
+      const step = entry.currentStep ?? index + 1;
+      if (step >= 1 && step <= totalSteps) {
+        latestByStep.set(step, entry);
       }
     });
 
-    // Remove duplicates and limit to meaningful insights
-    return [...new Set(insights)].slice(0, 10);
+    const insights: string[] = [];
+    const pushEach = (prefix: string, values: string[] | undefined): void => {
+      if (!Array.isArray(values)) {
+        return;
+      }
+      values.forEach(value => {
+        if (typeof value === 'string' && value.trim().length > 0) {
+          insights.push(`${prefix}: ${value.trim()}`);
+        }
+      });
+    };
+
+    for (let step = 1; step <= totalSteps; step++) {
+      const entry = latestByStep.get(step);
+      if (!entry) {
+        continue;
+      }
+      const stepName = this.steps[step - 1].name;
+
+      const output = entry.output?.trim();
+      if (output) {
+        const summary = firstSentence(output);
+        if (summary.length > 0) {
+          insights.push(`${stepName}: ${summary}`);
+        }
+      }
+
+      if (step === 1) {
+        pushEach('Solution state', entry.solutionStates);
+      }
+
+      if (step === 2) {
+        pushEach('Constructive interference', entry.interferencePatterns?.constructive);
+        pushEach('Destructive interference', entry.interferencePatterns?.destructive);
+        pushEach('Hybrid possibility', entry.interferencePatterns?.hybrid);
+
+        if (Array.isArray(entry.entanglements)) {
+          entry.entanglements.forEach(entanglement => {
+            const states = Array.isArray(entanglement?.states) ? entanglement.states : [];
+            if (states.length === 0 || !entanglement?.dependency) {
+              return;
+            }
+            insights.push(`Entangled: ${states.join(' ↔ ')} — ${entanglement.dependency}`);
+          });
+        }
+
+        const amplitudes = Object.entries(entry.amplitudes ?? {});
+        if (amplitudes.length > 0) {
+          const ranked = [...amplitudes].sort(([, a], [, b]) => b - a);
+          insights.push(
+            `${stepName}: Amplitudes, strongest first — ${ranked
+              .map(([state, amplitude]) => `${state} ${amplitude}`)
+              .join(', ')}`
+          );
+          insights.push(`Gaining ground: ${ranked[0][0]} (${ranked[0][1]})`);
+        }
+      }
+
+      if (step === 3) {
+        pushEach('Measurement criterion', entry.measurementCriteria);
+      }
+
+      if (step === 4) {
+        if (entry.chosenState?.trim()) {
+          insights.push(`Collapsed to: ${entry.chosenState.trim()}`);
+        }
+        pushEach('Preserved', entry.preservedInsights);
+      }
+    }
+
+    // Duplicates removed; nothing dropped for being the eleventh thing said.
+    return [...new Set(insights)];
   }
 }

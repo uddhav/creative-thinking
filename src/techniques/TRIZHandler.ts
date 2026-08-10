@@ -2,7 +2,7 @@
  * TRIZ technique handler
  */
 
-import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
+import { BaseTechniqueHandler, firstSentence, type TechniqueInfo, type StepInfo } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 
 export class TRIZHandler extends BaseTechniqueHandler {
@@ -120,32 +120,81 @@ export class TRIZHandler extends BaseTechniqueHandler {
     }
   }
 
+  /**
+   * Report what each step recorded, keyed on `entry.currentStep`.
+   *
+   * Step 2 — Remove Compromise — had no branch at all, so `viaNegativaRemovals`
+   * was declared, whitelisted by ObjectFieldValidator and reported nowhere;
+   * only the first inventive principle of however many were applied survived;
+   * and `entry.output` was read for no step.
+   */
   extractInsights(
     history: Array<{
       currentStep?: number;
       contradiction?: string;
+      viaNegativaRemovals?: string[];
       inventivePrinciples?: string[];
       minimalSolution?: string;
       output?: string;
     }>
   ): string[] {
-    const insights: string[] = [];
+    const totalSteps = this.getTechniqueInfo().totalSteps;
+    const latestByStep = new Map<number, (typeof history)[number]>();
 
-    history.forEach(entry => {
-      if (entry.currentStep === 1 && entry.contradiction) {
-        insights.push(`Contradiction identified: ${entry.contradiction}`);
-      }
-      if (
-        entry.currentStep === 3 &&
-        entry.inventivePrinciples &&
-        entry.inventivePrinciples.length > 0
-      ) {
-        insights.push(`Principle applied: ${entry.inventivePrinciples[0]}`);
-      }
-      if (entry.currentStep === 4 && entry.minimalSolution) {
-        insights.push(`Minimal solution: ${entry.minimalSolution}`);
+    history.forEach((entry, index) => {
+      // Fall back to position only when the caller sent no step number.
+      const step = entry.currentStep ?? index + 1;
+      if (step >= 1 && step <= totalSteps) {
+        latestByStep.set(step, entry);
       }
     });
+
+    const insights: string[] = [];
+    const pushEach = (prefix: string, values: string[] | undefined): void => {
+      if (!Array.isArray(values)) {
+        return;
+      }
+      values.forEach(value => {
+        if (typeof value === 'string' && value.trim().length > 0) {
+          insights.push(`${prefix}: ${value.trim()}`);
+        }
+      });
+    };
+
+    for (let step = 1; step <= totalSteps; step++) {
+      const entry = latestByStep.get(step);
+      if (!entry) {
+        continue;
+      }
+      const stepName = this.getStepInfo(step).name;
+
+      const output = entry.output?.trim();
+      if (output) {
+        const summary = firstSentence(output);
+        if (summary.length > 0) {
+          insights.push(`${stepName}: ${summary}`);
+        }
+      }
+
+      switch (step) {
+        case 1:
+          if (entry.contradiction?.trim()) {
+            insights.push(`Contradiction identified: ${entry.contradiction.trim()}`);
+          }
+          break;
+        case 2:
+          pushEach('Removed', entry.viaNegativaRemovals);
+          break;
+        case 3:
+          pushEach('Principle applied', entry.inventivePrinciples);
+          break;
+        case 4:
+          if (entry.minimalSolution?.trim()) {
+            insights.push(`Minimal solution: ${entry.minimalSolution.trim()}`);
+          }
+          break;
+      }
+    }
 
     return insights;
   }
