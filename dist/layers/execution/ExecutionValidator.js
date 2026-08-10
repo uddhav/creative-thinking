@@ -2,6 +2,8 @@
  * ExecutionValidator - Handles validation logic for thinking step execution
  * Extracted from executeThinkingStep to improve maintainability
  */
+import { ErgodicityManager } from '../../ergodicity/index.js';
+import { wrapErgodicityManager } from '../../utils/PerformanceIntegration.js';
 import { ErrorContextBuilder } from '../../core/ErrorContextBuilder.js';
 import { TelemetryCollector } from '../../telemetry/TelemetryCollector.js';
 import { ErrorFactory } from '../../errors/enhanced-errors.js';
@@ -419,7 +421,14 @@ export class ExecutionValidator {
     /**
      * Initialize a new session
      */
-    initializeSession(input, ergodicityManager) {
+    initializeSession(input, _sharedErgodicityManager) {
+        // A session gets its own manager. Reading the shared one here handed every
+        // session the same live PathMemory object — not merely the same values, the
+        // same object identity — so sessions aliased each other's commitments before
+        // a single step ran. The shared instance is still accepted so the call
+        // signature and its ~20 test call sites are unchanged; it is simply not the
+        // one this session records into.
+        const ergodicityManager = wrapErgodicityManager(new ErgodicityManager());
         const pathMemory = ergodicityManager.getPathMemory();
         const sessionData = {
             technique: input.technique,

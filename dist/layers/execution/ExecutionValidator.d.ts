@@ -8,7 +8,7 @@ import type { SessionManager } from '../../core/SessionManager.js';
 import type { TechniqueRegistry } from '../../techniques/TechniqueRegistry.js';
 import type { TechniqueHandler } from '../../techniques/types.js';
 import type { VisualFormatter } from '../../utils/VisualFormatter.js';
-import type { ErgodicityManager } from '../../ergodicity/index.js';
+import { ErgodicityManager } from '../../ergodicity/index.js';
 export interface ValidationResult {
     isValid: boolean;
     error?: LateralThinkingResponse;

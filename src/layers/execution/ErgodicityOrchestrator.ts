@@ -5,7 +5,7 @@
 
 import type { ExecuteThinkingStepInput, SessionData } from '../../types/index.js';
 import type { VisualFormatter } from '../../utils/VisualFormatter.js';
-import type { ErgodicityManager } from '../../ergodicity/index.js';
+import { ErgodicityManager } from '../../ergodicity/index.js';
 import type { PathMemory } from '../../ergodicity/types.js';
 import type { ReflexivityWarning } from '../../core/ReflexivityTracker.js';
 import { getErgodicityPrompt, getErgodicityGuidance } from '../../ergodicity/prompts.js';
@@ -15,7 +15,10 @@ import type {
   OptionGenerationResult,
   SessionData as OptionSessionData,
 } from '../../ergodicity/optionGeneration/types.js';
-import { monitorCriticalSectionAsync } from '../../utils/PerformanceIntegration.js';
+import {
+  monitorCriticalSectionAsync,
+  wrapErgodicityManager,
+} from '../../utils/PerformanceIntegration.js';
 import { ErgodicityResultAdapter } from './ErgodicityResultAdapter.js';
 import type { ErgodicityResult, ErgodicityManagerResult } from './ErgodicityResultAdapter.js';
 
@@ -34,6 +37,23 @@ export class ErgodicityOrchestrator {
     private ergodicityManager: ErgodicityManager,
     private sessionManager?: unknown // SessionManager - using unknown to avoid circular dependency
   ) {}
+
+  /**
+   * The manager that owns this session's path memory and sensor readings.
+   *
+   * Path memory and the early-warning sensors are per-session state, but a
+   * single manager was constructed once per server and handed to every call —
+   * so one session's commitments depressed another's flexibility, and the
+   * sensors' five-second reading cache served session B a measurement taken
+   * for session A.
+   *
+   * `SessionData.ergodicityManager` already existed and was already populated;
+   * nothing read it. This reads it.
+   */
+  private managerFor(session: SessionData): ErgodicityManager {
+    session.ergodicityManager ??= wrapErgodicityManager(new ErgodicityManager());
+    return session.ergodicityManager;
+  }
 
   /**
    * Check and display ergodicity prompts
@@ -80,7 +100,7 @@ export class ErgodicityOrchestrator {
     const ergodicityResult = await monitorCriticalSectionAsync(
       'ergodicity_tracking',
       () =>
-        this.ergodicityManager.recordThinkingStep(
+        this.managerFor(session).recordThinkingStep(
           input.technique,
           techniqueLocalStep,
           input.output,
@@ -91,7 +111,7 @@ export class ErgodicityOrchestrator {
     );
 
     // Update session with ergodicity data
-    session.pathMemory = this.ergodicityManager.getPathMemory();
+    session.pathMemory = this.managerFor(session).getPathMemory();
 
     // Calculate current flexibility
     const currentFlexibility =
@@ -204,6 +224,7 @@ export class ErgodicityOrchestrator {
       };
     } else {
       // Use technique profile for ergodicity tracking
+      // Shared instance is correct here: analyzeTechniqueImpact is a pure lookup table.
       const techniqueProfile = this.ergodicityManager.analyzeTechniqueImpact(input.technique);
 
       // Check if output suggests high commitment

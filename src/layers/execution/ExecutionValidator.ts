@@ -14,7 +14,8 @@ import type { SessionManager } from '../../core/SessionManager.js';
 import type { TechniqueRegistry } from '../../techniques/TechniqueRegistry.js';
 import type { TechniqueHandler } from '../../techniques/types.js';
 import type { VisualFormatter } from '../../utils/VisualFormatter.js';
-import type { ErgodicityManager } from '../../ergodicity/index.js';
+import { ErgodicityManager } from '../../ergodicity/index.js';
+import { wrapErgodicityManager } from '../../utils/PerformanceIntegration.js';
 import { ErrorContextBuilder } from '../../core/ErrorContextBuilder.js';
 import { TelemetryCollector } from '../../telemetry/TelemetryCollector.js';
 import { ErrorFactory } from '../../errors/enhanced-errors.js';
@@ -533,8 +534,15 @@ export class ExecutionValidator {
    */
   private initializeSession(
     input: ExecuteThinkingStepInput,
-    ergodicityManager: ErgodicityManager
+    _sharedErgodicityManager: ErgodicityManager
   ): SessionData {
+    // A session gets its own manager. Reading the shared one here handed every
+    // session the same live PathMemory object — not merely the same values, the
+    // same object identity — so sessions aliased each other's commitments before
+    // a single step ran. The shared instance is still accepted so the call
+    // signature and its ~20 test call sites are unchanged; it is simply not the
+    // one this session records into.
+    const ergodicityManager = wrapErgodicityManager(new ErgodicityManager());
     const pathMemory = ergodicityManager.getPathMemory();
 
     const sessionData: SessionData = {
