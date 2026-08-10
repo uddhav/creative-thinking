@@ -23,6 +23,7 @@ interface HistoryEntry {
     };
     excellenceDesign?: {
         area?: string;
+        standard?: string;
     };
 }
 export declare class ReverseBenchmarkingHandler extends BaseTechniqueHandler {

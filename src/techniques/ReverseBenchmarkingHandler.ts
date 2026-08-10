@@ -25,6 +25,7 @@ interface HistoryEntry {
   antiMimeticStrategy?: string | { differentiationVector?: string };
   excellenceDesign?: {
     area?: string;
+    standard?: string;
   };
 }
 
@@ -424,9 +425,14 @@ Output: Complete implementation plan with timeline and success metrics`,
         }
       }
       if (step === 4 && entry.excellenceDesign) {
-        insights.push(
-          `${stepName}: Excellence standard defined for ${entry.excellenceDesign.area || 'target area'}`
-        );
+        // "Excellence standard defined for target area" was true of every session
+        // that reached step 4 and said nothing about any of them. Report the area
+        // and the standard actually set; say nothing when neither was given.
+        const { area, standard } = entry.excellenceDesign;
+        const described = [area, standard].filter(Boolean).join(' — ');
+        if (described) {
+          insights.push(`${stepName}: ${described}`);
+        }
       }
     }
 

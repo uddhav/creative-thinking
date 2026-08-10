@@ -210,7 +210,10 @@ describe('ReverseBenchmarkingHandler', () => {
       // one exists — and its own output alongside it.
       expect(insights.some(i => i.includes('Anti-Mimetic Strategy: UX focus'))).toBe(true);
       expect(insights.some(i => i.includes('Anti-Mimetic Strategy: Strategy designed'))).toBe(true);
-      expect(insights.some(i => i.includes('Excellence standard defined'))).toBe(true);
+      // Step 4 likewise. "Excellence standard defined for target area" was true
+      // of every session that reached step 4 and named none of them.
+      expect(insights.some(i => i.includes('Excellence Design: User experience'))).toBe(true);
+      expect(insights.some(i => i.includes('Excellence standard defined'))).toBe(false);
       // No completion banner. It fired for any run that reached the last step
       // and asserted a competitive advantage the session may never have found.
       expect(insights.some(i => i.includes('competitive advantage identified'))).toBe(false);

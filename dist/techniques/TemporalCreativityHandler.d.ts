@@ -28,6 +28,7 @@ export declare class TemporalCreativityHandler extends BaseTechniqueHandler {
         currentConstraints?: string[];
         activeOptions?: string[];
         timelineProjections?: Record<string, unknown>;
+        blackSwanScenarios?: string[];
         lessonIntegration?: string[];
         preservedOptions?: string[];
     }>): string[];

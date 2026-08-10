@@ -525,10 +525,20 @@ export interface Tool {
             required?: string[];
             minimum?: number;
             maximum?: number;
+            exclusiveMinimum?: number;
             minLength?: number;
             maxLength?: number;
             maxItems?: number;
             default?: unknown;
+            /**
+             * The shape of values under keys the schema cannot name in advance —
+             * probabilities keyed by hypothesis, ratings keyed by pairing. Without
+             * it the only place left to say "these are numbers between 0 and 1" was
+             * the prose description, where nothing can check it.
+             */
+            additionalProperties?: Record<string, unknown>;
+            /** A field read in more than one shape, e.g. antiMimeticStrategy. */
+            anyOf?: Array<Record<string, unknown>>;
         }>;
         required?: string[];
         additionalProperties?: boolean;

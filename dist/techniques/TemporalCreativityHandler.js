@@ -251,6 +251,16 @@ export class TemporalCreativityHandler extends BaseTechniqueHandler {
                     }
                 });
             }
+            // Step 3 rejects blackSwanScenarios unless it is an array, then nothing
+            // read it — the one part of the projection the caller cannot derive from
+            // the other three was the part that got discarded.
+            if (Array.isArray(entry.blackSwanScenarios)) {
+                entry.blackSwanScenarios.forEach(scenario => {
+                    if (scenario && scenario.trim()) {
+                        insights.push(`Black swan: ${scenario}`);
+                    }
+                });
+            }
             // Extract integrated lessons
             if (entry.lessonIntegration && Array.isArray(entry.lessonIntegration)) {
                 entry.lessonIntegration.forEach(lesson => {

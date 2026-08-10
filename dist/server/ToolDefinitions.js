@@ -221,7 +221,29 @@ export const EXECUTE_THINKING_STEP_TOOL = {
                 ],
             },
             modifications: { type: 'array', items: { type: 'string' } },
-            pathImpact: { type: 'object' },
+            pathImpact: {
+                type: 'object',
+                description: "SCAMPER's measurement of what the modification costs in future freedom. " +
+                    'This is where optionsClosed and flexibilityRetention live — the top level ' +
+                    'has no such fields, and values sent there are read by nothing.',
+                properties: {
+                    reversible: { type: 'boolean' },
+                    dependenciesCreated: { type: 'array', items: { type: 'string' } },
+                    optionsClosed: { type: 'array', items: { type: 'string' } },
+                    optionsOpened: { type: 'array', items: { type: 'string' } },
+                    flexibilityRetention: {
+                        type: 'number',
+                        minimum: 0,
+                        maximum: 1,
+                        description: 'Share of future freedom the modification leaves intact. 1 = none lost.',
+                    },
+                    commitmentLevel: {
+                        type: 'string',
+                        enum: ['low', 'medium', 'high', 'irreversible'],
+                    },
+                    recoveryPath: { type: 'string' },
+                },
+            },
             // Concept Extraction specific
             successExample: { type: 'string' },
             extractedConcepts: { type: 'array', items: { type: 'string' } },
@@ -252,7 +274,19 @@ export const EXECUTE_THINKING_STEP_TOOL = {
             switchingRhythm: { type: 'array', items: { type: 'string' } },
             integrationInsights: { type: 'array', items: { type: 'string' } },
             // Temporal Work specific
-            temporalLandscape: { type: 'object' },
+            temporalLandscape: {
+                type: 'object',
+                description: 'Step 1: the shape of the available time. Rejected loudly if it is not an ' +
+                    'object, but its keys were undeclared, so the two that drive insights — ' +
+                    'fixedDeadlines and kairosOpportunities — could not be guessed.',
+                properties: {
+                    fixedDeadlines: { type: 'array', items: { type: 'string' } },
+                    flexibleWindows: { type: 'array', items: { type: 'string' } },
+                    pressurePoints: { type: 'array', items: { type: 'string' } },
+                    deadZones: { type: 'array', items: { type: 'string' } },
+                    kairosOpportunities: { type: 'array', items: { type: 'string' } },
+                },
+            },
             circadianAlignment: { type: 'array', items: { type: 'string' } },
             pressureTransformation: { type: 'array', items: { type: 'string' } },
             asyncSyncBalance: { type: 'array', items: { type: 'string' } },
@@ -379,17 +413,34 @@ export const EXECUTE_THINKING_STEP_TOOL = {
              * the technique's derived findings.
              */
             // Competing Hypotheses
-            hypotheses: { type: 'array', items: { type: 'string' } },
-            evidence: { type: 'array', items: { type: 'string' } },
             matrix: {
-                type: 'array',
-                items: { type: 'array', items: { type: 'number' } },
-                description: 'Evidence-by-hypothesis diagnosticity matrix.',
+                type: 'object',
+                description: 'Step 3. Rejected unless hypotheses, evidence and ratings are all present. ' +
+                    'Rate each pairing under the key `<evidence>_<hypothesis>`.',
+                properties: {
+                    hypotheses: { type: 'array', items: { type: 'string' } },
+                    evidence: { type: 'array', items: { type: 'string' } },
+                    ratings: {
+                        type: 'object',
+                        description: 'Diagnosticity of each evidence-hypothesis pairing, keyed ' +
+                            '`<evidence>_<hypothesis>`, from -2 (strongly contradicts) to +2 ' +
+                            '(strongly supports). Anything outside that range is rejected.',
+                        additionalProperties: { type: 'number', minimum: -2, maximum: 2 },
+                    },
+                    diagnosticValue: {
+                        type: 'object',
+                        description: 'How much each piece of evidence discriminates, keyed by evidence, 0-1.',
+                        additionalProperties: { type: 'number', minimum: 0, maximum: 1 },
+                    },
+                    sensitivityFactors: { type: 'array', items: { type: 'string' } },
+                },
             },
             probabilities: {
                 type: 'object',
-                description: 'Posterior probability keyed by hypothesis, e.g. { "H1": 0.38, "H2": 0.1 }. ' +
-                    'Drives the confidence band reported at the end.',
+                description: 'Step 6. Posterior probability keyed by hypothesis, e.g. { "H1": 0.6, "H2": 0.4 }. ' +
+                    'The values must sum to 1.0 (±0.01) or the step is rejected. Drives the ' +
+                    'confidence band reported at the end.',
+                additionalProperties: { type: 'number', minimum: 0, maximum: 1 },
             },
             leadingHypothesis: { type: 'string' },
             // Criteria-Based Analysis
@@ -397,30 +448,190 @@ export const EXECUTE_THINKING_STEP_TOOL = {
                 type: 'number',
                 minimum: 0,
                 maximum: 100,
-                description: 'Assessed validity as a percentage. Drives the validity band reported at the end.',
+                description: 'Step 5: assessed validity as a percentage. Drives the validity band reported ' +
+                    'at the end.',
             },
             // Linguistic Forensics
             pronounRatios: {
                 type: 'object',
-                description: 'Pronoun frequencies keyed by pronoun, e.g. { "i": 0.6, "we": 0.2 }.',
+                description: 'Step 3. Keyed by ratio, not by pronoun — iWe is the one that is read, and an ' +
+                    'example of { "i": …, "we": … } (which this description used to give) validates ' +
+                    'and then reports nothing. Each value is a fraction from 0 to 1.',
+                properties: {
+                    iWe: {
+                        type: 'number',
+                        minimum: 0,
+                        maximum: 1,
+                        description: 'Individual over collective. Above 0.7 and below 0.3 both get reported.',
+                    },
+                    activePassive: { type: 'number', minimum: 0, maximum: 1 },
+                    ownershipAvoidance: { type: 'number', minimum: 0, maximum: 1 },
+                },
             },
-            coherenceScore: { type: 'number', minimum: 0, maximum: 1 },
+            coherenceScore: {
+                type: 'number',
+                minimum: 0,
+                maximum: 100,
+                description: 'Step 6: narrative coherence as a percentage, not a fraction. The bands sit at ' +
+                    '85, 70 and 50, so a 0-1 value reports the worst verdict for the best score.',
+            },
             // Reverse Benchmarking
-            weaknessMapping: { type: 'array', items: { type: 'string' } },
-            vacantSpaces: { type: 'array', items: { type: 'string' } },
-            antiMimeticStrategy: { type: 'string' },
-            excellenceDesign: { type: 'string' },
+            weaknessMapping: {
+                type: 'object',
+                description: 'Step 1: what every competitor is bad at.',
+                properties: {
+                    universalWeaknesses: { type: 'array', items: { type: 'string' } },
+                },
+            },
+            vacantSpaces: {
+                type: 'array',
+                description: 'Step 2: the ground nobody is standing on. Every entry needs all four keys ' +
+                    'or the step is rejected.',
+                items: {
+                    type: 'object',
+                    properties: {
+                        space: { type: 'string' },
+                        opportunityValue: { type: 'string', enum: ['low', 'medium', 'high', 'very_high'] },
+                        implementationDifficulty: { type: 'string', enum: ['low', 'medium', 'high'] },
+                        whyVacant: { type: 'string' },
+                    },
+                    required: ['space', 'opportunityValue', 'implementationDifficulty', 'whyVacant'],
+                },
+            },
+            antiMimeticStrategy: {
+                description: 'Step 3: how this deliberately stops resembling the field. A plain string, or ' +
+                    '{ differentiationVector } — both are read.',
+                anyOf: [
+                    { type: 'string' },
+                    { type: 'object', properties: { differentiationVector: { type: 'string' } } },
+                ],
+            },
+            excellenceDesign: {
+                type: 'object',
+                description: 'Step 4: the standard being set, and where.',
+                properties: {
+                    area: { type: 'string' },
+                    standard: { type: 'string' },
+                },
+            },
             // Temporal Creativity
-            blackSwanScenarios: { type: 'array', items: { type: 'string' } },
-            constraintsCreated: { type: 'array', items: { type: 'string' } },
-            optionsClosed: { type: 'array', items: { type: 'string' } },
-            flexibilityImpact: { type: 'number' },
+            blackSwanScenarios: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Step 3: the outcomes the projection cannot price. Rejected if not an array.',
+            },
             // Biomimetic Path
             integratedSolution: { type: 'string' },
             // Random Entry
             roryMode: {
                 type: 'boolean',
                 description: 'Draw the stimulus from the behavioural-economics catalogue instead of at random.',
+            },
+            // Anecdotal Signal
+            anecdoteCount: {
+                type: 'integer',
+                minimum: 0,
+                description: 'Step 1: how many anecdotes were gathered.',
+            },
+            signals: {
+                type: 'array',
+                description: 'Step 2: the anecdotes that might be signal. Every entry needs all four keys ' +
+                    'or the step is rejected. Only strong and critical ones are reported.',
+                items: {
+                    type: 'object',
+                    properties: {
+                        story: { type: 'string' },
+                        divergenceLevel: {
+                            type: 'string',
+                            enum: ['minor', 'moderate', 'significant', 'extreme'],
+                        },
+                        signalStrength: { type: 'string', enum: ['weak', 'moderate', 'strong', 'critical'] },
+                        precedentType: { type: 'string', enum: ['first', 'rare', 'emerging', 'recurring'] },
+                    },
+                    required: ['story', 'divergenceLevel', 'signalStrength', 'precedentType'],
+                },
+            },
+            trajectoryAnalysis: { type: 'object', description: 'Step 3: where the signal is heading.' },
+            earlyWarnings: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Step 4: what would show first if this is real. Read only if it is an array.',
+            },
+            scalingScenarios: {
+                type: 'array',
+                description: 'Step 5: what adoption looks like if it spreads.',
+                items: {
+                    type: 'object',
+                    properties: {
+                        scenario: { type: 'string' },
+                        adoptionLevel: {
+                            type: 'number',
+                            minimum: 0,
+                            maximum: 100,
+                            description: 'Percentage of the market, not a fraction. Above 25 is reported as ' +
+                                'crossing into the mainstream. Outside 0-100 the step is rejected.',
+                        },
+                    },
+                },
+            },
+            strategicResponse: { type: 'object', description: 'Step 6: what to do about it.' },
+            // Context Reframing
+            contextAnalysis: {
+                type: 'object',
+                description: 'Step 1: the context as it stands, and what it constrains.',
+            },
+            interventions: {
+                type: 'array',
+                description: 'Step 2: the changes to the context, not to the message. Every entry needs all ' +
+                    'four keys or the step is rejected. Easy and moderate ones are reported.',
+                items: {
+                    type: 'object',
+                    properties: {
+                        type: {
+                            type: 'string',
+                            enum: ['spatial', 'temporal', 'social', 'comparative', 'procedural', 'informational'],
+                        },
+                        description: { type: 'string' },
+                        expectedImpact: { type: 'string' },
+                        implementationEase: { type: 'string', enum: ['easy', 'moderate', 'difficult'] },
+                    },
+                    required: ['type', 'description', 'expectedImpact', 'implementationEase'],
+                },
+            },
+            frameShift: { type: 'object', description: 'Step 3: the frame moved from, and to.' },
+            environmentDesign: { type: 'object', description: 'Step 4: the environment as redesigned.' },
+            behavioralMetrics: { type: 'object', description: 'Step 5: what the change is measured by.' },
+            // Perception Optimization
+            perceptionGaps: {
+                type: 'array',
+                description: 'Step 1: where what is true and what is perceived come apart. Every entry needs ' +
+                    'all four keys or the step is rejected. Large and massive gaps are reported.',
+                items: {
+                    type: 'object',
+                    properties: {
+                        objective: { type: 'string' },
+                        perceived: { type: 'string' },
+                        gapSize: { type: 'string', enum: ['small', 'medium', 'large', 'massive'] },
+                        leverageOpportunity: {
+                            type: 'string',
+                            enum: ['low', 'medium', 'high', 'very_high'],
+                        },
+                    },
+                    required: ['objective', 'perceived', 'gapSize', 'leverageOpportunity'],
+                },
+            },
+            valueAmplification: { type: 'object', description: 'Step 2: what makes the value felt.' },
+            experienceDesign: { type: 'object', description: 'Step 3: the experience as designed.' },
+            psychologicalValue: {
+                type: 'object',
+                description: 'Step 4: the value that is not material.',
+            },
+            perceptionROI: {
+                type: 'number',
+                exclusiveMinimum: 0,
+                description: 'Step 5: return as a multiple of what the equivalent spend on the product itself ' +
+                    'would return — 12 means twelvefold, not 12%. Above 10 is reported as ' +
+                    'exceptional. Zero and negatives are rejected.',
             },
             /**
              * First Principles specific fields
@@ -505,7 +716,8 @@ export const EXECUTE_THINKING_STEP_TOOL = {
             },
             metaSynthesis: {
                 type: 'string',
-                description: 'Step 4: Meta-level synthesis of learning patterns',
+                description: 'Step 4: Meta-level synthesis of learning patterns. Required; ' +
+                    '`synthesisStrategy` is accepted instead.',
             },
             /**
              * Biomimetic Path specific fields
