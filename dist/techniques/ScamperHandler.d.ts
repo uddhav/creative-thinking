@@ -37,6 +37,26 @@ export declare class ScamperHandler extends BaseTechniqueHandler {
     private calculateCumulativeCommitment;
     private generateRecoveryPath;
     generateAlternatives(action: ScamperAction, currentFlexibility: number): string[];
+    /**
+     * Report what each modification was, labelled by its action.
+     *
+     * SCAMPER was the only technique with no extraction of its own, so it fell
+     * through to the base class: any output under fifty characters dropped, the
+     * rest split naively at the first `.` so "cut it by approx. 40%" became "cut
+     * it by approx", unlabelled, in call order, and duplicated rather than
+     * superseded when a step was revised.
+     *
+     * The action is derived from the step rather than demanded, the same way the
+     * hat is for six_hats: `validateStep` accepts `scamperAction` only when it
+     * matches `actionOrder[step - 1]`, so the step already determines it.
+     */
+    extractInsights(history: Array<{
+        currentStep?: number;
+        scamperAction?: string;
+        modifications?: string[];
+        pathImpact?: ScamperPathImpact;
+        output?: string;
+    }>): string[];
     getAction(step: number): ScamperAction;
     getAllActions(): Record<ScamperAction, ScamperActionInfo>;
 }
