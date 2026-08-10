@@ -94,6 +94,13 @@ export interface SessionData {
     };
 }
 export interface ExecuteThinkingStepInput {
+    /**
+     * Server-computed: the step's position within its own technique, as opposed
+     * to `currentStep`, which counts across the whole plan. Never sent by a
+     * caller — `executeThinkingStep` derives it and records it on the history
+     * entry so handlers can index their own step tables.
+     */
+    techniqueLocalStep?: number;
     planId: string;
     sessionId?: string;
     technique: LateralTechnique;
@@ -297,6 +304,12 @@ export interface ExecuteThinkingStepInput {
     resolutionVerified?: boolean;
 }
 export interface ThinkingOperationData {
+    /**
+     * Server-computed: the step's position within its own technique, as opposed
+     * to `currentStep`, which counts across the whole plan. Handlers index their
+     * own step tables, so this is the number they need.
+     */
+    techniqueLocalStep?: number;
     sessionId?: string;
     technique: LateralTechnique;
     problem: string;

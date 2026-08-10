@@ -438,7 +438,19 @@ export class ExecutionResponseBuilder {
     // final step off the end of the array, discarding it. A session running
     // disney_method before keeper_test reported keeper_test's "Reconstruct the
     // Fence" output under "Decide and Set the Trigger" and dropped the verdict.
-    const techniqueHistory = session.history.filter(entry => entry.technique === input.technique);
+    const techniqueHistory = session.history
+      .filter(entry => entry.technique === input.technique)
+      // Present each entry under its technique-local step. Handlers key on
+      // `currentStep` to let a revision supersede the entry it revises, but
+      // `currentStep` counts across the plan, so for any technique that is not
+      // first the lookup fell outside the technique's own step range and the
+      // step vanished. Thirty-one of thirty-two techniques reported nothing at
+      // all in that position.
+      .map(entry =>
+        entry.techniqueLocalStep === undefined
+          ? entry
+          : { ...entry, currentStep: entry.techniqueLocalStep }
+      );
 
     const currentInsights = monitorCriticalSection(
       'extract_insights',

@@ -285,6 +285,12 @@ export async function executeThinkingStep(
       };
       session.history.push({
         ...operationData,
+        // The step within this technique, not within the plan. `currentStep`
+        // is the global step, and handlers index their own step tables by it —
+        // so a technique running second in a plan looked up positions past the
+        // end of its own table and reported nothing at all. Recorded here
+        // because this is where the offset is already known.
+        techniqueLocalStep,
         timestamp: new Date().toISOString(),
       });
 

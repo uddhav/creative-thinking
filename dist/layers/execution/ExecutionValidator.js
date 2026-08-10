@@ -308,7 +308,22 @@ export class ExecutionValidator {
             // A step is global if it falls within the global range for this technique
             const globalStartForTechnique = stepsBeforeThisTechnique + 1;
             const globalEndForTechnique = stepsBeforeThisTechnique + currentTechniqueSteps;
-            if (input.currentStep >= globalStartForTechnique &&
+            // `totalSteps` says which numbering the caller is using, and it is the
+            // only thing that can. For any technique after the first, the two ranges
+            // overlap — with a 3-step block ahead of a 5-step one, local 4 and 5 are
+            // also global 4 and 5 — and guessing from `currentStep` alone resolved
+            // both to the global reading, folding local steps 4 and 5 back onto 1
+            // and 2. A caller numbering within the technique sends that technique's
+            // own step count; a caller numbering across the plan sends the plan's.
+            const callerNumbersWithinTechnique = currentTechniqueSteps > 0 &&
+                input.totalSteps === currentTechniqueSteps &&
+                input.totalSteps !== totalPlanSteps;
+            if (callerNumbersWithinTechnique &&
+                input.currentStep >= 1 &&
+                input.currentStep <= currentTechniqueSteps) {
+                techniqueLocalStep = input.currentStep;
+            }
+            else if (input.currentStep >= globalStartForTechnique &&
                 input.currentStep <= globalEndForTechnique &&
                 input.currentStep <= totalPlanSteps) {
                 // This is a global step number for this technique
