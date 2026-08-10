@@ -389,9 +389,16 @@ export class PathMemoryManager {
         // option-generation engine; they no longer charge the measure twice.
         let flexibilityScore = 1;
         for (const event of this.pathMemory.pathHistory) {
-            if (event.flexibilityImpact !== undefined) {
-                flexibilityScore *= 1 - event.flexibilityImpact;
-            }
+            const impact = event.flexibilityImpact;
+            // A non-finite impact would propagate through both clamps below —
+            // Math.min(1, Math.max(0, NaN)) is NaN — and poison every later reading.
+            if (impact === undefined || !Number.isFinite(impact))
+                continue;
+            // Clamped per event, not only at the end. An escape records a credit, so
+            // the running product can exceed 1; clamping only the final value left
+            // the excess banked in the product, where eight escapes hid a true
+            // reading of 8.2 and silently absorbed a dozen committing steps.
+            flexibilityScore = Math.min(1, Math.max(0, flexibilityScore * (1 - impact)));
         }
         // An escape protocol records a negative impact — a credit, not a cost —
         // so the product can rise above 1. Thinking steps only ever spend.
@@ -601,6 +608,11 @@ export class PathMemoryManager {
         });
         // Update flexibility metrics
         this.updateBarrierProximity();
+        // Recompute, as recordPathEvent does. Without this the score did not move
+        // at escape time: an escape protocol reported a gain, the condition that
+        // triggered it was still true immediately afterwards, and the credit only
+        // appeared on the next ordinary step.
+        this.updateFlexibilityMetrics();
     }
 }
 //# sourceMappingURL=pathMemory.js.map

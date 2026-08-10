@@ -29,34 +29,52 @@ import type {
   LateralTechnique,
 } from '../../types/index.js';
 
-async function runSession(
-  technique: LateralTechnique,
-  problem: string,
-  outputs: string[],
+/**
+ * Wording is identical across every run below. The measure reads what each
+ * step declares about its own reversibility, not what its prose says, so any
+ * difference between two runs has to come from which steps were run.
+ */
+const PLAIN = 'A recorded finding for this step, written plainly.';
+
+/** Techniques whose steps are declared as commitments. */
+const COMMITTING: LateralTechnique[] = ['disney_method', 'keeper_test', 'scamper'];
+
+/** Techniques whose steps are all reflection. */
+const REFLECTIVE: LateralTechnique[] = ['neural_state', 'random_entry', 'six_hats'];
+
+/** Runs a chained plan and returns flexibility after each step. */
+async function runChain(
+  techniques: LateralTechnique[],
   extraPerStep: Record<string, unknown> = {}
-): Promise<{ flexibility: number[]; sessionManager: SessionManager; sessionId: string }> {
+): Promise<number[]> {
   const sessionManager = new SessionManager();
   const registry = TechniqueRegistry.getInstance();
+  const problem = 'Retire the legacy pipeline';
   const plan = planThinkingSession(
-    { problem, techniques: [technique], timeframe: 'thorough' } as PlanThinkingSessionInput,
+    { problem, techniques, timeframe: 'thorough' } as PlanThinkingSessionInput,
     sessionManager,
     registry
   );
 
+  // One entry per technique, each carrying its own steps — flatten to the
+  // plan-wide sequence the caller actually walks.
+  const steps = plan.workflow.flatMap(block =>
+    block.steps.map(() => ({ technique: block.technique }))
+  );
   let sessionId: string | undefined;
   const flexibility: number[] = [];
 
-  for (let index = 0; index < outputs.length; index++) {
+  for (let index = 0; index < steps.length; index++) {
     const response = await executeThinkingStep(
       {
         planId: plan.planId,
         sessionId,
-        technique,
+        technique: steps[index].technique,
         problem,
         currentStep: index + 1,
-        totalSteps: outputs.length,
-        output: outputs[index],
-        nextStepNeeded: index < outputs.length - 1,
+        totalSteps: steps.length,
+        output: PLAIN,
+        nextStepNeeded: index < steps.length - 1,
         ...extraPerStep,
       } as ExecuteThinkingStepInput,
       sessionManager,
@@ -74,34 +92,15 @@ async function runSession(
     );
   }
 
-  return { flexibility, sessionManager, sessionId: sessionId as string };
+  return flexibility;
 }
 
-const HEAVY = [
-  'We will eliminate the legacy pipeline permanently and commit the budget.',
-  'Remove the fallback entirely and delete the old path.',
-  'Invest in a permanent single-vendor contract.',
-  'Commit irreversibly to the migration and remove the rollback.',
-  'Delete the parallel stack; the investment is permanent.',
-  'Eliminate the remaining alternatives and commit the team.',
-  'Remove the last escape hatch permanently.',
-];
+describe('flexibility is spent by the steps a session runs', () => {
+  it('falls through the 0.4 gate on a run of committing steps', async () => {
+    const flexibility = await runChain(COMMITTING);
 
-const LIGHT = [
-  'Sketch a few directions worth a look.',
-  'Consider how the onboarding reads to a newcomer.',
-  'Note where the wording could be friendlier.',
-  'List the alternatives nobody has tried.',
-  'Ask what a first-time user expects to see.',
-  'Collect the smaller ideas worth keeping.',
-  'Summarise the directions still open.',
-];
-
-describe('flexibility moves for techniques that never touch pathImpact', () => {
-  it('falls through the 0.4 gate on a run of irreversible commitments', async () => {
-    const { flexibility } = await runSession('six_hats', 'Retire the legacy pipeline', HEAVY);
-
-    // Before this was measured, every one of these was exactly 1.0.
+    // Before this was measured, every one of these was exactly 1.0 — nothing
+    // ever set the per-step cost the score is a product of.
     expect(flexibility[0], 'the first step already costs something').toBeLessThan(1);
     expect(flexibility.at(-1), 'a run of commitments has to reach the gate').toBeLessThan(0.4);
 
@@ -111,12 +110,13 @@ describe('flexibility moves for techniques that never touch pathImpact', () => {
     }
   });
 
-  it('stays wide open on an exploratory run of the same length', async () => {
-    const { flexibility } = await runSession('six_hats', 'Name the onboarding flow', LIGHT);
+  it('stays wide open across a longer run of reflection', async () => {
+    const flexibility = await runChain(REFLECTIVE);
 
-    // The control. If this also fell through the gate, the measurement would
-    // be tracking session length rather than commitment, and every warning
-    // built on it would be noise again.
+    // The control, and it is longer than the committing run. If this also fell
+    // through the gate the measure would be tracking session length rather
+    // than commitment, and every warning built on it would be noise again.
+    expect(flexibility.length).toBeGreaterThanOrEqual((await runChain(COMMITTING)).length - 3);
     expect(flexibility.at(-1)).toBeGreaterThan(0.9);
   });
 });
@@ -124,14 +124,31 @@ describe('flexibility moves for techniques that never touch pathImpact', () => {
 describe('the caller cannot assert its own flexibility', () => {
   it('ignores a flexibilityScore sent alongside the step', async () => {
     // The field is gone from the schema and from the input type. An old client
-    // still sending it must not be able to move the number, in either
-    // direction — unknown keys pass through the server unvalidated.
-    const asserted = await runSession('six_hats', 'Name the onboarding flow', LIGHT, {
-      flexibilityScore: 0.02,
-    });
-    const silent = await runSession('six_hats', 'Name the onboarding flow', LIGHT);
+    // still sending it must not move the number in either direction.
+    const asserted = await runChain(REFLECTIVE, { flexibilityScore: 0.02 });
+    const silent = await runChain(REFLECTIVE);
 
-    expect(asserted.flexibility).toEqual(silent.flexibility);
-    expect(asserted.flexibility.at(-1)).toBeGreaterThan(0.9);
+    expect(asserted).toEqual(silent);
+  });
+
+  it('ignores a pathImpact sent for a technique that does not derive one', async () => {
+    // The hole the retired flexibilityScore left behind, wearing a different
+    // name: twenty entries in optionsOpened used to credit half a step's cost
+    // each and pin flexibility at 1.0 through any number of committing steps.
+    const optionsOpened = Array.from({ length: 20 }, (_, i) => `invented option ${i}`);
+    const asserted = await runChain(COMMITTING, {
+      pathImpact: {
+        reversible: true,
+        dependenciesCreated: [],
+        optionsClosed: [],
+        optionsOpened,
+        flexibilityRetention: 1,
+        commitmentLevel: 'low',
+      },
+    });
+    const silent = await runChain(COMMITTING);
+
+    expect(asserted).toEqual(silent);
+    expect(asserted.at(-1), 'the committing run still reaches the gate').toBeLessThan(0.4);
   });
 });

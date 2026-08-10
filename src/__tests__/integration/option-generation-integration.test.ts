@@ -7,8 +7,23 @@ import { VisualFormatter } from '../../utils/VisualFormatter.js';
 import { MetricsCollector } from '../../core/MetricsCollector.js';
 import { HybridComplexityAnalyzer } from '../../complexity/analyzer.js';
 import { ErgodicityManager } from '../../ergodicity/index.js';
-import type { ExecuteThinkingStepInput, PlanThinkingSessionInput } from '../../types/index.js';
+import type {
+  ExecuteThinkingStepInput,
+  LateralTechnique,
+  PlanThinkingSessionInput,
+} from '../../types/index.js';
 import type { PlanThinkingSessionOutput } from '../../types/planning.js';
+
+/**
+ * The same sentence for every step of every run below.
+ *
+ * Deliberately plain: flexibility is derived from what each step declares
+ * about its own reversibility, so the measure no longer reads the output text
+ * at all. Committal wording would buy nothing here, and plain wording costs
+ * nothing — which is the point, and is why these runs reach the gate by
+ * running steps rather than by choosing words.
+ */
+const PLAIN_OUTPUT = 'A recorded finding for this step, written plainly.';
 
 describe('Option Generation Integration', () => {
   let sessionManager: SessionManager;
@@ -27,107 +42,51 @@ describe('Option Generation Integration', () => {
     ergodicityManager = new ErgodicityManager();
   });
 
-  it('should trigger option generation when flexibility drops below 0.4', async () => {
-    // Create a plan with many constraints to trigger low flexibility
-    const planInput: PlanThinkingSessionInput = {
-      problem: 'Restructure company with strict budget constraints',
-      techniques: ['scamper'],
-      constraints: [
-        'Cannot increase budget',
-        'Must maintain all core services',
-        'Cannot reduce headcount',
-        'Must complete in 3 months',
-        'Cannot outsource',
-      ],
-      timeframe: 'quick',
-    };
-
+  /**
+   * Walks a chained plan one step at a time and stops at the first step whose
+   * response carries `optionGeneration`.
+   *
+   * Nothing here asserts a flexibility number to the server: no
+   * `flexibilityScore`, no hand-built `pathImpact`. Both are ignored by design,
+   * so a test that sent one would be testing only that the server believed what
+   * it was told. The gate is reached by spending flexibility on steps that
+   * declare themselves hard to undo.
+   */
+  async function runPlanUntilOptionGeneration(planInput: PlanThinkingSessionInput): Promise<{
+    plan: PlanThinkingSessionOutput;
+    totalSteps: number;
+    gateStep?: number;
+    gateTechnique?: LateralTechnique;
+    gateResponse?: Record<string, unknown>;
+  }> {
     const plan: PlanThinkingSessionOutput = planThinkingSession(
       planInput,
       sessionManager,
       techniqueRegistry
     );
 
-    // Verify plan indicates low flexibility
-    expect(plan.flexibilityAssessment).toBeDefined();
-    expect(plan.flexibilityAssessment?.score).toBeLessThan(0.4);
-    expect(plan.flexibilityAssessment?.optionGenerationRecommended).toBe(true);
-
-    // First, execute a few steps to build up constraints and reduce flexibility
-
-    // Step 1: Substitute with high commitment
-    const step1: ExecuteThinkingStepInput = {
-      planId: plan.planId,
-      technique: 'scamper',
-      problem: planInput.problem,
-      currentStep: 1,
-      totalSteps: 8,
-      output: 'Substitute all contractors with permanent employees only',
-      nextStepNeeded: true,
-      scamperAction: 'substitute',
-    };
-
-    let response = await executeThinkingStep(
-      step1,
-      sessionManager,
-      techniqueRegistry,
-      visualFormatter,
-      metricsCollector,
-      complexityAnalyzer,
-      ergodicityManager
-    );
-    const parsedResponse = JSON.parse(response.content[0].text) as { sessionId: string };
-    const sessionIdFromResponse = parsedResponse.sessionId;
-
-    // Step 2: Combine with more constraints
-    const step2: ExecuteThinkingStepInput = {
-      planId: plan.planId,
-      sessionId: sessionIdFromResponse,
-      technique: 'scamper',
-      problem: planInput.problem,
-      currentStep: 2,
-      totalSteps: 8,
-      output: 'Combine all departments into one mega-department',
-      nextStepNeeded: true,
-      scamperAction: 'combine',
-    };
-
-    await executeThinkingStep(
-      step2,
-      sessionManager,
-      techniqueRegistry,
-      visualFormatter,
-      metricsCollector,
-      complexityAnalyzer,
-      ergodicityManager
+    // `workflow` holds one entry PER TECHNIQUE, each with its own `steps`
+    // array. Flatten it to the plan-wide sequence a caller actually walks, and
+    // take the order from the plan rather than from `planInput.techniques` —
+    // planning is free to reorder them.
+    const sequence: LateralTechnique[] = plan.workflow.flatMap(block =>
+      block.steps.map(() => block.technique)
     );
 
-    // Steps 3 to 6: keep committing, and let the engine measure the cost.
-    //
-    // This used to hand the server `flexibilityRetention: 0.3` on step 6 and
-    // assert that option generation fired — which tested only that the server
-    // believed the number it was told. Flexibility is measured now, so the way
-    // to reach the gate is to spend it.
-    const committal: Array<[number, string, string]> = [
-      [3, 'adapt', 'Adapt the remaining teams permanently to the new structure'],
-      [4, 'modify', 'Modify reporting lines and commit to them for the year'],
-      [5, 'put_to_other_use', 'Invest the freed budget permanently in tooling'],
-      [6, 'eliminate', 'Eliminate redundant processes and delete the legacy systems'],
-    ];
+    let sessionId: string | undefined;
 
-    let responseData: Record<string, unknown> = {};
-    for (const [currentStep, scamperAction, output] of committal) {
-      response = await executeThinkingStep(
+    for (let index = 0; index < sequence.length; index++) {
+      const response = await executeThinkingStep(
         {
           planId: plan.planId,
-          sessionId: sessionIdFromResponse,
-          technique: 'scamper',
+          sessionId,
+          technique: sequence[index],
           problem: planInput.problem,
-          currentStep,
-          totalSteps: 8,
-          output,
-          nextStepNeeded: true,
-          scamperAction,
+          currentStep: index + 1,
+          totalSteps: sequence.length,
+          output: PLAIN_OUTPUT,
+          // Required on every call, and true until the final step.
+          nextStepNeeded: index < sequence.length - 1,
         } as ExecuteThinkingStepInput,
         sessionManager,
         techniqueRegistry,
@@ -136,13 +95,61 @@ describe('Option Generation Integration', () => {
         complexityAnalyzer,
         ergodicityManager
       );
-      responseData = JSON.parse(response.content[0].text) as Record<string, unknown>;
-      if (responseData.optionGeneration !== undefined) break;
+
+      const data = JSON.parse(response.content[0].text) as Record<string, unknown>;
+      sessionId = (data.sessionId as string | undefined) ?? sessionId;
+
+      if (data.optionGeneration !== undefined) {
+        return {
+          plan,
+          totalSteps: sequence.length,
+          gateStep: index + 1,
+          gateTechnique: sequence[index],
+          gateResponse: data,
+        };
+      }
     }
 
+    return { plan, totalSteps: sequence.length };
+  }
+
+  it('should trigger option generation when flexibility drops below 0.4', async () => {
+    // No single technique spends enough to reach the 0.4 gate on its own — the
+    // most committing one ends around 0.45. A real session reaches it the way
+    // this one does: by chaining techniques, so the per-step costs compound
+    // across the whole plan. `competing_hypotheses` then `scamper` is 16 steps
+    // of declared commitments.
+    const planInput: PlanThinkingSessionInput = {
+      problem: 'Restructure company with strict budget constraints',
+      techniques: ['competing_hypotheses', 'scamper'],
+      constraints: [
+        'Cannot increase budget',
+        'Must maintain all core services',
+        'Cannot reduce headcount',
+        'Must complete in 3 months',
+        'Cannot outsource',
+      ],
+      timeframe: 'thorough',
+    };
+
+    const { plan, totalSteps, gateStep, gateResponse } =
+      await runPlanUntilOptionGeneration(planInput);
+
+    // The planning layer's own up-front read of the constraints. Separate from
+    // the runtime measurement below, which is what actually opens the gate.
+    expect(plan.flexibilityAssessment).toBeDefined();
+    expect(plan.flexibilityAssessment?.score).toBeLessThan(0.4);
+    expect(plan.flexibilityAssessment?.optionGenerationRecommended).toBe(true);
+
     // Verify option generation was triggered by the measurement, not by input
+    const responseData = gateResponse ?? {};
     const optionGeneration = responseData.optionGeneration as Record<string, unknown> | undefined;
-    expect(optionGeneration, 'a run of irreversible commitments must reach the gate').toBeDefined();
+    expect(optionGeneration, 'a run of committing steps must reach the gate').toBeDefined();
+    // Partway through, not on the first step and not only on the last: the
+    // gate opens once enough has been spent, and the session still has steps
+    // left in which to act on the options. (Measured: step 10 of 16.)
+    expect(gateStep).toBeGreaterThan(1);
+    expect(gateStep).toBeLessThan(totalSteps);
     expect(optionGeneration?.triggered).toBe(true);
     expect(optionGeneration?.flexibility).toBeLessThan(0.4);
     expect(optionGeneration?.optionsGenerated).toBeGreaterThan(0);
@@ -209,13 +216,13 @@ describe('Option Generation Integration', () => {
   });
 
   it('should include option generation for non-SCAMPER techniques when flexibility is low', async () => {
-    // Note: Non-SCAMPER techniques don't calculate flexibilityScore themselves
-    // We need to simulate low flexibility by creating a session with path history
-    // that has already reduced flexibility significantly
-
+    // Option generation is not a SCAMPER-only feature: the flexibility it
+    // gates on is measured for every technique from what its steps declare
+    // about their own reversibility. So this chain contains no SCAMPER at all,
+    // and the gate has to open on a step belonging to something else.
     const planInput: PlanThinkingSessionInput = {
       problem: 'Launch new product with extreme constraints',
-      techniques: ['disney_method'],
+      techniques: ['context_reframing', 'perception_optimization'],
       constraints: [
         'Zero marketing budget',
         'Must use existing team only',
@@ -224,91 +231,24 @@ describe('Option Generation Integration', () => {
         'Cannot use external resources',
         'Must be profitable immediately',
       ],
-      timeframe: 'quick',
+      timeframe: 'thorough',
     };
 
-    const plan: PlanThinkingSessionOutput = planThinkingSession(
-      planInput,
-      sessionManager,
-      techniqueRegistry
-    );
-
-    // First, let's execute several steps to simulate path dependency buildup
-    let sessionId: string | undefined;
-
-    // Execute multiple high-commitment steps to reduce flexibility
-    for (let i = 0; i < 10; i++) {
-      const stepInput: ExecuteThinkingStepInput = {
-        planId: plan.planId,
-        sessionId,
-        technique: 'disney_method',
-        problem: planInput.problem,
-        currentStep: 1,
-        totalSteps: 3,
-        output: `High commitment decision ${i}: Permanently eliminate option ${i}, irreversible change, no backup plan`,
-        nextStepNeeded: true,
-        disneyRole: 'dreamer',
-        dreamerVision: [`Permanent elimination ${i}`, `Irreversible commitment ${i}`],
-        // Add high-risk elements that trigger ergodicity tracking
-        risks: ['Complete failure possible', 'No recovery path'],
-        failureModes: ['Total system collapse', 'Permanent damage'],
-      };
-
-      const response = await executeThinkingStep(
-        stepInput,
-        sessionManager,
-        techniqueRegistry,
-        visualFormatter,
-        metricsCollector,
-        complexityAnalyzer,
-        ergodicityManager
-      );
-
-      if (!sessionId) {
-        const parsedResp = JSON.parse(response.content[0].text) as { sessionId: string };
-        sessionId = parsedResp.sessionId;
-      }
-    }
-
-    // Now execute a step that should trigger option generation
-    const input: ExecuteThinkingStepInput = {
-      planId: plan.planId,
-      sessionId,
-      technique: 'disney_method',
-      problem: planInput.problem,
-      currentStep: 2,
-      totalSteps: 3,
-      output: 'Realist: We are completely locked in with no flexibility left',
-      nextStepNeeded: true,
-      disneyRole: 'realist',
-      realistPlan: ['No alternatives available', 'All bridges burned', 'Zero flexibility'],
-      // Manually indicate low flexibility if needed
-      flexibilityScore: 0.3,
-    };
-
-    const response = await executeThinkingStep(
-      input,
-      sessionManager,
-      techniqueRegistry,
-      visualFormatter,
-      metricsCollector,
-      complexityAnalyzer,
-      ergodicityManager
-    );
-
-    const responseData = JSON.parse(response.content[0].text) as Record<string, unknown>;
-
-    // Debug output
-    console.error('Disney method response keys:', Object.keys(responseData));
-    console.error('Flexibility score:', responseData.flexibilityScore);
-    console.error('Execution metadata:', responseData.executionMetadata);
-    console.error('Option generation:', responseData.optionGeneration);
+    const { gateStep, gateTechnique, gateResponse } = await runPlanUntilOptionGeneration(planInput);
 
     // Verify option generation was triggered for non-SCAMPER technique
-    expect(responseData.optionGeneration).toBeDefined();
-    expect(responseData.optionGeneration.triggered).toBe(true);
-    expect(responseData.optionGeneration.flexibility).toBeLessThan(0.4);
-    expect(responseData.optionGeneration.optionsGenerated).toBeGreaterThan(0);
+    expect(
+      gateResponse?.optionGeneration,
+      'a SCAMPER-free chain must reach the gate'
+    ).toBeDefined();
+    expect(gateTechnique).not.toBe('scamper');
+    // Measured: step 8 of 10, a perception_optimization step.
+    expect(gateStep).toBeGreaterThan(1);
+
+    const optionGeneration = gateResponse?.optionGeneration as Record<string, unknown>;
+    expect(optionGeneration.triggered).toBe(true);
+    expect(optionGeneration.flexibility).toBeLessThan(0.4);
+    expect(optionGeneration.optionsGenerated).toBeGreaterThan(0);
   });
 
   it('should handle option generation gracefully when engine fails', async () => {

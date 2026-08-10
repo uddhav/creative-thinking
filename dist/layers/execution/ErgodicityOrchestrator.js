@@ -59,9 +59,14 @@ export class ErgodicityOrchestrator {
     /**
      * Track ergodicity and generate options if needed
      */
-    async trackErgodicityAndGenerateOptions(input, session, techniqueLocalStep, sessionId = 'unknown') {
+    async trackErgodicityAndGenerateOptions(input, session, techniqueLocalStep, sessionId = 'unknown', 
+    // The technique's own handler, for what its steps declare about
+    // reversibility. Optional so the ~20 existing call sites keep working; a
+    // step with nothing declared falls back to the most reversible reading,
+    // which costs the least rather than the most.
+    handler) {
         // Calculate impact
-        const impact = this.calculateImpact(input);
+        const impact = this.calculateImpact(input, handler, techniqueLocalStep);
         // Track ergodicity
         const ergodicityResult = await monitorCriticalSectionAsync('ergodicity_tracking', () => this.managerFor(session).recordThinkingStep(input.technique, techniqueLocalStep, input.output, impact, session), { technique: input.technique, step: techniqueLocalStep });
         // Update session with ergodicity data
@@ -134,21 +139,6 @@ export class ErgodicityOrchestrator {
         };
     }
     /**
-     * Does what the step says it did read as a commitment?
-     *
-     * A blunt lexical signal, and the only content-sensitivity in the whole
-     * measurement. It used to be applied to thirty-one techniques and withheld
-     * from SCAMPER, whose costs came entirely from a fixed action table — so a
-     * SCAMPER run of all eight actions produced an identical curve whether its
-     * modifications were sketches or irreversible commitments, and could not
-     * reach the 0.4 gate on any wording at all.
-     */
-    outputSignalsCommitment(output) {
-        const outputLower = output.toLowerCase();
-        const highCommitmentWords = ['eliminate', 'remove', 'delete', 'commit', 'invest', 'permanent'];
-        return highCommitmentWords.some(word => outputLower.includes(word));
-    }
-    /**
      * What this step commits, for the path record.
      *
      * Returns the ingredients only. `PathMemoryManager.recordPathEvent` derives
@@ -156,55 +146,49 @@ export class ErgodicityOrchestrator {
      * — deriving it here meant any caller that did not go through this
      * orchestrator recorded steps that cost nothing at all.
      */
-    calculateImpact(input) {
-        if (input.pathImpact) {
-            // Use specific path impact from SCAMPER
-            const pathImpact = input.pathImpact;
-            // Both per-step facts about this one modification. Deliberately NOT
-            // `flexibilityRetention`: `ScamperHandler.analyzePathImpact` computes
-            // that from the whole prior history — a cumulative-commitment factor, a
-            // penalty per high-commitment action already taken, and a further factor
-            // per step — so it is a running total, not a step's cost. Feeding it to
-            // a running total drove a four-step session to 0.005, and dividing it by
-            // the previous reading only traded that for a ratchet, because the
-            // handler's retention is not monotonic: `adapt` after `combine` reports
-            // more retention than `combine` did.
-            //
-            // `reversible` and `commitmentLevel` describe this modification alone,
-            // which is what the product over the path history needs. SCAMPER is then
-            // measured on exactly the same bounded scale as every other technique.
-            const fromAction = pathImpact.commitmentLevel === 'low'
-                ? 0.2
-                : pathImpact.commitmentLevel === 'medium'
-                    ? 0.5
-                    : pathImpact.commitmentLevel === 'high'
-                        ? 0.8
-                        : 1.0;
-            // The more severe of what the action is and what the step says it did.
-            // The action table is fixed, so on the action alone SCAMPER's curve is
-            // identical for every session running the same eight actions.
-            const hasHighCommitment = this.outputSignalsCommitment(input.output);
-            const reversibilityCost = Math.max(pathImpact.reversible ? 0.3 : 0.9, hasHighCommitment ? 0.8 : 0);
-            const commitmentLevel = Math.max(fromAction, hasHighCommitment ? 0.8 : 0);
-            return {
-                optionsClosed: pathImpact.optionsClosed,
-                optionsOpened: pathImpact.optionsOpened,
-                reversibilityCost,
-                commitmentLevel,
-            };
-        }
-        else {
-            // Use technique profile for ergodicity tracking
-            // Shared instance is correct here: analyzeTechniqueImpact is a pure lookup table.
-            const techniqueProfile = this.ergodicityManager.analyzeTechniqueImpact(input.technique);
-            const hasHighCommitment = this.outputSignalsCommitment(input.output);
-            const reversibilityCost = hasHighCommitment ? 0.8 : 1 - techniqueProfile.typicalReversibility;
-            const commitmentLevel = hasHighCommitment ? 0.8 : techniqueProfile.typicalCommitment;
-            return {
-                reversibilityCost,
-                commitmentLevel,
-            };
-        }
+    calculateImpact(input, handler, techniqueLocalStep) {
+        // What the step declares about itself, not what its prose happens to say.
+        //
+        // This used to read the caller's output for six words — eliminate, remove,
+        // delete, commit, invest, permanent — as a plain substring match, and that
+        // one boolean carried the entire dynamic range of the measure: 0.160 a
+        // step against 0.005. It had no word boundaries and no notion of negation,
+        // so "we should NOT remove the fallback" and "the committee met" both read
+        // as maximal commitment while "signed the three-year lease, no way back"
+        // read as idle exploration. The server's own step guidance contains those
+        // six stems 201 times, and SCAMPER's sixth step is named Eliminate, so a
+        // model echoing its own prompt tripped the gate.
+        //
+        // Every step now declares how hard it is to undo, so the cost of a session
+        // is a property of the steps it ran rather than of the words it chose. Two
+        // sessions running the same technique cost the same, which is the honest
+        // consequence: the server cannot read commitment out of prose, so it no
+        // longer pretends to.
+        const stepInfo = handler?.getStepInfo(techniqueLocalStep);
+        const declared = stepInfo?.reversibility ?? stepInfo?.reflexiveEffects?.reversibility ?? 'high';
+        // Undoing is hard in inverse proportion to how reversible the step is.
+        const reversibilityCost = declared === 'very_low' ? 0.95 : declared === 'low' ? 0.9 : declared === 'medium' ? 0.5 : 0.1;
+        // A thinking step binds nothing; an action step binds in proportion to how
+        // hard it is to undo.
+        const commitmentLevel = stepInfo?.type === 'action' ? Math.max(0.2, reversibilityCost) : 0.2;
+        // SCAMPER's option lists are derived by its own handler — `execute`
+        // overwrites whatever the caller sent — so they are the one path-impact
+        // signal the measure can trust. A caller-supplied pathImpact is ignored:
+        // twenty entries in `optionsOpened` used to pin flexibility at 1.0 through
+        // maximally committal prose, which is the same hole the retired
+        // `flexibilityScore` field opened, wearing a different name.
+        // `execute` replaces `input.pathImpact` with the handler's own analysis
+        // only when a `scamperAction` is present, so that is the one condition
+        // under which this field is the server's own reading rather than the
+        // caller's. Without the action, a caller could hand SCAMPER twenty
+        // invented `optionsOpened` and buy back the cost of the step.
+        const serverDerived = input.technique === 'scamper' && input.scamperAction ? input.pathImpact : undefined;
+        return {
+            optionsClosed: serverDerived?.optionsClosed,
+            optionsOpened: serverDerived?.optionsOpened,
+            reversibilityCost,
+            commitmentLevel,
+        };
     }
     /**
      * Flexibility after each recorded step, as the engine measures it.

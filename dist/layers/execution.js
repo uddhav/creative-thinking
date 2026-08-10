@@ -163,7 +163,7 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
                 }
             }
             // Track ergodicity and generate options if needed
-            const { currentFlexibility, optionGenerationResult } = await ergodicityOrchestrator.trackErgodicityAndGenerateOptions(input, session, techniqueLocalStep, sessionId);
+            const { currentFlexibility, optionGenerationResult } = await ergodicityOrchestrator.trackErgodicityAndGenerateOptions(input, session, techniqueLocalStep, sessionId, handler);
             // Record step in history (exclude realityAssessment from operationData to avoid duplication)
             const { realityAssessment: inputRealityAssessment, ...inputWithoutReality } = input;
             // If there's a reality assessment from input, we should handle it separately

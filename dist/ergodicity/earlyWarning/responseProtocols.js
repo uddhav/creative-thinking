@@ -204,7 +204,11 @@ export class ResponseProtocolSystem {
         const flexibilityGained = success
             ? protocol.estimatedFlexibilityGain * getSecureRandomFloat(0.8, 1.2)
             : 0;
-        const flexibilityAfter = Math.min(1, flexibilityBefore + flexibilityGained);
+        // Multiplicative, because that is what the engine does with this gain:
+        // it records the escape as a negative flexibilityImpact and the score is a
+        // product over the path history. Reported additively, the same event was
+        // described two ways — 0.698 here against 0.471 there.
+        const flexibilityAfter = Math.min(1, flexibilityBefore * (1 + flexibilityGained));
         // Generate side effects
         const sideEffects = this.generateSideEffects(protocol, success, sessionData);
         // Generate next steps

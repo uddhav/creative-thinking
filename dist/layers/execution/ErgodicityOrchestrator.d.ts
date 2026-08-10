@@ -4,6 +4,7 @@
  */
 import type { ExecuteThinkingStepInput, SessionData } from '../../types/index.js';
 import type { VisualFormatter } from '../../utils/VisualFormatter.js';
+import type { TechniqueHandler } from '../../techniques/types.js';
 import { ErgodicityManager } from '../../ergodicity/index.js';
 import type { PathMemory } from '../../ergodicity/types.js';
 import type { OptionGenerationResult } from '../../ergodicity/optionGeneration/types.js';
@@ -40,18 +41,7 @@ export declare class ErgodicityOrchestrator {
     /**
      * Track ergodicity and generate options if needed
      */
-    trackErgodicityAndGenerateOptions(input: ExecuteThinkingStepInput, session: SessionData, techniqueLocalStep: number, sessionId?: string): Promise<ErgodicityOrchestrationResult>;
-    /**
-     * Does what the step says it did read as a commitment?
-     *
-     * A blunt lexical signal, and the only content-sensitivity in the whole
-     * measurement. It used to be applied to thirty-one techniques and withheld
-     * from SCAMPER, whose costs came entirely from a fixed action table — so a
-     * SCAMPER run of all eight actions produced an identical curve whether its
-     * modifications were sketches or irreversible commitments, and could not
-     * reach the 0.4 gate on any wording at all.
-     */
-    private outputSignalsCommitment;
+    trackErgodicityAndGenerateOptions(input: ExecuteThinkingStepInput, session: SessionData, techniqueLocalStep: number, sessionId?: string, handler?: TechniqueHandler): Promise<ErgodicityOrchestrationResult>;
     /**
      * What this step commits, for the path record.
      *

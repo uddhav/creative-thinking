@@ -255,7 +255,9 @@ describe('PDA-SCAMPER Enhancement', () => {
       for (let i = 1; i < flexibilityScores.length; i++) {
         expect(flexibilityScores[i]).toBeLessThan(flexibilityScores[i - 1]);
       }
-      expect(flexibilityScores.at(-1)).toBeLessThan(0.6);
+      // The bound tracks the declared cost of these three actions. It was 0.6
+      // when a keyword scan of the prose could double a step's price.
+      expect(flexibilityScores.at(-1)).toBeLessThan(0.7);
     });
 
     it('should generate alternative suggestions when flexibility is low', async () => {

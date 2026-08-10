@@ -267,7 +267,8 @@ export async function executeThinkingStep(
           input,
           session,
           techniqueLocalStep,
-          sessionId
+          sessionId,
+          handler
         );
 
       // Record step in history (exclude realityAssessment from operationData to avoid duplication)
