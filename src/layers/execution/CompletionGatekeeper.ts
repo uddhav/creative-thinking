@@ -62,7 +62,9 @@ export class CompletionGatekeeper {
     session: SessionData,
     plan?: PlanThinkingSessionOutput
   ): { allowed: boolean; response?: LateralThinkingResponse } {
-    const metadata = this.completionTracker.calculateCompletionMetadata(session, plan);
+    // Both gatekeeper paths run only when the session is trying to end, so
+    // incompleteness here is a real finding rather than progress.
+    const metadata = this.completionTracker.calculateCompletionMetadata(session, plan, true);
     const synthesisCheck = this.completionTracker.canProceedToSynthesis(metadata);
 
     if (synthesisCheck.allowed || this.config.enforcementLevel === EnforcementLevel.LENIENT) {
@@ -88,7 +90,9 @@ export class CompletionGatekeeper {
     session: SessionData,
     plan?: PlanThinkingSessionOutput
   ): { allowed: boolean; response?: LateralThinkingResponse } {
-    const metadata = this.completionTracker.calculateCompletionMetadata(session, plan);
+    // Both gatekeeper paths run only when the session is trying to end, so
+    // incompleteness here is a real finding rather than progress.
+    const metadata = this.completionTracker.calculateCompletionMetadata(session, plan, true);
     const completionPercentage = metadata.overallProgress;
     const remainingSteps = input.totalSteps - input.currentStep;
 

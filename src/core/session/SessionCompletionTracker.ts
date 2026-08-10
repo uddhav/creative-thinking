@@ -67,9 +67,16 @@ export class SessionCompletionTracker {
   /**
    * Calculate session completion metadata
    */
+  /**
+   * @param isTerminating whether this step ends the session. Incompleteness is
+   * only a problem when there will be no further steps; mid-session it is just
+   * progress, and saying otherwise on every early step taught callers to ignore
+   * the warnings entirely.
+   */
   calculateCompletionMetadata(
     session: SessionData,
-    plan?: PlanThinkingSessionOutput
+    plan?: PlanThinkingSessionOutput,
+    isTerminating = false
   ): SessionCompletionMetadata {
     if (!plan) {
       // No plan means single technique execution
@@ -84,7 +91,8 @@ export class SessionCompletionTracker {
     const warnings = this.generateCompletionWarnings(
       overallProgress,
       techniqueStatuses,
-      criticalGaps
+      criticalGaps,
+      isTerminating
     );
 
     return {
@@ -108,14 +116,13 @@ export class SessionCompletionTracker {
     reason?: string;
     requiredActions?: string[];
   } {
-    const isTestEnvironment = process.env.NODE_ENV === 'test' || process.env.VITEST === 'true';
-
-    // CRITICAL: Check for ANY skipped steps first (but be less strict in tests)
+    // No test-environment exemption. Suppressing this under vitest meant the
+    // suite could never observe the block, which is exactly how a guard rots.
     const totalSkippedSteps = metadata.techniqueStatuses.reduce(
       (sum, s) => sum + s.skippedSteps.length,
       0
     );
-    if (!isTestEnvironment && totalSkippedSteps > 0) {
+    if (totalSkippedSteps > 0) {
       return {
         allowed: false,
         reason: `❌ BLOCKED: ${totalSkippedSteps} steps were skipped. ALL steps MUST be executed sequentially.`,
@@ -419,36 +426,48 @@ export class SessionCompletionTracker {
   private generateCompletionWarnings(
     overallProgress: number,
     statuses: TechniqueCompletionStatus[],
-    criticalGaps: string[]
+    criticalGaps: string[],
+    isTerminating: boolean
   ): string[] {
     const warnings: string[] = [];
 
-    // Critical warnings with stronger language
-    if (overallProgress < this.CRITICAL_THRESHOLD) {
-      warnings.push(
-        `⚠️ CRITICAL FAILURE: Only ${Math.round(overallProgress * 100)}% complete! ` +
-          `YOU MUST COMPLETE ALL STEPS. ` +
-          `Missing ${Math.round((1 - overallProgress) * 100)}% will result in INVALID analysis. ` +
-          `DO NOT proceed to synthesis until ALL steps are complete.`
-      );
-    } else if (overallProgress < this.WARNING_THRESHOLD) {
-      warnings.push(
-        `⚠️ MANDATORY ACTION: Only ${Math.round(overallProgress * 100)}% complete. ` +
-          `You MUST complete remaining steps. Incomplete execution violates thinking process requirements.`
-      );
-    } else if (overallProgress < this.DEFAULT_MINIMUM_THRESHOLD) {
-      warnings.push(
-        `⚠️ WARNING: ${Math.round(overallProgress * 100)}% complete. ` +
-          `Minimum 80% required. Complete remaining steps before synthesis.`
-      );
-    }
+    // Incompleteness is only a fault when the session is ending. On step 1 of a
+    // seven-step technique, progress is 14% and the session is proceeding
+    // exactly as planned — telling the caller it has CRITICALLY FAILED there,
+    // every time, is how these warnings came to be routinely ignored.
+    //
+    // The technique-specific warnings below are NOT gated: "Black Hat skipped"
+    // is true whenever it is true, and acting on it mid-session is the point.
+    if (isTerminating) {
+      // Critical warnings with stronger language
+      if (overallProgress < this.CRITICAL_THRESHOLD) {
+        warnings.push(
+          `⚠️ CRITICAL FAILURE: Only ${Math.round(overallProgress * 100)}% complete! ` +
+            `YOU MUST COMPLETE ALL STEPS. ` +
+            `Missing ${Math.round((1 - overallProgress) * 100)}% will result in INVALID analysis. ` +
+            `DO NOT proceed to synthesis until ALL steps are complete.`
+        );
+      } else if (overallProgress < this.WARNING_THRESHOLD) {
+        warnings.push(
+          `⚠️ MANDATORY ACTION: Only ${Math.round(overallProgress * 100)}% complete. ` +
+            `You MUST complete remaining steps. Incomplete execution violates thinking process requirements.`
+        );
+      } else if (overallProgress < this.DEFAULT_MINIMUM_THRESHOLD) {
+        warnings.push(
+          `⚠️ WARNING: ${Math.round(overallProgress * 100)}% complete. ` +
+            `Minimum 80% required. Complete remaining steps before synthesis.`
+        );
+      }
 
-    // Critical gaps warnings with emphasis
-    if (criticalGaps.length > 0) {
-      warnings.push(
-        `❌ CRITICAL GAPS DETECTED: ${criticalGaps.join(', ')}. ` +
-          `These MUST be addressed for valid analysis.`
-      );
+      // Critical gaps had no progress gate at all, so this fired on step 1 of
+      // every multi-technique plan: identifyCriticalGaps counts any technique
+      // with zero completed steps, and at the start that is nearly all of them.
+      if (criticalGaps.length > 0) {
+        warnings.push(
+          `❌ CRITICAL GAPS DETECTED: ${criticalGaps.join(', ')}. ` +
+            `These MUST be addressed for valid analysis.`
+        );
+      }
     }
 
     // Specific technique warnings

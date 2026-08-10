@@ -54,7 +54,7 @@ export class VisualFormatter {
         }
         // Add progress bar if session and plan are available
         if (session && plan) {
-            const progressDisplay = this.formatSessionProgressBar(session, plan, currentStep, totalSteps);
+            const progressDisplay = this.formatSessionProgressBar(session, plan, currentStep, totalSteps, !input.nextStepNeeded);
             if (progressDisplay) {
                 lines.push(chalk.blue('│') + progressDisplay + chalk.blue('│'));
             }
@@ -706,9 +706,9 @@ export class VisualFormatter {
     /**
      * Format progress bar for session completion
      */
-    formatSessionProgressBar(session, plan, _currentStep, _totalSteps) {
+    formatSessionProgressBar(session, plan, _currentStep, _totalSteps, isTerminating) {
         // Calculate completion metadata
-        const metadata = this.completionTracker.calculateCompletionMetadata(session, plan);
+        const metadata = this.completionTracker.calculateCompletionMetadata(session, plan, isTerminating);
         const percentage = Math.round(metadata.overallProgress * 100);
         // Create progress bar
         const barWidth = 30;
@@ -730,7 +730,10 @@ export class VisualFormatter {
         const progressText = ` Progress: ${barColor(progressBar)} ${percentage}% (${metadata.completedSteps}/${metadata.totalPlannedSteps} steps) `;
         // Add warning indicator if needed
         let warningIndicator = '';
-        if (metadata.criticalGapsIdentified.length > 0) {
+        // Only flag gaps once the session is ending. Every technique a plan has not
+        // reached yet counts as a "critical gap", so this painted the progress bar
+        // red on step 1 of every multi-technique session.
+        if (isTerminating && metadata.criticalGapsIdentified.length > 0) {
             warningIndicator = chalk.red(' ⚠️');
         }
         else if (!metadata.minimumThresholdMet) {

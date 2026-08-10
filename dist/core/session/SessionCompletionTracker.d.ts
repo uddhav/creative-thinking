@@ -39,7 +39,13 @@ export declare class SessionCompletionTracker {
     /**
      * Calculate session completion metadata
      */
-    calculateCompletionMetadata(session: SessionData, plan?: PlanThinkingSessionOutput): SessionCompletionMetadata;
+    /**
+     * @param isTerminating whether this step ends the session. Incompleteness is
+     * only a problem when there will be no further steps; mid-session it is just
+     * progress, and saying otherwise on every early step taught callers to ignore
+     * the warnings entirely.
+     */
+    calculateCompletionMetadata(session: SessionData, plan?: PlanThinkingSessionOutput, isTerminating?: boolean): SessionCompletionMetadata;
     /**
      * Check if session should be allowed to proceed to synthesis
      */

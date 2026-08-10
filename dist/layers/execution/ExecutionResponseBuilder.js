@@ -212,7 +212,7 @@ export class ExecutionResponseBuilder {
         this.addMemoryOutputs(parsedResponse, memoryOutputs);
         this.addTechniqueProgress(parsedResponse, techniqueProgress);
         // Add completion tracking metadata
-        const completionMetadata = this.completionTracker.calculateCompletionMetadata(session, plan);
+        const completionMetadata = this.completionTracker.calculateCompletionMetadata(session, plan, !input.nextStepNeeded);
         this.addCompletionMetadata(parsedResponse, completionMetadata);
     }
     /**
@@ -268,17 +268,15 @@ export class ExecutionResponseBuilder {
             // one shape rather than two near-identical ones.
             return `Complete the ${handler.getTechniqueInfo().name} process for: "${input.problem}"`;
         }
-        // Check completion status and add assertive guidance if needed
-        const completionMetadata = this.completionTracker.calculateCompletionMetadata(session, plan);
-        const remainingSteps = input.totalSteps - input.currentStep;
-        // Add STRONG assertive guidance for low completion (skip in test environment)
-        const isTestEnvironment = process.env.NODE_ENV === 'test' || process.env.VITEST === 'true';
-        if (!isTestEnvironment && completionMetadata.overallProgress < 0.5) {
-            const percentage = Math.round(completionMetadata.overallProgress * 100);
-            return (`⚠️ MANDATORY: Only ${percentage}% complete with ${remainingSteps} steps remaining. ` +
-                `You MUST continue. ALL steps are required. ` +
-                `Next: ${this.getBaseGuidance(handler, techniqueLocalStep + 1, input)}`);
-        }
+        // No completion nag here. This function returns early unless
+        // input.nextStepNeeded is true, so anything it emits fires mid-session by
+        // definition — and it fired below 50% progress, i.e. on the opening steps of
+        // every session, prefixing "MANDATORY: Only 14% complete" onto the guidance
+        // for a step being taken exactly on plan. It was invisible because it also
+        // carried a NODE_ENV/VITEST exemption, so no test could ever see it.
+        //
+        // Incompleteness is reported once, where it means something: on the
+        // terminating step, via SessionCompletionTracker's warnings.
         // Check if we're transitioning to a new technique
         const currentTechniqueSteps = plan?.workflow[techniqueIndex]?.steps.length || handler.getTechniqueInfo().totalSteps;
         if (techniqueLocalStep >= currentTechniqueSteps) {

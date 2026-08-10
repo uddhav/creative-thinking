@@ -38,7 +38,9 @@ export class CompletionGatekeeper {
      * Check if synthesis is allowed based on completion status
      */
     canProceedToSynthesis(session, plan) {
-        const metadata = this.completionTracker.calculateCompletionMetadata(session, plan);
+        // Both gatekeeper paths run only when the session is trying to end, so
+        // incompleteness here is a real finding rather than progress.
+        const metadata = this.completionTracker.calculateCompletionMetadata(session, plan, true);
         const synthesisCheck = this.completionTracker.canProceedToSynthesis(metadata);
         if (synthesisCheck.allowed || this.config.enforcementLevel === EnforcementLevel.LENIENT) {
             return { allowed: true };
@@ -51,7 +53,9 @@ export class CompletionGatekeeper {
      * Handle early termination attempt
      */
     handleEarlyTermination(input, session, plan) {
-        const metadata = this.completionTracker.calculateCompletionMetadata(session, plan);
+        // Both gatekeeper paths run only when the session is trying to end, so
+        // incompleteness here is a real finding rather than progress.
+        const metadata = this.completionTracker.calculateCompletionMetadata(session, plan, true);
         const completionPercentage = metadata.overallProgress;
         const remainingSteps = input.totalSteps - input.currentStep;
         // CRITICAL: Always block early termination if steps are skipped
