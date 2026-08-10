@@ -184,11 +184,25 @@ export class SixHatsHandler extends BaseTechniqueHandler {
   ): string[] {
     const insights: string[] = [];
 
+    // Latest entry per step, like every other handler. Iterating the history
+    // directly reported a revised step twice — once as it was first written
+    // and once as revised — because `execute` appends an entry for every call,
+    // revisions included.
+    const latestByStep = new Map<number, (typeof history)[number]>();
     history.forEach((entry, index) => {
       const step = entry.currentStep ?? index + 1;
+      if (step >= 1 && step <= this.hatOrder.length) {
+        latestByStep.set(step, entry);
+      }
+    });
+
+    for (let step = 1; step <= this.hatOrder.length; step++) {
+      const entry = latestByStep.get(step);
+      if (!entry) continue;
+
       const color = (entry.hatColor as SixHatsColor | undefined) ?? this.hatOrder[step - 1];
       const hat = color ? this.hats[color] : undefined;
-      if (!hat) return;
+      if (!hat) continue;
 
       const output = entry.output?.trim();
       if (output) {
@@ -203,7 +217,7 @@ export class SixHatsHandler extends BaseTechniqueHandler {
       if (color === 'black' && entry.risks && entry.risks.length > 0) {
         insights.push(`Critical risks identified: ${entry.risks.join(', ')}`);
       }
-    });
+    }
 
     return insights;
   }

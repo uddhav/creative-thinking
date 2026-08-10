@@ -5,6 +5,7 @@
 
 import type {
   ExecuteThinkingStepInput,
+  LateralTechnique,
   SessionData,
   ThinkingOperationData,
   LateralThinkingResponse,
@@ -438,19 +439,7 @@ export class ExecutionResponseBuilder {
     // final step off the end of the array, discarding it. A session running
     // disney_method before keeper_test reported keeper_test's "Reconstruct the
     // Fence" output under "Decide and Set the Trigger" and dropped the verdict.
-    const techniqueHistory = session.history
-      .filter(entry => entry.technique === input.technique)
-      // Present each entry under its technique-local step. Handlers key on
-      // `currentStep` to let a revision supersede the entry it revises, but
-      // `currentStep` counts across the plan, so for any technique that is not
-      // first the lookup fell outside the technique's own step range and the
-      // step vanished. Thirty-one of thirty-two techniques reported nothing at
-      // all in that position.
-      .map(entry =>
-        entry.techniqueLocalStep === undefined
-          ? entry
-          : { ...entry, currentStep: entry.techniqueLocalStep }
-      );
+    const techniqueHistory = this.ownHistory(session, input.technique);
 
     const currentInsights = monitorCriticalSection(
       'extract_insights',
@@ -458,13 +447,84 @@ export class ExecutionResponseBuilder {
       { technique: input.technique, historyLength: techniqueHistory.length }
     );
 
-    currentInsights.forEach((insight: string) => {
-      if (!session.insights.includes(insight)) {
-        session.insights.push(insight);
-      }
-    });
+    // Rebuild rather than append. `extractInsights` returns the technique's
+    // complete current reading — one entry per step, latest wins — so a
+    // revision supersedes inside the handler. Appending undid that: the
+    // superseded text had already been pushed by the earlier call and nothing
+    // took it back out, so a revised session reported both readings and ended
+    // with more insights than it had steps.
+    //
+    // session.insights is a view of the history, not a log of what was said
+    // along the way, so every technique in the session is re-read each step.
+    session.insights = this.readInsightsFromHistory(session, currentInsights, input);
 
     return currentInsights;
+  }
+
+  /**
+   * One technique's own entries, each presented under its technique-local step.
+   *
+   * Handlers key on `currentStep` so a revision supersedes the entry it
+   * revises, but `currentStep` may count across the whole plan. For any
+   * technique that is not first, that number falls outside the technique's own
+   * step range and the step vanishes.
+   */
+  private ownHistory(
+    session: SessionData,
+    technique: LateralTechnique
+  ): Array<ThinkingOperationData & { timestamp: string }> {
+    return session.history
+      .filter(entry => entry.technique === technique)
+      .map(entry =>
+        entry.techniqueLocalStep === undefined
+          ? entry
+          : { ...entry, currentStep: entry.techniqueLocalStep }
+      );
+  }
+
+  /**
+   * Every technique's current reading of its own steps, in the order the
+   * techniques were first used.
+   */
+  private readInsightsFromHistory(
+    session: SessionData,
+    currentInsights: string[],
+    input: ExecuteThinkingStepInput
+  ): string[] {
+    const seen: string[] = [];
+    const techniques: LateralTechnique[] = [];
+    for (const entry of session.history) {
+      if (entry.technique && !techniques.includes(entry.technique)) {
+        techniques.push(entry.technique);
+      }
+    }
+
+    for (const technique of techniques) {
+      const insights =
+        technique === input.technique
+          ? currentInsights
+          : this.readTechniqueInsights(session, technique);
+      for (const insight of insights) {
+        if (!seen.includes(insight)) seen.push(insight);
+      }
+    }
+
+    // Deliberately no carry-over of whatever was already in session.insights:
+    // that is exactly the superseded text this rebuild exists to drop. Every
+    // technique in the history came from this registry, so each one is re-read
+    // above; one that cannot be resolved contributes nothing rather than
+    // preserving a stale reading.
+    return seen;
+  }
+
+  private readTechniqueInsights(session: SessionData, technique: LateralTechnique): string[] {
+    const handler = this.techniqueRegistry?.tryGetHandler(technique);
+    if (!handler) return [];
+    try {
+      return handler.extractInsights(this.ownHistory(session, technique));
+    } catch {
+      return [];
+    }
   }
 
   private createOperationData(

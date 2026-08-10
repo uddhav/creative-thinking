@@ -47,6 +47,21 @@ export declare class ExecutionResponseBuilder {
      */
     private enhanceWithAnalysisAndOptions;
     private extractInsights;
+    /**
+     * One technique's own entries, each presented under its technique-local step.
+     *
+     * Handlers key on `currentStep` so a revision supersedes the entry it
+     * revises, but `currentStep` may count across the whole plan. For any
+     * technique that is not first, that number falls outside the technique's own
+     * step range and the step vanishes.
+     */
+    private ownHistory;
+    /**
+     * Every technique's current reading of its own steps, in the order the
+     * techniques were first used.
+     */
+    private readInsightsFromHistory;
+    private readTechniqueInsights;
     private createOperationData;
     private generateNextStepGuidance;
     private getBaseGuidance;
