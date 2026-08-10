@@ -24,8 +24,12 @@ import { randomUUID } from 'crypto';
  * 0.95. Any cut between 0.50 and 0.90 separates "can be walked back" from
  * "cannot", and 0.7 is the cut `recordPathEvent` already uses to call a step a
  * critical decision, so the two agree on what an irreversible step is.
+ *
+ * Exported because the cognitive sensor reads the same cut: a sensor and the
+ * barrier it monitors disagreeing on what "irreversible" means would be a
+ * second definition wearing the same word.
  */
-const LOW_REVERSIBILITY_COST = 0.7;
+export const LOW_REVERSIBILITY_COST = 0.7;
 
 export class PathMemoryManager {
   private pathMemory: PathMemory;
@@ -339,6 +343,7 @@ export class PathMemoryManager {
       reversibilityCost?: number;
       commitmentLevel?: number;
       flexibilityImpact?: number;
+      isRevision?: boolean;
     }
   ): PathEvent {
     const event: PathEvent = {
@@ -351,6 +356,7 @@ export class PathMemoryManager {
       optionsClosed: impact.optionsClosed || [],
       reversibilityCost: impact.reversibilityCost || 0.1,
       commitmentLevel: impact.commitmentLevel || 0.1,
+      isRevision: impact.isRevision === true,
       constraintsCreated: [],
       flexibilityImpact:
         impact.flexibilityImpact ??
@@ -572,20 +578,17 @@ export class PathMemoryManager {
    * range clipped. The thresholds are the calibrated part; the multipliers
    * were not, and all but one are gone.
    *
-   * The one that remains is perfectionism, and the reason is that its input is
-   * still wrong rather than merely scaled. It reads
-   * `1 - criticalDecisions/pathLength`, so a session that has committed to
-   * nothing — which is every session at step 1, and the whole of a reflective
-   * chain — reports maximal perfectionism. Unscaled it would be a constant
-   * CRITICAL, which is the same defect as a threshold nothing can reach
-   * wearing the opposite sign. What it wants to measure is revision without
-   * progress: rework as a share of steps taken. That signal exists on the
-   * session history as `isRevision`, but `PathEvent` does not carry it and
-   * `recordPathEvent` is never handed it, so this function cannot see it.
-   * Threading it through is a change to the path record, not to this formula,
-   * and the multiplier stays until it lands. Anything else reachable from here
-   * — repeated step numbers, say — would be a proxy for revision rather than
-   * the thing itself.
+   * The last multiplier is gone with perfectionism's input. It read
+   * `(1 - criticalDecisions/pathLength) * 0.7`, so a session that had committed
+   * to nothing — every session at step 1, and the whole of a reflective chain —
+   * reported proximity 0.700, the maximum the scale allowed, for the absence of
+   * commitment. The scale was the only thing keeping a constant CRITICAL off
+   * the screen, which is a threshold nothing can reach wearing the opposite
+   * sign. It now reads what the barrier is named for: revisions as a share of
+   * the steps taken, a session reworking the same ground instead of advancing.
+   * `isRevision` reaches the path record as of this change, so no session has
+   * to be inferred from a proxy — no revisions is proximity 0, not 1, and the
+   * multiplier is not needed to hide anything.
    */
   private calculateBarrierProximity(barrier: Barrier): number {
     // Different calculation methods based on barrier type
@@ -628,14 +631,12 @@ export class PathMemoryManager {
       }
 
       case 'perfectionism': {
-        // Check for excessive refinement
-        const refinementRatio =
-          this.pathMemory.criticalDecisions.length /
-          Math.max(this.pathMemory.pathHistory.length, 1);
-        // Still scaled: see the note above — unscaled, a session that has made
-        // no commitment at all reads as maximally perfectionist, and the input
-        // that would fix it is not reachable from here.
-        return (1 - refinementRatio) * 0.7;
+        // Revision without progress: how much of the session went back over
+        // ground it had already covered. A session that has advanced on every
+        // step has reworked nothing, and reads 0.
+        if (this.pathMemory.pathHistory.length === 0) return 0;
+        const revisions = this.pathMemory.pathHistory.filter(e => e.isRevision === true).length;
+        return revisions / this.pathMemory.pathHistory.length;
       }
 
       default:

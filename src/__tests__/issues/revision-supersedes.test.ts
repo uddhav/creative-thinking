@@ -115,4 +115,31 @@ describe('a revision supersedes the step it revises', () => {
     expect(session.insights.some(i => i.includes('SECOND reading'))).toBe(true);
     expect(session.history.length, 'the history still records both calls').toBe(8);
   });
+
+  it('records the revision on the path event, not only on the session history', async () => {
+    // `isRevision` reached `SessionData.history` and stopped there. `PathEvent`
+    // had no such field and `ErgodicityOrchestrator.calculateImpact` never
+    // passed one, so `perfectionism` — the barrier whose whole subject is
+    // revision without progress — could not observe a revision from the path
+    // record and counted commitments instead, reporting its own maximum for a
+    // session that had committed to nothing.
+    //
+    // This asserts the real call site: the flag has to survive
+    // `executeThinkingStep` -> `calculateImpact` -> `recordThinkingStep` ->
+    // `recordPathEvent`, not merely be storable on the event type.
+    const { session } = await runWithRevision();
+    const pathHistory = session.pathMemory?.pathHistory ?? [];
+
+    expect(pathHistory).toHaveLength(8);
+    expect(pathHistory.map(e => e.isRevision === true)).toEqual([
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+    ]);
+  });
 });

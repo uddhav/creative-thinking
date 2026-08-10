@@ -14,6 +14,12 @@
  *    now reads the reversibility each step declared instead of counting
  *    repeated technique names, `cynicism` is retired, and `commitmentDepth` is
  *    a trailing window rather than a mean over the whole session.
+ * 4. The cognitive sensor, which measured transcript shape — technique variety,
+ *    decision-string variety, insight rate — and reached `caution` on the
+ *    healthy control at step 11 for being terse. It reads the reversibility the
+ *    steps declared now, at two scopes, and has no step-10 stub.
+ * 5. `perfectionism`, which read the absence of commitment because `isRevision`
+ *    stopped at the session history and never reached the path record.
  *
  * `getSensorStatus().historySize` is the observable for (1): a sensor appends
  * to its reading history only inside `measure`, so the count is a direct
@@ -146,18 +152,32 @@ describe('early warning re-measures per step, not per wall-clock second', () => 
 
   it('reports the state of the current step, not of step 1', async () => {
     const actions: string[] = [];
+    // Ten reflective steps, then thirty-one the session cannot walk back.
+    //
+    // The run used to commit from step 1 and still varied, because the
+    // cognitive sensor returned a hard-coded 0.8 for perspective diversity
+    // until the history reached ten events — so the first nine readings were
+    // the stub rather than the session, and the series moved when the stub
+    // handed over. The sensor reads the reversibility each step declared from
+    // step 1 now, so a run that commits from step 1 is at the barrier from step
+    // 1: a true reading of that session, and a useless one for this guard. The
+    // reflective opening is what makes the series have somewhere to move from.
     for (let step = 1; step <= 41; step++) {
-      commit(manager, 'scamper', step);
+      if (step <= 10) {
+        think(manager, 'six_hats', step);
+      } else {
+        commit(manager, 'scamper', step);
+      }
       const state = await system.continuousMonitoring(manager.getPathMemory(), session);
       actions.push(state.recommendedAction);
     }
 
-    // Forty-one near-irreversible steps taken in milliseconds. The wall-clock
-    // gate replayed step 1's reading for the whole run, so the series was one
-    // value repeated 41 times and the run ended on whatever step 1 said.
+    // Forty-one steps taken in milliseconds. The wall-clock gate replayed step
+    // 1's reading for the whole run, so the series was one value repeated 41
+    // times and the run ended on whatever step 1 said.
     expect(actions.at(-1)).toBe('escape');
     expect(new Set(actions).size).toBeGreaterThan(1);
-    expect(actions[0]).not.toBe('escape');
+    expect(actions[0]).toBe('continue');
   });
 });
 
@@ -410,5 +430,216 @@ describe('commitmentDepth answers "how committed now", not "on average since ste
       expect(depthOf(manager), `commitment depth at step ${index + 1}`).toBeCloseTo(0.2, 10);
       expect(depthWarnings(manager)).toHaveLength(0);
     });
+  });
+});
+
+describe('the cognitive sensor measures the path, not the shape of the transcript', () => {
+  /** Sensor rigidity for a session, unthrottled so every step is a fresh read. */
+  async function readings(
+    build: (manager: PathMemoryManager, step: number) => void,
+    steps: number
+  ): Promise<Array<{ raw: number; level: string; action: string }>> {
+    const system = new AbsorbingBarrierEarlyWarning({ measurementThrottleMs: 0 });
+    const manager = new PathMemoryManager();
+    const session = makeSession();
+    const out: Array<{ raw: number; level: string; action: string }> = [];
+
+    for (let step = 1; step <= steps; step++) {
+      build(manager, step);
+      const state = await system.continuousMonitoring(manager.getPathMemory(), session);
+      const reading = state.sensorReadings.get('cognitive');
+      if (!reading) throw new Error('no cognitive reading');
+      out.push({
+        raw: reading.rawValue,
+        level: reading.warningLevel,
+        action: state.recommendedAction,
+      });
+    }
+    return out;
+  }
+
+  it('leaves the healthy control chain at zero rigidity for every step', async () => {
+    // The chain this whole change set exists for. Thirteen thinking steps, each
+    // declaring itself reversible, flexibility ending at 0.937, nothing
+    // committed — and it reached `caution` at step 11.
+    //
+    // Three of the five inputs read transcript shape: how many distinct
+    // technique names appeared in the window, how many distinct decision
+    // strings appeared in it, and how many insights the session had logged per
+    // step. A terse scripted session lacks all three exactly as a struggling
+    // one does. `perspectiveDiversity` also returned a hard-coded 0.8 while the
+    // history was under ten events, so the reading jumped from 0.243 at step 9
+    // to 0.450 at step 10 — the stub handing over, on every chain in the
+    // catalogue — and drifted to 0.574 by step 13, which is a distance of 0.426
+    // against a caution threshold of 0.45.
+    const rows = await readings(
+      (manager, step) => think(manager, HEALTHY_CONTROL[step - 1], step),
+      HEALTHY_CONTROL.length
+    );
+
+    rows.forEach((row, index) => {
+      expect(row.raw, `cognitive rigidity at step ${index + 1} of the healthy control`).toBe(0);
+      expect(row.level).toBe('safe');
+    });
+  });
+
+  it('stays on continue at every level for the whole healthy control chain', async () => {
+    // Barrier, metrics and early-warning all read the same session, and the
+    // control has to be clean on all three. `recommendedAction` is the one the
+    // caller sees, and it was the one that fired.
+    const metrics = new MetricsCalculator();
+    const system = new AbsorbingBarrierEarlyWarning({ measurementThrottleMs: 0 });
+    const manager = new PathMemoryManager();
+    const session = makeSession();
+
+    for (const [index, technique] of HEALTHY_CONTROL.entries()) {
+      think(manager, technique, index + 1);
+      const pathMemory = manager.getPathMemory();
+
+      // Level 1: no barrier is within its own warning threshold.
+      for (const proximity of pathMemory.currentFlexibility.barrierProximity) {
+        expect(
+          proximity.distance,
+          `${proximity.barrier.subtype} distance at step ${index + 1}`
+        ).toBeGreaterThanOrEqual(proximity.barrier.warningThreshold);
+      }
+
+      // Level 2: the metrics raise nothing.
+      const raised = metrics
+        .generateWarnings(metrics.calculateMetrics(pathMemory))
+        .filter(w => w.level !== ErgodicityWarningLevel.INFO);
+      expect(
+        raised.map(w => w.message),
+        `metrics warning at step ${index + 1}`
+      ).toEqual([]);
+
+      // Level 3: the early-warning system says carry on.
+      const state = await system.continuousMonitoring(pathMemory, session);
+      expect(state.recommendedAction, `recommended action at step ${index + 1}`).toBe('continue');
+      for (const [sensor, reading] of state.sensorReadings) {
+        expect(reading.warningLevel, `${sensor} sensor at step ${index + 1}`).toBe('safe');
+      }
+    }
+  });
+
+  it('still escalates for a session that is binding itself', async () => {
+    // The other half: quiet on the control is only worth having if the sensor
+    // can still reach its thresholds. Fifteen steps that cannot be walked back.
+    const rows = await readings((manager, step) => commit(manager, 'scamper', step), 15);
+
+    expect(rows.at(-1)?.level).toBe('critical');
+    expect(rows.at(-1)?.action).toBe('escape');
+    // And it is monotone in what the session bound, not in how long it ran:
+    // the first step is already the whole of a one-step session's history.
+    expect(rows[0].raw).toBeGreaterThan(0.9);
+  });
+
+  it('reads the same session the same however many techniques it names', async () => {
+    // Technique variety was 0.3 of the weight through `perspectiveDiversity`
+    // and appeared again inside `creativeDivergence` and the x1.2 fixation
+    // multiplier. A plan that spends seven consecutive steps on six_hats is
+    // running as planned; that is the workflow's shape, not the session's risk.
+    const oneTechnique = await readings((manager, step) => commit(manager, 'scamper', step), 12);
+    const varied: LateralTechnique[] = ['scamper', 'triz', 'yes_and', 'po'];
+    const fourTechniques = await readings(
+      (manager, step) => commit(manager, varied[step % varied.length], step),
+      12
+    );
+
+    expect(fourTechniques.map(r => r.raw)).toEqual(oneTechnique.map(r => r.raw));
+  });
+
+  it('has no step-10 cliff', async () => {
+    // `perspectiveDiversity` returned 0.8 while `pathHistory.length < 10` and
+    // the real formula from step 10 on, so every chain showed a jump at exactly
+    // that step whatever it had been doing. Nothing about step 10 is special to
+    // a session; the discontinuity belonged to the stub.
+    const rows = await readings((manager, step) => think(manager, 'six_hats', step), 14);
+    const jumps = rows.slice(1).map((row, index) => Math.abs(row.raw - rows[index].raw));
+
+    expect(Math.max(...jumps)).toBe(0);
+  });
+});
+
+describe('perfectionism measures revision, not the absence of commitment', () => {
+  const metrics = new MetricsCalculator();
+
+  const distance = (manager: PathMemoryManager) => {
+    const proximity = manager
+      .getPathMemory()
+      .currentFlexibility.barrierProximity.find(p => p.barrier.subtype === 'perfectionism');
+    if (!proximity) throw new Error('no perfectionism barrier');
+    return proximity.distance;
+  };
+  const warnings = (manager: PathMemoryManager) =>
+    metrics
+      .generateWarnings(metrics.calculateMetrics(manager.getPathMemory()))
+      .filter(w => w.metric === 'barrierProximity' && w.message.includes('Perfectionism'));
+
+  /** A step that reworks an earlier one instead of advancing. */
+  function revise(manager: PathMemoryManager, step: number): void {
+    manager.recordPathEvent('six_hats', step, 'Reworking an earlier step.', {
+      reversibilityCost: 0.1,
+      commitmentLevel: 0.2,
+      isRevision: true,
+    });
+  }
+
+  it('reads zero for a session that has never revised', () => {
+    // It was `(1 - criticalDecisions/pathLength) * 0.7`, so a session that had
+    // committed to nothing reported proximity 0.700 — the maximum that scale
+    // allowed — for the absence of commitment, and the 0.7 was the only thing
+    // keeping a permanent CRITICAL off the screen. Every chain ever measured
+    // sat at distance 0.300, one thousandth clear of the warning threshold,
+    // from step 1 to the end.
+    const manager = new PathMemoryManager();
+    HEALTHY_CONTROL.forEach((technique, index) => {
+      think(manager, technique, index + 1);
+      expect(distance(manager), `perfectionism distance at step ${index + 1}`).toBe(1);
+    });
+    expect(warnings(manager)).toHaveLength(0);
+
+    // Committing hard is a different barrier's business, and it does not move
+    // this one either way.
+    for (let step = 14; step <= 20; step++) commit(manager, 'scamper', step);
+    expect(distance(manager)).toBe(1);
+  });
+
+  it('rises with rework as a share of the steps taken', () => {
+    // `isRevision` lives on `SessionData.history` and on the step input, and
+    // until now stopped there: `PathEvent` had no such field, so the one
+    // barrier whose subject is revision could not see a revision.
+    const manager = new PathMemoryManager();
+    for (let step = 1; step <= 10; step++) think(manager, 'six_hats', step);
+    expect(distance(manager)).toBe(1);
+
+    // Five reworks in fifteen steps: a third of the session went back over
+    // ground it had covered, distance 0.667, quiet.
+    for (let step = 11; step <= 15; step++) revise(manager, step);
+    expect(distance(manager)).toBeCloseTo(1 - 5 / 15, 10);
+    expect(warnings(manager)).toHaveLength(0);
+
+    // Twenty-four in thirty-four, distance 0.294: under the 0.3 threshold, a
+    // warning. A session spending seven steps in ten on rework.
+    for (let step = 16; step <= 34; step++) revise(manager, step);
+    expect(distance(manager)).toBeCloseTo(1 - 24 / 34, 10);
+    expect(warnings(manager)[0].level).toBe(ErgodicityWarningLevel.WARNING);
+
+    // Forty-one in fifty-one, distance 0.196, critical. The whole band is
+    // reachable, in both directions, which the old formula's 0.300 floor and
+    // 0.700 default made impossible in both.
+    for (let step = 35; step <= 51; step++) revise(manager, step);
+    expect(distance(manager)).toBeCloseTo(1 - 41 / 51, 10);
+    expect(warnings(manager)[0].level).toBe(ErgodicityWarningLevel.CRITICAL);
+  });
+
+  it('carries the revision flag from the step input onto the path event', () => {
+    // The thread the formula depends on: `recordPathEvent` records what it was
+    // handed, and an absent flag means "not a revision" rather than unknown.
+    const manager = new PathMemoryManager();
+    think(manager, 'six_hats', 1);
+    revise(manager, 2);
+
+    expect(manager.getPathMemory().pathHistory.map(e => e.isRevision)).toEqual([false, true]);
   });
 });

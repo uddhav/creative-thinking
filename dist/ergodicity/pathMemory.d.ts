@@ -3,6 +3,20 @@
  */
 import type { PathMemory, PathEvent, EscapeRoute } from './types.js';
 import type { LateralTechnique } from '../index.js';
+/**
+ * The `reversibilityCost` above which a step declared itself hard to undo.
+ *
+ * Every step declares a reversibility level and the execution layer records it
+ * on one rung: `high` → 0.10, `medium` → 0.50, `low` → 0.90, `very_low` →
+ * 0.95. Any cut between 0.50 and 0.90 separates "can be walked back" from
+ * "cannot", and 0.7 is the cut `recordPathEvent` already uses to call a step a
+ * critical decision, so the two agree on what an irreversible step is.
+ *
+ * Exported because the cognitive sensor reads the same cut: a sensor and the
+ * barrier it monitors disagreeing on what "irreversible" means would be a
+ * second definition wearing the same word.
+ */
+export declare const LOW_REVERSIBILITY_COST = 0.7;
 export declare class PathMemoryManager {
     private pathMemory;
     constructor(restored?: PathMemory);
@@ -58,6 +72,7 @@ export declare class PathMemoryManager {
         reversibilityCost?: number;
         commitmentLevel?: number;
         flexibilityImpact?: number;
+        isRevision?: boolean;
     }): PathEvent;
     /**
      * Create a constraint from a path event
@@ -88,20 +103,17 @@ export declare class PathMemoryManager {
      * range clipped. The thresholds are the calibrated part; the multipliers
      * were not, and all but one are gone.
      *
-     * The one that remains is perfectionism, and the reason is that its input is
-     * still wrong rather than merely scaled. It reads
-     * `1 - criticalDecisions/pathLength`, so a session that has committed to
-     * nothing — which is every session at step 1, and the whole of a reflective
-     * chain — reports maximal perfectionism. Unscaled it would be a constant
-     * CRITICAL, which is the same defect as a threshold nothing can reach
-     * wearing the opposite sign. What it wants to measure is revision without
-     * progress: rework as a share of steps taken. That signal exists on the
-     * session history as `isRevision`, but `PathEvent` does not carry it and
-     * `recordPathEvent` is never handed it, so this function cannot see it.
-     * Threading it through is a change to the path record, not to this formula,
-     * and the multiplier stays until it lands. Anything else reachable from here
-     * — repeated step numbers, say — would be a proxy for revision rather than
-     * the thing itself.
+     * The last multiplier is gone with perfectionism's input. It read
+     * `(1 - criticalDecisions/pathLength) * 0.7`, so a session that had committed
+     * to nothing — every session at step 1, and the whole of a reflective chain —
+     * reported proximity 0.700, the maximum the scale allowed, for the absence of
+     * commitment. The scale was the only thing keeping a constant CRITICAL off
+     * the screen, which is a threshold nothing can reach wearing the opposite
+     * sign. It now reads what the barrier is named for: revisions as a share of
+     * the steps taken, a session reworking the same ground instead of advancing.
+     * `isRevision` reaches the path record as of this change, so no session has
+     * to be inferred from a proxy — no revisions is proximity 0, not 1, and the
+     * multiplier is not needed to hide anything.
      */
     private calculateBarrierProximity;
     /**

@@ -32,12 +32,26 @@ export class ErgodicityResultAdapter {
     }
     /**
      * Adapt metrics data
+     *
+     * `constraintLevel` used to add two different clocks together and treat a
+     * missing reading as a middling one:
+     *
+     *     Math.min(1, (metrics.commitmentDepth || 0.5) + constraints.length * 0.05)
+     *
+     * `commitmentDepth` is a mean over the last five steps — a state a session
+     * can leave — while `constraints.length` counts every constraint since step 1
+     * and only grows, so the sum answered no single question about any moment.
+     * Worse, the two count the same steps: `createConstraint` fires on
+     * `commitmentLevel > 0.5`, which is exactly what `commitmentDepth` averages,
+     * so a committing step was charged twice — the same double charge the
+     * flexibility score shed when its own constraint penalty came off. And the
+     * `|| 0.5` turned a depth of 0, a session that has committed to nothing, into
+     * a reading halfway to fully constrained; 0 is a measurement, not a gap.
+     *
+     * One clock, the five-step window, and zero meaning zero.
      */
     adaptMetrics(metrics, currentFlexibility, pathMemory) {
-        // Use path memory to enhance constraint level calculation
-        const enhancedConstraintLevel = pathMemory
-            ? Math.min(1, (metrics.commitmentDepth || 0.5) + pathMemory.constraints.length * 0.05)
-            : metrics.commitmentDepth || 0.5;
+        const enhancedConstraintLevel = metrics.commitmentDepth ?? 0;
         // Use path memory to adjust option space size
         const adjustedOptionSpace = pathMemory
             ? (metrics.optionVelocity || 1.0) * Math.max(0.5, 1 - pathMemory.pathHistory.length * 0.01)

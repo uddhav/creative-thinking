@@ -44,6 +44,8 @@ export declare class ErgodicityManager {
         commitmentLevel?: number;
         /** Omit to have it derived from reversibility and commitment. */
         flexibilityImpact?: number;
+        /** Whether this step reworked an earlier one instead of advancing. */
+        isRevision?: boolean;
     }, sessionData?: SessionData): Promise<{
         event: PathEvent;
         metrics: FlexibilityMetrics;

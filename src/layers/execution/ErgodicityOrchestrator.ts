@@ -229,6 +229,7 @@ export class ErgodicityOrchestrator {
     optionsOpened?: string[];
     reversibilityCost?: number;
     commitmentLevel?: number;
+    isRevision?: boolean;
   } {
     // What the step declares about itself, not what its prose happens to say.
     //
@@ -277,6 +278,12 @@ export class ErgodicityOrchestrator {
       optionsOpened: serverDerived?.optionsOpened,
       reversibilityCost,
       commitmentLevel,
+      // The caller says whether this step reworks an earlier one, and until now
+      // that statement stopped at `session.history`. `perfectionism` is the
+      // barrier for revision without progress and it is the only consumer, so
+      // without this the barrier had to infer rework from something else and
+      // read a session that never revised as maximally perfectionist.
+      isRevision: input.isRevision === true,
     };
   }
 

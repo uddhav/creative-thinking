@@ -112,11 +112,9 @@ export interface TechnicalDebtMetrics {
  * Cognitive flexibility specific types
  */
 export interface CognitiveMetrics {
-    perspectiveDiversity: number;
+    recentReversibility: number;
+    sustainedReversibility: number;
     assumptionChallengeRate: number;
-    learningVelocity: number;
-    mentalModelFlexibility: number;
-    creativeDivergence: number;
 }
 /**
  * Relationship health specific types
