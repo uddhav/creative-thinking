@@ -71,6 +71,13 @@ node dist/cli.js execute --plan <planId> --technique six_hats \
 node dist/cli.js session list --status active --limit 20
 ```
 
+**Number steps across the whole plan.** A plan of `triz` (4 steps) then `six_hats` (7) numbers the
+first hat as `--step 5 --total-steps 11`, not `--step 1 --total-steps 7`. Numbering within a single
+technique is also accepted, but then `--total-steps` must be that technique's own count: the pair is
+what tells the server which convention you mean, and mixing them resolves the step to the wrong
+place. Both forms were accepted and neither was documented, which is how a technique running second
+in a plan came to report no insights at all.
+
 **`--next-step-needed` is required on every `execute` call and has no default.** Omitting it fails
 with `nextStepNeeded must be a boolean` — on any step, not just the last. Pass it while steps
 remain, and `--no-next-step-needed` on the final step. A session that never receives the negated
