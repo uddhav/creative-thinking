@@ -434,6 +434,41 @@ export class ExecutionValidator {
   }
 
   /**
+   * Name the fields a rejected step objected to.
+   *
+   * `validateStep` returns a bare boolean, so a handler that rejects
+   * `vacantSpaces` for a missing `whyVacant` cannot say so. It is a pure
+   * function of (step, data) though, so asking it again with one field removed
+   * at a time identifies the culprit: a field whose absence makes the step
+   * validate is a field whose value the handler refused.
+   *
+   * Only ever runs on the error path, and only over the fields the caller
+   * actually sent. A handler that throws instead of returning false already
+   * reports its own field, so a throw here just means "not this one".
+   */
+  private findRejectedFields(
+    handler: TechniqueHandler,
+    step: number,
+    input: ExecuteThinkingStepInput
+  ): string[] {
+    const candidates = Object.keys(input).filter(key => {
+      if (key === 'technique' || key === 'currentStep') return false;
+      const value = input[key as keyof typeof input];
+      return value !== null && value !== undefined;
+    });
+
+    return candidates.filter(field => {
+      const withoutField = { ...input } as Record<string, unknown>;
+      delete withoutField[field];
+      try {
+        return handler.validateStep(step, withoutField as unknown as ExecuteThinkingStepInput);
+      } catch {
+        return false;
+      }
+    });
+  }
+
+  /**
    * Validate step and get step info
    */
   validateStepAndGetInfo(
@@ -444,6 +479,16 @@ export class ExecutionValidator {
     isValid: boolean;
     stepInfo?: { name: string; focus: string; emoji: string } | null;
     normalizedStep: number;
+    /**
+     * Which of the two ways a step can fail. `range` is a step number outside
+     * the technique; `data` is a step number the technique accepts carrying
+     * fields it does not. Both used to be reported as `range`, so a mis-shaped
+     * field produced "Valid range is 1-5" for a step that was already in 1-5 —
+     * advice the caller could follow forever without getting anywhere.
+     */
+    failure?: 'range' | 'data';
+    /** Fields whose removal makes the step validate. See findRejectedFields. */
+    rejectedFields?: string[];
   } {
     // Store original step for error reporting before normalization
     const originalLocalStep = techniqueLocalStep;
@@ -472,7 +517,8 @@ export class ExecutionValidator {
     }
 
     // Check if the original step is invalid (including negative or out of bounds)
-    const isOriginalStepInvalid = wasNormalized || !handler.validateStep(originalLocalStep, input);
+    const rejectedByHandler = !wasNormalized && !handler.validateStep(originalLocalStep, input);
+    const isOriginalStepInvalid = wasNormalized || rejectedByHandler;
 
     if (isOriginalStepInvalid) {
       // Handle invalid step - visual formatter expects this
@@ -496,6 +542,10 @@ export class ExecutionValidator {
         isValid: false,
         stepInfo: null,
         normalizedStep: Math.max(1, techniqueLocalStep), // Ensure at least 1
+        failure: rejectedByHandler ? 'data' : 'range',
+        rejectedFields: rejectedByHandler
+          ? this.findRejectedFields(handler, originalLocalStep, input)
+          : undefined,
       };
     }
 

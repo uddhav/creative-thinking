@@ -368,7 +368,7 @@ export class ErrorHandler {
                 recovery: [
                     'Steps must be between 1 and totalSteps',
                     'Current step should increment by 1 from previous step',
-                    'Each technique has a specific number of steps (e.g., six_hats has 6)',
+                    'Each technique has a specific number of steps (e.g., six_hats has 7)',
                 ],
             },
             [ErrorCode.INVALID_STEP_SEQUENCE]: {

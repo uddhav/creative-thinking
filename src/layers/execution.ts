@@ -121,7 +121,19 @@ export async function executeThinkingStep(
         // Provide more detailed error message based on the scenario
         // Use originalStep from calculateTechniqueLocalStep for accurate checking
         let errorMessage = '';
-        if (originalStep < 1) {
+        if (stepValidation.failure === 'data') {
+          // The step number is fine — the technique refused the step's data.
+          // Reported as a range error, this sent callers to fix a step number
+          // that was already correct: sending vacantSpaces as the strings the
+          // schema used to describe got "Step 2 is invalid for Reverse
+          // Benchmarking. Valid range is 1-5" for a step that is inside 1-5.
+          const named = stepValidation.rejectedFields ?? [];
+          const culprit =
+            named.length > 0
+              ? `The problem is ${named.join(' or ')} — check the shape against the tool schema.`
+              : 'Check the fields this technique defines for this step against the tool schema.';
+          errorMessage = `Step ${originalStep} of ${techniqueInfo.name} rejected the data it was given. The step number is valid. ${culprit}`;
+        } else if (originalStep < 1) {
           errorMessage = `Step ${originalStep} is invalid. Steps must be positive integers starting from 1.`;
         } else if (originalStep > input.totalSteps) {
           errorMessage = `Step ${originalStep} exceeds total steps (${input.totalSteps}) for the plan.`;
@@ -153,12 +165,19 @@ export async function executeThinkingStep(
         // for the steps that had been saved. A step count that shrinks between
         // runs lands here — a technique trimmed, or a plan hydrated from disk by
         // a newer build.
-        throw new ValidationError(ErrorCode.INVALID_STEP, errorMessage, 'currentStep', {
-          ...errorContext,
-          technique: input.technique,
-          providedStep: input.currentStep,
-          validRange: `1-${techniqueInfo.totalSteps}`,
-        });
+        const isDataFailure = stepValidation.failure === 'data';
+        throw new ValidationError(
+          isDataFailure ? ErrorCode.INVALID_FIELD_VALUE : ErrorCode.INVALID_STEP,
+          errorMessage,
+          isDataFailure ? (stepValidation.rejectedFields?.[0] ?? 'stepData') : 'currentStep',
+          {
+            ...errorContext,
+            technique: input.technique,
+            providedStep: input.currentStep,
+            validRange: `1-${techniqueInfo.totalSteps}`,
+            ...(isDataFailure ? { rejectedFields: stepValidation.rejectedFields } : {}),
+          }
+        );
       }
 
       const { stepInfo, normalizedStep: techniqueLocalStep } = stepValidation as {
