@@ -1,14 +1,23 @@
 /**
- * Insight generation strategies for different thinking techniques
+ * Observations about a step, for the memory channel.
+ *
+ * These sit beside each handler's own `extractInsights`, which reports what the
+ * step said. What belongs here is what is true of the step by construction —
+ * counts of what the caller sent, readings it recorded — and nothing else.
+ *
+ * Seven entries here used to assert outcomes instead: a green hat on step 6
+ * meant "Creative solutions generated after systematic analysis", a
+ * contradiction meant "opening path to breakthrough", more than three
+ * additions meant "Collaborative momentum achieved", and user feedback on the
+ * last Design Thinking step meant "Testing validated solution assumptions" —
+ * emitted whether the testing validated anything or refuted it. Two strategies
+ * held nothing but such a claim and are gone.
  */
 export class SixHatsInsightStrategy {
     technique = 'six_hats';
     generateInsight(input) {
         if (input.hatColor === 'black' && input.risks && input.risks.length > 0) {
             return `Critical thinking revealed ${input.risks.length} risk factors that require mitigation`;
-        }
-        if (input.hatColor === 'green' && input.currentStep === 6) {
-            return 'Creative solutions generated after systematic analysis';
         }
         return undefined;
     }
@@ -28,18 +37,6 @@ export class DesignThinkingInsightStrategy {
         if (input.currentStep === 1 && input.empathyInsights && input.empathyInsights.length > 0) {
             return `User research uncovered ${input.empathyInsights.length} key pain points`;
         }
-        if (input.currentStep === 5 && input.userFeedback) {
-            return 'Testing validated solution assumptions with real users';
-        }
-        return undefined;
-    }
-}
-export class TRIZInsightStrategy {
-    technique = 'triz';
-    generateInsight(input) {
-        if (input.contradiction) {
-            return 'Technical contradiction identified, opening path to breakthrough';
-        }
         return undefined;
     }
 }
@@ -48,15 +45,6 @@ export class SCAMPERInsightStrategy {
     generateInsight(input) {
         if (input.pathImpact && input.pathImpact.flexibilityRetention < 0.3) {
             return 'High-commitment modification: consider generating alternatives';
-        }
-        return undefined;
-    }
-}
-export class YesAndInsightStrategy {
-    technique = 'yes_and';
-    generateInsight(input) {
-        if (input.currentStep === 3 && input.additions && input.additions.length > 3) {
-            return 'Collaborative momentum achieved with multiple building iterations';
         }
         return undefined;
     }
@@ -84,9 +72,6 @@ export class NeuralStateInsightStrategy {
             if (parts.length > 0) {
                 return parts.join('. ');
             }
-        }
-        if (input.dominantNetwork && input.suppressionDepth && input.suppressionDepth > 7) {
-            return 'Deep neural state manipulation achieved - breakthrough potential high';
         }
         return undefined;
     }
@@ -122,7 +107,7 @@ export class CrossCulturalInsightStrategy {
         if (input.currentStep === 3 &&
             input.respectfulSynthesis &&
             input.respectfulSynthesis.length > 0) {
-            return `Creating inclusive solution from ${input.respectfulSynthesis.length} synthesized approaches`;
+            return `${input.respectfulSynthesis.length} approaches synthesized`;
         }
         if (input.currentStep === 4 && input.parallelPaths && input.parallelPaths.length > 0) {
             return `${input.parallelPaths.length} parallel paths designed`;
@@ -144,10 +129,6 @@ export class TemporalWorkInsightStrategy {
             input.pressureTransformation &&
             input.pressureTransformation.length > 0) {
             return `${input.pressureTransformation.length} catalytic techniques applied`;
-        }
-        if (input.temporalLandscape?.kairosOpportunities &&
-            input.temporalLandscape.kairosOpportunities.length > 0) {
-            return 'Kairos moments identified - optimal timing windows available';
         }
         return undefined;
     }
@@ -174,9 +155,7 @@ export class InsightStrategyRegistry {
             new SixHatsInsightStrategy(),
             new POInsightStrategy(),
             new DesignThinkingInsightStrategy(),
-            new TRIZInsightStrategy(),
             new SCAMPERInsightStrategy(),
-            new YesAndInsightStrategy(),
             new NeuralStateInsightStrategy(),
             new CollectiveIntelInsightStrategy(),
             new CrossCulturalInsightStrategy(),

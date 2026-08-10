@@ -252,9 +252,12 @@ describe('Memory-Suggestive Outputs', () => {
         nextStepNeeded: false,
       });
 
+      // A revision is evidence of revision, and that is all this can see.
+      // Whether alternatives were explored is a claim about the content.
       expect(result.historicalNote).toBe(
-        'Solution evolved through iterative refinement and exploration of alternatives'
+        'Revised 2 step(s) rather than proceeding straight through'
       );
+      expect(result.historicalNote).not.toContain('exploration of alternatives');
     });
   });
 

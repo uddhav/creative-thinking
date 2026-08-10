@@ -258,7 +258,10 @@ describe('Cross-Cultural Integration', () => {
       });
 
       expect(step3.currentStep).toBe(3);
-      expect(step3.contextualInsight).toContain('inclusive solution');
+      // The count is observed; "inclusive" was a claim about the result, fired
+      // whenever the field was non-empty.
+      expect(step3.contextualInsight).toContain('approaches synthesized');
+      expect(step3.contextualInsight).not.toContain('inclusive solution');
 
       // Step 4: Develop parallel solutions
       const step4 = await executeStep(planId, {
