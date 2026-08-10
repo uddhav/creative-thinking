@@ -190,7 +190,13 @@ describe('Complete Technique Workflows', () => {
         // Check PDA-SCAMPER fields
         if (stepData.pathImpact) {
           expect(stepData.pathImpact.commitmentLevel).toBeDefined();
-          expect(stepData.flexibilityScore).toBeDefined();
+          // flexibilityScore is the engine's measurement and is reported on
+          // the same terms for every technique — once it is low enough to act
+          // on. SCAMPER used to echo the caller's own number unconditionally,
+          // which is what made it appear on every step here.
+          if (stepData.flexibilityScore !== undefined) {
+            expect(stepData.flexibilityScore).toBeLessThan(0.7);
+          }
         }
 
         if (i === actions.length - 1) {

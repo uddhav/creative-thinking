@@ -114,7 +114,6 @@ export interface ExecuteThinkingStepInput {
     scamperAction?: ScamperAction;
     modificationHistory?: ScamperModificationHistory[];
     pathImpact?: ScamperPathImpact;
-    flexibilityScore?: number;
     alternativeSuggestions?: string[];
     successExample?: string;
     extractedConcepts?: string[];
@@ -315,7 +314,6 @@ export interface ThinkingOperationData {
     scamperAction?: ScamperAction;
     modificationHistory?: ScamperModificationHistory[];
     pathImpact?: ScamperPathImpact;
-    flexibilityScore?: number;
     alternativeSuggestions?: string[];
     successExample?: string;
     extractedConcepts?: string[];

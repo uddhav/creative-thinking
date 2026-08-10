@@ -18,8 +18,8 @@ import { randomUUID } from 'crypto';
 export class PathMemoryManager {
   private pathMemory: PathMemory;
 
-  constructor() {
-    this.pathMemory = this.initializePathMemory();
+  constructor(restored?: PathMemory) {
+    this.pathMemory = restored ?? this.initializePathMemory();
   }
 
   /**
@@ -272,6 +272,51 @@ export class PathMemoryManager {
   /**
    * Record a path event and update path memory
    */
+  /**
+   * The share of remaining freedom a step consumes, 0-1.
+   *
+   * A step costs freedom when it is both hard to undo and binding, so the
+   * product of the two is the measure; the cap stops any one step consuming
+   * more than a fifth of what remains, which is what puts all thirty-two
+   * techniques on one scale a threshold can be set against.
+   *
+   * It lives here rather than in the execution layer because
+   * `flexibilityImpact` is the sole determinant of the flexibility score, and
+   * deriving it one layer up meant every caller except that one recorded steps
+   * that cost nothing — `ErgodicityManager.recordThinkingStep` could be handed
+   * a maximally irreversible, maximally binding decision and still report
+   * flexibility 1.0, forever.
+   *
+   * Options closed and opened enter through the same per-step channel rather
+   * than as a separate factor. As a global available-option ratio they were a
+   * surcharge only SCAMPER paid, since it is the only technique that reports
+   * them — it cost SCAMPER two steps of timing against an equally committal
+   * six_hats run, and made the score non-monotone, because a step that opened
+   * more than it closed raised a ratio the rest of the model only lowered.
+   * Netted per step they are one signal among two: reopening what was closed
+   * returns freedom, which is the whole point of an escape.
+   *
+   * The constants are a starting point to be measured, not tuned.
+   */
+  static deriveFlexibilityImpact(
+    reversibilityCost: number,
+    commitmentLevel: number,
+    optionsClosed = 0,
+    optionsOpened = 0
+  ): number {
+    const SCALE = 0.25;
+    const OPTION_WEIGHT = 0.05;
+    const MAX_PER_STEP = 0.5;
+
+    const binding = reversibilityCost * commitmentLevel * SCALE;
+    const netClosed = (optionsClosed - optionsOpened) * OPTION_WEIGHT;
+
+    // Negative is a credit: a step that reopens more than it forecloses gives
+    // freedom back. The cap is symmetric so no single step can take, or
+    // return, more than half of what remains.
+    return Math.max(-MAX_PER_STEP, Math.min(MAX_PER_STEP, binding + netClosed));
+  }
+
   recordPathEvent(
     technique: LateralTechnique,
     step: number,
@@ -295,7 +340,14 @@ export class PathMemoryManager {
       reversibilityCost: impact.reversibilityCost || 0.1,
       commitmentLevel: impact.commitmentLevel || 0.1,
       constraintsCreated: [],
-      flexibilityImpact: impact.flexibilityImpact,
+      flexibilityImpact:
+        impact.flexibilityImpact ??
+        PathMemoryManager.deriveFlexibilityImpact(
+          impact.reversibilityCost || 0.1,
+          impact.commitmentLevel || 0.1,
+          impact.optionsClosed?.length ?? 0,
+          impact.optionsOpened?.length ?? 0
+        ),
     };
 
     // Add to history
@@ -407,19 +459,32 @@ export class PathMemoryManager {
    * Update flexibility metrics based on current path state
    */
   private updateFlexibilityMetrics(): void {
-    const totalOptions =
-      this.pathMemory.availableOptions.length + this.pathMemory.foreclosedOptions.length;
-    const availableRatio = this.pathMemory.availableOptions.length / Math.max(totalOptions, 1);
-
-    // Calculate flexibility score
-    // Apply flexibility impacts from path events
-    let flexibilityScore = availableRatio;
+    // What the path has spent, and nothing else.
+    //
+    // This used to be scaled by the ratio of still-available options to every
+    // option ever named. Only SCAMPER reports optionsClosed and optionsOpened,
+    // so that ratio sat at exactly 1.0 for thirty-one techniques and floated
+    // around 0.78-0.87 for the thirty-second — a surcharge SCAMPER alone paid,
+    // on top of a per-step cost that already prices how binding the step was.
+    // Measured, it cost SCAMPER two steps of timing against an equally
+    // committal six_hats run, and tripped the 0.4 gate on a four-step session.
+    //
+    // It also made the score non-monotonic: a step that opens more options
+    // than it closes raises the ratio, so flexibility could be spent and then
+    // reappear. The option lists are still kept and still feed the
+    // option-generation engine; they no longer charge the measure twice.
+    let flexibilityScore = 1;
     for (const event of this.pathMemory.pathHistory) {
       if (event.flexibilityImpact !== undefined) {
         flexibilityScore *= 1 - event.flexibilityImpact;
       }
     }
-    this.pathMemory.currentFlexibility.flexibilityScore = flexibilityScore;
+    // An escape protocol records a negative impact — a credit, not a cost —
+    // so the product can rise above 1. Thinking steps only ever spend.
+    this.pathMemory.currentFlexibility.flexibilityScore = Math.min(
+      1,
+      Math.max(0, flexibilityScore)
+    );
 
     // Calculate reversibility index
     const reversibleDecisions = this.pathMemory.pathHistory.filter(

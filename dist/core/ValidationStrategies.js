@@ -308,9 +308,6 @@ export class ExecutionValidator extends BaseValidator {
                         }
                     }
                 }
-                if (data.flexibilityScore !== undefined) {
-                    this.validateNumber(data.flexibilityScore, 'flexibilityScore', errors, 0, 1);
-                }
                 break;
             case 'design_thinking':
                 if (data.designStage === undefined) {

@@ -32,7 +32,7 @@ export declare class DesignThinkingInsightStrategy implements InsightStrategy {
 }
 export declare class SCAMPERInsightStrategy implements InsightStrategy {
     technique: string;
-    generateInsight(input: ThinkingOperationData): string | undefined;
+    generateInsight(input: ThinkingOperationData, session: SessionData): string | undefined;
 }
 export declare class NeuralStateInsightStrategy implements InsightStrategy {
     technique: string;

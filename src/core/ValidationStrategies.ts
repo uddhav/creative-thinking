@@ -246,7 +246,6 @@ interface ExecuteThinkingStepInput {
   randomStimulus?: unknown;
   connections?: unknown;
   scamperAction?: unknown;
-  flexibilityScore?: unknown;
   designStage?: unknown;
   dominantNetwork?: unknown;
   suppressionDepth?: unknown;
@@ -493,9 +492,6 @@ export class ExecutionValidator extends BaseValidator {
               );
             }
           }
-        }
-        if (data.flexibilityScore !== undefined) {
-          this.validateNumber(data.flexibilityScore, 'flexibilityScore', errors, 0, 1);
         }
         break;
 

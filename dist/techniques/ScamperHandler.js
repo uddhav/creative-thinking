@@ -297,7 +297,7 @@ export class ScamperHandler extends BaseTechniqueHandler {
             reversible: actionInfo.commitmentLevel === 'low' || actionInfo.commitmentLevel === 'medium',
             dependenciesCreated: this.identifyDependencies(action, modification),
             optionsClosed: this.identifyClosedOptions(action, modification),
-            optionsOpened: this.identifyOpenedOptions(action, modification),
+            optionsOpened: this.identifyOpenedOptions(action),
             flexibilityRetention: 1 - actionInfo.typicalReversibilityCost,
             commitmentLevel: actionInfo.commitmentLevel,
         };
@@ -377,7 +377,17 @@ export class ScamperHandler extends BaseTechniqueHandler {
         }
         return closed;
     }
-    identifyOpenedOptions(action, modification) {
+    /**
+     * Options this action opens.
+     *
+     * Every entry is a consequence of the action itself. A word-count test used
+     * to add "Complex transformation opportunities" to any modification longer
+     * than five words, so a step written in a full sentence was recorded as
+     * having opened an option that a terser one had not — and once options
+     * entered the flexibility measure, that handed every realistic SCAMPER step
+     * a credit for its prose length.
+     */
+    identifyOpenedOptions(action) {
         const opened = [];
         switch (action) {
             case 'substitute':
@@ -401,10 +411,6 @@ export class ScamperHandler extends BaseTechniqueHandler {
                 opened.push('Dynamic adaptation');
                 opened.push('A/B testing opportunities');
                 break;
-        }
-        // Add specific opportunity based on the modification length/complexity
-        if (modification && modification.split(' ').length > 5) {
-            opened.push('Complex transformation opportunities');
         }
         return opened;
     }

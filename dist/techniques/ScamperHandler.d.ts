@@ -23,6 +23,16 @@ export declare class ScamperHandler extends BaseTechniqueHandler {
     }>): ScamperPathImpact;
     private identifyDependencies;
     private identifyClosedOptions;
+    /**
+     * Options this action opens.
+     *
+     * Every entry is a consequence of the action itself. A word-count test used
+     * to add "Complex transformation opportunities" to any modification longer
+     * than five words, so a step written in a full sentence was recorded as
+     * having opened an option that a terser one had not — and once options
+     * entered the flexibility measure, that handed every realistic SCAMPER step
+     * a credit for its prose length.
+     */
     private identifyOpenedOptions;
     private calculateCumulativeCommitment;
     private generateRecoveryPath;

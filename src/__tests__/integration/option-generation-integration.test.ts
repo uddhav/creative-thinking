@@ -102,64 +102,63 @@ describe('Option Generation Integration', () => {
       ergodicityManager
     );
 
-    // Step 6: Eliminate with high commitment - should trigger option generation
-    const input: ExecuteThinkingStepInput = {
-      planId: plan.planId,
-      sessionId: sessionIdFromResponse,
-      technique: 'scamper',
-      problem: planInput.problem,
-      currentStep: 6,
-      totalSteps: 8,
-      output: 'Eliminate redundant processes and legacy systems',
-      nextStepNeeded: true,
-      scamperAction: 'eliminate',
-      // Provide path impact to ensure low flexibility
-      pathImpact: {
-        reversible: false,
-        dependenciesCreated: ['Major process change'],
-        optionsClosed: ['Return to old processes', 'Legacy system support'],
-        optionsOpened: ['New efficiency gains'],
-        flexibilityRetention: 0.3, // Low flexibility to trigger option generation
-        commitmentLevel: 'high' as const,
-      },
-    };
+    // Steps 3 to 6: keep committing, and let the engine measure the cost.
+    //
+    // This used to hand the server `flexibilityRetention: 0.3` on step 6 and
+    // assert that option generation fired — which tested only that the server
+    // believed the number it was told. Flexibility is measured now, so the way
+    // to reach the gate is to spend it.
+    const committal: Array<[number, string, string]> = [
+      [3, 'adapt', 'Adapt the remaining teams permanently to the new structure'],
+      [4, 'modify', 'Modify reporting lines and commit to them for the year'],
+      [5, 'put_to_other_use', 'Invest the freed budget permanently in tooling'],
+      [6, 'eliminate', 'Eliminate redundant processes and delete the legacy systems'],
+    ];
 
-    response = await executeThinkingStep(
-      input,
-      sessionManager,
-      techniqueRegistry,
-      visualFormatter,
-      metricsCollector,
-      complexityAnalyzer,
-      ergodicityManager
-    );
+    let responseData: Record<string, unknown> = {};
+    for (const [currentStep, scamperAction, output] of committal) {
+      response = await executeThinkingStep(
+        {
+          planId: plan.planId,
+          sessionId: sessionIdFromResponse,
+          technique: 'scamper',
+          problem: planInput.problem,
+          currentStep,
+          totalSteps: 8,
+          output,
+          nextStepNeeded: true,
+          scamperAction,
+        } as ExecuteThinkingStepInput,
+        sessionManager,
+        techniqueRegistry,
+        visualFormatter,
+        metricsCollector,
+        complexityAnalyzer,
+        ergodicityManager
+      );
+      responseData = JSON.parse(response.content[0].text) as Record<string, unknown>;
+      if (responseData.optionGeneration !== undefined) break;
+    }
 
-    const responseData = JSON.parse(response.content[0].text) as Record<string, unknown>;
-
-    // Debug: Check flexibility score and path memory
-    console.error('Response data keys:', Object.keys(responseData));
-    console.error('Flexibility score:', responseData.flexibilityScore);
-    console.error('PathImpact:', responseData.pathImpact);
-
-    // Verify option generation was triggered
-    expect(responseData.optionGeneration).toBeDefined();
-    expect(responseData.optionGeneration.triggered).toBe(true);
-    expect(responseData.optionGeneration.flexibility).toBeLessThan(0.4);
-    expect(responseData.optionGeneration.optionsGenerated).toBeGreaterThan(0);
-    expect(responseData.optionGeneration.strategies).toBeInstanceOf(Array);
-    expect(responseData.optionGeneration.topOptions).toBeInstanceOf(Array);
-    expect(responseData.optionGeneration.topOptions.length).toBeGreaterThan(0);
+    // Verify option generation was triggered by the measurement, not by input
+    const optionGeneration = responseData.optionGeneration as Record<string, unknown> | undefined;
+    expect(optionGeneration, 'a run of irreversible commitments must reach the gate').toBeDefined();
+    expect(optionGeneration?.triggered).toBe(true);
+    expect(optionGeneration?.flexibility).toBeLessThan(0.4);
+    expect(optionGeneration?.optionsGenerated).toBeGreaterThan(0);
+    expect(optionGeneration?.strategies).toBeInstanceOf(Array);
+    expect(optionGeneration?.topOptions).toBeInstanceOf(Array);
+    expect((optionGeneration?.topOptions as unknown[]).length).toBeGreaterThan(0);
 
     // Verify options have expected structure
-    const optionGeneration = responseData.optionGeneration as {
-      topOptions: Array<{
+    const firstOption = (
+      optionGeneration?.topOptions as Array<{
         name: string;
         description: string;
         flexibilityGain?: number;
         recommendation?: string;
-      }>;
-    };
-    const firstOption = optionGeneration.topOptions[0];
+      }>
+    )[0];
     expect(firstOption).toHaveProperty('name');
     expect(firstOption).toHaveProperty('description');
     // flexibilityGain might be undefined if not evaluated yet

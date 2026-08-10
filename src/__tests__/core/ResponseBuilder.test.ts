@@ -418,7 +418,6 @@ describe('ResponseBuilder', () => {
           dependencyChains: ['material_choice'],
           flexibilityChange: -0.1,
         },
-        flexibilityScore: 0.7,
         alternativeSuggestions: ['Use recycled materials'],
       };
 
@@ -427,7 +426,9 @@ describe('ResponseBuilder', () => {
 
       expect(parsed.scamperAction).toBe('substitute');
       expect(parsed.pathImpact).toEqual(scamperInput.pathImpact);
-      expect(parsed.flexibilityScore).toBe(0.7);
+      // The caller's own flexibility number is not echoed back, because it is
+      // not an input any more — the engine measures it from the path history.
+      expect(parsed.flexibilityScore).toBeUndefined();
       expect(parsed.alternativeSuggestions).toEqual(['Use recycled materials']);
     });
 

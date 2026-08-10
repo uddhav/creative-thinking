@@ -44,6 +44,7 @@ interface ExecutionResponse {
     recoveryPath?: string;
   };
   flexibilityScore?: number;
+  executionMetadata?: { flexibilityImpact?: number };
   alternativeSuggestions?: string[];
   modificationHistory?: Array<{
     action: string;
@@ -154,7 +155,19 @@ describe('PDA-SCAMPER Enhancement', () => {
       expect(step1.pathImpact?.reversible).toBe(true);
       expect(step1.pathImpact?.optionsClosed).toContain('Using original component');
       expect(step1.pathImpact?.optionsOpened).toContain('New material properties to exploit');
-      expect(step1.flexibilityScore).toBeGreaterThan(0.7);
+      // What this step retained is SCAMPER's own reading, and it lives on
+      // pathImpact. `flexibilityScore` is no longer echoed back from the
+      // input: the response carries it only as the engine's measurement, and
+      // only once it falls below 0.7 — so `> 0.7` on that key could never be
+      // satisfied again.
+      expect(step1.pathImpact?.flexibilityRetention).toBeGreaterThan(0.7);
+      // `flexibilityScore` on the response is the engine's measurement now,
+      // never an echo of the input — nothing was sent for it here. It appears
+      // only once flexibility falls below the reporting threshold, which is
+      // the same rule for every technique; SCAMPER used to bypass it by
+      // echoing whatever the caller typed, so it alone reported a score on
+      // every step.
+      expect(step1.flexibilityScore).toBeUndefined();
 
       // Step 2: Combine (high commitment)
       const step2 = await executeStep(
@@ -169,11 +182,15 @@ describe('PDA-SCAMPER Enhancement', () => {
       expect(step2.pathImpact?.commitmentLevel).toBe('high');
       expect(step2.pathImpact?.reversible).toBe(false);
       expect(step2.pathImpact?.optionsClosed).toContain('Independent operation of elements');
-      expect(step2.flexibilityScore).toBeDefined();
-      expect(step1.flexibilityScore).toBeDefined();
-      if (step1.flexibilityScore !== undefined && step2.flexibilityScore !== undefined) {
-        expect(step2.flexibilityScore).toBeLessThan(step1.flexibilityScore);
-      }
+      // An irreversible, high-commitment combine costs more than a reversible
+      // medium-commitment substitute. The engine records what each step spent;
+      // neither modification is worded as a commitment, so the session is
+      // still well clear of the reporting threshold and neither step carries a
+      // flexibilityScore.
+      const substituteCost = Math.abs(step1.executionMetadata?.flexibilityImpact ?? 0);
+      const combineCost = Math.abs(step2.executionMetadata?.flexibilityImpact ?? 0);
+      expect(combineCost).toBeGreaterThan(substituteCost);
+      expect(step2.flexibilityScore).toBeUndefined();
 
       // Step 6: Eliminate (irreversible)
       const step6 = await executeStep(
@@ -231,10 +248,14 @@ describe('PDA-SCAMPER Enhancement', () => {
         flexibilityScores.push(step3.flexibilityScore);
       }
 
-      // Verify flexibility decreases with each high-commitment action
-      expect(flexibilityScores[0]).toBeGreaterThan(flexibilityScores[1]);
-      expect(flexibilityScores[1]).toBeGreaterThan(flexibilityScores[2]);
-      expect(flexibilityScores[2]).toBeLessThan(0.6); // Flexibility should degrade
+      // Flexibility is reported only below the threshold, so a run that
+      // starts high contributes fewer entries than it has steps. What must
+      // hold is that whatever is reported keeps falling, and ends low.
+      expect(flexibilityScores.length).toBeGreaterThan(0);
+      for (let i = 1; i < flexibilityScores.length; i++) {
+        expect(flexibilityScores[i]).toBeLessThan(flexibilityScores[i - 1]);
+      }
+      expect(flexibilityScores.at(-1)).toBeLessThan(0.6);
     });
 
     it('should generate alternative suggestions when flexibility is low', async () => {

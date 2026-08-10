@@ -147,15 +147,19 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
                             modification: entry.output,
                             timestamp: entry.timestamp || new Date().toISOString(),
                             impact: entry.pathImpact,
-                            cumulativeFlexibility: entry.flexibilityScore || entry.pathImpact.flexibilityRetention,
+                            cumulativeFlexibility: entry.pathImpact.flexibilityRetention,
                         });
                     }
                 });
-                // Add flexibility score to the input
-                input.flexibilityScore = input.pathImpact.flexibilityRetention;
-                // Generate alternatives if flexibility is low
-                if (input.pathImpact.flexibilityRetention < 0.4) {
-                    input.alternativeSuggestions = scamperHandler.generateAlternatives(input.scamperAction, input.pathImpact.flexibilityRetention);
+                // Generate alternatives if flexibility is low.
+                //
+                // Read from the engine, not from `pathImpact.flexibilityRetention`:
+                // that figure is SCAMPER's own running total, computed with its own
+                // degradation factors, and it is not monotonic — so this second 0.4
+                // gate disagreed with every other 0.4 gate in the codebase.
+                const flexibilityBeforeStep = session.pathMemory?.currentFlexibility?.flexibilityScore ?? 1;
+                if (flexibilityBeforeStep < 0.4) {
+                    input.alternativeSuggestions = scamperHandler.generateAlternatives(input.scamperAction, flexibilityBeforeStep);
                 }
             }
             // Track ergodicity and generate options if needed

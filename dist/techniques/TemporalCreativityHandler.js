@@ -178,10 +178,6 @@ export class TemporalCreativityHandler extends BaseTechniqueHandler {
                     if (stepData.activeOptions && !Array.isArray(stepData.activeOptions)) {
                         return false;
                     }
-                    if (stepData.flexibilityScore !== undefined &&
-                        typeof stepData.flexibilityScore !== 'number') {
-                        return false;
-                    }
                     break;
                 case 3: // Future Path Projection
                     if (stepData.timelineProjections && typeof stepData.timelineProjections !== 'object') {

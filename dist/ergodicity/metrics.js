@@ -17,17 +17,27 @@ export class MetricsCalculator {
         };
     }
     /**
-     * Calculate flexibility score (0.0-1.0)
-     * Measures the ratio of available options to total possible options
+     * Flexibility score (0.0-1.0), as the path memory measures it.
+     *
+     * This used to compute a rival number — the ratio of still-available options
+     * to all options ever named, minus a constraint penalty — while
+     * `PathMemoryManager.updateFlexibilityMetrics` computed a different one from
+     * what each step cost. Two fields called `flexibilityScore`, two formulas,
+     * and the warnings below fire on this one at 0.2 / 0.4 / 0.6 while every
+     * gate in the execution layer reads the other. Only SCAMPER ever reported an
+     * option as closed and nothing populates `constraintsCreated`, so this one
+     * sat at 1.0 for thirty-one techniques and its warnings never fired at all.
+     *
+     * One measure now, and only one. A constraint penalty of 0.1 per recorded
+     * constraint was kept at first, on the reasoning that constraints are a cost
+     * the step product does not see. They are not: `createConstraint` fires on
+     * any step whose reversibility cost or commitment exceeds 0.7 — the same
+     * steps the product already charges — so it billed one commitment twice,
+     * uncapped and growing with session length. That is the double-charge this
+     * whole change set exists to remove.
      */
     calculateFlexibilityScore(pathMemory) {
-        const totalOptions = pathMemory.availableOptions.length + pathMemory.foreclosedOptions.length;
-        if (totalOptions === 0)
-            return 1.0; // Start with full flexibility
-        const availableRatio = pathMemory.availableOptions.length / totalOptions;
-        // Factor in constraint strength
-        const constraintPenalty = pathMemory.constraints.reduce((sum, c) => sum + c.strength, 0) * 0.1;
-        return Math.max(0, Math.min(1, availableRatio - constraintPenalty));
+        return pathMemory.currentFlexibility?.flexibilityScore ?? 1.0;
     }
     /**
      * Calculate reversibility index

@@ -5,7 +5,7 @@ import type { PathMemory, PathEvent, EscapeRoute } from './types.js';
 import type { LateralTechnique } from '../index.js';
 export declare class PathMemoryManager {
     private pathMemory;
-    constructor();
+    constructor(restored?: PathMemory);
     /**
      * Initialize a new path memory
      */
@@ -25,6 +25,33 @@ export declare class PathMemoryManager {
     /**
      * Record a path event and update path memory
      */
+    /**
+     * The share of remaining freedom a step consumes, 0-1.
+     *
+     * A step costs freedom when it is both hard to undo and binding, so the
+     * product of the two is the measure; the cap stops any one step consuming
+     * more than a fifth of what remains, which is what puts all thirty-two
+     * techniques on one scale a threshold can be set against.
+     *
+     * It lives here rather than in the execution layer because
+     * `flexibilityImpact` is the sole determinant of the flexibility score, and
+     * deriving it one layer up meant every caller except that one recorded steps
+     * that cost nothing — `ErgodicityManager.recordThinkingStep` could be handed
+     * a maximally irreversible, maximally binding decision and still report
+     * flexibility 1.0, forever.
+     *
+     * Options closed and opened enter through the same per-step channel rather
+     * than as a separate factor. As a global available-option ratio they were a
+     * surcharge only SCAMPER paid, since it is the only technique that reports
+     * them — it cost SCAMPER two steps of timing against an equally committal
+     * six_hats run, and made the score non-monotone, because a step that opened
+     * more than it closed raised a ratio the rest of the model only lowered.
+     * Netted per step they are one signal among two: reopening what was closed
+     * returns freedom, which is the whole point of an escape.
+     *
+     * The constants are a starting point to be measured, not tuned.
+     */
+    static deriveFlexibilityImpact(reversibilityCost: number, commitmentLevel: number, optionsClosed?: number, optionsOpened?: number): number;
     recordPathEvent(technique: LateralTechnique, step: number, decision: string, impact: {
         optionsOpened?: string[];
         optionsClosed?: string[];

@@ -218,7 +218,6 @@ export interface ExecuteThinkingStepInput {
   scamperAction?: ScamperAction;
   modificationHistory?: ScamperModificationHistory[];
   pathImpact?: ScamperPathImpact;
-  flexibilityScore?: number;
   alternativeSuggestions?: string[];
 
   // Concept Extraction specific
@@ -467,7 +466,6 @@ export interface ThinkingOperationData {
   scamperAction?: ScamperAction;
   modificationHistory?: ScamperModificationHistory[];
   pathImpact?: ScamperPathImpact;
-  flexibilityScore?: number;
   alternativeSuggestions?: string[];
 
   // Concept Extraction specific

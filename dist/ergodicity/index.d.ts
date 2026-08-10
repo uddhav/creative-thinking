@@ -28,7 +28,12 @@ export declare class ErgodicityManager {
     private optionGenerationEngine;
     private lastWarningState;
     private autoEscapeEnabled;
-    constructor(warningConfig?: EarlyWarningConfig);
+    /**
+     * @param restoredPathMemory what a resumed session already spent. Without it
+     * a session reloaded from disk starts again at full flexibility, which after
+     * the measurement change is a silent loss rather than a cosmetic one.
+     */
+    constructor(warningConfig?: EarlyWarningConfig, restoredPathMemory?: PathMemory);
     /**
      * Record a thinking step and its path impacts with early warning monitoring
      */
@@ -37,6 +42,8 @@ export declare class ErgodicityManager {
         optionsClosed?: string[];
         reversibilityCost?: number;
         commitmentLevel?: number;
+        /** Omit to have it derived from reversibility and commitment. */
+        flexibilityImpact?: number;
     }, sessionData?: SessionData): Promise<{
         event: PathEvent;
         metrics: FlexibilityMetrics;

@@ -1,6 +1,7 @@
 /**
  * Core types and interfaces for session persistence
  */
+import type { PathMemory } from '../ergodicity/types.js';
 export type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 'concept_extraction' | 'yes_and' | 'design_thinking' | 'triz' | 'neural_state' | 'temporal_work' | 'collective_intel' | 'disney_method' | 'nine_windows' | 'quantum_superposition' | 'temporal_creativity' | 'paradoxical_problem' | 'meta_learning' | 'biomimetic_path' | 'first_principles' | 'cultural_integration' | 'neuro_computational' | 'criteria_based_analysis' | 'linguistic_forensics' | 'competing_hypotheses' | 'reverse_benchmarking' | 'context_reframing' | 'perception_optimization' | 'anecdotal_signal' | 'cognitive_bias_audit' | 'latticework' | 'keeper_test' | 'steelman_red_team';
 /**
  * Represents input data for a lateral thinking step
@@ -42,7 +43,6 @@ export interface LateralThinkingInput {
         commitmentLevel: string;
         recoveryPath?: string;
     };
-    flexibilityScore?: number;
     alternativeSuggestions?: string[];
     successExample?: string;
     extractedConcepts?: string[];
@@ -130,6 +130,15 @@ export interface SessionState {
     };
     tags?: string[];
     name?: string;
+    /**
+     * What the session has spent, and on what.
+     *
+     * Left out of the saved shape until now, so a resumed session restarted at
+     * flexibility 1.0 with an empty path history. That was survivable only while
+     * the caller could reassert `flexibilityScore` on the next step; now that the
+     * number is measured, dropping this is dropping the measurement.
+     */
+    pathMemory?: PathMemory;
 }
 /**
  * Session metadata for listings (lightweight)

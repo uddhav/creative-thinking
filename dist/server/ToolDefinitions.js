@@ -817,7 +817,6 @@ export const EXECUTE_THINKING_STEP_TOOL = {
             revisesStep: { type: 'number' },
             branchFromStep: { type: 'number' },
             branchId: { type: 'string' },
-            flexibilityScore: { type: 'number', minimum: 0, maximum: 1 },
             alternativeSuggestions: { type: 'array', items: { type: 'string' } },
         },
         required: [

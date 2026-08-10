@@ -489,7 +489,6 @@ export class ResponseBuilder {
       case 'scamper':
         if (input.scamperAction) fields.scamperAction = input.scamperAction;
         if (input.pathImpact) fields.pathImpact = input.pathImpact;
-        if (input.flexibilityScore !== undefined) fields.flexibilityScore = input.flexibilityScore;
         if (input.alternativeSuggestions)
           fields.alternativeSuggestions = input.alternativeSuggestions;
         if (input.modificationHistory) fields.modificationHistory = input.modificationHistory;

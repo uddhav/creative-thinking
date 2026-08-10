@@ -563,8 +563,6 @@ export class ExecutionResponseBuilder {
                     fields.scamperAction = stepInput.scamperAction;
                 if (stepInput.pathImpact)
                     fields.pathImpact = stepInput.pathImpact;
-                if (stepInput.flexibilityScore !== undefined)
-                    fields.flexibilityScore = stepInput.flexibilityScore;
                 if (stepInput.alternativeSuggestions)
                     fields.alternativeSuggestions = stepInput.alternativeSuggestions;
                 if (stepInput.modificationHistory)
@@ -609,10 +607,6 @@ export class ExecutionResponseBuilder {
         if (input.antifragileProperties && input.antifragileProperties.length > 0) {
             completeness += 0.15;
         }
-        if (input.technique === 'scamper' && input.pathImpact) {
-            if (input.pathImpact.flexibilityRetention > 0.5)
-                completeness += 0.1;
-        }
         if (input.provocation && input.principles)
             completeness += 0.2;
         return Math.min(1, completeness);
@@ -639,15 +633,17 @@ export class ExecutionResponseBuilder {
         return dependencies;
     }
     calculateFlexibilityImpact(input, session) {
-        if (input.flexibilityScore !== undefined) {
-            return -(1 - input.flexibilityScore);
-        }
-        if (input.pathImpact) {
-            return -(1 - input.pathImpact.flexibilityRetention);
-        }
-        if (session.pathMemory && session.pathMemory.currentFlexibility) {
-            const currentFlex = session.pathMemory.currentFlexibility.flexibilityScore || 1;
-            return -(1 - currentFlex) * 0.1;
+        // What this step cost, as the engine recorded it. SCAMPER used to report
+        // `-(1 - flexibilityRetention)` here — a cumulative total published under
+        // a per-step name, four to five times the actual step cost and
+        // non-monotonic — while every other technique reported an unrelated
+        // `-(1 - currentFlexibility) * 0.1`. Two formulas, one field name.
+        const lastEvent = session.pathMemory?.pathHistory?.at(-1);
+        if (lastEvent?.flexibilityImpact !== undefined) {
+            // Rounded: this is a 0-1 fraction, and publishing it raw put sixteen
+            // significant figures of binary residue on the wire — 0.005 serialised
+            // as -0.004999999999999999.
+            return Number((-lastEvent.flexibilityImpact).toFixed(4));
         }
         return -0.05;
     }
@@ -729,8 +725,9 @@ export class ExecutionResponseBuilder {
         // Option generation creates reusable strategies
         // Check if we have generated options in this step (passed as parameter)
         // or if flexibility is low enough that options would have been generated
-        const hasGeneratedOptions = (currentFlexibility < 0.4 && session.history.length > 5) ||
-            session.history.some(h => h.flexibilityScore !== undefined && h.flexibilityScore < 0.4);
+        // The second arm scanned history for a caller-typed flexibilityScore.
+        // The engine's own measurement is what currentFlexibility now carries.
+        const hasGeneratedOptions = currentFlexibility < 0.4 && session.history.length > 5;
         if (hasGeneratedOptions) {
             return 'The option generation strategies used here apply to many constrained situations';
         }

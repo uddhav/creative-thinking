@@ -122,10 +122,13 @@ describe('TemporalCreativityHandler', () => {
       };
       expect(handler.validateStep(2, validData)).toBe(true);
 
-      const invalidFlexibility = {
+      // flexibilityScore is no longer an input. It is measured by the
+      // ergodicity engine from the path history, so the handler neither
+      // validates it nor reads it, and an unknown key is simply ignored.
+      const strayFlexibility = {
         flexibilityScore: 'not a number',
       };
-      expect(handler.validateStep(2, invalidFlexibility)).toBe(false);
+      expect(handler.validateStep(2, strayFlexibility)).toBe(true);
     });
 
     it('should validate step 3 projection fields', () => {

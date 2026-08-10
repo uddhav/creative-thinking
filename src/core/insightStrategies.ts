@@ -57,8 +57,12 @@ export class DesignThinkingInsightStrategy implements InsightStrategy {
 export class SCAMPERInsightStrategy implements InsightStrategy {
   technique = 'scamper';
 
-  generateInsight(input: ThinkingOperationData): string | undefined {
-    if (input.pathImpact && input.pathImpact.flexibilityRetention < 0.3) {
+  generateInsight(input: ThinkingOperationData, session: SessionData): string | undefined {
+    // The engine's measurement, on the same threshold that actually generates
+    // alternatives. Reading SCAMPER's own retention against 0.3 advised
+    // alternatives three steps before anything produced them.
+    const flexibility = session.pathMemory?.currentFlexibility?.flexibilityScore;
+    if (input.pathImpact && flexibility !== undefined && flexibility < 0.4) {
       return 'High-commitment modification: consider generating alternatives';
     }
     return undefined;

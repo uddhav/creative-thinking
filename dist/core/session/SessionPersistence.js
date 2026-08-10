@@ -154,6 +154,7 @@ export class SessionPersistence {
             metrics: session.metrics,
             tags: session.tags,
             name: session.name,
+            pathMemory: session.pathMemory,
             // Convert history to the expected format
             history: session.history.map((entry, index) => ({
                 step: index + 1,
@@ -178,6 +179,7 @@ export class SessionPersistence {
             metrics: sessionState.metrics,
             tags: sessionState.tags,
             name: sessionState.name,
+            pathMemory: sessionState.pathMemory,
             // Convert history back to ThinkingOperationData format
             history: sessionState.history.map(entry => ({
                 ...entry.input,

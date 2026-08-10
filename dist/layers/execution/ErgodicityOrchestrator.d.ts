@@ -42,9 +42,35 @@ export declare class ErgodicityOrchestrator {
      */
     trackErgodicityAndGenerateOptions(input: ExecuteThinkingStepInput, session: SessionData, techniqueLocalStep: number, sessionId?: string): Promise<ErgodicityOrchestrationResult>;
     /**
-     * Calculate impact based on technique profile or specific path impact
+     * Does what the step says it did read as a commitment?
+     *
+     * A blunt lexical signal, and the only content-sensitivity in the whole
+     * measurement. It used to be applied to thirty-one techniques and withheld
+     * from SCAMPER, whose costs came entirely from a fixed action table — so a
+     * SCAMPER run of all eight actions produced an identical curve whether its
+     * modifications were sketches or irreversible commitments, and could not
+     * reach the 0.4 gate on any wording at all.
+     */
+    private outputSignalsCommitment;
+    /**
+     * What this step commits, for the path record.
+     *
+     * Returns the ingredients only. `PathMemoryManager.recordPathEvent` derives
+     * `flexibilityImpact` from them, so there is one derivation for every caller
+     * — deriving it here meant any caller that did not go through this
+     * orchestrator recorded steps that cost nothing at all.
      */
     private calculateImpact;
+    /**
+     * Flexibility after each recorded step, as the engine measures it.
+     *
+     * The running product of (1 − flexibilityImpact) over the path history —
+     * the same quantity `updateFlexibilityMetrics` reports, so every point of
+     * the series is the number the gates read at that step. It used to plot
+     * SCAMPER's own retention for SCAMPER steps and a straight 1.0 − 0.1·i
+     * placeholder for everything else, neither of which anything else used.
+     */
+    private flexibilitySeries;
     /**
      * Generate options when flexibility is low
      */

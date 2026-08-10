@@ -42,8 +42,12 @@ export class DesignThinkingInsightStrategy {
 }
 export class SCAMPERInsightStrategy {
     technique = 'scamper';
-    generateInsight(input) {
-        if (input.pathImpact && input.pathImpact.flexibilityRetention < 0.3) {
+    generateInsight(input, session) {
+        // The engine's measurement, on the same threshold that actually generates
+        // alternatives. Reading SCAMPER's own retention against 0.3 advised
+        // alternatives three steps before anything produced them.
+        const flexibility = session.pathMemory?.currentFlexibility?.flexibilityScore;
+        if (input.pathImpact && flexibility !== undefined && flexibility < 0.4) {
             return 'High-commitment modification: consider generating alternatives';
         }
         return undefined;

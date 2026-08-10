@@ -63,7 +63,7 @@ export class VisualFormatter {
         if (this.showTechniqueIndicators) {
             const stateIndicator = this.getTechniqueStateIndicator(technique, currentStep, input);
             const riskIndicator = this.getRiskLevelIndicator(input.risks);
-            const flexibilityIndicator = this.getFlexibilityIndicator(input);
+            const flexibilityIndicator = this.getFlexibilityIndicator(session);
             if (stateIndicator || riskIndicator || flexibilityIndicator) {
                 const indicators = [stateIndicator, riskIndicator, flexibilityIndicator]
                     .filter(Boolean)
@@ -411,8 +411,11 @@ export class VisualFormatter {
     /**
      * Get flexibility score indicator
      */
-    getFlexibilityIndicator(input) {
-        const flexibility = input.flexibilityScore;
+    getFlexibilityIndicator(session) {
+        // The engine's measurement, not a number the caller typed. Reading the
+        // input meant this indicator showed whatever the caller asserted about its
+        // own freedom of movement.
+        const flexibility = session?.pathMemory?.currentFlexibility?.flexibilityScore;
         // Already checked in formatOutput, but keep for safety
         if (flexibility === undefined || flexibility > 0.4) {
             return '';

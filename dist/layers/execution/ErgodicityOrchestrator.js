@@ -31,7 +31,9 @@ export class ErgodicityOrchestrator {
      * nothing read it. This reads it.
      */
     managerFor(session) {
-        session.ergodicityManager ??= wrapErgodicityManager(new ErgodicityManager());
+        // Seeded from whatever the session already spent, so a run resumed from
+        // disk keeps its path history instead of starting again at 1.0.
+        session.ergodicityManager ??= wrapErgodicityManager(new ErgodicityManager(undefined, session.pathMemory));
         return session.ergodicityManager;
     }
     /**
@@ -64,8 +66,14 @@ export class ErgodicityOrchestrator {
         const ergodicityResult = await monitorCriticalSectionAsync('ergodicity_tracking', () => this.managerFor(session).recordThinkingStep(input.technique, techniqueLocalStep, input.output, impact, session), { technique: input.technique, step: techniqueLocalStep });
         // Update session with ergodicity data
         session.pathMemory = this.managerFor(session).getPathMemory();
-        // Calculate current flexibility
-        const currentFlexibility = input.flexibilityScore ?? session.pathMemory?.currentFlexibility?.flexibilityScore ?? 1.0;
+        // Calculate current flexibility.
+        //
+        // Measured, not accepted. `input.flexibilityScore` used to win over the
+        // engine's own number, which meant a caller could type 0.05 and trip every
+        // barrier warning in the codebase, or type 1.0 and silence them — and,
+        // since the engine measured nothing for thirty-one of thirty-two
+        // techniques, typing it was the only way any of those gates ever fired.
+        const currentFlexibility = session.pathMemory?.currentFlexibility?.flexibilityScore ?? 1.0;
         // Adapt the result to the expected format
         const adaptedErgodicityResult = this.resultAdapter.adapt(ergodicityResult, currentFlexibility, session.pathMemory);
         // Note: Not updating session state with adapted ergodicity data
@@ -126,45 +134,98 @@ export class ErgodicityOrchestrator {
         };
     }
     /**
-     * Calculate impact based on technique profile or specific path impact
+     * Does what the step says it did read as a commitment?
+     *
+     * A blunt lexical signal, and the only content-sensitivity in the whole
+     * measurement. It used to be applied to thirty-one techniques and withheld
+     * from SCAMPER, whose costs came entirely from a fixed action table — so a
+     * SCAMPER run of all eight actions produced an identical curve whether its
+     * modifications were sketches or irreversible commitments, and could not
+     * reach the 0.4 gate on any wording at all.
+     */
+    outputSignalsCommitment(output) {
+        const outputLower = output.toLowerCase();
+        const highCommitmentWords = ['eliminate', 'remove', 'delete', 'commit', 'invest', 'permanent'];
+        return highCommitmentWords.some(word => outputLower.includes(word));
+    }
+    /**
+     * What this step commits, for the path record.
+     *
+     * Returns the ingredients only. `PathMemoryManager.recordPathEvent` derives
+     * `flexibilityImpact` from them, so there is one derivation for every caller
+     * — deriving it here meant any caller that did not go through this
+     * orchestrator recorded steps that cost nothing at all.
      */
     calculateImpact(input) {
         if (input.pathImpact) {
             // Use specific path impact from SCAMPER
             const pathImpact = input.pathImpact;
+            // Both per-step facts about this one modification. Deliberately NOT
+            // `flexibilityRetention`: `ScamperHandler.analyzePathImpact` computes
+            // that from the whole prior history — a cumulative-commitment factor, a
+            // penalty per high-commitment action already taken, and a further factor
+            // per step — so it is a running total, not a step's cost. Feeding it to
+            // a running total drove a four-step session to 0.005, and dividing it by
+            // the previous reading only traded that for a ratchet, because the
+            // handler's retention is not monotonic: `adapt` after `combine` reports
+            // more retention than `combine` did.
+            //
+            // `reversible` and `commitmentLevel` describe this modification alone,
+            // which is what the product over the path history needs. SCAMPER is then
+            // measured on exactly the same bounded scale as every other technique.
+            const fromAction = pathImpact.commitmentLevel === 'low'
+                ? 0.2
+                : pathImpact.commitmentLevel === 'medium'
+                    ? 0.5
+                    : pathImpact.commitmentLevel === 'high'
+                        ? 0.8
+                        : 1.0;
+            // The more severe of what the action is and what the step says it did.
+            // The action table is fixed, so on the action alone SCAMPER's curve is
+            // identical for every session running the same eight actions.
+            const hasHighCommitment = this.outputSignalsCommitment(input.output);
+            const reversibilityCost = Math.max(pathImpact.reversible ? 0.3 : 0.9, hasHighCommitment ? 0.8 : 0);
+            const commitmentLevel = Math.max(fromAction, hasHighCommitment ? 0.8 : 0);
             return {
                 optionsClosed: pathImpact.optionsClosed,
                 optionsOpened: pathImpact.optionsOpened,
-                reversibilityCost: 1 - pathImpact.flexibilityRetention,
-                commitmentLevel: pathImpact.commitmentLevel === 'low'
-                    ? 0.2
-                    : pathImpact.commitmentLevel === 'medium'
-                        ? 0.5
-                        : pathImpact.commitmentLevel === 'high'
-                            ? 0.8
-                            : 1.0,
+                reversibilityCost,
+                commitmentLevel,
             };
         }
         else {
             // Use technique profile for ergodicity tracking
             // Shared instance is correct here: analyzeTechniqueImpact is a pure lookup table.
             const techniqueProfile = this.ergodicityManager.analyzeTechniqueImpact(input.technique);
-            // Check if output suggests high commitment
-            const outputLower = input.output.toLowerCase();
-            const highCommitmentWords = [
-                'eliminate',
-                'remove',
-                'delete',
-                'commit',
-                'invest',
-                'permanent',
-            ];
-            const hasHighCommitment = highCommitmentWords.some(word => outputLower.includes(word));
+            const hasHighCommitment = this.outputSignalsCommitment(input.output);
+            const reversibilityCost = hasHighCommitment ? 0.8 : 1 - techniqueProfile.typicalReversibility;
+            const commitmentLevel = hasHighCommitment ? 0.8 : techniqueProfile.typicalCommitment;
             return {
-                reversibilityCost: hasHighCommitment ? 0.8 : 1 - techniqueProfile.typicalReversibility,
-                commitmentLevel: hasHighCommitment ? 0.8 : techniqueProfile.typicalCommitment,
+                reversibilityCost,
+                commitmentLevel,
             };
         }
+    }
+    /**
+     * Flexibility after each recorded step, as the engine measures it.
+     *
+     * The running product of (1 − flexibilityImpact) over the path history —
+     * the same quantity `updateFlexibilityMetrics` reports, so every point of
+     * the series is the number the gates read at that step. It used to plot
+     * SCAMPER's own retention for SCAMPER steps and a straight 1.0 − 0.1·i
+     * placeholder for everything else, neither of which anything else used.
+     */
+    flexibilitySeries(session) {
+        const history = session.pathMemory?.pathHistory ?? [];
+        let product = 1;
+        return history.map(event => {
+            product *= 1 - (event.flexibilityImpact ?? 0);
+            return {
+                step: event.step,
+                score: product,
+                timestamp: Date.parse(event.timestamp) || Date.now(),
+            };
+        });
     }
     /**
      * Generate options when flexibility is low
@@ -226,11 +287,12 @@ export class ErgodicityOrchestrator {
                         constraintsCreated: [],
                     })),
                     constraints: session.pathMemory?.constraints || [],
-                    flexibilityOverTime: session.history.map((h, i) => ({
-                        step: h.currentStep,
-                        score: h.flexibilityScore || 1.0 - i * 0.1,
-                        timestamp: Date.now() - (session.history.length - i) * 1000,
-                    })),
+                    // The running product the engine actually measures, so the series
+                    // and the number the gates read are the same quantity. This plotted
+                    // SCAMPER's own retention for SCAMPER steps and a straight
+                    // 1.0 − 0.1·i placeholder for everything else, neither of which the
+                    // rest of the system uses for anything.
+                    flexibilityOverTime: this.flexibilitySeries(session),
                     absorbingBarriers: session.pathMemory?.absorbingBarriers || [],
                 },
                 sessionData: optionSessionData,
