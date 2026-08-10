@@ -19,6 +19,7 @@ export class ParadoxicalProblemHandler extends BaseTechniqueHandler {
       focus: 'Surface contradictions and trace their path origins',
       emoji: '⚖️',
       type: 'thinking',
+      reversibility: 'high',
     },
     {
       name: 'Parallel Path Development',
@@ -69,6 +70,7 @@ export class ParadoxicalProblemHandler extends BaseTechniqueHandler {
       focus: 'Test resolution across multiple path contexts',
       emoji: '✨',
       type: 'thinking',
+      reversibility: 'high',
     },
   ];
 

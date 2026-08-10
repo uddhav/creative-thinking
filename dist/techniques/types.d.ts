@@ -35,6 +35,20 @@ export interface StepInfo {
     focus: string;
     emoji: string;
     type?: StepType;
+    /**
+     * How hard this step is to undo once taken.
+     *
+     * A thinking step declares it here, because it has no `reflexiveEffects` to
+     * carry it: an empty `realityChanges`/`futureConstraints` block would assert
+     * the step changes reality when analysing something does not. An action step
+     * may instead declare it inside `reflexiveEffects`, where it sits next to the
+     * changes that make it hard to undo.
+     *
+     * So a reader wanting one answer per step takes
+     * `reversibility ?? reflexiveEffects?.reversibility` — this field first,
+     * because a step that states it directly means the statement to stand.
+     */
+    reversibility?: 'low' | 'medium' | 'high';
     reflexiveEffects?: ReflexiveEffects;
 }
 export interface TechniqueInfo {

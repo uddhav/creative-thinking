@@ -14,18 +14,21 @@ export class FirstPrinciplesHandler extends BaseTechniqueHandler {
             focus: 'Break down into fundamental components',
             emoji: '🔨',
             type: 'thinking',
+            reversibility: 'high',
         },
         {
             name: 'Foundation Identification',
             focus: 'Identify fundamental truths',
             emoji: '🏛️',
             type: 'thinking',
+            reversibility: 'high',
         },
         {
             name: 'Assumption Challenging',
             focus: 'Question and eliminate assumptions',
             emoji: '❓',
             type: 'thinking',
+            reversibility: 'high',
         },
         {
             name: 'Reconstruction',

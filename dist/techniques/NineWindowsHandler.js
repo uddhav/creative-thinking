@@ -20,13 +20,49 @@ export class NineWindowsHandler extends BaseTechniqueHandler {
     getStepInfo(step) {
         const cells = [
             // Row 1: Past (thinking - analyzing history)
-            { name: 'Past Sub-system', focus: 'Component history', emoji: '🔧', type: 'thinking' },
-            { name: 'Past System', focus: 'System evolution', emoji: '⚙️', type: 'thinking' },
-            { name: 'Past Super-system', focus: 'Environmental history', emoji: '🌍', type: 'thinking' },
+            {
+                name: 'Past Sub-system',
+                focus: 'Component history',
+                emoji: '🔧',
+                type: 'thinking',
+                reversibility: 'high',
+            },
+            {
+                name: 'Past System',
+                focus: 'System evolution',
+                emoji: '⚙️',
+                type: 'thinking',
+                reversibility: 'high',
+            },
+            {
+                name: 'Past Super-system',
+                focus: 'Environmental history',
+                emoji: '🌍',
+                type: 'thinking',
+                reversibility: 'high',
+            },
             // Row 2: Present (thinking - analyzing current state)
-            { name: 'Present Sub-system', focus: 'Current components', emoji: '🔩', type: 'thinking' },
-            { name: 'Present System', focus: 'Current state', emoji: '🎯', type: 'thinking' },
-            { name: 'Present Super-system', focus: 'Current environment', emoji: '🏞️', type: 'thinking' },
+            {
+                name: 'Present Sub-system',
+                focus: 'Current components',
+                emoji: '🔩',
+                type: 'thinking',
+                reversibility: 'high',
+            },
+            {
+                name: 'Present System',
+                focus: 'Current state',
+                emoji: '🎯',
+                type: 'thinking',
+                reversibility: 'high',
+            },
+            {
+                name: 'Present Super-system',
+                focus: 'Current environment',
+                emoji: '🏞️',
+                type: 'thinking',
+                reversibility: 'high',
+            },
             // Row 3: Future (action - creating projections and path dependencies)
             {
                 name: 'Future Sub-system',

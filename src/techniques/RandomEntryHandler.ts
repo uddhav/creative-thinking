@@ -5,7 +5,7 @@
  * that focuses on human irrationality and psychological insights
  */
 
-import { BaseTechniqueHandler, firstSentence, type TechniqueInfo } from './types.js';
+import { BaseTechniqueHandler, firstSentence, type StepInfo, type TechniqueInfo } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 
 interface RandomEntryContext {
@@ -92,22 +92,28 @@ export class RandomEntryHandler extends BaseTechniqueHandler {
     };
   }
 
-  getStepInfo(step: number): { name: string; focus: string; emoji: string } {
-    const steps = [
+  getStepInfo(step: number): StepInfo {
+    const steps: StepInfo[] = [
       {
         name: 'Random Stimulus',
         focus: 'Select a random word or concept',
         emoji: '🎲',
+        type: 'thinking',
+        reversibility: 'high',
       },
       {
         name: 'Force Connections',
         focus: 'Find links between stimulus and problem',
         emoji: '🔗',
+        type: 'thinking',
+        reversibility: 'high',
       },
       {
         name: 'Develop Ideas',
         focus: 'Transform connections into solutions',
         emoji: '💡',
+        type: 'thinking',
+        reversibility: 'high',
       },
     ];
 

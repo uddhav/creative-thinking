@@ -23,24 +23,28 @@ export class KeeperTestHandler extends BaseTechniqueHandler {
       focus: 'State the unit being re-decided and what a period of keeping it costs',
       emoji: '🪑',
       type: 'thinking',
+      reversibility: 'high',
     },
     {
       name: 'Reconstruct the Fence',
       focus: 'Recover why it exists, then test whether that reason is still live',
       emoji: '🚧',
       type: 'thinking',
+      reversibility: 'high',
     },
     {
       name: 'The Re-Acquisition Test',
       focus: 'Would you take it on today, at today price, against today alternatives?',
       emoji: '🛒',
       type: 'thinking',
+      reversibility: 'high',
     },
     {
       name: 'Price It Honestly',
       focus: 'Carrying, switching and opportunity cost, with sunk cost struck out',
       emoji: '🧾',
       type: 'thinking',
+      reversibility: 'high',
     },
     {
       name: 'Decide and Set the Trigger',

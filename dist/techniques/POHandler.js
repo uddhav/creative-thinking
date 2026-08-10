@@ -29,12 +29,14 @@ export class POHandler extends BaseTechniqueHandler {
                 focus: 'Generate a deliberately unreasonable statement',
                 emoji: '💥',
                 type: 'thinking',
+                reversibility: 'high',
             },
             {
                 name: 'Movement',
                 focus: 'Extract useful ideas from the provocation',
                 emoji: '➡️',
                 type: 'thinking',
+                reversibility: 'high',
             },
             {
                 name: 'Develop Concepts',

@@ -36,6 +36,7 @@ export class NeuroComputationalHandler extends BaseTechniqueHandler {
             focus: 'Map problem to neural representations',
             emoji: '🧠',
             type: 'thinking',
+            reversibility: 'high',
         },
         {
             // Generation and interference analysis are one step. Splitting them asked
@@ -46,6 +47,7 @@ export class NeuroComputationalHandler extends BaseTechniqueHandler {
             focus: 'Generate diverse solution patterns and analyze how they interact',
             emoji: '🌊',
             type: 'thinking',
+            reversibility: 'high',
         },
         {
             name: 'Computational Synthesis',

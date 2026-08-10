@@ -13,6 +13,7 @@ export class LinguisticForensicsHandler extends BaseTechniqueHandler {
             focus: 'Identify key claims, statements, and assertions',
             emoji: '📝',
             type: 'thinking',
+            reversibility: 'high',
             markers: [
                 'Main claims and assertions',
                 'Supporting statements',
@@ -27,6 +28,7 @@ export class LinguisticForensicsHandler extends BaseTechniqueHandler {
             focus: 'Detect linguistic markers and anomalies',
             emoji: '🔍',
             type: 'thinking',
+            reversibility: 'high',
             markers: [
                 'Recurring linguistic structures',
                 'Deviations from baseline',

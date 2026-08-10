@@ -3,13 +3,10 @@
  */
 
 import type { SixHatsColor } from '../types/index.js';
-import { BaseTechniqueHandler, firstSentence, type TechniqueInfo } from './types.js';
+import { BaseTechniqueHandler, firstSentence, type StepInfo, type TechniqueInfo } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 
-interface HatInfo {
-  name: string;
-  focus: string;
-  emoji: string;
+interface HatInfo extends StepInfo {
   enhancedFocus: string;
 }
 
@@ -19,6 +16,8 @@ export class SixHatsHandler extends BaseTechniqueHandler {
       name: 'Blue Hat',
       focus: 'Process control and thinking about thinking',
       emoji: '🔵',
+      type: 'thinking',
+      reversibility: 'high',
       enhancedFocus:
         'Meta-cognition: Define objectives, set agenda, monitor progress, identify decision points',
     },
@@ -26,6 +25,8 @@ export class SixHatsHandler extends BaseTechniqueHandler {
       name: 'White Hat',
       focus: 'Facts, information, and data',
       emoji: '⚪',
+      type: 'thinking',
+      reversibility: 'high',
       enhancedFocus:
         'Data gathering: What do we know? What do we need to know? How do we get the information?',
     },
@@ -33,12 +34,16 @@ export class SixHatsHandler extends BaseTechniqueHandler {
       name: 'Red Hat',
       focus: 'Emotions, feelings, and intuition',
       emoji: '🔴',
+      type: 'thinking',
+      reversibility: 'high',
       enhancedFocus: 'Emotional intelligence: Gut feelings, fears, excitement, resistance patterns',
     },
     yellow: {
       name: 'Yellow Hat',
       focus: 'Optimism and positive thinking',
       emoji: '🟡',
+      type: 'thinking',
+      reversibility: 'high',
       enhancedFocus:
         'Value sensitivity: Benefits, advantages, why it might work, best-case scenarios',
     },
@@ -46,6 +51,8 @@ export class SixHatsHandler extends BaseTechniqueHandler {
       name: 'Black Hat',
       focus: 'Critical thinking and caution',
       emoji: '⚫',
+      type: 'thinking',
+      reversibility: 'high',
       enhancedFocus:
         'Risk awareness: Problems, dangers, difficulties, worst-case scenarios, Black Swans',
     },
@@ -53,6 +60,8 @@ export class SixHatsHandler extends BaseTechniqueHandler {
       name: 'Green Hat',
       focus: 'Creativity and new ideas',
       emoji: '🟢',
+      type: 'thinking',
+      reversibility: 'high',
       enhancedFocus:
         'Creative exploration: Alternatives, possibilities, innovations, lateral moves',
     },
@@ -60,6 +69,8 @@ export class SixHatsHandler extends BaseTechniqueHandler {
       name: 'Purple Hat',
       focus: 'Path dependency, ergodicity, and ruin risk analysis',
       emoji: '🟣',
+      type: 'thinking',
+      reversibility: 'high',
       enhancedFocus:
         'Ruin risk analysis: Identify non-ergodic domains, survival constraints, irreversible decisions, and escape routes',
     },

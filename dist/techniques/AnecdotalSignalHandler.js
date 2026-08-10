@@ -14,6 +14,7 @@ export class AnecdotalSignalHandler extends BaseTechniqueHandler {
             focus: 'Gather outlier stories and edge cases',
             emoji: '📚',
             type: 'thinking',
+            reversibility: 'high',
             analysisElements: [
                 'Outlier behaviors',
                 'Edge case stories',

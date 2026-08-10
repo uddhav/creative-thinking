@@ -33,6 +33,7 @@ export class ContextReframingHandler extends BaseTechniqueHandler {
       focus: 'Map current decision environment and constraints',
       emoji: '🗺️',
       type: 'thinking',
+      reversibility: 'high',
       dimensions: [
         'Current context mapping',
         'Environmental factors',

@@ -14,6 +14,7 @@ export class PerceptionOptimizationHandler extends BaseTechniqueHandler {
             focus: 'Map gaps between objective reality and subjective experience',
             emoji: '🗺️',
             type: 'thinking',
+            reversibility: 'high',
             elements: [
                 'Objective performance metrics',
                 'Subjective experience assessment',

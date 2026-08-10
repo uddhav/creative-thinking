@@ -10,6 +10,7 @@ export class YesAndHandler extends BaseTechniqueHandler {
             focus: 'Start with any idea without judgment',
             emoji: '✅',
             type: 'thinking',
+            reversibility: 'high',
         },
         {
             name: 'Add and Build',
@@ -36,6 +37,7 @@ export class YesAndHandler extends BaseTechniqueHandler {
             focus: 'Assess the enhanced ideas constructively',
             emoji: '⚖️',
             type: 'thinking',
+            reversibility: 'high',
         },
         {
             name: 'Synthesize',

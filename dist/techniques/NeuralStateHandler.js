@@ -12,16 +12,22 @@ export class NeuralStateHandler extends BaseTechniqueHandler {
             name: 'Assess Current State',
             focus: 'Identify the dominant neural network (DMN vs ECN) and the one it suppresses',
             emoji: '🔍',
+            type: 'thinking',
+            reversibility: 'high',
         },
         {
             name: 'Develop Switching',
             focus: 'Create rhythm between networks',
             emoji: '🔄',
+            type: 'thinking',
+            reversibility: 'high',
         },
         {
             name: 'Integrate Insights',
             focus: 'Combine outputs from both networks',
             emoji: '🔀',
+            type: 'thinking',
+            reversibility: 'high',
         },
     ];
     getTechniqueInfo() {

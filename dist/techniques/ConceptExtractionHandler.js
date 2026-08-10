@@ -24,18 +24,21 @@ export class ConceptExtractionHandler extends BaseTechniqueHandler {
                 focus: 'Find successful examples in any domain',
                 emoji: '🏆',
                 type: 'thinking',
+                reversibility: 'high',
             },
             {
                 name: 'Extract Concepts',
                 focus: 'Identify the underlying principles',
                 emoji: '🔍',
                 type: 'thinking',
+                reversibility: 'high',
             },
             {
                 name: 'Abstract Patterns',
                 focus: 'Generalize concepts to broader patterns',
                 emoji: '🔄',
                 type: 'thinking',
+                reversibility: 'high',
             },
             {
                 name: 'Apply to Problem',

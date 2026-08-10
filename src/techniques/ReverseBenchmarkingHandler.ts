@@ -41,6 +41,7 @@ export class ReverseBenchmarkingHandler extends BaseTechniqueHandler {
       focus: 'Identify what top competitors all do poorly',
       emoji: '🗺️',
       type: 'thinking',
+      reversibility: 'high',
       markers: [
         'Industry-wide blind spots',
         'Universal weaknesses',

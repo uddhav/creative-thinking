@@ -23,12 +23,14 @@ export class CulturalIntegrationHandler extends BaseTechniqueHandler {
             focus: 'Map cultural contexts, frameworks, and power dynamics',
             emoji: '🗺️',
             type: 'thinking',
+            reversibility: 'high',
         },
         {
             name: 'Touchpoint Discovery',
             focus: 'Find authentic connection opportunities',
             emoji: '🔍',
             type: 'thinking',
+            reversibility: 'high',
         },
         {
             name: 'Bridge Building',
@@ -57,6 +59,7 @@ export class CulturalIntegrationHandler extends BaseTechniqueHandler {
             focus: 'Integrate diverse viewpoints creatively',
             emoji: '🎨',
             type: 'thinking',
+            reversibility: 'high',
         },
         {
             name: 'Respectful Synthesis',

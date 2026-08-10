@@ -10,6 +10,7 @@ export class DisneyMethodHandler extends BaseTechniqueHandler {
             focus: 'What if anything were possible?',
             emoji: '🌟',
             type: 'thinking', // Pure imagination
+            reversibility: 'high',
         },
         {
             name: 'Realist',
@@ -36,6 +37,7 @@ export class DisneyMethodHandler extends BaseTechniqueHandler {
             focus: 'What could go wrong?',
             emoji: '🔍',
             type: 'thinking', // Analysis and evaluation
+            reversibility: 'high',
         },
     ];
     getTechniqueInfo() {

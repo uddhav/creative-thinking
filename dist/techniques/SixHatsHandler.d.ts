@@ -2,11 +2,8 @@
  * Six Thinking Hats technique handler
  */
 import type { SixHatsColor } from '../types/index.js';
-import { BaseTechniqueHandler, type TechniqueInfo } from './types.js';
-interface HatInfo {
-    name: string;
-    focus: string;
-    emoji: string;
+import { BaseTechniqueHandler, type StepInfo, type TechniqueInfo } from './types.js';
+interface HatInfo extends StepInfo {
     enhancedFocus: string;
 }
 export declare class SixHatsHandler extends BaseTechniqueHandler {

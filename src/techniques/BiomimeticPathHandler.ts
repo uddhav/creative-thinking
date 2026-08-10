@@ -22,6 +22,7 @@ export class BiomimeticPathHandler extends BaseTechniqueHandler {
       focus: 'Threat detection and adaptive response generation',
       emoji: '🦠',
       type: 'thinking', // Analysis and pattern recognition
+      reversibility: 'high',
     },
     {
       name: 'Evolutionary Variation',

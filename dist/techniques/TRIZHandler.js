@@ -34,12 +34,14 @@ export class TRIZHandler extends BaseTechniqueHandler {
                 focus: 'Find the core technical or physical contradiction',
                 emoji: '⚔️',
                 type: 'thinking',
+                reversibility: 'high',
             },
             {
                 name: 'Remove Compromise',
                 focus: 'Challenge the need for trade-offs',
                 emoji: '🚫',
                 type: 'thinking',
+                reversibility: 'high',
             },
             {
                 name: 'Apply Inventive Principles',

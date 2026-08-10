@@ -43,18 +43,21 @@ export class TemporalCreativityHandler extends BaseTechniqueHandler {
             focus: 'Excavate decision history and extract patterns',
             emoji: '🏛️',
             type: 'thinking', // Analysis of past
+            reversibility: 'high',
         },
         {
             name: 'Present State Synthesis',
             focus: 'Map current constraints and active options',
             emoji: '🎯',
             type: 'thinking', // Current state mapping
+            reversibility: 'high',
         },
         {
             name: 'Future Path Projection',
             focus: 'Project multiple timeline scenarios',
             emoji: '🔮',
             type: 'thinking', // Future analysis
+            reversibility: 'high',
         },
         {
             name: 'Temporal Option Creation',

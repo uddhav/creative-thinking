@@ -87,16 +87,22 @@ export class RandomEntryHandler extends BaseTechniqueHandler {
                 name: 'Random Stimulus',
                 focus: 'Select a random word or concept',
                 emoji: '🎲',
+                type: 'thinking',
+                reversibility: 'high',
             },
             {
                 name: 'Force Connections',
                 focus: 'Find links between stimulus and problem',
                 emoji: '🔗',
+                type: 'thinking',
+                reversibility: 'high',
             },
             {
                 name: 'Develop Ideas',
                 focus: 'Transform connections into solutions',
                 emoji: '💡',
+                type: 'thinking',
+                reversibility: 'high',
             },
         ];
         if (step < 1 || step > steps.length) {

@@ -2,28 +2,34 @@
  * Neural State Optimization technique handler
  */
 
-import { BaseTechniqueHandler, firstSentence, type TechniqueInfo } from './types.js';
+import { BaseTechniqueHandler, firstSentence, type StepInfo, type TechniqueInfo } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 
 export class NeuralStateHandler extends BaseTechniqueHandler {
   // Assessment and suppression are one step, not two: naming the dominant
   // network fixes the answer to which one is suppressed — grinding means DMN,
   // wandering means ECN — so the second step had no question left to ask.
-  private readonly steps = [
+  private readonly steps: StepInfo[] = [
     {
       name: 'Assess Current State',
       focus: 'Identify the dominant neural network (DMN vs ECN) and the one it suppresses',
       emoji: '🔍',
+      type: 'thinking',
+      reversibility: 'high',
     },
     {
       name: 'Develop Switching',
       focus: 'Create rhythm between networks',
       emoji: '🔄',
+      type: 'thinking',
+      reversibility: 'high',
     },
     {
       name: 'Integrate Insights',
       focus: 'Combine outputs from both networks',
       emoji: '🔀',
+      type: 'thinking',
+      reversibility: 'high',
     },
   ];
 
@@ -43,7 +49,7 @@ export class NeuralStateHandler extends BaseTechniqueHandler {
     };
   }
 
-  getStepInfo(step: number): { name: string; focus: string; emoji: string } {
+  getStepInfo(step: number): StepInfo {
     if (step < 1 || step > this.steps.length) {
       throw new ValidationError(
         ErrorCode.INVALID_STEP,

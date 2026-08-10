@@ -17,6 +17,7 @@ export class QuantumSuperpositionHandler extends BaseTechniqueHandler {
       focus: 'Create multiple contradictory solution states',
       emoji: '⚛️',
       type: 'thinking',
+      reversibility: 'high',
     },
     {
       name: 'State Interaction',
@@ -28,12 +29,14 @@ export class QuantumSuperpositionHandler extends BaseTechniqueHandler {
       focus: 'Map which states are coupled, which are gaining ground, and where they reinforce',
       emoji: '🌊',
       type: 'thinking',
+      reversibility: 'high',
     },
     {
       name: 'Measurement Context',
       focus: 'Define measurement context for collapse',
       emoji: '📏',
       type: 'thinking',
+      reversibility: 'high',
     },
     {
       name: 'State Collapse',

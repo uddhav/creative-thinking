@@ -13,6 +13,7 @@ export class CompetingHypothesesHandler extends BaseTechniqueHandler {
             focus: 'Create multiple competing explanations',
             emoji: '💡',
             type: 'thinking',
+            reversibility: 'high',
             analysisType: 'generation',
             matrixElements: [
                 'Primary hypothesis',
@@ -27,6 +28,7 @@ export class CompetingHypothesesHandler extends BaseTechniqueHandler {
             focus: 'List all available evidence',
             emoji: '📊',
             type: 'thinking',
+            reversibility: 'high',
             analysisType: 'evidence',
             matrixElements: [
                 'Direct evidence',

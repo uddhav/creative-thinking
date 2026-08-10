@@ -27,18 +27,21 @@ export class CollectiveIntelHandler extends BaseTechniqueHandler {
         focus: 'Map diverse knowledge sources',
         emoji: '📚',
         type: 'thinking',
+        reversibility: 'high',
       },
       {
         name: 'Gather Wisdom',
         focus: 'Collect insights from each source',
         emoji: '🎯',
         type: 'thinking',
+        reversibility: 'high',
       },
       {
         name: 'Find Patterns',
         focus: 'Identify emergent patterns',
         emoji: '🔍',
         type: 'thinking',
+        reversibility: 'high',
       },
       {
         name: 'Create Synergy',

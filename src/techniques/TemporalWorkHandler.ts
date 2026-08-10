@@ -12,12 +12,14 @@ export class TemporalWorkHandler extends BaseTechniqueHandler {
       focus: 'Identify time constraints and opportunities',
       emoji: '🗺️',
       type: 'thinking', // Analysis and mapping
+      reversibility: 'high',
     },
     {
       name: 'Circadian Alignment',
       focus: 'Align with natural rhythms',
       emoji: '🌅',
       type: 'thinking', // Analysis of patterns
+      reversibility: 'high',
     },
     {
       name: 'Pressure Transformation',

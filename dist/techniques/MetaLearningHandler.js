@@ -11,18 +11,21 @@ export class MetaLearningHandler extends BaseTechniqueHandler {
             focus: 'Identify successful path patterns across techniques',
             emoji: '🔍',
             type: 'thinking',
+            reversibility: 'high',
         },
         {
             name: 'Learning Accumulation',
             focus: 'Store effective combinations and context mappings',
             emoji: '📊',
             type: 'thinking',
+            reversibility: 'high',
         },
         {
             name: 'Strategy Evolution',
             focus: 'Adapt technique selection and execution sequences',
             emoji: '🔄',
             type: 'thinking',
+            reversibility: 'high',
         },
         // No 'Feedback Integration' step. It asked what telemetry revealed about
         // technique effectiveness, and getStepGuidance receives only (step, problem)

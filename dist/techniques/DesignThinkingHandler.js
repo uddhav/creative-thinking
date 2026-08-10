@@ -21,18 +21,21 @@ export class DesignThinkingHandler extends BaseTechniqueHandler {
             focus: 'Understand user needs and context | Challenge assumptions about user needs',
             emoji: '❤️',
             type: 'thinking',
+            reversibility: 'high',
         },
         {
             name: 'Define',
             focus: "Frame the problem clearly | Question if you're solving the right problem",
             emoji: '📍',
             type: 'thinking',
+            reversibility: 'high',
         },
         {
             name: 'Ideate',
             focus: 'Generate diverse solutions | Identify failure modes in each idea',
             emoji: '💡',
             type: 'thinking',
+            reversibility: 'high',
         },
         {
             name: 'Prototype',
