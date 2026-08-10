@@ -441,6 +441,41 @@ export class PathMemoryManager {
     /**
      * Calculate proximity to a specific barrier
      */
+    /**
+     * Proximity to a barrier, on the scale its thresholds are written against.
+     *
+     * Each branch used to multiply its saturated input by 0.7 or 0.8, which put
+     * a floor under the distance (`1 - proximity`) that no session could get
+     * below: cognitive_lock_in 0.280, resource_depletion 0.300,
+     * analysis_paralysis 0.200, perfectionism 0.300, cynicism 0.200. Every
+     * consumer compares distance against a `warningThreshold` of 0.3 and a
+     * CRITICAL cut of `< 0.2`, both strict — so resource_depletion and
+     * perfectionism could never warn at all, analysis_paralysis could never go
+     * critical, and the two remaining barriers had their top range clipped. The
+     * thresholds are the calibrated part; the multipliers were not.
+     *
+     * Three of the five are unscaled below. Two keep their multiplier, because
+     * measuring showed that for those two the multiplier was not a range cap at
+     * all — it was muting a formula whose *default* state is the saturated end:
+     *
+     *   perfectionism reads `1 - criticalDecisions/pathLength`, and a session
+     *   with no high-commitment step has no critical decisions, so unscaled it
+     *   reports proximity 1.0 — distance 0.000, CRITICAL — from step 1 of every
+     *   session, including a thirteen-step chain that ends at flexibility 0.937.
+     *
+     *   cognitive_lock_in reads `1 - unique/len` over the last ten steps, and a
+     *   planned chain repeats a technique across that technique's own steps —
+     *   six_hats is seven steps of six_hats — so unscaled the same healthy chain
+     *   reports distance 0.200 and goes CRITICAL at step 13.
+     *
+     * Removing those two multipliers does not make the barriers informative, it
+     * makes them constant, which is the same defect as a threshold nothing can
+     * reach wearing the opposite sign. They stay scaled until their inputs are
+     * fixed, so that what fires is still worth reading.
+     *
+     * What each branch measures is unchanged either way — only the range it can
+     * express.
+     */
     calculateBarrierProximity(barrier) {
         // Different calculation methods based on barrier type
         switch (barrier.subtype) {
@@ -449,28 +484,31 @@ export class PathMemoryManager {
                 const recentTechniques = this.pathMemory.pathHistory.slice(-10).map(e => e.technique);
                 const uniqueTechniques = new Set(recentTechniques).size;
                 const repetitionScore = 1 - uniqueTechniques / Math.max(recentTechniques.length, 1);
+                // Still scaled: see the note above — unscaled, an ordinary planned
+                // chain reads as lock-in.
                 return repetitionScore * 0.8;
             }
             case 'resource_depletion': {
                 // Simplified: based on number of steps taken
-                const stepsScore = Math.min(this.pathMemory.pathHistory.length / 50, 1);
-                return stepsScore * 0.7;
+                return Math.min(this.pathMemory.pathHistory.length / 50, 1);
             }
             case 'analysis_paralysis': {
                 // Check for high analysis without decisions
                 const analysisSteps = this.pathMemory.pathHistory.filter(e => e.technique === 'six_hats' && e.commitmentLevel < 0.3).length;
-                return Math.min(analysisSteps / 15, 1) * 0.8;
+                return Math.min(analysisSteps / 15, 1);
             }
             case 'perfectionism': {
                 // Check for excessive refinement
                 const refinementRatio = this.pathMemory.criticalDecisions.length /
                     Math.max(this.pathMemory.pathHistory.length, 1);
+                // Still scaled: see the note above — unscaled, a session that has made
+                // no commitment at all reads as maximally perfectionist.
                 return (1 - refinementRatio) * 0.7;
             }
             case 'cynicism': {
                 // Check for negative patterns (simplified)
                 const negativeIndicators = this.pathMemory.pathHistory.filter(e => e.optionsClosed.length > e.optionsOpened.length * 2).length;
-                return Math.min(negativeIndicators / 10, 1) * 0.8;
+                return Math.min(negativeIndicators / 10, 1);
             }
             default:
                 return 0.1; // Low default proximity

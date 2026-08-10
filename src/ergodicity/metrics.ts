@@ -173,22 +173,15 @@ export class MetricsCalculator {
       });
     }
 
-    // Option velocity warnings
-    if (metrics.optionVelocity < -2) {
-      warnings.push({
-        level: ErgodicityWarningLevel.WARNING,
-        message: 'Warning: Options closing rapidly. Need option generation.',
-        metric: 'optionVelocity',
-        value: metrics.optionVelocity,
-        threshold: -2,
-        recommendations: [
-          'Use SCAMPER to generate variations',
-          'Apply Concept Extraction from other domains',
-          'Question constraints - which are real vs assumed?',
-          'Seek inspiration from unrelated fields',
-        ],
-      });
-    }
+    // No option-velocity warning. It fired below -2 options closed per step,
+    // and SCAMPER is the only one of the thirty-two techniques that ever
+    // reports an option as opened or closed at all — for the other thirty-one
+    // the input is two empty arrays, so the velocity is exactly 0.00 for every
+    // step of every chain, and the measured minimum across all of them is
+    // 0.00. The threshold was never the problem: the warning asserted
+    // something nothing in the system could observe. `optionVelocity` is still
+    // computed and still reported in the metrics summary, where a reader can
+    // see it is zero; it just no longer pretends to be a trigger.
 
     // Commitment depth warnings
     if (metrics.commitmentDepth > 0.7) {

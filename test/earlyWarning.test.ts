@@ -259,14 +259,21 @@ describe('Early Warning System', () => {
 
       expect(result.earlyWarningState).toBeDefined();
 
-      // With WARNING level warnings, the system recommends 'pivot'
-      // 'escape' is only for CRITICAL warnings or compound risk
-      expect(result.earlyWarningState?.recommendedAction).toBe('pivot');
+      // 41 near-irreversible steps, 200 options closed, none opened, six hours
+      // of session — the sensors read CRITICAL and the system says 'escape'.
+      //
+      // This asserted 'pivot' while the sensors were gated on a 5 s wall clock.
+      // The loop above runs in under a second, so all 41 steps fell inside one
+      // throttle window: the sensors measured once against an empty path and
+      // every later step replayed that first reading. 'pivot' was the reading
+      // for step 1, not for step 41. The gate is now per recorded step, so the
+      // assertion is what the described conditions actually produce.
+      expect(result.earlyWarningState?.recommendedAction).toBe('escape');
 
       // Check that we have significant warnings
       expect(result.earlyWarningState?.activeWarnings.length).toBeGreaterThan(0);
 
-      // Check escape routes are available even at WARNING level
+      // Check escape routes are available
       const escapeRoutes = result.earlyWarningState?.escapeRoutesAvailable;
       expect(escapeRoutes).toBeDefined();
 
@@ -274,11 +281,12 @@ describe('Early Warning System', () => {
       // Just verify the structure is correct
       expect(Array.isArray(escapeRoutes)).toBeTruthy();
 
-      // Verify the system is detecting serious issues
-      const hasWarningLevel = result.earlyWarningState?.activeWarnings.some(
-        w => w.severity === BarrierWarningLevel.WARNING
+      // Verify the system is detecting serious issues. Was WARNING under the
+      // replayed step-1 reading; the live reading at step 41 is CRITICAL.
+      const hasCriticalLevel = result.earlyWarningState?.activeWarnings.some(
+        w => w.severity === BarrierWarningLevel.CRITICAL
       );
-      expect(hasWarningLevel).toBeTruthy();
+      expect(hasCriticalLevel).toBeTruthy();
     });
   });
 

@@ -11,8 +11,20 @@ export declare class AbsorbingBarrierEarlyWarning {
     private lastWarningState;
     private readonly maxHistorySize;
     private readonly historyTTL;
-    private lastMeasurementTime;
-    private readonly measurementThrottleMs;
+    /**
+     * Path length at which each sensor last took a fresh reading.
+     *
+     * The gate used to be wall-clock: a sensor re-measured only if 5000 ms had
+     * passed. Steps, not seconds, are the unit this subsystem reasons about, and
+     * every scripted caller — the CLI, the test suite, any programmatic run —
+     * completes a whole session inside one throttle window, so it measured once
+     * at step 1 and replayed that reading for the rest of the session. Measured:
+     * the server reported `continue` on 20/20 steps of a chain where an
+     * unthrottled monitor reported `escape` on step 11. Keying on path length
+     * costs the same one measurement per step while making a scripted run and a
+     * slow interactive run behave identically.
+     */
+    private lastMeasurementPathLength;
     private readonly defaultCalibration;
     private readonly onError;
     private sensorFailures;

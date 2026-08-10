@@ -199,12 +199,15 @@ export interface WarningPattern {
     effectiveEscapes: EscapeProtocol[];
 }
 /**
- * Configuration for the early warning system
+ * Configuration for the early warning system.
+ *
+ * There is no measurement-throttle knob: sensors re-measure once per recorded
+ * step, gated on path length rather than on elapsed milliseconds, so there is
+ * no window to configure.
  */
 export interface EarlyWarningConfig {
     maxHistorySize?: number;
     historyTTL?: number;
-    measurementThrottleMs?: number;
     defaultCalibration?: Partial<SensorCalibration>;
     onError?: (error: Error, context: {
         sensor?: SensorType;

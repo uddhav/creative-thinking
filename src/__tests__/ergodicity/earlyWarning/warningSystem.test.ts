@@ -125,7 +125,6 @@ describe('AbsorbingBarrierEarlyWarning', () => {
     warningSystem = new AbsorbingBarrierEarlyWarning({
       maxHistorySize: 10,
       historyTTL: 3600000, // 1 hour
-      measurementThrottleMs: 100, // Fast for tests
     });
 
     mockPathMemory = {
@@ -314,15 +313,19 @@ describe('AbsorbingBarrierEarlyWarning', () => {
       expect(history.length).toBeGreaterThan(0);
     });
 
-    it('should throttle measurements to avoid excessive processing', async () => {
-      const fastSystem = new AbsorbingBarrierEarlyWarning({
-        measurementThrottleMs: 1000, // 1 second throttle
-      });
+    it('should reuse the reading when asked twice about the same step', async () => {
+      // Was 'should throttle measurements to avoid excessive processing', with
+      // a `measurementThrottleMs: 1000` wall-clock window. The window is gone:
+      // sensors re-measure when the path advances, so a repeat call about an
+      // unchanged path still costs nothing while a new step always reads. The
+      // assertions below are unchanged — the same path memory is passed twice,
+      // which is now a same-step repeat rather than a same-second one.
+      const fastSystem = new AbsorbingBarrierEarlyWarning();
 
       // First measurement
       const result1 = await fastSystem.continuousMonitoring(mockPathMemory, mockSession);
 
-      // Immediate second measurement should be throttled
+      // Second call about the same path should reuse the reading
       const result2 = await fastSystem.continuousMonitoring(mockPathMemory, mockSession);
 
       // Check that sensor readings are the same (cached)
