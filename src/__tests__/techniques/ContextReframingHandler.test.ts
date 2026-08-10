@@ -213,27 +213,51 @@ describe('ContextReframingHandler', () => {
       ];
 
       const insights = handler.extractInsights(history);
-      expect(insights.some(i => i.includes('Current context mapped'))).toBe(true);
+      // Step 1 reports what contextAnalysis held, not a sentence saying it held
+      // something. The old string was true of every run that reached step 1.
+      expect(insights.some(i => i.includes('Context Analysis recorded:'))).toBe(true);
       expect(insights.some(i => i.includes('2 high-impact context interventions'))).toBe(true);
-      expect(insights.some(i => i.includes('Frame shifting strategy'))).toBe(true);
-      expect(insights.some(i => i.includes('Decision environment architected'))).toBe(true);
-      expect(insights.some(i => i.includes('Behavioral activation metrics'))).toBe(true);
-      expect(insights.some(i => i.includes('environment redesigned'))).toBe(true);
-    });
-
-    it('should handle partial history', () => {
-      const history = [{ output: 'Context analyzed', contextAnalysis: {} }];
-
-      const insights = handler.extractInsights(history);
-      expect(insights.some(i => i.includes('Current context mapped'))).toBe(true);
+      // Steps 3, 4 and 5 report the content they recorded, not a constant that
+      // fires whenever the field is merely present.
+      expect(insights.some(i => i.includes('Frame Shifting: newFrame: Health as default'))).toBe(
+        true
+      );
+      expect(insights.some(i => i.includes('Environment Design: changes: Complete redesign'))).toBe(
+        true
+      );
+      expect(insights.some(i => i.includes('Behavioral Activation: changeRate: 0.35'))).toBe(true);
+      // No completion banner: reaching the last step is not a finding.
       expect(insights.some(i => i.includes('environment redesigned'))).toBe(false);
     });
 
-    it('should detect behavioral change metrics', () => {
-      const history = [{ output: 'behavioral change rate: 45%' }];
+    it('should handle partial history', () => {
+      const history = [
+        { currentStep: 1, output: 'Context analyzed', contextAnalysis: { constraint: 'time' } },
+      ];
 
       const insights = handler.extractInsights(history);
-      expect(insights.some(i => i.includes('Behavioral activation metrics'))).toBe(true);
+      expect(insights.some(i => i.includes('constraint: time'))).toBe(true);
+      expect(insights.some(i => i.includes('environment redesigned'))).toBe(false);
+    });
+
+    it('should report the activation step whatever words its output uses', () => {
+      // The old gate fired only on the literal phrase "behavioral change rate",
+      // so a rate reported any other way produced no insight at all.
+      const phrased = handler.extractInsights([
+        { currentStep: 5, output: 'behavioral change rate: 45%' },
+      ]);
+      expect(
+        phrased.some(i => i.includes('Behavioral Activation: behavioral change rate: 45%'))
+      ).toBe(true);
+
+      const rephrased = handler.extractInsights([
+        { currentStep: 5, output: 'Uptake moved from 12% to 45% after the layout change.' },
+      ]);
+      expect(
+        rephrased.some(i =>
+          i.includes('Behavioral Activation: Uptake moved from 12% to 45% after the layout change.')
+        )
+      ).toBe(true);
     });
   });
 });

@@ -305,7 +305,14 @@ describe('Temporal Work Design', () => {
       expect(step5.completed).toBe(true);
       expect(step5.insights).toBeDefined();
       expect(step5.insights?.length).toBeGreaterThan(0);
-      expect(step5.insights?.some(i => i.includes('Temporal Work Design completed'))).toBe(true);
+      // The final step reports what it recorded — its own output and the escape
+      // routes — not a constant that fires merely because the step ran.
+      expect(
+        step5.insights?.some(i =>
+          i.includes('Temporal Escape Routes: Created buffers and graceful degradation plans')
+        )
+      ).toBe(true);
+      expect(step5.insights?.some(i => i.includes('20% buffer on all estimates'))).toBe(true);
     });
 
     it('should handle complex temporal landscapes', async () => {

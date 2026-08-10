@@ -92,10 +92,8 @@ export class CollectiveIntelHandler extends BaseTechniqueHandler {
         return steps[step - 1];
     }
     getStepGuidance(step, problem) {
-        // Handle out of bounds gracefully
-        if (step < 1 || step > 5) {
-            return `Complete the Collective Intelligence Synthesis process for: "${problem}"`;
-        }
+        // Out-of-range steps fall through to `default:` — one path, not an early
+        // bounds-return plus an unreachable arm returning the same string.
         switch (step) {
             case 1:
                 return `📚 Identify wisdom sources for "${problem}": experts, crowds, databases, cultural knowledge`;

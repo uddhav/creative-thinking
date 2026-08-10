@@ -6,7 +6,13 @@
  * in anecdotal form" - using outliers as early change indicators
  */
 
-import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
+import {
+  BaseTechniqueHandler,
+  describeStructuredField,
+  firstSentence,
+  type TechniqueInfo,
+  type StepInfo,
+} from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 
 interface AnecdotalSignal {
@@ -492,79 +498,122 @@ Output: Complete strategic response plan with monitoring systems`,
     return true;
   }
 
+  /**
+   * Report what each step actually recorded, labelled by the step.
+   *
+   * Keyed on `entry.currentStep`, not on position in the array: `execute`
+   * appends a history entry for every call including revisions, so one revision
+   * shifts every later entry. Keying on the step also means a revision
+   * supersedes the entry it revises rather than reporting twice.
+   */
   extractInsights(history: unknown[]): string[] {
-    const insights: string[] = [];
+    const totalSteps = this.steps.length;
+    const latestByStep = new Map<number, Record<string, unknown>>();
 
     history.forEach((entry, index) => {
-      if (typeof entry === 'object' && entry !== null) {
-        const entryObj = entry as Record<string, unknown>;
-        if (entryObj.output) {
-          const stepNumber = index + 1;
-          const stepName = this.steps[index]?.name || `Step ${stepNumber}`;
-
-          // Extract anecdote collection insights
-          if (entryObj.anecdoteCount && typeof entryObj.anecdoteCount === 'number') {
-            insights.push(`${stepName}: Collected ${entryObj.anecdoteCount} significant anecdotes`);
-          }
-
-          // Extract signal insights
-          if (entryObj.signals && Array.isArray(entryObj.signals)) {
-            const strongSignals = entryObj.signals.filter((s: unknown) => {
-              if (typeof s === 'object' && s !== null) {
-                const signalObj = s as AnecdotalSignal;
-                return (
-                  signalObj.signalStrength === 'strong' || signalObj.signalStrength === 'critical'
-                );
-              }
-              return false;
-            });
-            if (strongSignals.length > 0) {
-              insights.push(
-                `Identified ${strongSignals.length} strong signals from anecdotal evidence`
-              );
-            }
-          }
-
-          // Extract trajectory insights
-          if (entryObj.trajectoryAnalysis) {
-            insights.push('Individual trajectories reveal non-ergodic path dependencies');
-          }
-
-          // Extract early warning insights
-          if (entryObj.earlyWarnings && Array.isArray(entryObj.earlyWarnings)) {
-            insights.push(`${entryObj.earlyWarnings.length} early warning signals extracted`);
-          }
-
-          // Extract scaling insights
-          if (entryObj.scalingScenarios && Array.isArray(entryObj.scalingScenarios)) {
-            const highProbability: unknown = entryObj.scalingScenarios.find((s: unknown) => {
-              if (typeof s === 'object' && s !== null) {
-                const scenarioObj = s as Record<string, unknown>;
-                return (
-                  typeof scenarioObj.adoptionLevel === 'number' && scenarioObj.adoptionLevel > 25
-                );
-              }
-              return false;
-            });
-            if (highProbability !== undefined) {
-              insights.push('Scaling projections suggest potential mainstream adoption');
-            }
-          }
-
-          // Extract strategic insights
-          if (entryObj.strategicResponse) {
-            insights.push('Strategic response formulated based on weak signal analysis');
-          }
-        }
+      if (typeof entry !== 'object' || entry === null) {
+        return;
+      }
+      const entryObj = entry as Record<string, unknown>;
+      // Fall back to position only when the caller sent no step number.
+      const step = typeof entryObj.currentStep === 'number' ? entryObj.currentStep : index + 1;
+      if (step >= 1 && step <= totalSteps) {
+        latestByStep.set(step, entryObj);
       }
     });
 
-    // Add summary insight if complete
-    if (history.length >= this.steps.length) {
-      insights.push(
-        'Anecdotal signal detection complete - future insights extracted from outliers'
-      );
+    const insights: string[] = [];
+
+    for (let step = 1; step <= totalSteps; step++) {
+      const entryObj = latestByStep.get(step);
+      if (!entryObj) {
+        continue;
+      }
+      const stepName = this.steps[step - 1]?.name;
+      if (!stepName) {
+        continue;
+      }
+
+      const output = typeof entryObj.output === 'string' ? entryObj.output.trim() : '';
+      if (output) {
+        const summary = firstSentence(output);
+        if (summary.length > 0) {
+          insights.push(`${stepName}: ${summary}`);
+        }
+      }
+
+      // Each structured field belongs to one step; report it there.
+      if (step === 1 && typeof entryObj.anecdoteCount === 'number' && entryObj.anecdoteCount > 0) {
+        insights.push(`${stepName}: Collected ${entryObj.anecdoteCount} significant anecdotes`);
+      }
+
+      if (step === 2 && Array.isArray(entryObj.signals)) {
+        const strongSignals = entryObj.signals.filter((s: unknown) => {
+          if (typeof s === 'object' && s !== null) {
+            const signalObj = s as AnecdotalSignal;
+            return signalObj.signalStrength === 'strong' || signalObj.signalStrength === 'critical';
+          }
+          return false;
+        });
+        if (strongSignals.length > 0) {
+          insights.push(
+            `${stepName}: Identified ${strongSignals.length} strong signals from anecdotal evidence — ${strongSignals
+              .map(s => (s as AnecdotalSignal).story)
+              .filter(story => typeof story === 'string' && story.length > 0)
+              .join(', ')}`
+          );
+        }
+      }
+
+      if (step === 3) {
+        // Report the trajectories that were recorded, not a constant asserting
+        // that they are non-ergodic — the constant said that whatever the data.
+        const trajectories = describeStructuredField(entryObj.trajectoryAnalysis);
+        if (trajectories.length > 0) {
+          insights.push(`${stepName}: ${trajectories}`);
+        }
+      }
+
+      if (step === 4 && Array.isArray(entryObj.earlyWarnings)) {
+        const warnings = describeStructuredField(entryObj.earlyWarnings);
+        if (entryObj.earlyWarnings.length > 0) {
+          insights.push(
+            `${stepName}: ${entryObj.earlyWarnings.length} early warning signals extracted — ${warnings}`
+          );
+        }
+      }
+
+      if (step === 5 && Array.isArray(entryObj.scalingScenarios)) {
+        const scenarios = describeStructuredField(entryObj.scalingScenarios);
+        if (scenarios.length > 0) {
+          insights.push(`${stepName}: ${scenarios}`);
+        }
+        const mainstream = entryObj.scalingScenarios.filter((s: unknown) => {
+          if (typeof s === 'object' && s !== null) {
+            const scenarioObj = s as Record<string, unknown>;
+            return typeof scenarioObj.adoptionLevel === 'number' && scenarioObj.adoptionLevel > 25;
+          }
+          return false;
+        });
+        if (mainstream.length > 0) {
+          insights.push(
+            `${stepName}: ${mainstream.length} projection(s) cross mainstream adoption (>25%)`
+          );
+        }
+      }
+
+      if (step === 6) {
+        const response = describeStructuredField(entryObj.strategicResponse);
+        if (response.length > 0) {
+          insights.push(`${stepName}: ${response}`);
+        }
+      }
     }
+
+    // No completion banner. Reaching the last step is already visible from the
+    // step count, and a fixed string asserts a finding the session never made —
+    // "competitive advantage identified", "future insights extracted" — whatever
+    // the steps actually said.
 
     return insights;
   }

@@ -232,17 +232,29 @@ describe('PerceptionOptimizationHandler', () => {
 
       const insights = handler.extractInsights(history);
       expect(insights.some(i => i.includes('2 major perception gaps'))).toBe(true);
-      expect(insights.some(i => i.includes('Value amplification strategy'))).toBe(true);
-      expect(insights.some(i => i.includes('Peak experiences designed'))).toBe(true);
-      expect(insights.some(i => i.includes('Psychological value layers'))).toBe(true);
+      // Steps 2, 3 and 4 report the content they recorded, not a constant that
+      // fires whenever the field is merely present.
+      expect(
+        insights.some(i => i.includes('Value Amplification: strategy: Focus on speed perception'))
+      ).toBe(true);
+      expect(
+        insights.some(i => i.includes('Experience Design: peaks: Onboarding and delivery'))
+      ).toBe(true);
+      expect(
+        insights.some(i => i.includes('Psychological Value Creation: layers: Status and belonging'))
+      ).toBe(true);
       expect(insights.some(i => i.includes('Exceptional perception ROI: 25x'))).toBe(true);
-      expect(insights.some(i => i.includes('subjective value dramatically enhanced'))).toBe(true);
+      // No completion banner: reaching the last step is not a finding.
+      expect(insights.some(i => i.includes('subjective value dramatically enhanced'))).toBe(false);
     });
 
     it('should handle low ROI', () => {
-      const history = [{ output: 'Activated', perceptionROI: 5 }];
+      // perceptionROI belongs to step 5; say so, or the entry is read as step 1
+      // and the assertions below pass for the wrong reason.
+      const history = [{ currentStep: 5, output: 'Activated', perceptionROI: 5 }];
 
       const insights = handler.extractInsights(history);
+      expect(insights.some(i => i.includes('perception ROI 5x traditional ROI'))).toBe(true);
       expect(insights.some(i => i.includes('Exceptional perception ROI'))).toBe(false);
     });
 

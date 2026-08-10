@@ -6,7 +6,13 @@
  * experience is fundamentally subjective
  */
 
-import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
+import {
+  BaseTechniqueHandler,
+  describeStructuredField,
+  firstSentence,
+  type TechniqueInfo,
+  type StepInfo,
+} from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 
 interface PerceptionGap {
@@ -403,63 +409,106 @@ Output: Complete activation plan with perception metrics and success criteria`,
     return true;
   }
 
+  /**
+   * Report what each step actually recorded, labelled by the step.
+   *
+   * Keyed on `entry.currentStep`, not on position in the array: `execute`
+   * appends a history entry for every call including revisions, so one revision
+   * shifts every later entry. Keying on the step also means a revision
+   * supersedes the entry it revises rather than reporting twice.
+   */
   extractInsights(history: unknown[]): string[] {
-    const insights: string[] = [];
+    const totalSteps = this.steps.length;
+    const latestByStep = new Map<number, Record<string, unknown>>();
 
     history.forEach((entry, index) => {
-      if (typeof entry === 'object' && entry !== null) {
-        const entryObj = entry as Record<string, unknown>;
-        if (entryObj.output) {
-          const stepNumber = index + 1;
-          const stepName = this.steps[index]?.name || `Step ${stepNumber}`;
-
-          // Extract perception gap insights
-          if (entryObj.perceptionGaps && Array.isArray(entryObj.perceptionGaps)) {
-            const largeGaps = entryObj.perceptionGaps.filter((g: unknown) => {
-              if (typeof g === 'object' && g !== null) {
-                const gapObj = g as PerceptionGap;
-                return gapObj.gapSize === 'large' || gapObj.gapSize === 'massive';
-              }
-              return false;
-            });
-            if (largeGaps.length > 0) {
-              insights.push(
-                `${stepName}: Found ${largeGaps.length} major perception gaps to exploit`
-              );
-            }
-          }
-
-          // Extract value amplification insights
-          if (entryObj.valueAmplification) {
-            insights.push('Value amplification strategy designed for maximum leverage');
-          }
-
-          // Extract experience design insights
-          if (entryObj.experienceDesign) {
-            insights.push('Peak experiences designed using behavioral economics principles');
-          }
-
-          // Extract psychological value insights
-          if (entryObj.psychologicalValue) {
-            insights.push('Psychological value layers added beyond functional benefits');
-          }
-
-          // Extract ROI insights
-          if (entryObj.perceptionROI && typeof entryObj.perceptionROI === 'number') {
-            if (entryObj.perceptionROI > 10) {
-              insights.push(
-                `Exceptional perception ROI: ${entryObj.perceptionROI}x traditional ROI`
-              );
-            }
-          }
-        }
+      if (typeof entry !== 'object' || entry === null) {
+        return;
+      }
+      const entryObj = entry as Record<string, unknown>;
+      // Fall back to position only when the caller sent no step number.
+      const step = typeof entryObj.currentStep === 'number' ? entryObj.currentStep : index + 1;
+      if (step >= 1 && step <= totalSteps) {
+        latestByStep.set(step, entryObj);
       }
     });
 
-    // Add summary insight if complete
-    if (history.length >= this.steps.length) {
-      insights.push('Perception optimization complete - subjective value dramatically enhanced');
+    const insights: string[] = [];
+
+    for (let step = 1; step <= totalSteps; step++) {
+      const entryObj = latestByStep.get(step);
+      if (!entryObj) {
+        continue;
+      }
+      const stepName = this.steps[step - 1]?.name;
+      if (!stepName) {
+        continue;
+      }
+
+      const output = typeof entryObj.output === 'string' ? entryObj.output.trim() : '';
+      if (output) {
+        const summary = firstSentence(output);
+        if (summary.length > 0) {
+          insights.push(`${stepName}: ${summary}`);
+        }
+      }
+
+      // Each structured field belongs to one step; report it there.
+      if (step === 1 && Array.isArray(entryObj.perceptionGaps)) {
+        const largeGaps = entryObj.perceptionGaps.filter((g: unknown) => {
+          if (typeof g === 'object' && g !== null) {
+            const gapObj = g as PerceptionGap;
+            return gapObj.gapSize === 'large' || gapObj.gapSize === 'massive';
+          }
+          return false;
+        });
+        if (largeGaps.length > 0) {
+          insights.push(
+            `${stepName}: Found ${largeGaps.length} major perception gaps to exploit — ${largeGaps
+              .map(g => {
+                const gap = g as PerceptionGap;
+                return `${gap.objective} seen as ${gap.perceived}`;
+              })
+              .join(', ')}`
+          );
+        }
+      }
+
+      // Each of these used to be a constant fired by the field's mere presence,
+      // which told the reader nothing about what the step recorded.
+      if (step === 2) {
+        const amplification = describeStructuredField(entryObj.valueAmplification);
+        if (amplification.length > 0) {
+          insights.push(`${stepName}: ${amplification}`);
+        }
+      }
+
+      if (step === 3) {
+        const experience = describeStructuredField(entryObj.experienceDesign);
+        if (experience.length > 0) {
+          insights.push(`${stepName}: ${experience}`);
+        }
+      }
+
+      if (step === 4) {
+        const psychological = describeStructuredField(entryObj.psychologicalValue);
+        if (psychological.length > 0) {
+          insights.push(`${stepName}: ${psychological}`);
+        }
+      }
+
+      if (step === 5 && typeof entryObj.perceptionROI === 'number') {
+        insights.push(`${stepName}: perception ROI ${entryObj.perceptionROI}x traditional ROI`);
+        if (entryObj.perceptionROI > 10) {
+          insights.push(`Exceptional perception ROI: ${entryObj.perceptionROI}x traditional ROI`);
+        }
+      }
     }
+
+    // No completion banner. Reaching the last step is already visible from the
+    // step count, and a fixed string asserts a finding the session never made —
+    // "competitive advantage identified", "future insights extracted" — whatever
+    // the steps actually said.
 
     return insights;
   }

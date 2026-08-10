@@ -35,6 +35,41 @@ export function firstSentence(text) {
         ? `${summary.slice(0, MAX_SUMMARY_LENGTH).trimEnd()}…`
         : summary;
 }
+/**
+ * A readable rendering of a structured field a step recorded.
+ *
+ * An insight keyed to a field's mere presence — "Strategic response formulated
+ * based on weak signal analysis" — reports nothing the session produced: it
+ * says only that the field was non-empty. These fields arrive as a string, an
+ * array or a free-form object depending on the caller, so render whichever
+ * shape turned up rather than throwing the content away.
+ *
+ * Returns '' when there is no content to show, so callers can skip it.
+ */
+export function describeStructuredField(value) {
+    if (typeof value === 'string') {
+        return value.trim();
+    }
+    if (typeof value === 'number' || typeof value === 'boolean') {
+        return String(value);
+    }
+    if (Array.isArray(value)) {
+        return value
+            .map(item => describeStructuredField(item))
+            .filter(part => part.length > 0)
+            .join(', ');
+    }
+    if (typeof value === 'object' && value !== null) {
+        return Object.entries(value)
+            .map(([key, inner]) => {
+            const rendered = describeStructuredField(inner);
+            return rendered.length > 0 ? `${key}: ${rendered}` : '';
+        })
+            .filter(part => part.length > 0)
+            .join('; ');
+    }
+    return '';
+}
 export class BaseTechniqueHandler {
     validateStep(step, _data) {
         const info = this.getTechniqueInfo();

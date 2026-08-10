@@ -105,17 +105,14 @@ export class SixHatsHandler extends BaseTechniqueHandler {
   }
 
   getStepGuidance(step: number, problem: string): string {
-    // Handle out of bounds gracefully
-    if (step < 1 || step > this.hatOrder.length) {
-      return `Complete the Six Thinking Hats process for: "${problem}"`;
-    }
-
-    const hat = this.getStepInfo(step);
-    const hatColor = this.hatOrder[step - 1];
+    // An out-of-range step leaves `hatColor` undefined and falls through to
+    // `default:` — one path, not an early bounds-return plus an unreachable
+    // arm returning the same string.
+    const hatColor: SixHatsColor | undefined = this.hatOrder[step - 1];
 
     switch (hatColor) {
       case 'blue':
-        return `${hat.emoji} Blue Hat: Define the thinking process for "${problem}". What are we trying to achieve? What's our approach?`;
+        return `${this.hats.blue.emoji} Blue Hat: Define the thinking process for "${problem}". What are we trying to achieve? What's our approach?`;
 
       case 'white':
         return `⚪ White Hat: What facts and data do we have about "${problem}"? What information is missing?`;

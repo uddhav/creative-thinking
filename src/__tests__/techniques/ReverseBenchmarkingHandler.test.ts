@@ -206,9 +206,14 @@ describe('ReverseBenchmarkingHandler', () => {
       const insights = handler.extractInsights(history);
       expect(insights.some(i => i.includes('2 universal competitor weaknesses'))).toBe(true);
       expect(insights.some(i => i.includes('2 high-value vacant spaces'))).toBe(true);
-      expect(insights.some(i => i.includes('Anti-mimetic strategy'))).toBe(true);
+      // Step 3 reports the strategy it recorded, not a constant announcing that
+      // one exists — and its own output alongside it.
+      expect(insights.some(i => i.includes('Anti-Mimetic Strategy: UX focus'))).toBe(true);
+      expect(insights.some(i => i.includes('Anti-Mimetic Strategy: Strategy designed'))).toBe(true);
       expect(insights.some(i => i.includes('Excellence standard defined'))).toBe(true);
-      expect(insights.some(i => i.includes('competitive advantage identified'))).toBe(true);
+      // No completion banner. It fired for any run that reached the last step
+      // and asserted a competitive advantage the session may never have found.
+      expect(insights.some(i => i.includes('competitive advantage identified'))).toBe(false);
     });
 
     it('should handle partial history', () => {

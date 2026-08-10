@@ -1,7 +1,7 @@
 /**
  * Temporal Work technique handler
  */
-import { BaseTechniqueHandler } from './types.js';
+import { BaseTechniqueHandler, firstSentence } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 export class TemporalWorkHandler extends BaseTechniqueHandler {
     steps = [
@@ -111,10 +111,8 @@ export class TemporalWorkHandler extends BaseTechniqueHandler {
         return stepInfo;
     }
     getStepGuidance(step, problem) {
-        // Handle out of bounds gracefully
-        if (step < 1 || step > 5) {
-            return `Complete the Temporal Work Design process for: "${problem}"`;
-        }
+        // Out-of-range steps fall through to `default:` — one path, not an early
+        // return plus an unreachable arm returning the same string.
         switch (step) {
             case 1:
                 return `🗺️ Map the temporal landscape of "${problem}". What are fixed deadlines vs flexible windows?`;
@@ -130,29 +128,56 @@ export class TemporalWorkHandler extends BaseTechniqueHandler {
                 return `Complete the Temporal Work Design process for: "${problem}"`;
         }
     }
+    /**
+     * Report what each step actually recorded, labelled by the step.
+     *
+     * Keyed on `entry.currentStep`, not on position in the array: `execute`
+     * appends a history entry for every call including revisions, so one revision
+     * shifts every later entry. Keying on the step also means a revision
+     * supersedes the entry it revises rather than reporting twice.
+     */
     extractInsights(history) {
-        const insights = [];
-        history.forEach(entry => {
-            if (entry.currentStep === 1 && entry.temporalLandscape) {
-                if (entry.temporalLandscape.fixedDeadlines &&
-                    entry.temporalLandscape.fixedDeadlines.length > 0) {
-                    insights.push(`Fixed deadline: ${entry.temporalLandscape.fixedDeadlines[0]}`);
-                }
-                if (entry.temporalLandscape.kairosOpportunities &&
-                    entry.temporalLandscape.kairosOpportunities.length > 0) {
-                    insights.push(`Opportunity window: ${entry.temporalLandscape.kairosOpportunities[0]}`);
-                }
-            }
-            if (entry.currentStep === 5 &&
-                entry.temporalEscapeRoutes &&
-                entry.temporalEscapeRoutes.length > 0) {
-                insights.push(`Escape route: ${entry.temporalEscapeRoutes[0]}`);
-            }
-            // Add completion insight when all 5 steps are done
-            if (entry.currentStep === 5 && !entry.nextStepNeeded) {
-                insights.push('Temporal Work Design completed for optimized creative scheduling');
+        const totalSteps = this.steps.length;
+        const latestByStep = new Map();
+        history.forEach((entry, index) => {
+            // Fall back to position only when the caller sent no step number.
+            const step = entry.currentStep ?? index + 1;
+            if (step >= 1 && step <= totalSteps) {
+                latestByStep.set(step, entry);
             }
         });
+        const insights = [];
+        for (let step = 1; step <= totalSteps; step++) {
+            const entry = latestByStep.get(step);
+            if (!entry) {
+                continue;
+            }
+            const stepName = this.steps[step - 1]?.name;
+            if (!stepName) {
+                continue;
+            }
+            const output = entry.output?.trim();
+            if (output) {
+                const summary = firstSentence(output);
+                if (summary.length > 0) {
+                    insights.push(`${stepName}: ${summary}`);
+                }
+            }
+            // Each structured field belongs to one step; report it there.
+            if (step === 1 && entry.temporalLandscape) {
+                const deadlines = entry.temporalLandscape.fixedDeadlines;
+                if (deadlines && deadlines.length > 0) {
+                    insights.push(`Fixed deadlines: ${deadlines.join(', ')}`);
+                }
+                const windows = entry.temporalLandscape.kairosOpportunities;
+                if (windows && windows.length > 0) {
+                    insights.push(`Opportunity windows: ${windows.join(', ')}`);
+                }
+            }
+            if (step === totalSteps && entry.temporalEscapeRoutes?.length) {
+                insights.push(`Escape routes: ${entry.temporalEscapeRoutes.join(', ')}`);
+            }
+        }
         return insights;
     }
 }

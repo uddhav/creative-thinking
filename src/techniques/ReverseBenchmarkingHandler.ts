@@ -5,7 +5,7 @@
  * competitive advantage by excelling where all competitors fail
  */
 
-import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
+import { BaseTechniqueHandler, firstSentence, type TechniqueInfo, type StepInfo } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 
 interface VacantSpace {
@@ -16,12 +16,13 @@ interface VacantSpace {
 }
 
 interface HistoryEntry {
+  currentStep?: number;
   output?: string;
   weaknessMapping?: {
     universalWeaknesses?: string[];
   };
   vacantSpaces?: VacantSpace[];
-  antiMimeticStrategy?: unknown;
+  antiMimeticStrategy?: string | { differentiationVector?: string };
   excellenceDesign?: {
     area?: string;
   };
@@ -350,52 +351,89 @@ Output: Complete implementation plan with timeline and success metrics`,
     return true;
   }
 
+  /**
+   * Report what each step actually recorded, labelled by the step.
+   *
+   * Keyed on `entry.currentStep`, not on position in the array: `execute`
+   * appends a history entry for every call including revisions, so one revision
+   * shifts every later entry. Keying on the step also means a revision
+   * supersedes the entry it revises rather than reporting twice.
+   */
   extractInsights(history: HistoryEntry[]): string[] {
-    const insights: string[] = [];
+    const totalSteps = this.steps.length;
+    const latestByStep = new Map<number, HistoryEntry>();
 
     history.forEach((entry, index) => {
-      if (entry.output) {
-        const stepNumber = index + 1;
-        const stepName = this.steps[index]?.name || `Step ${stepNumber}`;
-
-        // Extract weakness mapping insights
-        if (entry.weaknessMapping) {
-          const count = entry.weaknessMapping.universalWeaknesses?.length || 0;
-          if (count > 0) {
-            insights.push(`${stepName}: Identified ${count} universal competitor weaknesses`);
-          }
-        }
-
-        // Extract vacant space insights
-        if (entry.vacantSpaces && Array.isArray(entry.vacantSpaces)) {
-          const highValue = entry.vacantSpaces.filter(
-            (s: VacantSpace) => s.opportunityValue === 'very_high' || s.opportunityValue === 'high'
-          );
-          if (highValue.length > 0) {
-            insights.push(`Found ${highValue.length} high-value vacant spaces`);
-          }
-        }
-
-        // Extract strategy insights
-        if (entry.antiMimeticStrategy) {
-          insights.push('Anti-mimetic strategy designed to preserve path independence');
-        }
-
-        // Extract excellence insights
-        if (entry.excellenceDesign) {
-          insights.push(
-            `Excellence standard defined for ${entry.excellenceDesign.area || 'target area'}`
-          );
-        }
+      // Fall back to position only when the caller sent no step number.
+      const step = entry.currentStep ?? index + 1;
+      if (step >= 1 && step <= totalSteps) {
+        latestByStep.set(step, entry);
       }
     });
 
-    // Add summary insight if complete
-    if (history.length >= this.steps.length) {
-      insights.push(
-        'Reverse benchmarking complete - competitive advantage identified in overlooked areas'
-      );
+    const insights: string[] = [];
+
+    for (let step = 1; step <= totalSteps; step++) {
+      const entry = latestByStep.get(step);
+      if (!entry) {
+        continue;
+      }
+      const stepName = this.steps[step - 1]?.name;
+      if (!stepName) {
+        continue;
+      }
+
+      const output = entry.output?.trim();
+      if (output) {
+        const summary = firstSentence(output);
+        if (summary.length > 0) {
+          insights.push(`${stepName}: ${summary}`);
+        }
+      }
+
+      // Each structured field belongs to one step; report it there.
+      if (step === 1) {
+        const weaknesses = entry.weaknessMapping?.universalWeaknesses ?? [];
+        if (weaknesses.length > 0) {
+          insights.push(
+            `${stepName}: Identified ${weaknesses.length} universal competitor weaknesses — ${weaknesses.join(', ')}`
+          );
+        }
+      }
+      if (step === 2 && Array.isArray(entry.vacantSpaces)) {
+        const highValue = entry.vacantSpaces.filter(
+          (s: VacantSpace) => s.opportunityValue === 'very_high' || s.opportunityValue === 'high'
+        );
+        if (highValue.length > 0) {
+          insights.push(
+            `${stepName}: Found ${highValue.length} high-value vacant spaces — ${highValue
+              .map(s => s.space)
+              .join(', ')}`
+          );
+        }
+      }
+      if (step === 3) {
+        // Reporting the recorded strategy, not a constant announcing that a
+        // strategy exists — the constant told the reader nothing about it.
+        const strategy =
+          typeof entry.antiMimeticStrategy === 'string'
+            ? entry.antiMimeticStrategy
+            : entry.antiMimeticStrategy?.differentiationVector;
+        if (strategy) {
+          insights.push(`${stepName}: ${strategy}`);
+        }
+      }
+      if (step === 4 && entry.excellenceDesign) {
+        insights.push(
+          `${stepName}: Excellence standard defined for ${entry.excellenceDesign.area || 'target area'}`
+        );
+      }
     }
+
+    // No completion banner. Reaching the last step is already visible from the
+    // step count, and a fixed string asserts a finding the session never made —
+    // "competitive advantage identified", "future insights extracted" — whatever
+    // the steps actually said.
 
     return insights;
   }

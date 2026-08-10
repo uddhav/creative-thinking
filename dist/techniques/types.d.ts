@@ -7,6 +7,18 @@
 export type StepType = 'thinking' | 'action';
 export declare function firstSentence(text: string): string;
 /**
+ * A readable rendering of a structured field a step recorded.
+ *
+ * An insight keyed to a field's mere presence — "Strategic response formulated
+ * based on weak signal analysis" — reports nothing the session produced: it
+ * says only that the field was non-empty. These fields arrive as a string, an
+ * array or a free-form object depending on the caller, so render whichever
+ * shape turned up rather than throwing the content away.
+ *
+ * Returns '' when there is no content to show, so callers can skip it.
+ */
+export declare function describeStructuredField(value: unknown): string;
+/**
  * Reflexive effects that occur after action steps
  */
 export interface ReflexiveEffects {
