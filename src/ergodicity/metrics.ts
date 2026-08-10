@@ -5,6 +5,40 @@
 import type { FlexibilityMetrics, PathMemory, ErgodicityWarning } from './types.js';
 import { ErgodicityWarningLevel } from './types.js';
 
+/**
+ * How many of the most recent steps `commitmentDepth` averages over.
+ *
+ * Picked by measurement, not by taste. Per-step commitment is one of four
+ * values — 0.20 for a thinking step, then 0.50 / 0.90 / 0.95 for an action
+ * step by how hard it is to undo — and 107 of the catalogue's 171 steps are
+ * 0.20. Averaged over the whole session, as this was, the thinking steps never
+ * leave the mean: the best any concatenation of whole techniques could reach
+ * was 0.65, against a warning threshold of 0.7, so the warning could not fire
+ * for any session that could be run.
+ *
+ * Best achievable window mean over any concatenation of whole techniques,
+ * against that 0.7 threshold:
+ *
+ *   W=1  0.950   W=4  0.813   W=7  0.750   W=10 0.730
+ *   W=2  0.925   W=5  0.830   W=8  0.738   W=15 0.703
+ *   W=3  0.917   W=6  0.792   W=9  0.739
+ *
+ * Five is the choice. Below it the measure stops being a depth and becomes a
+ * spot reading — at W=1 a single action step trips the warning, which is what
+ * the per-step ladder already reports on its own. Above it dilution takes over
+ * again: from W=6 on the best case sits within 0.09 of the threshold, so one
+ * 0.20 thinking step inside the window is enough to silence a session that is
+ * committing hard, and by W=15 the headroom is 0.003. At W=5 a run of
+ * genuinely irreversible steps reaches 0.83, two steps of slack clear of the
+ * threshold, while the healthy reflective control — thirteen steps, every one
+ * of them 0.20 — reads 0.20 at every window and cannot approach it at any.
+ *
+ * This answers "how committed is this session now", which is the question both
+ * the warning text and the escape-route gate ask. The old mean answered "on
+ * average since it began", and a session cannot outrun its own history.
+ */
+export const COMMITMENT_WINDOW = 5;
+
 export class MetricsCalculator {
   /**
    * Calculate comprehensive flexibility metrics
@@ -93,17 +127,17 @@ export class MetricsCalculator {
   }
 
   /**
-   * Calculate average commitment depth
+   * Mean commitment over the last `COMMITMENT_WINDOW` steps.
+   *
+   * See the constant for why the window exists and why it is five.
    */
   private calculateCommitmentDepth(pathMemory: PathMemory): number {
-    if (pathMemory.pathHistory.length === 0) return 0;
+    const recent = pathMemory.pathHistory.slice(-COMMITMENT_WINDOW);
+    if (recent.length === 0) return 0;
 
-    const totalCommitment = pathMemory.pathHistory.reduce(
-      (sum, event) => sum + event.commitmentLevel,
-      0
-    );
+    const totalCommitment = recent.reduce((sum, event) => sum + event.commitmentLevel, 0);
 
-    return totalCommitment / pathMemory.pathHistory.length;
+    return totalCommitment / recent.length;
   }
 
   /**
@@ -187,7 +221,7 @@ export class MetricsCalculator {
     if (metrics.commitmentDepth > 0.7) {
       warnings.push({
         level: ErgodicityWarningLevel.CAUTION,
-        message: 'Caution: High average commitment level. Flexibility at risk.',
+        message: `Caution: High commitment across the last ${COMMITMENT_WINDOW} steps. Flexibility at risk.`,
         metric: 'commitmentDepth',
         value: metrics.commitmentDepth,
         threshold: 0.7,
@@ -236,7 +270,7 @@ export class MetricsCalculator {
       `├─ Reversibility: ${this.formatPercentage(metrics.reversibilityIndex)}`,
       `├─ Path Divergence: ${metrics.pathDivergence.toFixed(2)}`,
       `├─ Option Velocity: ${metrics.optionVelocity > 0 ? '+' : ''}${metrics.optionVelocity.toFixed(1)}/step`,
-      `└─ Commitment Depth: ${this.formatPercentage(metrics.commitmentDepth)}`,
+      `└─ Commitment Depth (last ${COMMITMENT_WINDOW}): ${this.formatPercentage(metrics.commitmentDepth)}`,
     ];
 
     if (metrics.barrierProximity.length > 0) {

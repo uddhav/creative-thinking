@@ -1,7 +1,18 @@
 /**
  * Path Memory System - Tracks historical constraints and path dependencies
  */
+import { COMMITMENT_WINDOW } from './metrics.js';
 import { randomUUID } from 'crypto';
+/**
+ * The `reversibilityCost` above which a step declared itself hard to undo.
+ *
+ * Every step declares a reversibility level and the execution layer records it
+ * on one rung: `high` → 0.10, `medium` → 0.50, `low` → 0.90, `very_low` →
+ * 0.95. Any cut between 0.50 and 0.90 separates "can be walked back" from
+ * "cannot", and 0.7 is the cut `recordPathEvent` already uses to call a step a
+ * critical decision, so the two agree on what an irreversible step is.
+ */
+const LOW_REVERSIBILITY_COST = 0.7;
 export class PathMemoryManager {
     pathMemory;
     constructor(restored) {
@@ -97,17 +108,17 @@ export class PathMemoryManager {
                     'Inability to accept "good enough"',
                 ],
             },
-            {
-                subtype: 'cynicism',
-                name: 'Cynicism Spiral',
-                description: 'Belief that no solution will work',
-                indicators: [
-                    'Preemptive rejection of ideas',
-                    'Focus only on why things will fail',
-                    'Loss of creative energy',
-                    'Spreading negativity to team',
-                ],
-            },
+            // No cynicism barrier is monitored. Its proximity was
+            // `min(negativeIndicators/10, 1)` where an indicator is a step that
+            // closed more than twice as many options as it opened — and SCAMPER is
+            // the only one of the thirty-two techniques that ever reports an option
+            // as opened or closed at all. For the other thirty-one both arrays are
+            // empty, `0 > 0` is false, and the count stays at zero; measured, the
+            // proximity was 0.000 on every step of every chain. Like the retired
+            // option-velocity warning it drew on, the barrier asserted something
+            // nothing in the system could observe. The `cynicism` subtype and its
+            // avoidance strategies stay in the vocabulary, so a restored session
+            // that recorded one still reads back; it is simply no longer watched.
         ];
         const barriers = [];
         // Add creative barriers
@@ -409,9 +420,18 @@ export class PathMemoryManager {
         this.pathMemory.currentFlexibility.reversibilityIndex = reversibleDecisions / totalDecisions;
         // Calculate path divergence
         this.pathMemory.currentFlexibility.pathDivergence = this.pathMemory.pathHistory.length * 0.1;
-        // Calculate commitment depth
-        const avgCommitment = this.pathMemory.pathHistory.reduce((sum, e) => sum + e.commitmentLevel, 0) / totalDecisions;
-        this.pathMemory.currentFlexibility.commitmentDepth = avgCommitment;
+        // Commitment depth over the same trailing window `MetricsCalculator`
+        // uses, and for the same reason: as a mean over every step the session had
+        // ever taken it could not reach the 0.7 that `generateEscapeRoutes` below
+        // compares it against, because 107 of the catalogue's 171 steps are 0.20
+        // thinking steps that never leave the mean. Two computations of one field
+        // name existed; they now agree, and share `COMMITMENT_WINDOW` so they
+        // cannot drift apart again.
+        const recentCommitment = this.pathMemory.pathHistory.slice(-COMMITMENT_WINDOW);
+        this.pathMemory.currentFlexibility.commitmentDepth =
+            recentCommitment.length === 0
+                ? 0
+                : recentCommitment.reduce((sum, e) => sum + e.commitmentLevel, 0) / recentCommitment.length;
         // Calculate option velocity
         const recentEvents = this.pathMemory.pathHistory.slice(-5);
         const recentOpened = recentEvents.reduce((sum, e) => sum + e.optionsOpened.length, 0);
@@ -439,54 +459,57 @@ export class PathMemoryManager {
         this.pathMemory.currentFlexibility.barrierProximity = proximities;
     }
     /**
-     * Calculate proximity to a specific barrier
-     */
-    /**
      * Proximity to a barrier, on the scale its thresholds are written against.
      *
-     * Each branch used to multiply its saturated input by 0.7 or 0.8, which put
-     * a floor under the distance (`1 - proximity`) that no session could get
-     * below: cognitive_lock_in 0.280, resource_depletion 0.300,
-     * analysis_paralysis 0.200, perfectionism 0.300, cynicism 0.200. Every
-     * consumer compares distance against a `warningThreshold` of 0.3 and a
-     * CRITICAL cut of `< 0.2`, both strict — so resource_depletion and
-     * perfectionism could never warn at all, analysis_paralysis could never go
-     * critical, and the two remaining barriers had their top range clipped. The
-     * thresholds are the calibrated part; the multipliers were not.
+     * Each branch used to multiply its input by 0.7 or 0.8, which put a floor
+     * under the distance (`1 - proximity`) that no session could get below:
+     * cognitive_lock_in 0.280, resource_depletion 0.300, analysis_paralysis
+     * 0.200, perfectionism 0.300. Every consumer compares distance against a
+     * `warningThreshold` of 0.3 and a CRITICAL cut of `< 0.2`, both strict — so
+     * resource_depletion and perfectionism could never warn at all,
+     * analysis_paralysis could never go critical, and the rest had their top
+     * range clipped. The thresholds are the calibrated part; the multipliers
+     * were not, and all but one are gone.
      *
-     * Three of the five are unscaled below. Two keep their multiplier, because
-     * measuring showed that for those two the multiplier was not a range cap at
-     * all — it was muting a formula whose *default* state is the saturated end:
-     *
-     *   perfectionism reads `1 - criticalDecisions/pathLength`, and a session
-     *   with no high-commitment step has no critical decisions, so unscaled it
-     *   reports proximity 1.0 — distance 0.000, CRITICAL — from step 1 of every
-     *   session, including a thirteen-step chain that ends at flexibility 0.937.
-     *
-     *   cognitive_lock_in reads `1 - unique/len` over the last ten steps, and a
-     *   planned chain repeats a technique across that technique's own steps —
-     *   six_hats is seven steps of six_hats — so unscaled the same healthy chain
-     *   reports distance 0.200 and goes CRITICAL at step 13.
-     *
-     * Removing those two multipliers does not make the barriers informative, it
-     * makes them constant, which is the same defect as a threshold nothing can
-     * reach wearing the opposite sign. They stay scaled until their inputs are
-     * fixed, so that what fires is still worth reading.
-     *
-     * What each branch measures is unchanged either way — only the range it can
-     * express.
+     * The one that remains is perfectionism, and the reason is that its input is
+     * still wrong rather than merely scaled. It reads
+     * `1 - criticalDecisions/pathLength`, so a session that has committed to
+     * nothing — which is every session at step 1, and the whole of a reflective
+     * chain — reports maximal perfectionism. Unscaled it would be a constant
+     * CRITICAL, which is the same defect as a threshold nothing can reach
+     * wearing the opposite sign. What it wants to measure is revision without
+     * progress: rework as a share of steps taken. That signal exists on the
+     * session history as `isRevision`, but `PathEvent` does not carry it and
+     * `recordPathEvent` is never handed it, so this function cannot see it.
+     * Threading it through is a change to the path record, not to this formula,
+     * and the multiplier stays until it lands. Anything else reachable from here
+     * — repeated step numbers, say — would be a proxy for revision rather than
+     * the thing itself.
      */
     calculateBarrierProximity(barrier) {
         // Different calculation methods based on barrier type
         switch (barrier.subtype) {
             case 'cognitive_lock_in': {
-                // Check for repeated patterns
-                const recentTechniques = this.pathMemory.pathHistory.slice(-10).map(e => e.technique);
-                const uniqueTechniques = new Set(recentTechniques).size;
-                const repetitionScore = 1 - uniqueTechniques / Math.max(recentTechniques.length, 1);
-                // Still scaled: see the note above — unscaled, an ordinary planned
-                // chain reads as lock-in.
-                return repetitionScore * 0.8;
+                // Lock-in is being unable to change direction, and the path record
+                // says that directly: every step declares how hard it is to undo, and
+                // that declaration is stored as `reversibilityCost`. This is the share
+                // of the last ten steps that declared `low` or `very_low`.
+                //
+                // It used to be `1 - uniqueTechniques/window` over the same ten, which
+                // read repetition of a technique as lock-in. But a plan is a list of
+                // techniques and a technique is a list of its own steps — six_hats is
+                // seven consecutive steps of six_hats — so a session scored proximity
+                // 0.857 for running exactly as planned, and the healthy thirteen-step
+                // control went CRITICAL at step 13 for doing what it was asked.
+                // Repetition there is the shape of the workflow, not a symptom, which
+                // is why the branch needed a 0.8 multiplier to stay quiet. Reading the
+                // reversibility the steps declared needs no multiplier: a session of
+                // reversible steps scores exactly 0, however few techniques it used.
+                const recent = this.pathMemory.pathHistory.slice(-10);
+                if (recent.length === 0)
+                    return 0;
+                const irreversible = recent.filter(e => e.reversibilityCost > LOW_REVERSIBILITY_COST).length;
+                return irreversible / recent.length;
             }
             case 'resource_depletion': {
                 // Simplified: based on number of steps taken
@@ -502,13 +525,9 @@ export class PathMemoryManager {
                 const refinementRatio = this.pathMemory.criticalDecisions.length /
                     Math.max(this.pathMemory.pathHistory.length, 1);
                 // Still scaled: see the note above — unscaled, a session that has made
-                // no commitment at all reads as maximally perfectionist.
+                // no commitment at all reads as maximally perfectionist, and the input
+                // that would fix it is not reachable from here.
                 return (1 - refinementRatio) * 0.7;
-            }
-            case 'cynicism': {
-                // Check for negative patterns (simplified)
-                const negativeIndicators = this.pathMemory.pathHistory.filter(e => e.optionsClosed.length > e.optionsOpened.length * 2).length;
-                return Math.min(negativeIndicators / 10, 1);
             }
             default:
                 return 0.1; // Low default proximity
