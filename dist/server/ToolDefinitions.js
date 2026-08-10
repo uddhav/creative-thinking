@@ -194,7 +194,11 @@ export const EXECUTE_THINKING_STEP_TOOL = {
             // Six Hats specific
             hatColor: {
                 type: 'string',
-                enum: ['blue', 'white', 'red', 'yellow', 'black', 'green'],
+                enum: ['blue', 'white', 'red', 'yellow', 'black', 'green', 'purple'],
+                description: 'Which hat this step wears, in order blue, white, red, yellow, black, green, purple. ' +
+                    'Purple is the seventh step (path dependency and ruin risk) and was missing from this ' +
+                    'enum, so step 7 could not be labelled. Omitting hatColor discards every insight the ' +
+                    'technique would have produced, including the black hat risks.',
             },
             // PO specific
             provocation: { type: 'string' },
@@ -366,6 +370,59 @@ export const EXECUTE_THINKING_STEP_TOOL = {
             synthesisStrategy: { type: 'string' },
             preservedOptions: { type: 'array', items: { type: 'string' } },
             /**
+             * Fields the handlers read that this schema did not declare.
+             *
+             * Nothing enforced the schema — the server casts raw arguments — so these
+             * always worked if a caller happened to send them. They were simply
+             * undiscoverable, which for a schema is the same as absent. Several gate
+             * insight extraction, so a session that did not send them silently lost
+             * the technique's derived findings.
+             */
+            // Competing Hypotheses
+            hypotheses: { type: 'array', items: { type: 'string' } },
+            evidence: { type: 'array', items: { type: 'string' } },
+            matrix: {
+                type: 'array',
+                items: { type: 'array', items: { type: 'number' } },
+                description: 'Evidence-by-hypothesis diagnosticity matrix.',
+            },
+            probabilities: {
+                type: 'object',
+                description: 'Posterior probability keyed by hypothesis, e.g. { "H1": 0.38, "H2": 0.1 }. ' +
+                    'Drives the confidence band reported at the end.',
+            },
+            leadingHypothesis: { type: 'string' },
+            // Criteria-Based Analysis
+            validityScore: {
+                type: 'number',
+                minimum: 0,
+                maximum: 100,
+                description: 'Assessed validity as a percentage. Drives the validity band reported at the end.',
+            },
+            // Linguistic Forensics
+            pronounRatios: {
+                type: 'object',
+                description: 'Pronoun frequencies keyed by pronoun, e.g. { "i": 0.6, "we": 0.2 }.',
+            },
+            coherenceScore: { type: 'number', minimum: 0, maximum: 1 },
+            // Reverse Benchmarking
+            weaknessMapping: { type: 'array', items: { type: 'string' } },
+            vacantSpaces: { type: 'array', items: { type: 'string' } },
+            antiMimeticStrategy: { type: 'string' },
+            excellenceDesign: { type: 'string' },
+            // Temporal Creativity
+            blackSwanScenarios: { type: 'array', items: { type: 'string' } },
+            constraintsCreated: { type: 'array', items: { type: 'string' } },
+            optionsClosed: { type: 'array', items: { type: 'string' } },
+            flexibilityImpact: { type: 'number' },
+            // Biomimetic Path
+            integratedSolution: { type: 'string' },
+            // Random Entry
+            roryMode: {
+                type: 'boolean',
+                description: 'Draw the stimulus from the behavioural-economics catalogue instead of at random.',
+            },
+            /**
              * First Principles specific fields
              * Used for breaking down problems to fundamental components
              * Alternative fields support flexible input from LLMs
@@ -416,11 +473,39 @@ export const EXECUTE_THINKING_STEP_TOOL = {
             /**
              * Meta-Learning specific fields
              * Used for learning from patterns across techniques
-             * Alternative fields: patterns (patternRecognition), accumulatedLearning (learningHistory)
+             *
+             * Steps 1 and 2 REJECT input that omits these. They were described in this
+             * comment as "alternative fields" but never declared, so the only way to
+             * discover them was to trigger the error and read the message.
              */
+            patternRecognition: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Step 1: successful patterns recognised across techniques. Required; `patterns` is accepted instead.',
+            },
+            patterns: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Step 1: alias for patternRecognition.',
+            },
+            learningHistory: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Step 2: accumulated learnings and their contexts. Required; `accumulatedLearning` is accepted instead.',
+            },
+            accumulatedLearning: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Step 2: alias for learningHistory.',
+            },
+            strategyAdaptations: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Step 3: how technique selection adapts. Required; `strategyEvolution` is accepted instead.',
+            },
             metaSynthesis: {
                 type: 'string',
-                description: 'Step 5: Meta-level synthesis of learning patterns',
+                description: 'Step 4: Meta-level synthesis of learning patterns',
             },
             /**
              * Biomimetic Path specific fields

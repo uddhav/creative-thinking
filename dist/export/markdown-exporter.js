@@ -176,8 +176,15 @@ export class MarkdownExporter extends BaseExporter {
                         yellow: 'Optimism & Benefits',
                         black: 'Critical Judgment',
                         green: 'Creativity & Alternatives',
+                        purple: 'Path Dependency & Ruin Risk',
                     };
-                    return `${entry.hatColor.toUpperCase()} HAT - ${hatNames[entry.hatColor]}`;
+                    // Fall back to the bare colour rather than interpolating undefined. This
+                    // map went five years with six entries for a seven-hat technique; it only
+                    // stayed correct because purple was unreachable.
+                    const hatName = hatNames[entry.hatColor];
+                    return hatName
+                        ? `${entry.hatColor.toUpperCase()} HAT - ${hatName}`
+                        : `${entry.hatColor.toUpperCase()} HAT`;
                 }
                 break;
             case 'po':
