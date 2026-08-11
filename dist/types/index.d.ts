@@ -540,6 +540,16 @@ export interface Tool {
         }>;
         required?: string[];
         additionalProperties?: boolean;
+        /**
+         * Alternative shapes for the whole call. `execute_thinking_step` takes
+         * either a thinking step or a session operation, and a single `required`
+         * list cannot say that — it demanded the seven thinking-step fields of
+         * every call, including the session operations the server has always
+         * accepted.
+         */
+        oneOf?: Array<{
+            required: string[];
+        }>;
     };
 }
 export interface ValidityAssessment {

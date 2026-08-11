@@ -863,15 +863,91 @@ export const EXECUTE_THINKING_STEP_TOOL: Tool = {
       branchFromStep: { type: 'number' },
       branchId: { type: 'string' },
       alternativeSuggestions: { type: 'array', items: { type: 'string' } },
+
+      // The second mode. This tool dispatches on `sessionOperation` before it
+      // validates anything else (index.ts:166), so these have always worked —
+      // and were declared nowhere, while `required` demanded the seven
+      // thinking-step fields unconditionally. A client following the schema
+      // could not issue one at all. The `oneOf` below is what makes both
+      // shapes legal; the properties are what make the second one findable.
+      sessionOperation: {
+        type: 'string',
+        enum: ['save', 'load', 'list', 'delete', 'export'],
+        description:
+          'Operate on the session itself rather than advancing it. Send this ' +
+          'INSTEAD of the thinking-step fields, with the matching options ' +
+          'object below. `export` reads the live session and needs no ' +
+          'persistence. `save`, `load` and `list` require the server to be ' +
+          'started with PERSISTENCE_TYPE set; without it they report that the ' +
+          'adapter is unavailable.',
+      },
+      saveOptions: {
+        type: 'object',
+        description: 'For sessionOperation: save. Requires a persistence adapter.',
+        properties: {
+          sessionName: { type: 'string' },
+          tags: { type: 'array', items: { type: 'string' } },
+          asTemplate: { type: 'boolean' },
+        },
+      },
+      loadOptions: {
+        type: 'object',
+        description: 'For sessionOperation: load. Requires a persistence adapter.',
+        properties: {
+          sessionId: { type: 'string' },
+          continueFrom: { type: 'number' },
+        },
+        required: ['sessionId'],
+      },
+      listOptions: {
+        type: 'object',
+        description: 'For sessionOperation: list. Requires a persistence adapter.',
+        properties: {
+          limit: { type: 'number' },
+          technique: { type: 'string' },
+          status: { type: 'string', enum: ['active', 'completed', 'all'] },
+          tags: { type: 'array', items: { type: 'string' } },
+          searchTerm: { type: 'string' },
+        },
+      },
+      deleteOptions: {
+        type: 'object',
+        description: 'For sessionOperation: delete. Requires a persistence adapter.',
+        properties: {
+          sessionId: { type: 'string' },
+          confirm: { type: 'boolean' },
+        },
+        required: ['sessionId'],
+      },
+      exportOptions: {
+        type: 'object',
+        description:
+          'For sessionOperation: export. Returns the whole session as a ' +
+          'document. `sessionId` goes HERE, not at the top level — a top-level ' +
+          'sessionId is ignored and the call is rejected as missing it.',
+        properties: {
+          sessionId: { type: 'string' },
+          format: { type: 'string', enum: ['json', 'markdown', 'csv'] },
+          outputPath: { type: 'string' },
+        },
+        required: ['sessionId', 'format'],
+      },
     },
-    required: [
-      'planId',
-      'technique',
-      'problem',
-      'currentStep',
-      'totalSteps',
-      'output',
-      'nextStepNeeded',
+    // Two shapes, one tool. A thinking step needs all seven of its fields; a
+    // session operation needs none of them.
+    oneOf: [
+      {
+        required: [
+          'planId',
+          'technique',
+          'problem',
+          'currentStep',
+          'totalSteps',
+          'output',
+          'nextStepNeeded',
+        ],
+      },
+      { required: ['sessionOperation'] },
     ],
   },
 };
