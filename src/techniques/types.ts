@@ -165,12 +165,38 @@ export interface StepGuidanceContext {
   roryMode?: boolean;
 }
 
+/**
+ * One recorded step, as a handler sees it.
+ *
+ * Declared as `{ output?: string }` until now, which understated the contract
+ * badly enough that passing a step number was a type error — while all
+ * thirty-two handlers read `currentStep` to let a revision supersede the entry
+ * it revises, and most read fields of their own besides. The narrow shape was
+ * invisible because tests are not typechecked.
+ *
+ * Handlers declare their own narrower shapes naming the fields they actually
+ * read; method parameter bivariance is what lets them. The index signature
+ * carries the technique-specific fields — `hatColor`, `connections`,
+ * `coherenceScore` and the rest — which are exactly what a handler is reading
+ * when it does more than echo the output back.
+ */
+export interface HistoryEntry {
+  output?: string;
+  /** The step within its own technique — see `techniqueLocalStep`. */
+  currentStep?: number;
+  technique?: string;
+  timestamp?: string;
+  isRevision?: boolean;
+  /** Whatever else the technique recorded for this step. */
+  [field: string]: unknown;
+}
+
 export interface TechniqueHandler {
   getTechniqueInfo(): TechniqueInfo;
   getStepInfo(step: number): StepInfo;
   getStepGuidance(step: number, problem: string, context?: StepGuidanceContext): string;
   validateStep(step: number, data: unknown): boolean;
-  extractInsights(history: Array<{ output?: string }>): string[];
+  extractInsights(history: HistoryEntry[]): string[];
 }
 
 export abstract class BaseTechniqueHandler implements TechniqueHandler {

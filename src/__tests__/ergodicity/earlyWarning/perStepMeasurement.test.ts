@@ -441,7 +441,7 @@ describe('the cognitive sensor measures the path, not the shape of the transcrip
     build: (manager: PathMemoryManager, step: number) => void,
     steps: number
   ): Promise<Array<{ raw: number; level: string; action: string }>> {
-    const system = new AbsorbingBarrierEarlyWarning({ measurementThrottleMs: 0 });
+    const system = new AbsorbingBarrierEarlyWarning();
     const manager = new PathMemoryManager();
     const session = makeSession();
     const out: Array<{ raw: number; level: string; action: string }> = [];
@@ -490,7 +490,7 @@ describe('the cognitive sensor measures the path, not the shape of the transcrip
     // control has to be clean on all three. `recommendedAction` is the one the
     // caller sees, and it was the one that fired.
     const metrics = new MetricsCalculator();
-    const system = new AbsorbingBarrierEarlyWarning({ measurementThrottleMs: 0 });
+    const system = new AbsorbingBarrierEarlyWarning();
     const manager = new PathMemoryManager();
     const session = makeSession();
 

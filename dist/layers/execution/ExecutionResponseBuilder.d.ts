@@ -52,6 +52,15 @@ export declare class ExecutionResponseBuilder {
      * technique that is not first, that number falls outside the technique's own
      * step range and the step vanishes.
      */
+    /**
+     * One technique's own entries, each presented under its technique-local step.
+     *
+     * The conversion at the end is the one place the two shapes meet.
+     * `ThinkingOperationData` is a declared interface, so TypeScript will not
+     * give it an implicit index signature, while `HistoryEntry` needs one to
+     * carry the technique-specific fields a handler reads. The values are the
+     * same objects either way.
+     */
     private ownHistory;
     /**
      * Every technique's current reading of its own steps, in the order the

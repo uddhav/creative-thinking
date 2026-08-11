@@ -194,8 +194,9 @@ describe('Complete Technique Workflows', () => {
           // the same terms for every technique — once it is low enough to act
           // on. SCAMPER used to echo the caller's own number unconditionally,
           // which is what made it appear on every step here.
-          if (stepData.flexibilityScore !== undefined) {
-            expect(stepData.flexibilityScore).toBeLessThan(0.7);
+          const reported = (stepData as Record<string, unknown>).flexibilityScore;
+          if (reported !== undefined) {
+            expect(reported).toBeLessThan(0.7);
           }
         }
 

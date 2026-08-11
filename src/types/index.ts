@@ -712,6 +712,15 @@ export interface LateralThinkingResponse {
   isError?: boolean;
 }
 
+// The planning layer's input and output types.
+//
+// `src/index.ts` already re-exports these, so callers of the package see them;
+// `src/types/index.ts` did not, and a dozen test files import them from here
+// regardless. They were right about where the types belong — this is the types
+// barrel — and the imports have been silently broken the whole time because
+// tests are not typechecked.
+export * from './planning.js';
+
 // Tool types for MCP
 export interface Tool {
   name: string;

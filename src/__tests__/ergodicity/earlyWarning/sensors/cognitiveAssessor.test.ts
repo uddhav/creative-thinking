@@ -184,11 +184,15 @@ describe('CognitiveAssessor', () => {
 
       const varied = await assessor.measure(mockPathMemory, mockSession);
 
-      expect(varied.context.cognitiveMetrics).toBeDefined();
-      expect(varied.context.cognitiveMetrics.recentReversibility).toBeDefined();
-      expect(varied.context.cognitiveMetrics.sustainedReversibility).toBeDefined();
-      expect(varied.context.cognitiveMetrics.assumptionChallengeRate).toBeDefined();
-      expect(varied.context.cognitiveMetrics.perspectiveDiversity).toBeUndefined();
+      // `context` is Record<string, unknown>, so name the shape once rather
+      // than reaching through it five times untyped.
+      const metrics = varied.context.cognitiveMetrics as Record<string, unknown> | undefined;
+      expect(metrics).toBeDefined();
+      expect(metrics?.recentReversibility).toBeDefined();
+      expect(metrics?.sustainedReversibility).toBeDefined();
+      expect(metrics?.assumptionChallengeRate).toBeDefined();
+      // Retired with the shape-derived inputs it belonged to.
+      expect(metrics?.perspectiveDiversity).toBeUndefined();
 
       // The same five events under a single technique name, everything else
       // held equal.
@@ -345,7 +349,9 @@ describe('CognitiveAssessor', () => {
       const reading = await assessor.measure(mockPathMemory, mockSession);
 
       // Five of the six recorded steps cannot be undone.
-      expect(reading.context.cognitiveMetrics.recentReversibility).toBeCloseTo(1 / 6, 10);
+      const reversibility = (reading.context.cognitiveMetrics as Record<string, unknown>)
+        .recentReversibility as number;
+      expect(reversibility).toBeCloseTo(1 / 6, 10);
       expect(reading.indicators).toContain('Most recent steps declared themselves hard to undo');
       expect(reading.warningLevel).not.toBe('safe');
     });

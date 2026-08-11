@@ -30,7 +30,11 @@ function guidanceContext(input: ExecuteThinkingStepInput): StepGuidanceContext {
 import type { MemoryOutputs } from '../../core/MemoryAnalyzer.js';
 import { RealityIntegration } from '../../reality/integration.js';
 import { JsonOptimizer } from '../../utils/JsonOptimizer.js';
-import type { StepGuidanceContext, TechniqueHandler } from '../../techniques/types.js';
+import type {
+  HistoryEntry,
+  StepGuidanceContext,
+  TechniqueHandler,
+} from '../../techniques/types.js';
 import type { EscalationPromptGenerator } from '../../ergodicity/escalationPrompts.js';
 import type { HybridComplexityAnalyzer } from '../../complexity/analyzer.js';
 import { monitorCriticalSection } from '../../utils/PerformanceIntegration.js';
@@ -428,17 +432,23 @@ export class ExecutionResponseBuilder {
    * technique that is not first, that number falls outside the technique's own
    * step range and the step vanishes.
    */
-  private ownHistory(
-    session: SessionData,
-    technique: LateralTechnique
-  ): Array<ThinkingOperationData & { timestamp: string }> {
+  /**
+   * One technique's own entries, each presented under its technique-local step.
+   *
+   * The conversion at the end is the one place the two shapes meet.
+   * `ThinkingOperationData` is a declared interface, so TypeScript will not
+   * give it an implicit index signature, while `HistoryEntry` needs one to
+   * carry the technique-specific fields a handler reads. The values are the
+   * same objects either way.
+   */
+  private ownHistory(session: SessionData, technique: LateralTechnique): HistoryEntry[] {
     return session.history
       .filter(entry => entry.technique === technique)
       .map(entry =>
         entry.techniqueLocalStep === undefined
           ? entry
           : { ...entry, currentStep: entry.techniqueLocalStep }
-      );
+      ) as unknown as HistoryEntry[];
   }
 
   /**
