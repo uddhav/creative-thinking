@@ -40,7 +40,7 @@ export class QuantumSuperpositionHandler extends BaseTechniqueHandler {
     },
     {
       name: 'State Collapse',
-      focus: 'Collapse to optimal solution while preserving insights',
+      focus: 'Commit to one state, stand the rest down, and salvage what they were carrying',
       emoji: '💫',
       type: 'action',
       reflexiveEffects: {
@@ -97,7 +97,7 @@ export class QuantumSuperpositionHandler extends BaseTechniqueHandler {
       1: `Generate 3-5 mutually exclusive solution states for: "${problem}". Each state should optimize for different criteria (efficiency, flexibility, robustness, cost, innovation). Maintain all states without choosing.`,
       2: `Map how your solution states for "${problem}" relate. Which aspects are inseparably linked, so that developing one state moves another — and is that coupling symmetric, or does one direction leave the others cheaper and the reverse leave them dearer? As constraints and opportunities emerge, which states are gaining ground, and which are weakening but still hold something worth keeping? Where do they reinforce each other, and where do they cancel out? What hybrids do those reinforcements make possible?`,
       3: `Define the measurement context that will force collapse for "${problem}": What are the actual constraints? What criteria matter most now? What future flexibility is needed?`,
-      4: `Collapse to the optimal solution for "${problem}" while extracting and preserving insights from non-chosen states. How can elements from abandoned states enhance the chosen path?`,
+      4: `Commit. Name the one state you are standing behind for "${problem}", and say plainly which states you are standing down — a state nobody is told is abandoned goes on quietly consuming attention. Before you close them: what was each abandoned state carrying that the chosen path should inherit? And what does this collapse cost — what did holding them open buy you that you no longer have?`,
     };
 
     return guidanceMap[step] || `Complete the Quantum Superposition process for: "${problem}"`;

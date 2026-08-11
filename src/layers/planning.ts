@@ -581,7 +581,7 @@ function getExpectedOutputForStep(technique: string, step: number): string {
       1: 'Multiple contradictory solution states generated',
       2: 'State interactions mapped: reinforcement, cancellation, dependencies, trajectory',
       3: 'Measurement context defined',
-      4: 'Optimal state collapsed with preserved insights',
+      4: 'One state committed to, the rest explicitly stood down, salvage named and the collapse priced',
     },
     temporal_creativity: {
       1: 'Decision history excavated with patterns',
@@ -623,7 +623,7 @@ function getExpectedOutputForStep(technique: string, step: number): string {
       2: 'Diverse solution patterns generated, with constructive/destructive interference analyzed',
       3: 'Computational models synthesized from neural patterns',
       4: 'Optimization cycles completed with convergence ratings',
-      5: 'Optimal creative solution converged with preserved insights',
+      5: 'Search reported: converged or plateaued, local optimum assessed, unexplored regions named',
     },
     reverse_benchmarking: {
       1: 'Universal competitor weaknesses mapped',

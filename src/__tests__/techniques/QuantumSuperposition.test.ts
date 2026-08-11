@@ -108,8 +108,17 @@ describe('QuantumSuperpositionHandler', () => {
 
       // Step 4: State Collapse
       const guidance4 = handler.getStepGuidance(4, problem);
-      expect(guidance4).toContain('Collapse to the optimal solution');
-      expect(guidance4).toContain('preserving insights');
+      // The close is a commitment now, not a restatement of "converge while
+      // preserving insights" — which is what neuro_computational's close also
+      // said, and why the pair failed to be distinguishable.
+      expect(guidance4).toContain('Commit');
+      expect(guidance4).toContain('standing down');
+      // The salvage ask has to survive: extractInsights reads preservedInsights.
+      expect(guidance4).toContain('inherit');
+      // "preserving insights" was the phrase both techniques shared. The
+      // salvage ask survives in its own words, above; this asserts the
+      // duplicated one is gone.
+      expect(guidance4).not.toContain('preserving insights');
     });
 
     it('should ask the interference, entanglement and amplitude questions in step 2', () => {

@@ -94,7 +94,9 @@ describe('NeuroComputationalHandler', () => {
     it('should return correct info for step 5 - Convergence', () => {
       const step5 = handler.getStepInfo(5);
       expect(step5.name).toBe('Convergence');
-      expect(step5.focus).toBe('Converge to optimal solution');
+      // Reworded: the step reports what the search found rather than
+      // restating quantum_superposition's collapse-while-preserving.
+      expect(step5.focus).toBe('Report what the search found, and where it stopped looking');
       expect(step5.emoji).toBe('🎯');
       expect(step5.type).toBe('action');
       expect(step5.reflexiveEffects).toBeDefined();
@@ -179,10 +181,20 @@ describe('NeuroComputationalHandler', () => {
 
     it('should provide guidance for step 5 - Convergence', () => {
       const guidance = handler.getStepGuidance(5, problem);
-      expect(guidance).toContain('Converge to optimal creative solution');
+      expect(guidance).toContain('Report what the search actually found');
+      expect(guidance).toContain('plateau');
+      expect(guidance).toContain('local optimum');
+      expect(guidance).toContain('unexplored');
       expect(guidance).toContain(problem);
-      expect(guidance).toContain('Synthesize all neural-computational processes');
-      expect(guidance).toContain('Preserve key insights');
+      // The generic synthesis instruction is replaced by what only this
+      // technique can report — where its own search stopped.
+      expect(guidance).not.toContain('Preserve key insights from each pattern');
+      expect(guidance).toContain('emergence path');
+      // "Preserve key insights" was quantum_superposition's ask as much as
+      // this one's, which is precisely why the two closes were not
+      // distinguishable. What this step preserves is the account of the
+      // search, asserted above. This technique's own quality bar is not
+      // duplicated anywhere and stays.
       expect(guidance).toContain('cognitive plausibility');
       expect(guidance).toContain('computational efficiency');
       expect(guidance).toContain('creative novelty');

@@ -99,24 +99,21 @@ export class NeuroComputationalHandler extends BaseTechniqueHandler {
         },
         {
             name: 'Convergence',
-            focus: 'Converge to optimal solution',
+            focus: 'Report what the search found, and where it stopped looking',
             emoji: '🎯',
             type: 'action',
             reflexiveEffects: {
                 triggers: [
-                    'Converging to solution',
-                    'Finalizing neural-computational synthesis',
-                    'Locking in optimal configuration',
+                    'Declaring the search finished',
+                    'Reporting a result as converged rather than merely current',
                 ],
                 realityChanges: [
-                    'Solution converged',
-                    'Optimal configuration established',
-                    'Neural-computational model finalized',
+                    'The search stops, so the unexplored regions stay unexplored',
+                    'The reported result becomes the one others build on',
                 ],
                 futureConstraints: [
-                    'Solution locked at convergence point',
-                    'Model architecture fixed',
-                    'Further optimization limited',
+                    'Resuming the search costs the setup again, and a plateau reported as a convergence is not revisited',
+                    'A local optimum reported without that caveat is inherited as a global one',
                 ],
                 reversibility: 'low',
             },
@@ -149,7 +146,7 @@ export class NeuroComputationalHandler extends BaseTechniqueHandler {
             2: `Generate diverse solution patterns for: "${problem}". Activate multiple neural pathways simultaneously. Create variations through: random initialization, different connection weights, varied activation functions, alternative architectures. Generate at least 5-10 distinct patterns, and allow emergent properties to arise from their interactions. Then analyze how they interact: which reinforce each other (constructive interference), which cancel out (destructive interference), and which combinations produce the most creative emergence?`,
             3: `Synthesize patterns computationally for: "${problem}". Apply computational models: neural networks, genetic algorithms, evolutionary computation, swarm intelligence. Combine biological inspiration with computational efficiency. Create hybrid models that leverage both approaches. Generate novel combinations through computational synthesis.`,
             4: `Run optimization cycles for: "${problem}". Iterate through: feedforward passes, backpropagation, weight adjustment, architecture evolution. Rate convergence on each of coherence (internal consistency), novelty (creative distance from existing solutions) and utility (practical value), and say what the rating is based on. Refine for optimal balance between exploration and exploitation.`,
-            5: `Converge to optimal creative solution for: "${problem}". Synthesize all neural-computational processes. Preserve key insights from each pattern. Ensure solution maintains: cognitive plausibility, computational efficiency, creative novelty, practical applicability. Document the emergence path for future learning.`,
+            5: `Report what the search actually found for: "${problem}". Did it converge, or did it plateau — is this the best solution or the last one it could still improve on? Is it a local optimum, and what would tell you either way? Which regions went unexplored, and were they ruled out or merely never reached? Trace the emergence path: which pattern produced the result, and which contributed nothing. Then hold the result against this technique's own bar: cognitive plausibility, computational efficiency, creative novelty, practical applicability.`,
         };
         return (guidanceMap[step] || `Complete the Neuro-Computational Synthesis process for: "${problem}"`);
     }
