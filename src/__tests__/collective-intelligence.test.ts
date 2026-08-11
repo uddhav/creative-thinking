@@ -220,10 +220,15 @@ describe('Collective Intelligence Orchestration', () => {
       expect(planData.workflow[0].description).toContain('Identify wisdom sources');
       expect(planData.workflow[1].description).toContain("Gather each source's specific insight");
       expect(planData.workflow[2].description).toContain('Find patterns');
-      expect(planData.workflow[3].description).toContain('Create synergistic combinations');
-      expect(planData.workflow[4].description).toContain(
-        'Synthesize collective intelligence into unified, actionable insights'
-      );
+      // Step 4 asks for combinations that survive disagreement, not for
+      // amplification in general — the technique's warrant is that its sources
+      // disagreed, and steps 4 and 5 used to drop them entirely.
+      expect(planData.workflow[3].description).toContain('sources which disagree');
+      // The plan promises what the step now asks for: a collective view whose
+      // dissent is named rather than averaged away. "unified" was the word
+      // that invited the averaging.
+      expect(planData.workflow[4].description).toContain('still contradicts');
+      expect(planData.workflow[4].description).not.toContain('unified');
 
       // Check risk considerations
       expect(planData.workflow[0].riskConsiderations).toContain('Source bias awareness');

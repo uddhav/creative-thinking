@@ -208,7 +208,10 @@ function getExpectedOutputs(technique) {
         neural_state: ['Optimized thinking state', 'Integrated insights'],
         temporal_work: ['Time-aware design', 'Flexible implementation'],
         cultural_integration: ['Culturally adaptive solution', 'Respectful integration'],
-        collective_intel: ['Synthesized wisdom', 'Emergent insights'],
+        collective_intel: [
+            'Combinations that hold across disagreeing sources',
+            'A collective view with its dissent named, not averaged away',
+        ],
         disney_method: ['Implementable vision', 'Practical plan', 'Risk-aware solution'],
         nine_windows: [
             'Multi-dimensional understanding',
