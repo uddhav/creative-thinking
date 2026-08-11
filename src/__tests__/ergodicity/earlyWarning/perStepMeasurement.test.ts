@@ -229,28 +229,30 @@ describe('barrier proximity can reach the thresholds it is compared against', ()
   it('analysis_paralysis reaches CRITICAL, which the 0.8 scale made impossible', () => {
     const manager = new PathMemoryManager();
 
-    // The formula counts six_hats steps committing less than 0.3.
-    for (let step = 1; step <= 10; step++) think(manager, 'six_hats', step);
-    // 1 - 10/15 = 0.333: still clear of the 0.3 warningThreshold.
-    expect(distanceTo(manager.getPathMemory(), 'analysis_paralysis')).toBeCloseTo(0.3333, 4);
+    // Rewritten: the barrier no longer counts six_hats steps by name. It reads
+    // the share of the session that bound nothing, scaled by how long the
+    // session has run — so these steps still drive it, but as deliberation
+    // rather than as a technique. What this test still proves is the reason it
+    // was written: the range reaches the CRITICAL cut instead of stopping one
+    // rounding residue short of it.
+    for (let step = 1; step <= 13; step++) think(manager, 'six_hats', step);
+    // 1 - 13/25 = 0.48: clear of the 0.3 warningThreshold, which is where a
+    // thirteen-step reflective chain belongs.
+    expect(distanceTo(manager.getPathMemory(), 'analysis_paralysis')).toBeCloseTo(0.48, 4);
     expect(barrierWarnings(manager.getPathMemory(), 'analysis_paralysis')).toHaveLength(0);
 
-    // 11 steps: 0.2667, a warning. The scaled formula needed 14 analysis steps
-    // to reach the same level.
-    think(manager, 'six_hats', 11);
-    expect(distanceTo(manager.getPathMemory(), 'analysis_paralysis')).toBeCloseTo(0.2667, 4);
+    for (let step = 14; step <= 18; step++) think(manager, 'six_hats', step);
+    expect(distanceTo(manager.getPathMemory(), 'analysis_paralysis')).toBeCloseTo(0.28, 4);
     expect(barrierWarnings(manager.getPathMemory(), 'analysis_paralysis')[0].level).toBe(
       ErgodicityWarningLevel.WARNING
     );
 
-    // 13 steps: 0.1333, critical. The scaled formula's floor was 0.200 — the
-    // value of the CRITICAL cut itself — so it could only ever cross by the
-    // 4e-17 that `1 - 0.8` leaves behind in IEEE754, and only at full
-    // saturation (15 analysis steps). Nothing that depends on a rounding
-    // residue is a threshold anybody set.
-    think(manager, 'six_hats', 12);
-    think(manager, 'six_hats', 13);
-    expect(distanceTo(manager.getPathMemory(), 'analysis_paralysis')).toBeCloseTo(0.1333, 4);
+    // The scaled formula's floor was 0.200 — the value of the CRITICAL cut
+    // itself — so it could only ever cross by the 4e-17 that `1 - 0.8` leaves
+    // behind in IEEE754, and only at full saturation. Nothing that depends on
+    // a rounding residue is a threshold anybody set.
+    for (let step = 19; step <= 20; step++) think(manager, 'six_hats', step);
+    expect(distanceTo(manager.getPathMemory(), 'analysis_paralysis')).toBeCloseTo(0.2, 4);
     expect(barrierWarnings(manager.getPathMemory(), 'analysis_paralysis')[0].level).toBe(
       ErgodicityWarningLevel.CRITICAL
     );

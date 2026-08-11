@@ -17,6 +17,18 @@ import { randomUUID } from 'crypto';
  * second definition wearing the same word.
  */
 export const LOW_REVERSIBILITY_COST = 0.7;
+/**
+ * Steps of unbroken deliberation before it counts as paralysis rather than
+ * thoroughness.
+ *
+ * Chosen from the separation it gives, not from taste. Distance is
+ * `1 − steps/horizon` for a session that commits to nothing, so the warning
+ * band (0.3) and the critical band (0.2) land at 0.7 and 0.8 of the horizon.
+ * At 20 those are steps 15 and 16 — one step of warning before critical, which
+ * is no warning at all. At 25 they are 18 and 21, so a session has three steps
+ * to change course. A thirteen-step reflective chain sits at 0.48, well clear.
+ */
+const PARALYSIS_HORIZON = 25;
 export class PathMemoryManager {
     pathMemory;
     constructor(restored) {
@@ -518,9 +530,24 @@ export class PathMemoryManager {
                 return Math.min(this.pathMemory.pathHistory.length / 50, 1);
             }
             case 'analysis_paralysis': {
-                // Check for high analysis without decisions
-                const analysisSteps = this.pathMemory.pathHistory.filter(e => e.technique === 'six_hats' && e.commitmentLevel < 0.3).length;
-                return Math.min(analysisSteps / 15, 1);
+                // Deliberating at length without ever committing.
+                //
+                // This counted six_hats steps by name — one technique, hardcoded — so a
+                // plan that spent its steps there warned for running as planned, and a
+                // session that deliberated endlessly in any other technique was
+                // invisible. The path record says it without naming anyone: how much of
+                // the session bound nothing, and how long the session has gone on.
+                //
+                // Both terms are needed. The share alone is 1.0 on step one of every
+                // session, which is the saturated-by-default trap two other barriers
+                // were just rescued from; length alone would call any long session
+                // paralysed however much it committed to.
+                const events = this.pathMemory.pathHistory;
+                if (events.length === 0)
+                    return 0;
+                const committing = events.filter(e => e.commitmentLevel > 0.5).length;
+                const deliberationShare = 1 - committing / events.length;
+                return deliberationShare * Math.min(events.length / PARALYSIS_HORIZON, 1);
             }
             case 'perfectionism': {
                 // Revision without progress: how much of the session went back over

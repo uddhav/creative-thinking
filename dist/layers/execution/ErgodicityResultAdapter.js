@@ -52,10 +52,17 @@ export class ErgodicityResultAdapter {
      */
     adaptMetrics(metrics, currentFlexibility, pathMemory) {
         const enhancedConstraintLevel = metrics.commitmentDepth ?? 0;
-        // Use path memory to adjust option space size
+        // Absent evidence is not a full option space.
+        //
+        // `|| 1.0` reported maximum optionality exactly when the measure read
+        // zero — and it reads zero for thirty-one of the thirty-two techniques,
+        // since only SCAMPER reports options at all. So the one number meant to
+        // say how much room is left was at its most reassuring when it knew
+        // nothing.
+        const measuredVelocity = metrics.optionVelocity ?? 0;
         const adjustedOptionSpace = pathMemory
-            ? (metrics.optionVelocity || 1.0) * Math.max(0.5, 1 - pathMemory.pathHistory.length * 0.01)
-            : metrics.optionVelocity || 1.0;
+            ? measuredVelocity * Math.max(0.5, 1 - pathMemory.pathHistory.length * 0.01)
+            : measuredVelocity;
         return {
             currentFlexibility,
             pathDivergence: metrics.pathDivergence,
@@ -86,7 +93,9 @@ export class ErgodicityResultAdapter {
                 severity: this.mapSeverityString(warning.severity),
                 timestamp: Date.parse(warning.timestamp),
             })),
-            overallSeverity: earlyWarningState.overallRisk || 'medium',
+            // Not 'medium'. An absent risk level is an absent reading, and reporting
+            // the middle of the scale for it invents a severity nothing measured.
+            overallSeverity: earlyWarningState.overallRisk ?? 'unknown',
         };
     }
     /**
