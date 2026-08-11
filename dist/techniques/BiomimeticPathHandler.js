@@ -359,23 +359,5 @@ export class BiomimeticPathHandler extends BaseTechniqueHandler {
         // the session never made — it would fire on any six entries.
         return insights;
     }
-    getPromptContext(step) {
-        const stepInfo = this.getStepInfo(step);
-        return {
-            technique: 'biomimetic_path',
-            step,
-            stepName: stepInfo.name,
-            focus: stepInfo.focus,
-            emoji: stepInfo.emoji,
-            capabilities: {
-                immuneResponse: 'Pattern recognition and adaptive immunity',
-                evolutionaryVariation: 'Mutation and selection strategies',
-                ecosystemDynamics: 'Symbiotic relationships and balance',
-                swarmIntelligence: 'Collective behavior and emergence',
-                resiliencePatterns: 'Redundancy and adaptive cycles',
-                naturalSynthesis: 'Integrated biological solutions',
-            },
-        };
-    }
 }
 //# sourceMappingURL=BiomimeticPathHandler.js.map

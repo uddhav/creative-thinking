@@ -33,6 +33,5 @@ export declare class FirstPrinciplesHandler extends BaseTechniqueHandler {
      * fixes.
      */
     extractInsights(history: unknown[]): string[];
-    getPromptContext(step: number): Record<string, unknown>;
 }
 //# sourceMappingURL=FirstPrinciplesHandler.d.ts.map

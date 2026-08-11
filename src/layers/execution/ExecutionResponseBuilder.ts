@@ -15,6 +15,7 @@ import type { PathMemory } from '../../ergodicity/types.js';
 import type { OptionGenerationResult } from '../../ergodicity/optionGeneration/types.js';
 import type { TechniqueRegistry } from '../../techniques/TechniqueRegistry.js';
 import type { ExecutionMetadata } from '../../core/ResponseBuilder.js';
+import type { ErgodicityResult } from './ErgodicityResultAdapter.js';
 import { ResponseBuilder } from '../../core/ResponseBuilder.js';
 import { MemoryAnalyzer } from '../../core/MemoryAnalyzer.js';
 
@@ -81,7 +82,12 @@ export class ExecutionResponseBuilder {
     techniqueIndex: number,
     plan: PlanThinkingSessionOutput | undefined,
     currentFlexibility: number,
-    optionGenerationResult: OptionGenerationResult | undefined
+    optionGenerationResult: OptionGenerationResult | undefined,
+    // What the ergodicity adapter measured this step, beyond the flexibility
+    // number. Optional so the handful of call sites that only have flexibility
+    // keep working; when absent the response simply carries no metrics block
+    // rather than an invented one.
+    ergodicityMetrics?: ErgodicityResult['metrics']
   ): LateralThinkingResponse {
     // Track technique step
     this.telemetry
@@ -167,7 +173,8 @@ export class ExecutionResponseBuilder {
       currentFlexibility,
       input,
       session,
-      sessionId
+      sessionId,
+      ergodicityMetrics
     );
 
     // Track flexibility warnings
@@ -299,59 +306,6 @@ export class ExecutionResponseBuilder {
   }
 
   /**
-   * Build core response with insights and metadata
-   */
-  private buildCoreResponse(
-    input: ExecuteThinkingStepInput,
-    session: SessionData,
-    sessionId: string,
-    handler: TechniqueHandler,
-    techniqueLocalStep: number,
-    techniqueIndex: number,
-    plan: PlanThinkingSessionOutput | undefined,
-    currentFlexibility: number
-  ): { response: LateralThinkingResponse; currentInsights: string[] } {
-    // Extract insights
-    const currentInsights = this.extractInsights(handler, session, input);
-
-    // Generate next step guidance
-    const nextStepGuidance = this.generateNextStepGuidance(
-      input,
-      session,
-      handler,
-      techniqueLocalStep,
-      techniqueIndex,
-      plan
-    );
-
-    // Generate execution metadata
-    const executionMetadata = this.generateExecutionMetadata(
-      input,
-      session,
-      currentInsights,
-      session.pathMemory,
-      currentFlexibility
-    );
-
-    // Build base response
-    const operationData = this.createOperationData(input, sessionId);
-    // Enable session encoding for resilience (encode if we have a plan)
-    const shouldEncodeSession = !!plan;
-    const response = this.responseBuilder.buildExecutionResponse(
-      sessionId,
-      operationData,
-      currentInsights,
-      nextStepGuidance,
-      session.history.length,
-      executionMetadata,
-      shouldEncodeSession,
-      plan?.planId || input.planId
-    );
-
-    return { response, currentInsights };
-  }
-
-  /**
    * Enhance response with memory outputs and technique progress
    */
   private enhanceWithMemoryAndProgress(
@@ -407,9 +361,11 @@ export class ExecutionResponseBuilder {
     currentFlexibility: number,
     input: ExecuteThinkingStepInput,
     session: SessionData,
-    sessionId: string
+    sessionId: string,
+    ergodicityMetrics?: ErgodicityResult['metrics']
   ): void {
     this.addFlexibilityInfo(parsedResponse, currentFlexibility, input.alternativeSuggestions);
+    this.addErgodicityMetrics(parsedResponse, ergodicityMetrics);
     this.addPathAnalysis(parsedResponse, session.pathMemory, currentFlexibility);
     this.addWarnings(parsedResponse, session, sessionId);
   }
@@ -727,6 +683,30 @@ export class ExecutionResponseBuilder {
     }
   }
 
+  /**
+   * What the ergodicity adapter measured, alongside the flexibility number.
+   *
+   * The orchestrator computed `constraintLevel`, `optionSpaceSize` and
+   * `pathDivergence` on every step and `execution.ts` took only the flexibility
+   * score off the result, so three measurements the engine already had reached
+   * no caller. Reported unconditionally, not only when flexibility is low —
+   * these are readings, and withholding them until things look bad is what
+   * makes a reading unusable as a baseline.
+   */
+  private addErgodicityMetrics(
+    parsedResponse: Record<string, unknown>,
+    ergodicityMetrics?: ErgodicityResult['metrics']
+  ): void {
+    if (!ergodicityMetrics) return;
+
+    parsedResponse.ergodicityMetrics = {
+      currentFlexibility: ergodicityMetrics.currentFlexibility,
+      constraintLevel: ergodicityMetrics.constraintLevel,
+      optionSpaceSize: ergodicityMetrics.optionSpaceSize,
+      pathDivergence: ergodicityMetrics.pathDivergence,
+    };
+  }
+
   private addPathAnalysis(
     parsedResponse: Record<string, unknown>,
     pathMemory?: PathMemory,
@@ -948,6 +928,16 @@ export class ExecutionResponseBuilder {
 
   /**
    * Extract technique-specific fields from input
+   *
+   * There were two of these. This one is on the live path and covered six
+   * techniques; a second copy in `ResponseBuilder` covered fourteen, and sat
+   * behind a private `buildCoreResponse` that nothing called — so the eight
+   * techniques only the copy knew about (concept_extraction, yes_and,
+   * design_thinking, triz, neural_state, temporal_work, cultural_integration,
+   * collective_intel) declared fields in the tool schema, accepted them on
+   * input, and got none of them back. The copy's coverage is folded in here
+   * and the copy is gone, so there is one list to keep in step with the schema
+   * rather than two that disagree.
    */
   private extractTechniqueSpecificFields(input: ThinkingOperationData): Record<string, unknown> {
     const fields: Record<string, unknown> = {};
@@ -980,6 +970,74 @@ export class ExecutionResponseBuilder {
           fields.modificationHistory = stepInput.modificationHistory;
         break;
 
+      case 'concept_extraction':
+        if (stepInput.successExample) fields.successExample = stepInput.successExample;
+        if (stepInput.extractedConcepts) fields.extractedConcepts = stepInput.extractedConcepts;
+        if (stepInput.abstractedPatterns) fields.abstractedPatterns = stepInput.abstractedPatterns;
+        if (stepInput.applications) fields.applications = stepInput.applications;
+        break;
+
+      case 'yes_and':
+        if (stepInput.initialIdea) fields.initialIdea = stepInput.initialIdea;
+        if (stepInput.additions) fields.additions = stepInput.additions;
+        if (stepInput.evaluations) fields.evaluations = stepInput.evaluations;
+        if (stepInput.synthesis) fields.synthesis = stepInput.synthesis;
+        break;
+
+      case 'design_thinking':
+        if (stepInput.designStage) fields.designStage = stepInput.designStage;
+        if (stepInput.empathyInsights) fields.empathyInsights = stepInput.empathyInsights;
+        if (stepInput.problemStatement) fields.problemStatement = stepInput.problemStatement;
+        if (stepInput.ideaList) fields.ideaList = stepInput.ideaList;
+        if (stepInput.prototypeDescription)
+          fields.prototypeDescription = stepInput.prototypeDescription;
+        if (stepInput.userFeedback) fields.userFeedback = stepInput.userFeedback;
+        break;
+
+      case 'triz':
+        if (stepInput.contradiction) fields.contradiction = stepInput.contradiction;
+        if (stepInput.inventivePrinciples)
+          fields.inventivePrinciples = stepInput.inventivePrinciples;
+        if (stepInput.viaNegativaRemovals)
+          fields.viaNegativaRemovals = stepInput.viaNegativaRemovals;
+        if (stepInput.minimalSolution) fields.minimalSolution = stepInput.minimalSolution;
+        break;
+
+      case 'neural_state':
+        if (stepInput.dominantNetwork) fields.dominantNetwork = stepInput.dominantNetwork;
+        if (stepInput.suppressionDepth !== undefined)
+          fields.suppressionDepth = stepInput.suppressionDepth;
+        if (stepInput.switchingRhythm) fields.switchingRhythm = stepInput.switchingRhythm;
+        if (stepInput.integrationInsights)
+          fields.integrationInsights = stepInput.integrationInsights;
+        break;
+
+      case 'temporal_work':
+        if (stepInput.temporalLandscape) fields.temporalLandscape = stepInput.temporalLandscape;
+        if (stepInput.circadianAlignment) fields.circadianAlignment = stepInput.circadianAlignment;
+        if (stepInput.pressureTransformation)
+          fields.pressureTransformation = stepInput.pressureTransformation;
+        if (stepInput.asyncSyncBalance) fields.asyncSyncBalance = stepInput.asyncSyncBalance;
+        if (stepInput.temporalEscapeRoutes)
+          fields.temporalEscapeRoutes = stepInput.temporalEscapeRoutes;
+        break;
+
+      case 'cultural_integration':
+        if (stepInput.culturalFrameworks) fields.culturalFrameworks = stepInput.culturalFrameworks;
+        if (stepInput.bridgeBuilding) fields.bridgeBuilding = stepInput.bridgeBuilding;
+        if (stepInput.respectfulSynthesis)
+          fields.respectfulSynthesis = stepInput.respectfulSynthesis;
+        if (stepInput.parallelPaths) fields.parallelPaths = stepInput.parallelPaths;
+        break;
+
+      case 'collective_intel':
+        if (stepInput.wisdomSources) fields.wisdomSources = stepInput.wisdomSources;
+        if (stepInput.emergentPatterns) fields.emergentPatterns = stepInput.emergentPatterns;
+        if (stepInput.synergyCombinations)
+          fields.synergyCombinations = stepInput.synergyCombinations;
+        if (stepInput.collectiveInsights) fields.collectiveInsights = stepInput.collectiveInsights;
+        break;
+
       case 'disney_method':
         if (stepInput.disneyRole) fields.disneyRole = stepInput.disneyRole;
         break;
@@ -993,6 +1051,18 @@ export class ExecutionResponseBuilder {
     if (stepInput.risks) fields.risks = stepInput.risks;
     if (stepInput.failureModes) fields.failureModes = stepInput.failureModes;
     if (stepInput.mitigations) fields.mitigations = stepInput.mitigations;
+    if (stepInput.antifragileProperties)
+      fields.antifragileProperties = stepInput.antifragileProperties;
+    if (stepInput.blackSwans) fields.blackSwans = stepInput.blackSwans;
+
+    // Add revision fields if present
+    if (stepInput.isRevision) fields.isRevision = stepInput.isRevision;
+    if (stepInput.revisesStep !== undefined) fields.revisesStep = stepInput.revisesStep;
+    if (stepInput.branchFromStep !== undefined) fields.branchFromStep = stepInput.branchFromStep;
+    if (stepInput.branchId) fields.branchId = stepInput.branchId;
+
+    // Add synthesis for convergence, whichever technique reached it
+    if (stepInput.synthesis) fields.synthesis = stepInput.synthesis;
 
     return fields;
   }

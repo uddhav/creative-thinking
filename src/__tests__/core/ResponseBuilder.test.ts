@@ -6,7 +6,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { ResponseBuilder } from '../../core/ResponseBuilder.js';
 import { CreativeThinkingError, ErrorCode } from '../../errors/types.js';
-import type { SessionData, ThinkingOperationData } from '../../types/index.js';
+import type { SessionData } from '../../types/index.js';
 import type { DiscoverTechniquesOutput, PlanThinkingSessionOutput } from '../../types/planning.js';
 import {
   parseErrorResponse,
@@ -14,7 +14,6 @@ import {
   parseComplexObject,
   parseGenericResponse,
   parsePlanningTestResponse,
-  parseExecutionTestResponse,
   parseSessionOperationResponse,
   type TestErrorData,
 } from '../helpers/json-types.js';
@@ -370,91 +369,12 @@ describe('ResponseBuilder', () => {
     });
   });
 
-  describe('buildExecutionResponse', () => {
-    it('should build execution response with technique-specific fields', () => {
-      const input: ThinkingOperationData = {
-        technique: 'six_hats',
-        problem: 'Test problem',
-        currentStep: 1,
-        totalSteps: 6,
-        output: 'Blue hat output',
-        nextStepNeeded: true,
-        hatColor: 'blue',
-        risks: ['Risk 1'],
-        mitigations: ['Mitigation 1'],
-      };
-
-      const response = builder.buildExecutionResponse(
-        'session-123',
-        input,
-        ['Insight 1', 'Insight 2'],
-        'Next, try white hat thinking',
-        5
-      );
-
-      const parsed = parseExecutionTestResponse(response.content[0].text);
-
-      expect(parsed.sessionId).toBe('session-123');
-      expect(parsed.technique).toBe('six_hats');
-      expect(parsed.currentStep).toBe(1);
-      expect(parsed.insights).toEqual(['Insight 1', 'Insight 2']);
-      expect(parsed.hatColor).toBe('blue');
-      expect(parsed.risks).toEqual(['Risk 1']);
-      expect(parsed.nextStepGuidance).toBe('Next, try white hat thinking');
-      expect(parsed.historyLength).toBe(5);
-    });
-
-    it('should handle SCAMPER with path impact', () => {
-      const scamperInput: ThinkingOperationData = {
-        technique: 'scamper',
-        problem: 'Improve product',
-        currentStep: 1,
-        totalSteps: 7,
-        output: 'Substitute materials',
-        nextStepNeeded: true,
-        scamperAction: 'substitute',
-        pathImpact: {
-          reversibilityCost: 0.3,
-          dependencyChains: ['material_choice'],
-          flexibilityChange: -0.1,
-        },
-        alternativeSuggestions: ['Use recycled materials'],
-      };
-
-      const response = builder.buildExecutionResponse('session-456', scamperInput, []);
-      const parsed = parseExecutionTestResponse(response.content[0].text);
-
-      expect(parsed.scamperAction).toBe('substitute');
-      expect(parsed.pathImpact).toEqual(scamperInput.pathImpact);
-      // The caller's own flexibility number is not echoed back, because it is
-      // not an input any more — the engine measures it from the path history.
-      expect(parsed.flexibilityScore).toBeUndefined();
-      expect(parsed.alternativeSuggestions).toEqual(['Use recycled materials']);
-    });
-
-    it('should handle revision fields', () => {
-      const revisionInput: ThinkingOperationData = {
-        technique: 'po',
-        problem: 'Test problem',
-        currentStep: 2,
-        totalSteps: 4,
-        output: 'Revised output',
-        nextStepNeeded: true,
-        isRevision: true,
-        revisesStep: 1,
-        branchFromStep: 1,
-        branchId: 'branch-123',
-      };
-
-      const response = builder.buildExecutionResponse('session-789', revisionInput, []);
-      const parsed = parseExecutionTestResponse(response.content[0].text);
-
-      expect(parsed.isRevision).toBe(true);
-      expect(parsed.revisesStep).toBe(1);
-      expect(parsed.branchFromStep).toBe(1);
-      expect(parsed.branchId).toBe('branch-123');
-    });
-  });
+  // `buildExecutionResponse` and its private `extractTechniqueSpecificFields`
+  // are gone, and the two describes that exercised them here moved with the
+  // behaviour. Both were only ever reachable from a private `buildCoreResponse`
+  // that nothing called, so what they proved was that a dead copy worked. The
+  // same assertions now run against the live path, over the real three-layer
+  // flow, in src/__tests__/issues/echoed-fields-and-metrics.test.ts.
 
   describe('buildSessionOperationResponse', () => {
     it('should build session operation response', () => {
@@ -801,103 +721,6 @@ describe('ResponseBuilder', () => {
       expect(() => {
         builder.formatExportData(mockSession, 'pdf' as never);
       }).toThrow('Unsupported export format: pdf');
-    });
-  });
-
-  describe('extractTechniqueSpecificFields', () => {
-    it('should extract all technique-specific fields', () => {
-      // Test each technique type
-      const techniques: Array<[string, ThinkingOperationData, Record<string, unknown>]> = [
-        [
-          'six_hats',
-          {
-            technique: 'six_hats' as const,
-            hatColor: 'blue' as const,
-            problem: 'test',
-            currentStep: 1,
-            totalSteps: 6,
-            output: 'test',
-            nextStepNeeded: true,
-          } satisfies ThinkingOperationData,
-          { hatColor: 'blue' },
-        ],
-        [
-          'po',
-          {
-            technique: 'po' as const,
-            provocation: 'PO: Cars have square wheels',
-            principles: ['P1'],
-            problem: 'test',
-            currentStep: 1,
-            totalSteps: 4,
-            output: 'test',
-            nextStepNeeded: true,
-          } satisfies ThinkingOperationData,
-          { provocation: 'PO: Cars have square wheels', principles: ['P1'] },
-        ],
-        [
-          'random_entry',
-          {
-            technique: 'random_entry' as const,
-            randomStimulus: 'Apple',
-            connections: ['Red', 'Round'],
-            problem: 'test',
-            currentStep: 1,
-            totalSteps: 3,
-            output: 'test',
-            nextStepNeeded: true,
-          } satisfies ThinkingOperationData,
-          { randomStimulus: 'Apple', connections: ['Red', 'Round'] },
-        ],
-        [
-          'neural_state',
-          {
-            technique: 'neural_state' as const,
-            dominantNetwork: 'dmn' as const,
-            suppressionDepth: 5,
-            problem: 'test',
-            currentStep: 1,
-            totalSteps: 4,
-            output: 'test',
-            nextStepNeeded: true,
-          } satisfies ThinkingOperationData,
-          { dominantNetwork: 'dmn', suppressionDepth: 5 },
-        ],
-      ];
-
-      techniques.forEach(([technique, input, expected]) => {
-        const response = builder.buildExecutionResponse('test', input, []);
-        const parsed = parseExecutionTestResponse(response.content[0].text);
-
-        Object.entries(expected).forEach(([key, value]) => {
-          expect(parsed[key], `Failed for technique: ${technique}, field: ${key}`).toEqual(value);
-        });
-      });
-    });
-
-    it('should include risk/adversarial fields', () => {
-      const input: ThinkingOperationData = {
-        technique: 'triz',
-        problem: 'Test',
-        currentStep: 1,
-        totalSteps: 4,
-        output: 'Output',
-        nextStepNeeded: true,
-        risks: ['Risk 1'],
-        failureModes: ['Failure 1'],
-        mitigations: ['Mitigation 1'],
-        antifragileProperties: ['Redundancy'],
-        blackSwans: ['Unexpected event'],
-      };
-
-      const response = builder.buildExecutionResponse('test', input, []);
-      const parsed = parseExecutionTestResponse(response.content[0].text);
-
-      expect(parsed.risks).toEqual(['Risk 1']);
-      expect(parsed.failureModes).toEqual(['Failure 1']);
-      expect(parsed.mitigations).toEqual(['Mitigation 1']);
-      expect(parsed.antifragileProperties).toEqual(['Redundancy']);
-      expect(parsed.blackSwans).toEqual(['Unexpected event']);
     });
   });
 });

@@ -162,8 +162,13 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
                     input.alternativeSuggestions = scamperHandler.generateAlternatives(input.scamperAction, flexibilityBeforeStep);
                 }
             }
-            // Track ergodicity and generate options if needed
-            const { currentFlexibility, optionGenerationResult } = await ergodicityOrchestrator.trackErgodicityAndGenerateOptions(input, session, techniqueLocalStep, sessionId, handler);
+            // Track ergodicity and generate options if needed.
+            //
+            // `ergodicityResult.metrics` is taken as well as the flexibility score:
+            // the adapter measures constraintLevel, optionSpaceSize and
+            // pathDivergence on every step, and this call site used to drop all
+            // three on the floor.
+            const { currentFlexibility, optionGenerationResult, ergodicityResult } = await ergodicityOrchestrator.trackErgodicityAndGenerateOptions(input, session, techniqueLocalStep, sessionId, handler);
             // Record step in history (exclude realityAssessment from operationData to avoid duplication)
             const { realityAssessment: inputRealityAssessment, ...inputWithoutReality } = input;
             // If there's a reality assessment from input, we should handle it separately
@@ -220,7 +225,7 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
             // Update metrics
             metricsCollector.updateMetrics(session, operationData);
             // Build comprehensive execution response
-            const response = executionResponseBuilder.buildResponse(input, session, sessionId, handler, techniqueLocalStep, techniqueIndex, plan, currentFlexibility, optionGenerationResult);
+            const response = executionResponseBuilder.buildResponse(input, session, sessionId, handler, techniqueLocalStep, techniqueIndex, plan, currentFlexibility, optionGenerationResult, ergodicityResult.metrics);
             // Check completion gatekeeper before allowing termination
             const completionCheck = completionGatekeeper.canProceedToNextStep(input, session, plan);
             if (!completionCheck.allowed && completionCheck.response) {

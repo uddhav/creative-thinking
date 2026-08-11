@@ -251,22 +251,5 @@ export class MetaLearningHandler extends BaseTechniqueHandler {
         // finding the session never made — it would fire on any four entries.
         return insights;
     }
-    getPromptContext(step) {
-        const stepInfo = this.getStepInfo(step);
-        return {
-            technique: 'meta_learning',
-            step,
-            stepName: stepInfo.name,
-            focus: stepInfo.focus,
-            emoji: stepInfo.emoji,
-            capabilities: {
-                patternRecognition: 'Identifies successful patterns across techniques',
-                learningAccumulation: 'Stores and builds on effective combinations',
-                strategyEvolution: 'Adapts and improves technique selection',
-                feedbackIntegration: 'Incorporates telemetry and user choices',
-                metaSynthesis: 'Generates self-improving integration strategies',
-            },
-        };
-    }
 }
 //# sourceMappingURL=MetaLearningHandler.js.map

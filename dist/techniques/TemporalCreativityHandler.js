@@ -124,8 +124,6 @@ export class TemporalCreativityHandler extends BaseTechniqueHandler {
             },
         },
     ];
-    // Path memory system for tracking decision history
-    pathMemory = [];
     getTechniqueInfo() {
         return {
             name: 'Temporal Creativity',
@@ -323,52 +321,6 @@ export class TemporalCreativityHandler extends BaseTechniqueHandler {
         // Duplicates are removed — the same option preserved twice is one insight —
         // but nothing is dropped for being the thirteenth thing the session said.
         return [...new Set(insights)];
-    }
-    /**
-     * Track a decision in path memory
-     */
-    trackDecision(decision, constraintsCreated = [], optionsClosed = [], flexibilityImpact = 1.0) {
-        this.pathMemory.push({
-            timestamp: Date.now(),
-            decision,
-            constraintsCreated,
-            optionsClosed,
-            flexibilityImpact,
-        });
-    }
-    /**
-     * Analyze path memory for patterns
-     */
-    analyzePathMemory() {
-        const totalDecisions = this.pathMemory.length;
-        const totalConstraintsCreated = this.pathMemory.reduce((sum, entry) => sum + entry.constraintsCreated.length, 0);
-        const totalOptionsClosed = this.pathMemory.reduce((sum, entry) => sum + entry.optionsClosed.length, 0);
-        const currentFlexibility = this.pathMemory.reduce((flexibility, entry) => flexibility * entry.flexibilityImpact, 1.0);
-        // Identify critical decisions (those that closed many options or created many constraints)
-        const criticalDecisions = this.pathMemory
-            .filter(entry => entry.constraintsCreated.length > 2 ||
-            entry.optionsClosed.length > 2 ||
-            entry.flexibilityImpact < 0.7)
-            .sort((a, b) => a.flexibilityImpact - b.flexibilityImpact);
-        return {
-            totalDecisions,
-            totalConstraintsCreated,
-            totalOptionsClosed,
-            currentFlexibility,
-            criticalDecisions,
-        };
-    }
-    /**
-     * Project future flexibility based on current path
-     */
-    projectFutureFlexibility(horizons = [1, 5, 10]) {
-        const currentAnalysis = this.analyzePathMemory();
-        const decayRate = 0.9; // Flexibility tends to decay over time without active preservation
-        const projections = {};
-        horizons.forEach(horizon => {
-            projections[horizon] = currentAnalysis.currentFlexibility * Math.pow(decayRate, horizon);
-        });
-        return projections;
     }
 }
 //# sourceMappingURL=TemporalCreativityHandler.js.map

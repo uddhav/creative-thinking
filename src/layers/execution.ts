@@ -261,8 +261,13 @@ export async function executeThinkingStep(
         }
       }
 
-      // Track ergodicity and generate options if needed
-      const { currentFlexibility, optionGenerationResult } =
+      // Track ergodicity and generate options if needed.
+      //
+      // `ergodicityResult.metrics` is taken as well as the flexibility score:
+      // the adapter measures constraintLevel, optionSpaceSize and
+      // pathDivergence on every step, and this call site used to drop all
+      // three on the floor.
+      const { currentFlexibility, optionGenerationResult, ergodicityResult } =
         await ergodicityOrchestrator.trackErgodicityAndGenerateOptions(
           input,
           session,
@@ -353,7 +358,8 @@ export async function executeThinkingStep(
         techniqueIndex,
         plan,
         currentFlexibility,
-        optionGenerationResult
+        optionGenerationResult,
+        ergodicityResult.metrics
       );
 
       // Check completion gatekeeper before allowing termination

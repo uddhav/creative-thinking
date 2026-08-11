@@ -299,21 +299,4 @@ describe('MetaLearningHandler', () => {
       expect(insights[0]).toContain('vs. 8 before.');
     });
   });
-
-  describe('getPromptContext', () => {
-    it('should return comprehensive context for each step', () => {
-      for (let step = 1; step <= 4; step++) {
-        const context = handler.getPromptContext(step);
-
-        expect(context.technique).toBe('meta_learning');
-        expect(context.step).toBe(step);
-        expect(context.stepName).toBeTruthy();
-        expect(context.focus).toBeTruthy();
-        expect(context.emoji).toBeTruthy();
-        expect(context.capabilities).toBeDefined();
-        expect(context.capabilities).toHaveProperty('patternRecognition');
-        expect(context.capabilities).toHaveProperty('metaSynthesis');
-      }
-    });
-  });
 });

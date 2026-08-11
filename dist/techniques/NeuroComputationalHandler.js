@@ -393,23 +393,5 @@ export class NeuroComputationalHandler extends BaseTechniqueHandler {
         // they can say weak.
         return insights;
     }
-    getPromptContext(step) {
-        const stepInfo = this.getStepInfo(step);
-        return {
-            technique: 'neuro_computational',
-            step,
-            stepName: stepInfo.name,
-            focus: stepInfo.focus,
-            emoji: stepInfo.emoji,
-            capabilities: {
-                neuralMapping: 'Transform problems into neural network representations',
-                patternGeneration: 'Generate diverse solutions through parallel processing',
-                interferenceAnalysis: 'Analyze constructive and destructive pattern interactions',
-                computationalSynthesis: 'Synthesize patterns using computational models',
-                optimizationCycles: 'Iteratively refine for coherence, novelty, and utility',
-                convergence: 'Converge to optimal creative solutions',
-            },
-        };
-    }
 }
 //# sourceMappingURL=NeuroComputationalHandler.js.map

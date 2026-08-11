@@ -3,17 +3,9 @@
  * Extends temporal thinking with deep path memory and option preservation
  */
 import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
-interface PathMemoryEntry {
-    timestamp: number;
-    decision: string;
-    constraintsCreated: string[];
-    optionsClosed: string[];
-    flexibilityImpact: number;
-}
 export declare class TemporalCreativityHandler extends BaseTechniqueHandler {
     private readonly steps;
     private readonly stepsWithReflexivity;
-    private pathMemory;
     getTechniqueInfo(): TechniqueInfo;
     getStepInfo(step: number): StepInfo;
     getStepGuidance(step: number, problem: string): string;
@@ -57,24 +49,5 @@ export declare class TemporalCreativityHandler extends BaseTechniqueHandler {
         synthesisStrategy?: string;
         preservedOptions?: string[];
     }>): string[];
-    /**
-     * Track a decision in path memory
-     */
-    trackDecision(decision: string, constraintsCreated?: string[], optionsClosed?: string[], flexibilityImpact?: number): void;
-    /**
-     * Analyze path memory for patterns
-     */
-    analyzePathMemory(): {
-        totalDecisions: number;
-        totalConstraintsCreated: number;
-        totalOptionsClosed: number;
-        currentFlexibility: number;
-        criticalDecisions: PathMemoryEntry[];
-    };
-    /**
-     * Project future flexibility based on current path
-     */
-    projectFutureFlexibility(horizons?: number[]): Record<number, number>;
 }
-export {};
 //# sourceMappingURL=TemporalCreativityHandler.d.ts.map

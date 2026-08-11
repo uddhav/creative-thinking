@@ -284,18 +284,4 @@ describe('BiomimeticPathHandler', () => {
       expect(insights[0]).toContain('vs. 90ms before.');
     });
   });
-
-  describe('getPromptContext', () => {
-    it('should return correct context for each step', () => {
-      const context1 = handler.getPromptContext(1);
-      expect(context1.technique).toBe('biomimetic_path');
-      expect(context1.step).toBe(1);
-      expect(context1.stepName).toBe('Immune Response');
-
-      const context4 = handler.getPromptContext(4);
-      expect(context4.step).toBe(4);
-      expect(context4.stepName).toBe('Swarm Intelligence');
-      expect(context4.capabilities).toBeDefined();
-    });
-  });
 });

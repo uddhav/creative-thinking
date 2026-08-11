@@ -430,6 +430,7 @@ function getExpectedOutputForStep(technique, step) {
             5: 'Alternative uses',
             6: 'Elements to eliminate',
             7: 'Reversal concepts',
+            8: 'Parameters worth varying',
         },
         disney_method: {
             1: 'Bold vision without constraints',

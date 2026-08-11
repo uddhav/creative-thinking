@@ -60,6 +60,5 @@ export declare class NeuroComputationalHandler extends BaseTechniqueHandler {
      * defect this fixes.
      */
     extractInsights(history: unknown[]): string[];
-    getPromptContext(step: number): Record<string, unknown>;
 }
 //# sourceMappingURL=NeuroComputationalHandler.d.ts.map

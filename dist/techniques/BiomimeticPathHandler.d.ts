@@ -32,6 +32,5 @@ export declare class BiomimeticPathHandler extends BaseTechniqueHandler {
      * patterns and a synthesis; reporting none of them was the defect this fixes.
      */
     extractInsights(history: unknown[]): string[];
-    getPromptContext(step: number): Record<string, unknown>;
 }
 //# sourceMappingURL=BiomimeticPathHandler.d.ts.map

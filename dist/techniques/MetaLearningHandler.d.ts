@@ -31,6 +31,5 @@ export declare class MetaLearningHandler extends BaseTechniqueHandler {
      * this far has all four; reporting none of them was the defect this fixes.
      */
     extractInsights(history: unknown[]): string[];
-    getPromptContext(step: number): Record<string, unknown>;
 }
 //# sourceMappingURL=MetaLearningHandler.d.ts.map

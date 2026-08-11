@@ -2,7 +2,7 @@
  * Response Builder
  * Constructs formatted responses for MCP tools
  */
-import type { LateralThinkingResponse, SessionData, ThinkingOperationData } from '../types/index.js';
+import type { LateralThinkingResponse, SessionData } from '../types/index.js';
 import type { DiscoverTechniquesOutput, PlanThinkingSessionOutput } from '../types/planning.js';
 export interface ExecutionMetadata {
     /**
@@ -48,10 +48,6 @@ export declare class ResponseBuilder {
      */
     buildPlanningResponse(output: PlanThinkingSessionOutput): LateralThinkingResponse;
     /**
-     * Build an execution response
-     */
-    buildExecutionResponse(sessionId: string, input: ThinkingOperationData, insights: string[], nextStepGuidance?: string, historyLength?: number, executionMetadata?: ExecutionMetadata, encodeSessionId?: boolean, planId?: string): LateralThinkingResponse;
-    /**
      * Build a session operation response
      */
     buildSessionOperationResponse(operation: string, result: unknown): LateralThinkingResponse;
@@ -70,10 +66,6 @@ export declare class ResponseBuilder {
      * Format export data based on format type
      */
     formatExportData(session: SessionData, format: 'json' | 'markdown' | 'csv'): string;
-    /**
-     * Extract technique-specific fields from input
-     */
-    private extractTechniqueSpecificFields;
     /**
      * Format session as markdown
      */

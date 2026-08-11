@@ -216,6 +216,7 @@ export class CompletionGatekeeper {
       (sum, s) => sum + s.skippedSteps.length,
       0
     );
+    const outstandingWork = this.describeOutstandingWork(metadata);
 
     const content = {
       blocked: true,
@@ -247,13 +248,54 @@ export class CompletionGatekeeper {
       ].filter(Boolean),
       override: this.config.allowExplicitSkip
         ? {
-            message: 'To skip anyway, set forceComplete: true in your request',
+            // What actually clears the block, not a switch that does not exist.
+            //
+            // This read "To skip anyway, set forceComplete: true in your
+            // request". No tool schema declares `forceComplete`, nothing reads
+            // one, and `allowExplicitSkip` is on in three of the four
+            // enforcement levels — so a blocked caller followed the
+            // instruction, the field was ignored, the same block fired again
+            // and the session looped. The config and this block stay, because
+            // a deployment may key off them; the sentence they carry is now
+            // the route that exists, named from what the tracker measured.
+            message:
+              `There is no skip flag. Call execute_thinking_step for ${outstandingWork} ` +
+              `and this block clears on its own.`,
             consequences: metadata.missedPerspectives,
           }
         : undefined,
     };
 
     return this.responseBuilder.buildSuccessResponse(content);
+  }
+
+  /**
+   * Name the steps a caller still owes, in technique-local numbering.
+   *
+   * A technique that has run at all reports its gaps in `skippedSteps`; one
+   * that never started reports nothing there and appears in `skippedTechniques`
+   * instead, so both lists are read.
+   */
+  private describeOutstandingWork(metadata: SessionCompletionMetadata): string {
+    const perTechnique = [
+      ...metadata.techniqueStatuses
+        .filter(s => s.skippedSteps.length > 0)
+        .map(s => `${s.technique} steps ${s.skippedSteps.join(', ')}`),
+      ...metadata.skippedTechniques.map(technique => {
+        const status = metadata.techniqueStatuses.find(s => s.technique === technique);
+        return status ? `${technique} steps 1-${status.totalSteps}` : `${technique}`;
+      }),
+    ];
+
+    if (perTechnique.length > 0) {
+      return perTechnique.join('; ');
+    }
+
+    // No plan, or a single-technique session the tracker measures without
+    // per-step numbering — say how many are outstanding rather than invent
+    // which ones.
+    const remaining = Math.max(0, metadata.totalPlannedSteps - metadata.completedSteps);
+    return `the ${remaining} step${remaining === 1 ? '' : 's'} still outstanding`;
   }
 
   /**

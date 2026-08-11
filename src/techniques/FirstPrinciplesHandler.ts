@@ -336,22 +336,4 @@ export class FirstPrinciplesHandler extends BaseTechniqueHandler {
 
     return insights;
   }
-
-  getPromptContext(step: number): Record<string, unknown> {
-    const stepInfo = this.getStepInfo(step);
-    return {
-      technique: 'first_principles',
-      step,
-      stepName: stepInfo.name,
-      focus: stepInfo.focus,
-      emoji: stepInfo.emoji,
-      capabilities: {
-        deconstruction: 'Break down into fundamental components',
-        foundationIdentification: 'Identify irreducible truths',
-        assumptionChallenging: 'Question all conventions and assumptions',
-        reconstruction: 'Build from fundamental truths only',
-        solutionSynthesis: 'Create breakthrough innovations',
-      },
-    };
-  }
 }

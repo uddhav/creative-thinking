@@ -6,6 +6,7 @@ import type { ExecuteThinkingStepInput, SessionData, LateralThinkingResponse } f
 import type { PlanThinkingSessionOutput } from '../../types/planning.js';
 import type { OptionGenerationResult } from '../../ergodicity/optionGeneration/types.js';
 import type { TechniqueRegistry } from '../../techniques/TechniqueRegistry.js';
+import type { ErgodicityResult } from './ErgodicityResultAdapter.js';
 import type { TechniqueHandler } from '../../techniques/types.js';
 import type { EscalationPromptGenerator } from '../../ergodicity/escalationPrompts.js';
 import type { HybridComplexityAnalyzer } from '../../complexity/analyzer.js';
@@ -25,15 +26,11 @@ export declare class ExecutionResponseBuilder {
     /**
      * Build comprehensive execution response
      */
-    buildResponse(input: ExecuteThinkingStepInput, session: SessionData, sessionId: string, handler: TechniqueHandler, techniqueLocalStep: number, techniqueIndex: number, plan: PlanThinkingSessionOutput | undefined, currentFlexibility: number, optionGenerationResult: OptionGenerationResult | undefined): LateralThinkingResponse;
+    buildResponse(input: ExecuteThinkingStepInput, session: SessionData, sessionId: string, handler: TechniqueHandler, techniqueLocalStep: number, techniqueIndex: number, plan: PlanThinkingSessionOutput | undefined, currentFlexibility: number, optionGenerationResult: OptionGenerationResult | undefined, ergodicityMetrics?: ErgodicityResult['metrics']): LateralThinkingResponse;
     /**
      * Build core response data object with insights and metadata
      */
     private buildCoreResponseData;
-    /**
-     * Build core response with insights and metadata
-     */
-    private buildCoreResponse;
     /**
      * Enhance response with memory outputs and technique progress
      */
@@ -70,6 +67,17 @@ export declare class ExecutionResponseBuilder {
     private addTechniqueProgress;
     private addCompletionMetadata;
     private addFlexibilityInfo;
+    /**
+     * What the ergodicity adapter measured, alongside the flexibility number.
+     *
+     * The orchestrator computed `constraintLevel`, `optionSpaceSize` and
+     * `pathDivergence` on every step and `execution.ts` took only the flexibility
+     * score off the result, so three measurements the engine already had reached
+     * no caller. Reported unconditionally, not only when flexibility is low —
+     * these are readings, and withholding them until things look bad is what
+     * makes a reading unusable as a baseline.
+     */
+    private addErgodicityMetrics;
     private addPathAnalysis;
     private addWarnings;
     private addRealityAssessment;
@@ -80,6 +88,16 @@ export declare class ExecutionResponseBuilder {
     private handleSessionCompletion;
     /**
      * Extract technique-specific fields from input
+     *
+     * There were two of these. This one is on the live path and covered six
+     * techniques; a second copy in `ResponseBuilder` covered fourteen, and sat
+     * behind a private `buildCoreResponse` that nothing called — so the eight
+     * techniques only the copy knew about (concept_extraction, yes_and,
+     * design_thinking, triz, neural_state, temporal_work, cultural_integration,
+     * collective_intel) declared fields in the tool schema, accepted them on
+     * input, and got none of them back. The copy's coverage is folded in here
+     * and the copy is gone, so there is one list to keep in step with the schema
+     * rather than two that disagree.
      */
     private extractTechniqueSpecificFields;
     /**

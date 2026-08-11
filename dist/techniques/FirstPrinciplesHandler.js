@@ -278,22 +278,5 @@ export class FirstPrinciplesHandler extends BaseTechniqueHandler {
         // entries, including five that reproduced the conventional answer.
         return insights;
     }
-    getPromptContext(step) {
-        const stepInfo = this.getStepInfo(step);
-        return {
-            technique: 'first_principles',
-            step,
-            stepName: stepInfo.name,
-            focus: stepInfo.focus,
-            emoji: stepInfo.emoji,
-            capabilities: {
-                deconstruction: 'Break down into fundamental components',
-                foundationIdentification: 'Identify irreducible truths',
-                assumptionChallenging: 'Question all conventions and assumptions',
-                reconstruction: 'Build from fundamental truths only',
-                solutionSynthesis: 'Create breakthrough innovations',
-            },
-        };
-    }
 }
 //# sourceMappingURL=FirstPrinciplesHandler.js.map
