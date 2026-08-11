@@ -139,9 +139,28 @@ export class ErgodicityOrchestrator {
       session.pathMemory
     );
 
-    // Note: Not updating session state with adapted ergodicity data
-    // due to type incompatibility between simplified adapted types
-    // and full SessionData interface requirements
+    // Record what the monitoring actually found, from the raw result.
+    //
+    // The note that stood here said session state was not updated "due to type
+    // incompatibility between simplified adapted types and full SessionData
+    // interface requirements". True of the adapted result, and beside the
+    // point: `recordThinkingStep` returns `EarlyWarningState` and
+    // `EscapeProtocol` already — exactly the types `SessionData` declares — and
+    // the adapter is what flattens them, dropping sensor readings, compound
+    // risk, critical barriers and the available escape routes.
+    //
+    // So the subsystem computed a warning state on every step and assigned it
+    // nowhere. `ResponseBuilder`, `ExecutionResponseBuilder.addWarnings` and
+    // `MetricsCollector` all read these fields and all read undefined, which is
+    // why a session could reach `escape` internally and report nothing. Every
+    // reader below has been complete this whole time; none of them was ever
+    // given anything to read.
+    if (ergodicityResult.earlyWarningState) {
+      session.earlyWarningState = ergodicityResult.earlyWarningState;
+    }
+    if (ergodicityResult.escapeRecommendation) {
+      session.escapeRecommendation = ergodicityResult.escapeRecommendation;
+    }
 
     // Display flexibility warning if needed
     if (currentFlexibility < 0.4 && process.env.DISABLE_THOUGHT_LOGGING !== 'true') {

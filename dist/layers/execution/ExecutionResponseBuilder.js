@@ -18,6 +18,8 @@ import { monitorCriticalSection } from '../../utils/PerformanceIntegration.js';
 import { TelemetryCollector } from '../../telemetry/TelemetryCollector.js';
 import { SessionCompletionTracker } from '../../core/session/SessionCompletionTracker.js';
 import { MetricsCollector } from '../../core/MetricsCollector.js';
+/** Escape steps shown inline; the rest are counted rather than dropped. */
+const ESCAPE_STEPS_SHOWN = 3;
 export class ExecutionResponseBuilder {
     complexityAnalyzer;
     escalationGenerator;
@@ -468,6 +470,14 @@ export class ExecutionResponseBuilder {
     addWarnings(parsedResponse, session, sessionId) {
         if (session.earlyWarningState && session.earlyWarningState.activeWarnings.length > 0) {
             parsedResponse.earlyWarningState = {
+                // The verdict, not only the evidence. This reported a list of warnings
+                // and a count and withheld what the subsystem concluded from them, so a
+                // caller could see that something was flagged but not whether the
+                // server thought it should continue, change course, or stop. Reading
+                // that off the message strings is the caller doing the server's job.
+                overallRisk: session.earlyWarningState.overallRisk,
+                recommendedAction: session.earlyWarningState.recommendedAction,
+                compoundRisk: session.earlyWarningState.compoundRisk,
                 activeWarnings: session.earlyWarningState.activeWarnings.map(w => ({
                     level: w.severity,
                     message: w.message,
@@ -476,9 +486,14 @@ export class ExecutionResponseBuilder {
             };
         }
         if (session.escapeRecommendation) {
+            const steps = session.escapeRecommendation.steps;
+            const shown = steps.slice(0, ESCAPE_STEPS_SHOWN);
             parsedResponse.escapeRecommendation = {
                 protocol: session.escapeRecommendation.name,
-                steps: session.escapeRecommendation.steps.slice(0, 3),
+                steps: shown,
+                // Say when there are more. Slicing to three silently made a protocol
+                // look like a three-step one.
+                ...(steps.length > shown.length ? { furtherSteps: steps.length - shown.length } : {}),
                 recommendation: 'Consider these alternative approaches to regain flexibility.',
             };
         }
