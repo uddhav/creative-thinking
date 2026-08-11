@@ -628,142 +628,187 @@ export class ExecutionResponseBuilder {
     /**
      * Extract technique-specific fields from input
      *
-     * There were two of these. This one is on the live path and covered six
-     * techniques; a second copy in `ResponseBuilder` covered fourteen, and sat
-     * behind a private `buildCoreResponse` that nothing called — so the eight
-     * techniques only the copy knew about (concept_extraction, yes_and,
-     * design_thinking, triz, neural_state, temporal_work, cultural_integration,
-     * collective_intel) declared fields in the tool schema, accepted them on
-     * input, and got none of them back. The copy's coverage is folded in here
-     * and the copy is gone, so there is one list to keep in step with the schema
-     * rather than two that disagree.
+     * This was a switch: one `case` per technique, one `if (field)` per field.
+     * It knew fourteen techniques, so the other eighteen declared fields in the
+     * tool schema, accepted them on input, and got none of them back — a caller
+     * could not tell whether the server had read them at all. (An earlier round
+     * fixed a narrower version of the same fault: there were two copies of the
+     * switch, one live and knowing six, one dead and knowing fourteen.)
+     *
+     * A table instead, keyed by technique, so `tsc` fails until all thirty-two
+     * have an entry. Four of them read no declared field and echo nothing; that
+     * is recorded as an empty list rather than an absence, because an absence is
+     * what let the eighteen go unnoticed.
+     *
+     * Membership is what each handler actually reads, recorded by proxying the
+     * input object through `validateStep` and `extractInsights` for every step of
+     * every technique, not by reading field names. `nine_windows.currentCell` is
+     * added on top: it is read at `NineWindowsHandler:212` behind a branch the
+     * probe did not reach.
      */
+    static TECHNIQUE_FIELDS = {
+        six_hats: ['hatColor'],
+        scamper: [
+            'alternativeSuggestions',
+            'modificationHistory',
+            'modifications',
+            'pathImpact',
+            'scamperAction',
+        ],
+        po: ['principles', 'provocation'],
+        random_entry: ['connections', 'randomStimulus', 'roryMode'],
+        concept_extraction: [
+            'abstractedPatterns',
+            'applications',
+            'extractedConcepts',
+            'successExample',
+        ],
+        yes_and: ['additions', 'evaluations', 'initialIdea'],
+        design_thinking: [
+            'designStage',
+            'empathyInsights',
+            'failureInsights',
+            'failureModesPredicted',
+            'ideaList',
+            'problemStatement',
+            'prototypeDescription',
+            'stressTestResults',
+            'userFeedback',
+        ],
+        triz: ['contradiction', 'inventivePrinciples', 'minimalSolution', 'viaNegativaRemovals'],
+        neural_state: ['dominantNetwork', 'integrationInsights', 'suppressionDepth', 'switchingRhythm'],
+        temporal_work: [
+            'asyncSyncBalance',
+            'circadianAlignment',
+            'pressureTransformation',
+            'temporalEscapeRoutes',
+            'temporalLandscape',
+        ],
+        cultural_integration: [
+            'bridgeBuilding',
+            'culturalFrameworks',
+            'parallelPaths',
+            'respectfulSynthesis',
+        ],
+        collective_intel: [
+            'collectiveInsights',
+            'emergentPatterns',
+            'synergyCombinations',
+            'wisdomSources',
+        ],
+        disney_method: ['criticRisks', 'dreamerVision', 'realistPlan'],
+        nine_windows: ['currentCell', 'interdependencies', 'nineWindowsMatrix'],
+        quantum_superposition: [
+            'amplitudes',
+            'chosenState',
+            'entanglements',
+            'interferencePatterns',
+            'measurementCriteria',
+            'preservedInsights',
+            'solutionStates',
+        ],
+        temporal_creativity: [
+            'accelerationOptions',
+            'activeOptions',
+            'blackSwanScenarios',
+            'currentConstraints',
+            'decisionPatterns',
+            'delayOptions',
+            'lessonIntegration',
+            'parallelTimelines',
+            'pathHistory',
+            'preservedOptions',
+            'strategyEvolution',
+            'synthesisStrategy',
+            'timelineProjections',
+        ],
+        paradoxical_problem: [
+            'metaPath',
+            'paradox',
+            'parallelPaths',
+            'pathContexts',
+            'resolutionVerified',
+            'solutionA',
+            'solutionB',
+            'validation',
+        ],
+        meta_learning: [
+            'learningHistory',
+            'metaSynthesis',
+            'patternRecognition',
+            'strategyAdaptations',
+        ],
+        biomimetic_path: [
+            'immuneResponse',
+            'mutations',
+            'naturalSynthesis',
+            'resiliencePatterns',
+            'swarmBehavior',
+            'symbioticRelationships',
+        ],
+        first_principles: [
+            'assumptions',
+            'components',
+            'fundamentalTruths',
+            'reconstruction',
+            'solution',
+        ],
+        neuro_computational: [
+            'computationalModels',
+            'convergenceMetrics',
+            'finalSynthesis',
+            'interferenceAnalysis',
+            'neuralMappings',
+            'optimizationCycles',
+            'patternGenerations',
+        ],
+        criteria_based_analysis: ['validityScore'],
+        linguistic_forensics: ['coherenceScore', 'pronounRatios'],
+        competing_hypotheses: ['leadingHypothesis', 'matrix', 'probabilities'],
+        reverse_benchmarking: [
+            'antiMimeticStrategy',
+            'excellenceDesign',
+            'vacantSpaces',
+            'weaknessMapping',
+        ],
+        context_reframing: [
+            'behavioralMetrics',
+            'contextAnalysis',
+            'environmentDesign',
+            'frameShift',
+            'interventions',
+        ],
+        perception_optimization: [
+            'experienceDesign',
+            'perceptionGaps',
+            'perceptionROI',
+            'psychologicalValue',
+            'valueAmplification',
+        ],
+        anecdotal_signal: [
+            'anecdoteCount',
+            'earlyWarnings',
+            'scalingScenarios',
+            'signals',
+            'strategicResponse',
+            'trajectoryAnalysis',
+        ],
+        cognitive_bias_audit: [],
+        latticework: [],
+        keeper_test: [],
+        steelman_red_team: [],
+    };
     extractTechniqueSpecificFields(input) {
         const fields = {};
-        // Cast input to ExecuteThinkingStepInput to access all fields
         const stepInput = input;
-        // Add technique-specific fields based on the technique
-        switch (input.technique) {
-            case 'six_hats':
-                if (stepInput.hatColor)
-                    fields.hatColor = stepInput.hatColor;
-                break;
-            case 'po':
-                if (stepInput.provocation)
-                    fields.provocation = stepInput.provocation;
-                if (stepInput.principles)
-                    fields.principles = stepInput.principles;
-                break;
-            case 'random_entry':
-                if (stepInput.randomStimulus)
-                    fields.randomStimulus = stepInput.randomStimulus;
-                if (stepInput.connections)
-                    fields.connections = stepInput.connections;
-                break;
-            case 'scamper':
-                if (stepInput.scamperAction)
-                    fields.scamperAction = stepInput.scamperAction;
-                if (stepInput.pathImpact)
-                    fields.pathImpact = stepInput.pathImpact;
-                if (stepInput.alternativeSuggestions)
-                    fields.alternativeSuggestions = stepInput.alternativeSuggestions;
-                if (stepInput.modificationHistory)
-                    fields.modificationHistory = stepInput.modificationHistory;
-                break;
-            case 'concept_extraction':
-                if (stepInput.successExample)
-                    fields.successExample = stepInput.successExample;
-                if (stepInput.extractedConcepts)
-                    fields.extractedConcepts = stepInput.extractedConcepts;
-                if (stepInput.abstractedPatterns)
-                    fields.abstractedPatterns = stepInput.abstractedPatterns;
-                if (stepInput.applications)
-                    fields.applications = stepInput.applications;
-                break;
-            case 'yes_and':
-                if (stepInput.initialIdea)
-                    fields.initialIdea = stepInput.initialIdea;
-                if (stepInput.additions)
-                    fields.additions = stepInput.additions;
-                if (stepInput.evaluations)
-                    fields.evaluations = stepInput.evaluations;
-                if (stepInput.synthesis)
-                    fields.synthesis = stepInput.synthesis;
-                break;
-            case 'design_thinking':
-                if (stepInput.designStage)
-                    fields.designStage = stepInput.designStage;
-                if (stepInput.empathyInsights)
-                    fields.empathyInsights = stepInput.empathyInsights;
-                if (stepInput.problemStatement)
-                    fields.problemStatement = stepInput.problemStatement;
-                if (stepInput.ideaList)
-                    fields.ideaList = stepInput.ideaList;
-                if (stepInput.prototypeDescription)
-                    fields.prototypeDescription = stepInput.prototypeDescription;
-                if (stepInput.userFeedback)
-                    fields.userFeedback = stepInput.userFeedback;
-                break;
-            case 'triz':
-                if (stepInput.contradiction)
-                    fields.contradiction = stepInput.contradiction;
-                if (stepInput.inventivePrinciples)
-                    fields.inventivePrinciples = stepInput.inventivePrinciples;
-                if (stepInput.viaNegativaRemovals)
-                    fields.viaNegativaRemovals = stepInput.viaNegativaRemovals;
-                if (stepInput.minimalSolution)
-                    fields.minimalSolution = stepInput.minimalSolution;
-                break;
-            case 'neural_state':
-                if (stepInput.dominantNetwork)
-                    fields.dominantNetwork = stepInput.dominantNetwork;
-                if (stepInput.suppressionDepth !== undefined)
-                    fields.suppressionDepth = stepInput.suppressionDepth;
-                if (stepInput.switchingRhythm)
-                    fields.switchingRhythm = stepInput.switchingRhythm;
-                if (stepInput.integrationInsights)
-                    fields.integrationInsights = stepInput.integrationInsights;
-                break;
-            case 'temporal_work':
-                if (stepInput.temporalLandscape)
-                    fields.temporalLandscape = stepInput.temporalLandscape;
-                if (stepInput.circadianAlignment)
-                    fields.circadianAlignment = stepInput.circadianAlignment;
-                if (stepInput.pressureTransformation)
-                    fields.pressureTransformation = stepInput.pressureTransformation;
-                if (stepInput.asyncSyncBalance)
-                    fields.asyncSyncBalance = stepInput.asyncSyncBalance;
-                if (stepInput.temporalEscapeRoutes)
-                    fields.temporalEscapeRoutes = stepInput.temporalEscapeRoutes;
-                break;
-            case 'cultural_integration':
-                if (stepInput.culturalFrameworks)
-                    fields.culturalFrameworks = stepInput.culturalFrameworks;
-                if (stepInput.bridgeBuilding)
-                    fields.bridgeBuilding = stepInput.bridgeBuilding;
-                if (stepInput.respectfulSynthesis)
-                    fields.respectfulSynthesis = stepInput.respectfulSynthesis;
-                if (stepInput.parallelPaths)
-                    fields.parallelPaths = stepInput.parallelPaths;
-                break;
-            case 'collective_intel':
-                if (stepInput.wisdomSources)
-                    fields.wisdomSources = stepInput.wisdomSources;
-                if (stepInput.emergentPatterns)
-                    fields.emergentPatterns = stepInput.emergentPatterns;
-                if (stepInput.synergyCombinations)
-                    fields.synergyCombinations = stepInput.synergyCombinations;
-                if (stepInput.collectiveInsights)
-                    fields.collectiveInsights = stepInput.collectiveInsights;
-                break;
-            case 'disney_method':
-                if (stepInput.disneyRole)
-                    fields.disneyRole = stepInput.disneyRole;
-                break;
-            case 'nine_windows':
-                if (stepInput.currentCell)
-                    fields.currentCell = stepInput.currentCell;
-                break;
+        // `!== undefined`, not truthiness. Zero is a reading: a `validityScore` of
+        // 0 is the criteria-based analysis concluding the account does not hold up,
+        // and dropping it reports the step as having measured nothing. The switch
+        // had this right for exactly one field — `suppressionDepth`, patched after
+        // it bit someone — and wrong for every other number and boolean.
+        for (const field of ExecutionResponseBuilder.TECHNIQUE_FIELDS[input.technique]) {
+            if (stepInput[field] !== undefined)
+                fields[field] = stepInput[field];
         }
         // Add common risk/adversarial fields if present
         if (stepInput.risks)

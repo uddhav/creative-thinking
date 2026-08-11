@@ -98,16 +98,25 @@ export declare class ExecutionResponseBuilder {
     /**
      * Extract technique-specific fields from input
      *
-     * There were two of these. This one is on the live path and covered six
-     * techniques; a second copy in `ResponseBuilder` covered fourteen, and sat
-     * behind a private `buildCoreResponse` that nothing called — so the eight
-     * techniques only the copy knew about (concept_extraction, yes_and,
-     * design_thinking, triz, neural_state, temporal_work, cultural_integration,
-     * collective_intel) declared fields in the tool schema, accepted them on
-     * input, and got none of them back. The copy's coverage is folded in here
-     * and the copy is gone, so there is one list to keep in step with the schema
-     * rather than two that disagree.
+     * This was a switch: one `case` per technique, one `if (field)` per field.
+     * It knew fourteen techniques, so the other eighteen declared fields in the
+     * tool schema, accepted them on input, and got none of them back — a caller
+     * could not tell whether the server had read them at all. (An earlier round
+     * fixed a narrower version of the same fault: there were two copies of the
+     * switch, one live and knowing six, one dead and knowing fourteen.)
+     *
+     * A table instead, keyed by technique, so `tsc` fails until all thirty-two
+     * have an entry. Four of them read no declared field and echo nothing; that
+     * is recorded as an empty list rather than an absence, because an absence is
+     * what let the eighteen go unnoticed.
+     *
+     * Membership is what each handler actually reads, recorded by proxying the
+     * input object through `validateStep` and `extractInsights` for every step of
+     * every technique, not by reading field names. `nine_windows.currentCell` is
+     * added on top: it is read at `NineWindowsHandler:212` behind a branch the
+     * probe did not reach.
      */
+    private static readonly TECHNIQUE_FIELDS;
     private extractTechniqueSpecificFields;
     /**
      * How completely a step filled in the outputs its technique asks for.
