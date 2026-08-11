@@ -119,4 +119,31 @@ describe('ErgodicityResultAdapter constraintLevel', () => {
       adapter.adapt(result, 1, pathMemory).metrics.constraintLevel
     );
   });
+
+  it('does not report a full option space when it measured nothing', () => {
+    // `optionVelocity || 1.0` reported maximum optionality exactly when the
+    // measure read zero — and it reads zero for thirty-one of the thirty-two
+    // techniques, since only SCAMPER reports options at all. Reverting to the
+    // `||` form passed the whole suite before this assertion existed.
+    const manager = new PathMemoryManager();
+    think(manager, 1);
+    const pathMemory = manager.getPathMemory();
+
+    expect(adapter.adapt(managerResult(pathMemory), 1, pathMemory).metrics.optionSpaceSize).toBe(0);
+  });
+
+  it('reports an absent risk level as absent, not as the middle of the scale', () => {
+    // `overallRisk || 'medium'` invented a severity nothing had measured.
+    const manager = new PathMemoryManager();
+    think(manager, 1);
+    const pathMemory = manager.getPathMemory();
+    const result = {
+      ...managerResult(pathMemory),
+      earlyWarningState: { activeWarnings: [], overallRisk: undefined },
+    } as never;
+
+    expect(adapter.adapt(result, 1, pathMemory).earlyWarningState?.overallSeverity).not.toBe(
+      'medium'
+    );
+  });
 });

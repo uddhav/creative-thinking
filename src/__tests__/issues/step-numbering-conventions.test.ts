@@ -10,9 +10,10 @@
  * block ahead of a 7-step one, local steps 4..7 are also global steps 4..7 —
  * and the resolution guessed from `currentStep` alone, which meant it always
  * chose the global reading. Under plan-wide numbering the handlers then
- * indexed their own step tables with a global number and reported nothing at
- * all for thirty-one of thirty-two techniques; under per-technique numbering
- * the overlapping steps folded back onto earlier ones.
+ * indexed their own step tables with a plan-wide number: a technique of n
+ * steps behind a first block of k loses its last k steps and mislabels the
+ * rest, reporting nothing at all only when k >= n. Under per-technique
+ * numbering the overlapping steps folded back onto earlier ones instead.
  *
  * `totalSteps` is what distinguishes them, and it was not being read.
  */
@@ -139,7 +140,8 @@ describe('both step-numbering conventions reach the same step', () => {
 
   it('does not lose the trailing steps of a longer second technique', async () => {
     // nine_windows has nine steps behind triz's four, so under plan-wide
-    // numbering its steps run 5..13 — every one of them outside its own table.
+    // numbering its steps run 5..13. Steps 5-9 land inside its own table under
+    // the wrong labels; 10-13 fall off the end entirely.
     const insights = await runPlan(['triz', 'nine_windows'], 'plan-wide');
 
     for (let step = 1; step <= 9; step++) {

@@ -185,10 +185,20 @@ describe('the response carries what the ergodicity adapter measured', () => {
 
     const metrics = data.ergodicityMetrics as Record<string, number> | undefined;
     expect(metrics, 'the adapted metrics never reached the caller').toBeDefined();
+    // Values, not shapes. These four were asserted only as `typeof ===
+    // 'number'`, which let every one of them be replaced by a constant zero
+    // with the whole suite still green — the wiring was guarded and the
+    // measurement was not.
     expect(typeof metrics?.constraintLevel).toBe('number');
     expect(typeof metrics?.optionSpaceSize).toBe('number');
     expect(typeof metrics?.pathDivergence).toBe('number');
-    expect(typeof metrics?.currentFlexibility).toBe('number');
+
+    // A session one step in has spent something and no more than everything.
+    expect(metrics?.currentFlexibility).toBeGreaterThan(0);
+    expect(metrics?.currentFlexibility).toBeLessThanOrEqual(1);
+    expect(metrics?.currentFlexibility).toBe(
+      (data.flexibilityScore as number | undefined) ?? metrics?.currentFlexibility
+    );
   });
 
   it('reports them on every step, not only when flexibility has already fallen', async () => {

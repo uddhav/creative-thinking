@@ -100,9 +100,12 @@ export class ErgodicityOrchestrator {
         if (ergodicityResult.earlyWarningState) {
             session.earlyWarningState = ergodicityResult.earlyWarningState;
         }
-        if (ergodicityResult.escapeRecommendation) {
-            session.escapeRecommendation = ergodicityResult.escapeRecommendation;
-        }
+        // Assigned or cleared, never left behind. With no else-branch a protocol
+        // outlived the condition that produced it: once escape fired at step 15,
+        // step 19 reported `recommendedAction: 'pivot'` with the escape protocol
+        // still attached — the response contradicting itself about what the
+        // session should do.
+        session.escapeRecommendation = ergodicityResult.escapeRecommendation;
         // Display flexibility warning if needed
         if (currentFlexibility < 0.4 && process.env.DISABLE_THOUGHT_LOGGING !== 'true') {
             const flexibilityWarning = this.visualFormatter.formatFlexibilityWarning(currentFlexibility, input.alternativeSuggestions);

@@ -157,4 +157,18 @@ describe('a session that is running out of room says so', () => {
     expect(readings.some(r => r.action === 'pivot' || r.action === 'escape')).toBe(false);
     expect(readings.some(r => r.hasEscape)).toBe(false);
   });
+
+  it('withdraws the escape protocol when the reading no longer calls for one', async () => {
+    // The assignment had no else-branch, so a protocol outlived the condition
+    // that produced it. Measured: escape fired at step 15, and step 19 reported
+    // `recommendedAction: 'pivot'` with the escape protocol still attached —
+    // the response contradicting itself about what to do next.
+    const readings = await walk([...COMMITTING, 'six_hats']);
+
+    const contradictory = readings.filter(r => r.hasEscape && r.action !== 'escape');
+    expect(
+      contradictory.map(r => `step ${r.step}: ${r.action} + escape protocol`),
+      'an escape protocol outlived the reading that produced it'
+    ).toEqual([]);
+  });
 });
