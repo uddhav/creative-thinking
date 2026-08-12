@@ -231,6 +231,18 @@ export class ResponseBuilder {
       qualityCoverage: output.qualityCoverage,
       // Add execution graph for DAG-based parallel execution documentation
       executionGraph: output.executionGraph,
+      // Persona and debate mode. `planThinkingSession` builds all four of these
+      // — DebateOrchestrator runs, produces a plan per persona plus a synthesis
+      // plan, and writes them onto the plan object — and this allowlist dropped
+      // every one of them, so a caller asking for a two-persona structured
+      // debate got back an ordinary single-technique plan with no indication
+      // that anything of the sort had been computed. Measured before the fix:
+      // two personas and debateFormat 'structured' returned no debate key, no
+      // parallelPlans, and neither persona's voice in the step guidance.
+      personaContext: output.personaContext,
+      debateOutline: output.debateOutline,
+      parallelPlans: output.parallelPlans,
+      coordinationStrategy: output.coordinationStrategy,
       // Add execution guidance to help LLMs proceed
       nextSteps:
         output.techniques && output.techniques.length > 0 && output.problem
