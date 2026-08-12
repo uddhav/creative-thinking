@@ -742,12 +742,22 @@ function generateSequenceLogic(techniques, integrationStrategy) {
  */
 function generateHistoricalNote(techniques, objectives) {
     const techniquePatterns = {
-        'six_hats,scamper': 'This combination has proven effective for product improvements by balancing systematic analysis with creative modifications',
+        // Keys are the technique ids sorted and comma-joined, because that is how
+        // the lookup builds them. Two of these were written in unsorted order —
+        // 'six_hats,scamper' and 'triz,scamper' — so they could never match and
+        // their notes had never once been emitted.
+        'scamper,six_hats': 'This combination has proven effective for product improvements by balancing systematic analysis with creative modifications',
         'design_thinking,po': 'Pairing empathy with provocation often reveals hidden user needs',
-        'triz,scamper': 'Technical contradiction resolution followed by systematic modification creates robust innovations',
+        'scamper,triz': 'Technical contradiction resolution followed by systematic modification creates robust innovations',
         'random_entry,yes_and': 'Random stimuli enhanced through collaborative building generates unexpected breakthroughs',
     };
-    const key = techniques.sort().join(',');
+    // Copy before sorting. `Array.prototype.sort` is in place, and this array is
+    // the caller's own — so building a lookup key here silently reordered it, and
+    // with it `plan.techniques`, which holds the same reference. The plan's
+    // workflow kept the requested order, so the two disagreed: a caller that
+    // iterated its own array after planning walked the techniques in the wrong
+    // order and had every call after the first block rejected.
+    const key = [...techniques].sort().join(',');
     const pattern = techniquePatterns[key];
     if (pattern) {
         return pattern;
