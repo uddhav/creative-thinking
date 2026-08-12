@@ -18,22 +18,35 @@
  * `totalSteps` is what distinguishes them, and it was not being read.
  */
 
-import { describe, it, expect } from 'vitest';
-import { executeThinkingStep } from '../../layers/execution.js';
-import { planThinkingSession } from '../../layers/planning.js';
-import { SessionManager } from '../../core/SessionManager.js';
-import { TechniqueRegistry } from '../../techniques/TechniqueRegistry.js';
-import { VisualFormatter } from '../../utils/VisualFormatter.js';
-import { MetricsCollector } from '../../core/MetricsCollector.js';
-import { HybridComplexityAnalyzer } from '../../complexity/analyzer.js';
-import { ErgodicityManager } from '../../ergodicity/index.js';
-import type {
-  PlanThinkingSessionInput,
-  ExecuteThinkingStepInput,
-  LateralTechnique,
-} from '../../types/index.js';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { MCPClientTestHelper } from '../utils/MCPClientTestHelper.js';
+import type { LateralTechnique } from '../../types/index.js';
 
 const PROBLEM = 'Shorten the time it takes a new engineer to ship';
+
+// Driven through the real client: this is the convention the skill and the CLI
+// actually send, and what it reports back is a caller-visible fact.
+let client: MCPClientTestHelper;
+
+beforeAll(async () => {
+  client = new MCPClientTestHelper();
+  await client.connect();
+}, 30_000);
+
+afterAll(async () => {
+  await client.disconnect();
+  // Explicit timeout: vitest's hook default is 10s, and tearing down a spawned
+  // server under full-suite load exceeded it. Only ever failed in the whole
+  // run, never when the file was run alone.
+}, 30_000);
+
+function textOf(result: { content: Array<{ type: string }> }): string {
+  const first = result.content[0];
+  if (first?.type !== 'text') {
+    throw new Error(`expected a text content item, got ${first?.type ?? 'nothing'}`);
+  }
+  return (first as { type: 'text'; text: string }).text;
+}
 
 /**
  * Runs a two-technique plan under one numbering convention and returns the
@@ -43,20 +56,26 @@ async function runPlan(
   techniques: LateralTechnique[],
   numbering: 'per-technique' | 'plan-wide'
 ): Promise<string[]> {
-  const sessionManager = new SessionManager();
-  const registry = TechniqueRegistry.getInstance();
-  const plan = planThinkingSession(
-    { problem: PROBLEM, techniques, timeframe: 'thorough' } as PlanThinkingSessionInput,
-    sessionManager,
-    registry
-  );
+  const plan = JSON.parse(
+    textOf(
+      await client.callTool('plan_thinking_session', {
+        problem: PROBLEM,
+        techniques,
+        timeframe: 'thorough',
+      })
+    )
+  ) as { planId: string; workflow: Array<{ technique: LateralTechnique; steps?: unknown[] }> };
 
   // Block lengths come from the plan, not the handler: the plan is what lays
   // the blocks out, and a timeframe can change how many steps it gives each.
-  const blocks = plan.workflow.map(block => ({
-    technique: block.technique,
-    steps: block.steps.length,
-  }));
+  // The response flattens the workflow to one entry per step, so count the
+  // consecutive runs rather than reading a per-block length that is not there.
+  const blocks: Array<{ technique: LateralTechnique; steps: number }> = [];
+  for (const entry of plan.workflow) {
+    const last = blocks.at(-1);
+    if (last && last.technique === entry.technique) last.steps += 1;
+    else blocks.push({ technique: entry.technique, steps: 1 });
+  }
   const planSteps = blocks.reduce((sum, b) => sum + b.steps, 0);
 
   let sessionId: string | undefined;
@@ -67,25 +86,20 @@ async function runPlan(
     for (let local = 1; local <= block.steps; local++) {
       globalStep += 1;
       const isFinal = globalStep === planSteps;
-      const response = await executeThinkingStep(
-        {
-          planId: plan.planId,
-          sessionId,
-          technique: block.technique,
-          problem: PROBLEM,
-          currentStep: numbering === 'per-technique' ? local : globalStep,
-          totalSteps: numbering === 'per-technique' ? block.steps : planSteps,
-          output: `${block.technique} step ${local} recorded a finding. Second sentence.`,
-          nextStepNeeded: !isFinal,
-        } as ExecuteThinkingStepInput,
-        sessionManager,
-        registry,
-        new VisualFormatter(true),
-        new MetricsCollector(),
-        new HybridComplexityAnalyzer(),
-        new ErgodicityManager()
-      );
-      const data = JSON.parse(response.content[0].text) as Record<string, unknown>;
+      const data = JSON.parse(
+        textOf(
+          await client.callTool('execute_thinking_step', {
+            planId: plan.planId,
+            ...(sessionId ? { sessionId } : {}),
+            technique: block.technique,
+            problem: PROBLEM,
+            currentStep: numbering === 'per-technique' ? local : globalStep,
+            totalSteps: numbering === 'per-technique' ? block.steps : planSteps,
+            output: `${block.technique} step ${local} recorded a finding. Second sentence.`,
+            nextStepNeeded: !isFinal,
+          })
+        )
+      ) as Record<string, unknown>;
       sessionId = (data.sessionId as string) ?? sessionId;
       insights = (data.insights as string[]) ?? insights;
     }

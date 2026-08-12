@@ -139,7 +139,10 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await client.disconnect();
-});
+  // Explicit timeout: vitest's hook default is 10s, and tearing down a spawned
+  // server under full-suite load exceeded it. Only ever failed in the whole
+  // run, never when the file was run alone.
+}, 30_000);
 
 function textOf(result: { content: Array<{ type: string }> }): string {
   const first = result.content[0];

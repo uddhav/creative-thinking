@@ -22,21 +22,9 @@
  * from message strings is doing the server's job for it.
  */
 
-import { describe, it, expect } from 'vitest';
-import { executeThinkingStep } from '../../layers/execution.js';
-import { planThinkingSession } from '../../layers/planning.js';
-import { SessionManager } from '../../core/SessionManager.js';
-import { TechniqueRegistry } from '../../techniques/TechniqueRegistry.js';
-import { VisualFormatter } from '../../utils/VisualFormatter.js';
-import { MetricsCollector } from '../../core/MetricsCollector.js';
-import { HybridComplexityAnalyzer } from '../../complexity/analyzer.js';
-import { ErgodicityManager } from '../../ergodicity/index.js';
-import type {
-  PlanThinkingSessionInput,
-  ExecuteThinkingStepInput,
-  LateralTechnique,
-  SessionData,
-} from '../../types/index.js';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { MCPClientTestHelper } from '../utils/MCPClientTestHelper.js';
+import type { LateralTechnique } from '../../types/index.js';
 
 const PROBLEM = 'Retire the legacy pipeline';
 
@@ -45,47 +33,64 @@ interface StepReading {
   risk?: string;
   action?: string;
   hasEscape: boolean;
-  session: SessionData;
+  /** What the caller received for this step, whole. */
+  response: Record<string, unknown>;
+}
+
+let client: MCPClientTestHelper;
+
+beforeAll(async () => {
+  client = new MCPClientTestHelper();
+  await client.connect();
+}, 30_000);
+
+afterAll(async () => {
+  await client.disconnect();
+  // Explicit timeout: vitest's hook default is 10s, and tearing down a spawned
+  // server under full-suite load exceeded it. Only ever failed in the whole
+  // run, never when the file was run alone.
+}, 30_000);
+
+function textOf(result: { content: Array<{ type: string }> }): string {
+  const first = result.content[0];
+  if (first?.type !== 'text') {
+    throw new Error(`expected a text content item, got ${first?.type ?? 'nothing'}`);
+  }
+  return (first as { type: 'text'; text: string }).text;
 }
 
 /** Walks a plan and reports what each response actually carried. */
 async function walk(techniques: LateralTechnique[]): Promise<StepReading[]> {
-  const sessionManager = new SessionManager();
-  const registry = TechniqueRegistry.getInstance();
-  const plan = planThinkingSession(
-    { problem: PROBLEM, techniques, timeframe: 'thorough' } as PlanThinkingSessionInput,
-    sessionManager,
-    registry
-  );
+  const plan = JSON.parse(
+    textOf(
+      await client.callTool('plan_thinking_session', {
+        problem: PROBLEM,
+        techniques,
+        timeframe: 'thorough',
+      })
+    )
+  ) as { planId: string; estimatedSteps: number; workflow: Array<{ technique: LateralTechnique }> };
 
-  const steps = plan.workflow.flatMap(block =>
-    block.steps.map(() => ({ technique: block.technique }))
-  );
-
+  const steps = plan.workflow.map(block => block.technique);
   let sessionId: string | undefined;
   const readings: StepReading[] = [];
 
   for (let index = 0; index < steps.length; index++) {
-    const response = await executeThinkingStep(
-      {
-        planId: plan.planId,
-        sessionId,
-        technique: steps[index].technique,
-        problem: PROBLEM,
-        currentStep: index + 1,
-        totalSteps: steps.length,
-        output: 'A recorded finding for this step, written plainly.',
-        nextStepNeeded: index < steps.length - 1,
-      } as ExecuteThinkingStepInput,
-      sessionManager,
-      registry,
-      new VisualFormatter(true),
-      new MetricsCollector(),
-      new HybridComplexityAnalyzer(),
-      new ErgodicityManager()
-    );
+    const data = JSON.parse(
+      textOf(
+        await client.callTool('execute_thinking_step', {
+          planId: plan.planId,
+          ...(sessionId ? { sessionId } : {}),
+          technique: steps[index],
+          problem: PROBLEM,
+          currentStep: index + 1,
+          totalSteps: plan.estimatedSteps,
+          output: 'A recorded finding for this step, written plainly.',
+          nextStepNeeded: index < steps.length - 1,
+        })
+      )
+    ) as Record<string, unknown>;
 
-    const data = JSON.parse(response.content[0].text) as Record<string, unknown>;
     sessionId = (data.sessionId as string) ?? sessionId;
     const warning = data.earlyWarningState as
       | { overallRisk?: string; recommendedAction?: string }
@@ -96,7 +101,7 @@ async function walk(techniques: LateralTechnique[]): Promise<StepReading[]> {
       risk: warning?.overallRisk,
       action: warning?.recommendedAction,
       hasEscape: data.escapeRecommendation !== undefined,
-      session: sessionManager.getSession(sessionId) as SessionData,
+      response: data,
     });
   }
 
@@ -119,8 +124,14 @@ describe('a session that is running out of room says so', () => {
 
     // Assigned from the raw result, not the adapter, so the readers that have
     // always been complete finally have something to read.
-    expect(readings[0].session.earlyWarningState, 'never assigned before').toBeDefined();
-    expect(readings.at(-1)?.session.escapeRecommendation).toBeDefined();
+    // Read off the response, not the session object. The fields were assigned
+    // to the session all along in one earlier version and still never reached a
+    // caller, because the response allowlist did not carry them.
+    expect(
+      readings.some(r => r.risk !== undefined),
+      'no response carried a warning'
+    ).toBe(true);
+    expect(readings.at(-1)?.hasEscape, 'no escape protocol reached the caller').toBe(true);
   });
 
   it('reports the verdict, not only the evidence', async () => {

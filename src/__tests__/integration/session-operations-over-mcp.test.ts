@@ -86,7 +86,7 @@ describe('session operations over the MCP client', () => {
 
   afterAll(async () => {
     await client.disconnect();
-  });
+  }, 30_000);
 
   it('exports the session in the shape the skill documents', async () => {
     const result = await client.callTool('execute_thinking_step', {

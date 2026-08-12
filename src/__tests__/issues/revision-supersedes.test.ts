@@ -16,6 +16,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { beforeAll, afterAll } from 'vitest';
+import { MCPClientTestHelper } from '../utils/MCPClientTestHelper.js';
 import { executeThinkingStep } from '../../layers/execution.js';
 import { planThinkingSession } from '../../layers/planning.js';
 import { SessionManager } from '../../core/SessionManager.js';
@@ -32,7 +34,46 @@ import type {
 
 const PROBLEM = 'Decide whether to keep the nightly batch job';
 
-async function runWithRevision(): Promise<{ reported: string[]; session: SessionData }> {
+const CALLS: Array<{ step: number; output: string; revision?: boolean }> = [
+  { step: 1, output: 'Set the agenda for the review.' },
+  { step: 2, output: 'The job runs for forty minutes each night.' },
+  { step: 3, output: 'FIRST reading of how the team feels about it.' },
+  { step: 3, output: 'SECOND reading, which supersedes the first.', revision: true },
+  { step: 4, output: 'It does catch reconciliation errors early.' },
+  { step: 5, output: 'Nobody has tested the failure path in a year.' },
+  { step: 6, output: 'A shadow run could tell us what it still catches.' },
+  { step: 7, output: 'Turning it off frees a maintenance window we cannot get back.' },
+];
+
+let client: MCPClientTestHelper;
+
+beforeAll(async () => {
+  client = new MCPClientTestHelper();
+  await client.connect();
+}, 30_000);
+
+afterAll(async () => {
+  await client.disconnect();
+  // Explicit timeout: vitest's hook default is 10s, and tearing down a spawned
+  // server under full-suite load exceeded it. Only ever failed in the whole
+  // run, never when the file was run alone.
+}, 30_000);
+
+function textOf(result: { content: Array<{ type: string }> }): string {
+  const first = result.content[0];
+  if (first?.type !== 'text') {
+    throw new Error(`expected a text content item, got ${first?.type ?? 'nothing'}`);
+  }
+  return (first as { type: 'text'; text: string }).text;
+}
+
+/**
+ * The same sequence, in process, for the two assertions that read session state
+ * rather than the response. `session.insights` and `pathMemory` are not fields
+ * a caller ever sees, so there is nothing for an MCP client to check — running
+ * them through it would prove only that the transport works.
+ */
+async function runWithRevisionInProcess(): Promise<SessionData> {
   const sessionManager = new SessionManager();
   const registry = TechniqueRegistry.getInstance();
   const plan = planThinkingSession(
@@ -45,22 +86,9 @@ async function runWithRevision(): Promise<{ reported: string[]; session: Session
     registry
   );
 
-  const calls: Array<{ step: number; output: string; revision?: boolean }> = [
-    { step: 1, output: 'Set the agenda for the review.' },
-    { step: 2, output: 'The job runs for forty minutes each night.' },
-    { step: 3, output: 'FIRST reading of how the team feels about it.' },
-    { step: 3, output: 'SECOND reading, which supersedes the first.', revision: true },
-    { step: 4, output: 'It does catch reconciliation errors early.' },
-    { step: 5, output: 'Nobody has tested the failure path in a year.' },
-    { step: 6, output: 'A shadow run could tell us what it still catches.' },
-    { step: 7, output: 'Turning it off frees a maintenance window we cannot get back.' },
-  ];
-
   let sessionId: string | undefined;
-  let reported: string[] = [];
-
-  for (let i = 0; i < calls.length; i++) {
-    const call = calls[i];
+  for (let i = 0; i < CALLS.length; i++) {
+    const call = CALLS[i];
     const response = await executeThinkingStep(
       {
         planId: plan.planId,
@@ -70,7 +98,7 @@ async function runWithRevision(): Promise<{ reported: string[]; session: Session
         currentStep: call.step,
         totalSteps: 7,
         output: call.output,
-        nextStepNeeded: i < calls.length - 1,
+        nextStepNeeded: i < CALLS.length - 1,
         ...(call.revision ? { isRevision: true, revisesStep: call.step } : {}),
       } as ExecuteThinkingStepInput,
       sessionManager,
@@ -82,10 +110,46 @@ async function runWithRevision(): Promise<{ reported: string[]; session: Session
     );
     const data = JSON.parse(response.content[0].text) as Record<string, unknown>;
     sessionId = (data.sessionId as string) ?? sessionId;
+  }
+  return sessionManager.getSession(sessionId as string) as SessionData;
+}
+
+async function runWithRevision(): Promise<{ reported: string[] }> {
+  const plan = JSON.parse(
+    textOf(
+      await client.callTool('plan_thinking_session', {
+        problem: PROBLEM,
+        techniques: ['six_hats'],
+        timeframe: 'thorough',
+      })
+    )
+  ) as { planId: string };
+
+  let sessionId: string | undefined;
+  let reported: string[] = [];
+
+  for (let i = 0; i < CALLS.length; i++) {
+    const call = CALLS[i];
+    const data = JSON.parse(
+      textOf(
+        await client.callTool('execute_thinking_step', {
+          planId: plan.planId,
+          ...(sessionId ? { sessionId } : {}),
+          technique: 'six_hats',
+          problem: PROBLEM,
+          currentStep: call.step,
+          totalSteps: 7,
+          output: call.output,
+          nextStepNeeded: i < CALLS.length - 1,
+          ...(call.revision ? { isRevision: true, revisesStep: call.step } : {}),
+        })
+      )
+    ) as Record<string, unknown>;
+    sessionId = (data.sessionId as string) ?? sessionId;
     reported = (data.insights as string[]) ?? reported;
   }
 
-  return { reported, session: sessionManager.getSession(sessionId as string) as SessionData };
+  return { reported };
 }
 
 describe('a revision supersedes the step it revises', () => {
@@ -106,7 +170,7 @@ describe('a revision supersedes the step it revises', () => {
   });
 
   it('leaves no superseded text behind in the session', async () => {
-    const { session } = await runWithRevision();
+    const session = await runWithRevisionInProcess();
 
     // session.insights is what the metrics, the memory outputs and the export
     // read. Appending to it kept the replaced reading alive there even once
@@ -127,7 +191,7 @@ describe('a revision supersedes the step it revises', () => {
     // This asserts the real call site: the flag has to survive
     // `executeThinkingStep` -> `calculateImpact` -> `recordThinkingStep` ->
     // `recordPathEvent`, not merely be storable on the event type.
-    const { session } = await runWithRevision();
+    const session = await runWithRevisionInProcess();
     const pathHistory = session.pathMemory?.pathHistory ?? [];
 
     expect(pathHistory).toHaveLength(8);

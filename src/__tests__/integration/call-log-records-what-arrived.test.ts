@@ -53,7 +53,7 @@ describe('the server records the calls it was given', () => {
   afterAll(async () => {
     await client.disconnect();
     rmSync(dir, { recursive: true, force: true });
-  });
+  }, 30_000);
 
   function logged(): LoggedCall[] {
     if (!existsSync(logPath)) return [];
