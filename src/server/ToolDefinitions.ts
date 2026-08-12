@@ -221,9 +221,11 @@ export const EXECUTE_THINKING_STEP_TOOL: Tool = {
         enum: ['blue', 'white', 'red', 'yellow', 'black', 'green', 'purple'],
         description:
           'Which hat this step wears, in order blue, white, red, yellow, black, green, purple. ' +
-          'Purple is the seventh step (path dependency and ruin risk) and was missing from this ' +
-          'enum, so step 7 could not be labelled. Omitting hatColor discards every insight the ' +
-          'technique would have produced, including the black hat risks.',
+          "It must be both a real hat and this step's own hat: an unknown value is refused, and " +
+          'so is the right hat on the wrong step. Purple is the seventh step (path dependency ' +
+          'and ruin risk) and was missing from this enum, so step 7 could not be labelled even ' +
+          'though the handler accepted it. Omitting hatColor costs the step its label, and an ' +
+          'unlabelled hat cannot be attributed in the report.',
       },
       // PO specific
       provocation: { type: 'string' },
