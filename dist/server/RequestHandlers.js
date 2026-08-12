@@ -161,6 +161,15 @@ export class RequestHandlers {
                 }
                 break;
             case 'execute_thinking_step': {
+                // A session operation is the tool's other shape and carries none of the
+                // thinking-step fields. This check ran unconditionally, so every
+                // save / load / list / delete / export call was refused here — before
+                // `processLateralThinking` ever reached the dispatch that handles them.
+                // Declaring the mode in the schema was not enough: the `oneOf` said the
+                // call was legal and this said it was not, and this is the one the
+                // caller actually meets.
+                if (params.sessionOperation)
+                    break;
                 const missingParams = [];
                 if (!params.planId)
                     missingParams.push('planId (from plan_thinking_session)');
@@ -383,8 +392,21 @@ export class RequestHandlers {
             }
             // Record the tool call for workflow tracking
             workflowGuard.recordCall(name, args);
-            // Check for workflow violations before executing
-            const violation = workflowGuard.checkWorkflowViolation(name, args);
+            // Check for workflow violations before executing.
+            //
+            // A session operation is not a step in the discover -> plan -> execute
+            // workflow; it acts on a session that already exists. Running the
+            // ordering guard over it asked whether discovery had preceded an export
+            // and refused the call when the answer was no — a second gate behind the
+            // required-field one, and just as fatal. Both had to go for the mode the
+            // schema advertises to be reachable at all.
+            const isSessionOperation = name === 'execute_thinking_step' &&
+                typeof args === 'object' &&
+                args !== null &&
+                'sessionOperation' in args;
+            const violation = isSessionOperation
+                ? null
+                : workflowGuard.checkWorkflowViolation(name, args);
             if (violation) {
                 const violationError = workflowGuard.getViolationError(violation);
                 const enhancedError = violationError;
