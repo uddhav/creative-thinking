@@ -227,9 +227,20 @@ export class SessionCompletionTracker {
      */
     findSkippedSteps(techniqueSteps, completedStepNumbers, completedStepsForTechnique) {
         const skippedSteps = [];
-        // Only identify skipped steps if some steps were completed
+        // A step is skipped when the session has gone PAST it without running it.
+        // A step ahead of the furthest one reached has not been skipped; it has not
+        // been reached.
+        //
+        // Every incomplete step used to count, so step 1 of a seven-step technique
+        // reported the other six as skipped and the response told the caller
+        // "Black Hat thinking skipped - critical risks may be overlooked" before
+        // the session had any opportunity to run it. That is the same shape as the
+        // completion nag removed earlier: true of every session at that point
+        // whatever its quality, and so carrying no information while training the
+        // reader to discount warnings that do.
         if (completedStepsForTechnique > 0) {
-            for (let i = 1; i <= techniqueSteps; i++) {
+            const furthestReached = Math.max(...completedStepNumbers);
+            for (let i = 1; i < furthestReached; i++) {
                 if (!completedStepNumbers.has(i)) {
                     skippedSteps.push(i);
                 }

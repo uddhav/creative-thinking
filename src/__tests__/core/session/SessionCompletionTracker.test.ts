@@ -238,7 +238,12 @@ describe('SessionCompletionTracker', () => {
         const metadata = tracker.calculateCompletionMetadata(session, plan);
 
         const sixHatsStatus = metadata.techniqueStatuses.find(s => s.technique === 'six_hats');
-        expect(sixHatsStatus?.skippedSteps).toEqual([2, 4, 6, 7]);
+        // 2 and 4 were passed over; 6 and 7 are ahead of the furthest step
+        // reached and have not been skipped, they have not been reached. The
+        // old reading counted every incomplete step, which is why step 1 of a
+        // seven-step technique told the caller Black Hat had been skipped
+        // before the session could possibly have run it.
+        expect(sixHatsStatus?.skippedSteps).toEqual([2, 4]);
         expect(sixHatsStatus?.completedSteps).toBe(3);
       });
     });
