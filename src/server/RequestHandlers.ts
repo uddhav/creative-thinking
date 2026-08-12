@@ -12,6 +12,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import type { LateralThinkingServer } from '../index.js';
 import { ALL_LATERAL_TECHNIQUES } from '../types/index.js';
+import { appendFileSync } from 'node:fs';
 import { workflowGuard } from '../core/WorkflowGuard.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 import { getAllTools } from './ToolDefinitions.js';
@@ -467,6 +468,30 @@ export class RequestHandlers {
   /**
    * Process a single tool call
    */
+  /**
+   * Append every incoming tool call to `CT_CALL_LOG`, if it is set.
+   *
+   * Off unless the variable is present, so it costs a single undefined check in
+   * normal operation. It exists because a record of what was called has to be
+   * written by the thing being called: an agent asked to log its own calls
+   * writes what it believes it sent, which is the same evidence as its prose
+   * and fails in the same way. This is the only version of that record that can
+   * contradict the caller.
+   *
+   * Failures are swallowed deliberately. A logging path that can take the
+   * server down is worse than no logging, and stderr is the only place it could
+   * complain to anyway.
+   */
+  private recordCallToLog(name: string, args: unknown): void {
+    const path = process.env.CT_CALL_LOG;
+    if (!path) return;
+    try {
+      appendFileSync(path, `${JSON.stringify({ tool: name, arguments: args })}\n`);
+    } catch {
+      /* never let logging break the call it is observing */
+    }
+  }
+
   private async processSingleCall(request: unknown): Promise<Record<string, unknown>> {
     this.activeRequests++;
 
@@ -475,6 +500,11 @@ export class RequestHandlers {
       const params = (request as Record<string, unknown>).params as Record<string, unknown>;
       const name = params.name as string;
       const args = params.arguments;
+
+      // Before any validation, so a refused call is recorded as having been
+      // attempted — a caller that sent the wrong shape is exactly what this is
+      // for.
+      this.recordCallToLog(name, args);
 
       // Pre-validate required parameters
       const validationError = this.validateRequiredParameters(name, args);

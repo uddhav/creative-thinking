@@ -476,8 +476,14 @@ Process.
   `LateralThinkingServer` directly skips the first two entirely. Three defects on this path —
   session operations refused before dispatch, `isError` dropped from every layer-built error, debate
   mode stripped by the response allowlist — all passed their guards because the guards entered below
-  where the fault was. Anything asserting what the _caller receives_ belongs in an integration test
-  driving `MCPClientTestHelper`.
+  where the fault was.
+
+  **So: if an assertion is about what a caller receives, write it as an integration test driving
+  `MCPClientTestHelper` from the start** — not as a unit test to be promoted later, because the
+  promotion only ever happens after something has already gone wrong. Share one client per file
+  rather than per test: the helper spawns a server, and a session created by one test is visible to
+  the next, which is usually what you want and occasionally what bites you.
+
 - **Never log to stdout** — it breaks MCP protocol
 - **Never add a 4th tool** — all functionality fits within the three-tool workflow
 - Do what has been asked; nothing more, nothing less
