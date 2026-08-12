@@ -16,34 +16,48 @@
  * nothing at all.
  */
 
-import { describe, it, expect } from 'vitest';
-import { executeThinkingStep } from '../../layers/execution.js';
-import { planThinkingSession } from '../../layers/planning.js';
-import { SessionManager } from '../../core/SessionManager.js';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { MCPClientTestHelper } from '../utils/MCPClientTestHelper.js';
 import { TechniqueRegistry } from '../../techniques/TechniqueRegistry.js';
-import { VisualFormatter } from '../../utils/VisualFormatter.js';
-import { MetricsCollector } from '../../core/MetricsCollector.js';
-import { HybridComplexityAnalyzer } from '../../complexity/analyzer.js';
-import { ErgodicityManager } from '../../ergodicity/index.js';
-import type { PlanThinkingSessionInput, ExecuteThinkingStepInput } from '../../types/index.js';
 
 const PROBLEM = 'Nobody upgrades to the paid tier';
 
-async function runStep1(roryMode: boolean | undefined): Promise<string> {
-  const sessionManager = new SessionManager();
-  const registry = TechniqueRegistry.getInstance();
-  const plan = planThinkingSession(
-    {
-      problem: PROBLEM,
-      techniques: ['random_entry'],
-      timeframe: 'quick',
-    } as PlanThinkingSessionInput,
-    sessionManager,
-    registry
-  );
+// The guidance a caller reads is the subject of the first describe, so it runs
+// through the real client. The second describe calls `extractInsights` directly
+// and stays there: it is handler internals, and nothing in the request path can
+// change them.
+let client: MCPClientTestHelper;
 
-  const response = await executeThinkingStep(
-    {
+beforeAll(async () => {
+  client = new MCPClientTestHelper();
+  await client.connect();
+}, 30_000);
+
+afterAll(async () => {
+  await client.disconnect();
+}, 30_000);
+
+function textOf(result: { content: Array<{ type: string }> }): string {
+  const first = result.content[0];
+  if (first?.type !== 'text') {
+    throw new Error(`expected a text content item, got ${first?.type ?? 'nothing'}`);
+  }
+  return (first as { type: 'text'; text: string }).text;
+}
+
+async function runStep1(roryMode: boolean | undefined): Promise<string> {
+  const plan = JSON.parse(
+    textOf(
+      await client.callTool('plan_thinking_session', {
+        problem: PROBLEM,
+        techniques: ['random_entry'],
+        timeframe: 'quick',
+      })
+    )
+  ) as { planId: string };
+
+  return textOf(
+    await client.callTool('execute_thinking_step', {
       planId: plan.planId,
       technique: 'random_entry',
       problem: PROBLEM,
@@ -52,16 +66,8 @@ async function runStep1(roryMode: boolean | undefined): Promise<string> {
       output: 'Picked a stimulus without looking at the problem.',
       nextStepNeeded: true,
       ...(roryMode === undefined ? {} : { roryMode }),
-    } as ExecuteThinkingStepInput,
-    sessionManager,
-    registry,
-    new VisualFormatter(true),
-    new MetricsCollector(),
-    new HybridComplexityAnalyzer(),
-    new ErgodicityManager()
+    })
   );
-
-  return response.content[0].text;
 }
 
 describe('Rory Mode reaches the guidance', () => {

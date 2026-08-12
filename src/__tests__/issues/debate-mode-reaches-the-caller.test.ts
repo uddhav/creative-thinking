@@ -20,12 +20,8 @@
  * describes, and silently wasn't.
  */
 
-import { describe, it, expect } from 'vitest';
-import { planThinkingSession } from '../../layers/planning.js';
-import { SessionManager } from '../../core/SessionManager.js';
-import { TechniqueRegistry } from '../../techniques/TechniqueRegistry.js';
-import { ResponseBuilder } from '../../core/ResponseBuilder.js';
-import type { PlanThinkingSessionInput } from '../../types/index.js';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { MCPClientTestHelper } from '../utils/MCPClientTestHelper.js';
 
 const PROBLEM = 'Accept the counteroffer or leave';
 
@@ -39,31 +35,52 @@ interface DebateResponse {
   coordinationStrategy?: unknown;
 }
 
-/** Plans a two-persona debate and returns what the caller actually receives. */
-function debatePlan(): DebateResponse {
-  const sessionManager = new SessionManager();
-  const registry = TechniqueRegistry.getInstance();
-  const output = planThinkingSession(
-    {
-      problem: PROBLEM,
-      techniques: ['six_hats'],
-      timeframe: 'thorough',
-      personas: ['nassim_taleb', 'rory_sutherland'],
-      debateFormat: 'structured',
-    } as PlanThinkingSessionInput,
-    sessionManager,
-    registry
-  );
+let client: MCPClientTestHelper;
 
-  // Through the response builder, which is where the fields were lost —
-  // asserting on the plan object would have passed throughout the defect.
-  const response = new ResponseBuilder().buildPlanningResponse(output);
-  return JSON.parse(response.content[0].text) as DebateResponse;
+beforeAll(async () => {
+  client = new MCPClientTestHelper();
+  await client.connect();
+}, 30_000);
+
+afterAll(async () => {
+  await client.disconnect();
+}, 30_000);
+
+function textOf(result: { content: Array<{ type: string }> }): string {
+  const first = result.content[0];
+  if (first?.type !== 'text') {
+    throw new Error(`expected a text content item, got ${first?.type ?? 'nothing'}`);
+  }
+  return (first as { type: 'text'; text: string }).text;
+}
+
+/**
+ * Plans a two-persona debate and returns what the caller actually receives.
+ *
+ * Through the real client rather than a hand-built `ResponseBuilder`. The
+ * fields were lost in the response allowlist, so asserting on the plan object
+ * would have passed throughout the defect — and constructing the builder here
+ * would assert against a reconstruction of the response path rather than the
+ * path itself. `personas` and `debateFormat` also never meet the planning
+ * validator that way.
+ */
+async function debatePlan(): Promise<DebateResponse> {
+  return JSON.parse(
+    textOf(
+      await client.callTool('plan_thinking_session', {
+        problem: PROBLEM,
+        techniques: ['six_hats'],
+        timeframe: 'thorough',
+        personas: ['nassim_taleb', 'rory_sutherland'],
+        debateFormat: 'structured',
+      })
+    )
+  ) as DebateResponse;
 }
 
 describe('a two-persona debate arrives at the caller', () => {
-  it('names both personas and says it is a debate', () => {
-    const data = debatePlan();
+  it('names both personas and says it is a debate', async () => {
+    const data = await debatePlan();
 
     expect(data.personaContext, 'personaContext never left the server').toBeDefined();
     expect(data.personaContext?.activePersonas?.map(p => p.id)).toEqual([
@@ -73,8 +90,8 @@ describe('a two-persona debate arrives at the caller', () => {
     expect(data.personaContext?.isDebateMode).toBe(true);
   });
 
-  it('returns a plan per persona plus a synthesis plan', () => {
-    const data = debatePlan();
+  it('returns a plan per persona plus a synthesis plan', async () => {
+    const data = await debatePlan();
 
     // Two voices and the thing that reconciles them. Without the synthesis
     // plan a debate is two monologues.
@@ -98,8 +115,8 @@ describe('a two-persona debate arrives at the caller', () => {
     expect(returned.has(outline?.synthesisPlanId ?? '')).toBe(true);
   });
 
-  it('gives each persona plan that persona to speak in', () => {
-    const data = debatePlan();
+  it('gives each persona plan that persona to speak in', async () => {
+    const data = await debatePlan();
     const [taleb, rory] = data.parallelPlans ?? [];
 
     // The guidance has to differ, or the parallel plans are three copies and
@@ -108,26 +125,22 @@ describe('a two-persona debate arrives at the caller', () => {
     expect(JSON.stringify(rory)).toMatch(/rory|sutherland|perceiv|psycholog|behaviou?ral/i);
   });
 
-  it('tells the caller how to run them', () => {
-    const data = debatePlan();
+  it('tells the caller how to run them', async () => {
+    const data = await debatePlan();
 
     expect(data.coordinationStrategy, 'no instruction for sequencing the debate').toBeDefined();
   });
 
-  it('says nothing about debates when only one persona is asked for', () => {
-    const sessionManager = new SessionManager();
-    const output = planThinkingSession(
-      {
-        problem: PROBLEM,
-        techniques: ['six_hats'],
-        timeframe: 'thorough',
-        persona: 'nassim_taleb',
-      } as PlanThinkingSessionInput,
-      sessionManager,
-      TechniqueRegistry.getInstance()
-    );
+  it('says nothing about debates when only one persona is asked for', async () => {
     const data = JSON.parse(
-      new ResponseBuilder().buildPlanningResponse(output).content[0].text
+      textOf(
+        await client.callTool('plan_thinking_session', {
+          problem: PROBLEM,
+          techniques: ['six_hats'],
+          timeframe: 'thorough',
+          persona: 'nassim_taleb',
+        })
+      )
     ) as DebateResponse;
 
     // The control. Surfacing these fields must not mean inventing a debate

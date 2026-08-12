@@ -20,9 +20,23 @@
  *
  * The sort exists only to key a table of canned "these techniques go well
  * together" strings.
+ *
+ * This file keeps the in-process entry point, deliberately. An MCP client
+ * cannot observe the mutation at all — arguments are serialised on the way in,
+ * so the caller's array is a copy by the time the server sees it, and
+ * `plan.techniques` is not among the fields the response returns. The victims
+ * are in-process callers: the CLI, and anything embedding the server directly.
+ *
+ * The last test drives the real client, and it does NOT guard this defect —
+ * measured, not assumed. With the mutation restored it still passes, because
+ * `workflow` is built before the sort runs and is therefore correct in both
+ * versions. It is kept as a plain contract check on workflow ordering, and
+ * labelled as such, because a test sitting in this file could otherwise be read
+ * as covering the mutation when nothing at the client's level can.
  */
 
 import { describe, it, expect } from 'vitest';
+import { MCPClientTestHelper } from '../utils/MCPClientTestHelper.js';
 import { planThinkingSession } from '../../layers/planning.js';
 import { SessionManager } from '../../core/SessionManager.js';
 import { TechniqueRegistry } from '../../techniques/TechniqueRegistry.js';
@@ -92,4 +106,32 @@ describe('planning leaves the caller its own array', () => {
 
     expect(mine).toEqual(['triz', 'scamper', 'po']);
   });
+
+  it('gives the caller a workflow in the order it asked for', async () => {
+    // NOT a guard for the mutation above: kill-checked, and it passes with the
+    // in-place sort restored, because `workflow` is assembled before the sort
+    // runs. It checks the ordering contract itself, which nothing else does at
+    // the client's level.
+    const client = new MCPClientTestHelper();
+    try {
+      await client.connect();
+      const result = await client.callTool('plan_thinking_session', {
+        problem: PROBLEM,
+        techniques: ['triz', 'six_hats'],
+        timeframe: 'thorough',
+      });
+      const first = result.content[0];
+      const data = JSON.parse(first.type === 'text' ? (first as { text: string }).text : '{}') as {
+        workflow?: Array<{ technique: string }>;
+      };
+
+      const order = [...new Set((data.workflow ?? []).map(step => step.technique))];
+      expect(order, 'the plan reordered the techniques the caller asked for').toEqual([
+        'triz',
+        'six_hats',
+      ]);
+    } finally {
+      await client.disconnect();
+    }
+  }, 30_000);
 });

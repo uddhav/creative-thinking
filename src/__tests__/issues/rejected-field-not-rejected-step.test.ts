@@ -12,31 +12,48 @@
  * the handler again without each field in turn.
  */
 
-import { describe, it, expect } from 'vitest';
-import { executeThinkingStep } from '../../layers/execution.js';
-import { planThinkingSession } from '../../layers/planning.js';
-import { SessionManager } from '../../core/SessionManager.js';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { MCPClientTestHelper } from '../utils/MCPClientTestHelper.js';
 import { TechniqueRegistry } from '../../techniques/TechniqueRegistry.js';
-import { VisualFormatter } from '../../utils/VisualFormatter.js';
-import { MetricsCollector } from '../../core/MetricsCollector.js';
-import { HybridComplexityAnalyzer } from '../../complexity/analyzer.js';
-import { ErgodicityManager } from '../../ergodicity/index.js';
-import type { PlanThinkingSessionInput, ExecuteThinkingStepInput } from '../../types/index.js';
+import type { ExecuteThinkingStepInput } from '../../types/index.js';
 
+// Through the real client, because the message a caller actually reads is the
+// thing under test. `RequestHandlers` has refusal text of its own that fires
+// before dispatch, so a test entering below it can assert wording the caller
+// never sees.
+let client: MCPClientTestHelper;
+
+beforeAll(async () => {
+  client = new MCPClientTestHelper();
+  await client.connect();
+}, 30_000);
+
+afterAll(async () => {
+  await client.disconnect();
+}, 30_000);
+
+/**
+ * Returns the text of the response, refusal or not. `callTool` rejects when the
+ * response carries `isError`, and a refusal is exactly what most of these
+ * assert, so the throw is caught and its message read instead.
+ */
 async function runStep(overrides: Partial<ExecuteThinkingStepInput>): Promise<string> {
-  const sessionManager = new SessionManager();
-  const registry = TechniqueRegistry.getInstance();
   const problem = 'Where is nobody competing?';
   const technique = overrides.technique ?? 'reverse_benchmarking';
+  const registry = TechniqueRegistry.getInstance();
 
-  const plan = planThinkingSession(
-    { problem, techniques: [technique], timeframe: 'quick' } as PlanThinkingSessionInput,
-    sessionManager,
-    registry
-  );
+  const planResult = await client.callTool('plan_thinking_session', {
+    problem,
+    techniques: [technique],
+    timeframe: 'quick',
+  });
+  const planText = planResult.content[0];
+  const plan = JSON.parse(
+    planText.type === 'text' ? (planText as { text: string }).text : '{}'
+  ) as { planId: string };
 
-  const response = await executeThinkingStep(
-    {
+  try {
+    const result = await client.callTool('execute_thinking_step', {
       planId: plan.planId,
       technique,
       problem,
@@ -45,16 +62,12 @@ async function runStep(overrides: Partial<ExecuteThinkingStepInput>): Promise<st
       output: 'Overnight support and self-serve onboarding.',
       nextStepNeeded: true,
       ...overrides,
-    } as ExecuteThinkingStepInput,
-    sessionManager,
-    registry,
-    new VisualFormatter(true),
-    new MetricsCollector(),
-    new HybridComplexityAnalyzer(),
-    new ErgodicityManager()
-  );
-
-  return response.content[0].text;
+    });
+    const first = result.content[0];
+    return first.type === 'text' ? (first as { text: string }).text : '';
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
 }
 
 describe('a refused field is reported as a field', () => {

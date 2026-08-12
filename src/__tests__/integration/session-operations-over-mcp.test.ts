@@ -189,4 +189,68 @@ describe('session operations over the MCP client', () => {
     expect(body, 'expected the layer to refuse this step').toMatch(/rejected the data|E102/);
     expect(flagged, 'a layer-rejected step reached the client flagged as success').toBe(true);
   }, 30_000);
+
+  describe('an operation that cannot reach persistence says which case it is', () => {
+    // Moved here from `issues/session-operations-are-discoverable.test.ts`,
+    // which asserted these against `LateralThinkingServer` directly and so
+    // never met the two gates that made the whole mode unreachable. The
+    // behaviour is about what a caller receives, so it is checked where a
+    // caller stands.
+    //
+    // These run against the shared client, which is started WITHOUT
+    // PERSISTENCE_TYPE — the default. Degrading gracefully here is deliberate:
+    // three tests in `validation.test.ts` hold both operations to returning a
+    // success. Degrading *silently* was the fault.
+    it.each([
+      ['list', { sessionOperation: 'list', listOptions: { limit: 5 } }],
+      [
+        'delete',
+        { sessionOperation: 'delete', deleteOptions: { sessionId: 'nope', confirm: true } },
+      ],
+    ])(
+      '%s still succeeds, and flags that there was nothing to reach',
+      async (operation, input) => {
+        const result = await client.callTool('execute_thinking_step', input);
+
+        expect(result.isError, `${operation} stopped degrading gracefully`).not.toBe(true);
+
+        const payload = JSON.parse(textOf(result)) as {
+          result?: { persistenceAvailable?: boolean };
+        };
+        expect(
+          payload.result?.persistenceAvailable,
+          `${operation} did not say whether it could reach persistence at all`
+        ).toBe(false);
+      },
+      30_000
+    );
+
+    it('does not claim to have deleted anything it could not reach', async () => {
+      const text = textOf(
+        await client.callTool('execute_thinking_step', {
+          sessionOperation: 'delete',
+          deleteOptions: { sessionId: 'never-existed', confirm: true },
+        })
+      );
+
+      expect(text).not.toContain('Session deleted successfully');
+      expect(text).toContain('nothing was deleted');
+    }, 30_000);
+
+    it('distinguishes an empty list from an unreachable one', async () => {
+      const text = textOf(
+        await client.callTool('execute_thinking_step', {
+          sessionOperation: 'list',
+          listOptions: {},
+        })
+      );
+      // Parsed, not raw — the note's own quotes are escaped in the JSON.
+      const payload = JSON.parse(text) as { result?: { note?: string; sessions?: unknown[] } };
+
+      // The whole defect in one assertion: an empty array meant both "I looked
+      // and found none" and "I cannot look", and nothing told them apart.
+      expect(payload.result?.sessions).toEqual([]);
+      expect(payload.result?.note).toContain('means "cannot look", not "none found"');
+    }, 30_000);
+  });
 });
