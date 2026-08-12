@@ -553,10 +553,21 @@ export class RequestHandlers {
           });
       }
 
-      // Ensure we always return a properly formatted response
-      const response = {
+      // Ensure we always return a properly formatted response.
+      //
+      // `isError` has to survive. It was dropped here, and only here, so the
+      // refusals raised at this gate kept theirs while every error built by the
+      // layers or ResponseBuilder lost it — an MCP client was told the call
+      // succeeded and handed a body whose only content was an error object.
+      // Measured: a step rejected with E102 arrived with no `isError` at all,
+      // while a step rejected for missing parameters arrived with
+      // `isError: true`. Same tool, same client, opposite signals.
+      const response: { content: unknown; isError?: boolean } = {
         content: result.content,
       };
+      if (result.isError) {
+        response.isError = true;
+      }
 
       // Validate response structure before sending
       if (!response.content || !Array.isArray(response.content)) {
