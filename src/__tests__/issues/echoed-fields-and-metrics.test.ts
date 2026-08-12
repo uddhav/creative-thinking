@@ -14,65 +14,69 @@
  * result and dropped `metrics` — constraintLevel, optionSpaceSize and
  * pathDivergence, measured on every step and reported to nobody.
  *
- * These guards run the real three-layer flow, because that is the only path
- * either defect lived on: both had unit coverage against the copy that was
- * never called, which is how they survived.
+ * These guards drive the real MCP client, because that is the only path either
+ * defect lived on: both had unit coverage against the copy that was never
+ * called, which is how they survived. A later round found the same shape twice
+ * more — `isError` stripped from every layer-built error, and debate mode
+ * dropped by the planning allowlist — both invisible to a test that enters
+ * below `RequestHandlers`.
  */
 
-import { describe, it, expect } from 'vitest';
-import { executeThinkingStep } from '../../layers/execution.js';
-import { planThinkingSession } from '../../layers/planning.js';
-import { SessionManager } from '../../core/SessionManager.js';
-import { TechniqueRegistry } from '../../techniques/TechniqueRegistry.js';
-import { VisualFormatter } from '../../utils/VisualFormatter.js';
-import { MetricsCollector } from '../../core/MetricsCollector.js';
-import { HybridComplexityAnalyzer } from '../../complexity/analyzer.js';
-import { ErgodicityManager } from '../../ergodicity/index.js';
-import type {
-  PlanThinkingSessionInput,
-  ExecuteThinkingStepInput,
-  LateralTechnique,
-} from '../../types/index.js';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { MCPClientTestHelper } from '../utils/MCPClientTestHelper.js';
+import type { LateralTechnique } from '../../types/index.js';
 
 const PROBLEM = 'Cut the release train from monthly to weekly';
+
+/** One client for the file; the helper spawns a server per connection. */
+let client: MCPClientTestHelper;
+
+beforeAll(async () => {
+  client = new MCPClientTestHelper();
+  await client.connect();
+}, 30_000);
+
+afterAll(async () => {
+  await client.disconnect();
+});
+
+function textOf(result: { content: Array<{ type: string }> }): string {
+  const first = result.content[0];
+  if (first?.type !== 'text') {
+    throw new Error(`expected a text content item, got ${first?.type ?? 'nothing'}`);
+  }
+  return (first as { type: 'text'; text: string }).text;
+}
 
 /** Runs step 1 of a single-technique plan and returns what the caller got. */
 async function firstStep(
   technique: LateralTechnique,
   fields: Record<string, unknown>
 ): Promise<Record<string, unknown>> {
-  const sessionManager = new SessionManager();
-  const registry = TechniqueRegistry.getInstance();
-  const plan = planThinkingSession(
-    {
-      problem: PROBLEM,
-      techniques: [technique],
-      timeframe: 'thorough',
-    } as PlanThinkingSessionInput,
-    sessionManager,
-    registry
-  );
+  const plan = JSON.parse(
+    textOf(
+      await client.callTool('plan_thinking_session', {
+        problem: PROBLEM,
+        techniques: [technique],
+        timeframe: 'thorough',
+      })
+    )
+  ) as { planId: string; estimatedSteps: number };
 
-  const response = await executeThinkingStep(
-    {
-      planId: plan.planId,
-      technique,
-      problem: PROBLEM,
-      currentStep: 1,
-      totalSteps: plan.totalSteps,
-      output: 'A recorded finding for this step, written plainly.',
-      nextStepNeeded: true,
-      ...fields,
-    } as ExecuteThinkingStepInput,
-    sessionManager,
-    registry,
-    new VisualFormatter(true),
-    new MetricsCollector(),
-    new HybridComplexityAnalyzer(),
-    new ErgodicityManager()
-  );
-
-  return JSON.parse(response.content[0].text) as Record<string, unknown>;
+  return JSON.parse(
+    textOf(
+      await client.callTool('execute_thinking_step', {
+        planId: plan.planId,
+        technique,
+        problem: PROBLEM,
+        currentStep: 1,
+        totalSteps: plan.estimatedSteps,
+        output: 'A recorded finding for this step, written plainly and at length.',
+        nextStepNeeded: true,
+        ...fields,
+      })
+    )
+  ) as Record<string, unknown>;
 }
 
 describe('a technique gets its own declared fields back', () => {

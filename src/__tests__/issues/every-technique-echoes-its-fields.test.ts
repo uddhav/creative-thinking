@@ -12,7 +12,14 @@
  * The switch is a table now, so `tsc` refuses to build until all thirty-two
  * techniques have an entry. That catches a technique added without an echo. It
  * does not catch a technique whose entry is wrong, which is what these guards
- * are for: they run the real three-layer flow and check the response.
+ * are for.
+ *
+ * They drive the real MCP client. An earlier version called the layer function
+ * directly and so never met `RequestHandlers`, which holds its own
+ * technique-field validation and can refuse a call before an echo is ever
+ * built. Three defects on this branch passed their guards for exactly that
+ * reason, so an assertion about what the caller receives is written at the
+ * caller's level.
  *
  * Second defect, same function: every field was gated on truthiness. A
  * `validityScore` of 0 — criteria-based analysis concluding the account does
@@ -21,22 +28,11 @@
  * bit someone; the other hundred-odd had not.
  */
 
-import { describe, it, expect } from 'vitest';
-import { executeThinkingStep } from '../../layers/execution.js';
-import { planThinkingSession } from '../../layers/planning.js';
-import { SessionManager } from '../../core/SessionManager.js';
-import { TechniqueRegistry } from '../../techniques/TechniqueRegistry.js';
-import { VisualFormatter } from '../../utils/VisualFormatter.js';
-import { MetricsCollector } from '../../core/MetricsCollector.js';
-import { HybridComplexityAnalyzer } from '../../complexity/analyzer.js';
-import { ErgodicityManager } from '../../ergodicity/index.js';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { MCPClientTestHelper } from '../utils/MCPClientTestHelper.js';
 import { EXECUTE_THINKING_STEP_TOOL } from '../../server/ToolDefinitions.js';
 import { ALL_LATERAL_TECHNIQUES } from '../../types/index.js';
-import type {
-  PlanThinkingSessionInput,
-  ExecuteThinkingStepInput,
-  LateralTechnique,
-} from '../../types/index.js';
+import type { LateralTechnique } from '../../types/index.js';
 
 const PROBLEM = 'Cut the release train from monthly to weekly';
 
@@ -133,43 +129,55 @@ const schemaProperties = (
   EXECUTE_THINKING_STEP_TOOL.inputSchema as { properties: Record<string, FieldSchema> }
 ).properties;
 
+/** One client for the file: the helper spawns a server, and 28 is a lot of them. */
+let client: MCPClientTestHelper;
+
+beforeAll(async () => {
+  client = new MCPClientTestHelper();
+  await client.connect();
+}, 30_000);
+
+afterAll(async () => {
+  await client.disconnect();
+});
+
+function textOf(result: { content: Array<{ type: string }> }): string {
+  const first = result.content[0];
+  if (first?.type !== 'text') {
+    throw new Error(`expected a text content item, got ${first?.type ?? 'nothing'}`);
+  }
+  return (first as { type: 'text'; text: string }).text;
+}
+
 /** Runs step 1 of a single-technique plan and returns what the caller got. */
 async function firstStep(
   technique: LateralTechnique,
   fields: Record<string, unknown>
 ): Promise<Record<string, unknown>> {
-  const sessionManager = new SessionManager();
-  const registry = TechniqueRegistry.getInstance();
-  const plan = planThinkingSession(
-    {
-      problem: PROBLEM,
-      techniques: [technique],
-      timeframe: 'thorough',
-    } as PlanThinkingSessionInput,
-    sessionManager,
-    registry
-  );
+  const plan = JSON.parse(
+    textOf(
+      await client.callTool('plan_thinking_session', {
+        problem: PROBLEM,
+        techniques: [technique],
+        timeframe: 'thorough',
+      })
+    )
+  ) as { planId: string; estimatedSteps: number };
 
-  const response = await executeThinkingStep(
-    {
-      planId: plan.planId,
-      technique,
-      problem: PROBLEM,
-      currentStep: 1,
-      totalSteps: plan.totalSteps,
-      output: 'A recorded finding for this step, written plainly and at length.',
-      nextStepNeeded: true,
-      ...fields,
-    } as ExecuteThinkingStepInput,
-    sessionManager,
-    registry,
-    new VisualFormatter(true),
-    new MetricsCollector(),
-    new HybridComplexityAnalyzer(),
-    new ErgodicityManager()
-  );
-
-  return JSON.parse(response.content[0].text) as Record<string, unknown>;
+  return JSON.parse(
+    textOf(
+      await client.callTool('execute_thinking_step', {
+        planId: plan.planId,
+        technique,
+        problem: PROBLEM,
+        currentStep: 1,
+        totalSteps: plan.estimatedSteps,
+        output: 'A recorded finding for this step, written plainly and at length.',
+        nextStepNeeded: true,
+        ...fields,
+      })
+    )
+  ) as Record<string, unknown>;
 }
 
 describe('a technique gets back the fields it declares', () => {
