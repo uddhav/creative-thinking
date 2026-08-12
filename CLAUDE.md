@@ -463,6 +463,21 @@ Process.
   mention, the plural, or an underscored token. A **pull request description** is also safe — squash
   bodies here are assembled from commit messages, not the PR body.
 
+- **Measure from the built artifact, not by grepping source.** Field types, tool schemas and
+  technique lists are all assembled at build time; a regex over `src/` reads the ingredients rather
+  than the result and has been wrong three times. It called `provocation` and `successExample`
+  string arrays (both are plain strings), `weaknessMapping` an array (it is an object), and
+  over-counted the fields a handler reads by 72 because it could not tell the input field `patterns`
+  from a local variable of the same name. Import from `dist/`, or probe the running object with a
+  `Proxy`, and read the answer off that.
+- **Test through the surface the caller uses.** An MCP call passes `RequestHandlers` (required-field
+  validation, technique-field validation, workflow-order guard), then `processLateralThinking`, then
+  the layer functions, then the response builder. A test that calls a layer function or
+  `LateralThinkingServer` directly skips the first two entirely. Three defects on this path —
+  session operations refused before dispatch, `isError` dropped from every layer-built error, debate
+  mode stripped by the response allowlist — all passed their guards because the guards entered below
+  where the fault was. Anything asserting what the _caller receives_ belongs in an integration test
+  driving `MCPClientTestHelper`.
 - **Never log to stdout** — it breaks MCP protocol
 - **Never add a 4th tool** — all functionality fits within the three-tool workflow
 - Do what has been asked; nothing more, nothing less
