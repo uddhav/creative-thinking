@@ -34,6 +34,29 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
             return planValidation.error;
         }
         const plan = planValidation.plan;
+        // A named session the server has not got in memory may be on disk. Try to
+        // load it before the validator decides it does not exist.
+        //
+        // Without this, `ExecutionValidator` creates a NEW session under the id the
+        // caller supplied and reports success. Measured across two server processes
+        // sharing one PERSISTENCE_PATH: six committing steps saved with
+        // flexibility 0.475 and a six-event path history, then a step in the second
+        // process naming that same sessionId came back `historyLength: 1` and
+        // flexibility 0.975. The stored work was on disk, intact, and ignored — and
+        // the caller was told the step had succeeded.
+        //
+        // The CLI already does this in `hydrateSession` before calling in, which is
+        // why `socketes` resumes and the MCP server does not. Doing it here covers
+        // both, and leaves the CLI's own attempt harmless: it returns early when
+        // the session is already in memory.
+        if (input.sessionId && !sessionManager.getSession(input.sessionId)) {
+            try {
+                await sessionManager.loadSessionFromPersistence(input.sessionId);
+            }
+            catch {
+                // Not on disk. The validator's existing behaviour takes over from here.
+            }
+        }
         // Get or create session (this will determine the sessionId we need to lock)
         const sessionValidation = executionValidator.validateAndGetSession(input, ergodicityManager);
         if (sessionValidation.error) {
