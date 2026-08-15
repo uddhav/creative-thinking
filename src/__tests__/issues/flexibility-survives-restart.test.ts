@@ -83,37 +83,78 @@ async function runSteps(outputs: string[]): Promise<SessionData> {
 }
 
 describe('flexibility survives a restart', () => {
-  it('starts a manager from the path record it is handed', async () => {
+  it('keeps spending from where it left off rather than from full', async () => {
     const spent = await runSteps(COMMITTING);
     const spentScore = spent.pathMemory?.currentFlexibility?.flexibilityScore ?? 1;
 
     expect(spentScore, 'three committing steps must have cost something').toBeLessThan(0.95);
     expect(spent.pathMemory?.pathHistory).toHaveLength(COMMITTING.length);
 
-    // What `managerFor` does for a session rehydrated from disk.
-    const resumed = new ErgodicityManager(undefined, spent.pathMemory);
+    // Rehydrated exactly as `SessionPersistence` leaves a session: the path
+    // record survives, the manager does not. Then run a step through the real
+    // executor, so `ErgodicityOrchestrator.managerFor` is what does the
+    // seeding.
+    //
+    // This used to construct `new ErgodicityManager(undefined, spent.pathMemory)`
+    // itself — a transcription of the line inside `managerFor`. Removing the
+    // seed from the production call site left all three tests green, so the
+    // guard proved only that the constructor works, which was never in doubt.
+    const restored: SessionData = {
+      ...spent,
+      ergodicityManager: undefined,
+    } as SessionData;
 
-    expect(resumed.getPathMemory().currentFlexibility.flexibilityScore).toBeCloseTo(spentScore, 10);
-    expect(resumed.getPathMemory().pathHistory).toHaveLength(COMMITTING.length);
-  });
+    const sessionManager = new SessionManager();
+    const registry = TechniqueRegistry.getInstance();
+    const plan = planThinkingSession(
+      {
+        problem: PROBLEM,
+        techniques: ['scamper'],
+        timeframe: 'thorough',
+      } as PlanThinkingSessionInput,
+      sessionManager,
+      registry
+    );
 
-  it('keeps spending from where it left off rather than from full', async () => {
-    const spent = await runSteps(COMMITTING);
-    const spentScore = spent.pathMemory?.currentFlexibility?.flexibilityScore ?? 1;
+    // Placed the way a restore places it: state present, manager absent.
+    const resumedId = 'session_resumed_probe';
+    (sessionManager as unknown as { sessions: Map<string, SessionData> }).sessions.set(
+      resumedId,
+      restored
+    );
 
-    const resumed = new ErgodicityManager(undefined, spent.pathMemory);
-    await resumed.recordThinkingStep('scamper', 4, 'Modify the base profile.', {
-      reversibilityCost: 0.8,
-      commitmentLevel: 0.8,
-    });
+    const response = await executeThinkingStep(
+      {
+        planId: plan.planId,
+        sessionId: resumedId,
+        technique: 'scamper',
+        problem: PROBLEM,
+        currentStep: 1,
+        totalSteps: 8,
+        output: 'Modify the base profile, recorded plainly and at length.',
+        nextStepNeeded: true,
+        scamperAction: 'modify',
+      } as ExecuteThinkingStepInput,
+      sessionManager,
+      registry,
+      new VisualFormatter(true),
+      new MetricsCollector(),
+      new HybridComplexityAnalyzer(),
+      new ErgodicityManager()
+    );
 
-    const after = resumed.getPathMemory().currentFlexibility.flexibilityScore;
+    const data = JSON.parse(response.content[0].text) as {
+      ergodicityMetrics?: { currentFlexibility?: number };
+    };
+    const after = data.ergodicityMetrics?.currentFlexibility ?? 1;
 
-    // A fresh manager taking that same single step lands at 0.84. The point of
-    // restoring is that this one continues from what was already spent.
-    expect(after).toBeLessThan(spentScore);
-    expect(after, 'a resumed session must not start again at full flexibility').toBeLessThan(0.84);
-    expect(resumed.getPathMemory().pathHistory).toHaveLength(COMMITTING.length + 1);
+    // The point of restoring is that the resumed run continues from what was
+    // already spent rather than starting again at full.
+    expect(after, 'a resumed session started again at full flexibility').toBeLessThan(spentScore);
+    expect(
+      restored.pathMemory?.pathHistory,
+      'the resumed step was not appended to the record it was seeded from'
+    ).toHaveLength(COMMITTING.length + 1);
   });
 
   it('carries the path record through the saved session shape', async () => {

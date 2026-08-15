@@ -192,17 +192,20 @@ describe('the response carries what the ergodicity adapter measured', () => {
 
     const metrics = data.ergodicityMetrics as Record<string, number> | undefined;
     expect(metrics, 'the adapted metrics never reached the caller').toBeDefined();
-    // Values, not shapes. These four were asserted only as `typeof ===
-    // 'number'`, which let every one of them be replaced by a constant zero
-    // with the whole suite still green — the wiring was guarded and the
-    // measurement was not.
-    expect(typeof metrics?.constraintLevel).toBe('number');
-    expect(typeof metrics?.optionSpaceSize).toBe('number');
-    expect(typeof metrics?.pathDivergence).toBe('number');
 
     // A session one step in has spent something and no more than everything.
     expect(metrics?.currentFlexibility).toBeGreaterThan(0);
     expect(metrics?.currentFlexibility).toBeLessThanOrEqual(1);
+
+    // `optionSpaceSize` is zero here, and pinning it to zero is the honest
+    // assertion rather than a weak one. It derives from `optionVelocity`, and
+    // only SCAMPER reports an option as opened or closed at all — for the other
+    // thirty-one techniques the input is two empty arrays, so the velocity is
+    // exactly 0 and so is this. Measured 0 for a twelve-step context_reframing
+    // chain and an eight-step scamper chain alike. If it ever becomes non-zero
+    // that is worth someone noticing, which `typeof === 'number'` would not
+    // achieve.
+    expect(metrics?.optionSpaceSize).toBe(0);
     expect(metrics?.currentFlexibility).toBe(
       (data.flexibilityScore as number | undefined) ?? metrics?.currentFlexibility
     );
@@ -217,4 +220,55 @@ describe('the response carries what the ergodicity adapter measured', () => {
     expect(data.flexibilityScore, 'step 1 should be well above the warning line').toBeUndefined();
     expect(data.ergodicityMetrics).toBeDefined();
   });
+
+  it('moves the readings as the session commits, rather than reporting constants', async () => {
+    // The assertion this file's own comment claimed to make and did not.
+    // `constraintLevel`, `pathDivergence` and `currentFlexibility` were checked
+    // as `typeof === 'number'`, which a hardcoded value satisfies — the exact
+    // defect the comment above describes, left live in three of the four
+    // metrics it describes. A constant cannot pass this.
+    const plan = JSON.parse(
+      textOf(
+        await client.callTool('plan_thinking_session', {
+          problem: PROBLEM,
+          techniques: ['context_reframing', 'context_reframing', 'context_reframing'],
+          timeframe: 'thorough',
+        })
+      )
+    ) as { planId: string; estimatedSteps: number };
+
+    let sessionId: string | undefined;
+    const readings: Array<Record<string, number>> = [];
+
+    for (let step = 1; step <= plan.estimatedSteps; step++) {
+      const data = JSON.parse(
+        textOf(
+          await client.callTool('execute_thinking_step', {
+            planId: plan.planId,
+            ...(sessionId ? { sessionId } : {}),
+            technique: 'context_reframing',
+            problem: PROBLEM,
+            currentStep: step,
+            totalSteps: plan.estimatedSteps,
+            output: `Finding ${step}, written plainly and at length for the record.`,
+            nextStepNeeded: step < plan.estimatedSteps,
+          })
+        )
+      ) as Record<string, unknown>;
+      sessionId = (data.sessionId as string) ?? sessionId;
+      readings.push((data.ergodicityMetrics ?? {}) as Record<string, number>);
+    }
+
+    const first = readings[0];
+    const last = readings.at(-1) as Record<string, number>;
+
+    // context_reframing declares low reversibility, so a chain of it spends
+    // room. Measured across twelve steps: 0.995 -> 0.221, 0.2 -> 0.63,
+    // 0.07 -> 1.27.
+    expect(last.currentFlexibility, 'flexibility did not fall').toBeLessThan(
+      first.currentFlexibility
+    );
+    expect(last.constraintLevel, 'constraint did not rise').toBeGreaterThan(first.constraintLevel);
+    expect(last.pathDivergence, 'divergence did not rise').toBeGreaterThan(first.pathDivergence);
+  }, 60_000);
 });
