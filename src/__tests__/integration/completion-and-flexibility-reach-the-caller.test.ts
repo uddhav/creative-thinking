@@ -202,4 +202,48 @@ describe('a malformed array is refused, and the caller is told which field', () 
 
     expect(refusal).toMatch(/swarmBehavior/);
   }, 30_000);
+
+  describe('a session cannot end with steps it never ran', () => {
+    it('refuses the ending and says how many were skipped', async () => {
+      // Ending 13 of 15 used to be allowed through with `completionWarnings: []`
+      // — silently accepted. `skipped` meant "passed over", so steps 14 and 15,
+      // being ahead of the furthest reached, counted as pending even though the
+      // session was declaring itself over. Terminating is exactly when a pending
+      // step stops being pending.
+      const { planId, estimatedSteps } = await plan(['six_hats', 'scamper']);
+      const scamper = ['substitute', 'combine', 'adapt', 'modify', 'put_to_other_use', 'eliminate'];
+      let sessionId: string | undefined;
+      let raw = '';
+
+      for (let step = 1; step <= 13; step++) {
+        const technique = step <= 7 ? 'six_hats' : 'scamper';
+        const result = await client.callTool('execute_thinking_step', {
+          planId,
+          ...(sessionId ? { sessionId } : {}),
+          technique,
+          problem: PROBLEM,
+          currentStep: step,
+          totalSteps: estimatedSteps,
+          output: `Finding ${step}, written plainly and at length for the record.`,
+          nextStepNeeded: step < 13,
+          ...(technique === 'six_hats'
+            ? { hatColor: HATS[step - 1] }
+            : { scamperAction: scamper[step - 8] }),
+        });
+        raw = textOf(result);
+        sessionId = (JSON.parse(raw) as { sessionId?: string }).sessionId ?? sessionId;
+      }
+
+      const data = JSON.parse(raw) as {
+        blocked?: boolean;
+        reason?: string;
+        completionStatus?: { overallProgress?: number };
+      };
+
+      expect(data.blocked, 'the session was allowed to end two steps short').toBe(true);
+      // The count has to be right, or this passes on any refusal for any reason.
+      expect(data.reason).toContain('2 steps were skipped');
+      expect(data.completionStatus?.overallProgress).toBe(87);
+    }, 120_000);
+  });
 });

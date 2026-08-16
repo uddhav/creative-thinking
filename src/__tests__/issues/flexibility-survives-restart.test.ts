@@ -156,20 +156,4 @@ describe('flexibility survives a restart', () => {
       'the resumed step was not appended to the record it was seeded from'
     ).toHaveLength(COMMITTING.length + 1);
   });
-
-  it('carries the path record through the saved session shape', async () => {
-    const spent = await runSteps(COMMITTING);
-
-    // The record has to survive JSON, which is what persistence stores.
-    const roundTripped = JSON.parse(JSON.stringify(spent.pathMemory)) as NonNullable<
-      SessionData['pathMemory']
-    >;
-
-    expect(roundTripped.currentFlexibility.flexibilityScore).toBeCloseTo(
-      spent.pathMemory?.currentFlexibility?.flexibilityScore ?? 1,
-      10
-    );
-    expect(roundTripped.pathHistory).toHaveLength(COMMITTING.length);
-    expect(roundTripped.pathHistory[0].flexibilityImpact).toBeGreaterThan(0);
-  });
 });

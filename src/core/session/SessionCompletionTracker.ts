@@ -83,7 +83,7 @@ export class SessionCompletionTracker {
       return this.calculateSingleTechniqueCompletion(session);
     }
 
-    const techniqueStatuses = this.calculateTechniqueStatuses(session, plan);
+    const techniqueStatuses = this.calculateTechniqueStatuses(session, plan, isTerminating);
     const overallProgress = this.calculateOverallProgress(techniqueStatuses, plan);
     const skippedTechniques = this.identifySkippedTechniques(techniqueStatuses);
     const missedPerspectives = this.identifyMissedPerspectives(techniqueStatuses);
@@ -202,7 +202,8 @@ export class SessionCompletionTracker {
    */
   private calculateTechniqueStatuses(
     session: SessionData,
-    plan: PlanThinkingSessionOutput
+    plan: PlanThinkingSessionOutput,
+    isTerminating = false
   ): TechniqueCompletionStatus[] {
     const statuses: TechniqueCompletionStatus[] = [];
 
@@ -229,7 +230,8 @@ export class SessionCompletionTracker {
       const skippedSteps = this.findSkippedSteps(
         techniqueSteps,
         completedStepNumbers,
-        completedStepsForTechnique
+        completedStepsForTechnique,
+        isTerminating
       );
 
       // Identify critical skipped steps
@@ -330,7 +332,8 @@ export class SessionCompletionTracker {
   private findSkippedSteps(
     techniqueSteps: number,
     completedStepNumbers: Set<number>,
-    completedStepsForTechnique: number
+    completedStepsForTechnique: number,
+    isTerminating = false
   ): number[] {
     const skippedSteps: number[] = [];
 
@@ -345,9 +348,13 @@ export class SessionCompletionTracker {
     // completion nag removed earlier: true of every session at that point
     // whatever its quality, and so carrying no information while training the
     // reader to discount warnings that do.
-    if (completedStepsForTechnique > 0) {
-      const furthestReached = Math.max(...completedStepNumbers);
-      for (let i = 1; i < furthestReached; i++) {
+    // Once the session is ending, a step that has not run never will, so the
+    // whole technique counts. Mid-session only what was passed over does — the
+    // steps ahead are pending, and calling them skipped is what told a caller
+    // on step 1 of seven that Black Hat had been skipped.
+    if (completedStepsForTechnique > 0 || isTerminating) {
+      const limit = isTerminating ? techniqueSteps + 1 : Math.max(...completedStepNumbers, 0);
+      for (let i = 1; i < limit; i++) {
         if (!completedStepNumbers.has(i)) {
           skippedSteps.push(i);
         }

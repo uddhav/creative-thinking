@@ -42,7 +42,7 @@ export class SessionCompletionTracker {
             // No plan means single technique execution
             return this.calculateSingleTechniqueCompletion(session);
         }
-        const techniqueStatuses = this.calculateTechniqueStatuses(session, plan);
+        const techniqueStatuses = this.calculateTechniqueStatuses(session, plan, isTerminating);
         const overallProgress = this.calculateOverallProgress(techniqueStatuses, plan);
         const skippedTechniques = this.identifySkippedTechniques(techniqueStatuses);
         const missedPerspectives = this.identifyMissedPerspectives(techniqueStatuses);
@@ -135,7 +135,7 @@ export class SessionCompletionTracker {
     /**
      * Calculate statuses for each technique
      */
-    calculateTechniqueStatuses(session, plan) {
+    calculateTechniqueStatuses(session, plan, isTerminating = false) {
         const statuses = [];
         // Optimize: Only create Map for multi-technique workflows
         const isMultiTechnique = plan.workflow.length > 1;
@@ -152,7 +152,7 @@ export class SessionCompletionTracker {
             // Count completed steps and track step numbers
             const { completedStepsForTechnique, completedStepNumbers } = this.countTechniqueCompletedSteps(techniqueHistory, techniqueSteps, plan, globalStepOffset);
             // Find skipped steps (technique-local numbering)
-            const skippedSteps = this.findSkippedSteps(techniqueSteps, completedStepNumbers, completedStepsForTechnique);
+            const skippedSteps = this.findSkippedSteps(techniqueSteps, completedStepNumbers, completedStepsForTechnique, isTerminating);
             // Identify critical skipped steps
             const criticalSkipped = this.identifyCriticalSkippedSteps(workflow.technique, skippedSteps, session.problem);
             statuses.push({
@@ -225,7 +225,7 @@ export class SessionCompletionTracker {
     /**
      * Find skipped steps in technique execution
      */
-    findSkippedSteps(techniqueSteps, completedStepNumbers, completedStepsForTechnique) {
+    findSkippedSteps(techniqueSteps, completedStepNumbers, completedStepsForTechnique, isTerminating = false) {
         const skippedSteps = [];
         // A step is skipped when the session has gone PAST it without running it.
         // A step ahead of the furthest one reached has not been skipped; it has not
@@ -238,9 +238,13 @@ export class SessionCompletionTracker {
         // completion nag removed earlier: true of every session at that point
         // whatever its quality, and so carrying no information while training the
         // reader to discount warnings that do.
-        if (completedStepsForTechnique > 0) {
-            const furthestReached = Math.max(...completedStepNumbers);
-            for (let i = 1; i < furthestReached; i++) {
+        // Once the session is ending, a step that has not run never will, so the
+        // whole technique counts. Mid-session only what was passed over does — the
+        // steps ahead are pending, and calling them skipped is what told a caller
+        // on step 1 of seven that Black Hat had been skipped.
+        if (completedStepsForTechnique > 0 || isTerminating) {
+            const limit = isTerminating ? techniqueSteps + 1 : Math.max(...completedStepNumbers, 0);
+            for (let i = 1; i < limit; i++) {
                 if (!completedStepNumbers.has(i)) {
                     skippedSteps.push(i);
                 }

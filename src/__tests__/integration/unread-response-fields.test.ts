@@ -20,12 +20,11 @@
  * step each appears at is recorded so a change in when they fire reads as a
  * change rather than a mystery.
  *
- * Two of the six are not here: `sequentialThinkingSuggestion` and
- * `reflectionRequired`. Neither appeared in a 26-step mixed session.
- * `reflectionRequired` needs `riskEngagementMetrics.escalationLevel >= 2`,
- * which the dismissal tracker only reaches when a session argues back at
- * risks; the conditions are not obviously reachable from ordinary output and
- * are recorded as unverified rather than guessed at.
+ * The last two took finding. Neither `sequentialThinkingSuggestion` nor
+ * `reflectionRequired` appeared anywhere in a 26-step mixed session, and twice
+ * on this branch a field that would not fire turned out to be structurally
+ * dead. Both are reachable; the conditions are simply narrow, and both were
+ * confirmed against the running server before being written down here.
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
@@ -169,5 +168,118 @@ describe('the fields nothing was reading do arrive', () => {
     // response shows the first three steps, and this says how many were cut.
     // Without it a caller reads three steps as the whole protocol.
     expect(escape.furtherSteps, 'the truncated-step count never arrived').toBeGreaterThan(0);
+  });
+
+  describe('the two that took finding', () => {
+    it('suggests a different approach when the output is genuinely complex', async () => {
+      // Gated on the complexity analyser grading `output` as high, which needs 4
+      // of its 8 factors — interacting elements, conflicting requirements,
+      // uncertainty, and so on. Ordinary prose trips two at most, which is why a
+      // 26-step session never saw this and it read as dead.
+      const textOf = (result: { content: Array<{ type: string }> }): string => {
+        const first = result.content[0];
+        if (first?.type !== 'text') throw new Error('expected text content');
+        return (first as { type: 'text'; text: string }).text;
+      };
+
+      const plan = JSON.parse(
+        textOf(
+          await client.callTool('plan_thinking_session', {
+            problem: PROBLEM,
+            techniques: ['six_hats'],
+            timeframe: 'thorough',
+          })
+        )
+      ) as { planId: string };
+
+      const data = JSON.parse(
+        textOf(
+          await client.callTool('execute_thinking_step', {
+            planId: plan.planId,
+            technique: 'six_hats',
+            problem: PROBLEM,
+            currentStep: 1,
+            totalSteps: 7,
+            output:
+              'The release pipeline, the migration tooling and the on-call rotation all interact ' +
+              'with one another across a distributed system, and the stakeholders want conflicting ' +
+              'things: platform wants a freeze while product wants weekly ships. Much of this is ' +
+              'uncertain and several dependencies are unknown, under an urgent deadline that ' +
+              'nobody has costed.',
+            nextStepNeeded: true,
+            hatColor: 'blue',
+          })
+        )
+      ) as Record<string, unknown>;
+
+      const suggestion = data.sequentialThinkingSuggestion as
+        | { complexityNote?: string; suggestedApproach?: Record<string, string> }
+        | undefined;
+
+      expect(suggestion, 'sequentialThinkingSuggestion never reached the caller').toBeDefined();
+      expect(suggestion?.complexityNote).toMatch(/complex/i);
+      expect(
+        Object.keys(suggestion?.suggestedApproach ?? {}).length,
+        'a suggestion that suggests nothing'
+      ).toBeGreaterThan(0);
+    }, 60_000);
+
+    it('asks the session to account for a risk it stopped engaging with', async () => {
+      // Needs escalationLevel >= 2, reached when the caller names real risks with
+      // confidence and then keeps answering with content that registers a risk
+      // indicator while scoring no confidence. `uncertain` is the hinge word: it
+      // sets the indicator and contributes nothing to confidence, so four such
+      // steps in a row read as dismissal.
+      const textOf = (result: { content: Array<{ type: string }> }): string => {
+        const first = result.content[0];
+        if (first?.type !== 'text') throw new Error('expected text content');
+        return (first as { type: 'text'; text: string }).text;
+      };
+
+      const plan = JSON.parse(
+        textOf(
+          await client.callTool('plan_thinking_session', {
+            problem: PROBLEM,
+            techniques: ['scamper'],
+            timeframe: 'thorough',
+          })
+        )
+      ) as { planId: string };
+
+      let sessionId: string | undefined;
+      let reflection: unknown;
+
+      for (let step = 1; step <= 5; step++) {
+        const data = JSON.parse(
+          textOf(
+            await client.callTool('execute_thinking_step', {
+              planId: plan.planId,
+              ...(sessionId ? { sessionId } : {}),
+              technique: 'scamper',
+              problem: PROBLEM,
+              currentStep: step,
+              totalSteps: 8,
+              scamperAction: SCAMPER_ACTIONS[step - 1],
+              output:
+                step === 1
+                  ? 'This migration is permanent and irreversible once the data is cut over, ' +
+                    'there is an urgent deadline, and the impact is systemic across society.'
+                  : 'Outcome uncertain.',
+              nextStepNeeded: true,
+              ...(step === 1 ? { risks: ['data cutover is one-way', 'vendor lock-in'] } : {}),
+            })
+          )
+        ) as Record<string, unknown>;
+
+        sessionId = (data.sessionId as string) ?? sessionId;
+        if (data.reflectionRequired !== undefined) reflection = data.reflectionRequired;
+      }
+
+      expect(reflection, 'reflectionRequired never reached the caller').toBeDefined();
+      // It has to quote back the risks the session itself raised, or it is a
+      // prompt with nothing behind it.
+      expect(String(reflection)).toMatch(/REFLECTION REQUIRED/);
+      expect(String(reflection)).toContain('data cutover is one-way');
+    }, 90_000);
   });
 });

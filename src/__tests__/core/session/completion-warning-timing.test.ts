@@ -83,12 +83,30 @@ describe('completion warnings fire when a session ends, not while it runs', () =
     expect(text, 'ending 7% complete is a real finding').toContain('CRITICAL FAILURE');
   });
 
-  it('keeps populating criticalGapsIdentified mid-session', () => {
-    // Only the warning STRING is gated. CompletionGatekeeper reads this field on
-    // the terminating path, so suppressing the data would change enforcement.
-    const metadata = tracker.calculateCompletionMetadata(sessionWith('six_hats', 1), plan, false);
+  it('gates the warning string and not the data behind it', () => {
+    // The claim in one test: the same session, read mid-run and read as ending,
+    // must differ in what it SAYS and agree on what it KNOWS.
+    //
+    // This asserted `Array.isArray(metadata.criticalGapsIdentified)`, which
+    // `[]` satisfies — and `[]` is exactly what suppressing the field would
+    // produce, so the assertion was satisfied by the defect it existed to
+    // prevent. It was also the wrong field: measured, `criticalGapsIdentified`
+    // is empty on both paths here, while `completionWarnings` is 0 mid-session
+    // and 2 at termination. The observable difference is the warnings.
+    const session = sessionWith('six_hats', 3);
+    const midRun = tracker.calculateCompletionMetadata(session, plan, false);
+    const ending = tracker.calculateCompletionMetadata(session, plan, true);
 
-    expect(Array.isArray(metadata.criticalGapsIdentified)).toBe(true);
+    expect(midRun.completionWarnings, 'a running session warned about itself').toEqual([]);
+    expect(
+      ending.completionWarnings.length,
+      'an ending session said nothing about what it never ran'
+    ).toBeGreaterThan(0);
+
+    // The data the gatekeeper reads is present either way — only the string is
+    // withheld. Suppressing this too would change enforcement, not just noise.
+    expect(midRun.skippedTechniques).toContain('scamper');
+    expect(ending.skippedTechniques).toContain('scamper');
   });
 
   it('does not gate the technique-specific warnings on termination', () => {
