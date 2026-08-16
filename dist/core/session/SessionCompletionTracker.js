@@ -31,17 +31,23 @@ export class SessionCompletionTracker {
     /**
      * Calculate session completion metadata
      */
-    calculateCompletionMetadata(session, plan) {
+    /**
+     * @param isTerminating whether this step ends the session. Incompleteness is
+     * only a problem when there will be no further steps; mid-session it is just
+     * progress, and saying otherwise on every early step taught callers to ignore
+     * the warnings entirely.
+     */
+    calculateCompletionMetadata(session, plan, isTerminating = false) {
         if (!plan) {
             // No plan means single technique execution
             return this.calculateSingleTechniqueCompletion(session);
         }
-        const techniqueStatuses = this.calculateTechniqueStatuses(session, plan);
+        const techniqueStatuses = this.calculateTechniqueStatuses(session, plan, isTerminating);
         const overallProgress = this.calculateOverallProgress(techniqueStatuses, plan);
         const skippedTechniques = this.identifySkippedTechniques(techniqueStatuses);
         const missedPerspectives = this.identifyMissedPerspectives(techniqueStatuses);
         const criticalGaps = this.identifyCriticalGaps(session.problem, techniqueStatuses);
-        const warnings = this.generateCompletionWarnings(overallProgress, techniqueStatuses, criticalGaps);
+        const warnings = this.generateCompletionWarnings(overallProgress, techniqueStatuses, criticalGaps, isTerminating);
         return {
             overallProgress,
             totalPlannedSteps: plan.totalSteps,
@@ -58,10 +64,10 @@ export class SessionCompletionTracker {
      * Check if session should be allowed to proceed to synthesis
      */
     canProceedToSynthesis(metadata) {
-        const isTestEnvironment = process.env.NODE_ENV === 'test' || process.env.VITEST === 'true';
-        // CRITICAL: Check for ANY skipped steps first (but be less strict in tests)
+        // No test-environment exemption. Suppressing this under vitest meant the
+        // suite could never observe the block, which is exactly how a guard rots.
         const totalSkippedSteps = metadata.techniqueStatuses.reduce((sum, s) => sum + s.skippedSteps.length, 0);
-        if (!isTestEnvironment && totalSkippedSteps > 0) {
+        if (totalSkippedSteps > 0) {
             return {
                 allowed: false,
                 reason: `❌ BLOCKED: ${totalSkippedSteps} steps were skipped. ALL steps MUST be executed sequentially.`,
@@ -129,7 +135,7 @@ export class SessionCompletionTracker {
     /**
      * Calculate statuses for each technique
      */
-    calculateTechniqueStatuses(session, plan) {
+    calculateTechniqueStatuses(session, plan, isTerminating = false) {
         const statuses = [];
         // Optimize: Only create Map for multi-technique workflows
         const isMultiTechnique = plan.workflow.length > 1;
@@ -146,7 +152,7 @@ export class SessionCompletionTracker {
             // Count completed steps and track step numbers
             const { completedStepsForTechnique, completedStepNumbers } = this.countTechniqueCompletedSteps(techniqueHistory, techniqueSteps, plan, globalStepOffset);
             // Find skipped steps (technique-local numbering)
-            const skippedSteps = this.findSkippedSteps(techniqueSteps, completedStepNumbers, completedStepsForTechnique);
+            const skippedSteps = this.findSkippedSteps(techniqueSteps, completedStepNumbers, completedStepsForTechnique, isTerminating);
             // Identify critical skipped steps
             const criticalSkipped = this.identifyCriticalSkippedSteps(workflow.technique, skippedSteps, session.problem);
             statuses.push({
@@ -180,8 +186,12 @@ export class SessionCompletionTracker {
      * Count completed steps for a technique with proper validation
      */
     countTechniqueCompletedSteps(techniqueHistory, techniqueSteps, plan, globalStepOffset) {
-        let completedStepsForTechnique = 0;
         const completedStepNumbers = new Set();
+        const submissionsByStep = new Map();
+        const record = (localStep) => {
+            completedStepNumbers.add(localStep);
+            submissionsByStep.set(localStep, (submissionsByStep.get(localStep) ?? 0) + 1);
+        };
         // Define reasonable bounds for step validation
         const MAX_REASONABLE_STEP = 1000;
         for (const entry of techniqueHistory) {
@@ -192,23 +202,62 @@ export class SessionCompletionTracker {
             if (plan.workflow.length === 1) {
                 // Single technique - steps are technique-local
                 if (this.isValidStepForTechnique(entry.currentStep, 1, techniqueSteps)) {
-                    completedStepsForTechnique++;
-                    completedStepNumbers.add(entry.currentStep);
+                    record(entry.currentStep);
                 }
             }
             else {
-                // Multi-technique - always use sequential numbering for consistency
-                // This ensures identical behavior regardless of executionMode
-                const expectedStepMin = globalStepOffset + 1;
-                const expectedStepMax = globalStepOffset + techniqueSteps;
-                if (this.isValidStepForTechnique(entry.currentStep, expectedStepMin, expectedStepMax)) {
-                    completedStepsForTechnique++;
-                    // Convert to technique-local step number for tracking
-                    completedStepNumbers.add(entry.currentStep - globalStepOffset);
+                // Multi-technique. The execution validator accepts BOTH numbering
+                // conventions — plan-wide and technique-local, disambiguated by
+                // totalSteps — and this counter accepted only plan-wide. A session
+                // numbered per technique (six_hats 1-7 behind triz's 4) had its later
+                // steps fall outside the expected global range, so a fully-run session
+                // read as riddled with skips, and once the completion gate checked
+                // every termination that false reading BLOCKED legitimate endings.
+                // Two components disagreeing about the same convention, again; the
+                // entry's own totalSteps says which one its currentStep uses, exactly
+                // as it does for the validator.
+                const planTotal = plan.workflow.reduce((sum, w) => sum + w.steps.length, 0);
+                const entryIsLocal = entry.totalSteps === techniqueSteps && entry.totalSteps !== planTotal
+                    ? true
+                    : entry.totalSteps === planTotal
+                        ? false
+                        : entry.currentStep >= 1 && entry.currentStep <= techniqueSteps;
+                const localStep = entryIsLocal ? entry.currentStep : entry.currentStep - globalStepOffset;
+                if (this.isValidStepForTechnique(localStep, 1, techniqueSteps)) {
+                    record(localStep);
                 }
             }
         }
-        return { completedStepsForTechnique, completedStepNumbers };
+        // DISTINCT steps, not history entries. Counting entries let a duplicate
+        // submission inflate the tally: seven calls covering six distinct steps
+        // reported "7/7 steps, 100%" and painted a ✓ while the completion gate
+        // was simultaneously blocking the ending for the step that was skipped —
+        // one response asserting completeness and incompleteness at once.
+        return {
+            completedStepsForTechnique: completedStepNumbers.size,
+            completedStepNumbers,
+            submissionsByStep,
+        };
+    }
+    /**
+     * Technique-local progress for one technique of a plan, for callers outside
+     * this tracker — notably next-step guidance, which needs to know whether an
+     * earlier step was passed over before pointing the caller further ahead.
+     *
+     * This is the ONLY sanctioned way to read per-technique step coverage from
+     * outside: it reuses the same numbering-convention disambiguation as the
+     * completion metadata (the validator carries the third copy), so a fourth
+     * hand-rolled copy cannot drift.
+     */
+    techniqueLocalProgress(session, plan, technique, techniqueIndex) {
+        const workflow = plan.workflow[techniqueIndex];
+        const techniqueSteps = workflow?.steps.length ?? 0;
+        const globalStepOffset = plan.workflow
+            .slice(0, techniqueIndex)
+            .reduce((sum, w) => sum + w.steps.length, 0);
+        const techniqueHistory = session.history.filter(h => h.technique === technique);
+        const { completedStepNumbers, submissionsByStep } = this.countTechniqueCompletedSteps(techniqueHistory, techniqueSteps, plan, globalStepOffset);
+        return { completedStepNumbers, submissionsByStep, techniqueSteps };
     }
     /**
      * Check if a step number is valid for a technique
@@ -219,11 +268,26 @@ export class SessionCompletionTracker {
     /**
      * Find skipped steps in technique execution
      */
-    findSkippedSteps(techniqueSteps, completedStepNumbers, completedStepsForTechnique) {
+    findSkippedSteps(techniqueSteps, completedStepNumbers, completedStepsForTechnique, isTerminating = false) {
         const skippedSteps = [];
-        // Only identify skipped steps if some steps were completed
-        if (completedStepsForTechnique > 0) {
-            for (let i = 1; i <= techniqueSteps; i++) {
+        // A step is skipped when the session has gone PAST it without running it.
+        // A step ahead of the furthest one reached has not been skipped; it has not
+        // been reached.
+        //
+        // Every incomplete step used to count, so step 1 of a seven-step technique
+        // reported the other six as skipped and the response told the caller
+        // "Black Hat thinking skipped - critical risks may be overlooked" before
+        // the session had any opportunity to run it. That is the same shape as the
+        // completion nag removed earlier: true of every session at that point
+        // whatever its quality, and so carrying no information while training the
+        // reader to discount warnings that do.
+        // Once the session is ending, a step that has not run never will, so the
+        // whole technique counts. Mid-session only what was passed over does — the
+        // steps ahead are pending, and calling them skipped is what told a caller
+        // on step 1 of seven that Black Hat had been skipped.
+        if (completedStepsForTechnique > 0 || isTerminating) {
+            const limit = isTerminating ? techniqueSteps + 1 : Math.max(...completedStepNumbers, 0);
+            for (let i = 1; i < limit; i++) {
                 if (!completedStepNumbers.has(i)) {
                     skippedSteps.push(i);
                 }
@@ -294,27 +358,38 @@ export class SessionCompletionTracker {
     /**
      * Generate completion warnings
      */
-    generateCompletionWarnings(overallProgress, statuses, criticalGaps) {
+    generateCompletionWarnings(overallProgress, statuses, criticalGaps, isTerminating) {
         const warnings = [];
-        // Critical warnings with stronger language
-        if (overallProgress < this.CRITICAL_THRESHOLD) {
-            warnings.push(`⚠️ CRITICAL FAILURE: Only ${Math.round(overallProgress * 100)}% complete! ` +
-                `YOU MUST COMPLETE ALL STEPS. ` +
-                `Missing ${Math.round((1 - overallProgress) * 100)}% will result in INVALID analysis. ` +
-                `DO NOT proceed to synthesis until ALL steps are complete.`);
-        }
-        else if (overallProgress < this.WARNING_THRESHOLD) {
-            warnings.push(`⚠️ MANDATORY ACTION: Only ${Math.round(overallProgress * 100)}% complete. ` +
-                `You MUST complete remaining steps. Incomplete execution violates thinking process requirements.`);
-        }
-        else if (overallProgress < this.DEFAULT_MINIMUM_THRESHOLD) {
-            warnings.push(`⚠️ WARNING: ${Math.round(overallProgress * 100)}% complete. ` +
-                `Minimum 80% required. Complete remaining steps before synthesis.`);
-        }
-        // Critical gaps warnings with emphasis
-        if (criticalGaps.length > 0) {
-            warnings.push(`❌ CRITICAL GAPS DETECTED: ${criticalGaps.join(', ')}. ` +
-                `These MUST be addressed for valid analysis.`);
+        // Incompleteness is only a fault when the session is ending. On step 1 of a
+        // seven-step technique, progress is 14% and the session is proceeding
+        // exactly as planned — telling the caller it has CRITICALLY FAILED there,
+        // every time, is how these warnings came to be routinely ignored.
+        //
+        // The technique-specific warnings below are NOT gated: "Black Hat skipped"
+        // is true whenever it is true, and acting on it mid-session is the point.
+        if (isTerminating) {
+            // Critical warnings with stronger language
+            if (overallProgress < this.CRITICAL_THRESHOLD) {
+                warnings.push(`⚠️ CRITICAL FAILURE: Only ${Math.round(overallProgress * 100)}% complete! ` +
+                    `YOU MUST COMPLETE ALL STEPS. ` +
+                    `Missing ${Math.round((1 - overallProgress) * 100)}% will result in INVALID analysis. ` +
+                    `DO NOT proceed to synthesis until ALL steps are complete.`);
+            }
+            else if (overallProgress < this.WARNING_THRESHOLD) {
+                warnings.push(`⚠️ MANDATORY ACTION: Only ${Math.round(overallProgress * 100)}% complete. ` +
+                    `You MUST complete remaining steps. Incomplete execution violates thinking process requirements.`);
+            }
+            else if (overallProgress < this.DEFAULT_MINIMUM_THRESHOLD) {
+                warnings.push(`⚠️ WARNING: ${Math.round(overallProgress * 100)}% complete. ` +
+                    `Minimum 80% required. Complete remaining steps before synthesis.`);
+            }
+            // Critical gaps had no progress gate at all, so this fired on step 1 of
+            // every multi-technique plan: identifyCriticalGaps counts any technique
+            // with zero completed steps, and at the start that is nearly all of them.
+            if (criticalGaps.length > 0) {
+                warnings.push(`❌ CRITICAL GAPS DETECTED: ${criticalGaps.join(', ')}. ` +
+                    `These MUST be addressed for valid analysis.`);
+            }
         }
         // Specific technique warnings
         const blackHatStatus = statuses.find(s => s.technique === 'six_hats' && s.criticalStepsSkipped.includes('Black Hat'));

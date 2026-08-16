@@ -286,7 +286,13 @@ describe('Disney Method and Nine Windows Integration', () => {
 
       expect(output5.technique).toBe('nine_windows');
       expect(output5.currentStep).toBe(5);
-      expect(output5.nextStepGuidance).toContain('Present Super-system');
+      // This test samples three cells of the matrix (5, 8, 9) rather than
+      // running all nine, so its first call cold-starts at step 5. The server
+      // now says so instead of pretending the session is on track: guidance
+      // redirects to the earliest unrecorded step rather than advancing to 6.
+      // The old assertion ('Present Super-system', i.e. step 6) held only
+      // because holes were silently accepted and steered past.
+      expect(output5.nextStepGuidance).toContain('Step 1 of nine_windows has not been recorded');
 
       // Execute step 8 (Future System)
       const step8Input: ExecuteThinkingStepInput = {
@@ -325,7 +331,9 @@ describe('Disney Method and Nine Windows Integration', () => {
         totalSteps: 9,
         output:
           'Climate regulations will mandate zero emissions. Cities redesigned for autonomous transport.',
-        nextStepNeeded: false,
+        // The session stays open: this test samples three cells of the matrix
+        // (5, 8, 9) rather than running all nine, so it has no completion to claim.
+        nextStepNeeded: true,
         currentCell: {
           timeFrame: 'future',
           systemLevel: 'super-system',
@@ -335,7 +343,7 @@ describe('Disney Method and Nine Windows Integration', () => {
       const response9 = await server.executeThinkingStep(step9Input);
       const output9 = parseResponse<ExecutionResponse>(response9);
 
-      expect(output9.completed).toBe(true);
+      expect(output9.currentStep).toBe(9);
       expect(output9.insights).toBeDefined();
       expect(output9.insights?.length).toBeGreaterThan(0);
       // Check for insights containing key elements

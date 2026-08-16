@@ -130,11 +130,9 @@ export interface TechnicalDebtMetrics {
  * Cognitive flexibility specific types
  */
 export interface CognitiveMetrics {
-  perspectiveDiversity: number; // Variety of viewpoints (0.0-1.0)
+  recentReversibility: number; // Share of the last ten steps that could be walked back (0.0-1.0)
+  sustainedReversibility: number; // The same share over the whole session
   assumptionChallengeRate: number; // How often assumptions questioned
-  learningVelocity: number; // Rate of new insights
-  mentalModelFlexibility: number; // Ability to shift frameworks
-  creativeDivergence: number; // Variety in solutions generated
 }
 
 /**
@@ -225,12 +223,15 @@ export interface WarningPattern {
 }
 
 /**
- * Configuration for the early warning system
+ * Configuration for the early warning system.
+ *
+ * There is no measurement-throttle knob: sensors re-measure once per recorded
+ * step, gated on path length rather than on elapsed milliseconds, so there is
+ * no window to configure.
  */
 export interface EarlyWarningConfig {
   maxHistorySize?: number;
   historyTTL?: number;
-  measurementThrottleMs?: number;
   defaultCalibration?: Partial<SensorCalibration>;
   onError?: (error: Error, context: { sensor?: SensorType; operation: string }) => void;
 }

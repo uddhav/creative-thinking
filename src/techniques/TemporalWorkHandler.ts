@@ -2,7 +2,7 @@
  * Temporal Work technique handler
  */
 
-import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
+import { BaseTechniqueHandler, firstSentence, type TechniqueInfo, type StepInfo } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 
 export class TemporalWorkHandler extends BaseTechniqueHandler {
@@ -12,12 +12,14 @@ export class TemporalWorkHandler extends BaseTechniqueHandler {
       focus: 'Identify time constraints and opportunities',
       emoji: '🗺️',
       type: 'thinking', // Analysis and mapping
+      reversibility: 'high',
     },
     {
       name: 'Circadian Alignment',
       focus: 'Align with natural rhythms',
       emoji: '🌅',
       type: 'thinking', // Analysis of patterns
+      reversibility: 'high',
     },
     {
       name: 'Pressure Transformation',
@@ -123,11 +125,8 @@ export class TemporalWorkHandler extends BaseTechniqueHandler {
   }
 
   getStepGuidance(step: number, problem: string): string {
-    // Handle out of bounds gracefully
-    if (step < 1 || step > 5) {
-      return `Complete the Temporal Work Design process for: "${problem}"`;
-    }
-
+    // Out-of-range steps fall through to `default:` — one path, not an early
+    // return plus an unreachable arm returning the same string.
     switch (step) {
       case 1:
         return `🗺️ Map the temporal landscape of "${problem}". What are fixed deadlines vs flexible windows?`;
@@ -144,48 +143,96 @@ export class TemporalWorkHandler extends BaseTechniqueHandler {
     }
   }
 
+  /**
+   * Report what each step actually recorded, labelled by the step.
+   *
+   * Keyed on `entry.currentStep`, not on position in the array: `execute`
+   * appends a history entry for every call including revisions, so one revision
+   * shifts every later entry. Keying on the step also means a revision
+   * supersedes the entry it revises rather than reporting twice.
+   */
   extractInsights(
     history: Array<{
       currentStep?: number;
       temporalLandscape?: {
         fixedDeadlines?: string[];
+        flexibleWindows?: string[];
+        pressurePoints?: string[];
+        deadZones?: string[];
         kairosOpportunities?: string[];
       };
+      circadianAlignment?: string[];
+      pressureTransformation?: string[];
+      asyncSyncBalance?: string[];
       temporalEscapeRoutes?: string[];
-      nextStepNeeded?: boolean;
       output?: string;
     }>
   ): string[] {
-    const insights: string[] = [];
+    const totalSteps = this.steps.length;
+    const latestByStep = new Map<number, (typeof history)[number]>();
 
-    history.forEach(entry => {
-      if (entry.currentStep === 1 && entry.temporalLandscape) {
-        if (
-          entry.temporalLandscape.fixedDeadlines &&
-          entry.temporalLandscape.fixedDeadlines.length > 0
-        ) {
-          insights.push(`Fixed deadline: ${entry.temporalLandscape.fixedDeadlines[0]}`);
-        }
-        if (
-          entry.temporalLandscape.kairosOpportunities &&
-          entry.temporalLandscape.kairosOpportunities.length > 0
-        ) {
-          insights.push(`Opportunity window: ${entry.temporalLandscape.kairosOpportunities[0]}`);
-        }
-      }
-      if (
-        entry.currentStep === 5 &&
-        entry.temporalEscapeRoutes &&
-        entry.temporalEscapeRoutes.length > 0
-      ) {
-        insights.push(`Escape route: ${entry.temporalEscapeRoutes[0]}`);
-      }
-
-      // Add completion insight when all 5 steps are done
-      if (entry.currentStep === 5 && !entry.nextStepNeeded) {
-        insights.push('Temporal Work Design completed for optimized creative scheduling');
+    history.forEach((entry, index) => {
+      // Fall back to position only when the caller sent no step number.
+      const step = entry.currentStep ?? index + 1;
+      if (step >= 1 && step <= totalSteps) {
+        latestByStep.set(step, entry);
       }
     });
+
+    const insights: string[] = [];
+
+    for (let step = 1; step <= totalSteps; step++) {
+      const entry = latestByStep.get(step);
+      if (!entry) {
+        continue;
+      }
+      const stepName = this.steps[step - 1]?.name;
+      if (!stepName) {
+        continue;
+      }
+
+      const output = entry.output?.trim();
+      if (output) {
+        const summary = firstSentence(output);
+        if (summary.length > 0) {
+          insights.push(`${stepName}: ${summary}`);
+        }
+      }
+
+      // Each structured field belongs to one step; report it there.
+      if (step === 1 && entry.temporalLandscape) {
+        // All five keys, not the two that happened to be read. A landscape
+        // whose dead zones and pressure points were recorded and dropped is
+        // half a landscape.
+        const landscape: Array<[string, string[] | undefined]> = [
+          ['Fixed deadlines', entry.temporalLandscape.fixedDeadlines],
+          ['Flexible windows', entry.temporalLandscape.flexibleWindows],
+          ['Pressure points', entry.temporalLandscape.pressurePoints],
+          ['Dead zones', entry.temporalLandscape.deadZones],
+          ['Opportunity windows', entry.temporalLandscape.kairosOpportunities],
+        ];
+        for (const [label, values] of landscape) {
+          if (values && values.length > 0) {
+            insights.push(`${label}: ${values.join(', ')}`);
+          }
+        }
+      }
+      // Steps 2, 3 and 4 are array-validated on the way in and were read by
+      // nothing on the way out, so the three middle steps of a six-step
+      // technique contributed no structured content at all.
+      if (step === 2 && entry.circadianAlignment?.length) {
+        insights.push(`${stepName}: ${entry.circadianAlignment.join(', ')}`);
+      }
+      if (step === 3 && entry.pressureTransformation?.length) {
+        insights.push(`${stepName}: ${entry.pressureTransformation.join(', ')}`);
+      }
+      if (step === 4 && entry.asyncSyncBalance?.length) {
+        insights.push(`${stepName}: ${entry.asyncSyncBalance.join(', ')}`);
+      }
+      if (step === totalSteps && entry.temporalEscapeRoutes?.length) {
+        insights.push(`Escape routes: ${entry.temporalEscapeRoutes.join(', ')}`);
+      }
+    }
 
     return insights;
   }

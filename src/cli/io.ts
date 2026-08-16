@@ -9,18 +9,77 @@
 
 import type { LateralThinkingResponse } from '../types/index.js';
 
+/** How long to wait for the first byte before deciding nothing is coming. */
+export const STDIN_FIRST_BYTE_TIMEOUT_MS = 5000;
+
 /**
  * Read all of stdin and parse as JSON.
  * Returns null when stdin is a TTY (interactive use) so callers can fall back
  * to flags only.
+ *
+ * The wait for the *first* byte is bounded, because a stdin that is neither a
+ * TTY nor ever closed made this wait forever. That is the ordinary shape of
+ *
+ *     PLAN=$(socketes plan --problem "…" | head -1)
+ *
+ * in a script: inside `$( )` stdin is inherited from the parent shell, so it is
+ * open, is not a TTY, and never delivers EOF. The command hangs with no output
+ * and no indication of what it is waiting for. One did, here, for 84 minutes.
+ *
+ * Once a first byte arrives the read runs to EOF with no bound — a slow or
+ * large payload must not be truncated. The choice on timeout is to fail rather
+ * than to carry on with flags alone: proceeding would silently discard a
+ * payload that arrived a moment late, and the technique-specific fields are
+ * exactly what travels on stdin.
  */
-export async function readStdinJSON(): Promise<Record<string, unknown> | null> {
-  if (process.stdin.isTTY) return null;
+export async function readStdinJSON(
+  stream: NodeJS.ReadableStream & { isTTY?: boolean } = process.stdin,
+  firstByteTimeoutMs: number = STDIN_FIRST_BYTE_TIMEOUT_MS
+): Promise<Record<string, unknown> | null> {
+  if (stream.isTTY) return null;
 
   const chunks: Buffer[] = [];
-  for await (const chunk of process.stdin) {
-    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : (chunk as Buffer));
-  }
+  await new Promise<void>((resolve, reject) => {
+    let sawFirstChunk = false;
+
+    const cleanup = () => {
+      clearTimeout(timer);
+      stream.off('data', onData);
+      stream.off('end', onEnd);
+      stream.off('error', onError);
+    };
+    const onData = (chunk: Buffer | string) => {
+      if (!sawFirstChunk) {
+        sawFirstChunk = true;
+        clearTimeout(timer);
+      }
+      chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+    };
+    const onEnd = () => {
+      cleanup();
+      resolve();
+    };
+    const onError = (err: Error) => {
+      cleanup();
+      reject(err);
+    };
+    const timer = setTimeout(() => {
+      if (sawFirstChunk) return;
+      cleanup();
+      reject(
+        new Error(
+          `stdin stayed open and sent nothing for ${firstByteTimeoutMs}ms. ` +
+            'If you are not piping input, close it — `socketes … < /dev/null` — ' +
+            'which is also what a script needs inside $( ).'
+        )
+      );
+    }, firstByteTimeoutMs);
+
+    stream.on('data', onData);
+    stream.on('end', onEnd);
+    stream.on('error', onError);
+  });
+
   const raw = Buffer.concat(chunks).toString('utf8').trim();
   if (!raw) return null;
 

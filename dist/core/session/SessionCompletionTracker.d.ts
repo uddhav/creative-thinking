@@ -39,7 +39,13 @@ export declare class SessionCompletionTracker {
     /**
      * Calculate session completion metadata
      */
-    calculateCompletionMetadata(session: SessionData, plan?: PlanThinkingSessionOutput): SessionCompletionMetadata;
+    /**
+     * @param isTerminating whether this step ends the session. Incompleteness is
+     * only a problem when there will be no further steps; mid-session it is just
+     * progress, and saying otherwise on every early step taught callers to ignore
+     * the warnings entirely.
+     */
+    calculateCompletionMetadata(session: SessionData, plan?: PlanThinkingSessionOutput, isTerminating?: boolean): SessionCompletionMetadata;
     /**
      * Check if session should be allowed to proceed to synthesis
      */
@@ -64,6 +70,21 @@ export declare class SessionCompletionTracker {
      * Count completed steps for a technique with proper validation
      */
     private countTechniqueCompletedSteps;
+    /**
+     * Technique-local progress for one technique of a plan, for callers outside
+     * this tracker — notably next-step guidance, which needs to know whether an
+     * earlier step was passed over before pointing the caller further ahead.
+     *
+     * This is the ONLY sanctioned way to read per-technique step coverage from
+     * outside: it reuses the same numbering-convention disambiguation as the
+     * completion metadata (the validator carries the third copy), so a fourth
+     * hand-rolled copy cannot drift.
+     */
+    techniqueLocalProgress(session: SessionData, plan: PlanThinkingSessionOutput, technique: string, techniqueIndex: number): {
+        completedStepNumbers: Set<number>;
+        submissionsByStep: Map<number, number>;
+        techniqueSteps: number;
+    };
     /**
      * Check if a step number is valid for a technique
      */

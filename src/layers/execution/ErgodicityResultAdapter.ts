@@ -118,21 +118,42 @@ export class ErgodicityResultAdapter {
 
   /**
    * Adapt metrics data
+   *
+   * `constraintLevel` used to add two different clocks together and treat a
+   * missing reading as a middling one:
+   *
+   *     Math.min(1, (metrics.commitmentDepth || 0.5) + constraints.length * 0.05)
+   *
+   * `commitmentDepth` is a mean over the last five steps — a state a session
+   * can leave — while `constraints.length` counts every constraint since step 1
+   * and only grows, so the sum answered no single question about any moment.
+   * Worse, the two count the same steps: `createConstraint` fires on
+   * `commitmentLevel > 0.5`, which is exactly what `commitmentDepth` averages,
+   * so a committing step was charged twice — the same double charge the
+   * flexibility score shed when its own constraint penalty came off. And the
+   * `|| 0.5` turned a depth of 0, a session that has committed to nothing, into
+   * a reading halfway to fully constrained; 0 is a measurement, not a gap.
+   *
+   * One clock, the five-step window, and zero meaning zero.
    */
   private adaptMetrics(
     metrics: ErgodicityManagerResult['metrics'],
     currentFlexibility: number,
     pathMemory?: PathMemory
   ) {
-    // Use path memory to enhance constraint level calculation
-    const enhancedConstraintLevel = pathMemory
-      ? Math.min(1, (metrics.commitmentDepth || 0.5) + pathMemory.constraints.length * 0.05)
-      : metrics.commitmentDepth || 0.5;
+    const enhancedConstraintLevel = metrics.commitmentDepth ?? 0;
 
-    // Use path memory to adjust option space size
+    // Absent evidence is not a full option space.
+    //
+    // `|| 1.0` reported maximum optionality exactly when the measure read
+    // zero — and it reads zero for thirty-one of the thirty-two techniques,
+    // since only SCAMPER reports options at all. So the one number meant to
+    // say how much room is left was at its most reassuring when it knew
+    // nothing.
+    const measuredVelocity = metrics.optionVelocity ?? 0;
     const adjustedOptionSpace = pathMemory
-      ? (metrics.optionVelocity || 1.0) * Math.max(0.5, 1 - pathMemory.pathHistory.length * 0.01)
-      : metrics.optionVelocity || 1.0;
+      ? measuredVelocity * Math.max(0.5, 1 - pathMemory.pathHistory.length * 0.01)
+      : measuredVelocity;
 
     return {
       currentFlexibility,
@@ -166,7 +187,9 @@ export class ErgodicityResultAdapter {
         severity: this.mapSeverityString(warning.severity),
         timestamp: Date.parse(warning.timestamp),
       })),
-      overallSeverity: earlyWarningState.overallRisk || 'medium',
+      // Not 'medium'. An absent risk level is an absent reading, and reporting
+      // the middle of the scale for it invents a severity nothing measured.
+      overallSeverity: earlyWarningState.overallRisk ?? 'unknown',
     };
   }
 

@@ -14,7 +14,8 @@ import type { SessionManager } from '../../core/SessionManager.js';
 import type { TechniqueRegistry } from '../../techniques/TechniqueRegistry.js';
 import type { TechniqueHandler } from '../../techniques/types.js';
 import type { VisualFormatter } from '../../utils/VisualFormatter.js';
-import type { ErgodicityManager } from '../../ergodicity/index.js';
+import { ErgodicityManager } from '../../ergodicity/index.js';
+import { wrapErgodicityManager } from '../../utils/PerformanceIntegration.js';
 import { ErrorContextBuilder } from '../../core/ErrorContextBuilder.js';
 import { TelemetryCollector } from '../../telemetry/TelemetryCollector.js';
 import { ErrorFactory } from '../../errors/enhanced-errors.js';
@@ -382,7 +383,25 @@ export class ExecutionValidator {
       const globalStartForTechnique = stepsBeforeThisTechnique + 1;
       const globalEndForTechnique = stepsBeforeThisTechnique + currentTechniqueSteps;
 
+      // `totalSteps` says which numbering the caller is using, and it is the
+      // only thing that can. For any technique after the first, the two ranges
+      // overlap — with a 3-step block ahead of a 5-step one, local 4 and 5 are
+      // also global 4 and 5 — and guessing from `currentStep` alone resolved
+      // both to the global reading, folding local steps 4 and 5 back onto 1
+      // and 2. A caller numbering within the technique sends that technique's
+      // own step count; a caller numbering across the plan sends the plan's.
+      const callerNumbersWithinTechnique =
+        currentTechniqueSteps > 0 &&
+        input.totalSteps === currentTechniqueSteps &&
+        input.totalSteps !== totalPlanSteps;
+
       if (
+        callerNumbersWithinTechnique &&
+        input.currentStep >= 1 &&
+        input.currentStep <= currentTechniqueSteps
+      ) {
+        techniqueLocalStep = input.currentStep;
+      } else if (
         input.currentStep >= globalStartForTechnique &&
         input.currentStep <= globalEndForTechnique &&
         input.currentStep <= totalPlanSteps
@@ -433,6 +452,41 @@ export class ExecutionValidator {
   }
 
   /**
+   * Name the fields a rejected step objected to.
+   *
+   * `validateStep` returns a bare boolean, so a handler that rejects
+   * `vacantSpaces` for a missing `whyVacant` cannot say so. It is a pure
+   * function of (step, data) though, so asking it again with one field removed
+   * at a time identifies the culprit: a field whose absence makes the step
+   * validate is a field whose value the handler refused.
+   *
+   * Only ever runs on the error path, and only over the fields the caller
+   * actually sent. A handler that throws instead of returning false already
+   * reports its own field, so a throw here just means "not this one".
+   */
+  private findRejectedFields(
+    handler: TechniqueHandler,
+    step: number,
+    input: ExecuteThinkingStepInput
+  ): string[] {
+    const candidates = Object.keys(input).filter(key => {
+      if (key === 'technique' || key === 'currentStep') return false;
+      const value = input[key as keyof typeof input];
+      return value !== null && value !== undefined;
+    });
+
+    return candidates.filter(field => {
+      const withoutField = { ...input } as Record<string, unknown>;
+      delete withoutField[field];
+      try {
+        return handler.validateStep(step, withoutField as unknown as ExecuteThinkingStepInput);
+      } catch {
+        return false;
+      }
+    });
+  }
+
+  /**
    * Validate step and get step info
    */
   validateStepAndGetInfo(
@@ -443,6 +497,16 @@ export class ExecutionValidator {
     isValid: boolean;
     stepInfo?: { name: string; focus: string; emoji: string } | null;
     normalizedStep: number;
+    /**
+     * Which of the two ways a step can fail. `range` is a step number outside
+     * the technique; `data` is a step number the technique accepts carrying
+     * fields it does not. Both used to be reported as `range`, so a mis-shaped
+     * field produced "Valid range is 1-5" for a step that was already in 1-5 —
+     * advice the caller could follow forever without getting anywhere.
+     */
+    failure?: 'range' | 'data';
+    /** Fields whose removal makes the step validate. See findRejectedFields. */
+    rejectedFields?: string[];
   } {
     // Store original step for error reporting before normalization
     const originalLocalStep = techniqueLocalStep;
@@ -471,7 +535,8 @@ export class ExecutionValidator {
     }
 
     // Check if the original step is invalid (including negative or out of bounds)
-    const isOriginalStepInvalid = wasNormalized || !handler.validateStep(originalLocalStep, input);
+    const rejectedByHandler = !wasNormalized && !handler.validateStep(originalLocalStep, input);
+    const isOriginalStepInvalid = wasNormalized || rejectedByHandler;
 
     if (isOriginalStepInvalid) {
       // Handle invalid step - visual formatter expects this
@@ -495,6 +560,10 @@ export class ExecutionValidator {
         isValid: false,
         stepInfo: null,
         normalizedStep: Math.max(1, techniqueLocalStep), // Ensure at least 1
+        failure: rejectedByHandler ? 'data' : 'range',
+        rejectedFields: rejectedByHandler
+          ? this.findRejectedFields(handler, originalLocalStep, input)
+          : undefined,
       };
     }
 
@@ -533,8 +602,15 @@ export class ExecutionValidator {
    */
   private initializeSession(
     input: ExecuteThinkingStepInput,
-    ergodicityManager: ErgodicityManager
+    _sharedErgodicityManager: ErgodicityManager
   ): SessionData {
+    // A session gets its own manager. Reading the shared one here handed every
+    // session the same live PathMemory object — not merely the same values, the
+    // same object identity — so sessions aliased each other's commitments before
+    // a single step ran. The shared instance is still accepted so the call
+    // signature and its ~20 test call sites are unchanged; it is simply not the
+    // one this session records into.
+    const ergodicityManager = wrapErgodicityManager(new ErgodicityManager());
     const pathMemory = ergodicityManager.getPathMemory();
 
     const sessionData: SessionData = {

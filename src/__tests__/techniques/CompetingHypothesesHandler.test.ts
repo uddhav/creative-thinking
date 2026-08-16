@@ -355,6 +355,135 @@ describe('CompetingHypothesesHandler', () => {
       expect(insights).toContain('Leading hypothesis: H1 (70.0%)');
     });
 
+    it('should report every step that recorded an output', () => {
+      // `entry.output` gated every branch below it and was never itself
+      // reported, so steps 1, 2, 4, 5 and 7 — which carry no structured field —
+      // reported nothing at all however much the caller wrote.
+      const history = [
+        { currentStep: 1, output: 'Four hypotheses, including a deception scenario.' },
+        { currentStep: 2, output: 'Nine evidence items, three of them absences.' },
+        {
+          currentStep: 4,
+          output: 'The maintenance log discriminates; the witness reports do not.',
+        },
+        { currentStep: 5, output: 'A planted log entry is cheap for an insider.' },
+        { currentStep: 7, output: 'Removing the maintenance log flips the leader.' },
+      ];
+
+      const insights = handler.extractInsights(history);
+      expect(insights).toEqual([
+        'Hypothesis Generation: Four hypotheses, including a deception scenario.',
+        'Evidence Mapping: Nine evidence items, three of them absences.',
+        'Diagnostic Value Assessment: The maintenance log discriminates; the witness reports do not.',
+        'Deception Scenario Modeling: A planted log entry is cheap for an insider.',
+        'Sensitivity Analysis: Removing the maintenance log flips the leader.',
+      ]);
+    });
+
+    it('should report the evidence, ratings and diagnostic values of the matrix', () => {
+      // The matrix used to report only hypotheses.length; the evidence list,
+      // every required rating and the diagnostic scores were discarded.
+      const history = [
+        {
+          currentStep: 3,
+          output: 'Matrix built',
+          matrix: {
+            hypotheses: ['Equipment failure', 'Human error'],
+            evidence: ['Error logs', 'Witness reports'],
+            ratings: {
+              'Error logs_Equipment failure': 2,
+              'Error logs_Human error': -1,
+              'Witness reports_Human error': 0,
+            },
+            diagnosticValue: { 'Error logs': 0.9, 'Witness reports': 0.3 },
+            probabilities: {},
+            sensitivityFactors: ['Log integrity'],
+          },
+        },
+      ];
+
+      const insights = handler.extractInsights(history);
+      expect(insights).toContain(
+        'Matrix Construction: Evaluating 2 competing hypotheses — Equipment failure, Human error'
+      );
+      expect(insights).toContain(
+        'Matrix Construction: 2 pieces of evidence mapped — Error logs, Witness reports'
+      );
+      expect(insights).toContain(
+        'Matrix Construction: Compatibility ratings — Error logs_Equipment failure +2, ' +
+          'Error logs_Human error -1, Witness reports_Human error 0'
+      );
+      expect(insights).toContain(
+        'Matrix Construction: Diagnostic value, most discriminating first — ' +
+          'Error logs 0.9, Witness reports 0.3'
+      );
+      expect(insights).toContain('Matrix Construction: Sensitivity factors — Log integrity');
+    });
+
+    it('should report the whole posterior distribution, not only its leader', () => {
+      const history = [
+        {
+          currentStep: 6,
+          probabilities: { 'Equipment failure': 0.6, 'Human error': 0.25, 'Material defect': 0.15 },
+        },
+      ];
+
+      const insights = handler.extractInsights(history);
+      expect(insights).toContain('Leading hypothesis: Equipment failure (60.0%)');
+      expect(insights).toContain(
+        'Bayesian Update: Posterior distribution — Equipment failure 60.0%, ' +
+          'Human error 25.0%, Material defect 15.0%'
+      );
+    });
+
+    it('should band the confidence once every step has been recorded', () => {
+      // The band used to be read off the last history entry, which is step 8 and
+      // never carries probabilities, so it was unreachable in practice.
+      const buildHistory = (probabilities: Record<string, number>) =>
+        Array.from({ length: 8 }, (_, i) => ({
+          currentStep: i + 1,
+          output: `Step ${i + 1} recorded`,
+          ...(i === 5 ? { probabilities } : {}),
+        }));
+
+      expect(handler.extractInsights(buildHistory({ H1: 0.85, H2: 0.15 }))).toContain(
+        'High confidence - Strong evidence for leading hypothesis'
+      );
+      expect(handler.extractInsights(buildHistory({ H1: 0.65, H2: 0.35 }))).toContain(
+        'Moderate confidence - Leading hypothesis likely but not certain'
+      );
+      expect(handler.extractInsights(buildHistory({ H1: 0.45, H2: 0.55 }))).toContain(
+        'Low confidence - Multiple plausible hypotheses remain'
+      );
+      expect(handler.extractInsights(buildHistory({ H1: 0.35, H2: 0.33, H3: 0.32 }))).toContain(
+        'Very low confidence - No hypothesis strongly supported'
+      );
+    });
+
+    it('should not band the confidence when the session is incomplete', () => {
+      const history = [{ currentStep: 6, probabilities: { H1: 0.9, H2: 0.1 } }];
+
+      const insights = handler.extractInsights(history);
+      expect(insights).toContain('Leading hypothesis: H1 (90.0%)');
+      expect(insights.some(i => i.includes('confidence -'))).toBe(false);
+    });
+
+    it('should label by currentStep, so a revision supersedes what it revises', () => {
+      // The old version labelled by array position, so one revision shifted
+      // every later entry onto the wrong step name.
+      const history = [
+        { currentStep: 1, output: 'The first set of hypotheses.' },
+        { currentStep: 2, output: 'The evidence as first mapped.' },
+        { currentStep: 1, output: 'The corrected set of hypotheses.' },
+      ];
+
+      const insights = handler.extractInsights(history);
+      expect(insights).toEqual([
+        'Hypothesis Generation: The corrected set of hypotheses.',
+        'Evidence Mapping: The evidence as first mapped.',
+      ]);
+    });
+
     it('should handle missing data gracefully', () => {
       const history = [
         { output: 'Basic hypothesis generation' },

@@ -36,6 +36,9 @@ export class JsonOptimizer {
   /**
    * Optimize a response object by reducing size and caching
    */
+  /** JSON paths whose string values were cut this run, with original lengths. */
+  private truncatedPaths: Array<{ path: string; originalLength: number }> = [];
+
   public optimizeResponse(content: unknown): string {
     // Handle undefined specifically since JSON.stringify converts it to undefined (not "undefined")
     if (content === undefined) {
@@ -51,11 +54,50 @@ export class JsonOptimizer {
     }
 
     // Apply optimizations
+    this.truncatedPaths = [];
     const optimized = this.deepOptimize(content, 0);
+    if (
+      this.truncatedPaths.length > 0 &&
+      optimized !== null &&
+      typeof optimized === 'object' &&
+      !Array.isArray(optimized)
+    ) {
+      // Beside the data, not buried in it: which values were cut and how long
+      // they really were. Array indices are collapsed (`$.history[3].data`
+      // becomes `$.history[].data` with a count) — per-element entries are
+      // noise, and an uncapped report once grew large enough to trip the
+      // response size limit it was reporting on, which dropped the very fields
+      // it described. The session history holds the full text — export
+      // retrieves it untruncated.
+      const aggregated = new Map<string, { count: number; maxOriginalLength: number }>();
+      for (const { path, originalLength } of this.truncatedPaths) {
+        const key = path.replace(/\[\d+\]/g, '[]');
+        const entry = aggregated.get(key) ?? { count: 0, maxOriginalLength: 0 };
+        entry.count += 1;
+        entry.maxOriginalLength = Math.max(entry.maxOriginalLength, originalLength);
+        aggregated.set(key, entry);
+      }
+      (optimized as Record<string, unknown>).truncation = {
+        fields: [...aggregated].map(([path, info]) => ({ path, ...info })),
+        note: `Strings over ${this.config.maxStringLength} chars cut at end; session export returns full text.`,
+      };
+    }
     const result = JSON.stringify(optimized, null, 2);
 
     // Check size limit
     if (result.length > this.config.maxResponseSize) {
+      // The report is the first thing sacrificed: it must never squeeze out
+      // the data it describes. If dropping it gets the response under budget,
+      // stop there.
+      if (optimized !== null && typeof optimized === 'object' && 'truncation' in optimized) {
+        const withoutReport = { ...(optimized as Record<string, unknown>) };
+        delete withoutReport.truncation;
+        const slimmed = JSON.stringify(withoutReport, null, 2);
+        if (slimmed.length <= this.config.maxResponseSize) {
+          this.updateCache(cacheKey, slimmed);
+          return slimmed;
+        }
+      }
       const truncated = this.truncateResponse(optimized);
       const truncatedResult = JSON.stringify(truncated, null, 2);
       this.updateCache(cacheKey, truncatedResult);
@@ -85,7 +127,7 @@ export class JsonOptimizer {
   /**
    * Deep optimize an object/array recursively
    */
-  private deepOptimize(value: unknown, depth: number): unknown {
+  private deepOptimize(value: unknown, depth: number, path = '$'): unknown {
     if (depth >= this.config.maxDepth) {
       return this.config.truncateMessage;
     }
@@ -95,15 +137,15 @@ export class JsonOptimizer {
     }
 
     if (typeof value === 'string') {
-      return this.optimizeString(value);
+      return this.optimizeString(value, path);
     }
 
     if (Array.isArray(value)) {
-      return this.optimizeArray(value, depth);
+      return this.optimizeArray(value, depth, path);
     }
 
     if (typeof value === 'object') {
-      return this.optimizeObject(value as Record<string, unknown>, depth);
+      return this.optimizeObject(value as Record<string, unknown>, depth, path);
     }
 
     return value;
@@ -112,21 +154,29 @@ export class JsonOptimizer {
   /**
    * Optimize string values
    */
-  private optimizeString(str: string): string {
+  private optimizeString(str: string, path?: string): string {
     if (str.length <= this.config.maxStringLength) {
       return str;
     }
 
-    const half = Math.floor(this.config.maxStringLength / 2);
-    return str.substring(0, half) + this.config.truncateMessage + str.substring(str.length - half);
+    // Cut at the END and say so. The old form spliced the marker into the
+    // MIDDLE — head + '... [truncated]' + tail — so a caller re-read a doctored
+    // version of its own input with the marker buried mid-sentence and no
+    // other signal anywhere. Measured: a 1200-char problemStatement came back
+    // as 815 chars with the splice, silently, on 26 of 32 techniques. The
+    // truncated paths are now collected per run and reported beside the data.
+    if (path) {
+      this.truncatedPaths.push({ path, originalLength: str.length });
+    }
+    return str.substring(0, this.config.maxStringLength) + this.config.truncateMessage;
   }
 
   /**
    * Optimize arrays
    */
-  private optimizeArray(arr: unknown[], depth: number): unknown[] {
+  private optimizeArray(arr: unknown[], depth: number, path = '$'): unknown[] {
     if (arr.length <= this.config.maxArrayLength) {
-      return arr.map(item => this.deepOptimize(item, depth + 1));
+      return arr.map((item, i) => this.deepOptimize(item, depth + 1, `${path}[${i}]`));
     }
 
     const half = Math.floor(this.config.maxArrayLength / 2);
@@ -134,7 +184,7 @@ export class JsonOptimizer {
 
     // Keep first half
     for (let i = 0; i < half; i++) {
-      result.push(this.deepOptimize(arr[i], depth + 1));
+      result.push(this.deepOptimize(arr[i], depth + 1, `${path}[${i}]`));
     }
 
     // Add truncation marker
@@ -145,7 +195,7 @@ export class JsonOptimizer {
     // Keep last few items
     for (let i = arr.length - 5; i < arr.length; i++) {
       if (i >= 0) {
-        result.push(this.deepOptimize(arr[i], depth + 1));
+        result.push(this.deepOptimize(arr[i], depth + 1, `${path}[${i}]`));
       }
     }
 
@@ -155,7 +205,11 @@ export class JsonOptimizer {
   /**
    * Optimize objects
    */
-  private optimizeObject(obj: Record<string, unknown>, depth: number): Record<string, unknown> {
+  private optimizeObject(
+    obj: Record<string, unknown>,
+    depth: number,
+    path = '$'
+  ): Record<string, unknown> {
     const result: Record<string, unknown> = {};
 
     // Special handling for known fields
@@ -182,14 +236,14 @@ export class JsonOptimizer {
     // Process priority fields first
     for (const field of priorityFields) {
       if (field in obj) {
-        result[field] = this.deepOptimize(obj[field], depth + 1);
+        result[field] = this.deepOptimize(obj[field], depth + 1, `${path}.${field}`);
       }
     }
 
     // Process other fields
     for (const [key, value] of Object.entries(obj)) {
       if (!priorityFields.includes(key) && !deferredFields.includes(key)) {
-        result[key] = this.deepOptimize(value, depth + 1);
+        result[key] = this.deepOptimize(value, depth + 1, `${path}.${key}`);
       }
     }
 
@@ -203,7 +257,7 @@ export class JsonOptimizer {
 
     for (const field of deferredFields) {
       if (field in obj) {
-        result[field] = this.deepOptimize(obj[field], depth + 1);
+        result[field] = this.deepOptimize(obj[field], depth + 1, `${path}.${field}`);
       }
     }
 

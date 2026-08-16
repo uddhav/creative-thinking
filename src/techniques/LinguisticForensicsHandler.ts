@@ -5,7 +5,7 @@
  * hidden insights, cognitive states, and authenticity markers
  */
 
-import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
+import { BaseTechniqueHandler, firstSentence, type TechniqueInfo, type StepInfo } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 
 interface LinguisticStep extends StepInfo {
@@ -20,6 +20,7 @@ export class LinguisticForensicsHandler extends BaseTechniqueHandler {
       focus: 'Identify key claims, statements, and assertions',
       emoji: '📝',
       type: 'thinking',
+      reversibility: 'high',
       markers: [
         'Main claims and assertions',
         'Supporting statements',
@@ -34,6 +35,7 @@ export class LinguisticForensicsHandler extends BaseTechniqueHandler {
       focus: 'Detect linguistic markers and anomalies',
       emoji: '🔍',
       type: 'thinking',
+      reversibility: 'high',
       markers: [
         'Recurring linguistic structures',
         'Deviations from baseline',
@@ -405,46 +407,79 @@ Output: Complete linguistic forensics report with coherence verdict and confiden
     return true;
   }
 
+  /**
+   * Report what each step actually recorded, labelled by the step.
+   *
+   * Keyed on `entry.currentStep`, not on position in the array: `execute`
+   * appends a history entry for every call including revisions, so one revision
+   * shifts every later entry. Keying on the step also means a revision
+   * supersedes the entry it revises rather than reporting twice.
+   *
+   * Detecting linguistic markers is this technique's job, so the marker checks
+   * stay — but as an *addition* to the step's own output, never as the gate
+   * deciding whether that output is reported at all. Gated on the markers, a
+   * finding phrased without the words "distancing" or "hedging" produced no
+   * insight whatsoever.
+   */
   extractInsights(
     history: Array<{
+      currentStep?: number;
       output?: string;
       coherenceScore?: number;
       pronounRatios?: Record<string, number>;
     }>
   ): string[] {
-    const insights: string[] = [];
+    const totalSteps = this.steps.length;
+    const latestByStep = new Map<number, (typeof history)[number]>();
 
     history.forEach((entry, index) => {
-      if (entry.output) {
-        const stepNumber = index + 1;
-        const stepName = this.steps[index]?.name || `Step ${stepNumber}`;
-
-        // Extract linguistic pattern insights
-        if (entry.output.toLowerCase().includes('distancing')) {
-          insights.push(`${stepName}: Psychological distancing detected`);
-        }
-        if (entry.output.toLowerCase().includes('hedg')) {
-          insights.push(`${stepName}: Hedging language indicates uncertainty`);
-        }
-        if (entry.pronounRatios) {
-          const iWeRatio = entry.pronounRatios.iWe;
-          if (iWeRatio && iWeRatio > 0.7) {
-            insights.push('High individual focus (I/We ratio > 0.7)');
-          } else if (iWeRatio && iWeRatio < 0.3) {
-            insights.push('High collective focus (I/We ratio < 0.3)');
-          }
-        }
-        if (entry.coherenceScore !== undefined) {
-          insights.push(`Coherence Score: ${entry.coherenceScore}%`);
-        }
+      // Fall back to position only when the caller sent no step number.
+      const step = entry.currentStep ?? index + 1;
+      if (step >= 1 && step <= totalSteps) {
+        latestByStep.set(step, entry);
       }
     });
 
-    // Add summary insight
-    if (history.length >= this.steps.length) {
-      const finalEntry = history[history.length - 1];
-      if (finalEntry.coherenceScore !== undefined) {
-        const score = finalEntry.coherenceScore;
+    const insights: string[] = [];
+
+    for (let step = 1; step <= totalSteps; step++) {
+      const entry = latestByStep.get(step);
+      if (!entry) {
+        continue;
+      }
+      const stepName = this.steps[step - 1]?.name;
+      if (!stepName) {
+        continue;
+      }
+
+      const output = entry.output?.trim();
+      if (output) {
+        const summary = firstSentence(output);
+        if (summary.length > 0) {
+          insights.push(`${stepName}: ${summary}`);
+        }
+        // Marker detection, reported alongside the output rather than instead of it.
+        const lowered = output.toLowerCase();
+        if (lowered.includes('distancing')) {
+          insights.push(`${stepName}: Psychological distancing detected`);
+        }
+        if (lowered.includes('hedg')) {
+          insights.push(`${stepName}: Hedging language indicates uncertainty`);
+        }
+      }
+
+      // Each structured field belongs to one step; report it there.
+      if (step === 3 && entry.pronounRatios) {
+        const iWeRatio = entry.pronounRatios.iWe;
+        if (iWeRatio && iWeRatio > 0.7) {
+          insights.push('High individual focus (I/We ratio > 0.7)');
+        } else if (iWeRatio && iWeRatio < 0.3) {
+          insights.push('High collective focus (I/We ratio < 0.3)');
+        }
+      }
+      if (step === totalSteps && entry.coherenceScore !== undefined) {
+        const score = entry.coherenceScore;
+        insights.push(`Coherence Score: ${score}%`);
         if (score >= 85) {
           insights.push('High coherence - Consistent and authentic communication');
         } else if (score >= 70) {

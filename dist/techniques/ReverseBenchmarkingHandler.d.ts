@@ -12,14 +12,18 @@ interface VacantSpace {
     whyVacant: string;
 }
 interface HistoryEntry {
+    currentStep?: number;
     output?: string;
     weaknessMapping?: {
         universalWeaknesses?: string[];
     };
     vacantSpaces?: VacantSpace[];
-    antiMimeticStrategy?: unknown;
+    antiMimeticStrategy?: string | {
+        differentiationVector?: string;
+    };
     excellenceDesign?: {
         area?: string;
+        standard?: string;
     };
 }
 export declare class ReverseBenchmarkingHandler extends BaseTechniqueHandler {
@@ -28,6 +32,14 @@ export declare class ReverseBenchmarkingHandler extends BaseTechniqueHandler {
     getStepInfo(step: number): StepInfo;
     getStepGuidance(step: number, problem: string): string;
     validateStep(step: number, data: unknown): boolean;
+    /**
+     * Report what each step actually recorded, labelled by the step.
+     *
+     * Keyed on `entry.currentStep`, not on position in the array: `execute`
+     * appends a history entry for every call including revisions, so one revision
+     * shifts every later entry. Keying on the step also means a revision
+     * supersedes the entry it revises rather than reporting twice.
+     */
     extractInsights(history: HistoryEntry[]): string[];
 }
 export {};

@@ -5,7 +5,7 @@
  * competing explanations using evidence matrices and Bayesian reasoning
  */
 
-import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
+import { BaseTechniqueHandler, firstSentence, type TechniqueInfo, type StepInfo } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 
 interface HypothesisStep extends StepInfo {
@@ -19,6 +19,7 @@ export interface EvidenceHypothesisMatrix {
   ratings: { [key: string]: number }; // evidence_hypothesis -> rating (-2 to +2)
   diagnosticValue: { [evidence: string]: number }; // 0-1 scale
   probabilities: { [hypothesis: string]: number }; // posterior probabilities
+  sensitivityFactors?: string[]; // declared by the tool schema alongside the rest of the matrix
 }
 
 export class CompetingHypothesesHandler extends BaseTechniqueHandler {
@@ -28,6 +29,7 @@ export class CompetingHypothesesHandler extends BaseTechniqueHandler {
       focus: 'Create multiple competing explanations',
       emoji: '💡',
       type: 'thinking',
+      reversibility: 'high',
       analysisType: 'generation',
       matrixElements: [
         'Primary hypothesis',
@@ -42,6 +44,7 @@ export class CompetingHypothesesHandler extends BaseTechniqueHandler {
       focus: 'List all available evidence',
       emoji: '📊',
       type: 'thinking',
+      reversibility: 'high',
       analysisType: 'evidence',
       matrixElements: [
         'Direct evidence',
@@ -494,62 +497,159 @@ Output: Complete decision package with conclusion, confidence, actions, and moni
     return true;
   }
 
+  /**
+   * Report what each step recorded, labelled by the step it belongs to.
+   *
+   * Keyed on `entry.currentStep`, not on position: `execute` appends an entry
+   * per call including revisions, so one revision shifts every later entry onto
+   * the wrong step name. Keying on the step also lets a revision supersede the
+   * entry it revises instead of reporting both.
+   */
   extractInsights(
     history: Array<{
+      currentStep?: number;
       output?: string;
       matrix?: EvidenceHypothesisMatrix;
       probabilities?: Record<string, number>;
       leadingHypothesis?: string;
     }>
   ): string[] {
-    const insights: string[] = [];
+    const totalSteps = this.steps.length;
+    const latestByStep = new Map<number, (typeof history)[number]>();
 
     history.forEach((entry, index) => {
-      if (entry.output) {
-        const stepNumber = index + 1;
-        const stepName = this.steps[index]?.name || `Step ${stepNumber}`;
-
-        // Extract hypothesis-specific insights
-        if (entry.matrix?.hypotheses) {
-          insights.push(
-            `${stepName}: Evaluating ${entry.matrix.hypotheses.length} competing hypotheses`
-          );
-        }
-
-        if (entry.probabilities) {
-          const sorted = Object.entries(entry.probabilities).sort(([, a], [, b]) => b - a);
-          if (sorted.length > 0) {
-            const [leading, prob] = sorted[0];
-            insights.push(`Leading hypothesis: ${leading} (${(prob * 100).toFixed(1)}%)`);
-          }
-        }
-
-        if (entry.leadingHypothesis) {
-          insights.push(`Decision: ${entry.leadingHypothesis}`);
-        }
+      // Fall back to position only when the caller sent no step number.
+      const step = entry.currentStep ?? index + 1;
+      if (step >= 1 && step <= totalSteps) {
+        latestByStep.set(step, entry);
       }
     });
 
-    // Add final insight about decision confidence
-    if (history.length >= this.steps.length) {
-      const finalEntry = history[history.length - 1];
-      if (finalEntry.probabilities) {
-        const probs = Object.values(finalEntry.probabilities);
-        const maxProb = Math.max(...probs);
+    const insights: string[] = [];
+    let finalProbabilities: Record<string, number> | undefined;
 
-        if (maxProb > 0.8) {
-          insights.push('High confidence - Strong evidence for leading hypothesis');
-        } else if (maxProb > 0.6) {
-          insights.push('Moderate confidence - Leading hypothesis likely but not certain');
-        } else if (maxProb > 0.4) {
-          insights.push('Low confidence - Multiple plausible hypotheses remain');
-        } else {
-          insights.push('Very low confidence - No hypothesis strongly supported');
+    for (let step = 1; step <= totalSteps; step++) {
+      const entry = latestByStep.get(step);
+      if (!entry) {
+        continue;
+      }
+      const stepName = this.steps[step - 1].name;
+
+      // `entry.output` used to gate every insight below and was never itself
+      // reported, so steps 1, 2, 4, 5 and 7 — which carry no structured field —
+      // reported nothing at all however much the caller wrote.
+      const output = entry.output?.trim();
+      if (output) {
+        const summary = firstSentence(output);
+        if (summary.length > 0) {
+          insights.push(`${stepName}: ${summary}`);
         }
+      }
+
+      if (step === 3 && entry.matrix) {
+        insights.push(...this.describeMatrix(stepName, entry.matrix));
+      }
+
+      if (step === 6 && entry.probabilities) {
+        insights.push(...this.describeProbabilities(stepName, entry.probabilities));
+        finalProbabilities = entry.probabilities;
+      }
+
+      if (step === 8 && entry.leadingHypothesis) {
+        insights.push(`Decision: ${entry.leadingHypothesis}`);
+      }
+    }
+
+    // The banded reading of the posterior distribution, which is a judgement
+    // the numbers themselves do not carry.
+    if (latestByStep.size >= totalSteps && finalProbabilities) {
+      const maxProb = Math.max(...Object.values(finalProbabilities));
+
+      if (maxProb > 0.8) {
+        insights.push('High confidence - Strong evidence for leading hypothesis');
+      } else if (maxProb > 0.6) {
+        insights.push('Moderate confidence - Leading hypothesis likely but not certain');
+      } else if (maxProb > 0.4) {
+        insights.push('Low confidence - Multiple plausible hypotheses remain');
+      } else {
+        insights.push('Very low confidence - No hypothesis strongly supported');
       }
     }
 
     return insights;
+  }
+
+  /**
+   * The matrix is the technique's central artefact and every part of it is
+   * caller-supplied. Reporting only `hypotheses.length` discarded the evidence
+   * list, every rating the caller was required to supply, and the diagnostic
+   * scores that decide where to look next.
+   */
+  private describeMatrix(stepName: string, matrix: EvidenceHypothesisMatrix): string[] {
+    const described: string[] = [];
+
+    const hypotheses = Array.isArray(matrix.hypotheses) ? matrix.hypotheses : [];
+    const evidence = Array.isArray(matrix.evidence) ? matrix.evidence : [];
+
+    if (hypotheses.length > 0) {
+      described.push(
+        `${stepName}: Evaluating ${hypotheses.length} competing hypotheses — ${hypotheses.join(', ')}`
+      );
+    }
+    if (evidence.length > 0) {
+      described.push(
+        `${stepName}: ${evidence.length} pieces of evidence mapped — ${evidence.join(', ')}`
+      );
+    }
+
+    const ratings = Object.entries(matrix.ratings ?? {});
+    if (ratings.length > 0) {
+      described.push(
+        `${stepName}: Compatibility ratings — ${ratings
+          .map(([pair, rating]) => `${pair} ${rating > 0 ? '+' : ''}${rating}`)
+          .join(', ')}`
+      );
+    }
+
+    const diagnostic = Object.entries(matrix.diagnosticValue ?? {});
+    if (diagnostic.length > 0) {
+      const ranked = [...diagnostic].sort(([, a], [, b]) => b - a);
+      described.push(
+        `${stepName}: Diagnostic value, most discriminating first — ${ranked
+          .map(([item, value]) => `${item} ${value}`)
+          .join(', ')}`
+      );
+    }
+
+    const carriedProbabilities = Object.entries(matrix.probabilities ?? {});
+    if (carriedProbabilities.length > 0) {
+      described.push(
+        `${stepName}: Probabilities carried in the matrix — ${carriedProbabilities
+          .map(([hypothesis, probability]) => `${hypothesis} ${(probability * 100).toFixed(1)}%`)
+          .join(', ')}`
+      );
+    }
+
+    if (Array.isArray(matrix.sensitivityFactors) && matrix.sensitivityFactors.length > 0) {
+      described.push(`${stepName}: Sensitivity factors — ${matrix.sensitivityFactors.join(', ')}`);
+    }
+
+    return described;
+  }
+
+  private describeProbabilities(stepName: string, probabilities: Record<string, number>): string[] {
+    const sorted = Object.entries(probabilities).sort(([, a], [, b]) => b - a);
+    if (sorted.length === 0) {
+      return [];
+    }
+
+    const [leading, prob] = sorted[0];
+    return [
+      `Leading hypothesis: ${leading} (${(prob * 100).toFixed(1)}%)`,
+      `${stepName}: Posterior distribution — ${sorted
+        .map(([hypothesis, probability]) => `${hypothesis} ${(probability * 100).toFixed(1)}%`)
+        .join(', ')}`,
+    ];
   }
 
   // Helper method to create empty matrix

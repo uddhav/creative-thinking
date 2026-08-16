@@ -124,7 +124,7 @@ describe('Ergodicity Prompts', () => {
         currentStep: 7,
         totalSteps: 7,
         output: 'Purple hat: Analyzing path dependencies...',
-        nextStepNeeded: false,
+        nextStepNeeded: true,
         hatColor: 'purple',
       };
 

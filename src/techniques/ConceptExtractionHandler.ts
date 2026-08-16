@@ -2,7 +2,7 @@
  * Concept Extraction technique handler with reflexivity
  */
 
-import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
+import { BaseTechniqueHandler, firstSentence, type TechniqueInfo, type StepInfo } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 
 export class ConceptExtractionHandler extends BaseTechniqueHandler {
@@ -27,18 +27,21 @@ export class ConceptExtractionHandler extends BaseTechniqueHandler {
         focus: 'Find successful examples in any domain',
         emoji: '🏆',
         type: 'thinking',
+        reversibility: 'high',
       },
       {
         name: 'Extract Concepts',
         focus: 'Identify the underlying principles',
         emoji: '🔍',
         type: 'thinking',
+        reversibility: 'high',
       },
       {
         name: 'Abstract Patterns',
         focus: 'Generalize concepts to broader patterns',
         emoji: '🔄',
         type: 'thinking',
+        reversibility: 'high',
       },
       {
         name: 'Apply to Problem',
@@ -98,6 +101,14 @@ export class ConceptExtractionHandler extends BaseTechniqueHandler {
     }
   }
 
+  /**
+   * Report what each step recorded, keyed on `entry.currentStep`.
+   *
+   * Each of the three arrays was reduced to its first element — the caller was
+   * asked for the concepts, plural, and got one back — and `entry.output` was
+   * declared on the parameter and read by nothing, so a step that recorded only
+   * prose reported nothing.
+   */
   extractInsights(
     history: Array<{
       currentStep?: number;
@@ -108,30 +119,61 @@ export class ConceptExtractionHandler extends BaseTechniqueHandler {
       output?: string;
     }>
   ): string[] {
-    const insights: string[] = [];
+    const totalSteps = this.getTechniqueInfo().totalSteps;
+    const latestByStep = new Map<number, (typeof history)[number]>();
 
-    history.forEach(entry => {
-      if (entry.currentStep === 1 && entry.successExample) {
-        insights.push(`Success example analyzed: ${entry.successExample}`);
-      }
-      if (
-        entry.currentStep === 2 &&
-        entry.extractedConcepts &&
-        entry.extractedConcepts.length > 0
-      ) {
-        insights.push(`Key concept: ${entry.extractedConcepts[0]}`);
-      }
-      if (
-        entry.currentStep === 3 &&
-        entry.abstractedPatterns &&
-        entry.abstractedPatterns.length > 0
-      ) {
-        insights.push(`Pattern identified: ${entry.abstractedPatterns[0]}`);
-      }
-      if (entry.currentStep === 4 && entry.applications && entry.applications.length > 0) {
-        insights.push(`Application: ${entry.applications[0]}`);
+    history.forEach((entry, index) => {
+      // Fall back to position only when the caller sent no step number.
+      const step = entry.currentStep ?? index + 1;
+      if (step >= 1 && step <= totalSteps) {
+        latestByStep.set(step, entry);
       }
     });
+
+    const insights: string[] = [];
+    const pushEach = (prefix: string, values: string[] | undefined): void => {
+      if (!Array.isArray(values)) {
+        return;
+      }
+      values.forEach(value => {
+        if (typeof value === 'string' && value.trim().length > 0) {
+          insights.push(`${prefix}: ${value.trim()}`);
+        }
+      });
+    };
+
+    for (let step = 1; step <= totalSteps; step++) {
+      const entry = latestByStep.get(step);
+      if (!entry) {
+        continue;
+      }
+      const stepName = this.getStepInfo(step).name;
+
+      const output = entry.output?.trim();
+      if (output) {
+        const summary = firstSentence(output);
+        if (summary.length > 0) {
+          insights.push(`${stepName}: ${summary}`);
+        }
+      }
+
+      switch (step) {
+        case 1:
+          if (entry.successExample?.trim()) {
+            insights.push(`Success example analyzed: ${entry.successExample.trim()}`);
+          }
+          break;
+        case 2:
+          pushEach('Key concept', entry.extractedConcepts);
+          break;
+        case 3:
+          pushEach('Pattern identified', entry.abstractedPatterns);
+          break;
+        case 4:
+          pushEach('Application', entry.applications);
+          break;
+      }
+    }
 
     return insights;
   }

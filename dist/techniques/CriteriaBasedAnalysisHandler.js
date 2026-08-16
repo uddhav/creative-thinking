@@ -13,6 +13,7 @@ export class CriteriaBasedAnalysisHandler extends BaseTechniqueHandler {
             focus: 'Establish normal patterns and expected characteristics',
             emoji: '🎯',
             type: 'thinking',
+            reversibility: 'high',
             criteria: [
                 'What does truth look like in this context?',
                 'What are normal patterns for this domain?',
@@ -26,6 +27,7 @@ export class CriteriaBasedAnalysisHandler extends BaseTechniqueHandler {
             focus: 'Evaluate logical consistency and detail richness',
             emoji: '🧠',
             type: 'thinking',
+            reversibility: 'high',
             criteria: [
                 'Is there logical consistency throughout?',
                 'Are there unexpected complications that add credibility?',

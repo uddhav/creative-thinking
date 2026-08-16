@@ -2,10 +2,37 @@
  * Neural State Optimization technique handler
  */
 
-import { BaseTechniqueHandler, type TechniqueInfo } from './types.js';
+import { BaseTechniqueHandler, firstSentence, type StepInfo, type TechniqueInfo } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 
 export class NeuralStateHandler extends BaseTechniqueHandler {
+  // Assessment and suppression are one step, not two: naming the dominant
+  // network fixes the answer to which one is suppressed — grinding means DMN,
+  // wandering means ECN — so the second step had no question left to ask.
+  private readonly steps: StepInfo[] = [
+    {
+      name: 'Assess Current State',
+      focus: 'Identify the dominant neural network (DMN vs ECN) and the one it suppresses',
+      emoji: '🔍',
+      type: 'thinking',
+      reversibility: 'high',
+    },
+    {
+      name: 'Develop Switching',
+      focus: 'Create rhythm between networks',
+      emoji: '🔄',
+      type: 'thinking',
+      reversibility: 'high',
+    },
+    {
+      name: 'Integrate Insights',
+      focus: 'Combine outputs from both networks',
+      emoji: '🔀',
+      type: 'thinking',
+      reversibility: 'high',
+    },
+  ];
+
   getTechniqueInfo(): TechniqueInfo {
     return {
       name: 'Neural State Optimization',
@@ -22,38 +49,17 @@ export class NeuralStateHandler extends BaseTechniqueHandler {
     };
   }
 
-  getStepInfo(step: number): { name: string; focus: string; emoji: string } {
-    // Assessment and suppression are one step, not two: naming the dominant
-    // network fixes the answer to which one is suppressed — grinding means DMN,
-    // wandering means ECN — so the second step had no question left to ask.
-    const steps = [
-      {
-        name: 'Assess Current State',
-        focus: 'Identify the dominant neural network (DMN vs ECN) and the one it suppresses',
-        emoji: '🔍',
-      },
-      {
-        name: 'Develop Switching',
-        focus: 'Create rhythm between networks',
-        emoji: '🔄',
-      },
-      {
-        name: 'Integrate Insights',
-        focus: 'Combine outputs from both networks',
-        emoji: '🔀',
-      },
-    ];
-
-    if (step < 1 || step > steps.length) {
+  getStepInfo(step: number): StepInfo {
+    if (step < 1 || step > this.steps.length) {
       throw new ValidationError(
         ErrorCode.INVALID_STEP,
-        `Invalid step ${step} for Neural State technique. Valid steps are 1-${steps.length}`,
+        `Invalid step ${step} for Neural State technique. Valid steps are 1-${this.steps.length}`,
         'step',
-        { providedStep: step, validRange: [1, steps.length] }
+        { providedStep: step, validRange: [1, this.steps.length] }
       );
     }
 
-    return steps[step - 1];
+    return this.steps[step - 1];
   }
 
   getStepGuidance(step: number, problem: string): string {
@@ -85,27 +91,63 @@ export class NeuralStateHandler extends BaseTechniqueHandler {
       output?: string;
     }>
   ): string[] {
-    const insights: string[] = [];
+    const totalSteps = this.steps.length;
+    const latestByStep = new Map<number, (typeof history)[number]>();
 
-    history.forEach(entry => {
-      // Step 1 now carries both halves of the assessment.
-      if (entry.currentStep === 1 && entry.dominantNetwork) {
-        insights.push(`Dominant network: ${entry.dominantNetwork.toUpperCase()}`);
-      }
-      if (entry.currentStep === 1 && entry.suppressionDepth !== undefined) {
-        insights.push(`Suppression depth: ${entry.suppressionDepth}/10`);
-      }
-      if (entry.currentStep === 2 && entry.switchingRhythm && entry.switchingRhythm.length > 0) {
-        insights.push(`Switching pattern: ${entry.switchingRhythm[0]}`);
-      }
-      if (
-        entry.currentStep === 3 &&
-        entry.integrationInsights &&
-        entry.integrationInsights.length > 0
-      ) {
-        insights.push(`Integration: ${entry.integrationInsights[0]}`);
+    history.forEach((entry, index) => {
+      // Fall back to position only when the caller sent no step number.
+      const step = entry.currentStep ?? index + 1;
+      if (step >= 1 && step <= totalSteps) {
+        latestByStep.set(step, entry);
       }
     });
+
+    const insights: string[] = [];
+    const pushEach = (prefix: string, values: string[] | undefined): void => {
+      if (!Array.isArray(values)) {
+        return;
+      }
+      values.forEach(value => {
+        if (typeof value === 'string' && value.trim().length > 0) {
+          insights.push(`${prefix}: ${value.trim()}`);
+        }
+      });
+    };
+
+    for (let step = 1; step <= totalSteps; step++) {
+      const entry = latestByStep.get(step);
+      if (!entry) {
+        continue;
+      }
+      const stepName = this.steps[step - 1].name;
+
+      // `entry.output` was declared on the parameter and read by nothing, so a
+      // step whose findings were prose reported none of them.
+      const output = entry.output?.trim();
+      if (output) {
+        const summary = firstSentence(output);
+        if (summary.length > 0) {
+          insights.push(`${stepName}: ${summary}`);
+        }
+      }
+
+      // Step 1 carries both halves of the assessment.
+      if (step === 1) {
+        if (entry.dominantNetwork) {
+          insights.push(`Dominant network: ${entry.dominantNetwork.toUpperCase()}`);
+        }
+        if (entry.suppressionDepth !== undefined) {
+          insights.push(`Suppression depth: ${entry.suppressionDepth}/10`);
+        }
+      }
+      if (step === 2) {
+        // The whole rhythm, not just its first element.
+        pushEach('Switching pattern', entry.switchingRhythm);
+      }
+      if (step === 3) {
+        pushEach('Integration', entry.integrationInsights);
+      }
+    }
 
     // No completion banner here. Pushing a fixed string because the last step
     // ran reports an insight the session never produced, which is what

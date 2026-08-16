@@ -37,4 +37,12 @@ export const ALL_LATERAL_TECHNIQUES = [
     'keeper_test',
     'steelman_red_team',
 ];
+// The planning layer's input and output types.
+//
+// `src/index.ts` already re-exports these, so callers of the package see them;
+// `src/types/index.ts` did not, and a dozen test files import them from here
+// regardless. They were right about where the types belong — this is the types
+// barrel — and the imports have been silently broken the whole time because
+// tests are not typechecked.
+export * from './planning.js';
 //# sourceMappingURL=index.js.map

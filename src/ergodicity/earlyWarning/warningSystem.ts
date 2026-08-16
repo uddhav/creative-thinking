@@ -32,8 +32,20 @@ export class AbsorbingBarrierEarlyWarning {
   private lastWarningState: EarlyWarningState | null = null;
   private readonly maxHistorySize: number;
   private readonly historyTTL: number;
-  private lastMeasurementTime: Map<SensorType, number> = new Map();
-  private readonly measurementThrottleMs: number;
+  /**
+   * Path length at which each sensor last took a fresh reading.
+   *
+   * The gate used to be wall-clock: a sensor re-measured only if 5000 ms had
+   * passed. Steps, not seconds, are the unit this subsystem reasons about, and
+   * every scripted caller — the CLI, the test suite, any programmatic run —
+   * completes a whole session inside one throttle window, so it measured once
+   * at step 1 and replayed that reading for the rest of the session. Measured:
+   * the server reported `continue` on 20/20 steps of a chain where an
+   * unthrottled monitor reported `escape` on step 11. Keying on path length
+   * costs the same one measurement per step while making a scripted run and a
+   * slow interactive run behave identically.
+   */
+  private lastMeasurementPathLength: Map<SensorType, number> = new Map();
   private readonly defaultCalibration: Partial<SensorCalibration>;
   private readonly onError: (
     error: Error,
@@ -46,7 +58,6 @@ export class AbsorbingBarrierEarlyWarning {
     // Apply configuration with defaults
     this.maxHistorySize = config.maxHistorySize ?? 100;
     this.historyTTL = config.historyTTL ?? 24 * 60 * 60 * 1000; // 24 hours
-    this.measurementThrottleMs = config.measurementThrottleMs ?? 5000; // 5 seconds
     this.defaultCalibration = config.defaultCalibration ?? {};
     this.onError =
       config.onError ??
@@ -72,16 +83,19 @@ export class AbsorbingBarrierEarlyWarning {
     pathMemory: PathMemory,
     sessionData: SessionData
   ): Promise<EarlyWarningState> {
-    const now = Date.now();
+    // How far the path has advanced. A sensor re-measures when this differs
+    // from the length it last read at — once per step, however fast the caller
+    // is driving.
+    const pathLength = pathMemory.pathHistory.length;
 
     // Prepare sensor tasks for parallel execution
     const sensorTasks = Array.from(this.sensors.entries()).map(async ([sensorType, sensor]) => {
       try {
-        const lastMeasurement = this.lastMeasurementTime.get(sensorType) || 0;
-        const timeSinceLastMeasurement = now - lastMeasurement;
+        const lastMeasuredLength = this.lastMeasurementPathLength.get(sensorType);
 
-        // Use cached reading if within throttle window
-        if (timeSinceLastMeasurement < this.measurementThrottleMs && this.lastWarningState) {
+        // Repeat call at the same path length: nothing the sensors read has
+        // changed, so replay the cached reading.
+        if (lastMeasuredLength === pathLength && this.lastWarningState) {
           const cachedReading = this.lastWarningState.sensorReadings.get(sensorType);
           if (cachedReading) {
             const warnings = this.generateWarningsFromReading(
@@ -96,7 +110,7 @@ export class AbsorbingBarrierEarlyWarning {
 
         // Take new measurement
         const reading = await sensor.measure(pathMemory, sessionData);
-        this.lastMeasurementTime.set(sensorType, now);
+        this.lastMeasurementPathLength.set(sensorType, pathLength);
 
         // Generate warnings if needed
         const warnings = this.generateWarningsFromReading(reading, sensor, pathMemory, sessionData);
@@ -689,6 +703,7 @@ ${barrier.description}
       sensor.reset();
     }
     this.lastWarningState = null;
+    this.lastMeasurementPathLength.clear();
     this.sensorFailures.clear();
   }
 

@@ -70,14 +70,19 @@ describe('CognitiveAssessor', () => {
       expect(reading.indicators).toBeInstanceOf(Array);
     });
 
-    it('should detect increasing complexity patterns', async () => {
+    it('reads rising cost from what steps declared, not from how complex they read', async () => {
+      // Was 'should detect increasing complexity patterns'. It passed on
+      // transcript shape: eleven distinct decision strings moved the retired
+      // perspective-diversity and creative-divergence inputs, so an indicator
+      // appeared whatever those steps actually cost. The inputs are the
+      // reversibility each step declared now, so eleven steps that can all be
+      // walked back are quiet however elaborately they are worded.
       const complexScenarios = [
         'Implement distributed caching with consistency guarantees',
         'Design fault-tolerant message queue system',
         'Create real-time data synchronization across regions',
       ];
 
-      // Add complex decisions with increasing complexity
       for (let i = 0; i < 10; i++) {
         mockPathMemory.pathHistory.push({
           id: `event-${i + 2}`,
@@ -87,21 +92,48 @@ describe('CognitiveAssessor', () => {
           decision: `Decision ${i + 2}: ${complexScenarios[i % complexScenarios.length]}`,
           optionsOpened: [],
           optionsClosed: [`option${i + 3}`],
-          reversibilityCost: 0.3 + i * 0.05,
-          commitmentLevel: 0.4 + i * 0.05,
+          reversibilityCost: 0.3,
+          commitmentLevel: 0.4,
           constraintsCreated: [],
           flexibilityImpact: -(i * 0.05),
         });
       }
 
-      const reading = await assessor.measure(mockPathMemory, mockSession);
+      const reversible = await assessor.measure(mockPathMemory, mockSession);
+      expect(reversible.indicators).toEqual([]);
 
-      expect(reading.indicators.length).toBeGreaterThan(0);
-      expect(reading.approachRate).toBeGreaterThanOrEqual(0);
+      // The same elaborate wording over steps that declared they cannot be
+      // undone is what the sensor is for.
+      for (let i = 0; i < 10; i++) {
+        mockPathMemory.pathHistory.push({
+          id: `event-${i + 12}`,
+          timestamp: new Date().toISOString(),
+          technique: 'six_hats' as LateralTechnique,
+          step: i + 12,
+          decision: `Decision ${i + 12}: ${complexScenarios[i % complexScenarios.length]}`,
+          optionsOpened: [],
+          optionsClosed: [`option${i + 13}`],
+          reversibilityCost: 0.9,
+          commitmentLevel: 0.9,
+          constraintsCreated: [],
+          flexibilityImpact: -0.2,
+        });
+      }
+
+      const bound = await assessor.measure(mockPathMemory, mockSession);
+      expect(bound.rawValue).toBeGreaterThan(reversible.rawValue);
+      expect(bound.indicators).toContain('Most recent steps declared themselves hard to undo');
+      expect(bound.approachRate).toBeGreaterThanOrEqual(0);
     });
 
-    it('should warn about decision fatigue', async () => {
-      // Add many rapid decisions
+    it('stays safe through twenty rapid steps that bind nothing', async () => {
+      // Was 'should warn about decision fatigue', and it fired on the shape of
+      // the transcript rather than on anything the steps cost: twenty entries
+      // reading 'Quick decision N' repeated a decision pattern and logged no
+      // insights, which is what the retired inputs measured. Twenty reversible
+      // steps taken quickly forecloses nothing, and a session that has
+      // foreclosed nothing is not rigid however fast it moved. This is the
+      // shape of the healthy control, at unit scale.
       for (let i = 0; i < 20; i++) {
         mockPathMemory.pathHistory.push({
           id: `event-${i + 2}`,
@@ -120,12 +152,19 @@ describe('CognitiveAssessor', () => {
 
       const reading = await assessor.measure(mockPathMemory, mockSession);
 
-      expect(reading.indicators.length).toBeGreaterThan(0);
+      expect(reading.rawValue).toBe(0);
+      expect(reading.warningLevel).toBe('safe');
+      expect(reading.indicators).toEqual([]);
       expect(reading.context.cognitiveLoad).toBeDefined();
     });
 
-    it('should assess cognitive diversity in techniques', async () => {
-      // Use diverse techniques
+    it('does not read technique variety as cognitive flexibility', async () => {
+      // Was 'should assess cognitive diversity in techniques', which asserted a
+      // `perspectiveDiversity` field that counted how many distinct technique
+      // names appeared in the window. A plan is a list of techniques and a
+      // technique is a list of its own steps, so that number described the
+      // workflow rather than the session's risk. Four techniques and one
+      // technique now read the same, because what changed is neither.
       const techniques: LateralTechnique[] = ['six_hats', 'po', 'random_entry', 'scamper'];
       techniques.forEach((technique, i) => {
         mockPathMemory.pathHistory.push({
@@ -143,10 +182,31 @@ describe('CognitiveAssessor', () => {
         });
       });
 
-      const reading = await assessor.measure(mockPathMemory, mockSession);
+      const varied = await assessor.measure(mockPathMemory, mockSession);
 
-      expect(reading.context.cognitiveMetrics).toBeDefined();
-      expect(reading.context.cognitiveMetrics.perspectiveDiversity).toBeDefined();
+      // `context` is Record<string, unknown>, so name the shape once rather
+      // than reaching through it five times untyped.
+      const metrics = varied.context.cognitiveMetrics as Record<string, unknown> | undefined;
+      expect(metrics).toBeDefined();
+      expect(metrics?.recentReversibility).toBeDefined();
+      expect(metrics?.sustainedReversibility).toBeDefined();
+      expect(metrics?.assumptionChallengeRate).toBeDefined();
+      // Retired with the shape-derived inputs it belonged to.
+      expect(metrics?.perspectiveDiversity).toBeUndefined();
+
+      // The same five events under a single technique name, everything else
+      // held equal.
+      const single = new CognitiveAssessor();
+      const monotone: PathMemory = {
+        ...mockPathMemory,
+        pathHistory: mockPathMemory.pathHistory.map(event => ({
+          ...event,
+          technique: 'six_hats' as LateralTechnique,
+        })),
+      };
+      const uniform = await single.measure(monotone, mockSession);
+
+      expect(uniform.rawValue).toBe(varied.rawValue);
     });
 
     it('should detect abstract thinking overload', async () => {
@@ -256,7 +316,12 @@ describe('CognitiveAssessor', () => {
 
   describe('cognitive-specific patterns', () => {
     it('should identify cognitive tunneling', async () => {
-      // Add decisions showing tunneling pattern
+      // Tunneling used to be read off the decision strings — five texts about
+      // optimizing the same algorithm scored as repetitive thinking whatever
+      // the steps cost. Tunneling in the path record is a run of steps the
+      // session cannot walk back, so these five declare `low` reversibility
+      // (0.9, the rung the execution layer records for it) instead of the 0.6
+      // to 0.8 ramp the old string-based reading did not depend on anyway.
       const tunnelingDecisions = [
         'Focus on optimization of specific algorithm',
         'Further optimize the same algorithm',
@@ -274,8 +339,8 @@ describe('CognitiveAssessor', () => {
           decision,
           optionsOpened: [],
           optionsClosed: [`alternative${i}`, `alternative${i + 1}`],
-          reversibilityCost: 0.6 + i * 0.05,
-          commitmentLevel: 0.7 + i * 0.05,
+          reversibilityCost: 0.9,
+          commitmentLevel: 0.9,
           constraintsCreated: [`tunnel_constraint${i}`],
           flexibilityImpact: -(0.2 + i * 0.05),
         });
@@ -283,10 +348,12 @@ describe('CognitiveAssessor', () => {
 
       const reading = await assessor.measure(mockPathMemory, mockSession);
 
-      // With tunneling pattern, there should be indicators
-      expect(reading.indicators.length).toBeGreaterThan(0);
-      // Perspective diversity calculation in early stages may still show diversity
-      expect(reading.context.cognitiveMetrics.perspectiveDiversity).toBeDefined();
+      // Five of the six recorded steps cannot be undone.
+      const reversibility = (reading.context.cognitiveMetrics as Record<string, unknown>)
+        .recentReversibility as number;
+      expect(reversibility).toBeCloseTo(1 / 6, 10);
+      expect(reading.indicators).toContain('Most recent steps declared themselves hard to undo');
+      expect(reading.warningLevel).not.toBe('safe');
     });
 
     it('should detect context switching overhead', async () => {

@@ -30,6 +30,17 @@ export interface PathEvent {
     commitmentLevel: number;
     constraintsCreated: string[];
     flexibilityImpact?: number;
+    /**
+     * Whether this step reworked an earlier one instead of advancing.
+     *
+     * `SessionData.history` and `ExecuteThinkingStepInput` have carried
+     * `isRevision` all along; the path record did not, so `perfectionism` — the
+     * one barrier whose subject is revision without progress — could not see a
+     * revision and counted commitments instead. Optional, so a session restored
+     * from before the field existed reads back as not a revision, which is what
+     * an absent flag means.
+     */
+    isRevision?: boolean;
 }
 /**
  * Types of absorbing barriers in creative/critical thinking

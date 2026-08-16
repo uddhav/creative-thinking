@@ -1,174 +1,180 @@
 /**
- * Tests for wildcard technique selection feature
+ * Wildcard selection is deterministic per problem, varied across problems.
+ *
+ * It used to be Math.random(): one discover call in five grew 1–2 extra
+ * techniques, so the same problem got different recommendation sets run to
+ * run — untestable, and indistinguishable from a routing change. The draw is
+ * now seeded from the category and the chosen set.
+ *
+ * The previous tests here asserted the old statistical contract (identical
+ * calls sometimes differing across 100 iterations) and forced draws by
+ * mocking Math.random, with every property assertion inside `if (wildcard)` —
+ * conditionally vacuous. These assert the new contract unconditionally: a
+ * sweep over many distinct inputs must find wildcards on some and not others,
+ * every draw must repeat exactly, and the found wildcards carry the
+ * properties the old tests only checked when luck produced one.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import {
   TechniqueRecommender,
   TECHNIQUE_FIT,
 } from '../../../layers/discovery/TechniqueRecommender.js';
 import { TechniqueRegistry } from '../../../techniques/TechniqueRegistry.js';
 
-describe('Wildcard Technique Selection', () => {
-  let recommender: TechniqueRecommender;
-  let registry: TechniqueRegistry;
+const CATEGORIES = [
+  'paradoxical',
+  'temporal',
+  'organizational',
+  'validation',
+  'behavioral',
+  'fundamental',
+  'learning',
+  'computational',
+  'cognitive',
+  'implementation',
+  'systems',
+  'user-centered',
+  'technical',
+  'creative',
+  'process',
+  'strategic',
+  'decision',
+  'communication',
+  'cultural',
+  'biological',
+  'retention',
+  'adversarial',
+  'general',
+];
+const OUTCOMES = [undefined, 'innovative', 'systematic', 'risk-aware', 'analytical'] as const;
 
-  beforeEach(() => {
-    recommender = new TechniqueRecommender();
-    registry = TechniqueRegistry.getInstance();
-  });
+interface Recommendation {
+  technique: string;
+  reasoning: string;
+  effectiveness: number;
+  isWildcard?: boolean;
+}
 
-  it('should sometimes include a wildcard technique', () => {
-    // Run multiple times to check for wildcard inclusion
-    let wildcardCount = 0;
-    const iterations = 100;
+interface SweepEntry {
+  category: string;
+  outcome: string | undefined;
+  recs: Recommendation[];
+}
 
-    for (let i = 0; i < iterations; i++) {
-      const recommendations = recommender.recommendTechniques(
-        'creative',
-        undefined,
+let recommender: TechniqueRecommender;
+let registry: TechniqueRegistry;
+let sweep: SweepEntry[];
+
+beforeAll(() => {
+  recommender = new TechniqueRecommender();
+  registry = TechniqueRegistry.getInstance();
+  sweep = [];
+  for (const category of CATEGORIES) {
+    for (const outcome of OUTCOMES) {
+      sweep.push({
+        category,
+        outcome,
+        recs: recommender.recommendTechniques(category, outcome, undefined, 'medium', registry),
+      });
+    }
+  }
+});
+
+describe('deterministic wildcard selection', () => {
+  it('returns the identical recommendation list when called again with the same input', () => {
+    // The property Math.random() could never satisfy. Every input, both the
+    // set and the order.
+    for (const { category, outcome, recs } of sweep) {
+      const again = recommender.recommendTechniques(
+        category,
+        outcome,
         undefined,
         'medium',
         registry
       );
-
-      // Check if any recommendation is marked as wildcard
-      if (recommendations.some(r => r.isWildcard === true)) {
-        wildcardCount++;
-      }
+      expect(again, `${category}/${outcome ?? 'no outcome'} differed on repeat`).toEqual(recs);
     }
-
-    // With 20% probability, we expect around 18-22 wildcards in 100 iterations
-    // Allow for some variance (10-30)
-    expect(wildcardCount).toBeGreaterThanOrEqual(10);
-    expect(wildcardCount).toBeLessThanOrEqual(30);
   });
 
-  it('should not include wildcard technique in already recommended techniques', () => {
-    // Force wildcard inclusion by mocking Math.random
-    const originalRandom = Math.random;
-    let callCount = 0;
-
-    vi.spyOn(Math, 'random').mockImplementation(() => {
-      callCount++;
-      // First call is for wildcard probability check - return low value to trigger wildcard
-      if (callCount === 1) {
-        return 0.1; // Less than 0.175 (17.5% threshold)
-      }
-      // Subsequent calls for selecting the wildcard
-      return originalRandom();
-    });
-
-    const recommendations = recommender.recommendTechniques(
-      'creative',
-      undefined,
-      undefined,
-      'medium',
-      registry
-    );
-
-    // Find the wildcard recommendation
-    const wildcard = recommendations.find(r => r.isWildcard === true);
-
-    if (wildcard) {
-      // Non-wildcard recommendations
-      const regularRecommendations = recommendations.filter(r => !r.isWildcard);
-      const regularTechniques = regularRecommendations.map(r => r.technique);
-
-      // Wildcard should not be in regular recommendations
-      expect(regularTechniques).not.toContain(wildcard.technique);
-    }
-
-    vi.restoreAllMocks();
+  it('draws wildcards for some inputs and not others', () => {
+    // Seeded ≠ constant: variety across problems is the feature being kept.
+    const withWildcard = sweep.filter(s => s.recs.some(r => r.isWildcard === true));
+    expect(withWildcard.length, 'no input ever draws a wildcard').toBeGreaterThan(0);
+    expect(withWildcard.length, 'every input draws a wildcard').toBeLessThan(sweep.length);
   });
 
-  it('should have appropriate reasoning for wildcard techniques', () => {
-    let callCount = 0;
-
-    vi.spyOn(Math, 'random').mockImplementation(() => {
-      callCount++;
-      // Force wildcard inclusion
-      if (callCount === 1) {
-        return 0.1;
+  it('never duplicates an already-recommended technique', () => {
+    for (const { category, recs } of sweep) {
+      const regular = recs.filter(r => !r.isWildcard).map(r => r.technique);
+      for (const wildcard of recs.filter(r => r.isWildcard === true)) {
+        expect(regular, `${category}: wildcard duplicates a recommendation`).not.toContain(
+          wildcard.technique
+        );
       }
-      return 0; // Select first available technique
-    });
+    }
+  });
 
-    const recommendations = recommender.recommendTechniques(
-      'technical',
-      undefined,
-      undefined,
-      'medium',
-      registry
-    );
-
-    const wildcard = recommendations.find(r => r.isWildcard === true);
-
-    if (wildcard) {
-      // Check wildcard has appropriate reasoning
+  it('labels every wildcard as exploratory, with reasoning and step count', () => {
+    const wildcards = sweep.flatMap(s => s.recs.filter(r => r.isWildcard === true));
+    // Unconditional: the sweep must have produced some, or the checks below
+    // run zero times and this test guards nothing.
+    expect(wildcards.length).toBeGreaterThan(0);
+    for (const wildcard of wildcards) {
       expect(wildcard.reasoning).toMatch(
         /alternative|wildcard|unexpected|complementary|unconventional/i
       );
-      expect(wildcard.reasoning).toContain('steps)'); // Should include step count
-      // Wildcards are included for breadth, not fit, so they sit at the
-      // bottom of the ordinal scale rather than carrying an invented decimal.
+      expect(wildcard.reasoning).toContain('steps)');
       expect(wildcard.effectiveness).toBe(TECHNIQUE_FIT.WEAK);
     }
-
-    vi.restoreAllMocks();
   });
 
-  it('should respect WILDCARD_PROBABILITY environment variable', () => {
-    // Save original env value
+  it('picks different wildcard techniques for different inputs', () => {
+    const picked = new Set(
+      sweep.flatMap(s => s.recs.filter(r => r.isWildcard === true).map(r => r.technique))
+    );
+    // Anti-pigeonholing requires the pool to actually vary; one constant
+    // technique would satisfy every other test here.
+    expect(picked.size).toBeGreaterThanOrEqual(3);
+  });
+
+  it('respects the WILDCARD_PROBABILITY environment variable at both extremes', () => {
     const originalEnv = process.env.WILDCARD_PROBABILITY;
 
-    // Set to 100% probability
+    // 1.0: the seeded unit draw is always < 1, so every input draws.
     process.env.WILDCARD_PROBABILITY = '1.0';
-
-    // Create new recommender to pick up env variable
-    const alwaysWildcardRecommender = new TechniqueRecommender();
-
-    // Should always include wildcard
-    let wildcardCount = 0;
-    for (let i = 0; i < 10; i++) {
-      const recommendations = alwaysWildcardRecommender.recommendTechniques(
-        'process',
+    const alwaysRecommender = new TechniqueRecommender();
+    for (const category of ['process', 'strategic', 'creative']) {
+      const recs = alwaysRecommender.recommendTechniques(
+        category,
         undefined,
         undefined,
         'low',
         registry
       );
-
-      if (recommendations.some(r => r.isWildcard === true)) {
-        wildcardCount++;
-      }
+      expect(
+        recs.some(r => r.isWildcard === true),
+        `${category} drew no wildcard at 1.0`
+      ).toBe(true);
     }
 
-    expect(wildcardCount).toBe(10);
-
-    // Set to 0% probability
+    // 0.0: the draw is always >= 0, so no input draws.
     process.env.WILDCARD_PROBABILITY = '0.0';
-    const neverWildcardRecommender = new TechniqueRecommender();
-
-    // Should never include wildcard
-    wildcardCount = 0;
-    for (let i = 0; i < 10; i++) {
-      const recommendations = neverWildcardRecommender.recommendTechniques(
-        'organizational',
+    const neverRecommender = new TechniqueRecommender();
+    for (const category of ['organizational', 'technical', 'general']) {
+      const recs = neverRecommender.recommendTechniques(
+        category,
         undefined,
         undefined,
         'high',
         registry
       );
-
-      if (recommendations.some(r => r.isWildcard === true)) {
-        wildcardCount++;
-      }
+      expect(
+        recs.some(r => r.isWildcard === true),
+        `${category} drew a wildcard at 0.0`
+      ).toBe(false);
     }
 
-    expect(wildcardCount).toBe(0);
-
-    // Restore original env value
     if (originalEnv !== undefined) {
       process.env.WILDCARD_PROBABILITY = originalEnv;
     } else {
@@ -176,39 +182,21 @@ describe('Wildcard Technique Selection', () => {
     }
   });
 
-  it('should return dynamic recommendations based on complexity', () => {
-    // Force wildcard inclusion
-    vi.spyOn(Math, 'random').mockImplementation(() => 0.1);
-
-    // High complexity should allow more recommendations
-    const highComplexityRecs = recommender.recommendTechniques(
+  it('sizes the recommendation list by tier', () => {
+    // Range assertions only — how many wildcards ride along is the seed's
+    // business; the base count is the tier's.
+    const high = recommender.recommendTechniques(
       'strategic',
       'systematic',
       ['time constraint'],
       'high',
       registry
     );
+    expect(high.length).toBeGreaterThanOrEqual(5);
+    expect(high.length).toBeLessThanOrEqual(9);
+    expect(high.filter(r => r.isWildcard === true).length).toBeLessThanOrEqual(2);
 
-    // Should have 5-9 recommendations for high complexity (5-7 base + up to 2 wildcards)
-    expect(highComplexityRecs.length).toBeGreaterThanOrEqual(5);
-    expect(highComplexityRecs.length).toBeLessThanOrEqual(9);
-
-    // Count wildcards - should be up to 2 for high complexity
-    const highWildcardCount = highComplexityRecs.filter(r => r.isWildcard === true).length;
-    expect(highWildcardCount).toBeLessThanOrEqual(2);
-
-    // Low complexity should have fewer recommendations
-    const lowComplexityRecs = recommender.recommendTechniques(
-      'strategic',
-      'systematic',
-      [],
-      'low',
-      registry
-    );
-
-    // Should have 2-4 recommendations for low complexity (2-3 base + up to 1 wildcard)
-    expect(lowComplexityRecs.length).toBeLessThanOrEqual(4);
-
-    vi.restoreAllMocks();
+    const low = recommender.recommendTechniques('strategic', 'systematic', [], 'low', registry);
+    expect(low.length).toBeLessThanOrEqual(4);
   });
 });

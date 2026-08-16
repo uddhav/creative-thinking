@@ -7,12 +7,31 @@
  * sees the envelope.
  */
 import type { LateralThinkingResponse } from '../types/index.js';
+/** How long to wait for the first byte before deciding nothing is coming. */
+export declare const STDIN_FIRST_BYTE_TIMEOUT_MS = 5000;
 /**
  * Read all of stdin and parse as JSON.
  * Returns null when stdin is a TTY (interactive use) so callers can fall back
  * to flags only.
+ *
+ * The wait for the *first* byte is bounded, because a stdin that is neither a
+ * TTY nor ever closed made this wait forever. That is the ordinary shape of
+ *
+ *     PLAN=$(socketes plan --problem "…" | head -1)
+ *
+ * in a script: inside `$( )` stdin is inherited from the parent shell, so it is
+ * open, is not a TTY, and never delivers EOF. The command hangs with no output
+ * and no indication of what it is waiting for. One did, here, for 84 minutes.
+ *
+ * Once a first byte arrives the read runs to EOF with no bound — a slow or
+ * large payload must not be truncated. The choice on timeout is to fail rather
+ * than to carry on with flags alone: proceeding would silently discard a
+ * payload that arrived a moment late, and the technique-specific fields are
+ * exactly what travels on stdin.
  */
-export declare function readStdinJSON(): Promise<Record<string, unknown> | null>;
+export declare function readStdinJSON(stream?: NodeJS.ReadableStream & {
+    isTTY?: boolean;
+}, firstByteTimeoutMs?: number): Promise<Record<string, unknown> | null>;
 /**
  * Merge flag-derived input with stdin-derived input. Flags win when both
  * supply the same key, on the principle that CLI flags are an explicit

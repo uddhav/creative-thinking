@@ -62,7 +62,18 @@ export function discoverTechniques(
   const memoryContextGenerator = new MemoryContextGenerator();
 
   // Categorize the problem
-  const problemCategory = problemAnalyzer.categorizeProblem(problem, context);
+  const { category: problemCategory, evidenceBreadth } =
+    problemAnalyzer.categorizeProblemWithEvidence(problem, context);
+
+  // The recommendation set is sized by evidence breadth — how many categories
+  // the problem genuinely implicates — not by the readability-complexity
+  // level. Complexity rises with any appended sentence, so keying the set on
+  // it changed the recommendations whenever a user added harmless context;
+  // breadth only moves when a new topic clears the evidence bar.
+  // `complexityAssessment` keeps its other jobs (warnings, sequential-thinking
+  // suggestions, the response field) untouched.
+  const recommendationTier: 'low' | 'medium' | 'high' =
+    evidenceBreadth >= 3 ? 'high' : evidenceBreadth === 2 ? 'medium' : 'low';
 
   // Get technique recommendations. The primary persona's bias is passed in so
   // it is blended during scoring, before ranking and truncation — applying it
@@ -72,7 +83,7 @@ export function discoverTechniques(
     problemCategory,
     effectivePreferredOutcome,
     constraints,
-    complexityAssessment.level,
+    recommendationTier,
     techniqueRegistry,
     resolvedPersonas[0]?.techniqueBias
   );

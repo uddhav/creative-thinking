@@ -206,20 +206,97 @@ describe('MetaLearningHandler', () => {
     });
   });
 
-  describe('getPromptContext', () => {
-    it('should return comprehensive context for each step', () => {
-      for (let step = 1; step <= 4; step++) {
-        const context = handler.getPromptContext(step);
+  describe('extractInsights', () => {
+    it('reports every required field under its own step name', () => {
+      const insights = handler.extractInsights([
+        {
+          currentStep: 1,
+          output: 'Divergent techniques paid off early.',
+          patternRecognition: ['six_hats before scamper', 'constraints raised idea quality'],
+        },
+        {
+          currentStep: 2,
+          output: 'Two combinations kept recurring.',
+          learningHistory: ['triz suits contradictions', 'design_thinking suits users'],
+        },
+        {
+          currentStep: 3,
+          output: 'Selection now keys on problem type.',
+          strategyAdaptations: ['pick visual techniques for spatial problems'],
+        },
+        {
+          currentStep: 4,
+          output: 'The framework updates itself per session.',
+          metaSynthesis: 'Diverge first, converge on evidence of a constraint',
+        },
+      ]);
 
-        expect(context.technique).toBe('meta_learning');
-        expect(context.step).toBe(step);
-        expect(context.stepName).toBeTruthy();
-        expect(context.focus).toBeTruthy();
-        expect(context.emoji).toBeTruthy();
-        expect(context.capabilities).toBeDefined();
-        expect(context.capabilities).toHaveProperty('patternRecognition');
-        expect(context.capabilities).toHaveProperty('metaSynthesis');
-      }
+      expect(insights).toContain(
+        'Pattern Recognition: six_hats before scamper, constraints raised idea quality'
+      );
+      expect(insights).toContain(
+        'Learning Accumulation: triz suits contradictions, design_thinking suits users'
+      );
+      expect(insights).toContain('Strategy Evolution: pick visual techniques for spatial problems');
+      expect(insights).toContain(
+        'Meta-Synthesis: Diverge first, converge on evidence of a constraint'
+      );
+      // The outputs are reported too, each under its own step.
+      expect(insights).toContain('Pattern Recognition: Divergent techniques paid off early.');
+      // No banner: reaching step 4 is not itself a finding.
+      expect(insights.some(i => /self-improving framework|meta-learning complete/i.test(i))).toBe(
+        false
+      );
+    });
+
+    it('reports the alias fields identically to the primary names', () => {
+      const primary = handler.extractInsights([
+        { currentStep: 1, patternRecognition: ['p'] },
+        { currentStep: 2, learningHistory: ['l'] },
+        { currentStep: 3, strategyAdaptations: ['s'] },
+        { currentStep: 4, metaSynthesis: 'm' },
+      ]);
+      const aliases = handler.extractInsights([
+        { currentStep: 1, patterns: ['p'] },
+        { currentStep: 2, accumulatedLearning: ['l'] },
+        { currentStep: 3, strategyEvolution: 's' },
+        { currentStep: 4, synthesisStrategy: 'm' },
+      ]);
+
+      expect(aliases).toEqual(primary);
+      expect(aliases).toContain('Pattern Recognition: p');
+      expect(aliases).toContain('Meta-Synthesis: m');
+    });
+
+    it('lets a revision supersede the step it revises', () => {
+      const insights = handler.extractInsights([
+        { currentStep: 1, patternRecognition: ['the first reading'] },
+        { currentStep: 2, learningHistory: ['a later step'] },
+        { currentStep: 1, patternRecognition: ['the corrected reading'] },
+      ]);
+
+      expect(insights).toContain('Pattern Recognition: the corrected reading');
+      expect(insights).not.toContain('Pattern Recognition: the first reading');
+      // The revision must not shift step 2's label onto step 3's name.
+      expect(insights).toContain('Learning Accumulation: a later step');
+      expect(insights.some(i => i.startsWith('Strategy Evolution'))).toBe(false);
+    });
+
+    it('reports nothing for a step that recorded nothing', () => {
+      expect(handler.extractInsights([])).toEqual([]);
+      expect(handler.extractInsights([{ currentStep: 1, output: '   ' }])).toEqual([]);
+      expect(handler.extractInsights([{ currentStep: 2, learningHistory: [] }])).toEqual([]);
+    });
+
+    it('does not cut the output summary at an abbreviation', () => {
+      const insights = handler.extractInsights([
+        {
+          currentStep: 1,
+          output: 'Convergence took 3 rounds vs. 8 before. The pattern is early constraint.',
+        },
+      ]);
+
+      expect(insights[0]).toContain('vs. 8 before.');
     });
   });
 });

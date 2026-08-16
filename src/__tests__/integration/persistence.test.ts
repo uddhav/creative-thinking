@@ -108,32 +108,40 @@ describe('Session Persistence - Simple Integration', () => {
     it('should create separate files for different sessions', async () => {
       const sessionIds: string[] = [];
 
-      // Create multiple sessions
+      // Create multiple sessions. PO has four steps and each one is run, so the
+      // session that gets saved is a finished one rather than a stub.
       for (let i = 0; i < 3; i++) {
         const planResult = server.planThinkingSession({
           problem: `Problem ${i}`,
           techniques: ['po'],
         });
-        const plan = safeJsonParse(planResult.content[0].text);
+        const plan = safeJsonParse<{ planId: string }>(planResult.content[0].text);
 
-        const stepResult = await server.executeThinkingStep({
-          planId: plan.planId,
-          technique: 'po',
-          problem: `Problem ${i}`,
-          currentStep: 4,
-          totalSteps: 4,
-          provocation: `Po: Provocation ${i}`,
-          output: `Output ${i}`,
-          synthesis: `Final solution ${i}`,
-          nextStepNeeded: false,
-          autoSave: true,
-        });
+        let sessionId: string | undefined;
+        for (let step = 1; step <= 4; step++) {
+          const stepResult = await server.executeThinkingStep({
+            planId: plan.planId,
+            sessionId,
+            technique: 'po',
+            problem: `Problem ${i}`,
+            currentStep: step,
+            totalSteps: 4,
+            provocation: `Po: Provocation ${i}`,
+            output: `Output ${i} step ${step}`,
+            ...(step === 4 ? { synthesis: `Final solution ${i}` } : {}),
+            nextStepNeeded: step < 4,
+            autoSave: true,
+          });
 
-        const responseData = safeJsonParse(stepResult.content[0].text);
-        // Only push sessionId if not blocked
-        if (!responseData.blocked && responseData.sessionId) {
-          sessionIds.push(responseData.sessionId);
+          const responseData = safeJsonParse<{ blocked?: boolean; sessionId?: string }>(
+            stepResult.content[0].text
+          );
+          expect(responseData.blocked).toBeUndefined();
+          sessionId = responseData.sessionId;
         }
+
+        expect(sessionId).toBeDefined();
+        sessionIds.push(sessionId as string);
       }
 
       // Wait for file system operations

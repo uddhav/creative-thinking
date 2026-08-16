@@ -124,12 +124,14 @@ export class LatticeworkHandler extends BaseTechniqueHandler {
       focus: 'State the problem and the one model you instinctively reach for',
       emoji: '🔨',
       type: 'thinking',
+      reversibility: 'high',
     },
     {
       name: 'Physics & Engineering Lens',
       focus: 'Equilibrium, feedback, thresholds, margin of safety, common-mode failure',
       emoji: '⚙️',
       type: 'thinking',
+      reversibility: 'high',
       modelIds: ['equilibrium', 'feedback', 'critical_mass', 'margin_of_safety', 'common_mode'],
     },
     {
@@ -137,6 +139,7 @@ export class LatticeworkHandler extends BaseTechniqueHandler {
       focus: 'Competition, niches, adaptation, selection pressure, carrying capacity',
       emoji: '🧬',
       type: 'thinking',
+      reversibility: 'high',
       modelIds: ['competition', 'adaptation', 'carrying_capacity'],
     },
     {
@@ -144,6 +147,7 @@ export class LatticeworkHandler extends BaseTechniqueHandler {
       focus: 'Incentives and the standard causes of human misjudgment',
       emoji: '🧠',
       type: 'thinking',
+      reversibility: 'high',
       modelIds: ['incentives', 'misjudgment'],
     },
     {
@@ -151,6 +155,7 @@ export class LatticeworkHandler extends BaseTechniqueHandler {
       focus: 'Scale, compounding, base rates, opportunity cost, Occam, inversion',
       emoji: '📐',
       type: 'thinking',
+      reversibility: 'high',
       modelIds: ['scale', 'compounding', 'base_rates', 'opportunity_cost', 'occam', 'inversion'],
     },
     {
@@ -158,6 +163,7 @@ export class LatticeworkHandler extends BaseTechniqueHandler {
       focus: 'Where the lenses agree, conflict, or stack into a confluence',
       emoji: '🕸️',
       type: 'thinking',
+      reversibility: 'high',
     },
     {
       name: 'Decide with a Margin of Safety',

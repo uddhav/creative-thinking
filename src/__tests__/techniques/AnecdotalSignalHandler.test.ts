@@ -266,12 +266,24 @@ describe('AnecdotalSignalHandler', () => {
 
       const insights = handler.extractInsights(history);
       expect(insights.some(i => i.includes('Collected 15 significant anecdotes'))).toBe(true);
-      expect(insights.some(i => i.includes('2 strong signals'))).toBe(true);
-      expect(insights.some(i => i.includes('non-ergodic path dependencies'))).toBe(true);
+      // divergenceLevel and precedentType are required on every signal and
+      // reached nothing, so the report kept the anecdote and dropped the two
+      // judgements that made it a signal. The weak one is counted, not erased.
+      expect(insights.some(i => i.includes('2 of 3 signals rated strong or critical'))).toBe(true);
+      expect(insights.some(i => i.includes('extreme divergence'))).toBe(true);
+      expect(insights.some(i => i.includes('first precedent'))).toBe(true);
+      expect(insights.some(i => i.includes('1 weaker signal(s) also recorded'))).toBe(true);
+      // Steps 3, 5 and 6 report the content they recorded, not a constant that
+      // fires whenever the field is merely present.
+      expect(insights.some(i => i.includes('Trajectory Analysis: nonErgodic: true'))).toBe(true);
       expect(insights.some(i => i.includes('3 early warning signals'))).toBe(true);
-      expect(insights.some(i => i.includes('potential mainstream adoption'))).toBe(true);
-      expect(insights.some(i => i.includes('Strategic response formulated'))).toBe(true);
-      expect(insights.some(i => i.includes('future insights extracted from outliers'))).toBe(true);
+      expect(insights.some(i => i.includes('Scaling Projection: adoptionLevel: 30'))).toBe(true);
+      expect(insights.some(i => i.includes('cross mainstream adoption'))).toBe(true);
+      expect(insights.some(i => i.includes('Strategic Response: approach: Early mover'))).toBe(
+        true
+      );
+      // No completion banner: reaching the last step is not a finding.
+      expect(insights.some(i => i.includes('future insights extracted from outliers'))).toBe(false);
     });
 
     it('should handle partial history', () => {
@@ -283,15 +295,21 @@ describe('AnecdotalSignalHandler', () => {
     });
 
     it('should detect low adoption scenarios', () => {
-      const history = [{ output: 'Scaling projected', scalingScenarios: [{ adoptionLevel: 5 }] }];
+      // Scaling scenarios belong to step 5; say so, or the entry is read as step 1
+      // and the assertion below passes for the wrong reason.
+      const history = [
+        { currentStep: 5, output: 'Scaling projected', scalingScenarios: [{ adoptionLevel: 5 }] },
+      ];
 
       const insights = handler.extractInsights(history);
       expect(insights.some(i => i.includes('mainstream adoption'))).toBe(false);
     });
 
     it('should identify critical signals', () => {
+      // Signals belong to step 2, so the entry has to say which step it is.
       const history = [
         {
+          currentStep: 2,
           output: 'Signals found',
           signals: [
             {
@@ -305,7 +323,10 @@ describe('AnecdotalSignalHandler', () => {
       ];
 
       const insights = handler.extractInsights(history);
-      expect(insights.some(i => i.includes('1 strong signals'))).toBe(true);
+      expect(insights.some(i => i.includes('1 of 1 signals rated strong or critical'))).toBe(true);
+      expect(insights.some(i => i.includes('Critical discovery'))).toBe(true);
+      // Nothing to say about weaker signals when there were none.
+      expect(insights.some(i => i.includes('weaker signal'))).toBe(false);
     });
   });
 });

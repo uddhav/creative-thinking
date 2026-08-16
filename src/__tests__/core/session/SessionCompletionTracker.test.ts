@@ -97,16 +97,23 @@ describe('SessionCompletionTracker', () => {
             {
               technique: 'scamper',
               problem: 'test',
-              currentStep: 8, // Sequential numbering: after six_hats (7 steps)
-              totalSteps: 8,
+              // Plan-wide numbering: totalSteps is the PLAN total, matching the
+              // convention currentStep uses. The old pair (8 of 8) mixed the
+              // conventions, and under the validator's own disambiguation rule
+              // — totalSteps equals the technique's count means technique-local
+              // — it denotes scamper's LAST step, not its first. The tracker
+              // now applies the same rule as the validator, so the fixture has
+              // to say what it means.
+              currentStep: 8,
+              totalSteps: 15,
               output: 'scamper step 1',
               nextStepNeeded: true,
             },
             {
               technique: 'scamper',
               problem: 'test',
-              currentStep: 9, // Sequential numbering: after six_hats (7 steps)
-              totalSteps: 8,
+              currentStep: 9,
+              totalSteps: 15,
               output: 'scamper step 2',
               nextStepNeeded: true,
             },
@@ -238,7 +245,12 @@ describe('SessionCompletionTracker', () => {
         const metadata = tracker.calculateCompletionMetadata(session, plan);
 
         const sixHatsStatus = metadata.techniqueStatuses.find(s => s.technique === 'six_hats');
-        expect(sixHatsStatus?.skippedSteps).toEqual([2, 4, 6, 7]);
+        // 2 and 4 were passed over; 6 and 7 are ahead of the furthest step
+        // reached and have not been skipped, they have not been reached. The
+        // old reading counted every incomplete step, which is why step 1 of a
+        // seven-step technique told the caller Black Hat had been skipped
+        // before the session could possibly have run it.
+        expect(sixHatsStatus?.skippedSteps).toEqual([2, 4]);
         expect(sixHatsStatus?.completedSteps).toBe(3);
       });
     });

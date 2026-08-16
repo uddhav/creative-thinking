@@ -13,7 +13,13 @@
  * explicit computational models for enhanced creative problem solving.
  */
 
-import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
+import {
+  BaseTechniqueHandler,
+  describeStructuredField,
+  firstSentence,
+  type TechniqueInfo,
+  type StepInfo,
+} from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 
 /**
@@ -39,6 +45,7 @@ export class NeuroComputationalHandler extends BaseTechniqueHandler {
       focus: 'Map problem to neural representations',
       emoji: '🧠',
       type: 'thinking',
+      reversibility: 'high',
     },
     {
       // Generation and interference analysis are one step. Splitting them asked
@@ -49,6 +56,7 @@ export class NeuroComputationalHandler extends BaseTechniqueHandler {
       focus: 'Generate diverse solution patterns and analyze how they interact',
       emoji: '🌊',
       type: 'thinking',
+      reversibility: 'high',
     },
     {
       name: 'Computational Synthesis',
@@ -100,24 +108,21 @@ export class NeuroComputationalHandler extends BaseTechniqueHandler {
     },
     {
       name: 'Convergence',
-      focus: 'Converge to optimal solution',
+      focus: 'Report what the search found, and where it stopped looking',
       emoji: '🎯',
       type: 'action',
       reflexiveEffects: {
         triggers: [
-          'Converging to solution',
-          'Finalizing neural-computational synthesis',
-          'Locking in optimal configuration',
+          'Declaring the search finished',
+          'Reporting a result as converged rather than merely current',
         ],
         realityChanges: [
-          'Solution converged',
-          'Optimal configuration established',
-          'Neural-computational model finalized',
+          'The search stops, so the unexplored regions stay unexplored',
+          'The reported result becomes the one others build on',
         ],
         futureConstraints: [
-          'Solution locked at convergence point',
-          'Model architecture fixed',
-          'Further optimization limited',
+          'Resuming the search costs the setup again, and a plateau reported as a convergence is not revisited',
+          'A local optimum reported without that caveat is inherited as a global one',
         ],
         reversibility: 'low',
       },
@@ -161,7 +166,7 @@ export class NeuroComputationalHandler extends BaseTechniqueHandler {
       2: `Generate diverse solution patterns for: "${problem}". Activate multiple neural pathways simultaneously. Create variations through: random initialization, different connection weights, varied activation functions, alternative architectures. Generate at least 5-10 distinct patterns, and allow emergent properties to arise from their interactions. Then analyze how they interact: which reinforce each other (constructive interference), which cancel out (destructive interference), and which combinations produce the most creative emergence?`,
       3: `Synthesize patterns computationally for: "${problem}". Apply computational models: neural networks, genetic algorithms, evolutionary computation, swarm intelligence. Combine biological inspiration with computational efficiency. Create hybrid models that leverage both approaches. Generate novel combinations through computational synthesis.`,
       4: `Run optimization cycles for: "${problem}". Iterate through: feedforward passes, backpropagation, weight adjustment, architecture evolution. Rate convergence on each of coherence (internal consistency), novelty (creative distance from existing solutions) and utility (practical value), and say what the rating is based on. Refine for optimal balance between exploration and exploitation.`,
-      5: `Converge to optimal creative solution for: "${problem}". Synthesize all neural-computational processes. Preserve key insights from each pattern. Ensure solution maintains: cognitive plausibility, computational efficiency, creative novelty, practical applicability. Document the emergence path for future learning.`,
+      5: `Report what the search actually found for: "${problem}". Did it converge, or did it plateau — is this the best solution or the last one it could still improve on? Is it a local optimum, and what would tell you either way? Which regions went unexplored, and were they ruled out or merely never reached? Trace the emergence path: which pattern produced the result, and which contributed nothing. Then hold the result against this technique's own bar: cognitive plausibility, computational efficiency, creative novelty, practical applicability.`,
     };
 
     return (
@@ -319,22 +324,149 @@ export class NeuroComputationalHandler extends BaseTechniqueHandler {
     return true;
   }
 
-  getPromptContext(step: number): Record<string, unknown> {
-    const stepInfo = this.getStepInfo(step);
-    return {
-      technique: 'neuro_computational',
-      step,
-      stepName: stepInfo.name,
-      focus: stepInfo.focus,
-      emoji: stepInfo.emoji,
-      capabilities: {
-        neuralMapping: 'Transform problems into neural network representations',
-        patternGeneration: 'Generate diverse solutions through parallel processing',
-        interferenceAnalysis: 'Analyze constructive and destructive pattern interactions',
-        computationalSynthesis: 'Synthesize patterns using computational models',
-        optimizationCycles: 'Iteratively refine for coherence, novelty, and utility',
-        convergence: 'Converge to optimal creative solutions',
-      },
-    };
+  /**
+   * A convergence rating as the caller was asked to give it.
+   *
+   * `getStepGuidance` and the step-4/5 validation errors offer exactly three
+   * ratings — strong, moderate, weak — so a value that is one of them is
+   * reported by its name, which is what the caller chose. Anything else is
+   * reported as the bare number: the handler defines no scale between the
+   * tiers, so bucketing 0.83 into "moderate" would invent a judgement the
+   * session never made, which is the same fault the named tiers exist to
+   * prevent.
+   */
+  private renderConvergenceMetrics(value: unknown): string {
+    if (typeof value !== 'object' || value === null) {
+      return describeStructuredField(value);
+    }
+    const names = new Map<number, string>([
+      [CONVERGENCE_RATING.STRONG, 'strong'],
+      [CONVERGENCE_RATING.MODERATE, 'moderate'],
+      [CONVERGENCE_RATING.WEAK, 'weak'],
+    ]);
+    return Object.entries(value)
+      .map(([metric, rating]) => {
+        if (typeof rating === 'number') {
+          return `${metric} ${names.get(rating) ?? String(rating)}`;
+        }
+        const rendered = describeStructuredField(rating);
+        return rendered.length > 0 ? `${metric} ${rendered}` : '';
+      })
+      .filter(part => part.length > 0)
+      .join(', ');
+  }
+
+  /**
+   * Report what each step actually recorded, labelled by the step.
+   *
+   * Keyed on `entry.currentStep`, not on position in the array: `execute`
+   * appends a history entry for every call including revisions, so one revision
+   * shifts every later entry. Keying on the step also means a revision
+   * supersedes the entry it revises rather than reporting twice.
+   *
+   * `validateStep` rejects a step that omits its field, so a session that got
+   * this far named its mappings, its patterns, which of them reinforce and
+   * which cancel, its models and its ratings; reporting none of them was the
+   * defect this fixes.
+   */
+  extractInsights(history: unknown[]): string[] {
+    const totalSteps = this.steps.length;
+    const latestByStep = new Map<number, Record<string, unknown>>();
+
+    history.forEach((entry, index) => {
+      if (typeof entry !== 'object' || entry === null) {
+        return;
+      }
+      const entryObj = entry as Record<string, unknown>;
+      // Fall back to position only when the caller sent no step number.
+      const step = typeof entryObj.currentStep === 'number' ? entryObj.currentStep : index + 1;
+      if (step >= 1 && step <= totalSteps) {
+        latestByStep.set(step, entryObj);
+      }
+    });
+
+    const insights: string[] = [];
+
+    for (let step = 1; step <= totalSteps; step++) {
+      const entryObj = latestByStep.get(step);
+      if (!entryObj) {
+        continue;
+      }
+      const stepName = this.steps[step - 1]?.name;
+      if (!stepName) {
+        continue;
+      }
+
+      const output = typeof entryObj.output === 'string' ? entryObj.output.trim() : '';
+      if (output) {
+        const summary = firstSentence(output);
+        if (summary.length > 0) {
+          insights.push(`${stepName}: ${summary}`);
+        }
+      }
+
+      if (step === 1) {
+        const mappings = describeStructuredField(entryObj.neuralMappings);
+        if (mappings.length > 0) {
+          insights.push(`${stepName}: ${mappings}`);
+        }
+      }
+
+      if (step === 2) {
+        const patterns = describeStructuredField(entryObj.patternGenerations);
+        if (patterns.length > 0) {
+          insights.push(`${stepName}: ${patterns}`);
+        }
+        // interferenceAnalysis has known keys, so name what each one means
+        // rather than emitting "constructive: a, b; destructive: c".
+        const analysis = entryObj.interferenceAnalysis;
+        if (typeof analysis === 'object' && analysis !== null) {
+          const { constructive, destructive } = analysis as Record<string, unknown>;
+          const reinforcing = describeStructuredField(constructive);
+          const cancelling = describeStructuredField(destructive);
+          if (reinforcing.length > 0) {
+            insights.push(`${stepName}: patterns that reinforce — ${reinforcing}`);
+          }
+          if (cancelling.length > 0) {
+            insights.push(`${stepName}: patterns that cancel — ${cancelling}`);
+          }
+        }
+      }
+
+      if (step === 3) {
+        const models = describeStructuredField(entryObj.computationalModels);
+        if (models.length > 0) {
+          insights.push(`${stepName}: ${models}`);
+        }
+      }
+
+      if (step === 4 && typeof entryObj.optimizationCycles === 'number') {
+        insights.push(`${stepName}: ${entryObj.optimizationCycles} optimization cycles run`);
+      }
+
+      if (step === 5) {
+        const synthesis = describeStructuredField(entryObj.finalSynthesis);
+        if (synthesis.length > 0) {
+          insights.push(`${stepName}: ${synthesis}`);
+        }
+      }
+
+      // Steps 4 and 5 both require convergenceMetrics; report it on whichever
+      // one carried it rather than only at the end, so a step-4 rating that a
+      // later step revised downward is still visible.
+      if (step === 4 || step === 5) {
+        const metrics = this.renderConvergenceMetrics(entryObj.convergenceMetrics);
+        if (metrics.length > 0) {
+          insights.push(`${stepName}: rated ${metrics}`);
+        }
+      }
+    }
+
+    // No completion banner. Reaching step 5 is already visible from the step
+    // count, and a fixed "optimal solution converged" asserts a finding the
+    // session never made — the convergence ratings above are the finding, and
+    // they can say weak.
+
+    return insights;
   }
 }

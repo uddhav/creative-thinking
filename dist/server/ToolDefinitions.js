@@ -167,11 +167,19 @@ export const EXECUTE_THINKING_STEP_TOOL = {
             },
             currentStep: {
                 type: 'number',
-                description: 'REQUIRED: Current step number (1-based). Must be sequential without gaps.',
+                description: 'REQUIRED: Current step number (1-based). Prefer numbering within the current ' +
+                    'technique: a plan of triz (4 steps) then six_hats (7) numbers the first hat as ' +
+                    'step 1 with totalSteps 7. Plan-wide numbering (that same hat as step 5 with ' +
+                    'totalSteps 11) is equally accepted — totalSteps is what tells the two apart, so ' +
+                    'it must match the convention currentStep is using. Steps must be sequential ' +
+                    'without gaps.',
             },
             totalSteps: {
                 type: 'number',
-                description: 'REQUIRED: Total number of steps for this technique.',
+                description: 'REQUIRED: Total number of steps in the plan, matching how currentStep is counted. ' +
+                    'Send the plan total when numbering across the plan, or one technique step count ' +
+                    'when numbering within that technique. Pairing one convention with the other ' +
+                    'resolves the step to the wrong place.',
             },
             output: {
                 type: 'string',
@@ -194,7 +202,13 @@ export const EXECUTE_THINKING_STEP_TOOL = {
             // Six Hats specific
             hatColor: {
                 type: 'string',
-                enum: ['blue', 'white', 'red', 'yellow', 'black', 'green'],
+                enum: ['blue', 'white', 'red', 'yellow', 'black', 'green', 'purple'],
+                description: 'Which hat this step wears, in order blue, white, red, yellow, black, green, purple. ' +
+                    "It must be both a real hat and this step's own hat: an unknown value is refused, and " +
+                    'so is the right hat on the wrong step. Purple is the seventh step (path dependency ' +
+                    'and ruin risk) and was missing from this enum, so step 7 could not be labelled even ' +
+                    'though the handler accepted it. Omitting hatColor costs the step its label, and an ' +
+                    'unlabelled hat cannot be attributed in the report.',
             },
             // PO specific
             provocation: { type: 'string' },
@@ -217,7 +231,33 @@ export const EXECUTE_THINKING_STEP_TOOL = {
                 ],
             },
             modifications: { type: 'array', items: { type: 'string' } },
-            pathImpact: { type: 'object' },
+            pathImpact: {
+                type: 'object',
+                description: "SCAMPER's measurement of what the modification costs in future freedom — " +
+                    'COMPUTED BY THE SERVER. On a scamper step carrying a scamperAction, the ' +
+                    'server derives this from its own analysis of the action and REPLACES ' +
+                    'anything sent here, however fully populated. It appears on responses as ' +
+                    "the server's reading; sending it has no effect. (An older description " +
+                    'invited callers to populate it, which was measured false: zero caller ' +
+                    'sentinels survive.)',
+                properties: {
+                    reversible: { type: 'boolean' },
+                    dependenciesCreated: { type: 'array', items: { type: 'string' } },
+                    optionsClosed: { type: 'array', items: { type: 'string' } },
+                    optionsOpened: { type: 'array', items: { type: 'string' } },
+                    flexibilityRetention: {
+                        type: 'number',
+                        minimum: 0,
+                        maximum: 1,
+                        description: 'Share of future freedom the modification leaves intact. 1 = none lost.',
+                    },
+                    commitmentLevel: {
+                        type: 'string',
+                        enum: ['low', 'medium', 'high', 'irreversible'],
+                    },
+                    recoveryPath: { type: 'string' },
+                },
+            },
             // Concept Extraction specific
             successExample: { type: 'string' },
             extractedConcepts: { type: 'array', items: { type: 'string' } },
@@ -248,7 +288,19 @@ export const EXECUTE_THINKING_STEP_TOOL = {
             switchingRhythm: { type: 'array', items: { type: 'string' } },
             integrationInsights: { type: 'array', items: { type: 'string' } },
             // Temporal Work specific
-            temporalLandscape: { type: 'object' },
+            temporalLandscape: {
+                type: 'object',
+                description: 'Step 1: the shape of the available time. Rejected loudly if it is not an ' +
+                    'object, but its keys were undeclared, so the two that drive insights — ' +
+                    'fixedDeadlines and kairosOpportunities — could not be guessed.',
+                properties: {
+                    fixedDeadlines: { type: 'array', items: { type: 'string' } },
+                    flexibleWindows: { type: 'array', items: { type: 'string' } },
+                    pressurePoints: { type: 'array', items: { type: 'string' } },
+                    deadZones: { type: 'array', items: { type: 'string' } },
+                    kairosOpportunities: { type: 'array', items: { type: 'string' } },
+                },
+            },
             circadianAlignment: { type: 'array', items: { type: 'string' } },
             pressureTransformation: { type: 'array', items: { type: 'string' } },
             asyncSyncBalance: { type: 'array', items: { type: 'string' } },
@@ -366,6 +418,236 @@ export const EXECUTE_THINKING_STEP_TOOL = {
             synthesisStrategy: { type: 'string' },
             preservedOptions: { type: 'array', items: { type: 'string' } },
             /**
+             * Fields the handlers read that this schema did not declare.
+             *
+             * Nothing enforced the schema — the server casts raw arguments — so these
+             * always worked if a caller happened to send them. They were simply
+             * undiscoverable, which for a schema is the same as absent. Several gate
+             * insight extraction, so a session that did not send them silently lost
+             * the technique's derived findings.
+             */
+            // Competing Hypotheses
+            matrix: {
+                type: 'object',
+                description: 'Step 3. Rejected unless hypotheses, evidence and ratings are all present. ' +
+                    'Rate each pairing under the key `<evidence>_<hypothesis>`.',
+                properties: {
+                    hypotheses: { type: 'array', items: { type: 'string' } },
+                    evidence: { type: 'array', items: { type: 'string' } },
+                    ratings: {
+                        type: 'object',
+                        description: 'Diagnosticity of each evidence-hypothesis pairing, keyed ' +
+                            '`<evidence>_<hypothesis>`, from -2 (strongly contradicts) to +2 ' +
+                            '(strongly supports). Anything outside that range is rejected.',
+                        additionalProperties: { type: 'number', minimum: -2, maximum: 2 },
+                    },
+                    diagnosticValue: {
+                        type: 'object',
+                        description: 'How much each piece of evidence discriminates, keyed by evidence, 0-1.',
+                        additionalProperties: { type: 'number', minimum: 0, maximum: 1 },
+                    },
+                    sensitivityFactors: { type: 'array', items: { type: 'string' } },
+                },
+            },
+            probabilities: {
+                type: 'object',
+                description: 'Step 6. Posterior probability keyed by hypothesis, e.g. { "H1": 0.6, "H2": 0.4 }. ' +
+                    'The values must sum to 1.0 (±0.01) or the step is rejected. Drives the ' +
+                    'confidence band reported at the end.',
+                additionalProperties: { type: 'number', minimum: 0, maximum: 1 },
+            },
+            leadingHypothesis: { type: 'string' },
+            // Criteria-Based Analysis
+            validityScore: {
+                type: 'number',
+                minimum: 0,
+                maximum: 100,
+                description: 'Step 5: assessed validity as a percentage. Drives the validity band reported ' +
+                    'at the end.',
+            },
+            // Linguistic Forensics
+            pronounRatios: {
+                type: 'object',
+                description: 'Step 3. Keyed by ratio, not by pronoun — iWe is the one that is read, and an ' +
+                    'example of { "i": …, "we": … } (which this description used to give) validates ' +
+                    'and then reports nothing. Each value is a fraction from 0 to 1.',
+                properties: {
+                    iWe: {
+                        type: 'number',
+                        minimum: 0,
+                        maximum: 1,
+                        description: 'Individual over collective. Above 0.7 and below 0.3 both get reported.',
+                    },
+                    activePassive: { type: 'number', minimum: 0, maximum: 1 },
+                    ownershipAvoidance: { type: 'number', minimum: 0, maximum: 1 },
+                },
+            },
+            coherenceScore: {
+                type: 'number',
+                minimum: 0,
+                maximum: 100,
+                description: 'Step 6: narrative coherence as a percentage, not a fraction. The bands sit at ' +
+                    '85, 70 and 50, so a 0-1 value reports the worst verdict for the best score.',
+            },
+            // Reverse Benchmarking
+            weaknessMapping: {
+                type: 'object',
+                description: 'Step 1: what every competitor is bad at.',
+                properties: {
+                    universalWeaknesses: { type: 'array', items: { type: 'string' } },
+                },
+            },
+            vacantSpaces: {
+                type: 'array',
+                description: 'Step 2: the ground nobody is standing on. Every entry needs all four keys ' +
+                    'or the step is rejected.',
+                items: {
+                    type: 'object',
+                    properties: {
+                        space: { type: 'string' },
+                        opportunityValue: { type: 'string', enum: ['low', 'medium', 'high', 'very_high'] },
+                        implementationDifficulty: { type: 'string', enum: ['low', 'medium', 'high'] },
+                        whyVacant: { type: 'string' },
+                    },
+                    required: ['space', 'opportunityValue', 'implementationDifficulty', 'whyVacant'],
+                },
+            },
+            antiMimeticStrategy: {
+                description: 'Step 3: how this deliberately stops resembling the field. A plain string, or ' +
+                    '{ differentiationVector } — both are read.',
+                anyOf: [
+                    { type: 'string' },
+                    { type: 'object', properties: { differentiationVector: { type: 'string' } } },
+                ],
+            },
+            excellenceDesign: {
+                type: 'object',
+                description: 'Step 4: the standard being set, and where.',
+                properties: {
+                    area: { type: 'string' },
+                    standard: { type: 'string' },
+                },
+            },
+            // Temporal Creativity
+            blackSwanScenarios: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Step 3: the outcomes the projection cannot price. Rejected if not an array.',
+            },
+            // Biomimetic Path
+            integratedSolution: { type: 'string' },
+            // Random Entry
+            roryMode: {
+                type: 'boolean',
+                description: 'Draw the stimulus from the behavioural-economics catalogue instead of at random.',
+            },
+            // Anecdotal Signal
+            anecdoteCount: {
+                type: 'integer',
+                minimum: 0,
+                description: 'Step 1: how many anecdotes were gathered.',
+            },
+            signals: {
+                type: 'array',
+                description: 'Step 2: the anecdotes that might be signal. Every entry needs all four keys ' +
+                    'or the step is rejected. Only strong and critical ones are reported.',
+                items: {
+                    type: 'object',
+                    properties: {
+                        story: { type: 'string' },
+                        divergenceLevel: {
+                            type: 'string',
+                            enum: ['minor', 'moderate', 'significant', 'extreme'],
+                        },
+                        signalStrength: { type: 'string', enum: ['weak', 'moderate', 'strong', 'critical'] },
+                        precedentType: { type: 'string', enum: ['first', 'rare', 'emerging', 'recurring'] },
+                    },
+                    required: ['story', 'divergenceLevel', 'signalStrength', 'precedentType'],
+                },
+            },
+            trajectoryAnalysis: { type: 'object', description: 'Step 3: where the signal is heading.' },
+            earlyWarnings: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Step 4: what would show first if this is real. Read only if it is an array.',
+            },
+            scalingScenarios: {
+                type: 'array',
+                description: 'Step 5: what adoption looks like if it spreads.',
+                items: {
+                    type: 'object',
+                    properties: {
+                        scenario: { type: 'string' },
+                        adoptionLevel: {
+                            type: 'number',
+                            minimum: 0,
+                            maximum: 100,
+                            description: 'Percentage of the market, not a fraction. Above 25 is reported as ' +
+                                'crossing into the mainstream. Outside 0-100 the step is rejected.',
+                        },
+                    },
+                },
+            },
+            strategicResponse: { type: 'object', description: 'Step 6: what to do about it.' },
+            // Context Reframing
+            contextAnalysis: {
+                type: 'object',
+                description: 'Step 1: the context as it stands, and what it constrains.',
+            },
+            interventions: {
+                type: 'array',
+                description: 'Step 2: the changes to the context, not to the message. Every entry needs all ' +
+                    'four keys or the step is rejected. Easy and moderate ones are reported.',
+                items: {
+                    type: 'object',
+                    properties: {
+                        type: {
+                            type: 'string',
+                            enum: ['spatial', 'temporal', 'social', 'comparative', 'procedural', 'informational'],
+                        },
+                        description: { type: 'string' },
+                        expectedImpact: { type: 'string' },
+                        implementationEase: { type: 'string', enum: ['easy', 'moderate', 'difficult'] },
+                    },
+                    required: ['type', 'description', 'expectedImpact', 'implementationEase'],
+                },
+            },
+            frameShift: { type: 'object', description: 'Step 3: the frame moved from, and to.' },
+            environmentDesign: { type: 'object', description: 'Step 4: the environment as redesigned.' },
+            behavioralMetrics: { type: 'object', description: 'Step 5: what the change is measured by.' },
+            // Perception Optimization
+            perceptionGaps: {
+                type: 'array',
+                description: 'Step 1: where what is true and what is perceived come apart. Every entry needs ' +
+                    'all four keys or the step is rejected. Large and massive gaps are reported.',
+                items: {
+                    type: 'object',
+                    properties: {
+                        objective: { type: 'string' },
+                        perceived: { type: 'string' },
+                        gapSize: { type: 'string', enum: ['small', 'medium', 'large', 'massive'] },
+                        leverageOpportunity: {
+                            type: 'string',
+                            enum: ['low', 'medium', 'high', 'very_high'],
+                        },
+                    },
+                    required: ['objective', 'perceived', 'gapSize', 'leverageOpportunity'],
+                },
+            },
+            valueAmplification: { type: 'object', description: 'Step 2: what makes the value felt.' },
+            experienceDesign: { type: 'object', description: 'Step 3: the experience as designed.' },
+            psychologicalValue: {
+                type: 'object',
+                description: 'Step 4: the value that is not material.',
+            },
+            perceptionROI: {
+                type: 'number',
+                exclusiveMinimum: 0,
+                description: 'Step 5: return as a multiple of what the equivalent spend on the product itself ' +
+                    'would return — 12 means twelvefold, not 12%. Above 10 is reported as ' +
+                    'exceptional. Zero and negatives are rejected.',
+            },
+            /**
              * First Principles specific fields
              * Used for breaking down problems to fundamental components
              * Alternative fields support flexible input from LLMs
@@ -416,11 +698,40 @@ export const EXECUTE_THINKING_STEP_TOOL = {
             /**
              * Meta-Learning specific fields
              * Used for learning from patterns across techniques
-             * Alternative fields: patterns (patternRecognition), accumulatedLearning (learningHistory)
+             *
+             * Steps 1 and 2 REJECT input that omits these. They were described in this
+             * comment as "alternative fields" but never declared, so the only way to
+             * discover them was to trigger the error and read the message.
              */
+            patternRecognition: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Step 1: successful patterns recognised across techniques. Required; `patterns` is accepted instead.',
+            },
+            patterns: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Step 1: alias for patternRecognition.',
+            },
+            learningHistory: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Step 2: accumulated learnings and their contexts. Required; `accumulatedLearning` is accepted instead.',
+            },
+            accumulatedLearning: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Step 2: alias for learningHistory.',
+            },
+            strategyAdaptations: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Step 3: how technique selection adapts. Required; `strategyEvolution` is accepted instead.',
+            },
             metaSynthesis: {
                 type: 'string',
-                description: 'Step 5: Meta-level synthesis of learning patterns',
+                description: 'Step 4: Meta-level synthesis of learning patterns. Required; ' +
+                    '`synthesisStrategy` is accepted instead.',
             },
             /**
              * Biomimetic Path specific fields
@@ -520,17 +831,89 @@ export const EXECUTE_THINKING_STEP_TOOL = {
             revisesStep: { type: 'number' },
             branchFromStep: { type: 'number' },
             branchId: { type: 'string' },
-            flexibilityScore: { type: 'number', minimum: 0, maximum: 1 },
             alternativeSuggestions: { type: 'array', items: { type: 'string' } },
+            // The second mode. This tool dispatches on `sessionOperation` before it
+            // validates anything else (index.ts:166), so these have always worked —
+            // and were declared nowhere, while `required` demanded the seven
+            // thinking-step fields unconditionally. A client following the schema
+            // could not issue one at all. The `oneOf` below is what makes both
+            // shapes legal; the properties are what make the second one findable.
+            sessionOperation: {
+                type: 'string',
+                enum: ['save', 'load', 'list', 'delete', 'export'],
+                description: 'Operate on the session itself rather than advancing it. Send this ' +
+                    'INSTEAD of the thinking-step fields, with the matching options ' +
+                    'object below. `export` reads the live session and needs no ' +
+                    'persistence. `save`, `load` and `list` require the server to be ' +
+                    'started with PERSISTENCE_TYPE set; without it they report that the ' +
+                    'adapter is unavailable.',
+            },
+            saveOptions: {
+                type: 'object',
+                description: 'For sessionOperation: save. Requires a persistence adapter.',
+                properties: {
+                    sessionName: { type: 'string' },
+                    tags: { type: 'array', items: { type: 'string' } },
+                    asTemplate: { type: 'boolean' },
+                },
+            },
+            loadOptions: {
+                type: 'object',
+                description: 'For sessionOperation: load. Requires a persistence adapter.',
+                properties: {
+                    sessionId: { type: 'string' },
+                    continueFrom: { type: 'number' },
+                },
+                required: ['sessionId'],
+            },
+            listOptions: {
+                type: 'object',
+                description: 'For sessionOperation: list. Requires a persistence adapter.',
+                properties: {
+                    limit: { type: 'number' },
+                    technique: { type: 'string' },
+                    status: { type: 'string', enum: ['active', 'completed', 'all'] },
+                    tags: { type: 'array', items: { type: 'string' } },
+                    searchTerm: { type: 'string' },
+                },
+            },
+            deleteOptions: {
+                type: 'object',
+                description: 'For sessionOperation: delete. Requires a persistence adapter.',
+                properties: {
+                    sessionId: { type: 'string' },
+                    confirm: { type: 'boolean' },
+                },
+                required: ['sessionId'],
+            },
+            exportOptions: {
+                type: 'object',
+                description: 'For sessionOperation: export. Returns the whole session as a ' +
+                    'document. `sessionId` goes HERE, not at the top level — a top-level ' +
+                    'sessionId is ignored and the call is rejected as missing it.',
+                properties: {
+                    sessionId: { type: 'string' },
+                    format: { type: 'string', enum: ['json', 'markdown', 'csv'] },
+                    outputPath: { type: 'string' },
+                },
+                required: ['sessionId', 'format'],
+            },
         },
-        required: [
-            'planId',
-            'technique',
-            'problem',
-            'currentStep',
-            'totalSteps',
-            'output',
-            'nextStepNeeded',
+        // Two shapes, one tool. A thinking step needs all seven of its fields; a
+        // session operation needs none of them.
+        oneOf: [
+            {
+                required: [
+                    'planId',
+                    'technique',
+                    'problem',
+                    'currentStep',
+                    'totalSteps',
+                    'output',
+                    'nextStepNeeded',
+                ],
+            },
+            { required: ['sessionOperation'] },
         ],
     },
 };

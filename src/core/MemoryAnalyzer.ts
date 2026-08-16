@@ -135,13 +135,17 @@ export class MemoryAnalyzer {
     // Check for iterative refinement (including current step)
     const revisions = session.history.filter(h => h.isRevision).length + (input.isRevision ? 1 : 0);
     if (revisions >= 1) {
-      return 'Solution evolved through iterative refinement and exploration of alternatives';
+      // A revision is evidence of revision. Whether alternatives were explored
+      // is a claim about the content, which this cannot see.
+      return `Revised ${revisions} step(s) rather than proceeding straight through`;
     }
 
-    // Check for multi-technique synergy
+    // Say how many techniques ran, not that the coverage is comprehensive.
+    // Two techniques were enough to claim comprehensiveness, whatever either
+    // of them found.
     const techniques = new Set(session.history.map(h => h.technique));
     if (techniques.size >= 2) {
-      return 'Multi-technique approach creating comprehensive solution coverage';
+      return `${techniques.size} techniques applied to this problem`;
     }
 
     return undefined;

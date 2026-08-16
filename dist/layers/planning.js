@@ -6,6 +6,8 @@ import { randomUUID } from 'crypto';
 import { ExecutionGraphGenerator } from './planning/ExecutionGraphGenerator.js';
 import { TelemetryCollector } from '../telemetry/TelemetryCollector.js';
 import { PersonaResolver } from '../personas/PersonaResolver.js';
+import { ValidationError } from '../errors/types.js';
+import { ErrorCode } from '../errors/types.js';
 import { HumanisticQualityCoverage } from './discovery/HumanisticQualityCoverage.js';
 import { PersonaGuidanceInjector } from '../personas/PersonaGuidanceInjector.js';
 import { DebateOrchestrator } from '../personas/DebateOrchestrator.js';
@@ -13,18 +15,36 @@ import { DebateOrchestrator } from '../personas/DebateOrchestrator.js';
 const personaResolver = new PersonaResolver();
 export function planThinkingSession(input, sessionManager, techniqueRegistry) {
     const { problem, techniques, objectives, constraints, timeframe = 'thorough', executionMode = 'sequential', persona, personas, debateFormat, } = input;
-    // Resolve persona for guidance injection
+    // Resolve persona for guidance injection.
+    //
+    // A persona that does not resolve is an ERROR, not a filter. This used to
+    // drop it silently — `personas: ['rich_hickey', 'nobody_at_all']` returned a
+    // single-voice plan with no debate keys and nothing naming the dropped
+    // persona, so a caller asking for a debate got a monologue and no way to
+    // know why. Duplicates collapse instead: two copies of one persona cannot
+    // hold a debate with each other, and the pre-fix behaviour built two
+    // byte-identical "voices" and called it one.
     let resolvedPersona = null;
     const resolvedPersonas = [];
+    const resolveOrThrow = (name) => {
+        const resolved = personaResolver.resolve(name);
+        if (!resolved) {
+            throw new ValidationError(ErrorCode.INVALID_FIELD_VALUE, `Unknown persona: '${name}'. Use a built-in id, an external catalog id, ` +
+                `or the 'custom:' prefix for a generated persona.`, 'personas', { provided: name });
+        }
+        return resolved;
+    };
     if (persona) {
-        resolvedPersona = personaResolver.resolve(persona);
+        resolvedPersona = resolveOrThrow(persona);
     }
     if (personas && Array.isArray(personas)) {
+        const seenIds = new Set();
         for (const p of personas) {
-            const resolved = personaResolver.resolve(p);
-            if (resolved) {
-                resolvedPersonas.push(resolved);
-            }
+            const resolved = resolveOrThrow(p);
+            if (seenIds.has(resolved.id))
+                continue;
+            seenIds.add(resolved.id);
+            resolvedPersonas.push(resolved);
         }
         // In debate mode with multiple personas, use the first as the primary
         if (!resolvedPersona && resolvedPersonas.length > 0) {
@@ -208,7 +228,10 @@ function getExpectedOutputs(technique) {
         neural_state: ['Optimized thinking state', 'Integrated insights'],
         temporal_work: ['Time-aware design', 'Flexible implementation'],
         cultural_integration: ['Culturally adaptive solution', 'Respectful integration'],
-        collective_intel: ['Synthesized wisdom', 'Emergent insights'],
+        collective_intel: [
+            'Combinations that hold across disagreeing sources',
+            'A collective view with its dissent named, not averaged away',
+        ],
         disney_method: ['Implementable vision', 'Practical plan', 'Risk-aware solution'],
         nine_windows: [
             'Multi-dimensional understanding',
@@ -427,6 +450,7 @@ function getExpectedOutputForStep(technique, step) {
             5: 'Alternative uses',
             6: 'Elements to eliminate',
             7: 'Reversal concepts',
+            8: 'Parameters worth varying',
         },
         disney_method: {
             1: 'Bold vision without constraints',
@@ -448,7 +472,7 @@ function getExpectedOutputForStep(technique, step) {
             1: 'Multiple contradictory solution states generated',
             2: 'State interactions mapped: reinforcement, cancellation, dependencies, trajectory',
             3: 'Measurement context defined',
-            4: 'Optimal state collapsed with preserved insights',
+            4: 'One state committed to, the rest explicitly stood down, salvage named and the collapse priced',
         },
         temporal_creativity: {
             1: 'Decision history excavated with patterns',
@@ -490,7 +514,7 @@ function getExpectedOutputForStep(technique, step) {
             2: 'Diverse solution patterns generated, with constructive/destructive interference analyzed',
             3: 'Computational models synthesized from neural patterns',
             4: 'Optimization cycles completed with convergence ratings',
-            5: 'Optimal creative solution converged with preserved insights',
+            5: 'Search reported: converged or plateaued, local optimum assessed, unexplored regions named',
         },
         reverse_benchmarking: {
             1: 'Universal competitor weaknesses mapped',
@@ -738,12 +762,22 @@ function generateSequenceLogic(techniques, integrationStrategy) {
  */
 function generateHistoricalNote(techniques, objectives) {
     const techniquePatterns = {
-        'six_hats,scamper': 'This combination has proven effective for product improvements by balancing systematic analysis with creative modifications',
+        // Keys are the technique ids sorted and comma-joined, because that is how
+        // the lookup builds them. Two of these were written in unsorted order —
+        // 'six_hats,scamper' and 'triz,scamper' — so they could never match and
+        // their notes had never once been emitted.
+        'scamper,six_hats': 'This combination has proven effective for product improvements by balancing systematic analysis with creative modifications',
         'design_thinking,po': 'Pairing empathy with provocation often reveals hidden user needs',
-        'triz,scamper': 'Technical contradiction resolution followed by systematic modification creates robust innovations',
+        'scamper,triz': 'Technical contradiction resolution followed by systematic modification creates robust innovations',
         'random_entry,yes_and': 'Random stimuli enhanced through collaborative building generates unexpected breakthroughs',
     };
-    const key = techniques.sort().join(',');
+    // Copy before sorting. `Array.prototype.sort` is in place, and this array is
+    // the caller's own — so building a lookup key here silently reordered it, and
+    // with it `plan.techniques`, which holds the same reference. The plan's
+    // workflow kept the requested order, so the two disagreed: a caller that
+    // iterated its own array after planning walked the techniques in the wrong
+    // order and had every call after the first block rejected.
+    const key = [...techniques].sort().join(',');
     const pattern = techniquePatterns[key];
     if (pattern) {
         return pattern;

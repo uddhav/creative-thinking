@@ -36,24 +36,41 @@ describe('Complete Technique Workflows', () => {
       expect(plan.planId).toBeDefined();
 
       let sessionId: string | undefined;
-      const hatColors: SixHatsColor[] = ['blue', 'white', 'red', 'yellow', 'black', 'green'];
+      // Six Thinking Hats has SEVEN steps — the Purple Hat closes it out.
+      const hatColors: SixHatsColor[] = [
+        'blue',
+        'white',
+        'red',
+        'yellow',
+        'black',
+        'green',
+        'purple',
+      ];
 
-      // Execute all 6 hats
-      for (let i = 0; i < 6; i++) {
+      // Execute all 7 hats
+      for (let i = 0; i < hatColors.length; i++) {
         const stepInput: ExecuteThinkingStepInput = {
           planId: plan.planId,
           technique: 'six_hats',
           problem,
           currentStep: i + 1,
-          totalSteps: 6,
+          totalSteps: hatColors.length,
           hatColor: hatColors[i],
           output: getHatOutput(hatColors[i]),
-          nextStepNeeded: i < 5,
+          nextStepNeeded: i < hatColors.length - 1,
           sessionId,
         };
 
         const result = await server.executeThinkingStep(stepInput);
-        const stepData = safeJsonParse(result.content[0].text);
+        const stepData = safeJsonParse<{
+          technique?: string;
+          currentStep?: number;
+          sessionId?: string;
+          nextStepNeeded?: boolean;
+          completed?: boolean;
+          insights?: string[];
+          pathImpact?: { commitmentLevel?: string; reversible?: boolean };
+        }>(result.content[0].text);
 
         expect(stepData.technique).toBe('six_hats');
         expect(stepData.currentStep).toBe(i + 1);
@@ -63,7 +80,7 @@ describe('Complete Technique Workflows', () => {
           expect(sessionId).toBeDefined();
         }
 
-        if (i === 5) {
+        if (i === hatColors.length - 1) {
           // Final step
           expect(stepData.nextStepNeeded).toBe(false);
           expect(stepData.insights).toBeDefined();
@@ -178,7 +195,15 @@ describe('Complete Technique Workflows', () => {
           sessionId,
         });
 
-        const stepData = safeJsonParse(result.content[0].text);
+        const stepData = safeJsonParse<{
+          technique?: string;
+          currentStep?: number;
+          sessionId?: string;
+          nextStepNeeded?: boolean;
+          completed?: boolean;
+          insights?: string[];
+          pathImpact?: { commitmentLevel?: string; reversible?: boolean };
+        }>(result.content[0].text);
 
         expect(stepData.technique).toBe('scamper');
         expect(stepData.currentStep).toBe(i + 1);
@@ -190,7 +215,14 @@ describe('Complete Technique Workflows', () => {
         // Check PDA-SCAMPER fields
         if (stepData.pathImpact) {
           expect(stepData.pathImpact.commitmentLevel).toBeDefined();
-          expect(stepData.flexibilityScore).toBeDefined();
+          // flexibilityScore is the engine's measurement and is reported on
+          // the same terms for every technique — once it is low enough to act
+          // on. SCAMPER used to echo the caller's own number unconditionally,
+          // which is what made it appear on every step here.
+          const reported = (stepData as Record<string, unknown>).flexibilityScore;
+          if (reported !== undefined) {
+            expect(reported).toBeLessThan(0.7);
+          }
         }
 
         if (i === actions.length - 1) {
@@ -315,7 +347,15 @@ describe('Complete Technique Workflows', () => {
           ...stageInput.fields,
         });
 
-        const stepData = safeJsonParse(result.content[0].text);
+        const stepData = safeJsonParse<{
+          technique?: string;
+          currentStep?: number;
+          sessionId?: string;
+          nextStepNeeded?: boolean;
+          completed?: boolean;
+          insights?: string[];
+          pathImpact?: { commitmentLevel?: string; reversible?: boolean };
+        }>(result.content[0].text);
 
         if (i === 0) {
           sessionId = stepData.sessionId;
@@ -389,6 +429,8 @@ function getHatOutput(color: SixHatsColor): string {
     yellow: 'Benefits: Strong product-market fit, high satisfaction when engaged',
     black: 'Risks: Competitor offering better onboarding experience',
     green: 'Ideas: AI chatbot for instant support, gamified onboarding process',
+    purple:
+      'Path dependencies: churned customers rarely return, so retention spend is irreversible',
   };
   return outputs[color];
 }

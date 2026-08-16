@@ -5,7 +5,14 @@
 import { Sensor } from './base.js';
 import type { CognitiveMetrics, SensorCalibration } from '../types.js';
 import type { PathMemory, Barrier } from '../../types.js';
+import { LOW_REVERSIBILITY_COST } from '../../pathMemory.js';
 import type { SessionData } from '../../../index.js';
+
+/** Trailing window for "can this session still change direction now". */
+const RECENT_WINDOW = 10;
+
+/** Trailing window for the graded assumption-challenge reading. */
+const CHALLENGE_WINDOW = 15;
 
 export class CognitiveAssessor extends Sensor {
   constructor(calibration?: Partial<SensorCalibration>) {
@@ -23,51 +30,86 @@ export class CognitiveAssessor extends Sensor {
   }
 
   /**
-   * Calculate cognitive rigidity level
+   * Cognitive rigidity, read from the path record rather than from the shape
+   * of the transcript.
+   *
+   * Three of the five inputs used to count transcript shape and call it risk,
+   * the same defect `cognitive_lock_in` carried: how many distinct techniques
+   * appeared in the window, how many distinct decision strings appeared in it,
+   * and how many insights the session had logged per step. A plan is a list of
+   * techniques and a technique is a list of its own steps, so running exactly
+   * as planned scored as narrow; a session whose steps are recorded in one
+   * consistent voice scored as repetitive; and a scripted run that logs no
+   * insights scored as not learning. A terse healthy session was
+   * indistinguishable from a struggling one on all three, which is why the
+   * thirteen-step reflective control — flexibility 0.937, committed to nothing
+   * — reached `caution` at step 11.
+   *
+   * `perspectiveDiversity` also returned a hard-coded 0.8 while the history was
+   * under ten events, so every chain in the catalogue showed the same step-10
+   * cliff as the stub handed over to the real formula. That was not an early
+   * -stage allowance; it was the measure declining to measure and the real
+   * value arriving all at once.
+   *
+   * What the record does state, per event, is how hard the step declared itself
+   * to undo and how much it committed. Those two are not independent here:
+   * across all 171 steps of the catalogue, `commitmentLevel > 0.7` holds for
+   * exactly the 38 steps where `reversibilityCost > 0.7` and for no others, so
+   * a separate commitment axis would be the same 38 steps counted twice. The
+   * three inputs below are therefore two scopes of the reversibility the steps
+   * declared, plus the one graded reading that also sees the middle of the
+   * ladder and the options a step opened.
    */
-  protected getRawReading(pathMemory: PathMemory, sessionData: SessionData): Promise<number> {
-    const metrics = this.calculateCognitiveMetrics(pathMemory, sessionData);
+  protected getRawReading(pathMemory: PathMemory, _sessionData: SessionData): Promise<number> {
+    const metrics = this.calculateCognitiveMetrics(pathMemory);
 
     // Weighted combination of cognitive factors
     const weights = {
-      perspectiveDiversity: 0.3,
-      assumptionChallenge: 0.25,
-      learningVelocity: 0.25,
-      mentalFlexibility: 0.2,
+      recentReversibility: 0.4,
+      sustainedReversibility: 0.25,
+      assumptionChallenge: 0.35,
     };
 
     // Calculate rigidity scores (0 = flexible, 1 = rigid)
-    const perspectiveRigidity = 1 - metrics.perspectiveDiversity;
+    const recentRigidity = 1 - metrics.recentReversibility;
+    const sustainedRigidity = 1 - metrics.sustainedReversibility;
     const assumptionRigidity = 1 - metrics.assumptionChallengeRate;
-    const learningRigidity = 1 - metrics.learningVelocity;
-    const mentalRigidity = 1 - metrics.mentalModelFlexibility;
 
     // Weighted average
     const overallRigidity =
-      perspectiveRigidity * weights.perspectiveDiversity +
-      assumptionRigidity * weights.assumptionChallenge +
-      learningRigidity * weights.learningVelocity +
-      mentalRigidity * weights.mentalFlexibility;
+      recentRigidity * weights.recentReversibility +
+      sustainedRigidity * weights.sustainedReversibility +
+      assumptionRigidity * weights.assumptionChallenge;
 
-    // Apply pattern-based adjustments
-    const patternAdjusted = this.adjustForCognitivePatterns(overallRigidity, pathMemory);
-
-    return Promise.resolve(Math.min(1, Math.max(0, patternAdjusted)));
+    // No pattern multipliers. There were three, and none survives its own
+    // evidence: `detectTechniqueFixation` (x1.2) fired whenever the last eight
+    // steps used two or fewer techniques, which is the shape of any two-
+    // technique plan; `detectCircularReasoning` (x1.15) fired whenever a
+    // decision string repeated three or four steps apart, which is true of
+    // every session recorded in a consistent voice; and
+    // `detectConfirmationBias` (x1.1) needed more than seven of the last ten
+    // steps to both commit above 0.8 and close more options than they opened,
+    // and SCAMPER — the only technique that reports options at all — peaks at
+    // three and two over any window. Two measured shape and the third could not
+    // fire.
+    return Promise.resolve(Math.min(1, Math.max(0, overallRigidity)));
   }
 
   /**
    * Detect specific cognitive rigidity indicators
    */
-  protected detectIndicators(pathMemory: PathMemory, sessionData: SessionData): Promise<string[]> {
+  protected detectIndicators(pathMemory: PathMemory, _sessionData: SessionData): Promise<string[]> {
     const indicators: string[] = [];
-    const metrics = this.calculateCognitiveMetrics(pathMemory, sessionData);
+    const metrics = this.calculateCognitiveMetrics(pathMemory);
 
-    // Perspective diversity indicators
-    if (metrics.perspectiveDiversity < 0.3) {
-      indicators.push('Limited perspective diversity');
+    // Recent room to change direction
+    if (metrics.recentReversibility < 0.3) {
+      indicators.push('Most recent steps declared themselves hard to undo');
     }
-    if (this.detectPerspectiveNarrowing(pathMemory)) {
-      indicators.push('Perspective narrowing over time');
+
+    // Session-long binding
+    if (metrics.sustainedReversibility < 0.3) {
+      indicators.push('Most of the session has been spent on steps that cannot be walked back');
     }
 
     // Assumption challenging indicators
@@ -78,30 +120,6 @@ export class CognitiveAssessor extends Sensor {
       indicators.push('Assumptions becoming rigid');
     }
 
-    // Learning indicators
-    if (metrics.learningVelocity < 0.2) {
-      indicators.push('Slow learning rate');
-    }
-    if (this.detectLearningPlateau(sessionData)) {
-      indicators.push('Learning plateau detected');
-    }
-
-    // Mental model indicators
-    if (metrics.mentalModelFlexibility < 0.3) {
-      indicators.push('Rigid mental models');
-    }
-    if (this.detectFrameworkLockIn(pathMemory)) {
-      indicators.push('Framework lock-in detected');
-    }
-
-    // Creativity indicators
-    if (metrics.creativeDivergence < 0.3) {
-      indicators.push('Low creative divergence');
-    }
-    if (this.detectRepetitiveThinking(pathMemory)) {
-      indicators.push('Repetitive thinking patterns');
-    }
-
     return Promise.resolve(indicators);
   }
 
@@ -110,9 +128,9 @@ export class CognitiveAssessor extends Sensor {
    */
   protected gatherContext(
     pathMemory: PathMemory,
-    sessionData: SessionData
+    _sessionData: SessionData
   ): Promise<Record<string, unknown>> {
-    const metrics = this.calculateCognitiveMetrics(pathMemory, sessionData);
+    const metrics = this.calculateCognitiveMetrics(pathMemory);
 
     return Promise.resolve({
       cognitiveMetrics: metrics,
@@ -120,7 +138,6 @@ export class CognitiveAssessor extends Sensor {
       perspectiveShifts: this.countPerspectiveShifts(pathMemory),
       assumptionsChallenged: this.identifyChallengedAssumptions(pathMemory),
       dominantTechnique: this.identifyDominantTechnique(pathMemory),
-      thinkingLoops: this.detectThinkingLoops(pathMemory),
       cognitiveLoad: this.estimateCognitiveLoad(pathMemory),
     });
   }
@@ -128,76 +145,47 @@ export class CognitiveAssessor extends Sensor {
   /**
    * Calculate comprehensive cognitive metrics
    */
-  private calculateCognitiveMetrics(
-    pathMemory: PathMemory,
-    sessionData: SessionData
-  ): CognitiveMetrics {
+  private calculateCognitiveMetrics(pathMemory: PathMemory): CognitiveMetrics {
     return {
-      perspectiveDiversity: this.calculatePerspectiveDiversity(pathMemory),
+      recentReversibility: this.calculateReversibleShare(pathMemory, RECENT_WINDOW),
+      sustainedReversibility: this.calculateReversibleShare(pathMemory),
       assumptionChallengeRate: this.calculateAssumptionChallengeRate(pathMemory),
-      learningVelocity: this.calculateLearningVelocity(sessionData),
-      mentalModelFlexibility: this.calculateMentalModelFlexibility(pathMemory),
-      creativeDivergence: this.calculateCreativeDivergence(pathMemory),
     };
   }
 
   /**
-   * Calculate diversity of perspectives used
+   * Share of steps that declared they could be walked back.
+   *
+   * `window` bounds it to the most recent steps; omitted, it reads the whole
+   * session. Same cut as `cognitive_lock_in` and as `recordPathEvent`'s
+   * critical-decision test, so all three agree on what an irreversible step is.
+   * A session with no history has bound nothing, and reads 1.
    */
-  private calculatePerspectiveDiversity(pathMemory: PathMemory): number {
-    if (pathMemory.pathHistory.length === 0) {
+  private calculateReversibleShare(pathMemory: PathMemory, window?: number): number {
+    const events =
+      window === undefined ? pathMemory.pathHistory : pathMemory.pathHistory.slice(-window);
+    if (events.length === 0) {
       return 1.0;
     }
 
-    // Give more lenient assessment for early stages
-    if (pathMemory.pathHistory.length < 10) {
-      // In early stages, assume diversity is good unless proven otherwise
-      return 0.8; // 80% diversity assumed for early exploration
-    }
-
-    const recentHistory = pathMemory.pathHistory.slice(-20);
-
-    // Count unique techniques - adjust denominator based on history size
-    const techniques = new Set(recentHistory.map(e => e.technique));
-    const maxExpectedTechniques = Math.min(recentHistory.length / 3, 8); // Expect technique variety every 3 steps
-    const techniquesDiversity = techniques.size / maxExpectedTechniques;
-
-    // Count unique decision types
-    const decisionPatterns = new Set(
-      recentHistory.map(e => this.classifyDecisionPattern(e.decision))
-    );
-    const maxExpectedPatterns = Math.min(recentHistory.length / 4, 5); // Expect pattern variety every 4 steps
-    const patternDiversity = decisionPatterns.size / maxExpectedPatterns;
-
-    // Count option variety - scale expectations with history size
-    const allOptions = recentHistory.flatMap(e => [...e.optionsOpened, ...e.optionsClosed]);
-    const uniqueOptions = new Set(allOptions);
-    const maxExpectedOptions = Math.min(recentHistory.length * 1.5, 20); // 1.5 unique options per step
-    const optionDiversity = uniqueOptions.size / maxExpectedOptions;
-
-    // Weight recent diversity more heavily than technique diversity early on
-    const weights =
-      recentHistory.length < 15
-        ? { technique: 0.2, pattern: 0.4, option: 0.4 }
-        : { technique: 0.33, pattern: 0.33, option: 0.34 };
-
-    return Math.min(
-      1,
-      techniquesDiversity * weights.technique +
-        patternDiversity * weights.pattern +
-        optionDiversity * weights.option
-    );
+    const reversible = events.filter(e => e.reversibilityCost <= LOW_REVERSIBILITY_COST).length;
+    return reversible / events.length;
   }
 
   /**
-   * Calculate how often assumptions are challenged
+   * Calculate how often assumptions are challenged.
+   *
+   * Kept as it was: every one of its three terms already reads the path record
+   * rather than the transcript, and it is the only input that sees the middle
+   * of the reversibility ladder — a step declared `medium` is neither counted
+   * as free by the shares above nor as binding, but it moves this.
    */
   private calculateAssumptionChallengeRate(pathMemory: PathMemory): number {
     if (pathMemory.pathHistory.length === 0) {
       return 0.5; // Neutral starting point
     }
 
-    const recentHistory = pathMemory.pathHistory.slice(-15);
+    const recentHistory = pathMemory.pathHistory.slice(-CHALLENGE_WINDOW);
 
     // Look for indicators of assumption challenging
     let challengeIndicators = 0;
@@ -221,117 +209,6 @@ export class CognitiveAssessor extends Sensor {
   }
 
   /**
-   * Calculate rate of learning and insight generation
-   */
-  private calculateLearningVelocity(sessionData: SessionData): number {
-    if (!sessionData.history || sessionData.history.length < 5) {
-      return 0.5;
-    }
-
-    // Insights per decision
-    const insightRate = sessionData.insights.length / sessionData.history.length;
-
-    // Improvement in metrics over time
-    const metricsImprovement = this.calculateMetricsImprovement(sessionData);
-
-    // Variety in approaches over time
-    const approachEvolution = this.calculateApproachEvolution(sessionData);
-
-    return Math.min((insightRate + metricsImprovement + approachEvolution) / 3, 1);
-  }
-
-  /**
-   * Calculate flexibility of mental models
-   */
-  private calculateMentalModelFlexibility(pathMemory: PathMemory): number {
-    if (pathMemory.pathHistory.length < 5) {
-      return 0.7;
-    }
-
-    // Framework switching frequency
-    const frameworkSwitches = this.countFrameworkSwitches(pathMemory);
-    const switchRate = frameworkSwitches / (pathMemory.pathHistory.length - 1);
-
-    // Willingness to reverse course
-    const reversals = pathMemory.pathHistory.filter(e => e.reversibilityCost < 0.5).length;
-    const reversalRate = reversals / pathMemory.pathHistory.length;
-
-    // Adaptation to feedback
-    const adaptationRate = this.calculateAdaptationRate(pathMemory);
-
-    return (switchRate + reversalRate + adaptationRate) / 3;
-  }
-
-  /**
-   * Calculate creative divergence in solutions
-   */
-  private calculateCreativeDivergence(pathMemory: PathMemory): number {
-    if (pathMemory.pathHistory.length === 0) {
-      return 1.0;
-    }
-
-    // Variety in decisions
-    const decisions = pathMemory.pathHistory.map(e => e.decision);
-    const uniqueDecisions = new Set(decisions);
-    const decisionVariety = uniqueDecisions.size / decisions.length;
-
-    // Options generated per decision
-    const totalOptions = pathMemory.pathHistory
-      .map(e => e.optionsOpened.length)
-      .reduce((a, b) => a + b, 0);
-    const optionRate = totalOptions / pathMemory.pathHistory.length;
-    const normalizedOptionRate = Math.min(optionRate / 3, 1);
-
-    // Technique variety
-    const techniques = pathMemory.pathHistory.map(e => e.technique);
-    const uniqueTechniques = new Set(techniques);
-    const techniqueVariety = uniqueTechniques.size / Math.min(techniques.length, 8);
-
-    return (decisionVariety + normalizedOptionRate + techniqueVariety) / 3;
-  }
-
-  /**
-   * Adjust reading based on cognitive patterns
-   */
-  private adjustForCognitivePatterns(baseReading: number, pathMemory: PathMemory): number {
-    let adjusted = baseReading;
-
-    // Repeated technique usage increases rigidity
-    if (this.detectTechniqueFixation(pathMemory)) {
-      adjusted *= 1.2;
-    }
-
-    // Circular reasoning patterns
-    if (this.detectCircularReasoning(pathMemory)) {
-      adjusted *= 1.15;
-    }
-
-    // Confirmation bias patterns
-    if (this.detectConfirmationBias(pathMemory)) {
-      adjusted *= 1.1;
-    }
-
-    return Math.min(adjusted, 1);
-  }
-
-  /**
-   * Detect narrowing of perspectives over time
-   */
-  private detectPerspectiveNarrowing(pathMemory: PathMemory): boolean {
-    if (pathMemory.pathHistory.length < 20) {
-      return false;
-    }
-
-    const early = pathMemory.pathHistory.slice(0, 10);
-    const recent = pathMemory.pathHistory.slice(-10);
-
-    const earlyTechniques = new Set(early.map(e => e.technique)).size;
-    const recentTechniques = new Set(recent.map(e => e.technique)).size;
-
-    return recentTechniques < earlyTechniques * 0.7;
-  }
-
-  /**
    * Detect hardening of assumptions
    */
   private detectAssumptionHardening(pathMemory: PathMemory): boolean {
@@ -344,88 +221,6 @@ export class CognitiveAssessor extends Sensor {
     const lowReversibility = recent.filter(e => e.reversibilityCost > 0.7).length;
 
     return highCommitment > 6 && lowReversibility > 5;
-  }
-
-  /**
-   * Detect learning plateau
-   */
-  private detectLearningPlateau(sessionData: SessionData): boolean {
-    if (sessionData.insights.length < 3) {
-      return false;
-    }
-
-    const densities = this.calculateInsightDensities(sessionData);
-    return densities.secondHalf < densities.firstHalf * 0.5;
-  }
-
-  /**
-   * Calculate insight densities for first and second halves of session
-   */
-  private calculateInsightDensities(sessionData: SessionData): {
-    firstHalf: number;
-    secondHalf: number;
-  } {
-    const totalSteps = sessionData.history.length;
-    const insightMidpoint = sessionData.insights.length / 2;
-
-    // Count insights in each half
-    const firstHalfInsights = sessionData.insights.filter(
-      (_: unknown, i: number) => i < insightMidpoint
-    ).length;
-    const secondHalfInsights = sessionData.insights.length - firstHalfInsights;
-
-    // Calculate densities relative to session steps
-    const stepsPerHalf = totalSteps / 2;
-    const insightDensityFirstHalf = firstHalfInsights / stepsPerHalf;
-    const insightDensitySecondHalf = secondHalfInsights / stepsPerHalf;
-
-    return {
-      firstHalf: insightDensityFirstHalf,
-      secondHalf: insightDensitySecondHalf,
-    };
-  }
-
-  /**
-   * Detect framework lock-in
-   */
-  private detectFrameworkLockIn(pathMemory: PathMemory): boolean {
-    if (pathMemory.pathHistory.length < 10) {
-      return false;
-    }
-
-    const recent = pathMemory.pathHistory.slice(-10);
-    const techniques = recent.map(e => e.technique);
-    const dominantTechnique = this.findMostCommon(techniques);
-    const dominantCount = techniques.filter(t => t === dominantTechnique).length;
-
-    return dominantCount > 7;
-  }
-
-  /**
-   * Detect repetitive thinking patterns
-   */
-  private detectRepetitiveThinking(pathMemory: PathMemory): boolean {
-    if (pathMemory.pathHistory.length < 10) {
-      return false;
-    }
-
-    const recent = pathMemory.pathHistory.slice(-10);
-    const decisions = recent.map(e => this.normalizeDecision(e.decision));
-    const uniqueDecisions = new Set(decisions).size;
-
-    return uniqueDecisions < 4;
-  }
-
-  /**
-   * Classify decision patterns
-   */
-  private classifyDecisionPattern(decision: string): string {
-    const lower = decision.toLowerCase();
-    if (lower.includes('combine') || lower.includes('merge')) return 'combination';
-    if (lower.includes('eliminate') || lower.includes('remove')) return 'elimination';
-    if (lower.includes('reverse') || lower.includes('opposite')) return 'reversal';
-    if (lower.includes('adapt') || lower.includes('modify')) return 'adaptation';
-    return 'exploration';
   }
 
   /**
@@ -469,26 +264,6 @@ export class CognitiveAssessor extends Sensor {
   }
 
   /**
-   * Detect thinking loops
-   */
-  private detectThinkingLoops(pathMemory: PathMemory): number {
-    if (pathMemory.pathHistory.length < 10) return 0;
-
-    let loops = 0;
-    const decisions = pathMemory.pathHistory.map(e => this.normalizeDecision(e.decision));
-
-    for (let i = 0; i < decisions.length - 5; i++) {
-      for (let j = i + 3; j < decisions.length - 2; j++) {
-        if (decisions[i] === decisions[j] && decisions[i + 1] === decisions[j + 1]) {
-          loops++;
-        }
-      }
-    }
-
-    return loops;
-  }
-
-  /**
    * Estimate cognitive load
    */
   private estimateCognitiveLoad(pathMemory: PathMemory): number {
@@ -499,139 +274,6 @@ export class CognitiveAssessor extends Sensor {
     // Simple heuristic: more constraints and options = higher load
     const load = (constraints * 0.3 + options * 0.1 + decisions * 0.05) / 10;
     return Math.min(load, 1);
-  }
-
-  /**
-   * Calculate metrics improvement
-   */
-  private calculateMetricsImprovement(sessionData: SessionData): number {
-    if (!sessionData.metrics) return 0.5;
-
-    // Simple: check if metrics exist and are positive
-    const hasPositiveMetrics =
-      (sessionData.metrics.outputCompleteness || 0) > 0 ||
-      (sessionData.metrics.risksCaught || 0) > 0 ||
-      (sessionData.metrics.antifragileFeatures || 0) > 0;
-
-    return hasPositiveMetrics ? 0.7 : 0.3;
-  }
-
-  /**
-   * Calculate approach evolution
-   */
-  private calculateApproachEvolution(sessionData: SessionData): number {
-    if (sessionData.history.length < 10) return 0.5;
-
-    const firstHalf = sessionData.history.slice(0, sessionData.history.length / 2);
-    const secondHalf = sessionData.history.slice(sessionData.history.length / 2);
-
-    const firstTechniques = new Set(firstHalf.map(h => h.technique));
-    const secondTechniques = new Set(secondHalf.map(h => h.technique));
-
-    // More techniques in second half indicates evolution
-    return secondTechniques.size > firstTechniques.size ? 0.8 : 0.4;
-  }
-
-  /**
-   * Count framework switches
-   */
-  private countFrameworkSwitches(pathMemory: PathMemory): number {
-    let switches = 0;
-    for (let i = 1; i < pathMemory.pathHistory.length; i++) {
-      const prev = pathMemory.pathHistory[i - 1];
-      const curr = pathMemory.pathHistory[i];
-      if (
-        prev.technique !== curr.technique ||
-        (prev.commitmentLevel < 0.3 && curr.commitmentLevel > 0.7)
-      ) {
-        switches++;
-      }
-    }
-    return switches;
-  }
-
-  /**
-   * Calculate adaptation rate
-   */
-  private calculateAdaptationRate(pathMemory: PathMemory): number {
-    if (pathMemory.pathHistory.length < 5) return 0.5;
-
-    // Look for course corrections
-    let adaptations = 0;
-    for (let i = 1; i < pathMemory.pathHistory.length; i++) {
-      const prev = pathMemory.pathHistory[i - 1];
-      const curr = pathMemory.pathHistory[i];
-
-      // High commitment followed by low commitment suggests adaptation
-      if (prev.commitmentLevel > 0.7 && curr.commitmentLevel < 0.3) {
-        adaptations++;
-      }
-
-      // Opening options after closing them
-      if (prev.optionsClosed.length > 2 && curr.optionsOpened.length > 2) {
-        adaptations++;
-      }
-    }
-
-    return Math.min(adaptations / (pathMemory.pathHistory.length - 1), 1);
-  }
-
-  /**
-   * Detect technique fixation
-   */
-  private detectTechniqueFixation(pathMemory: PathMemory): boolean {
-    if (pathMemory.pathHistory.length < 8) return false;
-
-    const recent = pathMemory.pathHistory.slice(-8);
-    const techniques = recent.map(e => e.technique);
-    const uniqueTechniques = new Set(techniques).size;
-
-    return uniqueTechniques <= 2;
-  }
-
-  /**
-   * Detect circular reasoning
-   */
-  private detectCircularReasoning(pathMemory: PathMemory): boolean {
-    if (pathMemory.pathHistory.length < 10) return false;
-
-    const decisions = pathMemory.pathHistory.map(e => this.normalizeDecision(e.decision));
-
-    // Look for A->B->C->A patterns
-    for (let i = 0; i < decisions.length - 6; i++) {
-      if (decisions[i] === decisions[i + 3] || decisions[i] === decisions[i + 4]) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  /**
-   * Detect confirmation bias
-   */
-  private detectConfirmationBias(pathMemory: PathMemory): boolean {
-    if (pathMemory.pathHistory.length < 10) return false;
-
-    const recent = pathMemory.pathHistory.slice(-10);
-
-    // All high commitment and low reversibility suggests not considering alternatives
-    const highCommitment = recent.filter(e => e.commitmentLevel > 0.8).length;
-    const closedOptions = recent.filter(
-      e => e.optionsClosed.length > e.optionsOpened.length
-    ).length;
-
-    return highCommitment > 7 && closedOptions > 7;
-  }
-
-  /**
-   * Normalize decision text for comparison
-   */
-  private normalizeDecision(decision: string): string {
-    return decision
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]/g, '');
   }
 
   /**

@@ -4,8 +4,54 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { mergeInput, parseList, parseNumber, unwrapResponse } from '../../cli/io.js';
+import { PassThrough } from 'node:stream';
+import { mergeInput, parseList, parseNumber, readStdinJSON, unwrapResponse } from '../../cli/io.js';
 import type { LateralThinkingResponse } from '../../types/index.js';
+
+describe('cli/io.readStdinJSON', () => {
+  it('reads a piped object', async () => {
+    const stream = new PassThrough();
+    const reading = readStdinJSON(stream, 50);
+    stream.end(JSON.stringify({ hatColor: 'purple' }));
+
+    await expect(reading).resolves.toEqual({ hatColor: 'purple' });
+  });
+
+  it('returns null for an interactive terminal', async () => {
+    const stream = Object.assign(new PassThrough(), { isTTY: true });
+    await expect(readStdinJSON(stream, 50)).resolves.toBeNull();
+  });
+
+  it('returns null when stdin closes with nothing in it', async () => {
+    const stream = new PassThrough();
+    const reading = readStdinJSON(stream, 50);
+    stream.end();
+
+    await expect(reading).resolves.toBeNull();
+  });
+
+  it('gives up on a stdin that is open and silent, rather than waiting forever', async () => {
+    // `PLAN=$(socketes plan …)` inherits the parent shell's stdin inside $( ):
+    // open, not a TTY, never any EOF. This waited on it indefinitely. One such
+    // invocation sat unnoticed for 84 minutes.
+    const stream = new PassThrough(); // never written to, never ended
+
+    await expect(readStdinJSON(stream, 30)).rejects.toThrow(/stayed open and sent nothing/);
+  });
+
+  it('does not cut off a payload that arrives slowly once it has begun', async () => {
+    // The bound is on the first byte only. A producer that has started must be
+    // allowed to finish, or the timeout becomes a new way to lose input.
+    const stream = new PassThrough();
+    const reading = readStdinJSON(stream, 40);
+
+    stream.write('{"problem":');
+    await new Promise(resolve => setTimeout(resolve, 90));
+    stream.end('"still here"}');
+
+    await expect(reading).resolves.toEqual({ problem: 'still here' });
+  });
+});
 
 describe('cli/io.mergeInput', () => {
   it('returns flag-form when no stdin', () => {

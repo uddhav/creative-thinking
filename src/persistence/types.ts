@@ -2,6 +2,10 @@
  * Core types and interfaces for session persistence
  */
 
+// Type-only, so it is erased at compile time and creates no runtime cycle —
+// unlike LateralTechnique below, which is redeclared for exactly that reason.
+import type { PathMemory } from '../ergodicity/types.js';
+
 // Define LateralTechnique type locally to avoid circular dependency
 export type LateralTechnique =
   | 'six_hats'
@@ -83,7 +87,6 @@ export interface LateralThinkingInput {
     commitmentLevel: string;
     recoveryPath?: string;
   };
-  flexibilityScore?: number;
   alternativeSuggestions?: string[];
 
   successExample?: string;
@@ -189,6 +192,15 @@ export interface SessionState {
   };
   tags?: string[];
   name?: string;
+  /**
+   * What the session has spent, and on what.
+   *
+   * Left out of the saved shape until now, so a resumed session restarted at
+   * flexibility 1.0 with an empty path history. That was survivable only while
+   * the caller could reassert `flexibilityScore` on the next step; now that the
+   * number is measured, dropping this is dropping the measurement.
+   */
+  pathMemory?: PathMemory;
 }
 
 /**

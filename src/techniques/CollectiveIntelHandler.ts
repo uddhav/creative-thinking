@@ -27,22 +27,25 @@ export class CollectiveIntelHandler extends BaseTechniqueHandler {
         focus: 'Map diverse knowledge sources',
         emoji: '📚',
         type: 'thinking',
+        reversibility: 'high',
       },
       {
         name: 'Gather Wisdom',
         focus: 'Collect insights from each source',
         emoji: '🎯',
         type: 'thinking',
+        reversibility: 'high',
       },
       {
         name: 'Find Patterns',
         focus: 'Identify emergent patterns',
         emoji: '🔍',
         type: 'thinking',
+        reversibility: 'high',
       },
       {
         name: 'Create Synergy',
-        focus: 'Combine for amplified value',
+        focus: 'Build combinations that sources who disagree would each accept',
         emoji: '✨',
         type: 'action',
         reflexiveEffects: {
@@ -66,14 +69,13 @@ export class CollectiveIntelHandler extends BaseTechniqueHandler {
       },
       {
         name: 'Synthesize Insight',
-        focus: 'Form unified understanding',
+        focus: 'State the collective view with its dissent still attached',
         emoji: '💫',
         type: 'action',
         reflexiveEffects: {
           triggers: [
-            'Forming unified understanding',
-            'Committing to collective decision',
-            'Creating consensus reality',
+            'Declaring a collective position',
+            'Deciding which dissent travels with it and which is dropped',
           ],
           realityChanges: [
             'Collective intelligence crystallized',
@@ -103,11 +105,8 @@ export class CollectiveIntelHandler extends BaseTechniqueHandler {
   }
 
   getStepGuidance(step: number, problem: string): string {
-    // Handle out of bounds gracefully
-    if (step < 1 || step > 5) {
-      return `Complete the Collective Intelligence Synthesis process for: "${problem}"`;
-    }
-
+    // Out-of-range steps fall through to `default:` — one path, not an early
+    // bounds-return plus an unreachable arm returning the same string.
     switch (step) {
       case 1:
         return `📚 Identify wisdom sources for "${problem}": experts, crowds, databases, cultural knowledge`;
@@ -116,9 +115,9 @@ export class CollectiveIntelHandler extends BaseTechniqueHandler {
       case 3:
         return `🔍 Find patterns across the sources on "${problem}". Look for convergence, divergence, and emergence`;
       case 4:
-        return `✨ Create synergistic combinations for "${problem}". How do different insights amplify each other?`;
+        return `✨ Build combinations for "${problem}" that hold across sources which disagree. Take the sources that conflicted in step 3: what does a combination look like that each of them would still accept? A combination only its supporters endorse is one source restated, not collective intelligence. Name which source each part came from.`;
       case 5:
-        return `💫 Synthesize collective intelligence into unified, actionable insights for "${problem}"`;
+        return `💫 State the collective view on "${problem}", and keep its dissent attached. Which source still contradicts it, and what would have to be true for that source to be the right one? Do not average the sources into a position none of them holds — the disagreement is the evidence that made consulting them worth it, and a synthesis that reads as unanimous has thrown away its own warrant.`;
       default:
         return `Complete the Collective Intelligence Synthesis process for: "${problem}"`;
     }

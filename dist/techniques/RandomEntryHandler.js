@@ -4,7 +4,7 @@
  * Enhanced with "Rory Mode" - behavioral economics-inspired wildcarding
  * that focuses on human irrationality and psychological insights
  */
-import { BaseTechniqueHandler } from './types.js';
+import { BaseTechniqueHandler, firstSentence } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 export class RandomEntryHandler extends BaseTechniqueHandler {
     // Rory Mode wildcards inspired by behavioral economics
@@ -87,16 +87,22 @@ export class RandomEntryHandler extends BaseTechniqueHandler {
                 name: 'Random Stimulus',
                 focus: 'Select a random word or concept',
                 emoji: '🎲',
+                type: 'thinking',
+                reversibility: 'high',
             },
             {
                 name: 'Force Connections',
                 focus: 'Find links between stimulus and problem',
                 emoji: '🔗',
+                type: 'thinking',
+                reversibility: 'high',
             },
             {
                 name: 'Develop Ideas',
                 focus: 'Transform connections into solutions',
                 emoji: '💡',
+                type: 'thinking',
+                reversibility: 'high',
             },
         ];
         if (step < 1 || step > steps.length) {
@@ -236,39 +242,46 @@ How can the forced connections become real innovations?`;
     extractInsights(history) {
         const insights = [];
         const isRoryMode = history.some(entry => entry.roryMode === true);
-        history.forEach(entry => {
-            if (entry.currentStep === 1 && entry.randomStimulus) {
-                if (isRoryMode) {
-                    insights.push(`Rory Mode stimulus: ${entry.randomStimulus} (behavioral economics wildcard)`);
-                }
-                else {
-                    insights.push(`Random stimulus used: ${entry.randomStimulus}`);
-                }
-            }
-            if (entry.currentStep === 2 && entry.connections && entry.connections.length > 0) {
-                if (isRoryMode) {
-                    insights.push(`Psychological connection: ${entry.connections[0]}`);
-                }
-                else {
-                    insights.push(`Key connection: ${entry.connections[0]}`);
-                }
-            }
-            if (entry.currentStep === 3 && entry.output) {
-                const ideas = entry.output.match(/could|might|perhaps/gi);
-                if (ideas && ideas.length > 0) {
-                    if (isRoryMode) {
-                        insights.push(`Generated ${ideas.length} counterintuitive solutions using behavioral insights`);
-                    }
-                    else {
-                        insights.push(`Generated ${ideas.length} potential ideas from random stimulus`);
-                    }
-                }
+        const latestByStep = new Map();
+        history.forEach((entry, index) => {
+            const step = entry.currentStep ?? index + 1;
+            if (step >= 1 && step <= 3) {
+                latestByStep.set(step, entry);
             }
         });
-        // Add summary insight for Rory Mode
-        if (isRoryMode && history.length >= 3) {
-            insights.push('Rory Mode: Applied behavioral economics principles to generate non-obvious solutions');
+        for (let step = 1; step <= 3; step++) {
+            const entry = latestByStep.get(step);
+            if (!entry)
+                continue;
+            const stepName = this.getStepInfo(step).name;
+            const output = entry.output?.trim();
+            if (output) {
+                const summary = firstSentence(output);
+                if (summary.length > 0) {
+                    insights.push(`${stepName}: ${summary}`);
+                }
+            }
+            if (step === 1 && entry.randomStimulus) {
+                insights.push(isRoryMode
+                    ? `Rory Mode stimulus: ${entry.randomStimulus} (behavioral economics wildcard)`
+                    : `Random stimulus used: ${entry.randomStimulus}`);
+            }
+            // Every connection, not the first. Forcing connections is the technique;
+            // reporting one of six is reporting a sixth of the step.
+            if (step === 2 && entry.connections && entry.connections.length > 0) {
+                const label = isRoryMode ? 'Psychological connection' : 'Key connection';
+                insights.push(`${label}: ${entry.connections.join('; ')}`);
+            }
         }
+        // Step 3 used to count occurrences of "could", "might" and "perhaps" in the
+        // prose and report that count as the number of ideas. An idea written in
+        // the imperative — "Ship a shadow deploy; charge for the slow lane" —
+        // counted zero and was reported as nothing. The step's own output, reported
+        // above, is what it produced.
+        //
+        // The Rory Mode banner is gone with it: it fired on any three-entry history
+        // and asserted that non-obvious solutions had been generated, whatever the
+        // steps said.
         return insights;
     }
     /**
