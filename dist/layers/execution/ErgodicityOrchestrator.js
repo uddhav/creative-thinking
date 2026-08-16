@@ -177,8 +177,8 @@ export class ErgodicityOrchestrator {
         // step against 0.005. It had no word boundaries and no notion of negation,
         // so "we should NOT remove the fallback" and "the committee met" both read
         // as maximal commitment while "signed the three-year lease, no way back"
-        // read as idle exploration. The server's own step guidance contains those
-        // six stems 201 times, and SCAMPER's sixth step is named Eliminate, so a
+        // read as idle exploration. The server's own step guidance uses those six
+        // stems throughout, and SCAMPER's sixth step is named Eliminate, so a
         // model echoing its own prompt tripped the gate.
         //
         // Every step now declares how hard it is to undo, so the cost of a session

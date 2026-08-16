@@ -167,11 +167,12 @@ export const EXECUTE_THINKING_STEP_TOOL = {
             },
             currentStep: {
                 type: 'number',
-                description: 'REQUIRED: Current step number (1-based), counted across the whole plan. ' +
-                    'A plan of triz (4 steps) then six_hats (7) numbers the first hat as step 5, ' +
-                    'not step 1. Must be sequential without gaps. ' +
-                    'Numbering within a single technique is also accepted, in which case totalSteps ' +
-                    'must be the step count of that technique alone — that is what tells the two apart.',
+                description: 'REQUIRED: Current step number (1-based). Prefer numbering within the current ' +
+                    'technique: a plan of triz (4 steps) then six_hats (7) numbers the first hat as ' +
+                    'step 1 with totalSteps 7. Plan-wide numbering (that same hat as step 5 with ' +
+                    'totalSteps 11) is equally accepted — totalSteps is what tells the two apart, so ' +
+                    'it must match the convention currentStep is using. Steps must be sequential ' +
+                    'without gaps.',
             },
             totalSteps: {
                 type: 'number',

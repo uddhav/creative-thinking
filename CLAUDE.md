@@ -71,12 +71,13 @@ node dist/cli.js execute --plan <planId> --technique six_hats \
 node dist/cli.js session list --status active --limit 20
 ```
 
-**Number steps across the whole plan.** A plan of `triz` (4 steps) then `six_hats` (7) numbers the
-first hat as `--step 5 --total-steps 11`, not `--step 1 --total-steps 7`. Numbering within a single
-technique is also accepted, but then `--total-steps` must be that technique's own count: the pair is
-what tells the server which convention you mean, and mixing them resolves the step to the wrong
-place. Both forms were accepted and neither was documented, which is how a technique running second
-in a plan came to report no insights at all.
+**Number steps within the technique.** A plan of `triz` (4 steps) then `six_hats` (7) numbers the
+first hat as `--step 1 --total-steps 7`: each technique counts its own steps, which also keeps
+parallel branches independent. Plan-wide numbering (`--step 5 --total-steps 11` for that same hat)
+is equally accepted — `--total-steps` is what tells the server which convention you mean, so it must
+match the convention `--step` is using. Note the plan response carries the plan-wide count as
+`estimatedSteps`; there is no `totalSteps` key on it. Both forms were accepted and neither was
+documented, which is how a technique running second in a plan came to report no insights at all.
 
 **`--next-step-needed` is required on every `execute` call and has no default.** Omitting it fails
 with `nextStepNeeded must be a boolean` — on any step, not just the last. Pass it while steps
@@ -103,11 +104,11 @@ flag form for the common 5–6 params and the stdin form for technique-specific 
   `PlanManager` / `SessionManager`. If not, it loads them from disk via `hydratePlan` /
   `loadSessionFromPersistence`. See `src/cli/commands/execute.ts`.
 
-**Parallel execution.** The plan response includes `executionGraph.parallelizableGroups` that the
-LLM/skill can use to fan out concurrent invocations. Concurrent executions against **different**
-sessionIds are safe. Concurrent executions against the **same** sessionId are last-writer-wins — the
-codebase enforces sequential per-session in-process via `SessionLock`, but cross-process is
-unprotected. Coordinate from the client.
+**Parallel execution.** The plan response includes `executionGraph.metadata.parallelizableGroups`
+that the LLM/skill can use to fan out concurrent invocations. Concurrent executions against
+**different** sessionIds are safe. Concurrent executions against the **same** sessionId are
+last-writer-wins — the codebase enforces sequential per-session in-process via `SessionLock`, but
+cross-process is unprotected. Coordinate from the client.
 
 ### Running the MCP Server Locally
 
@@ -368,7 +369,9 @@ src/__tests__/
 └── *.test.ts       # Top-level tests (validation, reflexivity, session encoding, etc.)
 ```
 
-Tests auto-build before running (`pretest` script runs `npm run build`).
+`npm test` (watch mode) auto-builds via the `pretest` hook. **`npm run test:run` does not** — npm
+fires `pretest` only for the `test` script, so the command used by CI and pre-commit runs against
+whatever `dist/` already holds. Build first.
 
 ## Release pipeline
 
@@ -441,7 +444,10 @@ Process.
 ## Important Constraints
 
 - **dist/ is checked in** — required for `npx github:uddhav/creative-thinking` distribution
-- **Sequential execution only** — steps execute in order for coherence (no parallel execution)
+- **Steps within one technique are ordered; independent techniques may run in parallel** — the
+  plan's `executionGraph.metadata.parallelizableGroups` says which. (An older line here said
+  "sequential execution only", which the server itself contradicts: it accepts and echoes
+  `executionMode: "parallel"` and ships parallelization instructions in every plan.)
 - **Conventional Commits** required — `fix:` (patch), `feat:` (minor), `feat!:` (major)
 - **Never let `BREAKING CHANGE` begin a line in a commit body unless you mean it.** semantic-release
   parses the body, not just the subject. The table below comes from running the resolved parser

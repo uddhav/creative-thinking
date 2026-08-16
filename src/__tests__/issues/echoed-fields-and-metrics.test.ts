@@ -197,14 +197,15 @@ describe('the response carries what the ergodicity adapter measured', () => {
     expect(metrics?.currentFlexibility).toBeGreaterThan(0);
     expect(metrics?.currentFlexibility).toBeLessThanOrEqual(1);
 
-    // `optionSpaceSize` is zero here, and pinning it to zero is the honest
-    // assertion rather than a weak one. It derives from `optionVelocity`, and
-    // only SCAMPER reports an option as opened or closed at all — for the other
-    // thirty-one techniques the input is two empty arrays, so the velocity is
-    // exactly 0 and so is this. Measured 0 for a twelve-step context_reframing
-    // chain and an eight-step scamper chain alike. If it ever becomes non-zero
-    // that is worth someone noticing, which `typeof === 'number'` would not
-    // achieve.
+    // `optionSpaceSize` is zero HERE — a six_hats step, and only SCAMPER steps
+    // carrying a scamperAction ever report options opened or closed, so for the
+    // other thirty-one techniques the velocity input is two empty arrays and
+    // this is exactly 0. It is NOT structurally zero everywhere: an 8-step
+    // scamper chain with actions reads 0.38-0.55 from step 5 on. (An earlier
+    // comment here claimed it was zero for scamper too — measured with a probe
+    // that had forgotten to send scamperAction, which is a measurement of the
+    // probe.) Pinning the zero on this fixture means a non-zero would be
+    // noticed, which `typeof === 'number'` would not achieve.
     expect(metrics?.optionSpaceSize).toBe(0);
     // A line here read `expect(x).toBe(data.flexibilityScore ?? x)`, and
     // `flexibilityScore` is withheld above 0.7 — the next test asserts it is
@@ -229,7 +230,8 @@ describe('the response carries what the ergodicity adapter measured', () => {
     // `constraintLevel`, `pathDivergence` and `currentFlexibility` were checked
     // as `typeof === 'number'`, which a hardcoded value satisfies — the exact
     // defect the comment above describes, left live in three of the four
-    // metrics it describes. A constant cannot pass this.
+    // metrics it describes. A constant cannot pass this. The chain below is the
+    // plan's full length (15 steps at this timeframe), not a fixed count.
     const plan = JSON.parse(
       textOf(
         await client.callTool('plan_thinking_session', {
@@ -266,8 +268,8 @@ describe('the response carries what the ergodicity adapter measured', () => {
     const last = readings.at(-1) as Record<string, number>;
 
     // context_reframing declares low reversibility, so a chain of it spends
-    // room. Measured across twelve steps: 0.995 -> 0.221, 0.2 -> 0.63,
-    // 0.07 -> 1.27.
+    // room. Measured across the 15-step chain: flexibility 0.995 -> 0.109
+    // (0.221 by step 12), constraint 0.2 -> 0.63, divergence 0.07 -> 1.695.
     expect(last.currentFlexibility, 'flexibility did not fall').toBeLessThan(
       first.currentFlexibility
     );
