@@ -125,7 +125,7 @@ jobs:
             echo "Aligned $CURRENT_VERSION -> $NEW_VERSION (newest tag $LATEST_TAG)"
           fi
 
-          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT"
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
       - name: Generate changelog entry
         if: steps.bump.outputs.skip != 'true'
