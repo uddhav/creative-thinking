@@ -122,10 +122,13 @@ describe('TemporalCreativityHandler', () => {
       };
       expect(handler.validateStep(2, validData)).toBe(true);
 
-      const invalidFlexibility = {
+      // flexibilityScore is no longer an input. It is measured by the
+      // ergodicity engine from the path history, so the handler neither
+      // validates it nor reads it, and an unknown key is simply ignored.
+      const strayFlexibility = {
         flexibilityScore: 'not a number',
       };
-      expect(handler.validateStep(2, invalidFlexibility)).toBe(false);
+      expect(handler.validateStep(2, strayFlexibility)).toBe(true);
     });
 
     it('should validate step 3 projection fields', () => {
@@ -189,6 +192,7 @@ describe('TemporalCreativityHandler', () => {
     it('should extract path history insights', () => {
       const history = [
         {
+          currentStep: 1,
           pathHistory: [
             { decision: 'Choose microservices', impact: 'Increased complexity' },
             { decision: 'Adopt CI/CD', impact: 'Faster deployment' },
@@ -201,9 +205,33 @@ describe('TemporalCreativityHandler', () => {
       expect(insights).toContain('Path decision: Adopt CI/CD → Faster deployment');
     });
 
+    it('should report the constraints and closed options a path decision carried', () => {
+      const history = [
+        {
+          currentStep: 1,
+          pathHistory: [
+            {
+              decision: 'Choose microservices',
+              impact: 'Increased complexity',
+              constraintsCreated: ['Network partition handling', 'Distributed tracing required'],
+              optionsClosed: ['In-process transactions'],
+            },
+          ],
+        },
+      ];
+
+      const insights = handler.extractInsights(history);
+      expect(insights).toContain(
+        'Path decision: Choose microservices → Increased complexity ' +
+          '(constraints created: Network partition handling, Distributed tracing required; ' +
+          'options closed: In-process transactions)'
+      );
+    });
+
     it('should extract decision patterns', () => {
       const history = [
         {
+          currentStep: 1,
           decisionPatterns: [
             'Tendency to over-engineer solutions',
             'Preference for proven technologies',
@@ -219,7 +247,11 @@ describe('TemporalCreativityHandler', () => {
     it('should extract active and preserved options', () => {
       const history = [
         {
+          currentStep: 2,
           activeOptions: ['Refactor codebase', 'Add monitoring'],
+        },
+        {
+          currentStep: 6,
           preservedOptions: ['Platform migration capability', 'Vendor independence'],
         },
       ];
@@ -232,6 +264,7 @@ describe('TemporalCreativityHandler', () => {
     it('should extract integrated lessons', () => {
       const history = [
         {
+          currentStep: 5,
           lessonIntegration: [
             'Early prototyping reduces risk',
             'Regular retrospectives improve process',
@@ -244,91 +277,119 @@ describe('TemporalCreativityHandler', () => {
       expect(insights).toContain('Lesson: Regular retrospectives improve process');
     });
 
-    it('should limit insights to 12 and remove duplicates', () => {
-      const history = [];
-
-      // Add many insights
-      for (let i = 0; i < 20; i++) {
-        history.push({
-          decisionPatterns: ['Duplicate pattern', `Unique pattern ${i}`],
-          activeOptions: [`Option ${i}`],
-        });
-      }
+    it('should keep short content that the length gates used to drop', () => {
+      // `pattern.length > 10`, `option.length > 5` and `lesson.length > 10`
+      // rejected recorded content for a reason unrelated to whether it was
+      // content: "Ship late" is nine characters and a decision pattern.
+      const history = [
+        { currentStep: 1, decisionPatterns: ['Ship late'] },
+        { currentStep: 2, activeOptions: ['Wait'] },
+        { currentStep: 5, lessonIntegration: ['Buy time'] },
+        { currentStep: 6, preservedOptions: ['Exit'] },
+      ];
 
       const insights = handler.extractInsights(history);
-      expect(insights.length).toBeLessThanOrEqual(12);
+      expect(insights).toContain('Pattern: Ship late');
+      expect(insights).toContain('Active option: Wait');
+      expect(insights).toContain('Lesson: Buy time');
+      expect(insights).toContain('Preserved: Exit');
+    });
 
-      // Check for no duplicates
+    it('should report the whole of step 3 projection and step 4 options', () => {
+      // Every field here was validated by validateStep and then read by
+      // nothing: step 4 produced no structured insight at all, and only the
+      // black swans survived from step 3.
+      const history = [
+        {
+          currentStep: 3,
+          timelineProjections: {
+            bestCase: ['Ships in one quarter'],
+            probableCase: ['Ships in two quarters'],
+            worstCase: ['Slips past the funding round'],
+            antifragileDesign: ['Each slip buys a paying pilot'],
+          },
+          blackSwanScenarios: ['Regulator bans the primary data source'],
+        },
+        {
+          currentStep: 4,
+          delayOptions: ['Hold the schema decision until pilot two'],
+          accelerationOptions: ['Buy the ingestion component'],
+          parallelTimelines: ['Run the manual process alongside for a quarter'],
+        },
+        {
+          currentStep: 5,
+          strategyEvolution: 'From single-track delivery to two tracks with a decision point',
+        },
+        {
+          currentStep: 6,
+          synthesisStrategy: 'Converge only where both tracks agree',
+        },
+      ];
+
+      const insights = handler.extractInsights(history);
+      expect(insights).toContain('Best case: Ships in one quarter');
+      expect(insights).toContain('Probable case: Ships in two quarters');
+      expect(insights).toContain('Worst case: Slips past the funding round');
+      expect(insights).toContain('Antifragile design: Each slip buys a paying pilot');
+      expect(insights).toContain('Black swan: Regulator bans the primary data source');
+      expect(insights).toContain('Delay option: Hold the schema decision until pilot two');
+      expect(insights).toContain('Acceleration option: Buy the ingestion component');
+      expect(insights).toContain(
+        'Parallel timeline: Run the manual process alongside for a quarter'
+      );
+      expect(insights).toContain(
+        'Strategy evolution: From single-track delivery to two tracks with a decision point'
+      );
+      expect(insights).toContain('Synthesis strategy: Converge only where both tracks agree');
+    });
+
+    it('should read black swans nested inside timelineProjections', () => {
+      const history = [
+        {
+          currentStep: 3,
+          timelineProjections: {
+            blackSwanScenarios: ['The incumbent open-sources the product'],
+          },
+        },
+      ];
+
+      const insights = handler.extractInsights(history);
+      expect(insights).toContain('Black swan: The incumbent open-sources the product');
+    });
+
+    it('should remove duplicates without silently capping the count', () => {
+      // Replaces the assertion that the result was cut to twelve. The cut was
+      // silent, so a session could not tell that its thirteenth finding had
+      // been dropped rather than never recorded.
+      const patterns = Array.from({ length: 20 }, (_, i) => `Unique pattern ${i}`);
+      const history = [
+        { currentStep: 1, decisionPatterns: ['Duplicate pattern', ...patterns] },
+        { currentStep: 2, activeOptions: ['Duplicate option', 'Duplicate option'] },
+      ];
+
+      const insights = handler.extractInsights(history);
+
+      // All 21 patterns plus the one deduplicated option.
+      expect(insights).toHaveLength(22);
+      expect(insights.length).toBeGreaterThan(12);
+      expect(insights).toContain('Pattern: Unique pattern 19');
+
       const uniqueInsights = new Set(insights);
       expect(uniqueInsights.size).toBe(insights.length);
     });
-  });
 
-  describe('path memory tracking', () => {
-    it('should track decisions in path memory', () => {
-      handler.trackDecision(
-        'Implement caching',
-        ['Performance optimization'],
-        ['Direct database access'],
-        0.9
-      );
+    it('should key on currentStep so a revision supersedes what it revises', () => {
+      const history = [
+        { currentStep: 1, output: 'The first reading of the decision history.' },
+        { currentStep: 2, output: 'Present state as first mapped.' },
+        { currentStep: 1, output: 'The corrected reading of the decision history.' },
+      ];
 
-      const analysis = handler.analyzePathMemory();
-      expect(analysis.totalDecisions).toBe(1);
-      expect(analysis.totalConstraintsCreated).toBe(1);
-      expect(analysis.totalOptionsClosed).toBe(1);
-      expect(analysis.currentFlexibility).toBe(0.9);
-    });
-
-    it('should identify critical decisions', () => {
-      // Add a critical decision (many constraints)
-      handler.trackDecision(
-        'Choose architecture',
-        ['Tech stack', 'Team structure', 'Deployment model'],
-        ['Alternative architectures', 'Migration paths', 'Vendor options'],
-        0.5
-      );
-
-      // Add a normal decision
-      handler.trackDecision('Add feature', ['Feature dependency'], [], 0.95);
-
-      const analysis = handler.analyzePathMemory();
-      expect(analysis.criticalDecisions).toHaveLength(1);
-      expect(analysis.criticalDecisions[0].decision).toBe('Choose architecture');
-    });
-
-    it('should calculate cumulative flexibility impact', () => {
-      handler.trackDecision('Decision 1', [], [], 0.9);
-      handler.trackDecision('Decision 2', [], [], 0.8);
-      handler.trackDecision('Decision 3', [], [], 0.7);
-
-      const analysis = handler.analyzePathMemory();
-      // 0.9 * 0.8 * 0.7 = 0.504
-      expect(analysis.currentFlexibility).toBeCloseTo(0.504, 3);
-    });
-  });
-
-  describe('future flexibility projection', () => {
-    it('should project future flexibility with decay', () => {
-      handler.trackDecision('Initial decision', [], [], 0.8);
-
-      const projections = handler.projectFutureFlexibility([1, 5, 10]);
-
-      // With 0.9 decay rate and 0.8 initial flexibility
-      expect(projections[1]).toBeCloseTo(0.8 * 0.9, 3);
-      expect(projections[5]).toBeCloseTo(0.8 * Math.pow(0.9, 5), 3);
-      expect(projections[10]).toBeCloseTo(0.8 * Math.pow(0.9, 10), 3);
-    });
-
-    it('should handle multiple horizons', () => {
-      handler.trackDecision('Decision', [], [], 1.0);
-
-      const projections = handler.projectFutureFlexibility([2, 4, 6, 8]);
-
-      expect(Object.keys(projections)).toHaveLength(4);
-      expect(projections[2]).toBeGreaterThan(projections[4]);
-      expect(projections[4]).toBeGreaterThan(projections[6]);
-      expect(projections[6]).toBeGreaterThan(projections[8]);
+      const insights = handler.extractInsights(history);
+      expect(insights).toEqual([
+        'Archaeological Path Analysis: The corrected reading of the decision history.',
+        'Present State Synthesis: Present state as first mapped.',
+      ]);
     });
   });
 });

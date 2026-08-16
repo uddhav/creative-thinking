@@ -3,7 +3,7 @@
  * Maintains multiple contradictory solution states simultaneously until optimal collapse
  */
 
-import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
+import { BaseTechniqueHandler, firstSentence, type TechniqueInfo, type StepInfo } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 
 export class QuantumSuperpositionHandler extends BaseTechniqueHandler {
@@ -17,6 +17,7 @@ export class QuantumSuperpositionHandler extends BaseTechniqueHandler {
       focus: 'Create multiple contradictory solution states',
       emoji: '⚛️',
       type: 'thinking',
+      reversibility: 'high',
     },
     {
       name: 'State Interaction',
@@ -28,16 +29,18 @@ export class QuantumSuperpositionHandler extends BaseTechniqueHandler {
       focus: 'Map which states are coupled, which are gaining ground, and where they reinforce',
       emoji: '🌊',
       type: 'thinking',
+      reversibility: 'high',
     },
     {
       name: 'Measurement Context',
       focus: 'Define measurement context for collapse',
       emoji: '📏',
       type: 'thinking',
+      reversibility: 'high',
     },
     {
       name: 'State Collapse',
-      focus: 'Collapse to optimal solution while preserving insights',
+      focus: 'Commit to one state, stand the rest down, and salvage what they were carrying',
       emoji: '💫',
       type: 'action',
       reflexiveEffects: {
@@ -94,7 +97,7 @@ export class QuantumSuperpositionHandler extends BaseTechniqueHandler {
       1: `Generate 3-5 mutually exclusive solution states for: "${problem}". Each state should optimize for different criteria (efficiency, flexibility, robustness, cost, innovation). Maintain all states without choosing.`,
       2: `Map how your solution states for "${problem}" relate. Which aspects are inseparably linked, so that developing one state moves another — and is that coupling symmetric, or does one direction leave the others cheaper and the reverse leave them dearer? As constraints and opportunities emerge, which states are gaining ground, and which are weakening but still hold something worth keeping? Where do they reinforce each other, and where do they cancel out? What hybrids do those reinforcements make possible?`,
       3: `Define the measurement context that will force collapse for "${problem}": What are the actual constraints? What criteria matter most now? What future flexibility is needed?`,
-      4: `Collapse to the optimal solution for "${problem}" while extracting and preserving insights from non-chosen states. How can elements from abandoned states enhance the chosen path?`,
+      4: `Commit. Name the one state you are standing behind for "${problem}", and say plainly which states you are standing down — a state nobody is told is abandoned goes on quietly consuming attention. Before you close them: what was each abandoned state carrying that the chosen path should inherit? And what does this collapse cost — what did holding them open buy you that you no longer have?`,
     };
 
     return guidanceMap[step] || `Complete the Quantum Superposition process for: "${problem}"`;
@@ -151,38 +154,112 @@ export class QuantumSuperpositionHandler extends BaseTechniqueHandler {
     return true;
   }
 
+  /**
+   * Report what each step recorded, keyed on `entry.currentStep`.
+   *
+   * Step 2 is the step this technique exists for — the coupling question no
+   * other technique asks — and all three of its fields were validated and then
+   * read by nothing, as were the measurement criteria and the chosen state.
+   * What survived was cut to ten without saying so.
+   */
   extractInsights(
-    history: Array<{ output?: string; solutionStates?: string[]; preservedInsights?: string[] }>
+    history: Array<{
+      currentStep?: number;
+      output?: string;
+      solutionStates?: string[];
+      interferencePatterns?: {
+        constructive?: string[];
+        destructive?: string[];
+        hybrid?: string[];
+      };
+      entanglements?: Array<{ states: string[]; dependency: string }>;
+      amplitudes?: Record<string, number>;
+      measurementCriteria?: string[];
+      chosenState?: string;
+      preservedInsights?: string[];
+    }>
   ): string[] {
-    const insights: string[] = [];
+    const totalSteps = this.steps.length;
+    const latestByStep = new Map<number, (typeof history)[number]>();
 
-    history.forEach(entry => {
-      // Extract solution states from step 1
-      if (entry.solutionStates && Array.isArray(entry.solutionStates)) {
-        entry.solutionStates.forEach(state => {
-          if (state && state.length > 0) {
-            insights.push(`Solution state: ${state}`);
-          }
-        });
-      }
-
-      // Extract preserved insights from the collapse step
-      if (entry.preservedInsights && Array.isArray(entry.preservedInsights)) {
-        entry.preservedInsights.forEach(insight => {
-          if (insight && insight.length > 0) {
-            insights.push(`Preserved: ${insight}`);
-          }
-        });
-      }
-
-      // Also use base extraction
-      if (entry.output) {
-        const baseInsights = super.extractInsights([{ output: entry.output }]);
-        insights.push(...baseInsights);
+    history.forEach((entry, index) => {
+      const step = entry.currentStep ?? index + 1;
+      if (step >= 1 && step <= totalSteps) {
+        latestByStep.set(step, entry);
       }
     });
 
-    // Remove duplicates and limit to meaningful insights
-    return [...new Set(insights)].slice(0, 10);
+    const insights: string[] = [];
+    const pushEach = (prefix: string, values: string[] | undefined): void => {
+      if (!Array.isArray(values)) {
+        return;
+      }
+      values.forEach(value => {
+        if (typeof value === 'string' && value.trim().length > 0) {
+          insights.push(`${prefix}: ${value.trim()}`);
+        }
+      });
+    };
+
+    for (let step = 1; step <= totalSteps; step++) {
+      const entry = latestByStep.get(step);
+      if (!entry) {
+        continue;
+      }
+      const stepName = this.steps[step - 1].name;
+
+      const output = entry.output?.trim();
+      if (output) {
+        const summary = firstSentence(output);
+        if (summary.length > 0) {
+          insights.push(`${stepName}: ${summary}`);
+        }
+      }
+
+      if (step === 1) {
+        pushEach('Solution state', entry.solutionStates);
+      }
+
+      if (step === 2) {
+        pushEach('Constructive interference', entry.interferencePatterns?.constructive);
+        pushEach('Destructive interference', entry.interferencePatterns?.destructive);
+        pushEach('Hybrid possibility', entry.interferencePatterns?.hybrid);
+
+        if (Array.isArray(entry.entanglements)) {
+          entry.entanglements.forEach(entanglement => {
+            const states = Array.isArray(entanglement?.states) ? entanglement.states : [];
+            if (states.length === 0 || !entanglement?.dependency) {
+              return;
+            }
+            insights.push(`Entangled: ${states.join(' ↔ ')} — ${entanglement.dependency}`);
+          });
+        }
+
+        const amplitudes = Object.entries(entry.amplitudes ?? {});
+        if (amplitudes.length > 0) {
+          const ranked = [...amplitudes].sort(([, a], [, b]) => b - a);
+          insights.push(
+            `${stepName}: Amplitudes, strongest first — ${ranked
+              .map(([state, amplitude]) => `${state} ${amplitude}`)
+              .join(', ')}`
+          );
+          insights.push(`Gaining ground: ${ranked[0][0]} (${ranked[0][1]})`);
+        }
+      }
+
+      if (step === 3) {
+        pushEach('Measurement criterion', entry.measurementCriteria);
+      }
+
+      if (step === 4) {
+        if (entry.chosenState?.trim()) {
+          insights.push(`Collapsed to: ${entry.chosenState.trim()}`);
+        }
+        pushEach('Preserved', entry.preservedInsights);
+      }
+    }
+
+    // Duplicates removed; nothing dropped for being the eleventh thing said.
+    return [...new Set(insights)];
   }
 }

@@ -69,6 +69,11 @@ export declare class TechniqueRecommender {
         isWildcard?: boolean;
     }>;
     /**
+     * FNV-1a hash of a string, folded to a unit interval [0, 1). The wildcard
+     * path needs repeatable draws, not cryptographic ones.
+     */
+    private seededUnit;
+    /**
      * Adjust recommendations based on preferred outcome
      */
     private adjustForPreferredOutcome;

@@ -305,7 +305,14 @@ describe('Temporal Work Design', () => {
       expect(step5.completed).toBe(true);
       expect(step5.insights).toBeDefined();
       expect(step5.insights?.length).toBeGreaterThan(0);
-      expect(step5.insights?.some(i => i.includes('Temporal Work Design completed'))).toBe(true);
+      // The final step reports what it recorded — its own output and the escape
+      // routes — not a constant that fires merely because the step ran.
+      expect(
+        step5.insights?.some(i =>
+          i.includes('Temporal Escape Routes: Created buffers and graceful degradation plans')
+        )
+      ).toBe(true);
+      expect(step5.insights?.some(i => i.includes('20% buffer on all estimates'))).toBe(true);
     });
 
     it('should handle complex temporal landscapes', async () => {
@@ -452,12 +459,14 @@ describe('Temporal Work Design', () => {
           kairosOpportunities: ['Flow state windows'],
         },
         circadianAlignment: ['DMN morning windows', 'ECN afternoon focus'],
-        nextStepNeeded: false,
+        nextStepNeeded: true,
       });
 
-      expect(temporalStep.completed).toBe(true);
+      expect(temporalStep.technique).toBe('temporal_work');
 
       // Then optimize neural state within that structure
+      // The session stays open: this test is about the two techniques sharing a
+      // session, not about completing either one.
       const neuralStep = await executeStep(planId, {
         sessionId: temporalStep.sessionId,
         technique: 'neural_state',
@@ -467,7 +476,7 @@ describe('Temporal Work Design', () => {
         output: 'Neural state aligned with temporal design',
         dominantNetwork: 'dmn',
         switchingRhythm: ['Aligned with circadian peaks'],
-        nextStepNeeded: false,
+        nextStepNeeded: true,
       });
 
       expect(neuralStep.sessionId).toBe(temporalStep.sessionId);

@@ -5,7 +5,13 @@
  * "you can change a million minds or just change one context"
  */
 
-import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
+import {
+  BaseTechniqueHandler,
+  describeStructuredField,
+  firstSentence,
+  type TechniqueInfo,
+  type StepInfo,
+} from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 
 interface ContextIntervention {
@@ -27,6 +33,7 @@ export class ContextReframingHandler extends BaseTechniqueHandler {
       focus: 'Map current decision environment and constraints',
       emoji: '🗺️',
       type: 'thinking',
+      reversibility: 'high',
       dimensions: [
         'Current context mapping',
         'Environmental factors',
@@ -386,63 +393,125 @@ Output: Complete activation plan with success metrics and scaling strategy`,
     return true;
   }
 
+  /**
+   * Report what each step actually recorded, labelled by the step.
+   *
+   * Keyed on `entry.currentStep`, not on position in the array: `execute`
+   * appends a history entry for every call including revisions, so one revision
+   * shifts every later entry. Keying on the step also means a revision
+   * supersedes the entry it revises rather than reporting twice.
+   */
   extractInsights(history: unknown[]): string[] {
-    const insights: string[] = [];
+    const totalSteps = this.steps.length;
+    const latestByStep = new Map<number, Record<string, unknown>>();
 
     history.forEach((entry, index) => {
-      if (typeof entry === 'object' && entry !== null) {
-        const entryObj = entry as Record<string, unknown>;
-        if (entryObj.output) {
-          const stepNumber = index + 1;
-          const stepName = this.steps[index]?.name || `Step ${stepNumber}`;
-
-          // Extract context analysis insights
-          if (entryObj.contextAnalysis) {
-            insights.push(`${stepName}: Current context mapped with key constraints identified`);
-          }
-
-          // Extract intervention insights
-          if (entryObj.interventions && Array.isArray(entryObj.interventions)) {
-            const highImpact = entryObj.interventions.filter((i: unknown) => {
-              if (typeof i === 'object' && i !== null) {
-                const interventionObj = i as ContextIntervention;
-                return (
-                  interventionObj.implementationEase === 'easy' ||
-                  interventionObj.implementationEase === 'moderate'
-                );
-              }
-              return false;
-            });
-            if (highImpact.length > 0) {
-              insights.push(`Identified ${highImpact.length} high-impact context interventions`);
-            }
-          }
-
-          // Extract frame insights
-          if (entryObj.frameShift) {
-            insights.push('Frame shifting strategy designed to alter perception');
-          }
-
-          // Extract environment insights
-          if (entryObj.environmentDesign) {
-            insights.push('Decision environment architected for behavioral influence');
-          }
-
-          // Look for specific behavioral metrics in output
-          if (
-            typeof entryObj.output === 'string' &&
-            (entryObj.output.includes('behavioral change rate') || entryObj.behavioralMetrics)
-          ) {
-            insights.push('Behavioral activation metrics established');
-          }
-        }
+      if (typeof entry !== 'object' || entry === null) {
+        return;
+      }
+      const entryObj = entry as Record<string, unknown>;
+      // Fall back to position only when the caller sent no step number.
+      const step = typeof entryObj.currentStep === 'number' ? entryObj.currentStep : index + 1;
+      if (step >= 1 && step <= totalSteps) {
+        latestByStep.set(step, entryObj);
       }
     });
 
-    // Add summary insight if complete
-    if (history.length >= this.steps.length) {
-      insights.push('Context reframing complete - environment redesigned for behavioral change');
+    const insights: string[] = [];
+
+    for (let step = 1; step <= totalSteps; step++) {
+      const entryObj = latestByStep.get(step);
+      if (!entryObj) {
+        continue;
+      }
+      const stepName = this.steps[step - 1]?.name;
+      if (!stepName) {
+        continue;
+      }
+
+      const output = typeof entryObj.output === 'string' ? entryObj.output.trim() : '';
+      if (output) {
+        const summary = firstSentence(output);
+        if (summary.length > 0) {
+          insights.push(`${stepName}: ${summary}`);
+        }
+      }
+
+      // Each structured field belongs to one step; report it there.
+      if (step === 1 && entryObj.contextAnalysis) {
+        // The content, not a sentence about the content. "Current context mapped
+        // with key constraints identified" is true of every run that reached
+        // step 1 and tells a reader none of the constraints.
+        const described = describeStructuredField(entryObj.contextAnalysis);
+        if (described) {
+          insights.push(`${stepName} recorded: ${described}`);
+        }
+      }
+
+      if (step === 2 && Array.isArray(entryObj.interventions)) {
+        const interventions = entryObj.interventions.filter(
+          (i): i is ContextIntervention => typeof i === 'object' && i !== null
+        );
+        const highImpact = interventions.filter(
+          i => i.implementationEase === 'easy' || i.implementationEase === 'moderate'
+        );
+        if (highImpact.length > 0) {
+          // expectedImpact is required on every intervention and was read by
+          // nothing, so the record kept what would be changed and dropped what
+          // it was expected to change.
+          const described = highImpact
+            .map(i => {
+              const description =
+                typeof i.description === 'string' ? i.description : 'unnamed intervention';
+              const qualifiers = [
+                i.type,
+                i.expectedImpact ? `expected: ${i.expectedImpact}` : undefined,
+              ].filter(Boolean);
+              return qualifiers.length > 0
+                ? `${description} (${qualifiers.join('; ')})`
+                : description;
+            })
+            .join('; ');
+          const harder = interventions.length - highImpact.length;
+          const remainder = harder > 0 ? ` ${harder} harder intervention(s) also recorded.` : '';
+          insights.push(
+            `${stepName}: ${highImpact.length} of ${interventions.length} interventions rated easy or moderate — ${described}.${remainder}`
+          );
+        }
+      }
+
+      if (step === 3) {
+        // Report the frame that was recorded, not a constant announcing that
+        // some frame exists.
+        const frameShift = describeStructuredField(entryObj.frameShift);
+        if (frameShift.length > 0) {
+          insights.push(`${stepName}: ${frameShift}`);
+        }
+      }
+
+      if (step === 4) {
+        const environment = describeStructuredField(entryObj.environmentDesign);
+        if (environment.length > 0) {
+          insights.push(`${stepName}: ${environment}`);
+        }
+      }
+
+      if (step === 5) {
+        // The metrics themselves, from the field that holds them. This used to
+        // also fire on the output containing the literal phrase "behavioral
+        // change rate", so a rate reported in any other wording vanished — and
+        // the phrase produced a constant rather than the number.
+        const metrics = describeStructuredField(entryObj.behavioralMetrics);
+        if (metrics.length > 0) {
+          insights.push(`${stepName}: ${metrics}`);
+        }
+      }
     }
+
+    // No completion banner. Reaching the last step is already visible from the
+    // step count, and a fixed string asserts a finding the session never made —
+    // "competitive advantage identified", "future insights extracted" — whatever
+    // the steps actually said.
 
     return insights;
   }

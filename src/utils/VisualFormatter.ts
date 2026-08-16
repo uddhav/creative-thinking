@@ -87,7 +87,13 @@ export class VisualFormatter {
 
     // Add progress bar if session and plan are available
     if (session && plan) {
-      const progressDisplay = this.formatSessionProgressBar(session, plan, currentStep, totalSteps);
+      const progressDisplay = this.formatSessionProgressBar(
+        session,
+        plan,
+        currentStep,
+        totalSteps,
+        !input.nextStepNeeded
+      );
       if (progressDisplay) {
         lines.push(chalk.blue('│') + progressDisplay + chalk.blue('│'));
       }
@@ -97,7 +103,7 @@ export class VisualFormatter {
     if (this.showTechniqueIndicators) {
       const stateIndicator = this.getTechniqueStateIndicator(technique, currentStep, input);
       const riskIndicator = this.getRiskLevelIndicator(input.risks);
-      const flexibilityIndicator = this.getFlexibilityIndicator(input);
+      const flexibilityIndicator = this.getFlexibilityIndicator(session);
 
       if (stateIndicator || riskIndicator || flexibilityIndicator) {
         const indicators = [stateIndicator, riskIndicator, flexibilityIndicator]
@@ -509,8 +515,11 @@ export class VisualFormatter {
   /**
    * Get flexibility score indicator
    */
-  private getFlexibilityIndicator(input: ThinkingOperationData): string {
-    const flexibility = input.flexibilityScore;
+  private getFlexibilityIndicator(session?: SessionData): string {
+    // The engine's measurement, not a number the caller typed. Reading the
+    // input meant this indicator showed whatever the caller asserted about its
+    // own freedom of movement.
+    const flexibility = session?.pathMemory?.currentFlexibility?.flexibilityScore;
 
     // Already checked in formatOutput, but keep for safety
     if (flexibility === undefined || flexibility > 0.4) {
@@ -928,10 +937,15 @@ export class VisualFormatter {
     session: SessionData,
     plan: PlanThinkingSessionOutput,
     _currentStep: number,
-    _totalSteps: number
+    _totalSteps: number,
+    isTerminating: boolean
   ): string {
     // Calculate completion metadata
-    const metadata = this.completionTracker.calculateCompletionMetadata(session, plan);
+    const metadata = this.completionTracker.calculateCompletionMetadata(
+      session,
+      plan,
+      isTerminating
+    );
     const percentage = Math.round(metadata.overallProgress * 100);
 
     // Create progress bar
@@ -955,7 +969,10 @@ export class VisualFormatter {
 
     // Add warning indicator if needed
     let warningIndicator = '';
-    if (metadata.criticalGapsIdentified.length > 0) {
+    // Only flag gaps once the session is ending. Every technique a plan has not
+    // reached yet counts as a "critical gap", so this painted the progress bar
+    // red on step 1 of every multi-technique session.
+    if (isTerminating && metadata.criticalGapsIdentified.length > 0) {
       warningIndicator = chalk.red(' ⚠️');
     } else if (!metadata.minimumThresholdMet) {
       warningIndicator = chalk.yellow(' ⚡');

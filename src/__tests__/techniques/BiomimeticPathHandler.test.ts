@@ -201,17 +201,87 @@ describe('BiomimeticPathHandler', () => {
     });
   });
 
-  describe('getPromptContext', () => {
-    it('should return correct context for each step', () => {
-      const context1 = handler.getPromptContext(1);
-      expect(context1.technique).toBe('biomimetic_path');
-      expect(context1.step).toBe(1);
-      expect(context1.stepName).toBe('Immune Response');
+  describe('extractInsights', () => {
+    it('reports every required field under its own step name', () => {
+      const insights = handler.extractInsights([
+        {
+          currentStep: 1,
+          output: 'Three threat classes matter here.',
+          immuneResponse: ['rate-limit abuse', 'credential stuffing'],
+        },
+        { currentStep: 2, mutations: ['cache-first variant', 'queue-first variant'] },
+        { currentStep: 3, symbioticRelationships: ['gateway feeds the cache warmer'] },
+        { currentStep: 4, swarmBehavior: ['each worker publishes its own backlog'] },
+        { currentStep: 5, resiliencePatterns: ['shed load before the queue fills'] },
+        { currentStep: 6, naturalSynthesis: 'Adaptive shedding driven by local signals' },
+      ]);
 
-      const context4 = handler.getPromptContext(4);
-      expect(context4.step).toBe(4);
-      expect(context4.stepName).toBe('Swarm Intelligence');
-      expect(context4.capabilities).toBeDefined();
+      expect(insights).toContain('Immune Response: rate-limit abuse, credential stuffing');
+      expect(insights).toContain(
+        'Evolutionary Variation: cache-first variant, queue-first variant'
+      );
+      expect(insights).toContain('Ecosystem Dynamics: gateway feeds the cache warmer');
+      expect(insights).toContain('Swarm Intelligence: each worker publishes its own backlog');
+      expect(insights).toContain('Resilience Patterns: shed load before the queue fills');
+      expect(insights).toContain('Natural Synthesis: Adaptive shedding driven by local signals');
+      expect(insights).toContain('Immune Response: Three threat classes matter here.');
+      // No banner: reaching step 6 is not itself a finding.
+      expect(insights.some(i => /nature-inspired solution|biomimetic .*complete/i.test(i))).toBe(
+        false
+      );
+    });
+
+    it('reports the alias fields identically to the primary names', () => {
+      const primary = handler.extractInsights([
+        { currentStep: 1, immuneResponse: ['a'] },
+        { currentStep: 2, mutations: ['b'] },
+        { currentStep: 3, symbioticRelationships: ['c'] },
+        { currentStep: 4, swarmBehavior: ['d'] },
+        { currentStep: 5, resiliencePatterns: ['e'] },
+        { currentStep: 6, naturalSynthesis: 'f' },
+      ]);
+      const aliases = handler.extractInsights([
+        { currentStep: 1, antibodies: ['a'] },
+        { currentStep: 2, selectionPressure: 'b' },
+        { currentStep: 3, ecosystemBalance: 'c' },
+        { currentStep: 4, emergentPatterns: ['d'] },
+        { currentStep: 5, redundancy: ['e'] },
+        { currentStep: 6, biologicalStrategies: ['f'] },
+      ]);
+
+      expect(aliases).toEqual(primary);
+      expect(aliases).toContain('Immune Response: a');
+      expect(aliases).toContain('Natural Synthesis: f');
+    });
+
+    it('lets a revision supersede the step it revises', () => {
+      const insights = handler.extractInsights([
+        { currentStep: 1, immuneResponse: ['the first reading'] },
+        { currentStep: 2, mutations: ['a later step'] },
+        { currentStep: 1, immuneResponse: ['the corrected reading'] },
+      ]);
+
+      expect(insights).toContain('Immune Response: the corrected reading');
+      expect(insights).not.toContain('Immune Response: the first reading');
+      expect(insights).toContain('Evolutionary Variation: a later step');
+      expect(insights.some(i => i.startsWith('Ecosystem Dynamics'))).toBe(false);
+    });
+
+    it('reports nothing for a step that recorded nothing', () => {
+      expect(handler.extractInsights([])).toEqual([]);
+      expect(handler.extractInsights([{ currentStep: 1, output: '   ' }])).toEqual([]);
+      expect(handler.extractInsights([{ currentStep: 3, symbioticRelationships: [] }])).toEqual([]);
+    });
+
+    it('does not cut the output summary at an abbreviation', () => {
+      const insights = handler.extractInsights([
+        {
+          currentStep: 1,
+          output: 'Latency held at 40ms vs. 90ms before. The shedding rule is what changed.',
+        },
+      ]);
+
+      expect(insights[0]).toContain('vs. 90ms before.');
     });
   });
 });

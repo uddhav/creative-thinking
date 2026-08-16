@@ -353,7 +353,17 @@ export class ObjectFieldValidator {
      * Generic method to validate any technique's array fields
      */
     static validateTechniqueArrayFields(technique, params) {
-        // Map of technique to its array fields
+        // Every field a handler reads whose schema declares array-of-string, keyed
+        // by technique. Arrays of OBJECTS are deliberately absent: this runs
+        // `validateStringArray`, so listing nineWindowsMatrix, perceptionGaps,
+        // signals, scalingScenarios, interventions, vacantSpaces, entanglements or
+        // pathHistory here would refuse valid input. The omission is a decision,
+        // and `object-field-table-covers-string-arrays.test.ts` holds it to both
+        // halves — every string-array present, every object-array absent.
+        //
+        // Before that guard the table covered 14 of 32 techniques, left 30
+        // string-array fields unchecked, and listed `connections` under `po`, which
+        // does not have it, while `random_entry`, which does, went unchecked.
         const techniqueArrayFields = {
             disney_method: ['dreamerVision', 'realistPlan', 'criticRisks'],
             cultural_integration: [
@@ -387,10 +397,34 @@ export class ObjectFieldValidator {
                 'temporalEscapeRoutes',
             ],
             scamper: ['modifications', 'alternativeSuggestions'],
-            po: ['principles', 'connections'],
-            six_hats: [], // No specific array fields
+            po: ['principles'],
+            six_hats: [],
             nine_windows: ['interdependencies'],
-            random_entry: [], // No specific array fields
+            random_entry: ['connections'],
+            quantum_superposition: ['measurementCriteria', 'preservedInsights', 'solutionStates'],
+            temporal_creativity: [
+                'accelerationOptions',
+                'activeOptions',
+                'blackSwanScenarios',
+                'currentConstraints',
+                'decisionPatterns',
+                'delayOptions',
+                'lessonIntegration',
+                'parallelTimelines',
+                'preservedOptions',
+            ],
+            paradoxical_problem: ['parallelPaths', 'pathContexts'],
+            meta_learning: ['learningHistory', 'patternRecognition', 'strategyAdaptations'],
+            biomimetic_path: [
+                'immuneResponse',
+                'mutations',
+                'resiliencePatterns',
+                'swarmBehavior',
+                'symbioticRelationships',
+            ],
+            first_principles: ['assumptions', 'components', 'fundamentalTruths'],
+            neuro_computational: ['computationalModels', 'neuralMappings', 'patternGenerations'],
+            anecdotal_signal: ['earlyWarnings'],
         };
         const arrayFields = techniqueArrayFields[technique] || [];
         // Also check common array fields that apply to all techniques

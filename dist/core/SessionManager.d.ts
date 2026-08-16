@@ -65,10 +65,6 @@ export declare class SessionManager {
      */
     getSession(sessionId: string): SessionData | undefined;
     /**
-     * Update session data
-     */
-    updateSession(sessionId: string, data: Partial<SessionData>): Promise<void>;
-    /**
      * Delete a session
      */
     deleteSession(sessionId: string): boolean;

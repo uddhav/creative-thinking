@@ -9,42 +9,56 @@ export class SixHatsHandler extends BaseTechniqueHandler {
             name: 'Blue Hat',
             focus: 'Process control and thinking about thinking',
             emoji: '🔵',
+            type: 'thinking',
+            reversibility: 'high',
             enhancedFocus: 'Meta-cognition: Define objectives, set agenda, monitor progress, identify decision points',
         },
         white: {
             name: 'White Hat',
             focus: 'Facts, information, and data',
             emoji: '⚪',
+            type: 'thinking',
+            reversibility: 'high',
             enhancedFocus: 'Data gathering: What do we know? What do we need to know? How do we get the information?',
         },
         red: {
             name: 'Red Hat',
             focus: 'Emotions, feelings, and intuition',
             emoji: '🔴',
+            type: 'thinking',
+            reversibility: 'high',
             enhancedFocus: 'Emotional intelligence: Gut feelings, fears, excitement, resistance patterns',
         },
         yellow: {
             name: 'Yellow Hat',
             focus: 'Optimism and positive thinking',
             emoji: '🟡',
+            type: 'thinking',
+            reversibility: 'high',
             enhancedFocus: 'Value sensitivity: Benefits, advantages, why it might work, best-case scenarios',
         },
         black: {
             name: 'Black Hat',
             focus: 'Critical thinking and caution',
             emoji: '⚫',
+            type: 'thinking',
+            reversibility: 'high',
             enhancedFocus: 'Risk awareness: Problems, dangers, difficulties, worst-case scenarios, Black Swans',
         },
         green: {
             name: 'Green Hat',
             focus: 'Creativity and new ideas',
             emoji: '🟢',
+            type: 'thinking',
+            reversibility: 'high',
             enhancedFocus: 'Creative exploration: Alternatives, possibilities, innovations, lateral moves',
         },
         purple: {
             name: 'Purple Hat',
             focus: 'Path dependency, ergodicity, and ruin risk analysis',
             emoji: '🟣',
+            type: 'thinking',
+            reversibility: 'high',
             enhancedFocus: 'Ruin risk analysis: Identify non-ergodic domains, survival constraints, irreversible decisions, and escape routes',
         },
     };
@@ -79,15 +93,13 @@ export class SixHatsHandler extends BaseTechniqueHandler {
         return this.hats[hatColor];
     }
     getStepGuidance(step, problem) {
-        // Handle out of bounds gracefully
-        if (step < 1 || step > this.hatOrder.length) {
-            return `Complete the Six Thinking Hats process for: "${problem}"`;
-        }
-        const hat = this.getStepInfo(step);
+        // An out-of-range step leaves `hatColor` undefined and falls through to
+        // `default:` — one path, not an early bounds-return plus an unreachable
+        // arm returning the same string.
         const hatColor = this.hatOrder[step - 1];
         switch (hatColor) {
             case 'blue':
-                return `${hat.emoji} Blue Hat: Define the thinking process for "${problem}". What are we trying to achieve? What's our approach?`;
+                return `${this.hats.blue.emoji} Blue Hat: Define the thinking process for "${problem}". What are we trying to achieve? What's our approach?`;
             case 'white':
                 return `⚪ White Hat: What facts and data do we have about "${problem}"? What information is missing?`;
             case 'red':
@@ -128,14 +140,37 @@ export class SixHatsHandler extends BaseTechniqueHandler {
      * one only on "concern" or "worry" — silently drops everything phrased another
      * way, so a session of substantive hat outputs can return nothing at all. The
      * absence of a keyword is not the absence of a finding.
+     *
+     * The hat is derived from the step, not demanded from the caller. `hatColor`
+     * is optional, and `validateStep` accepts it only when it equals
+     * `hatOrder[step - 1]` — so the step already determines the hat. Yet a
+     * session that omitted the field got no insights at all, from any hat,
+     * including the Black Hat's enumerated risks. A caller should not lose the
+     * whole technique for withholding a value the server can compute. An
+     * explicit `hatColor` still wins, which keeps a history that carries no step
+     * numbers working as before.
      */
     extractInsights(history) {
         const insights = [];
-        history.forEach(entry => {
-            const color = entry.hatColor;
+        // Latest entry per step, like every other handler. Iterating the history
+        // directly reported a revised step twice — once as it was first written
+        // and once as revised — because `execute` appends an entry for every call,
+        // revisions included.
+        const latestByStep = new Map();
+        history.forEach((entry, index) => {
+            const step = entry.currentStep ?? index + 1;
+            if (step >= 1 && step <= this.hatOrder.length) {
+                latestByStep.set(step, entry);
+            }
+        });
+        for (let step = 1; step <= this.hatOrder.length; step++) {
+            const entry = latestByStep.get(step);
+            if (!entry)
+                continue;
+            const color = entry.hatColor ?? this.hatOrder[step - 1];
             const hat = color ? this.hats[color] : undefined;
             if (!hat)
-                return;
+                continue;
             const output = entry.output?.trim();
             if (output) {
                 const summary = firstSentence(output);
@@ -148,7 +183,7 @@ export class SixHatsHandler extends BaseTechniqueHandler {
             if (color === 'black' && entry.risks && entry.risks.length > 0) {
                 insights.push(`Critical risks identified: ${entry.risks.join(', ')}`);
             }
-        });
+        }
         return insights;
     }
     getHatColor(step) {

@@ -12,6 +12,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import type { LateralThinkingServer } from '../index.js';
 import { ALL_LATERAL_TECHNIQUES } from '../types/index.js';
+import { appendFileSync } from 'node:fs';
 import { workflowGuard } from '../core/WorkflowGuard.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 import { getAllTools } from './ToolDefinitions.js';
@@ -219,6 +220,15 @@ export class RequestHandlers {
         break;
 
       case 'execute_thinking_step': {
+        // A session operation is the tool's other shape and carries none of the
+        // thinking-step fields. This check ran unconditionally, so every
+        // save / load / list / delete / export call was refused here — before
+        // `processLateralThinking` ever reached the dispatch that handles them.
+        // Declaring the mode in the schema was not enough: the `oneOf` said the
+        // call was legal and this said it was not, and this is the one the
+        // caller actually meets.
+        if (params.sessionOperation) break;
+
         const missingParams = [];
         if (!params.planId) missingParams.push('planId (from plan_thinking_session)');
         if (!params.technique) missingParams.push('technique');
@@ -458,6 +468,30 @@ export class RequestHandlers {
   /**
    * Process a single tool call
    */
+  /**
+   * Append every incoming tool call to `CT_CALL_LOG`, if it is set.
+   *
+   * Off unless the variable is present, so it costs a single undefined check in
+   * normal operation. It exists because a record of what was called has to be
+   * written by the thing being called: an agent asked to log its own calls
+   * writes what it believes it sent, which is the same evidence as its prose
+   * and fails in the same way. This is the only version of that record that can
+   * contradict the caller.
+   *
+   * Failures are swallowed deliberately. A logging path that can take the
+   * server down is worse than no logging, and stderr is the only place it could
+   * complain to anyway.
+   */
+  private recordCallToLog(name: string, args: unknown): void {
+    const path = process.env.CT_CALL_LOG;
+    if (!path) return;
+    try {
+      appendFileSync(path, `${JSON.stringify({ tool: name, arguments: args })}\n`);
+    } catch {
+      /* never let logging break the call it is observing */
+    }
+  }
+
   private async processSingleCall(request: unknown): Promise<Record<string, unknown>> {
     this.activeRequests++;
 
@@ -466,6 +500,11 @@ export class RequestHandlers {
       const params = (request as Record<string, unknown>).params as Record<string, unknown>;
       const name = params.name as string;
       const args = params.arguments;
+
+      // Before any validation, so a refused call is recorded as having been
+      // attempted — a caller that sent the wrong shape is exactly what this is
+      // for.
+      this.recordCallToLog(name, args);
 
       // Pre-validate required parameters
       const validationError = this.validateRequiredParameters(name, args);
@@ -484,8 +523,22 @@ export class RequestHandlers {
       // Record the tool call for workflow tracking
       workflowGuard.recordCall(name, args);
 
-      // Check for workflow violations before executing
-      const violation = workflowGuard.checkWorkflowViolation(name, args);
+      // Check for workflow violations before executing.
+      //
+      // A session operation is not a step in the discover -> plan -> execute
+      // workflow; it acts on a session that already exists. Running the
+      // ordering guard over it asked whether discovery had preceded an export
+      // and refused the call when the answer was no — a second gate behind the
+      // required-field one, and just as fatal. Both had to go for the mode the
+      // schema advertises to be reachable at all.
+      const isSessionOperation =
+        name === 'execute_thinking_step' &&
+        typeof args === 'object' &&
+        args !== null &&
+        'sessionOperation' in args;
+      const violation = isSessionOperation
+        ? null
+        : workflowGuard.checkWorkflowViolation(name, args);
       if (violation) {
         const violationError = workflowGuard.getViolationError(violation);
         const enhancedError = violationError as CreativeThinkingError;
@@ -530,10 +583,21 @@ export class RequestHandlers {
           });
       }
 
-      // Ensure we always return a properly formatted response
-      const response = {
+      // Ensure we always return a properly formatted response.
+      //
+      // `isError` has to survive. It was dropped here, and only here, so the
+      // refusals raised at this gate kept theirs while every error built by the
+      // layers or ResponseBuilder lost it — an MCP client was told the call
+      // succeeded and handed a body whose only content was an error object.
+      // Measured: a step rejected with E102 arrived with no `isError` at all,
+      // while a step rejected for missing parameters arrived with
+      // `isError: true`. Same tool, same client, opposite signals.
+      const response: { content: unknown; isError?: boolean } = {
         content: result.content,
       };
+      if (result.isError) {
+        response.isError = true;
+      }
 
       // Validate response structure before sending
       if (!response.content || !Array.isArray(response.content)) {

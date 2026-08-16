@@ -108,10 +108,12 @@ describe('AbsorbingBarrierEarlyWarning - Basic Tests', () => {
 
   describe('Configuration', () => {
     it('should accept configuration options', () => {
+      // `measurementThrottleMs` was the third option here. There is no
+      // wall-clock measurement window any more — sensors re-measure per
+      // recorded step — so the knob is gone rather than ignored.
       const configuredSystem = new AbsorbingBarrierEarlyWarning({
         maxHistorySize: 50,
         historyTTL: 3600000,
-        measurementThrottleMs: 5000,
       });
 
       expect(configuredSystem).toBeDefined();

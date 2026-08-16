@@ -2,7 +2,7 @@
  * Yes, And... technique handler
  */
 
-import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
+import { BaseTechniqueHandler, firstSentence, type TechniqueInfo, type StepInfo } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 
 export class YesAndHandler extends BaseTechniqueHandler {
@@ -12,6 +12,7 @@ export class YesAndHandler extends BaseTechniqueHandler {
       focus: 'Start with any idea without judgment',
       emoji: '✅',
       type: 'thinking',
+      reversibility: 'high',
     },
     {
       name: 'Add and Build',
@@ -38,6 +39,7 @@ export class YesAndHandler extends BaseTechniqueHandler {
       focus: 'Assess the enhanced ideas constructively',
       emoji: '⚖️',
       type: 'thinking',
+      reversibility: 'high',
     },
     {
       name: 'Synthesize',
@@ -112,6 +114,15 @@ export class YesAndHandler extends BaseTechniqueHandler {
     }
   }
 
+  /**
+   * Report what each step recorded, keyed on `entry.currentStep`.
+   *
+   * Step 3 used to report an evaluation only when it contained the literal
+   * substring "good" or "strong", so every negative or neutral judgement was
+   * dropped by construction — the one place this technique can say an addition
+   * did not work. The synthesis was also cut at 100 characters and marked with
+   * an ellipsis, and `entry.output` was read for no step.
+   */
   extractInsights(
     history: Array<{
       currentStep?: number;
@@ -122,27 +133,66 @@ export class YesAndHandler extends BaseTechniqueHandler {
       output?: string;
     }>
   ): string[] {
-    const insights: string[] = [];
+    const totalSteps = this.steps.length;
+    const latestByStep = new Map<number, (typeof history)[number]>();
 
-    history.forEach(entry => {
-      if (entry.currentStep === 1 && entry.initialIdea) {
-        insights.push(`Initial idea: ${entry.initialIdea}`);
-      }
-      if (entry.currentStep === 2 && entry.additions && entry.additions.length > 0) {
-        insights.push(`Key addition: ${entry.additions[0]}`);
-      }
-      if (entry.currentStep === 3 && entry.evaluations && entry.evaluations.length > 0) {
-        const positive = entry.evaluations.filter(
-          e => e.toLowerCase().includes('good') || e.toLowerCase().includes('strong')
-        );
-        if (positive.length > 0) {
-          insights.push(`Positive aspect: ${positive[0]}`);
-        }
-      }
-      if (entry.currentStep === 4 && entry.synthesis) {
-        insights.push(`Synthesis achieved: ${entry.synthesis.slice(0, 100)}...`);
+    history.forEach((entry, index) => {
+      // Fall back to position only when the caller sent no step number.
+      const step = entry.currentStep ?? index + 1;
+      if (step >= 1 && step <= totalSteps) {
+        latestByStep.set(step, entry);
       }
     });
+
+    const insights: string[] = [];
+    const pushEach = (prefix: string, values: string[] | undefined): void => {
+      if (!Array.isArray(values)) {
+        return;
+      }
+      values.forEach(value => {
+        if (typeof value === 'string' && value.trim().length > 0) {
+          insights.push(`${prefix}: ${value.trim()}`);
+        }
+      });
+    };
+
+    for (let step = 1; step <= totalSteps; step++) {
+      const entry = latestByStep.get(step);
+      if (!entry) {
+        continue;
+      }
+      const stepName = this.steps[step - 1].name;
+
+      const output = entry.output?.trim();
+      if (output) {
+        const summary = firstSentence(output);
+        if (summary.length > 0) {
+          insights.push(`${stepName}: ${summary}`);
+        }
+      }
+
+      switch (step) {
+        case 1:
+          if (entry.initialIdea?.trim()) {
+            insights.push(`Initial idea: ${entry.initialIdea.trim()}`);
+          }
+          break;
+        case 2:
+          pushEach('Addition', entry.additions);
+          break;
+        case 3:
+          // Every evaluation the caller made, not only those containing the
+          // word "good" or "strong". Step 3 asks which combination moves the
+          // problem furthest; the answer is often that one of them does not.
+          pushEach('Evaluation', entry.evaluations);
+          break;
+        case 4:
+          if (entry.synthesis?.trim()) {
+            insights.push(`Synthesis achieved: ${entry.synthesis.trim()}`);
+          }
+          break;
+      }
+    }
 
     return insights;
   }

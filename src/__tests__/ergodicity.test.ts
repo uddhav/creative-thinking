@@ -139,14 +139,27 @@ describe('Ergodicity and Path Dependency Tracking', () => {
 
   describe('Absorbing Barrier Detection', () => {
     it('should detect approaching cognitive lock-in', async () => {
+      // Rewritten for the input change. Lock-in used to be counted as repeated
+      // technique names over the last ten steps, so this test drove it with
+      // ten identical six_hats steps and any repetition scored. It now reads
+      // the reversibility each step declared, because lock-in is being unable
+      // to change direction, and repeating a technique is the ordinary shape
+      // of a plan — six_hats is seven consecutive six_hats steps. Same
+      // barrier, same assertion, driven by steps that cannot be walked back
+      // rather than by steps that share a name.
       const ergodicityManager = new ErgodicityManager();
 
-      // Simulate repeated use of same technique
+      const techniques = ['six_hats', 'scamper', 'triz', 'yes_and'] as const;
       for (let i = 0; i < 10; i++) {
-        await ergodicityManager.recordThinkingStep('six_hats', 1, 'Using same approach again', {
-          commitmentLevel: 0.5,
-          reversibilityCost: 0.3,
-        });
+        await ergodicityManager.recordThinkingStep(
+          techniques[i % techniques.length],
+          i + 1,
+          'Committing to an approach that cannot be walked back',
+          {
+            commitmentLevel: 0.5,
+            reversibilityCost: 0.9,
+          }
+        );
       }
 
       const pathMemory = ergodicityManager.getPathMemory();
@@ -156,6 +169,28 @@ describe('Ergodicity and Path Dependency Tracking', () => {
 
       expect(cognitiveBarrier).toBeDefined();
       expect(cognitiveBarrier?.proximity).toBeGreaterThan(0.5);
+    });
+
+    it('should not report lock-in for a long run of reversible steps', async () => {
+      // The other half of the same change, and the reason it was made: ten
+      // repetitions of one technique, every step reversible, used to score
+      // 0.720 proximity — held short of the threshold only by the 0.8
+      // multiplier the branch carried for that purpose. Running as planned is
+      // not lock-in.
+      const ergodicityManager = new ErgodicityManager();
+
+      for (let i = 0; i < 10; i++) {
+        await ergodicityManager.recordThinkingStep('six_hats', i + 1, 'Exploring a perspective', {
+          commitmentLevel: 0.2,
+          reversibilityCost: 0.1,
+        });
+      }
+
+      const cognitiveBarrier = ergodicityManager
+        .getPathMemory()
+        .absorbingBarriers.find(b => b.subtype === 'cognitive_lock_in');
+
+      expect(cognitiveBarrier?.proximity).toBe(0);
     });
 
     it('should provide escape routes when flexibility is low', async () => {

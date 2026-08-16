@@ -86,6 +86,23 @@ export declare class ErgodicityResultAdapter {
     private adaptEvent;
     /**
      * Adapt metrics data
+     *
+     * `constraintLevel` used to add two different clocks together and treat a
+     * missing reading as a middling one:
+     *
+     *     Math.min(1, (metrics.commitmentDepth || 0.5) + constraints.length * 0.05)
+     *
+     * `commitmentDepth` is a mean over the last five steps — a state a session
+     * can leave — while `constraints.length` counts every constraint since step 1
+     * and only grows, so the sum answered no single question about any moment.
+     * Worse, the two count the same steps: `createConstraint` fires on
+     * `commitmentLevel > 0.5`, which is exactly what `commitmentDepth` averages,
+     * so a committing step was charged twice — the same double charge the
+     * flexibility score shed when its own constraint penalty came off. And the
+     * `|| 0.5` turned a depth of 0, a session that has committed to nothing, into
+     * a reading halfway to fully constrained; 0 is a measurement, not a gap.
+     *
+     * One clock, the five-step window, and zero meaning zero.
      */
     private adaptMetrics;
     /**

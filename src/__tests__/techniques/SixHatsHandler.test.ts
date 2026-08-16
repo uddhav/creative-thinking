@@ -136,15 +136,39 @@ describe('SixHatsHandler', () => {
       expect(insights[1]).toContain('single maintainer');
     });
 
-    it('skips entries with no output and unknown hat colours', () => {
+    it('skips entries with no output, and entries naming a hat that does not exist', () => {
       expect(
         handler.extractInsights([
           { hatColor: 'white', output: '' },
           { hatColor: 'white', output: '   ' },
           { hatColor: 'orange', output: 'not a hat' },
-          { output: 'no hat colour' },
         ])
       ).toEqual([]);
+    });
+
+    it('derives the hat from the step when hatColor is absent', () => {
+      // hatColor is optional, and validateStep accepts it only when it equals
+      // hatOrder[step - 1] — so the step already fixes the hat. Omitting it
+      // used to return nothing for the entire technique, the Black Hat's
+      // enumerated risks included.
+      const insights = handler.extractInsights([
+        { currentStep: 1, output: 'Set the agenda for the review.' },
+        { currentStep: 5, output: 'The rollback path is untested.', risks: ['no rollback drill'] },
+        { currentStep: 7, output: 'One irreversible step: the schema migration.' },
+      ]);
+
+      expect(insights).toContain('Blue Hat: Set the agenda for the review.');
+      expect(insights).toContain('Black Hat: The rollback path is untested.');
+      expect(insights).toContain('Critical risks identified: no rollback drill');
+      expect(insights).toContain('Purple Hat: One irreversible step: the schema migration.');
+    });
+
+    it('lets an explicit hatColor win over the step', () => {
+      const insights = handler.extractInsights([
+        { currentStep: 1, hatColor: 'white', output: 'Facts only.' },
+      ]);
+
+      expect(insights).toEqual(['White Hat: Facts only.']);
     });
   });
 });

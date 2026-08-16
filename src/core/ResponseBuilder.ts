@@ -3,17 +3,11 @@
  * Constructs formatted responses for MCP tools
  */
 
-import type {
-  LateralThinkingResponse,
-  SessionData,
-  ThinkingOperationData,
-  LateralTechnique,
-} from '../types/index.js';
+import type { LateralThinkingResponse, SessionData, LateralTechnique } from '../types/index.js';
 import { ALL_LATERAL_TECHNIQUES } from '../types/index.js';
 import type { DiscoverTechniquesOutput, PlanThinkingSessionOutput } from '../types/planning.js';
 import { CreativeThinkingError, ValidationError, ErrorCode } from '../errors/types.js';
 import { JsonOptimizer } from '../utils/JsonOptimizer.js';
-import { SessionEncoder } from './session/SessionEncoder.js';
 
 // Type for execution metadata
 export interface ExecutionMetadata {
@@ -237,6 +231,18 @@ export class ResponseBuilder {
       qualityCoverage: output.qualityCoverage,
       // Add execution graph for DAG-based parallel execution documentation
       executionGraph: output.executionGraph,
+      // Persona and debate mode. `planThinkingSession` builds all four of these
+      // — DebateOrchestrator runs, produces a plan per persona plus a synthesis
+      // plan, and writes them onto the plan object — and this allowlist dropped
+      // every one of them, so a caller asking for a two-persona structured
+      // debate got back an ordinary single-technique plan with no indication
+      // that anything of the sort had been computed. Measured before the fix:
+      // two personas and debateFormat 'structured' returned no debate key, no
+      // parallelPlans, and neither persona's voice in the step guidance.
+      personaContext: output.personaContext,
+      debateOutline: output.debateOutline,
+      parallelPlans: output.parallelPlans,
+      coordinationStrategy: output.coordinationStrategy,
       // Add execution guidance to help LLMs proceed
       nextSteps:
         output.techniques && output.techniques.length > 0 && output.problem
@@ -277,66 +283,6 @@ export class ResponseBuilder {
     };
 
     return this.buildSuccessResponse(transformedOutput);
-  }
-
-  /**
-   * Build an execution response
-   */
-  public buildExecutionResponse(
-    sessionId: string,
-    input: ThinkingOperationData,
-    insights: string[],
-    nextStepGuidance?: string,
-    historyLength?: number,
-    executionMetadata?: ExecutionMetadata,
-    encodeSessionId: boolean = false,
-    planId?: string
-  ): LateralThinkingResponse {
-    // Optionally encode the sessionId for resilience
-    let returnSessionId = sessionId;
-    if (encodeSessionId && planId) {
-      // Create encoded sessionId that can survive server restarts
-      returnSessionId = SessionEncoder.createEncodedSessionId(
-        sessionId,
-        planId,
-        input.problem,
-        input.technique,
-        input.currentStep,
-        input.totalSteps,
-        {
-          historyLength: historyLength || 0,
-          lastOutput: input.output,
-        }
-      );
-    }
-
-    const response: Record<string, unknown> = {
-      sessionId: returnSessionId,
-      technique: input.technique,
-      problem: input.problem,
-      currentStep: input.currentStep,
-      totalSteps: input.totalSteps,
-      nextStepNeeded: input.nextStepNeeded,
-      insights,
-      ...this.extractTechniqueSpecificFields(input),
-    };
-
-    // Add historyLength if provided
-    if (historyLength !== undefined) {
-      response.historyLength = historyLength;
-    }
-
-    // Add next step guidance if provided
-    if (nextStepGuidance) {
-      response.nextStepGuidance = nextStepGuidance;
-    }
-
-    // Add execution metadata for memory context
-    if (executionMetadata) {
-      response.executionMetadata = executionMetadata;
-    }
-
-    return this.buildSuccessResponse(response);
   }
 
   /**
@@ -462,120 +408,6 @@ export class ResponseBuilder {
           { providedFormat: format }
         );
     }
-  }
-
-  /**
-   * Extract technique-specific fields from input
-   */
-  private extractTechniqueSpecificFields(input: ThinkingOperationData): Record<string, unknown> {
-    const fields: Record<string, unknown> = {};
-
-    // Add technique-specific fields based on the technique
-    switch (input.technique) {
-      case 'six_hats':
-        if (input.hatColor) fields.hatColor = input.hatColor;
-        break;
-
-      case 'po':
-        if (input.provocation) fields.provocation = input.provocation;
-        if (input.principles) fields.principles = input.principles;
-        break;
-
-      case 'random_entry':
-        if (input.randomStimulus) fields.randomStimulus = input.randomStimulus;
-        if (input.connections) fields.connections = input.connections;
-        break;
-
-      case 'scamper':
-        if (input.scamperAction) fields.scamperAction = input.scamperAction;
-        if (input.pathImpact) fields.pathImpact = input.pathImpact;
-        if (input.flexibilityScore !== undefined) fields.flexibilityScore = input.flexibilityScore;
-        if (input.alternativeSuggestions)
-          fields.alternativeSuggestions = input.alternativeSuggestions;
-        if (input.modificationHistory) fields.modificationHistory = input.modificationHistory;
-        break;
-
-      case 'concept_extraction':
-        if (input.successExample) fields.successExample = input.successExample;
-        if (input.extractedConcepts) fields.extractedConcepts = input.extractedConcepts;
-        if (input.abstractedPatterns) fields.abstractedPatterns = input.abstractedPatterns;
-        if (input.applications) fields.applications = input.applications;
-        break;
-
-      case 'yes_and':
-        if (input.initialIdea) fields.initialIdea = input.initialIdea;
-        if (input.additions) fields.additions = input.additions;
-        if (input.evaluations) fields.evaluations = input.evaluations;
-        if (input.synthesis) fields.synthesis = input.synthesis;
-        break;
-
-      case 'design_thinking':
-        if (input.designStage) fields.designStage = input.designStage;
-        if (input.empathyInsights) fields.empathyInsights = input.empathyInsights;
-        if (input.problemStatement) fields.problemStatement = input.problemStatement;
-        if (input.ideaList) fields.ideaList = input.ideaList;
-        if (input.prototypeDescription) fields.prototypeDescription = input.prototypeDescription;
-        if (input.userFeedback) fields.userFeedback = input.userFeedback;
-        break;
-
-      case 'triz':
-        if (input.contradiction) fields.contradiction = input.contradiction;
-        if (input.inventivePrinciples) fields.inventivePrinciples = input.inventivePrinciples;
-        if (input.viaNegativaRemovals) fields.viaNegativaRemovals = input.viaNegativaRemovals;
-        if (input.minimalSolution) fields.minimalSolution = input.minimalSolution;
-        break;
-
-      case 'neural_state':
-        if (input.dominantNetwork) fields.dominantNetwork = input.dominantNetwork;
-        if (input.suppressionDepth !== undefined) fields.suppressionDepth = input.suppressionDepth;
-        if (input.switchingRhythm) fields.switchingRhythm = input.switchingRhythm;
-        if (input.integrationInsights) fields.integrationInsights = input.integrationInsights;
-        break;
-
-      case 'temporal_work':
-        if (input.temporalLandscape) fields.temporalLandscape = input.temporalLandscape;
-        if (input.circadianAlignment) fields.circadianAlignment = input.circadianAlignment;
-        if (input.pressureTransformation)
-          fields.pressureTransformation = input.pressureTransformation;
-        if (input.asyncSyncBalance) fields.asyncSyncBalance = input.asyncSyncBalance;
-        if (input.temporalEscapeRoutes) fields.temporalEscapeRoutes = input.temporalEscapeRoutes;
-        break;
-
-      case 'cultural_integration':
-        if (input.culturalFrameworks) fields.culturalFrameworks = input.culturalFrameworks;
-        if (input.bridgeBuilding) fields.bridgeBuilding = input.bridgeBuilding;
-        if (input.respectfulSynthesis) fields.respectfulSynthesis = input.respectfulSynthesis;
-        if (input.parallelPaths) fields.parallelPaths = input.parallelPaths;
-        break;
-
-      case 'collective_intel':
-        if (input.wisdomSources) fields.wisdomSources = input.wisdomSources;
-        if (input.emergentPatterns) fields.emergentPatterns = input.emergentPatterns;
-        if (input.synergyCombinations) fields.synergyCombinations = input.synergyCombinations;
-        if (input.collectiveInsights) fields.collectiveInsights = input.collectiveInsights;
-        break;
-    }
-
-    // Add common risk/adversarial fields if present
-    if (input.risks) fields.risks = input.risks;
-    if (input.failureModes) fields.failureModes = input.failureModes;
-    if (input.mitigations) fields.mitigations = input.mitigations;
-    if (input.antifragileProperties) fields.antifragileProperties = input.antifragileProperties;
-    if (input.blackSwans) fields.blackSwans = input.blackSwans;
-
-    // Add revision fields if present
-    if (input.isRevision) fields.isRevision = input.isRevision;
-    if (input.revisesStep !== undefined) fields.revisesStep = input.revisesStep;
-    if (input.branchFromStep !== undefined) fields.branchFromStep = input.branchFromStep;
-    if (input.branchId) fields.branchId = input.branchId;
-
-    // Add reality assessment if present
-    if (input.realityAssessment) fields.realityAssessment = input.realityAssessment;
-
-    // Add synthesis for convergence
-    if (input.synthesis) fields.synthesis = input.synthesis;
-
-    return fields;
   }
 
   /**

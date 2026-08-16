@@ -3,7 +3,7 @@
  */
 
 import type { ScamperAction, ScamperPathImpact } from '../types/index.js';
-import { BaseTechniqueHandler, type TechniqueInfo, type StepInfo } from './types.js';
+import { BaseTechniqueHandler, firstSentence, type TechniqueInfo, type StepInfo } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 
 // Constants for path degradation factors
@@ -335,7 +335,7 @@ export class ScamperHandler extends BaseTechniqueHandler {
       reversible: actionInfo.commitmentLevel === 'low' || actionInfo.commitmentLevel === 'medium',
       dependenciesCreated: this.identifyDependencies(action, modification),
       optionsClosed: this.identifyClosedOptions(action, modification),
-      optionsOpened: this.identifyOpenedOptions(action, modification),
+      optionsOpened: this.identifyOpenedOptions(action),
       flexibilityRetention: 1 - actionInfo.typicalReversibilityCost,
       commitmentLevel: actionInfo.commitmentLevel,
     };
@@ -434,7 +434,17 @@ export class ScamperHandler extends BaseTechniqueHandler {
     return closed;
   }
 
-  private identifyOpenedOptions(action: ScamperAction, modification: string): string[] {
+  /**
+   * Options this action opens.
+   *
+   * Every entry is a consequence of the action itself. A word-count test used
+   * to add "Complex transformation opportunities" to any modification longer
+   * than five words, so a step written in a full sentence was recorded as
+   * having opened an option that a terser one had not — and once options
+   * entered the flexibility measure, that handed every realistic SCAMPER step
+   * a credit for its prose length.
+   */
+  private identifyOpenedOptions(action: ScamperAction): string[] {
     const opened: string[] = [];
 
     switch (action) {
@@ -459,11 +469,6 @@ export class ScamperHandler extends BaseTechniqueHandler {
         opened.push('Dynamic adaptation');
         opened.push('A/B testing opportunities');
         break;
-    }
-
-    // Add specific opportunity based on the modification length/complexity
-    if (modification && modification.split(' ').length > 5) {
-      opened.push('Complex transformation opportunities');
     }
 
     return opened;
@@ -546,6 +551,82 @@ export class ScamperHandler extends BaseTechniqueHandler {
     }
 
     return alternatives;
+  }
+
+  /**
+   * Report what each modification was, labelled by its action.
+   *
+   * SCAMPER was the only technique with no extraction of its own, so it fell
+   * through to the base class: any output under fifty characters dropped, the
+   * rest split naively at the first `.` so "cut it by approx. 40%" became "cut
+   * it by approx", unlabelled, in call order, and duplicated rather than
+   * superseded when a step was revised.
+   *
+   * The action is derived from the step rather than demanded, the same way the
+   * hat is for six_hats: `validateStep` accepts `scamperAction` only when it
+   * matches `actionOrder[step - 1]`, so the step already determines it.
+   */
+  extractInsights(
+    history: Array<{
+      currentStep?: number;
+      scamperAction?: string;
+      modifications?: string[];
+      pathImpact?: ScamperPathImpact;
+      output?: string;
+    }>
+  ): string[] {
+    const insights: string[] = [];
+    const latestByStep = new Map<number, (typeof history)[number]>();
+
+    history.forEach((entry, index) => {
+      const step = entry.currentStep ?? index + 1;
+      if (step >= 1 && step <= this.actionOrder.length) {
+        latestByStep.set(step, entry);
+      }
+    });
+
+    for (let step = 1; step <= this.actionOrder.length; step++) {
+      const entry = latestByStep.get(step);
+      if (!entry) continue;
+
+      const action =
+        (entry.scamperAction as ScamperAction | undefined) ?? this.actionOrder[step - 1];
+      const declaredIndex = this.actionOrder.indexOf(action);
+      const stepName =
+        this.steps[declaredIndex >= 0 ? declaredIndex : step - 1]?.name ?? `Step ${step}`;
+
+      const output = entry.output?.trim();
+      if (output) {
+        const summary = firstSentence(output);
+        if (summary.length > 0) {
+          insights.push(`${stepName}: ${summary}`);
+        }
+      }
+
+      if (entry.modifications && entry.modifications.length > 0) {
+        insights.push(`${stepName} modifications: ${entry.modifications.join('; ')}`);
+      }
+
+      // What a modification costs in future freedom is the point of running
+      // SCAMPER with path analysis, and it reached no insight at all.
+      const impact = entry.pathImpact;
+      if (impact) {
+        const closed = impact.optionsClosed?.length ?? 0;
+        const opened = impact.optionsOpened?.length ?? 0;
+        const parts = [
+          impact.commitmentLevel ? `${impact.commitmentLevel} commitment` : undefined,
+          impact.reversible === false ? 'not reversible' : undefined,
+          closed > 0 ? `closes ${impact.optionsClosed.join(', ')}` : undefined,
+          opened > 0 ? `opens ${impact.optionsOpened.join(', ')}` : undefined,
+          impact.recoveryPath ? `recovery: ${impact.recoveryPath}` : undefined,
+        ].filter(Boolean);
+        if (parts.length > 0) {
+          insights.push(`${stepName} path impact: ${parts.join('; ')}`);
+        }
+      }
+    }
+
+    return insights;
   }
 
   getAction(step: number): ScamperAction {

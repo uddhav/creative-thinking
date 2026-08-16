@@ -45,6 +45,14 @@ export declare class CompletionGatekeeper {
      */
     private buildBlockingResponse;
     /**
+     * Name the steps a caller still owes, in technique-local numbering.
+     *
+     * A technique that has run at all reports its gaps in `skippedSteps`; one
+     * that never started reports nothing there and appears in `skippedTechniques`
+     * instead, so both lists are read.
+     */
+    private describeOutstandingWork;
+    /**
      * Update configuration
      */
     updateConfig(updates: Partial<CompletionGatekeeperConfig>): void;

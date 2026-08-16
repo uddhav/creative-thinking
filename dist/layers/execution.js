@@ -34,6 +34,29 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
             return planValidation.error;
         }
         const plan = planValidation.plan;
+        // A named session the server has not got in memory may be on disk. Try to
+        // load it before the validator decides it does not exist.
+        //
+        // Without this, `ExecutionValidator` creates a NEW session under the id the
+        // caller supplied and reports success. Measured across two server processes
+        // sharing one PERSISTENCE_PATH: six committing steps saved with
+        // flexibility 0.475 and a six-event path history, then a step in the second
+        // process naming that same sessionId came back `historyLength: 1` and
+        // flexibility 0.975. The stored work was on disk, intact, and ignored — and
+        // the caller was told the step had succeeded.
+        //
+        // The CLI already does this in `hydrateSession` before calling in, which is
+        // why `socketes` resumes and the MCP server does not. Doing it here covers
+        // both, and leaves the CLI's own attempt harmless: it returns early when
+        // the session is already in memory.
+        if (input.sessionId && !sessionManager.getSession(input.sessionId)) {
+            try {
+                await sessionManager.loadSessionFromPersistence(input.sessionId);
+            }
+            catch {
+                // Not on disk. The validator's existing behaviour takes over from here.
+            }
+        }
         // Get or create session (this will determine the sessionId we need to lock)
         const sessionValidation = executionValidator.validateAndGetSession(input, ergodicityManager);
         if (sessionValidation.error) {
@@ -60,7 +83,19 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
                 // Provide more detailed error message based on the scenario
                 // Use originalStep from calculateTechniqueLocalStep for accurate checking
                 let errorMessage = '';
-                if (originalStep < 1) {
+                if (stepValidation.failure === 'data') {
+                    // The step number is fine — the technique refused the step's data.
+                    // Reported as a range error, this sent callers to fix a step number
+                    // that was already correct: sending vacantSpaces as the strings the
+                    // schema used to describe got "Step 2 is invalid for Reverse
+                    // Benchmarking. Valid range is 1-5" for a step that is inside 1-5.
+                    const named = stepValidation.rejectedFields ?? [];
+                    const culprit = named.length > 0
+                        ? `The problem is ${named.join(' or ')} — check the shape against the tool schema.`
+                        : 'Check the fields this technique defines for this step against the tool schema.';
+                    errorMessage = `Step ${originalStep} of ${techniqueInfo.name} rejected the data it was given. The step number is valid. ${culprit}`;
+                }
+                else if (originalStep < 1) {
                     errorMessage = `Step ${originalStep} is invalid. Steps must be positive integers starting from 1.`;
                 }
                 else if (originalStep > input.totalSteps) {
@@ -92,11 +127,13 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
                 // for the steps that had been saved. A step count that shrinks between
                 // runs lands here — a technique trimmed, or a plan hydrated from disk by
                 // a newer build.
-                throw new ValidationError(ErrorCode.INVALID_STEP, errorMessage, 'currentStep', {
+                const isDataFailure = stepValidation.failure === 'data';
+                throw new ValidationError(isDataFailure ? ErrorCode.INVALID_FIELD_VALUE : ErrorCode.INVALID_STEP, errorMessage, isDataFailure ? (stepValidation.rejectedFields?.[0] ?? 'stepData') : 'currentStep', {
                     ...errorContext,
                     technique: input.technique,
                     providedStep: input.currentStep,
                     validRange: `1-${techniqueInfo.totalSteps}`,
+                    ...(isDataFailure ? { rejectedFields: stepValidation.rejectedFields } : {}),
                 });
             }
             const { stepInfo, normalizedStep: techniqueLocalStep } = stepValidation;
@@ -133,19 +170,28 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
                             modification: entry.output,
                             timestamp: entry.timestamp || new Date().toISOString(),
                             impact: entry.pathImpact,
-                            cumulativeFlexibility: entry.flexibilityScore || entry.pathImpact.flexibilityRetention,
+                            cumulativeFlexibility: entry.pathImpact.flexibilityRetention,
                         });
                     }
                 });
-                // Add flexibility score to the input
-                input.flexibilityScore = input.pathImpact.flexibilityRetention;
-                // Generate alternatives if flexibility is low
-                if (input.pathImpact.flexibilityRetention < 0.4) {
-                    input.alternativeSuggestions = scamperHandler.generateAlternatives(input.scamperAction, input.pathImpact.flexibilityRetention);
+                // Generate alternatives if flexibility is low.
+                //
+                // Read from the engine, not from `pathImpact.flexibilityRetention`:
+                // that figure is SCAMPER's own running total, computed with its own
+                // degradation factors, and it is not monotonic — so this second 0.4
+                // gate disagreed with every other 0.4 gate in the codebase.
+                const flexibilityBeforeStep = session.pathMemory?.currentFlexibility?.flexibilityScore ?? 1;
+                if (flexibilityBeforeStep < 0.4) {
+                    input.alternativeSuggestions = scamperHandler.generateAlternatives(input.scamperAction, flexibilityBeforeStep);
                 }
             }
-            // Track ergodicity and generate options if needed
-            const { currentFlexibility, optionGenerationResult } = await ergodicityOrchestrator.trackErgodicityAndGenerateOptions(input, session, techniqueLocalStep, sessionId);
+            // Track ergodicity and generate options if needed.
+            //
+            // `ergodicityResult.metrics` is taken as well as the flexibility score:
+            // the adapter measures constraintLevel, optionSpaceSize and
+            // pathDivergence on every step, and this call site used to drop all
+            // three on the floor.
+            const { currentFlexibility, optionGenerationResult, ergodicityResult } = await ergodicityOrchestrator.trackErgodicityAndGenerateOptions(input, session, techniqueLocalStep, sessionId, handler);
             // Record step in history (exclude realityAssessment from operationData to avoid duplication)
             const { realityAssessment: inputRealityAssessment, ...inputWithoutReality } = input;
             // If there's a reality assessment from input, we should handle it separately
@@ -159,6 +205,12 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
             };
             session.history.push({
                 ...operationData,
+                // The step within this technique, not within the plan. `currentStep`
+                // is the global step, and handlers index their own step tables by it —
+                // so a technique running second in a plan looked up positions past the
+                // end of its own table and reported nothing at all. Recorded here
+                // because this is where the offset is already known.
+                techniqueLocalStep,
                 timestamp: new Date().toISOString(),
             });
             // Track reflexivity for ANY technique that provides reflexivity data
@@ -196,7 +248,7 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
             // Update metrics
             metricsCollector.updateMetrics(session, operationData);
             // Build comprehensive execution response
-            const response = executionResponseBuilder.buildResponse(input, session, sessionId, handler, techniqueLocalStep, techniqueIndex, plan, currentFlexibility, optionGenerationResult);
+            const response = executionResponseBuilder.buildResponse(input, session, sessionId, handler, techniqueLocalStep, techniqueIndex, plan, currentFlexibility, optionGenerationResult, ergodicityResult.metrics);
             // Check completion gatekeeper before allowing termination
             const completionCheck = completionGatekeeper.canProceedToNextStep(input, session, plan);
             if (!completionCheck.allowed && completionCheck.response) {

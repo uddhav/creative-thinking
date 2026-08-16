@@ -29,8 +29,13 @@ export class ErgodicityManager {
     optionGenerationEngine;
     lastWarningState = null;
     autoEscapeEnabled = true;
-    constructor(warningConfig) {
-        this.pathMemoryManager = new PathMemoryManager();
+    /**
+     * @param restoredPathMemory what a resumed session already spent. Without it
+     * a session reloaded from disk starts again at full flexibility, which after
+     * the measurement change is a silent loss rather than a cosmetic one.
+     */
+    constructor(warningConfig, restoredPathMemory) {
+        this.pathMemoryManager = new PathMemoryManager(restoredPathMemory);
         this.metricsCalculator = new MetricsCalculator();
         this.earlyWarningSystem = new AbsorbingBarrierEarlyWarning(warningConfig);
         this.responseProtocolSystem = new ResponseProtocolSystem();
@@ -246,7 +251,10 @@ export class ErgodicityManager {
                 optionsOpened: result.newOptionsCreated,
                 optionsClosed: [],
                 constraintsCreated: [],
-                flexibilityImpact: result.flexibilityGained,
+                // Negated: `flexibilityImpact` is a cost, and this is a gain. Written
+                // positive, an escape protocol that recovered 0.2 was charged 20% of
+                // the remaining flexibility the next time the score was recomputed.
+                flexibilityImpact: -result.flexibilityGained,
             };
             this.pathMemoryManager.recordEvent(event);
         }

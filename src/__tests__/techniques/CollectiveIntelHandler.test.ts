@@ -73,8 +73,14 @@ describe('CollectiveIntelHandler', () => {
         "Gather each source's specific insight"
       );
       expect(handler.getStepGuidance(3, problem)).toContain('Find patterns across the sources');
-      expect(handler.getStepGuidance(4, problem)).toContain('Create synergistic combinations');
-      expect(handler.getStepGuidance(5, problem)).toContain('Synthesize collective intelligence');
+      // See above: the ask is combinations each disagreeing source would
+      // still accept, and it names which source each part came from.
+      expect(handler.getStepGuidance(4, problem)).toContain('sources which disagree');
+      expect(handler.getStepGuidance(5, problem)).toContain('still contradicts');
+      expect(handler.getStepGuidance(5, problem)).not.toContain('unified');
+      // Step 5 states the collective view and keeps its dissent attached;
+      // asserted just above. "Synthesize ... into unified" was the phrasing
+      // that invited averaging the sources into a position none of them holds.
     });
 
     it('falls back to a generic instruction out of bounds', () => {

@@ -205,7 +205,9 @@ describe('Technique Validation Documentation', () => {
       const planId = planResult.content[0].text.match(/"planId":\s*"([^"]+)"/)?.[1];
       if (!planId) throw new Error('Plan ID not found');
 
-      // Meta-synthesis is the last step of meta_learning, which has 4 steps
+      // Meta-synthesis is the last step of meta_learning, which has 4 steps.
+      // Steps 1-3 are not run, so the session stays open — the subject here is
+      // whether the alternative field name is accepted.
       const metaSynthesisStepInput: ExecuteThinkingStepInput = {
         planId,
         technique: 'meta_learning',
@@ -213,7 +215,7 @@ describe('Technique Validation Documentation', () => {
         currentStep: 4,
         totalSteps: 4,
         output: 'Meta-synthesis complete',
-        nextStepNeeded: false,
+        nextStepNeeded: true,
         synthesisStrategy: 'Adaptive meta-learning strategy', // Alternative to metaSynthesis
       };
 

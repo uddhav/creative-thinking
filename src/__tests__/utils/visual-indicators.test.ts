@@ -4,7 +4,19 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { VisualFormatter } from '../../utils/VisualFormatter.js';
-import type { ThinkingOperationData } from '../../types/index.js';
+import type { SessionData, ThinkingOperationData } from '../../types/index.js';
+
+/**
+ * Flexibility is measured by the ergodicity engine and lives on the session's
+ * path memory. It used to be read off the step input, which meant the
+ * indicator showed whatever number the caller asserted about its own freedom
+ * of movement rather than what the run had actually spent.
+ */
+function sessionWithFlexibility(flexibilityScore: number): SessionData {
+  return {
+    pathMemory: { currentFlexibility: { flexibilityScore } },
+  } as unknown as SessionData;
+}
 
 describe('Visual Indicators', () => {
   let originalEnv: string | undefined;
@@ -282,7 +294,6 @@ describe('Visual Indicators', () => {
         totalSteps: 8,
         output: 'Test output',
         nextStepNeeded: true,
-        flexibilityScore: 0.7,
       };
 
       const output = formatter.formatOutput(
@@ -292,7 +303,8 @@ describe('Visual Indicators', () => {
         8,
         { name: 'Substitute', focus: 'Replace elements', emoji: '🔄' },
         { color: (s: string) => s, symbol: '✨' },
-        input
+        input,
+        sessionWithFlexibility(0.7)
       );
 
       expect(output).not.toContain('Flexibility:');
@@ -306,7 +318,6 @@ describe('Visual Indicators', () => {
         totalSteps: 8,
         output: 'Test output',
         nextStepNeeded: true,
-        flexibilityScore: 0.35,
       };
 
       const output = formatter.formatOutput(
@@ -316,7 +327,8 @@ describe('Visual Indicators', () => {
         8,
         { name: 'Modify', focus: 'Change attributes', emoji: '✏️' },
         { color: (s: string) => s, symbol: '✨' },
-        input
+        input,
+        sessionWithFlexibility(0.35)
       );
 
       expect(output).toContain('[🔶 Flexibility: 35%]');
@@ -330,7 +342,6 @@ describe('Visual Indicators', () => {
         totalSteps: 8,
         output: 'Test output',
         nextStepNeeded: true,
-        flexibilityScore: 0.25,
       };
 
       const output = formatter.formatOutput(
@@ -340,7 +351,8 @@ describe('Visual Indicators', () => {
         8,
         { name: 'Eliminate', focus: 'Remove elements', emoji: '❌' },
         { color: (s: string) => s, symbol: '⚠️' },
-        input
+        input,
+        sessionWithFlexibility(0.25)
       );
 
       expect(output).toContain('[⚠️  Flexibility: 25%]');
@@ -354,7 +366,6 @@ describe('Visual Indicators', () => {
         totalSteps: 8,
         output: 'Test output',
         nextStepNeeded: true,
-        flexibilityScore: 0.15,
       };
 
       const output = formatter.formatOutput(
@@ -364,7 +375,8 @@ describe('Visual Indicators', () => {
         8,
         { name: 'Reverse', focus: 'Invert elements', emoji: '↩️' },
         { color: (s: string) => s, symbol: '⚠️' },
-        input
+        input,
+        sessionWithFlexibility(0.15)
       );
 
       expect(output).toContain('[⛔ Flexibility: 15%]');
@@ -381,7 +393,6 @@ describe('Visual Indicators', () => {
         output: 'Test output',
         nextStepNeeded: true,
         scamperAction: 'eliminate',
-        flexibilityScore: 0.25,
         risks: ['Risk 1', 'Risk 2', 'Risk 3'],
       };
 
@@ -392,7 +403,8 @@ describe('Visual Indicators', () => {
         8,
         { name: 'Eliminate', focus: 'Remove elements', emoji: '❌' },
         { color: (s: string) => s, symbol: '⚠️' },
-        input
+        input,
+        sessionWithFlexibility(0.25)
       );
 
       // Should show all three indicators
@@ -415,7 +427,6 @@ describe('Visual Indicators', () => {
         totalSteps: 7,
         output: 'Test output',
         nextStepNeeded: true,
-        flexibilityScore: 0.2,
         risks: ['Risk 1', 'Risk 2'],
       };
 
@@ -426,7 +437,8 @@ describe('Visual Indicators', () => {
         7,
         { name: 'Red Hat', focus: 'Emotions', emoji: '🔴' },
         { color: (s: string) => s, symbol: '✨' },
-        input
+        input,
+        sessionWithFlexibility(0.2)
       );
 
       // Should not contain any indicators
@@ -446,7 +458,6 @@ describe('Visual Indicators', () => {
         output: 'Eliminating unnecessary steps from the onboarding flow',
         nextStepNeeded: true,
         scamperAction: 'eliminate',
-        flexibilityScore: 0.25,
         risks: [
           'May confuse existing users',
           'Could reduce data collection',
@@ -461,7 +472,8 @@ describe('Visual Indicators', () => {
         8,
         { name: 'Eliminate', focus: 'Remove unnecessary elements', emoji: '❌' },
         { color: (s: string) => s, symbol: '⚠️' },
-        input
+        input,
+        sessionWithFlexibility(0.25)
       );
 
       // Verify the complete structure
@@ -541,7 +553,6 @@ describe('Visual Indicators', () => {
         output: 'Critically evaluating the proposed feature',
         nextStepNeeded: false,
         disneyRole: 'critic',
-        flexibilityScore: 0.15,
         risks: [
           'Technical complexity',
           'Budget constraints',
@@ -559,7 +570,8 @@ describe('Visual Indicators', () => {
         3,
         { name: 'Critic', focus: 'Identify risks and gaps', emoji: '🔍' },
         { color: (s: string) => s, symbol: '⚠️' },
-        input
+        input,
+        sessionWithFlexibility(0.15)
       );
 
       // Verify all indicators are present

@@ -4,7 +4,7 @@
  * Enhanced with "Rory Mode" - behavioral economics-inspired wildcarding
  * that focuses on human irrationality and psychological insights
  */
-import { BaseTechniqueHandler, type TechniqueInfo } from './types.js';
+import { BaseTechniqueHandler, type StepInfo, type TechniqueInfo } from './types.js';
 interface RandomEntryContext {
     roryMode?: boolean;
     stimulus?: string;
@@ -13,11 +13,7 @@ interface RandomEntryContext {
 export declare class RandomEntryHandler extends BaseTechniqueHandler {
     private readonly roryModeStimuli;
     getTechniqueInfo(): TechniqueInfo;
-    getStepInfo(step: number): {
-        name: string;
-        focus: string;
-        emoji: string;
-    };
+    getStepInfo(step: number): StepInfo;
     getStepGuidance(step: number, problem: string, context?: RandomEntryContext): string;
     private getRandomRoryStimulus;
     validateStep(step: number, data: unknown): boolean;

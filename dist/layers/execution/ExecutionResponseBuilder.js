@@ -4,12 +4,22 @@
  */
 import { ResponseBuilder } from '../../core/ResponseBuilder.js';
 import { MemoryAnalyzer } from '../../core/MemoryAnalyzer.js';
+/**
+ * Carry forward the flags that change what the next step should say. Without
+ * this, random_entry's Rory Mode guidance was unreachable: the branch took a
+ * third argument no call site supplied.
+ */
+function guidanceContext(input) {
+    return { roryMode: input.roryMode };
+}
 import { RealityIntegration } from '../../reality/integration.js';
 import { JsonOptimizer } from '../../utils/JsonOptimizer.js';
 import { monitorCriticalSection } from '../../utils/PerformanceIntegration.js';
 import { TelemetryCollector } from '../../telemetry/TelemetryCollector.js';
 import { SessionCompletionTracker } from '../../core/session/SessionCompletionTracker.js';
 import { MetricsCollector } from '../../core/MetricsCollector.js';
+/** Escape steps shown inline; the rest are counted rather than dropped. */
+const ESCAPE_STEPS_SHOWN = 3;
 export class ExecutionResponseBuilder {
     complexityAnalyzer;
     escalationGenerator;
@@ -36,7 +46,12 @@ export class ExecutionResponseBuilder {
     /**
      * Build comprehensive execution response
      */
-    buildResponse(input, session, sessionId, handler, techniqueLocalStep, techniqueIndex, plan, currentFlexibility, optionGenerationResult) {
+    buildResponse(input, session, sessionId, handler, techniqueLocalStep, techniqueIndex, plan, currentFlexibility, optionGenerationResult, 
+    // What the ergodicity adapter measured this step, beyond the flexibility
+    // number. Optional so the handful of call sites that only have flexibility
+    // keep working; when absent the response simply carries no metrics block
+    // rather than an invented one.
+    ergodicityMetrics) {
         // Track technique step
         this.telemetry
             .trackTechniqueStep(sessionId, input.technique, input.currentStep, input.totalSteps, {
@@ -87,7 +102,7 @@ export class ExecutionResponseBuilder {
         // Enhance response object directly (no parsing needed)
         this.enhanceWithMemoryAndProgress(responseData, input, session, sessionId, handler, techniqueLocalStep, techniqueIndex, plan);
         // Enhance with flexibility and warnings
-        this.enhanceWithFlexibilityAndWarnings(responseData, currentFlexibility, input, session, sessionId);
+        this.enhanceWithFlexibilityAndWarnings(responseData, currentFlexibility, input, session, sessionId, ergodicityMetrics);
         // Track flexibility warnings
         if (currentFlexibility < 0.4) {
             const warningLevel = currentFlexibility < 0.2 ? 'critical' : currentFlexibility < 0.3 ? 'high' : 'medium';
@@ -173,23 +188,6 @@ export class ExecutionResponseBuilder {
         return { responseData, currentInsights };
     }
     /**
-     * Build core response with insights and metadata
-     */
-    buildCoreResponse(input, session, sessionId, handler, techniqueLocalStep, techniqueIndex, plan, currentFlexibility) {
-        // Extract insights
-        const currentInsights = this.extractInsights(handler, session, input);
-        // Generate next step guidance
-        const nextStepGuidance = this.generateNextStepGuidance(input, session, handler, techniqueLocalStep, techniqueIndex, plan);
-        // Generate execution metadata
-        const executionMetadata = this.generateExecutionMetadata(input, session, currentInsights, session.pathMemory, currentFlexibility);
-        // Build base response
-        const operationData = this.createOperationData(input, sessionId);
-        // Enable session encoding for resilience (encode if we have a plan)
-        const shouldEncodeSession = !!plan;
-        const response = this.responseBuilder.buildExecutionResponse(sessionId, operationData, currentInsights, nextStepGuidance, session.history.length, executionMetadata, shouldEncodeSession, plan?.planId || input.planId);
-        return { response, currentInsights };
-    }
-    /**
      * Enhance response with memory outputs and technique progress
      */
     enhanceWithMemoryAndProgress(parsedResponse, input, session, sessionId, handler, techniqueLocalStep, techniqueIndex, plan) {
@@ -212,14 +210,15 @@ export class ExecutionResponseBuilder {
         this.addMemoryOutputs(parsedResponse, memoryOutputs);
         this.addTechniqueProgress(parsedResponse, techniqueProgress);
         // Add completion tracking metadata
-        const completionMetadata = this.completionTracker.calculateCompletionMetadata(session, plan);
+        const completionMetadata = this.completionTracker.calculateCompletionMetadata(session, plan, !input.nextStepNeeded);
         this.addCompletionMetadata(parsedResponse, completionMetadata);
     }
     /**
      * Enhance response with flexibility and warnings
      */
-    enhanceWithFlexibilityAndWarnings(parsedResponse, currentFlexibility, input, session, sessionId) {
+    enhanceWithFlexibilityAndWarnings(parsedResponse, currentFlexibility, input, session, sessionId, ergodicityMetrics) {
         this.addFlexibilityInfo(parsedResponse, currentFlexibility, input.alternativeSuggestions);
+        this.addErgodicityMetrics(parsedResponse, ergodicityMetrics);
         this.addPathAnalysis(parsedResponse, session.pathMemory, currentFlexibility);
         this.addWarnings(parsedResponse, session, sessionId);
     }
@@ -240,14 +239,82 @@ export class ExecutionResponseBuilder {
         // final step off the end of the array, discarding it. A session running
         // disney_method before keeper_test reported keeper_test's "Reconstruct the
         // Fence" output under "Decide and Set the Trigger" and dropped the verdict.
-        const techniqueHistory = session.history.filter(entry => entry.technique === input.technique);
+        const techniqueHistory = this.ownHistory(session, input.technique);
         const currentInsights = monitorCriticalSection('extract_insights', () => handler.extractInsights(techniqueHistory), { technique: input.technique, historyLength: techniqueHistory.length });
-        currentInsights.forEach((insight) => {
-            if (!session.insights.includes(insight)) {
-                session.insights.push(insight);
-            }
-        });
+        // Rebuild rather than append. `extractInsights` returns the technique's
+        // complete current reading — one entry per step, latest wins — so a
+        // revision supersedes inside the handler. Appending undid that: the
+        // superseded text had already been pushed by the earlier call and nothing
+        // took it back out, so a revised session reported both readings and ended
+        // with more insights than it had steps.
+        //
+        // session.insights is a view of the history, not a log of what was said
+        // along the way, so every technique in the session is re-read each step.
+        session.insights = this.readInsightsFromHistory(session, currentInsights, input);
         return currentInsights;
+    }
+    /**
+     * One technique's own entries, each presented under its technique-local step.
+     *
+     * Handlers key on `currentStep` so a revision supersedes the entry it
+     * revises, but `currentStep` may count across the whole plan. For any
+     * technique that is not first, that number falls outside the technique's own
+     * step range and the step vanishes.
+     */
+    /**
+     * One technique's own entries, each presented under its technique-local step.
+     *
+     * The conversion at the end is the one place the two shapes meet.
+     * `ThinkingOperationData` is a declared interface, so TypeScript will not
+     * give it an implicit index signature, while `HistoryEntry` needs one to
+     * carry the technique-specific fields a handler reads. The values are the
+     * same objects either way.
+     */
+    ownHistory(session, technique) {
+        return session.history
+            .filter(entry => entry.technique === technique)
+            .map(entry => entry.techniqueLocalStep === undefined
+            ? entry
+            : { ...entry, currentStep: entry.techniqueLocalStep });
+    }
+    /**
+     * Every technique's current reading of its own steps, in the order the
+     * techniques were first used.
+     */
+    readInsightsFromHistory(session, currentInsights, input) {
+        const seen = [];
+        const techniques = [];
+        for (const entry of session.history) {
+            if (entry.technique && !techniques.includes(entry.technique)) {
+                techniques.push(entry.technique);
+            }
+        }
+        for (const technique of techniques) {
+            const insights = technique === input.technique
+                ? currentInsights
+                : this.readTechniqueInsights(session, technique);
+            for (const insight of insights) {
+                if (!seen.includes(insight))
+                    seen.push(insight);
+            }
+        }
+        // Deliberately no carry-over of whatever was already in session.insights:
+        // that is exactly the superseded text this rebuild exists to drop. Every
+        // technique in the history came from this registry, so each one is re-read
+        // above; one that cannot be resolved contributes nothing rather than
+        // preserving a stale reading.
+        return seen;
+    }
+    readTechniqueInsights(session, technique) {
+        const handler = this.techniqueRegistry?.tryGetHandler(technique);
+        if (!handler)
+            return [];
+        try {
+            return handler.extractInsights(this.ownHistory(session, technique));
+        }
+        catch {
+            return [];
+        }
     }
     createOperationData(input, sessionId) {
         // Remove realityAssessment to avoid duplication
@@ -262,23 +329,46 @@ export class ExecutionResponseBuilder {
         if (!input.nextStepNeeded)
             return undefined;
         const nextStep = input.currentStep + 1;
+        // Out-of-order and duplicate submissions, read from the same counter the
+        // completion metadata uses. Measured in 6 of 8 eval runs: an executor sent
+        // step-2 content under currentStep 3, the server accepted it, recorded the
+        // skip only in buried metadata — and this function then steered to step 4,
+        // actively pointing away from the hole it had just accepted. The executors
+        // recovered against the guidance, not because of it. A hole now redirects
+        // the guidance to the earliest missing step, before anything else this
+        // function might say (including the end-of-technique transition, which
+        // would otherwise walk into the next technique with the hole left behind);
+        // a duplicate gets named rather than silently appended.
+        let duplicateNotice = '';
+        if (plan) {
+            const { completedStepNumbers, submissionsByStep } = this.completionTracker.techniqueLocalProgress(session, plan, input.technique, techniqueIndex);
+            for (let step = 1; step < techniqueLocalStep; step++) {
+                if (!completedStepNumbers.has(step)) {
+                    return (`⚠️ Step ${step} of ${input.technique} has not been recorded — the session has moved past it. ` +
+                        `Complete it before continuing. ${handler.getStepGuidance(step, input.problem, guidanceContext(input))}`);
+                }
+            }
+            if ((submissionsByStep.get(techniqueLocalStep) ?? 0) > 1) {
+                duplicateNotice =
+                    `⚠️ Step ${techniqueLocalStep} of ${input.technique} had already been recorded; ` +
+                        `this submission was appended alongside the earlier one, not merged into it. `;
+            }
+        }
         // Ensure next step is valid
         if (nextStep < 1 || nextStep > input.totalSteps) {
             // Same contract the handlers use for an out-of-range step, so callers see
             // one shape rather than two near-identical ones.
-            return `Complete the ${handler.getTechniqueInfo().name} process for: "${input.problem}"`;
+            return `${duplicateNotice}Complete the ${handler.getTechniqueInfo().name} process for: "${input.problem}"`;
         }
-        // Check completion status and add assertive guidance if needed
-        const completionMetadata = this.completionTracker.calculateCompletionMetadata(session, plan);
-        const remainingSteps = input.totalSteps - input.currentStep;
-        // Add STRONG assertive guidance for low completion (skip in test environment)
-        const isTestEnvironment = process.env.NODE_ENV === 'test' || process.env.VITEST === 'true';
-        if (!isTestEnvironment && completionMetadata.overallProgress < 0.5) {
-            const percentage = Math.round(completionMetadata.overallProgress * 100);
-            return (`⚠️ MANDATORY: Only ${percentage}% complete with ${remainingSteps} steps remaining. ` +
-                `You MUST continue. ALL steps are required. ` +
-                `Next: ${this.getBaseGuidance(handler, techniqueLocalStep + 1, input)}`);
-        }
+        // No completion nag here. This function returns early unless
+        // input.nextStepNeeded is true, so anything it emits fires mid-session by
+        // definition — and it fired below 50% progress, i.e. on the opening steps of
+        // every session, prefixing "MANDATORY: Only 14% complete" onto the guidance
+        // for a step being taken exactly on plan. It was invisible because it also
+        // carried a NODE_ENV/VITEST exemption, so no test could ever see it.
+        //
+        // Incompleteness is reported once, where it means something: on the
+        // terminating step, via SessionCompletionTracker's warnings.
         // Check if we're transitioning to a new technique
         const currentTechniqueSteps = plan?.workflow[techniqueIndex]?.steps.length || handler.getTechniqueInfo().totalSteps;
         if (techniqueLocalStep >= currentTechniqueSteps) {
@@ -296,15 +386,15 @@ export class ExecutionResponseBuilder {
                     // the *previous* technique's final step, which had already succeeded.
                     const nextHandler = this.techniqueRegistry?.tryGetHandler(nextTechnique);
                     return nextHandler
-                        ? `Transitioning to ${nextTechnique}. ${nextHandler.getStepGuidance(1, input.problem)}`
-                        : `Transitioning to ${nextTechnique}`;
+                        ? `${duplicateNotice}Transitioning to ${nextTechnique}. ${nextHandler.getStepGuidance(1, input.problem, guidanceContext(input))}`
+                        : `${duplicateNotice}Transitioning to ${nextTechnique}`;
                 }
             }
         }
         else {
             // Still in the same technique
             const nextLocalStep = techniqueLocalStep + 1;
-            let guidance = handler.getStepGuidance(nextLocalStep, input.problem);
+            let guidance = handler.getStepGuidance(nextLocalStep, input.problem, guidanceContext(input));
             // Add contextual guidance for temporal_work
             if (input.technique === 'temporal_work' && nextStep === 3) {
                 const step1Data = session.history.find(h => h.currentStep === 1 && h.temporalLandscape);
@@ -315,12 +405,12 @@ export class ExecutionResponseBuilder {
                     }
                 }
             }
-            return guidance;
+            return `${duplicateNotice}${guidance}`;
         }
         return undefined;
     }
     getBaseGuidance(handler, nextLocalStep, input) {
-        return handler.getStepGuidance(nextLocalStep, input.problem);
+        return handler.getStepGuidance(nextLocalStep, input.problem, guidanceContext(input));
     }
     generateExecutionMetadata(input, session, insights, pathMemory, currentFlexibility) {
         const metadata = {
@@ -386,6 +476,26 @@ export class ExecutionResponseBuilder {
             parsedResponse.alternativeSuggestions = alternativeSuggestions;
         }
     }
+    /**
+     * What the ergodicity adapter measured, alongside the flexibility number.
+     *
+     * The orchestrator computed `constraintLevel`, `optionSpaceSize` and
+     * `pathDivergence` on every step and `execution.ts` took only the flexibility
+     * score off the result, so three measurements the engine already had reached
+     * no caller. Reported unconditionally, not only when flexibility is low —
+     * these are readings, and withholding them until things look bad is what
+     * makes a reading unusable as a baseline.
+     */
+    addErgodicityMetrics(parsedResponse, ergodicityMetrics) {
+        if (!ergodicityMetrics)
+            return;
+        parsedResponse.ergodicityMetrics = {
+            currentFlexibility: ergodicityMetrics.currentFlexibility,
+            constraintLevel: ergodicityMetrics.constraintLevel,
+            optionSpaceSize: ergodicityMetrics.optionSpaceSize,
+            pathDivergence: ergodicityMetrics.pathDivergence,
+        };
+    }
     addPathAnalysis(parsedResponse, pathMemory, currentFlexibility) {
         if (pathMemory &&
             pathMemory.currentFlexibility &&
@@ -403,6 +513,14 @@ export class ExecutionResponseBuilder {
     addWarnings(parsedResponse, session, sessionId) {
         if (session.earlyWarningState && session.earlyWarningState.activeWarnings.length > 0) {
             parsedResponse.earlyWarningState = {
+                // The verdict, not only the evidence. This reported a list of warnings
+                // and a count and withheld what the subsystem concluded from them, so a
+                // caller could see that something was flagged but not whether the
+                // server thought it should continue, change course, or stop. Reading
+                // that off the message strings is the caller doing the server's job.
+                overallRisk: session.earlyWarningState.overallRisk,
+                recommendedAction: session.earlyWarningState.recommendedAction,
+                compoundRisk: session.earlyWarningState.compoundRisk,
                 activeWarnings: session.earlyWarningState.activeWarnings.map(w => ({
                     level: w.severity,
                     message: w.message,
@@ -411,9 +529,14 @@ export class ExecutionResponseBuilder {
             };
         }
         if (session.escapeRecommendation) {
+            const steps = session.escapeRecommendation.steps;
+            const shown = steps.slice(0, ESCAPE_STEPS_SHOWN);
             parsedResponse.escapeRecommendation = {
                 protocol: session.escapeRecommendation.name,
-                steps: session.escapeRecommendation.steps.slice(0, 3),
+                steps: shown,
+                // Say when there are more. Slicing to three silently made a protocol
+                // look like a three-step one.
+                ...(steps.length > shown.length ? { furtherSteps: steps.length - shown.length } : {}),
                 recommendation: 'Consider these alternative approaches to regain flexibility.',
             };
         }
@@ -529,49 +652,188 @@ export class ExecutionResponseBuilder {
     }
     /**
      * Extract technique-specific fields from input
+     *
+     * This was a switch: one `case` per technique, one `if (field)` per field.
+     * It knew fourteen techniques, so the other eighteen declared fields in the
+     * tool schema, accepted them on input, and got none of them back — a caller
+     * could not tell whether the server had read them at all. (An earlier round
+     * fixed a narrower version of the same fault: there were two copies of the
+     * switch, one live and knowing six, one dead and knowing fourteen.)
+     *
+     * A table instead, keyed by technique, so `tsc` fails until all thirty-two
+     * have an entry. Four of them read no declared field and echo nothing; that
+     * is recorded as an empty list rather than an absence, because an absence is
+     * what let the eighteen go unnoticed.
+     *
+     * Membership is what each handler actually reads, recorded by proxying the
+     * input object through `validateStep` and `extractInsights` for every step of
+     * every technique, not by reading field names. `nine_windows.currentCell` is
+     * added on top: it is read at `NineWindowsHandler:212` behind a branch the
+     * probe did not reach.
      */
+    static TECHNIQUE_FIELDS = {
+        six_hats: ['hatColor'],
+        scamper: [
+            'alternativeSuggestions',
+            'modificationHistory',
+            'modifications',
+            'pathImpact',
+            'scamperAction',
+        ],
+        po: ['principles', 'provocation'],
+        random_entry: ['connections', 'randomStimulus', 'roryMode'],
+        concept_extraction: [
+            'abstractedPatterns',
+            'applications',
+            'extractedConcepts',
+            'successExample',
+        ],
+        yes_and: ['additions', 'evaluations', 'initialIdea'],
+        design_thinking: [
+            'designStage',
+            'empathyInsights',
+            'failureInsights',
+            'failureModesPredicted',
+            'ideaList',
+            'problemStatement',
+            'prototypeDescription',
+            'stressTestResults',
+            'userFeedback',
+        ],
+        triz: ['contradiction', 'inventivePrinciples', 'minimalSolution', 'viaNegativaRemovals'],
+        neural_state: ['dominantNetwork', 'integrationInsights', 'suppressionDepth', 'switchingRhythm'],
+        temporal_work: [
+            'asyncSyncBalance',
+            'circadianAlignment',
+            'pressureTransformation',
+            'temporalEscapeRoutes',
+            'temporalLandscape',
+        ],
+        cultural_integration: [
+            'bridgeBuilding',
+            'culturalFrameworks',
+            'parallelPaths',
+            'respectfulSynthesis',
+        ],
+        collective_intel: [
+            'collectiveInsights',
+            'emergentPatterns',
+            'synergyCombinations',
+            'wisdomSources',
+        ],
+        disney_method: ['criticRisks', 'dreamerVision', 'realistPlan'],
+        nine_windows: ['currentCell', 'interdependencies', 'nineWindowsMatrix'],
+        quantum_superposition: [
+            'amplitudes',
+            'chosenState',
+            'entanglements',
+            'interferencePatterns',
+            'measurementCriteria',
+            'preservedInsights',
+            'solutionStates',
+        ],
+        temporal_creativity: [
+            'accelerationOptions',
+            'activeOptions',
+            'blackSwanScenarios',
+            'currentConstraints',
+            'decisionPatterns',
+            'delayOptions',
+            'lessonIntegration',
+            'parallelTimelines',
+            'pathHistory',
+            'preservedOptions',
+            'strategyEvolution',
+            'synthesisStrategy',
+            'timelineProjections',
+        ],
+        paradoxical_problem: [
+            'metaPath',
+            'paradox',
+            'parallelPaths',
+            'pathContexts',
+            'resolutionVerified',
+            'solutionA',
+            'solutionB',
+            'validation',
+        ],
+        meta_learning: [
+            'learningHistory',
+            'metaSynthesis',
+            'patternRecognition',
+            'strategyAdaptations',
+        ],
+        biomimetic_path: [
+            'immuneResponse',
+            'mutations',
+            'naturalSynthesis',
+            'resiliencePatterns',
+            'swarmBehavior',
+            'symbioticRelationships',
+        ],
+        first_principles: [
+            'assumptions',
+            'components',
+            'fundamentalTruths',
+            'reconstruction',
+            'solution',
+        ],
+        neuro_computational: [
+            'computationalModels',
+            'convergenceMetrics',
+            'finalSynthesis',
+            'interferenceAnalysis',
+            'neuralMappings',
+            'optimizationCycles',
+            'patternGenerations',
+        ],
+        criteria_based_analysis: ['validityScore'],
+        linguistic_forensics: ['coherenceScore', 'pronounRatios'],
+        competing_hypotheses: ['leadingHypothesis', 'matrix', 'probabilities'],
+        reverse_benchmarking: [
+            'antiMimeticStrategy',
+            'excellenceDesign',
+            'vacantSpaces',
+            'weaknessMapping',
+        ],
+        context_reframing: [
+            'behavioralMetrics',
+            'contextAnalysis',
+            'environmentDesign',
+            'frameShift',
+            'interventions',
+        ],
+        perception_optimization: [
+            'experienceDesign',
+            'perceptionGaps',
+            'perceptionROI',
+            'psychologicalValue',
+            'valueAmplification',
+        ],
+        anecdotal_signal: [
+            'anecdoteCount',
+            'earlyWarnings',
+            'scalingScenarios',
+            'signals',
+            'strategicResponse',
+            'trajectoryAnalysis',
+        ],
+        cognitive_bias_audit: [],
+        latticework: [],
+        keeper_test: [],
+        steelman_red_team: [],
+    };
     extractTechniqueSpecificFields(input) {
         const fields = {};
-        // Cast input to ExecuteThinkingStepInput to access all fields
         const stepInput = input;
-        // Add technique-specific fields based on the technique
-        switch (input.technique) {
-            case 'six_hats':
-                if (stepInput.hatColor)
-                    fields.hatColor = stepInput.hatColor;
-                break;
-            case 'po':
-                if (stepInput.provocation)
-                    fields.provocation = stepInput.provocation;
-                if (stepInput.principles)
-                    fields.principles = stepInput.principles;
-                break;
-            case 'random_entry':
-                if (stepInput.randomStimulus)
-                    fields.randomStimulus = stepInput.randomStimulus;
-                if (stepInput.connections)
-                    fields.connections = stepInput.connections;
-                break;
-            case 'scamper':
-                if (stepInput.scamperAction)
-                    fields.scamperAction = stepInput.scamperAction;
-                if (stepInput.pathImpact)
-                    fields.pathImpact = stepInput.pathImpact;
-                if (stepInput.flexibilityScore !== undefined)
-                    fields.flexibilityScore = stepInput.flexibilityScore;
-                if (stepInput.alternativeSuggestions)
-                    fields.alternativeSuggestions = stepInput.alternativeSuggestions;
-                if (stepInput.modificationHistory)
-                    fields.modificationHistory = stepInput.modificationHistory;
-                break;
-            case 'disney_method':
-                if (stepInput.disneyRole)
-                    fields.disneyRole = stepInput.disneyRole;
-                break;
-            case 'nine_windows':
-                if (stepInput.currentCell)
-                    fields.currentCell = stepInput.currentCell;
-                break;
+        // `!== undefined`, not truthiness. Zero is a reading: a `validityScore` of
+        // 0 is the criteria-based analysis concluding the account does not hold up,
+        // and dropping it reports the step as having measured nothing. The switch
+        // had this right for exactly one field — `suppressionDepth`, patched after
+        // it bit someone — and wrong for every other number and boolean.
+        for (const field of ExecutionResponseBuilder.TECHNIQUE_FIELDS[input.technique]) {
+            if (stepInput[field] !== undefined)
+                fields[field] = stepInput[field];
         }
         // Add common risk/adversarial fields if present
         if (stepInput.risks)
@@ -580,6 +842,22 @@ export class ExecutionResponseBuilder {
             fields.failureModes = stepInput.failureModes;
         if (stepInput.mitigations)
             fields.mitigations = stepInput.mitigations;
+        if (stepInput.antifragileProperties)
+            fields.antifragileProperties = stepInput.antifragileProperties;
+        if (stepInput.blackSwans)
+            fields.blackSwans = stepInput.blackSwans;
+        // Add revision fields if present
+        if (stepInput.isRevision)
+            fields.isRevision = stepInput.isRevision;
+        if (stepInput.revisesStep !== undefined)
+            fields.revisesStep = stepInput.revisesStep;
+        if (stepInput.branchFromStep !== undefined)
+            fields.branchFromStep = stepInput.branchFromStep;
+        if (stepInput.branchId)
+            fields.branchId = stepInput.branchId;
+        // Add synthesis for convergence, whichever technique reached it
+        if (stepInput.synthesis)
+            fields.synthesis = stepInput.synthesis;
         return fields;
     }
     /**
@@ -602,10 +880,6 @@ export class ExecutionResponseBuilder {
             completeness += 0.1;
         if (input.antifragileProperties && input.antifragileProperties.length > 0) {
             completeness += 0.15;
-        }
-        if (input.technique === 'scamper' && input.pathImpact) {
-            if (input.pathImpact.flexibilityRetention > 0.5)
-                completeness += 0.1;
         }
         if (input.provocation && input.principles)
             completeness += 0.2;
@@ -633,15 +907,17 @@ export class ExecutionResponseBuilder {
         return dependencies;
     }
     calculateFlexibilityImpact(input, session) {
-        if (input.flexibilityScore !== undefined) {
-            return -(1 - input.flexibilityScore);
-        }
-        if (input.pathImpact) {
-            return -(1 - input.pathImpact.flexibilityRetention);
-        }
-        if (session.pathMemory && session.pathMemory.currentFlexibility) {
-            const currentFlex = session.pathMemory.currentFlexibility.flexibilityScore || 1;
-            return -(1 - currentFlex) * 0.1;
+        // What this step cost, as the engine recorded it. SCAMPER used to report
+        // `-(1 - flexibilityRetention)` here — a cumulative total published under
+        // a per-step name, four to five times the actual step cost and
+        // non-monotonic — while every other technique reported an unrelated
+        // `-(1 - currentFlexibility) * 0.1`. Two formulas, one field name.
+        const lastEvent = session.pathMemory?.pathHistory?.at(-1);
+        if (lastEvent?.flexibilityImpact !== undefined) {
+            // Rounded: this is a 0-1 fraction, and publishing it raw put sixteen
+            // significant figures of binary residue on the wire — 0.005 serialised
+            // as -0.004999999999999999.
+            return Number((-lastEvent.flexibilityImpact).toFixed(4));
         }
         return -0.05;
     }
@@ -723,8 +999,9 @@ export class ExecutionResponseBuilder {
         // Option generation creates reusable strategies
         // Check if we have generated options in this step (passed as parameter)
         // or if flexibility is low enough that options would have been generated
-        const hasGeneratedOptions = (currentFlexibility < 0.4 && session.history.length > 5) ||
-            session.history.some(h => h.flexibilityScore !== undefined && h.flexibilityScore < 0.4);
+        // The second arm scanned history for a caller-typed flexibilityScore.
+        // The engine's own measurement is what currentFlexibility now carries.
+        const hasGeneratedOptions = currentFlexibility < 0.4 && session.history.length > 5;
         if (hasGeneratedOptions) {
             return 'The option generation strategies used here apply to many constrained situations';
         }

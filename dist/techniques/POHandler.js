@@ -1,7 +1,7 @@
 /**
  * PO (Provocative Operation) technique handler with reflexivity
  */
-import { BaseTechniqueHandler } from './types.js';
+import { BaseTechniqueHandler, firstSentence } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 export class POHandler extends BaseTechniqueHandler {
     getTechniqueInfo() {
@@ -29,12 +29,14 @@ export class POHandler extends BaseTechniqueHandler {
                 focus: 'Generate a deliberately unreasonable statement',
                 emoji: '💥',
                 type: 'thinking',
+                reversibility: 'high',
             },
             {
                 name: 'Movement',
                 focus: 'Extract useful ideas from the provocation',
                 emoji: '➡️',
                 type: 'thinking',
+                reversibility: 'high',
             },
             {
                 name: 'Develop Concepts',
@@ -108,22 +110,56 @@ export class POHandler extends BaseTechniqueHandler {
                 return `Complete the PO - Provocative Operation process for: "${problem}"`;
         }
     }
+    /**
+     * Report what each step actually recorded, labelled by the step.
+     *
+     * Keyed on `entry.currentStep`, not on position in the array: `execute`
+     * appends a history entry for every call including revisions, so one revision
+     * shifts every later entry. Keying on the step also means a revision
+     * supersedes the entry it revises rather than reporting twice.
+     *
+     * Every step reports. Step 2 used to be gated on the output containing the
+     * word "could", and step 3 had no branch at all, so a movement phrased
+     * without that word and every concept developed in step 3 vanished.
+     */
     extractInsights(history) {
-        const insights = [];
-        history.forEach(entry => {
-            if (entry.currentStep === 1 && entry.provocation) {
-                insights.push(`Provocation explored: ${entry.provocation}`);
-            }
-            if (entry.currentStep === 2 && entry.output && entry.output.includes('could')) {
-                insights.push(`Movement insight: ${entry.output.slice(0, 100)}...`);
-            }
-            if (entry.currentStep === 4 && entry.output) {
-                const solutions = entry.output.split(/[.!?]+/).filter(s => s.trim());
-                if (solutions.length > 0) {
-                    insights.push(`Practical solution: ${solutions[0].trim()}`);
-                }
+        const totalSteps = this.getTechniqueInfo().totalSteps;
+        const latestByStep = new Map();
+        history.forEach((entry, index) => {
+            // Fall back to position only when the caller sent no step number.
+            const step = entry.currentStep ?? index + 1;
+            if (step >= 1 && step <= totalSteps) {
+                latestByStep.set(step, entry);
             }
         });
+        const insights = [];
+        for (let step = 1; step <= totalSteps; step++) {
+            const entry = latestByStep.get(step);
+            if (!entry) {
+                continue;
+            }
+            const stepName = this.getStepInfo(step).name;
+            const output = entry.output?.trim();
+            if (output) {
+                const summary = firstSentence(output);
+                if (summary.length > 0) {
+                    insights.push(`${stepName}: ${summary}`);
+                }
+            }
+            // The provocation is step 1's own field; report it there as an addition.
+            if (step === 1) {
+                const provocation = entry.provocation?.trim();
+                if (provocation) {
+                    insights.push(`Provocation explored: ${provocation}`);
+                }
+            }
+            // Step 2's own field. It was schema-declared and echoed back, but the
+            // only thing that read it said "Provocation successfully challenged N
+            // core assumptions" — the count, never which ones.
+            if (step === 2 && entry.principles?.length) {
+                insights.push(`Principles extracted: ${entry.principles.join(', ')}`);
+            }
+        }
         return insights;
     }
 }

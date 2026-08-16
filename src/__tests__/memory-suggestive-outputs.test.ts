@@ -252,9 +252,12 @@ describe('Memory-Suggestive Outputs', () => {
         nextStepNeeded: false,
       });
 
+      // A revision is evidence of revision, and that is all this can see.
+      // Whether alternatives were explored is a claim about the content.
       expect(result.historicalNote).toBe(
-        'Solution evolved through iterative refinement and exploration of alternatives'
+        'Revised 2 step(s) rather than proceeding straight through'
       );
+      expect(result.historicalNote).not.toContain('exploration of alternatives');
     });
   });
 
@@ -309,7 +312,9 @@ describe('Memory-Suggestive Outputs', () => {
         totalSteps: 4,
         output: 'Final synthesis',
         synthesis: 'Hybrid workshop model with engagement tools',
-        nextStepNeeded: false,
+        // Step 3 was never run, so the session stays open — the subject is the
+        // pattern read off the history, not completion.
+        nextStepNeeded: true,
       });
 
       expect(result.patternObserved).toBe(
@@ -380,30 +385,63 @@ describe('Memory-Suggestive Outputs', () => {
     });
 
     it('should identify multi-technique synthesis pattern', async () => {
-      const planId = createPlan('Complex problem solving', ['six_hats', 'scamper']);
+      const problem = 'Complex problem solving';
+      const planId = createPlan(problem, ['six_hats', 'scamper']);
 
-      // Execute Six Hats first
+      // A fingerprint is only emitted for a session that ends, and a session
+      // only ends if every planned step ran: six_hats(7) + scamper(8) = 15,
+      // numbered cumulatively across the plan.
+      const hatColors = ['blue', 'white', 'red', 'yellow', 'black', 'green', 'purple'] as const;
+      const scamperActions = [
+        'substitute',
+        'combine',
+        'adapt',
+        'modify',
+        'put_to_other_use',
+        'eliminate',
+        'reverse',
+        'parameterize',
+      ] as const;
+      const totalSteps = hatColors.length + scamperActions.length;
+
       const step1 = await executeStep(planId, {
         technique: 'six_hats',
-        problem: 'Complex problem solving',
-        currentStep: 7,
-        totalSteps: 7,
-        output: 'Six hats analysis complete',
-        hatColor: 'purple',
-        nextStepNeeded: false,
+        problem,
+        currentStep: 1,
+        totalSteps,
+        output: `${hatColors[0]} hat on complex problem solving`,
+        hatColor: hatColors[0],
+        nextStepNeeded: true,
       });
+      const sessionId = step1.sessionId;
 
-      // Then SCAMPER
-      const result = await executeStep(planId, {
-        sessionId: step1.sessionId,
-        technique: 'scamper',
-        problem: 'Complex problem solving',
-        currentStep: 8,
-        totalSteps: 8,
-        output: 'SCAMPER modifications complete',
-        scamperAction: 'parameterize',
-        nextStepNeeded: false,
-      });
+      for (let i = 1; i < hatColors.length; i++) {
+        await executeStep(planId, {
+          sessionId,
+          technique: 'six_hats',
+          problem,
+          currentStep: i + 1,
+          totalSteps,
+          output: `${hatColors[i]} hat on complex problem solving`,
+          hatColor: hatColors[i],
+          nextStepNeeded: true,
+        });
+      }
+
+      let result = step1;
+      for (let i = 0; i < scamperActions.length; i++) {
+        const currentStep = hatColors.length + i + 1;
+        result = await executeStep(planId, {
+          sessionId,
+          technique: 'scamper',
+          problem,
+          currentStep,
+          totalSteps,
+          output: `SCAMPER ${scamperActions[i]} on complex problem solving`,
+          scamperAction: scamperActions[i],
+          nextStepNeeded: currentStep < totalSteps,
+        });
+      }
 
       expect(result.sessionFingerprint?.solutionPattern).toBe('multi-technique synthesis');
     });
@@ -456,67 +494,67 @@ describe('Memory-Suggestive Outputs', () => {
     });
 
     it('should detect effective multi-technique combination', async () => {
-      // Create a plan with all three techniques to avoid validation errors
-      const planId = createPlan('Strategic innovation', ['po', 'six_hats', 'triz']);
+      const problem = 'Strategic innovation';
+      const planId = createPlan(problem, ['po', 'six_hats', 'triz']);
 
-      // Execute PO technique (steps 1-4 in cumulative numbering)
+      // The pattern is only reported for a session that ends, and a session only
+      // ends if every planned step ran: po(4) + six_hats(7) + triz(4) = 15,
+      // numbered cumulatively across the plan.
+      const hatColors = ['blue', 'white', 'red', 'yellow', 'black', 'green', 'purple'] as const;
+      const totalSteps = 15;
+
       const step1 = await executeStep(planId, {
         technique: 'po',
-        problem: 'Strategic innovation',
+        problem,
         currentStep: 1,
-        totalSteps: 15, // Total for all three techniques: po(4) + six_hats(7) + triz(4) = 15
+        totalSteps,
         output: 'Provocation phase',
         provocation: 'PO: Innovation is unnecessary',
         nextStepNeeded: true,
       });
+      const sessionId = step1.sessionId;
 
-      await executeStep(planId, {
-        sessionId: step1.sessionId,
-        technique: 'po',
-        problem: 'Strategic innovation',
-        currentStep: 2,
-        totalSteps: 15,
-        output: 'Principles extracted',
-        principles: ['Focus on essentials'],
-        nextStepNeeded: true,
-      });
+      for (let step = 2; step <= 4; step++) {
+        await executeStep(planId, {
+          sessionId,
+          technique: 'po',
+          problem,
+          currentStep: step,
+          totalSteps,
+          output: `PO step ${step} on strategic innovation`,
+          principles: ['Focus on essentials'],
+          nextStepNeeded: true,
+        });
+      }
 
-      // Skip to six_hats (steps 5-11 in cumulative numbering)
-      await executeStep(planId, {
-        sessionId: step1.sessionId,
-        technique: 'six_hats',
-        problem: 'Strategic innovation',
-        currentStep: 5, // First step of six_hats in cumulative numbering
-        totalSteps: 15,
-        output: 'Blue hat - process overview',
-        hatColor: 'blue',
-        nextStepNeeded: true,
-      });
+      for (let i = 0; i < hatColors.length; i++) {
+        await executeStep(planId, {
+          sessionId,
+          technique: 'six_hats',
+          problem,
+          currentStep: 5 + i,
+          totalSteps,
+          output: `${hatColors[i]} hat on strategic innovation`,
+          hatColor: hatColors[i],
+          nextStepNeeded: true,
+        });
+      }
 
-      await executeStep(planId, {
-        sessionId: step1.sessionId,
-        technique: 'six_hats',
-        problem: 'Strategic innovation',
-        currentStep: 6, // Second step of six_hats
-        totalSteps: 15,
-        output: 'White hat - facts and data',
-        hatColor: 'white',
-        nextStepNeeded: true,
-      });
+      let result = step1;
+      for (let step = 12; step <= totalSteps; step++) {
+        result = await executeStep(planId, {
+          sessionId,
+          technique: 'triz',
+          problem,
+          currentStep: step,
+          totalSteps,
+          output: `TRIZ step ${step} on strategic innovation`,
+          contradiction: 'Innovation vs stability',
+          nextStepNeeded: step < totalSteps,
+        });
+      }
 
-      // Final step with TRIZ (steps 12-15 in cumulative numbering)
-      const result = await executeStep(planId, {
-        sessionId: step1.sessionId,
-        technique: 'triz',
-        problem: 'Strategic innovation',
-        currentStep: 15, // Last step of triz, completing the session
-        totalSteps: 15,
-        output: 'TRIZ synthesis',
-        contradiction: 'Innovation vs stability',
-        nextStepNeeded: false,
-      });
-
-      // Now we have 3+ history items and 3 unique techniques (po, six_hats, triz)
+      // Three unique techniques in a history of fifteen steps
       expect(result.noteworthyPatterns?.observed).toBe('Effective multi-technique combination');
       expect(result.noteworthyPatterns?.applicability).toContain('complex problems');
     });

@@ -256,20 +256,6 @@ export class SessionManager {
   }
 
   /**
-   * Update session data
-   */
-  public async updateSession(sessionId: string, data: Partial<SessionData>): Promise<void> {
-    return this.sessionLock.withLock(sessionId, () => {
-      const session = this.sessions.get(sessionId);
-      if (session) {
-        Object.assign(session, data);
-        session.lastActivityTime = Date.now();
-      }
-      return Promise.resolve();
-    });
-  }
-
-  /**
    * Delete a session
    */
   public deleteSession(sessionId: string): boolean {

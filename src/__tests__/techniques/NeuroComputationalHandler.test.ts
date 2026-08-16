@@ -94,7 +94,9 @@ describe('NeuroComputationalHandler', () => {
     it('should return correct info for step 5 - Convergence', () => {
       const step5 = handler.getStepInfo(5);
       expect(step5.name).toBe('Convergence');
-      expect(step5.focus).toBe('Converge to optimal solution');
+      // Reworded: the step reports what the search found rather than
+      // restating quantum_superposition's collapse-while-preserving.
+      expect(step5.focus).toBe('Report what the search found, and where it stopped looking');
       expect(step5.emoji).toBe('🎯');
       expect(step5.type).toBe('action');
       expect(step5.reflexiveEffects).toBeDefined();
@@ -179,10 +181,20 @@ describe('NeuroComputationalHandler', () => {
 
     it('should provide guidance for step 5 - Convergence', () => {
       const guidance = handler.getStepGuidance(5, problem);
-      expect(guidance).toContain('Converge to optimal creative solution');
+      expect(guidance).toContain('Report what the search actually found');
+      expect(guidance).toContain('plateau');
+      expect(guidance).toContain('local optimum');
+      expect(guidance).toContain('unexplored');
       expect(guidance).toContain(problem);
-      expect(guidance).toContain('Synthesize all neural-computational processes');
-      expect(guidance).toContain('Preserve key insights');
+      // The generic synthesis instruction is replaced by what only this
+      // technique can report — where its own search stopped.
+      expect(guidance).not.toContain('Preserve key insights from each pattern');
+      expect(guidance).toContain('emergence path');
+      // "Preserve key insights" was quantum_superposition's ask as much as
+      // this one's, which is precisely why the two closes were not
+      // distinguishable. What this step preserves is the account of the
+      // search, asserted above. This technique's own quality bar is not
+      // duplicated anywhere and stays.
       expect(guidance).toContain('cognitive plausibility');
       expect(guidance).toContain('computational efficiency');
       expect(guidance).toContain('creative novelty');
@@ -430,60 +442,121 @@ describe('NeuroComputationalHandler', () => {
     });
   });
 
-  describe('getPromptContext', () => {
-    it('should return correct context for step 1', () => {
-      const context = handler.getPromptContext(1);
-      expect(context.technique).toBe('neuro_computational');
-      expect(context.step).toBe(1);
-      expect(context.stepName).toBe('Neural Mapping');
-      expect(context.focus).toBe('Map problem to neural representations');
-      expect(context.emoji).toBe('🧠');
-      expect(context.capabilities).toBeDefined();
-      expect(context.capabilities).toHaveProperty('neuralMapping');
+  describe('extractInsights', () => {
+    it('reports every required field under its own step name', () => {
+      const insights = handler.extractInsights([
+        {
+          currentStep: 1,
+          output: 'The queue is the only stateful node.',
+          neuralMappings: ['queue holds state', 'router gates by tenant'],
+        },
+        {
+          currentStep: 2,
+          patternGenerations: ['batch-then-fan-out', 'fan-out-then-batch'],
+          interferenceAnalysis: {
+            constructive: ['batching amplifies tenant isolation'],
+            destructive: ['fan-out first defeats batching'],
+          },
+        },
+        { currentStep: 3, computationalModels: ['genetic algorithm', 'swarm optimization'] },
+        {
+          currentStep: 4,
+          optimizationCycles: 12,
+          convergenceMetrics: { coherence: 0.9, novelty: 0.7, utility: 0.5 },
+        },
+        {
+          currentStep: 5,
+          finalSynthesis: 'Batch inside the tenant boundary, fan out across it',
+          convergenceMetrics: { coherence: 0.9, novelty: 0.9, utility: 0.9 },
+        },
+      ]);
+
+      expect(insights).toContain('Neural Mapping: queue holds state, router gates by tenant');
+      expect(insights).toContain('Pattern Generation: batch-then-fan-out, fan-out-then-batch');
+      expect(insights).toContain(
+        'Pattern Generation: patterns that reinforce — batching amplifies tenant isolation'
+      );
+      expect(insights).toContain(
+        'Pattern Generation: patterns that cancel — fan-out first defeats batching'
+      );
+      expect(insights).toContain('Computational Synthesis: genetic algorithm, swarm optimization');
+      expect(insights).toContain('Optimization Cycles: 12 optimization cycles run');
+      expect(insights).toContain(
+        'Convergence: Batch inside the tenant boundary, fan out across it'
+      );
+      // No banner: reaching step 5 is not itself a finding.
+      expect(insights.some(i => /optimal solution converged|synthesis complete/i.test(i))).toBe(
+        false
+      );
     });
 
-    it('should surface the interference analysis capability on step 2', () => {
-      // Was asserted against the standalone step 3; step 2 now carries it.
-      const context = handler.getPromptContext(2);
-      expect(context.step).toBe(2);
-      expect(context.stepName).toBe('Pattern Generation');
-      expect(context.capabilities).toHaveProperty('interferenceAnalysis');
+    it('names the convergence ratings the caller was offered', () => {
+      const insights = handler.extractInsights([
+        {
+          currentStep: 4,
+          optimizationCycles: 3,
+          convergenceMetrics: { coherence: 0.9, novelty: 0.7, utility: 0.5 },
+        },
+      ]);
+
+      expect(insights).toContain(
+        'Optimization Cycles: rated coherence strong, novelty moderate, utility weak'
+      );
+      // The bare decimals are what made every caller invent their own.
+      expect(insights.some(i => i.includes('0.9'))).toBe(false);
     });
 
-    it('should return correct context for step 3', () => {
-      const context = handler.getPromptContext(3);
-      expect(context.step).toBe(3);
-      expect(context.stepName).toBe('Computational Synthesis');
-      expect(context.capabilities).toHaveProperty('computationalSynthesis');
+    it('passes an off-scale rating through as its number rather than bucketing it', () => {
+      const insights = handler.extractInsights([
+        { currentStep: 4, optimizationCycles: 1, convergenceMetrics: { coherence: 0.83 } },
+      ]);
+
+      expect(insights).toContain('Optimization Cycles: rated coherence 0.83');
+      expect(insights.some(i => /strong|moderate|weak/.test(i))).toBe(false);
     });
 
-    it('should return correct context for step 5', () => {
-      const context = handler.getPromptContext(5);
-      expect(context.step).toBe(5);
-      expect(context.stepName).toBe('Convergence');
-      expect(context.capabilities).toHaveProperty('convergence');
+    it('reports a weak final rating rather than only the strong ones', () => {
+      const insights = handler.extractInsights([
+        {
+          currentStep: 5,
+          finalSynthesis: 'Converged on the incumbent design',
+          convergenceMetrics: { coherence: 0.9, novelty: 0.5, utility: 0.7 },
+        },
+      ]);
+
+      expect(insights).toContain(
+        'Convergence: rated coherence strong, novelty weak, utility moderate'
+      );
     });
 
-    it('should include all required capabilities', () => {
-      const context = handler.getPromptContext(1);
-      const capabilities = context.capabilities as Record<string, string>;
+    it('lets a revision supersede the step it revises', () => {
+      const insights = handler.extractInsights([
+        { currentStep: 1, neuralMappings: ['the first reading'] },
+        { currentStep: 3, computationalModels: ['a later step'] },
+        { currentStep: 1, neuralMappings: ['the corrected reading'] },
+      ]);
 
-      expect(capabilities.neuralMapping).toBe(
-        'Transform problems into neural network representations'
-      );
-      expect(capabilities.patternGeneration).toBe(
-        'Generate diverse solutions through parallel processing'
-      );
-      expect(capabilities.interferenceAnalysis).toBe(
-        'Analyze constructive and destructive pattern interactions'
-      );
-      expect(capabilities.computationalSynthesis).toBe(
-        'Synthesize patterns using computational models'
-      );
-      expect(capabilities.optimizationCycles).toBe(
-        'Iteratively refine for coherence, novelty, and utility'
-      );
-      expect(capabilities.convergence).toBe('Converge to optimal creative solutions');
+      expect(insights).toContain('Neural Mapping: the corrected reading');
+      expect(insights).not.toContain('Neural Mapping: the first reading');
+      expect(insights).toContain('Computational Synthesis: a later step');
+      expect(insights.some(i => i.startsWith('Pattern Generation'))).toBe(false);
+    });
+
+    it('reports nothing for a step that recorded nothing', () => {
+      expect(handler.extractInsights([])).toEqual([]);
+      expect(handler.extractInsights([{ currentStep: 1, output: '   ' }])).toEqual([]);
+      expect(handler.extractInsights([{ currentStep: 3, computationalModels: [] }])).toEqual([]);
+    });
+
+    it('does not cut the output summary at an abbreviation', () => {
+      const insights = handler.extractInsights([
+        {
+          currentStep: 1,
+          output: 'Depth is 3 layers vs. 12 before. The router is what collapsed.',
+        },
+      ]);
+
+      expect(insights[0]).toContain('vs. 12 before.');
     });
   });
 });

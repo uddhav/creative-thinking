@@ -44,6 +44,17 @@ export interface PathEvent {
   commitmentLevel: number; // 0.0-1.0, how much this commits future paths
   constraintsCreated: string[]; // IDs of constraints created by this event
   flexibilityImpact?: number; // Impact on overall flexibility
+  /**
+   * Whether this step reworked an earlier one instead of advancing.
+   *
+   * `SessionData.history` and `ExecuteThinkingStepInput` have carried
+   * `isRevision` all along; the path record did not, so `perfectionism` — the
+   * one barrier whose subject is revision without progress — could not see a
+   * revision and counted commitments instead. Optional, so a session restored
+   * from before the field existed reads back as not a revision, which is what
+   * an absent flag means.
+   */
+  isRevision?: boolean;
 }
 
 /**

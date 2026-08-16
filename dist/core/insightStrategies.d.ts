@@ -1,5 +1,17 @@
 /**
- * Insight generation strategies for different thinking techniques
+ * Observations about a step, for the memory channel.
+ *
+ * These sit beside each handler's own `extractInsights`, which reports what the
+ * step said. What belongs here is what is true of the step by construction —
+ * counts of what the caller sent, readings it recorded — and nothing else.
+ *
+ * Seven entries here used to assert outcomes instead: a green hat on step 6
+ * meant "Creative solutions generated after systematic analysis", a
+ * contradiction meant "opening path to breakthrough", more than three
+ * additions meant "Collaborative momentum achieved", and user feedback on the
+ * last Design Thinking step meant "Testing validated solution assumptions" —
+ * emitted whether the testing validated anything or refuted it. Two strategies
+ * held nothing but such a claim and are gone.
  */
 import type { ThinkingOperationData, SessionData } from '../types/index.js';
 export interface InsightStrategy {
@@ -18,17 +30,9 @@ export declare class DesignThinkingInsightStrategy implements InsightStrategy {
     technique: string;
     generateInsight(input: ThinkingOperationData): string | undefined;
 }
-export declare class TRIZInsightStrategy implements InsightStrategy {
-    technique: string;
-    generateInsight(input: ThinkingOperationData): string | undefined;
-}
 export declare class SCAMPERInsightStrategy implements InsightStrategy {
     technique: string;
-    generateInsight(input: ThinkingOperationData): string | undefined;
-}
-export declare class YesAndInsightStrategy implements InsightStrategy {
-    technique: string;
-    generateInsight(input: ThinkingOperationData): string | undefined;
+    generateInsight(input: ThinkingOperationData, session: SessionData): string | undefined;
 }
 export declare class NeuralStateInsightStrategy implements InsightStrategy {
     technique: string;

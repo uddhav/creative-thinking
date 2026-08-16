@@ -71,6 +71,14 @@ node dist/cli.js execute --plan <planId> --technique six_hats \
 node dist/cli.js session list --status active --limit 20
 ```
 
+**Number steps within the technique.** A plan of `triz` (4 steps) then `six_hats` (7) numbers the
+first hat as `--step 1 --total-steps 7`: each technique counts its own steps, which also keeps
+parallel branches independent. Plan-wide numbering (`--step 5 --total-steps 11` for that same hat)
+is equally accepted — `--total-steps` is what tells the server which convention you mean, so it must
+match the convention `--step` is using. Note the plan response carries the plan-wide count as
+`estimatedSteps`; there is no `totalSteps` key on it. Both forms were accepted and neither was
+documented, which is how a technique running second in a plan came to report no insights at all.
+
 **`--next-step-needed` is required on every `execute` call and has no default.** Omitting it fails
 with `nextStepNeeded must be a boolean` — on any step, not just the last. Pass it while steps
 remain, and `--no-next-step-needed` on the final step. A session that never receives the negated
@@ -96,11 +104,11 @@ flag form for the common 5–6 params and the stdin form for technique-specific 
   `PlanManager` / `SessionManager`. If not, it loads them from disk via `hydratePlan` /
   `loadSessionFromPersistence`. See `src/cli/commands/execute.ts`.
 
-**Parallel execution.** The plan response includes `executionGraph.parallelizableGroups` that the
-LLM/skill can use to fan out concurrent invocations. Concurrent executions against **different**
-sessionIds are safe. Concurrent executions against the **same** sessionId are last-writer-wins — the
-codebase enforces sequential per-session in-process via `SessionLock`, but cross-process is
-unprotected. Coordinate from the client.
+**Parallel execution.** The plan response includes `executionGraph.metadata.parallelizableGroups`
+that the LLM/skill can use to fan out concurrent invocations. Concurrent executions against
+**different** sessionIds are safe. Concurrent executions against the **same** sessionId are
+last-writer-wins — the codebase enforces sequential per-session in-process via `SessionLock`, but
+cross-process is unprotected. Coordinate from the client.
 
 ### Running the MCP Server Locally
 
@@ -361,7 +369,9 @@ src/__tests__/
 └── *.test.ts       # Top-level tests (validation, reflexivity, session encoding, etc.)
 ```
 
-Tests auto-build before running (`pretest` script runs `npm run build`).
+`npm test` (watch mode) auto-builds via the `pretest` hook. **`npm run test:run` does not** — npm
+fires `pretest` only for the `test` script, so the command used by CI and pre-commit runs against
+whatever `dist/` already holds. Build first.
 
 ## Release pipeline
 
@@ -434,7 +444,10 @@ Process.
 ## Important Constraints
 
 - **dist/ is checked in** — required for `npx github:uddhav/creative-thinking` distribution
-- **Sequential execution only** — steps execute in order for coherence (no parallel execution)
+- **Steps within one technique are ordered; independent techniques may run in parallel** — the
+  plan's `executionGraph.metadata.parallelizableGroups` says which. (An older line here said
+  "sequential execution only", which the server itself contradicts: it accepts and echoes
+  `executionMode: "parallel"` and ships parallelization instructions in every plan.)
 - **Conventional Commits** required — `fix:` (patch), `feat:` (minor), `feat!:` (major)
 - **Never let `BREAKING CHANGE` begin a line in a commit body unless you mean it.** semantic-release
   parses the body, not just the subject. The table below comes from running the resolved parser
@@ -455,6 +468,36 @@ Process.
   So indentation, bullets, table cells and dropping the colon all fail to protect. Use an inline
   mention, the plural, or an underscored token. A **pull request description** is also safe — squash
   bodies here are assembled from commit messages, not the PR body.
+
+- **Measure from the built artifact, not by grepping source.** Field types, tool schemas and
+  technique lists are all assembled at build time; a regex over `src/` reads the ingredients rather
+  than the result and has been wrong three times. It called `provocation` and `successExample`
+  string arrays (both are plain strings), `weaknessMapping` an array (it is an object), and
+  over-counted the fields a handler reads by 72 because it could not tell the input field `patterns`
+  from a local variable of the same name. Import from `dist/`, or probe the running object with a
+  `Proxy`, and read the answer off that.
+- **Test through the surface the caller uses.** An MCP call passes `RequestHandlers` (required-field
+  validation, technique-field validation, workflow-order guard), then `processLateralThinking`, then
+  the layer functions, then the response builder. A test that calls a layer function or
+  `LateralThinkingServer` directly skips the first two entirely. Three defects on this path —
+  session operations refused before dispatch, `isError` dropped from every layer-built error, debate
+  mode stripped by the response allowlist — all passed their guards because the guards entered below
+  where the fault was.
+
+  **So: if an assertion is about what a caller receives, write it as an integration test driving
+  `MCPClientTestHelper` from the start** — not as a unit test to be promoted later, because the
+  promotion only ever happens after something has already gone wrong. Share one client per file
+  rather than per test: the helper spawns a server, and a session created by one test is visible to
+  the next, which is usually what you want and occasionally what bites you.
+
+- **Integration guards run the BUILT server, so rebuild before trusting a kill-check.**
+  `MCPClientTestHelper` spawns `node dist/mcp-server-main.js`, and `npm run test:run` has no pretest
+  hook — so a kill-check that edits `src/` and runs vitest without `npm run build` tests the old
+  `dist/` and comes back green. That green reads as "this guard cannot fail", which is the opposite
+  of what happened. Every break must be followed by a build.
+
+  Related: `vitest.config.ts` sets `retry: 2` globally. A real regression still fails all three
+  attempts, but a guard that fails intermittently is masked rather than reported.
 
 - **Never log to stdout** — it breaks MCP protocol
 - **Never add a 4th tool** — all functionality fits within the three-tool workflow

@@ -65,7 +65,20 @@ export class SessionOperationsHandler {
             },
         });
     }
+    /**
+     * `list` and `delete` degrade gracefully when there is no persistence
+     * adapter, and that is deliberate — three tests in `validation.test.ts` hold
+     * them to it. What they did not do is say so. `listPersistedSessions`
+     * returns `[]` with no adapter, so "0 sessions" was indistinguishable from a
+     * configured server holding none; `deletePersistedSession` returns void, so
+     * `delete` reported "Session deleted successfully" for a session it had no
+     * way to touch. Degrading is fine. Degrading silently is the fault.
+     */
+    persistenceAvailable() {
+        return this.sessionManager.getPersistenceAdapter() !== null;
+    }
     async handleListOperation(input) {
+        const available = this.persistenceAvailable();
         const sessionStates = await this.sessionManager.listPersistedSessions(input.listOptions);
         // Transform SessionState[] to the expected format by converting to SessionData
         const sessions = sessionStates.map(sessionState => ({
@@ -88,16 +101,31 @@ export class SessionOperationsHandler {
             },
         }));
         const formatted = this.responseBuilder.formatSessionList(sessions);
-        return this.responseBuilder.buildSessionOperationResponse('list', formatted);
+        return this.responseBuilder.buildSessionOperationResponse('list', {
+            ...formatted,
+            persistenceAvailable: available,
+            ...(available
+                ? {}
+                : {
+                    note: 'No persistence adapter is configured, so no sessions can be ' +
+                        'listed. This empty list means "cannot look", not "none found". ' +
+                        'Start the server with PERSISTENCE_TYPE set (filesystem or postgres).',
+                }),
+        });
     }
     async handleDeleteOperation(input) {
         if (!input.deleteOptions?.sessionId) {
             throw new ValidationError(ErrorCode.MISSING_REQUIRED_FIELD, 'sessionId is required for delete operation', 'deleteOptions.sessionId');
         }
+        const available = this.persistenceAvailable();
         await this.sessionManager.deletePersistedSession(input.deleteOptions.sessionId);
         return this.responseBuilder.buildSessionOperationResponse('delete', {
             sessionId: input.deleteOptions.sessionId,
-            message: 'Session deleted successfully',
+            persistenceAvailable: available,
+            message: available
+                ? 'Session deleted successfully'
+                : 'No persistence adapter is configured, so nothing was deleted. ' +
+                    'Start the server with PERSISTENCE_TYPE set (filesystem or postgres).',
         });
     }
     async handleExportOperation(input) {

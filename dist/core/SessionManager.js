@@ -179,19 +179,6 @@ export class SessionManager {
         return this.sessions.get(sessionId);
     }
     /**
-     * Update session data
-     */
-    async updateSession(sessionId, data) {
-        return this.sessionLock.withLock(sessionId, () => {
-            const session = this.sessions.get(sessionId);
-            if (session) {
-                Object.assign(session, data);
-                session.lastActivityTime = Date.now();
-            }
-            return Promise.resolve();
-        });
-    }
-    /**
      * Delete a session
      */
     deleteSession(sessionId) {

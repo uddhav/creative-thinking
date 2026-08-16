@@ -196,6 +196,13 @@ export interface SessionData {
 
 // Execution input type
 export interface ExecuteThinkingStepInput {
+  /**
+   * Server-computed: the step's position within its own technique, as opposed
+   * to `currentStep`, which counts across the whole plan. Never sent by a
+   * caller — `executeThinkingStep` derives it and records it on the history
+   * entry so handlers can index their own step tables.
+   */
+  techniqueLocalStep?: number;
   planId: string;
   sessionId?: string;
   technique: LateralTechnique;
@@ -212,11 +219,12 @@ export interface ExecuteThinkingStepInput {
   provocation?: string;
   principles?: string[];
   randomStimulus?: string;
+  /** Draw the stimulus from the behavioural-economics catalogue. */
+  roryMode?: boolean;
   connections?: string[];
   scamperAction?: ScamperAction;
   modificationHistory?: ScamperModificationHistory[];
   pathImpact?: ScamperPathImpact;
-  flexibilityScore?: number;
   alternativeSuggestions?: string[];
 
   // Concept Extraction specific
@@ -353,21 +361,10 @@ export interface ExecuteThinkingStepInput {
   learningHistory?: string[];
   accumulatedLearning?: string[]; // Alternative to learningHistory
   strategyAdaptations?: string[];
-  feedbackInsights?: string[];
   metaSynthesis?: string;
 
   // Reality assessment
   realityAssessment?: RealityAssessment;
-
-  // Cultural Creativity specific
-  culturalContexts?: string[];
-  powerDynamics?: string[];
-  naturalConnections?: string[];
-  frictionZones?: string[];
-  translationProtocols?: string[];
-  trustMechanisms?: string[];
-  attributionMap?: Record<string, string>;
-  authenticityMeasures?: string[];
 
   // Ergodicity awareness fields
   ergodicityCheck?: {
@@ -457,6 +454,12 @@ export interface ExecuteThinkingStepInput {
 
 // Operation data types
 export interface ThinkingOperationData {
+  /**
+   * Server-computed: the step's position within its own technique, as opposed
+   * to `currentStep`, which counts across the whole plan. Handlers index their
+   * own step tables, so this is the number they need.
+   */
+  techniqueLocalStep?: number;
   sessionId?: string;
   technique: LateralTechnique;
   problem: string;
@@ -470,11 +473,12 @@ export interface ThinkingOperationData {
   provocation?: string;
   principles?: string[];
   randomStimulus?: string;
+  /** Draw the stimulus from the behavioural-economics catalogue. */
+  roryMode?: boolean;
   connections?: string[];
   scamperAction?: ScamperAction;
   modificationHistory?: ScamperModificationHistory[];
   pathImpact?: ScamperPathImpact;
-  flexibilityScore?: number;
   alternativeSuggestions?: string[];
 
   // Concept Extraction specific
@@ -617,21 +621,10 @@ export interface ThinkingOperationData {
   learningHistory?: string[];
   accumulatedLearning?: string[]; // Alternative to learningHistory
   strategyAdaptations?: string[];
-  feedbackInsights?: string[];
   metaSynthesis?: string;
 
   // Reality assessment
   realityAssessment?: RealityAssessment;
-
-  // Cultural Creativity specific
-  culturalContexts?: string[];
-  powerDynamics?: string[];
-  naturalConnections?: string[];
-  frictionZones?: string[];
-  translationProtocols?: string[];
-  trustMechanisms?: string[];
-  attributionMap?: Record<string, string>;
-  authenticityMeasures?: string[];
 
   // Ergodicity awareness fields
   ergodicityCheck?: {
@@ -719,6 +712,15 @@ export interface LateralThinkingResponse {
   isError?: boolean;
 }
 
+// The planning layer's input and output types.
+//
+// `src/index.ts` already re-exports these, so callers of the package see them;
+// `src/types/index.ts` did not, and a dozen test files import them from here
+// regardless. They were right about where the types belong — this is the types
+// barrel — and the imports have been silently broken the whole time because
+// tests are not typechecked.
+export * from './planning.js';
+
 // Tool types for MCP
 export interface Tool {
   name: string;
@@ -736,14 +738,32 @@ export interface Tool {
         required?: string[];
         minimum?: number;
         maximum?: number;
+        exclusiveMinimum?: number;
         minLength?: number;
         maxLength?: number;
         maxItems?: number;
         default?: unknown;
+        /**
+         * The shape of values under keys the schema cannot name in advance —
+         * probabilities keyed by hypothesis, ratings keyed by pairing. Without
+         * it the only place left to say "these are numbers between 0 and 1" was
+         * the prose description, where nothing can check it.
+         */
+        additionalProperties?: Record<string, unknown>;
+        /** A field read in more than one shape, e.g. antiMimeticStrategy. */
+        anyOf?: Array<Record<string, unknown>>;
       }
     >;
     required?: string[];
     additionalProperties?: boolean;
+    /**
+     * Alternative shapes for the whole call. `execute_thinking_step` takes
+     * either a thinking step or a session operation, and a single `required`
+     * list cannot say that — it demanded the seven thinking-step fields of
+     * every call, including the session operations the server has always
+     * accepted.
+     */
+    oneOf?: Array<{ required: string[] }>;
   };
 }
 

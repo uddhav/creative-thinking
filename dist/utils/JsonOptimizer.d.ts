@@ -22,6 +22,8 @@ export declare class JsonOptimizer {
     /**
      * Optimize a response object by reducing size and caching
      */
+    /** JSON paths whose string values were cut this run, with original lengths. */
+    private truncatedPaths;
     optimizeResponse(content: unknown): string;
     /**
      * Build response with optimization

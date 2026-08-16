@@ -164,12 +164,14 @@ export class CognitiveBiasAuditHandler extends BaseTechniqueHandler {
       focus: 'Name the specific decision and your tentative answer',
       emoji: '🎯',
       type: 'thinking',
+      reversibility: 'high',
     },
     {
       name: 'Follow the Incentives',
       focus: 'Map incentive forces on self and advisors',
       emoji: '🎣',
       type: 'thinking',
+      reversibility: 'high',
       tendencyIds: ['incentives', 'agency'],
     },
     {
@@ -177,6 +179,7 @@ export class CognitiveBiasAuditHandler extends BaseTechniqueHandler {
       focus: 'Surface denial, commitment lock-in, envy, liking bias',
       emoji: '🧠',
       type: 'thinking',
+      reversibility: 'high',
       tendencyIds: [
         'denial',
         'consistency',
@@ -192,6 +195,7 @@ export class CognitiveBiasAuditHandler extends BaseTechniqueHandler {
       focus: 'Scan social proof, authority, reciprocation, stress, noise',
       emoji: '👥',
       type: 'thinking',
+      reversibility: 'high',
       tendencyIds: ['social_proof', 'authority', 'reciprocation', 'stress', 'say_something'],
     },
     {
@@ -199,6 +203,7 @@ export class CognitiveBiasAuditHandler extends BaseTechniqueHandler {
       focus: 'Check deprival super-reaction and near-miss gambling',
       emoji: '🐶',
       type: 'thinking',
+      reversibility: 'high',
       tendencyIds: ['deprival', 'endowment', 'gambling'],
     },
     {
@@ -206,6 +211,7 @@ export class CognitiveBiasAuditHandler extends BaseTechniqueHandler {
       focus: 'Identify association, contrast, availability, base-rate neglect, vividness',
       emoji: '🔬',
       type: 'thinking',
+      reversibility: 'high',
       tendencyIds: ['pavlovian', 'contrast', 'availability', 'vivid', 'sensory_limits'],
     },
     {
@@ -213,12 +219,14 @@ export class CognitiveBiasAuditHandler extends BaseTechniqueHandler {
       focus: 'Find tendencies stacking multiplicatively toward one conclusion',
       emoji: '🎰',
       type: 'thinking',
+      reversibility: 'high',
     },
     {
       name: 'Invert & Seek Disconfirmation',
       focus: 'Argue the opposite; hunt evidence that proves you wrong',
       emoji: '🔄',
       type: 'thinking',
+      reversibility: 'high',
     },
     {
       name: 'Debias & Decide',
