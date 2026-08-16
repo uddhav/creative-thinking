@@ -41,6 +41,18 @@ function planFor(techniques: LateralTechnique[], stepsEach: number): PlanThinkin
   } as unknown as PlanThinkingSessionOutput;
 }
 
+/** A session that ran the given step numbers and no others. */
+function sessionOverSteps(technique: LateralTechnique, steps: number[]): SessionData {
+  return {
+    technique,
+    problem: 'Test problem',
+    history: steps.map(n => ({ technique, currentStep: n, output: `step ${n} output` })),
+    branches: {},
+    insights: [],
+    startTime: Date.now(),
+  } as unknown as SessionData;
+}
+
 function sessionWith(technique: LateralTechnique, completedSteps: number): SessionData {
   return {
     technique,
@@ -112,14 +124,27 @@ describe('completion warnings fire when a session ends, not while it runs', () =
   it('does not gate the technique-specific warnings on termination', () => {
     // "Black Hat skipped" is true whenever it is true, and acting on it
     // mid-session is the entire point of saying it.
-    const skipped = tracker.calculateCompletionMetadata(
-      sessionWith('six_hats', 6),
-      planFor(['six_hats'], 7),
-      false
-    );
+    //
+    // The fixture has to actually skip it. This used six consecutive steps and
+    // asserted only `not.toContain('CRITICAL FAILURE')` — with nothing passed
+    // over there is no such warning to gate, and an empty array satisfies the
+    // assertion, so the test was satisfied by the suppression it claims to
+    // bound. Steps 1-4 then 6 goes PAST Black Hat at step 5 without running it.
+    const passedOver = sessionOverSteps('six_hats', [1, 2, 3, 4, 6]);
+    const plan7 = planFor(['six_hats'], 7);
 
-    // Whatever else it says, the gate must not be what decides this class.
-    expect(skipped.completionWarnings.join(' ')).not.toContain('CRITICAL FAILURE');
+    const midRun = tracker.calculateCompletionMetadata(passedOver, plan7, false);
+    const ending = tracker.calculateCompletionMetadata(passedOver, plan7, true);
+
+    // Present on both: this class is not the gate's business.
+    expect(
+      midRun.completionWarnings.join(' '),
+      'a genuinely skipped Black Hat went unmentioned mid-session'
+    ).toContain('Black Hat');
+    expect(ending.completionWarnings.join(' ')).toContain('Black Hat');
+
+    // And the gated class still is: no progress nag mid-run.
+    expect(midRun.completionWarnings.join(' ')).not.toContain('CRITICAL FAILURE');
   });
 
   it('has no test-environment exemption left to hide behind', () => {

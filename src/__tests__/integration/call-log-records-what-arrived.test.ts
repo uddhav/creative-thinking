@@ -120,7 +120,16 @@ describe('the server records the calls it was given', () => {
 
   it('writes nothing when the variable is unset', async () => {
     // The control: this is opt-in, and a server started without it must not
-    // create files or pay for the machinery.
+    // write.
+    //
+    // This used to assert a freshly-made temp path did not exist — a path the
+    // server was never told about, so no change to `recordCallToLog` could
+    // have created it. The assertion could not fail. It now watches the log
+    // this suite's own server IS writing to: a second server without the
+    // variable must not add to it.
+    const before = logged().length;
+    expect(before, 'nothing had been logged to compare against').toBeGreaterThan(0);
+
     const quiet = new MCPClientTestHelper();
     const quietDir = mkdtempSync(path.join(tmpdir(), 'ct-call-log-off-'));
     const quietLog = path.join(quietDir, 'calls.jsonl');
@@ -134,7 +143,8 @@ describe('the server records the calls it was given', () => {
       await quiet.connect({ env });
       await quiet.callTool('discover_techniques', { problem: PROBLEM });
 
-      expect(existsSync(quietLog)).toBe(false);
+      expect(existsSync(quietLog), 'a path never given to the server was written').toBe(false);
+      expect(logged().length, 'a server without the variable still wrote to the log').toBe(before);
     } finally {
       await quiet.disconnect();
       rmSync(quietDir, { recursive: true, force: true });

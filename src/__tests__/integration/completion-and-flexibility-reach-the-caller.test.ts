@@ -184,6 +184,7 @@ describe('a malformed array is refused, and the caller is told which field', () 
     const { planId } = await plan(['biomimetic_path']);
 
     let refusal = '';
+    let refused = false;
     try {
       const result = await client.callTool('execute_thinking_step', {
         planId,
@@ -196,11 +197,20 @@ describe('a malformed array is refused, and the caller is told which field', () 
         swarmBehavior: 'a string, not an array',
       });
       refusal = textOf(result);
+      refused = result.isError === true;
     } catch (error) {
+      // The helper throws when the response carries isError, which is itself
+      // the signal being asserted.
+      refused = true;
       refusal = error instanceof Error ? error.message : String(error);
     }
 
-    expect(refusal).toMatch(/swarmBehavior/);
+    // Both halves. Matching only `/swarmBehavior/` was satisfied by the SUCCESS
+    // body too, because the echo table returns the field verbatim — so removing
+    // `swarmBehavior` from the validator's table left this green. The refusal
+    // has to be a refusal.
+    expect(refused, 'a string was accepted where an array of strings is declared').toBe(true);
+    expect(refusal, 'the refusal did not say which field').toMatch(/swarmBehavior/);
   }, 30_000);
 
   describe('a session cannot end with steps it never ran', () => {

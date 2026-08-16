@@ -206,9 +206,12 @@ describe('the response carries what the ergodicity adapter measured', () => {
     // that is worth someone noticing, which `typeof === 'number'` would not
     // achieve.
     expect(metrics?.optionSpaceSize).toBe(0);
-    expect(metrics?.currentFlexibility).toBe(
-      (data.flexibilityScore as number | undefined) ?? metrics?.currentFlexibility
-    );
+    // A line here read `expect(x).toBe(data.flexibilityScore ?? x)`, and
+    // `flexibilityScore` is withheld above 0.7 — the next test asserts it is
+    // undefined on step 1 — so the expected value collapsed to the actual one.
+    // No production change could redden `expect(x).toBe(x)`. Removed rather
+    // than repaired: the relationship it meant to check is asserted where
+    // `flexibilityScore` is actually present, in the descent test below.
   });
 
   it('reports them on every step, not only when flexibility has already fallen', async () => {

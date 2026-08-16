@@ -11,6 +11,13 @@
  * Two seams have to hold for that not to happen — the record has to be saved,
  * and the manager that continues the session has to start from it rather than
  * from a fresh one.
+ *
+ * This file covers the SECOND seam only. Deleting `pathMemory:` from
+ * `SessionPersistence` leaves it green; what reddens on that is
+ * `integration/session-resumes-across-processes.test.ts`, which reads the saved
+ * envelope off disk and then resumes from it in a second server process. Said
+ * plainly because the paragraph above reads as a claim to both, and a file that
+ * names a seam it does not exercise is read as covering it.
  */
 
 import { describe, it, expect } from 'vitest';
