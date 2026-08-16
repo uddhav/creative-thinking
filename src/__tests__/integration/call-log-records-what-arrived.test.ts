@@ -111,8 +111,9 @@ describe('the server records the calls it was given', () => {
     // `purple` is a real hat on the wrong step, so the handler rejects the data.
     // A log that dropped this would hide exactly the runs worth looking at.
     const before = logged().length;
+    let refused = false;
     try {
-      await client.callTool('execute_thinking_step', {
+      const result = await client.callTool('execute_thinking_step', {
         planId: 'no-such-plan',
         technique: 'six_hats',
         problem: PROBLEM,
@@ -122,9 +123,16 @@ describe('the server records the calls it was given', () => {
         nextStepNeeded: true,
         hatColor: 'purple',
       });
+      refused = result.isError === true;
     } catch {
-      /* the refusal is the point; the record is what is being asserted */
+      /* the helper throws on isError responses; either way it was refused */
+      refused = true;
     }
+
+    // Pinned, so this test cannot silently become "records an accepted call" —
+    // if a change makes this fixture succeed, the refused-call property would
+    // otherwise stop being covered while the log assertions stayed green.
+    expect(refused, 'the fixture stopped being a refusal').toBe(true);
 
     const calls = logged();
     expect(calls.length, 'a refused call left no trace').toBe(before + 1);
