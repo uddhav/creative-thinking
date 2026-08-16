@@ -484,6 +484,15 @@ Process.
   rather than per test: the helper spawns a server, and a session created by one test is visible to
   the next, which is usually what you want and occasionally what bites you.
 
+- **Integration guards run the BUILT server, so rebuild before trusting a kill-check.**
+  `MCPClientTestHelper` spawns `node dist/mcp-server-main.js`, and `npm run test:run` has no pretest
+  hook — so a kill-check that edits `src/` and runs vitest without `npm run build` tests the old
+  `dist/` and comes back green. That green reads as "this guard cannot fail", which is the opposite
+  of what happened. Every break must be followed by a build.
+
+  Related: `vitest.config.ts` sets `retry: 2` globally. A real regression still fails all three
+  attempts, but a guard that fails intermittently is masked rather than reported.
+
 - **Never log to stdout** — it breaks MCP protocol
 - **Never add a 4th tool** — all functionality fits within the three-tool workflow
 - Do what has been asked; nothing more, nothing less

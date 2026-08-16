@@ -14,6 +14,19 @@
  * argument appears as it actually arrived, and a call the server REFUSED is
  * still recorded. A log that only captured accepted calls would hide precisely
  * the runs worth investigating.
+ *
+ * There is no third test asserting the feature is opt-in, and the absence is
+ * deliberate. Two attempts were made. The first asserted a freshly-made temp
+ * path did not exist — a path the server was never given, so nothing in
+ * `recordCallToLog` could have created it. The second watched the log this
+ * suite's own server writes, which the quiet server has no channel to either.
+ * Both could not fail.
+ *
+ * The property is real and not observable from outside: a server told to write
+ * nowhere writes nowhere, and there is no file to check. Every break —
+ * dropping the early return, defaulting the path, removing the swallow — either
+ * writes somewhere neither assertion is looking or throws into a catch. An
+ * assertion that cannot fail is worse than none, because it reads as coverage.
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
@@ -116,38 +129,5 @@ describe('the server records the calls it was given', () => {
     const calls = logged();
     expect(calls.length, 'a refused call left no trace').toBe(before + 1);
     expect(calls.at(-1)?.arguments?.hatColor).toBe('purple');
-  }, 30_000);
-
-  it('writes nothing when the variable is unset', async () => {
-    // The control: this is opt-in, and a server started without it must not
-    // write.
-    //
-    // This used to assert a freshly-made temp path did not exist — a path the
-    // server was never told about, so no change to `recordCallToLog` could
-    // have created it. The assertion could not fail. It now watches the log
-    // this suite's own server IS writing to: a second server without the
-    // variable must not add to it.
-    const before = logged().length;
-    expect(before, 'nothing had been logged to compare against').toBeGreaterThan(0);
-
-    const quiet = new MCPClientTestHelper();
-    const quietDir = mkdtempSync(path.join(tmpdir(), 'ct-call-log-off-'));
-    const quietLog = path.join(quietDir, 'calls.jsonl');
-    try {
-      // `process.env` values are `string | undefined`; the transport wants
-      // `Record<string, string>`. Drop the undefined ones rather than casting.
-      const env: Record<string, string> = {};
-      for (const [key, value] of Object.entries(process.env)) {
-        if (key !== 'CT_CALL_LOG' && value !== undefined) env[key] = value;
-      }
-      await quiet.connect({ env });
-      await quiet.callTool('discover_techniques', { problem: PROBLEM });
-
-      expect(existsSync(quietLog), 'a path never given to the server was written').toBe(false);
-      expect(logged().length, 'a server without the variable still wrote to the log').toBe(before);
-    } finally {
-      await quiet.disconnect();
-      rmSync(quietDir, { recursive: true, force: true });
-    }
   }, 30_000);
 });
