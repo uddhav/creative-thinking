@@ -286,7 +286,13 @@ describe('Disney Method and Nine Windows Integration', () => {
 
       expect(output5.technique).toBe('nine_windows');
       expect(output5.currentStep).toBe(5);
-      expect(output5.nextStepGuidance).toContain('Present Super-system');
+      // This test samples three cells of the matrix (5, 8, 9) rather than
+      // running all nine, so its first call cold-starts at step 5. The server
+      // now says so instead of pretending the session is on track: guidance
+      // redirects to the earliest unrecorded step rather than advancing to 6.
+      // The old assertion ('Present Super-system', i.e. step 6) held only
+      // because holes were silently accepted and steered past.
+      expect(output5.nextStepGuidance).toContain('Step 1 of nine_windows has not been recorded');
 
       // Execute step 8 (Future System)
       const step8Input: ExecuteThinkingStepInput = {

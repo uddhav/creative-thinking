@@ -522,11 +522,45 @@ export class ExecutionResponseBuilder {
 
     const nextStep = input.currentStep + 1;
 
+    // Out-of-order and duplicate submissions, read from the same counter the
+    // completion metadata uses. Measured in 6 of 8 eval runs: an executor sent
+    // step-2 content under currentStep 3, the server accepted it, recorded the
+    // skip only in buried metadata — and this function then steered to step 4,
+    // actively pointing away from the hole it had just accepted. The executors
+    // recovered against the guidance, not because of it. A hole now redirects
+    // the guidance to the earliest missing step, before anything else this
+    // function might say (including the end-of-technique transition, which
+    // would otherwise walk into the next technique with the hole left behind);
+    // a duplicate gets named rather than silently appended.
+    let duplicateNotice = '';
+    if (plan) {
+      const { completedStepNumbers, submissionsByStep } =
+        this.completionTracker.techniqueLocalProgress(
+          session,
+          plan,
+          input.technique,
+          techniqueIndex
+        );
+      for (let step = 1; step < techniqueLocalStep; step++) {
+        if (!completedStepNumbers.has(step)) {
+          return (
+            `⚠️ Step ${step} of ${input.technique} has not been recorded — the session has moved past it. ` +
+            `Complete it before continuing. ${handler.getStepGuidance(step, input.problem, guidanceContext(input))}`
+          );
+        }
+      }
+      if ((submissionsByStep.get(techniqueLocalStep) ?? 0) > 1) {
+        duplicateNotice =
+          `⚠️ Step ${techniqueLocalStep} of ${input.technique} had already been recorded; ` +
+          `this submission was appended alongside the earlier one, not merged into it. `;
+      }
+    }
+
     // Ensure next step is valid
     if (nextStep < 1 || nextStep > input.totalSteps) {
       // Same contract the handlers use for an out-of-range step, so callers see
       // one shape rather than two near-identical ones.
-      return `Complete the ${handler.getTechniqueInfo().name} process for: "${input.problem}"`;
+      return `${duplicateNotice}Complete the ${handler.getTechniqueInfo().name} process for: "${input.problem}"`;
     }
 
     // No completion nag here. This function returns early unless
@@ -559,8 +593,8 @@ export class ExecutionResponseBuilder {
           // the *previous* technique's final step, which had already succeeded.
           const nextHandler = this.techniqueRegistry?.tryGetHandler(nextTechnique);
           return nextHandler
-            ? `Transitioning to ${nextTechnique}. ${nextHandler.getStepGuidance(1, input.problem, guidanceContext(input))}`
-            : `Transitioning to ${nextTechnique}`;
+            ? `${duplicateNotice}Transitioning to ${nextTechnique}. ${nextHandler.getStepGuidance(1, input.problem, guidanceContext(input))}`
+            : `${duplicateNotice}Transitioning to ${nextTechnique}`;
         }
       }
     } else {
@@ -579,7 +613,7 @@ export class ExecutionResponseBuilder {
         }
       }
 
-      return guidance;
+      return `${duplicateNotice}${guidance}`;
     }
 
     return undefined;

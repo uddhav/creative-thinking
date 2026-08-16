@@ -71,6 +71,21 @@ export declare class SessionCompletionTracker {
      */
     private countTechniqueCompletedSteps;
     /**
+     * Technique-local progress for one technique of a plan, for callers outside
+     * this tracker — notably next-step guidance, which needs to know whether an
+     * earlier step was passed over before pointing the caller further ahead.
+     *
+     * This is the ONLY sanctioned way to read per-technique step coverage from
+     * outside: it reuses the same numbering-convention disambiguation as the
+     * completion metadata (the validator carries the third copy), so a fourth
+     * hand-rolled copy cannot drift.
+     */
+    techniqueLocalProgress(session: SessionData, plan: PlanThinkingSessionOutput, technique: string, techniqueIndex: number): {
+        completedStepNumbers: Set<number>;
+        submissionsByStep: Map<number, number>;
+        techniqueSteps: number;
+    };
+    /**
      * Check if a step number is valid for a technique
      */
     private isValidStepForTechnique;

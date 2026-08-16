@@ -186,8 +186,12 @@ export class SessionCompletionTracker {
      * Count completed steps for a technique with proper validation
      */
     countTechniqueCompletedSteps(techniqueHistory, techniqueSteps, plan, globalStepOffset) {
-        let completedStepsForTechnique = 0;
         const completedStepNumbers = new Set();
+        const submissionsByStep = new Map();
+        const record = (localStep) => {
+            completedStepNumbers.add(localStep);
+            submissionsByStep.set(localStep, (submissionsByStep.get(localStep) ?? 0) + 1);
+        };
         // Define reasonable bounds for step validation
         const MAX_REASONABLE_STEP = 1000;
         for (const entry of techniqueHistory) {
@@ -198,8 +202,7 @@ export class SessionCompletionTracker {
             if (plan.workflow.length === 1) {
                 // Single technique - steps are technique-local
                 if (this.isValidStepForTechnique(entry.currentStep, 1, techniqueSteps)) {
-                    completedStepsForTechnique++;
-                    completedStepNumbers.add(entry.currentStep);
+                    record(entry.currentStep);
                 }
             }
             else {
@@ -221,12 +224,40 @@ export class SessionCompletionTracker {
                         : entry.currentStep >= 1 && entry.currentStep <= techniqueSteps;
                 const localStep = entryIsLocal ? entry.currentStep : entry.currentStep - globalStepOffset;
                 if (this.isValidStepForTechnique(localStep, 1, techniqueSteps)) {
-                    completedStepsForTechnique++;
-                    completedStepNumbers.add(localStep);
+                    record(localStep);
                 }
             }
         }
-        return { completedStepsForTechnique, completedStepNumbers };
+        // DISTINCT steps, not history entries. Counting entries let a duplicate
+        // submission inflate the tally: seven calls covering six distinct steps
+        // reported "7/7 steps, 100%" and painted a ✓ while the completion gate
+        // was simultaneously blocking the ending for the step that was skipped —
+        // one response asserting completeness and incompleteness at once.
+        return {
+            completedStepsForTechnique: completedStepNumbers.size,
+            completedStepNumbers,
+            submissionsByStep,
+        };
+    }
+    /**
+     * Technique-local progress for one technique of a plan, for callers outside
+     * this tracker — notably next-step guidance, which needs to know whether an
+     * earlier step was passed over before pointing the caller further ahead.
+     *
+     * This is the ONLY sanctioned way to read per-technique step coverage from
+     * outside: it reuses the same numbering-convention disambiguation as the
+     * completion metadata (the validator carries the third copy), so a fourth
+     * hand-rolled copy cannot drift.
+     */
+    techniqueLocalProgress(session, plan, technique, techniqueIndex) {
+        const workflow = plan.workflow[techniqueIndex];
+        const techniqueSteps = workflow?.steps.length ?? 0;
+        const globalStepOffset = plan.workflow
+            .slice(0, techniqueIndex)
+            .reduce((sum, w) => sum + w.steps.length, 0);
+        const techniqueHistory = session.history.filter(h => h.technique === technique);
+        const { completedStepNumbers, submissionsByStep } = this.countTechniqueCompletedSteps(techniqueHistory, techniqueSteps, plan, globalStepOffset);
+        return { completedStepNumbers, submissionsByStep, techniqueSteps };
     }
     /**
      * Check if a step number is valid for a technique
