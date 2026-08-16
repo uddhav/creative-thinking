@@ -266,4 +266,45 @@ describe('the echo table and the tool schema agree', () => {
     expect(data.modificationHistory).toBeDefined();
     expect(data.alternativeSuggestions).toEqual(['Use a recycled frame']);
   });
+
+  describe('a long value is cut honestly, not doctored', () => {
+    it('cuts at the end, says so beside the data, and never splices the middle', async () => {
+      // The optimizer used to cut the MIDDLE out — head + '... [truncated]' +
+      // tail — so a caller re-read a stitched version of its own input with the
+      // only signal buried mid-sentence. Measured: 1200 chars came back as 815
+      // with the splice, on 26 of 32 techniques, silently. Now the cut is a true
+      // prefix, the marker is at the end, and `truncation.fields` names the path
+      // and the original length.
+      const sent = 'S'.repeat(300) + ' MIDDLE-SENTINEL ' + 'E'.repeat(1000);
+      const data = await firstStep('design_thinking', {
+        designStage: 'define',
+        problemStatement: sent,
+      });
+
+      const got = typeof data.problemStatement === 'string' ? data.problemStatement : '';
+      expect(got.endsWith('... [truncated]'), 'the marker is not at the end').toBe(true);
+      expect(
+        sent.startsWith(got.replace('... [truncated]', '')),
+        'the returned text is not a true prefix of what was sent — the middle was spliced'
+      ).toBe(true);
+
+      const truncation = data.truncation as
+        | {
+            fields?: Array<{ path: string; count: number; maxOriginalLength: number }>;
+            note?: string;
+          }
+        | undefined;
+      expect(truncation, 'nothing beside the data says it was cut').toBeDefined();
+      const entry = truncation?.fields?.find(f => f.path === '$.problemStatement');
+      expect(entry, 'the cut field is not named').toBeDefined();
+      expect(entry?.maxOriginalLength).toBe(sent.length);
+    });
+
+    it('adds no truncation field when nothing was cut', async () => {
+      // The control: the report must not become ambient noise on every response.
+      const data = await firstStep('six_hats', { hatColor: 'blue' });
+
+      expect(data.truncation).toBeUndefined();
+    });
+  });
 });

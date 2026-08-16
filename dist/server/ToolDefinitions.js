@@ -233,9 +233,13 @@ export const EXECUTE_THINKING_STEP_TOOL = {
             modifications: { type: 'array', items: { type: 'string' } },
             pathImpact: {
                 type: 'object',
-                description: "SCAMPER's measurement of what the modification costs in future freedom. " +
-                    'This is where optionsClosed and flexibilityRetention live — the top level ' +
-                    'has no such fields, and values sent there are read by nothing.',
+                description: "SCAMPER's measurement of what the modification costs in future freedom — " +
+                    'COMPUTED BY THE SERVER. On a scamper step carrying a scamperAction, the ' +
+                    'server derives this from its own analysis of the action and REPLACES ' +
+                    'anything sent here, however fully populated. It appears on responses as ' +
+                    "the server's reading; sending it has no effect. (An older description " +
+                    'invited callers to populate it, which was measured false: zero caller ' +
+                    'sentinels survive.)',
                 properties: {
                     reversible: { type: 'boolean' },
                     dependenciesCreated: { type: 'array', items: { type: 'string' } },
