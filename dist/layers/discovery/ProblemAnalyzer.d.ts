@@ -12,6 +12,42 @@ export declare class ProblemAnalyzer {
      */
     categorizeProblem(problem: string, context?: string): string;
     /**
+     * Categorize, and say how broad the evidence is.
+     *
+     * `evidenceBreadth` is the number of categories whose accumulated evidence
+     * clears QUALIFYING_EVIDENCE — a measure of how many distinct things the
+     * problem is genuinely about. Discovery uses it to size the recommendation
+     * set, replacing the readability-complexity level that used to do that job:
+     * one appended sentence of harmless context bumped 'low' to 'medium' and
+     * changed the recommendation set regardless of what the sentence said.
+     * Perturbation sentences peak around 2 evidence points, so the 2.5 bar keeps
+     * breadth stable under them, while a problem that names two topics outright
+     * still clears it twice.
+     *
+     * Paths that bypass scoring — an explicit technique request, an adversarial
+     * ask, end-of-life language, a true paradox, the rescue detectors — are
+     * focused asks by construction and report breadth 1.
+     */
+    categorizeProblemWithEvidence(problem: string, context?: string): {
+        category: string;
+        evidenceBreadth: number;
+    };
+    /**
+     * Score every topic category on accumulated evidence.
+     *
+     * Returned in the old cascade's order, which the caller uses to break exact
+     * ties — so a problem with equal evidence for two categories routes exactly
+     * as the first-match cascade would have. Weights follow one rule: a phrase
+     * that names the category outright ('first principles', 'fresh ideas',
+     * 'swarm intelligence') is worth 1.5–2; a generic word that merely leans that
+     * way ('basic', 'feedback', 'system') is worth 1 or less, capped so a pile of
+     * generic words cannot outvote a named topic. Term matches are substring
+     * matches except where a term is a substring of an unrelated common word —
+     * 'prove' sat inside 'improve' for years and sent every "improve the user
+     * experience" problem to `validation`.
+     */
+    private scoreCategories;
+    /**
      * End-of-life vocabulary, checked ahead of the broad category detectors.
      *
      * The broad retention detector below runs last, so it can only reclaim
@@ -102,29 +138,16 @@ export declare class ProblemAnalyzer {
      */
     needsCollaboration(problem: string, context?: string): boolean;
     /**
-     * Fast-path check for explicit technique requests (avoids NLP overhead)
+     * Check for explicit technique requests.
+     *
+     * This map is the one place a single phrase should decide the category by
+     * itself: the user named the tool they want. The single-keyword fast-paths
+     * that used to sit above it ('schedule' → temporal, 'global' →
+     * organizational, 'mental' → cognitive) were hijack sources — one passing
+     * word outranked every signal in the rest of the sentence — and now
+     * contribute weighted evidence in scoreCategories instead.
      */
     private checkExplicitTechniqueRequest;
-    /**
-     * Detect behavioral economics patterns using NLP analysis
-     */
-    private detectBehavioralPattern;
-    /**
-     * Detect fundamental/first principles patterns using NLP analysis
-     */
-    private detectFundamentalPattern;
-    /**
-     * Detect learning/adaptive patterns using NLP analysis
-     */
-    private detectLearningPattern;
-    /**
-     * Detect computational/algorithmic patterns using NLP analysis
-     */
-    private detectComputationalPattern;
-    /**
-     * Detect validation/verification patterns using NLP analysis
-     */
-    private detectValidationPattern;
     /**
      * Fallback categorization when NLP service fails
      * Uses simple keyword matching without NLP analysis

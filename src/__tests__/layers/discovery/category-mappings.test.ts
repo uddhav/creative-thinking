@@ -342,30 +342,59 @@ describe('Enhanced Category Mappings', () => {
   });
 
   describe('Wildcard Selection', () => {
-    it('should include all 28 techniques in wildcard pool', () => {
-      // Test that wildcard selection can potentially recommend any technique
-      const wildcardRecommendations = new Set<string>();
+    it('varies the wildcard pick across inputs while repeating exactly per input', () => {
+      // Wildcard draws are seeded from the category and chosen set — the old
+      // version of this test called the same input 200 times and counted on
+      // Math.random() to vary the answer, which is the nondeterminism the
+      // seeding removed. Variety now comes from varying the input; the full
+      // contract (some draw, some don't; no duplicates; labelling) lives in
+      // wildcard.test.ts.
+      const originalEnv = process.env.WILDCARD_PROBABILITY;
+      process.env.WILDCARD_PROBABILITY = '1.0';
+      const alwaysRecommender = new TechniqueRecommender();
 
-      // Run wildcard selection multiple times to collect different techniques
-      // Increased iterations for better statistical coverage (20% wildcard probability)
-      for (let i = 0; i < 200; i++) {
-        const recommendations = recommender.recommendTechniques(
-          'general',
+      const picks = new Set<string>();
+      const categories = [
+        'general',
+        'strategic',
+        'creative',
+        'process',
+        'organizational',
+        'technical',
+        'validation',
+        'learning',
+      ];
+      for (const category of categories) {
+        const recommendations = alwaysRecommender.recommendTechniques(
+          category,
           undefined,
           undefined,
           'medium',
           registry
         );
-
         const wildcard = recommendations.find(r => r.isWildcard);
-        if (wildcard) {
-          wildcardRecommendations.add(wildcard.technique);
-        }
+        expect(wildcard, `${category} drew no wildcard at probability 1.0`).toBeDefined();
+        picks.add(wildcard?.technique ?? '');
+
+        // Per input, the draw repeats exactly.
+        const again = alwaysRecommender.recommendTechniques(
+          category,
+          undefined,
+          undefined,
+          'medium',
+          registry
+        );
+        expect(again.find(r => r.isWildcard)?.technique).toBe(wildcard?.technique);
       }
 
-      // Should have collected a diverse set of techniques (at least 10)
-      // With 200 iterations at 20% probability = ~40 wildcards from 28 techniques
-      expect(wildcardRecommendations.size).toBeGreaterThanOrEqual(10);
+      // Across inputs, the pool actually varies.
+      expect(picks.size).toBeGreaterThanOrEqual(3);
+
+      if (originalEnv !== undefined) {
+        process.env.WILDCARD_PROBABILITY = originalEnv;
+      } else {
+        delete process.env.WILDCARD_PROBABILITY;
+      }
     });
   });
 

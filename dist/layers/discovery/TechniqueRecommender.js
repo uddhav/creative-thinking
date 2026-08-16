@@ -76,7 +76,13 @@ export class TechniqueRecommender {
      */
     PERSONA_BASE_WEIGHT = 0.7;
     PERSONA_BIAS_WEIGHT = 0.3;
-    recommendTechniques(problemCategory, preferredOutcome, constraints, complexity, techniqueRegistry, techniqueBias) {
+    recommendTechniques(problemCategory, preferredOutcome, constraints, 
+    // The recommendation tier: sizes the set (RECOMMENDATION_LIMITS) and feeds
+    // multi-factor scoring. Discovery derives it from evidence breadth — how
+    // many categories the problem genuinely implicates — NOT from the
+    // readability-complexity level, which rises with any appended sentence and
+    // used to change the set whenever a user added harmless context.
+    complexity, techniqueRegistry, techniqueBias) {
         const recommendations = [];
         // Category-based recommendations
         switch (problemCategory) {
@@ -668,15 +674,25 @@ export class TechniqueRecommender {
         const baseRecommendationCount = Math.min(validatedRecommendations.length, maxRecommendations);
         // Get top recommendations based on dynamic limit
         const topRecommendations = validatedRecommendations.slice(0, baseRecommendationCount);
-        // Early exit if wildcard not needed (performance optimization)
-        if (Math.random() >= this.WILDCARD_PROBABILITY) {
+        // The wildcard draw is deterministic, seeded from what was chosen: the
+        // same category and set always draw the same wildcard, or none. It used
+        // to be Math.random(), which made discover_techniques non-deterministic —
+        // the same problem got different recommendation sets on one call in five,
+        // untestable and indistinguishable from a routing change. Seeding from
+        // the chosen set keeps the anti-pigeonhole variety ACROSS problems while
+        // making every individual problem's answer repeatable.
+        const wildcardSeed = `${problemCategory}|${topRecommendations
+            .map(r => r.technique)
+            .sort()
+            .join(',')}`;
+        if (this.seededUnit(wildcardSeed) >= this.WILDCARD_PROBABILITY) {
             return topRecommendations;
         }
         // Add wildcard technique(s) to prevent pigeonholing
         const wildcardCount = limits.wildcard;
         const excludeTechniques = new Set(topRecommendations.map(r => r.technique));
         for (let i = 0; i < wildcardCount; i++) {
-            const wildcardRecommendation = this.selectWildcardTechnique(excludeTechniques, techniqueRegistry);
+            const wildcardRecommendation = this.selectWildcardTechnique(excludeTechniques, techniqueRegistry, `${wildcardSeed}#${i}`);
             if (wildcardRecommendation) {
                 topRecommendations.push({
                     ...wildcardRecommendation,
@@ -686,6 +702,18 @@ export class TechniqueRecommender {
             }
         }
         return topRecommendations;
+    }
+    /**
+     * FNV-1a hash of a string, folded to a unit interval [0, 1). The wildcard
+     * path needs repeatable draws, not cryptographic ones.
+     */
+    seededUnit(seed) {
+        let hash = 0x811c9dc5;
+        for (let i = 0; i < seed.length; i++) {
+            hash ^= seed.charCodeAt(i);
+            hash = Math.imul(hash, 0x01000193);
+        }
+        return (hash >>> 0) / 0x100000000;
     }
     /**
      * Adjust recommendations based on preferred outcome
@@ -754,15 +782,15 @@ export class TechniqueRecommender {
     /**
      * Select a wildcard technique to prevent algorithmic pigeonholing
      */
-    selectWildcardTechnique(excludeTechniques, techniqueRegistry) {
+    selectWildcardTechnique(excludeTechniques, techniqueRegistry, seed) {
         // Use the single source of truth for all techniques
         // This ensures we always include all available techniques
         const availableTechniques = ALL_LATERAL_TECHNIQUES.filter(t => !excludeTechniques.has(t) && techniqueRegistry.isValidTechnique(t));
         if (availableTechniques.length === 0) {
             return null;
         }
-        // Randomly select a wildcard technique
-        const wildcardTechnique = availableTechniques[Math.floor(Math.random() * availableTechniques.length)];
+        // Seeded selection — repeatable for a given problem, varied across them.
+        const wildcardTechnique = availableTechniques[Math.floor(this.seededUnit(`${seed}|pick`) * availableTechniques.length)];
         // Use cache for technique info (performance optimization)
         let info = this.techniqueInfoCache.get(wildcardTechnique);
         if (!info) {
@@ -777,7 +805,7 @@ export class TechniqueRecommender {
             'Complementary technique for comprehensive exploration',
             'Unexpected angle to challenge assumptions',
         ];
-        const reasoning = wildcardReasons[Math.floor(Math.random() * wildcardReasons.length)];
+        const reasoning = wildcardReasons[Math.floor(this.seededUnit(`${seed}|reason`) * wildcardReasons.length)];
         return {
             technique: wildcardTechnique,
             reasoning: `${reasoning} (${info.totalSteps} steps)`,

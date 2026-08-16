@@ -18,6 +18,30 @@ export class ProblemAnalyzer {
    * Categorize the problem based on NLP analysis and patterns
    */
   categorizeProblem(problem: string, context?: string): string {
+    return this.categorizeProblemWithEvidence(problem, context).category;
+  }
+
+  /**
+   * Categorize, and say how broad the evidence is.
+   *
+   * `evidenceBreadth` is the number of categories whose accumulated evidence
+   * clears QUALIFYING_EVIDENCE — a measure of how many distinct things the
+   * problem is genuinely about. Discovery uses it to size the recommendation
+   * set, replacing the readability-complexity level that used to do that job:
+   * one appended sentence of harmless context bumped 'low' to 'medium' and
+   * changed the recommendation set regardless of what the sentence said.
+   * Perturbation sentences peak around 2 evidence points, so the 2.5 bar keeps
+   * breadth stable under them, while a problem that names two topics outright
+   * still clears it twice.
+   *
+   * Paths that bypass scoring — an explicit technique request, an adversarial
+   * ask, end-of-life language, a true paradox, the rescue detectors — are
+   * focused asks by construction and report breadth 1.
+   */
+  categorizeProblemWithEvidence(
+    problem: string,
+    context?: string
+  ): { category: string; evidenceBreadth: number } {
     const fullText = `${problem} ${context || ''}`;
     // Cache toLowerCase result for performance
     const lowerText = fullText.toLowerCase();
@@ -35,7 +59,7 @@ export class ProblemAnalyzer {
     // OPTIMIZATION: Fast-path for explicit technique requests (skip NLP)
     const explicitTechnique = this.checkExplicitTechniqueRequest(fullText, lowerText);
     if (explicitTechnique) {
-      return explicitTechnique;
+      return { category: explicitTechnique, evidenceBreadth: 1 };
     }
 
     // Use NLPService for comprehensive analysis with error handling
@@ -45,15 +69,17 @@ export class ProblemAnalyzer {
     } catch (error) {
       console.warn('NLP analysis failed, using fallback categorization', error);
       // Fallback to keyword-only detection when NLP fails
-      return this.fallbackCategorization(lowerText);
+      return { category: this.fallbackCategorization(lowerText), evidenceBreadth: 1 };
     }
 
-    // 1. Check for paradoxes using NLP results
-    if (nlpAnalysis.paradoxes.hasParadox || nlpAnalysis.contradictions.hasContradiction) {
+    // 1. A true paradox short-circuits. Only `hasParadox` — a detected
+    // contradiction is demoted to weighted evidence in scoreCategories, because
+    // competitive language trips the contradiction detector ('a competitor
+    // keeps undercutting us') and used to reroute whole strategy questions.
+    if (nlpAnalysis.paradoxes.hasParadox) {
       // Exclude time/requirement conflicts that aren't true paradoxes
-      const lower = fullText.toLowerCase();
-      if (!lower.includes('deadline') && !lower.includes('conflicting requirements')) {
-        return 'paradoxical';
+      if (!lowerText.includes('deadline') && !lowerText.includes('conflicting requirements')) {
+        return { category: 'paradoxical', evidenceBreadth: 1 };
       }
     }
 
@@ -65,150 +91,48 @@ export class ProblemAnalyzer {
     // claimed by `technical`; 'prove me wrong about dropping the mobile app'
     // was claimed by `validation`.
     //
-    // Placed above the temporal check deliberately, and measured: a deadline in
-    // the sentence is context, not the ask. 'Stress test the plan before we
-    // commit' routed `temporal` on 'before' alone. Moving this pass up reclaims
-    // it and recategorises nothing — 288 unique problem strings from the test
-    // suite route identically either way.
-    //
-    // It also runs ahead of the end-of-life pass, so 'poke holes in the plan to
+    // It runs ahead of the end-of-life pass, so 'poke holes in the plan to
     // decommission the cluster' is adversarial rather than retention. That is
     // the intended precedence: the user asked to be argued with, and a
     // keep-or-cut question they have not asked to be attacked ('should we
     // decommission the staging cluster') still reaches `retention` untouched.
     if (this.detectExplicitAdversarialAsk(lowerProblem)) {
-      return 'adversarial';
+      return { category: 'adversarial', evidenceBreadth: 1 };
     }
 
-    // 2. Check temporal using NLP results (no redundant string matching)
-    if (
-      nlpAnalysis.temporal.hasDeadline ||
-      nlpAnalysis.temporal.urgency !== 'none' ||
-      nlpAnalysis.temporal.expressions.length > 2
-    ) {
-      return 'temporal';
-    }
-
-    // 3. Explicit end-of-life language outranks the topic detectors below.
+    // 2. Explicit end-of-life language outranks the topic scoring below.
     // "Decommission the staging cluster" is a retention re-decision that
     // happens to be about infrastructure, not an infrastructure problem.
     if (this.detectExplicitEndOfLife(lowerProblem)) {
-      return 'retention';
+      return { category: 'retention', evidenceBreadth: 1 };
     }
 
-    // 4. Check organizational/collaborative using NLP entities
-    if (
-      nlpAnalysis.entities.people.length > 2 ||
-      nlpAnalysis.topics.categories.includes('people')
-    ) {
-      return 'organizational';
+    // 3. Everything else is evidence, not a verdict. The previous cascade of
+    // ~20 ordered first-match checks meant one passing word could outrank every
+    // signal in the rest of the sentence — measured at 15/42 category flips
+    // from meaning-preserving context additions, with 5 of 6 clean category
+    // exemplars misrouting. Each category now accumulates a weighted score and
+    // the best-supported one wins; the old cascade order breaks exact ties, so
+    // genuinely ambiguous problems route as they always did.
+    const scores = this.scoreCategories(nlpAnalysis, lowerText);
+    let best: string | null = null;
+    let bestScore = 0;
+    for (const [category, score] of scores) {
+      if (score > bestScore) {
+        best = category;
+        bestScore = score;
+      }
     }
-
-    // 5. Check for specific pattern categories FIRST (higher priority)
-    // These should take precedence over general categories
-    // Pass lowerText to detection methods to avoid repeated toLowerCase calls
-
-    // Check for validation/verification patterns first
-    if (this.detectValidationPattern(nlpAnalysis, lowerText)) {
-      return 'validation';
-    }
-
-    // Check for behavioral economics patterns
-    if (this.detectBehavioralPattern(nlpAnalysis, lowerText)) {
-      return 'behavioral';
-    }
-
-    // Check for fundamental/first principles patterns
-    if (this.detectFundamentalPattern(nlpAnalysis, lowerText)) {
-      return 'fundamental';
-    }
-
-    // Check for learning/adaptive patterns
-    if (this.detectLearningPattern(nlpAnalysis, lowerText)) {
-      return 'learning';
-    }
-
-    // Check for computational/algorithmic patterns
-    if (this.detectComputationalPattern(nlpAnalysis, lowerText)) {
-      return 'computational';
-    }
-
-    // 6. Use NLP topic categories for general classification
-    const topicCategories = nlpAnalysis.topics.categories;
-    const entities = nlpAnalysis.entities;
-    const verbs = nlpAnalysis.entities.verbs;
-
-    // Cognitive: Check NLP topics and verbs
-    if (
-      topicCategories.includes('psychology') ||
-      verbs.some(v => ['focus', 'think', 'concentrate', 'remember'].includes(v.toLowerCase()))
-    ) {
-      return 'cognitive';
-    }
-
-    // Implementation: Check verbs and intent
-    if (
-      nlpAnalysis.intent.intents.some(i => i.intent === 'request_action') &&
-      verbs.some(v =>
-        ['implement', 'execute', 'deploy', 'launch', 'build'].includes(v.toLowerCase())
-      )
-    ) {
-      return 'implementation';
-    }
-
-    // Systems: Use NLP topics and entities
-    if (
-      topicCategories.includes('technology') &&
-      entities.nouns.some(n =>
-        ['system', 'architecture', 'ecosystem', 'component'].includes(n.toLowerCase())
-      )
-    ) {
-      return 'systems';
-    }
-
-    // User-centered: Check entities and topics
-    if (
-      (entities.nouns.some(n => ['user', 'customer', 'client'].includes(n.toLowerCase())) ||
-        topicCategories.includes('people')) &&
-      verbs.some(v => ['experience', 'interact', 'use'].includes(v.toLowerCase()))
-    ) {
-      return 'user-centered';
-    }
-
-    // Technical: Use NLP readability and topics
-    if (
-      nlpAnalysis.readability.clarity === 'complex' ||
-      nlpAnalysis.readability.clarity === 'very_complex' ||
-      topicCategories.includes('science') ||
-      topicCategories.includes('technology')
-    ) {
-      return 'technical';
-    }
-
-    // Creative: Check adjectives and intent
-    if (
-      entities.adjectives.some(a =>
-        ['creative', 'innovative', 'novel', 'original'].includes(a.toLowerCase())
-      ) ||
-      nlpAnalysis.intent.intents.some(i => i.intent === 'express_opinion' && i.confidence > 0.7)
-    ) {
-      return 'creative';
-    }
-
-    // Process: Check nouns and verbs
-    if (
-      entities.nouns.some(n => ['process', 'workflow', 'procedure'].includes(n.toLowerCase())) &&
-      verbs.some(v => ['optimize', 'improve', 'streamline'].includes(v.toLowerCase()))
-    ) {
-      return 'process';
-    }
-
-    // Strategic: Use topics and entities
-    if (
-      topicCategories.includes('business') ||
-      entities.nouns.some(n => ['strategy', 'market', 'competition'].includes(n.toLowerCase()))
-    ) {
-      return 'strategic';
+    // Below this, the "winner" is a single generic word ('think', 'system',
+    // 'user') — not enough to claim the problem over the rescue detectors.
+    const MIN_EVIDENCE = 1.5;
+    // A category counts toward breadth only on evidence no incidental sentence
+    // can muster — the strongest perturbation signal measured ('learn from',
+    // a deadline mention) reaches 2.0.
+    const QUALIFYING_EVIDENCE = 2.5;
+    if (best !== null && bestScore >= MIN_EVIDENCE) {
+      const qualifying = scores.filter(([, score]) => score >= QUALIFYING_EVIDENCE).length;
+      return { category: best, evidenceBreadth: Math.max(1, qualifying) };
     }
 
     // Rescue categories. These run LAST, so they only reclaim problems that
@@ -216,30 +140,328 @@ export class ProblemAnalyzer {
     // changes. Each maps to a TechniqueRecommender case group that no category
     // could previously reach, stranding the techniques registered there.
     if (this.detectDecisionPattern(lowerText)) {
-      return 'decision';
+      return { category: 'decision', evidenceBreadth: 1 };
     }
 
     if (this.detectCommunicationPattern(lowerText)) {
-      return 'communication';
+      return { category: 'communication', evidenceBreadth: 1 };
     }
 
     if (this.detectCulturalPattern(lowerText)) {
-      return 'cultural';
+      return { category: 'cultural', evidenceBreadth: 1 };
     }
 
     if (this.detectBiologicalPattern(lowerText)) {
-      return 'biological';
+      return { category: 'biological', evidenceBreadth: 1 };
     }
 
     if (this.detectRetentionPattern(lowerText)) {
-      return 'retention';
+      return { category: 'retention', evidenceBreadth: 1 };
     }
 
     if (this.detectAdversarialPattern(lowerText)) {
-      return 'adversarial';
+      return { category: 'adversarial', evidenceBreadth: 1 };
     }
 
-    return 'general';
+    return { category: 'general', evidenceBreadth: 1 };
+  }
+
+  /**
+   * Score every topic category on accumulated evidence.
+   *
+   * Returned in the old cascade's order, which the caller uses to break exact
+   * ties — so a problem with equal evidence for two categories routes exactly
+   * as the first-match cascade would have. Weights follow one rule: a phrase
+   * that names the category outright ('first principles', 'fresh ideas',
+   * 'swarm intelligence') is worth 1.5–2; a generic word that merely leans that
+   * way ('basic', 'feedback', 'system') is worth 1 or less, capped so a pile of
+   * generic words cannot outvote a named topic. Term matches are substring
+   * matches except where a term is a substring of an unrelated common word —
+   * 'prove' sat inside 'improve' for years and sent every "improve the user
+   * experience" problem to `validation`.
+   */
+  private scoreCategories(
+    nlpAnalysis: ReturnType<NLPService['analyze']>,
+    lowerText: string
+  ): Array<[string, number]> {
+    const topics = nlpAnalysis.topics.categories;
+    const entities = nlpAnalysis.entities;
+
+    // The NLP entity extractor returns whole noun *phrases* ('our release
+    // process?'), so the cascade's exact-match noun lists almost never matched
+    // — one reason nearly everything fell through to `technical` or the rescue
+    // block. Tokenize into words, with naive de-pluralization so 'users'
+    // counts as 'user'.
+    const nounSet = new Set<string>();
+    const verbSet = new Set<string>();
+    const addWords = (set: Set<string>, phrases: string[]): void => {
+      for (const phrase of phrases) {
+        for (const word of phrase.toLowerCase().split(/[^a-z-]+/)) {
+          if (!word) continue;
+          set.add(word);
+          if (word.endsWith('s')) set.add(word.slice(0, -1));
+        }
+      }
+    };
+    addWords(nounSet, entities.nouns);
+    addWords(verbSet, entities.verbs);
+
+    const countTerms = (terms: string[], weight: number, cap: number): number =>
+      Math.min(cap, terms.filter(t => lowerText.includes(t)).length * weight);
+    const countNouns = (nouns: string[], weight: number, cap: number): number =>
+      Math.min(cap, nouns.filter(n => nounSet.has(n)).length * weight);
+    const countVerbs = (verbs: string[], weight: number, cap: number): number =>
+      Math.min(cap, verbs.filter(v => verbSet.has(v)).length * weight);
+
+    // Detected contradiction (not a full paradox — that short-circuited
+    // earlier) is evidence, not a verdict: competitive language trips it.
+    const paradoxical =
+      nlpAnalysis.contradictions.hasContradiction &&
+      !lowerText.includes('deadline') &&
+      !lowerText.includes('conflicting requirements')
+        ? 1.5
+        : 0;
+
+    const urgency = nlpAnalysis.temporal.urgency;
+    const temporal =
+      countTerms(['deadline', 'time management'], 2, 4) +
+      (lowerText.includes('schedule') ? 1 : 0) +
+      (nlpAnalysis.temporal.hasDeadline ? 1 : 0) +
+      (urgency === 'immediate' ? 2 : urgency === 'high' ? 1 : urgency !== 'none' ? 0.5 : 0) +
+      (nlpAnalysis.temporal.expressions.length > 2 ? 0.5 : 0);
+
+    const organizational =
+      (entities.people.length > 2 ? 2 : 0) +
+      (topics.includes('people') ? 1 : 0) +
+      countTerms(
+        [
+          'swarm intelligence',
+          'wisdom of crowds',
+          'crowdsourc',
+          'team collaboration',
+          'multiple perspectives',
+          'bring together',
+          'collective',
+          'consensus',
+          'stakeholder',
+          'emergent',
+        ],
+        1.5,
+        3
+      ) +
+      countTerms(['cultural', 'global', 'multicultural'], 1, 2) +
+      countTerms(
+        ['team', 'restructure', 'reorgani', 'collaborat', 'department', 'headcount'],
+        1,
+        3
+      );
+
+    const validation =
+      countTerms(
+        ['validation', 'validate', 'verify', 'hypothesis', 'evidence', 'authentic'],
+        1.5,
+        3
+      ) +
+      countTerms(['test our', 'test the', 'truth'], 1, 2) +
+      // Word-bounded: 'prove' is a substring of 'improve', which sent every
+      // "improve the X" problem here for years.
+      (/\b(prove|proof)\b/.test(lowerText) ? 1.5 : 0) +
+      (nlpAnalysis.pos.sentences.some(
+        s =>
+          s.type === 'question' &&
+          (s.text.toLowerCase().includes('true') ||
+            s.text.toLowerCase().includes('real') ||
+            s.text.toLowerCase().includes('valid'))
+      )
+        ? 1
+        : 0);
+
+    const behavioral =
+      countTerms(['customer behavior', 'user psychology'], 2, 2) +
+      countTerms(['psycholog', 'nudge', 'perception'], 1.5, 3) +
+      countTerms(['influence', 'incentive', 'behavior', 'behaviour'], 1, 2) +
+      (topics.includes('psychology') ? 1 : 0) +
+      (entities.money.length > 0 ? 0.5 : 0);
+
+    const fundamental =
+      countTerms(
+        [
+          'first principle',
+          'fundamental principle',
+          'root cause',
+          'core issue',
+          'break this down',
+          'deconstruct',
+          'essential element',
+          'basic component',
+          'foundation of',
+        ],
+        2,
+        4
+      ) +
+      (lowerText.includes('break down') && !lowerText.includes('break this down') ? 1 : 0) +
+      countTerms(['foundation', 'fundamental', 'essential', 'basic'], 0.5, 1) +
+      (nlpAnalysis.pos.sentences.some(
+        s => s.type === 'question' && s.text.toLowerCase().includes('why')
+      )
+        ? 1
+        : 0);
+
+    const learning =
+      countTerms(
+        [
+          'learn from',
+          'synthesize pattern',
+          'past failures',
+          'past experience',
+          'evolve our',
+          'evolve your',
+          'evolve the',
+          'adapt to',
+          // 'evolution' (and so 'evolutionary') and 'knowledge' belong to
+          // learning outright — the biological detector deliberately carries
+          // no keyword this branch owns, and 'build knowledge from X' is a
+          // learning ask however generic the word looks.
+          'evolution',
+          'knowledge',
+        ],
+        1.5,
+        3
+      ) +
+      countTerms(['feedback', 'adapt'], 1, 2) +
+      (topics.includes('education') || topics.includes('knowledge') ? 1 : 0);
+
+    const hasComplexity =
+      nlpAnalysis.readability.clarity === 'complex' ||
+      nlpAnalysis.readability.clarity === 'very_complex';
+    const computational =
+      countTerms(
+        [
+          'computational efficiency',
+          'computational model',
+          'process these in parallel',
+          'process in parallel',
+          'parallel process',
+          'neural network',
+        ],
+        2,
+        4
+      ) +
+      countTerms(['computational', 'algorithm'], 2, 4) +
+      (lowerText.includes('neural') ? 1 : 0) +
+      (topics.includes('technology') && hasComplexity ? 1 : 0);
+
+    const cognitive =
+      (this.COGNITIVE_PATTERN.test(lowerText) ? 2 : 0) +
+      countVerbs(['focus', 'think', 'concentrate', 'remember'], 1, 2) +
+      (topics.includes('psychology') ? 1 : 0);
+
+    const implementationVerbs = countVerbs(
+      ['implement', 'execute', 'deploy', 'launch', 'build'],
+      1,
+      3
+    );
+    const implementation =
+      implementationVerbs > 0
+        ? implementationVerbs +
+          (nlpAnalysis.intent.intents.some(i => i.intent === 'request_action') ? 1 : 0)
+        : 0;
+
+    // 'architecture' and 'ecosystem' name the systems concern outright —
+    // "simplify our architecture" is a systems ask with no other signal in the
+    // sentence. 'system' and 'component' are generic and stay at 1 so a
+    // passing "our current system makes this harder" cannot claim a problem.
+    const systemNouns =
+      countNouns(['architecture', 'ecosystem'], 1.5, 3) + countNouns(['system', 'component'], 1, 2);
+    const systems = systemNouns > 0 ? systemNouns + (topics.includes('technology') ? 1 : 0) : 0;
+
+    const userCentered =
+      countNouns(['user', 'customer', 'client'], 1, 2) +
+      countTerms(['user experience', 'checkout', 'onboarding', 'user journey', 'usability'], 1, 2) +
+      countVerbs(['experience', 'interact', 'use'], 1, 2) +
+      (topics.includes('people') ? 0.5 : 0);
+
+    const technical =
+      (nlpAnalysis.readability.clarity === 'very_complex'
+        ? 1.5
+        : nlpAnalysis.readability.clarity === 'complex'
+          ? 1
+          : 0) +
+      (topics.includes('science') ? 1 : 0) +
+      (topics.includes('technology') ? 1 : 0) +
+      countTerms(
+        [
+          'database',
+          'server',
+          'infrastructure',
+          'codebase',
+          'latency',
+          'backend',
+          'frontend',
+          'compiler',
+          'performance',
+        ],
+        0.75,
+        2.25
+      ) +
+      // Defect-repair verbs lean technical without deciding anything alone.
+      countVerbs(['fix', 'debug', 'patch', 'refactor'], 0.75, 1.5);
+
+    const creative =
+      Math.min(
+        2,
+        entities.adjectives.filter(a =>
+          ['creative', 'innovative', 'novel', 'original'].includes(a.toLowerCase())
+        ).length
+      ) +
+      countTerms(
+        ['fresh ideas', 'new ideas', 'brainstorm', 'out of the box', 'think outside'],
+        2,
+        2
+      ) +
+      (/\bideas?\b/.test(lowerText) ? 1 : 0) +
+      (nlpAnalysis.intent.intents.some(i => i.intent === 'express_opinion' && i.confidence > 0.7)
+        ? 1
+        : 0);
+
+    const processNouns = countNouns(['process', 'workflow', 'procedure', 'pipeline'], 1, 2);
+    const process =
+      processNouns > 0
+        ? processNouns +
+          Math.max(
+            countVerbs(['optimize', 'improve', 'streamline'], 1, 2),
+            countTerms(['optimiz', 'streamlin'], 1, 2)
+          )
+        : 0;
+
+    const strategic =
+      (topics.includes('business') ? 1 : 0) +
+      countNouns(
+        ['strategy', 'market', 'competition', 'competitor', 'pricing', 'revenue', 'positioning'],
+        1,
+        3
+      ) +
+      countTerms(['market strategy', 'go-to-market', 'competitive advantage'], 1, 2);
+
+    // Old cascade order — the tiebreak.
+    return [
+      ['paradoxical', paradoxical],
+      ['temporal', temporal],
+      ['organizational', organizational],
+      ['validation', validation],
+      ['behavioral', behavioral],
+      ['fundamental', fundamental],
+      ['learning', learning],
+      ['computational', computational],
+      ['cognitive', cognitive],
+      ['implementation', implementation],
+      ['systems', systems],
+      ['user-centered', userCentered],
+      ['technical', technical],
+      ['creative', creative],
+      ['process', process],
+      ['strategic', strategic],
+    ];
   }
 
   /**
@@ -759,45 +981,17 @@ export class ProblemAnalyzer {
   }
 
   /**
-   * Fast-path check for explicit technique requests (avoids NLP overhead)
+   * Check for explicit technique requests.
+   *
+   * This map is the one place a single phrase should decide the category by
+   * itself: the user named the tool they want. The single-keyword fast-paths
+   * that used to sit above it ('schedule' → temporal, 'global' →
+   * organizational, 'mental' → cognitive) were hijack sources — one passing
+   * word outranked every signal in the rest of the sentence — and now
+   * contribute weighted evidence in scoreCategories instead.
    */
   private checkExplicitTechniqueRequest(text: string, lowerText?: string): string | null {
     const lower = lowerText || text.toLowerCase();
-
-    // Fast-path for explicit temporal keywords (deadlines, time management)
-    if (
-      lower.includes('deadline') ||
-      lower.includes('time management') ||
-      lower.includes('schedule')
-    ) {
-      return 'temporal';
-    }
-
-    // Fast-path for explicit cultural/global/organizational keywords
-    if (
-      lower.includes('cultural') ||
-      lower.includes('cross-cultural') ||
-      lower.includes('global') ||
-      lower.includes('multicultural') ||
-      lower.includes('stakeholder') ||
-      lower.includes('collective') ||
-      lower.includes('crowdsourc') ||
-      lower.includes('wisdom of crowds') ||
-      lower.includes('team collaboration') ||
-      lower.includes('consensus') ||
-      lower.includes('swarm intelligence') ||
-      lower.includes('multiple perspectives') ||
-      lower.includes('bring together') ||
-      lower.includes('emergent')
-    ) {
-      return 'organizational';
-    }
-
-    // Fast-path for explicit cognitive/mental keywords
-    // Use pre-compiled regex to avoid false positives like 'fundamental' matching 'mental'
-    if (this.COGNITIVE_PATTERN.test(lower)) {
-      return 'cognitive';
-    }
 
     // Map explicit technique mentions to categories
     const techniqueMap: Record<string, string> = {
@@ -845,213 +1039,6 @@ export class ProblemAnalyzer {
     }
 
     return null;
-  }
-
-  /**
-   * Detect behavioral economics patterns using NLP analysis
-   */
-  private detectBehavioralPattern(
-    nlpAnalysis: ReturnType<NLPService['analyze']>,
-    lowerText: string
-  ): boolean {
-    // Use pre-lowercased text for performance
-    const lower = lowerText;
-
-    // Ordered from most to least specific for early exit optimization
-    const behavioralKeywords = [
-      'customer behavior',
-      'user psychology',
-      'psychological',
-      'psychology',
-      'influence',
-      'incentive',
-      'perception',
-      'behavior',
-      'behaviour',
-      'nudge',
-    ];
-
-    // Use find() for early exit on first match instead of checking all
-    const hasDirectMatch = behavioralKeywords.find(keyword => lower.includes(keyword));
-    if (hasDirectMatch) return true;
-
-    const hasKeywords = nlpAnalysis.topics.keywords.some(k =>
-      behavioralKeywords.some(b => k.toLowerCase().includes(b))
-    );
-
-    const hasPsychCategory = nlpAnalysis.topics.categories.includes('psychology');
-    const hasMoneyEntities = nlpAnalysis.entities.money.length > 0;
-
-    return hasKeywords || hasPsychCategory || hasMoneyEntities;
-  }
-
-  /**
-   * Detect fundamental/first principles patterns using NLP analysis
-   */
-  private detectFundamentalPattern(
-    nlpAnalysis: ReturnType<NLPService['analyze']>,
-    lowerText: string
-  ): boolean {
-    // Use pre-lowercased text for performance
-    const lower = lowerText;
-
-    // Ordered from most to least specific for early exit optimization
-    const fundamentalKeywords = [
-      'fundamental principle',
-      'first principle',
-      'root cause',
-      'basic component',
-      'core issue',
-      'essential element',
-      'break this down',
-      'break down',
-      'deconstruct',
-      'foundation',
-      'fundamental',
-      'essential',
-      'basic',
-      'core',
-    ];
-
-    // Use find() for early exit on first match instead of checking all
-    const hasDirectMatch = fundamentalKeywords.find(keyword => lower.includes(keyword));
-    if (hasDirectMatch) return true;
-
-    const hasKeywords = nlpAnalysis.topics.keywords.some(k =>
-      fundamentalKeywords.some(f => k.toLowerCase().includes(f))
-    );
-
-    // Check for questions about "why" which often indicate fundamental analysis
-    const hasWhyQuestions = nlpAnalysis.pos.sentences.some(
-      s => s.type === 'question' && s.text.toLowerCase().includes('why')
-    );
-
-    return hasKeywords || hasWhyQuestions;
-  }
-
-  /**
-   * Detect learning/adaptive patterns using NLP analysis
-   */
-  private detectLearningPattern(
-    nlpAnalysis: ReturnType<NLPService['analyze']>,
-    lowerText: string
-  ): boolean {
-    // Use pre-lowercased text for performance
-    const lower = lowerText;
-
-    // Ordered from most to least specific for early exit optimization
-    const learningKeywords = [
-      'learn from',
-      'synthesize pattern',
-      'past failures',
-      'past experience',
-      'evolve our',
-      'evolve your',
-      'evolve the',
-      'evolution',
-      'feedback',
-      'knowledge',
-      'adapt',
-    ];
-
-    // Use find() for early exit on first match instead of checking all
-    const hasDirectMatch = learningKeywords.find(keyword => lower.includes(keyword));
-    if (hasDirectMatch) return true;
-
-    const hasKeywords = nlpAnalysis.topics.keywords.some(k =>
-      learningKeywords.some(l => k.toLowerCase().includes(l))
-    );
-
-    // Check for education or knowledge topics
-    const hasEducationCategory =
-      nlpAnalysis.topics.categories.includes('education') ||
-      nlpAnalysis.topics.categories.includes('knowledge');
-
-    return hasKeywords || hasEducationCategory;
-  }
-
-  /**
-   * Detect computational/algorithmic patterns using NLP analysis
-   */
-  private detectComputationalPattern(
-    nlpAnalysis: ReturnType<NLPService['analyze']>,
-    lowerText: string
-  ): boolean {
-    // Use pre-lowercased text for performance
-    const lower = lowerText;
-
-    // Ordered from most to least specific for early exit optimization
-    const computationalKeywords = [
-      'computational efficiency',
-      'computational model',
-      'process these in parallel',
-      'process in parallel',
-      'parallel process',
-      'neural network',
-      'computational',
-      'algorithm',
-      'neural',
-    ];
-
-    // Use find() for early exit on first match instead of checking all
-    const hasDirectMatch = computationalKeywords.find(keyword => lower.includes(keyword));
-    if (hasDirectMatch) return true;
-
-    const hasKeywords = nlpAnalysis.topics.keywords.some(k =>
-      computationalKeywords.some(c => k.toLowerCase().includes(c))
-    );
-
-    // Check for technology topics and complex technical language
-    const hasTechCategory = nlpAnalysis.topics.categories.includes('technology');
-    const hasComplexity =
-      nlpAnalysis.readability.clarity === 'complex' ||
-      nlpAnalysis.readability.clarity === 'very_complex';
-
-    return hasKeywords || (hasTechCategory && hasComplexity);
-  }
-
-  /**
-   * Detect validation/verification patterns using NLP analysis
-   */
-  private detectValidationPattern(
-    nlpAnalysis: ReturnType<NLPService['analyze']>,
-    lowerText: string
-  ): boolean {
-    // Use pre-lowercased text for performance
-    const lower = lowerText;
-
-    // Ordered from most to least specific for early exit optimization
-    const validationKeywords = [
-      'test our',
-      'test the',
-      'validation',
-      'hypothesis',
-      'authentic',
-      'evidence',
-      'validate',
-      'verify',
-      'prove',
-      'truth',
-    ];
-
-    // Use find() for early exit on first match instead of checking all
-    const hasDirectMatch = validationKeywords.find(keyword => lower.includes(keyword));
-    if (hasDirectMatch) return true;
-
-    const hasKeywords = nlpAnalysis.topics.keywords.some(k =>
-      validationKeywords.some(v => k.toLowerCase().includes(v))
-    );
-
-    // Check for questions about verification
-    const hasVerificationQuestions = nlpAnalysis.pos.sentences.some(
-      s =>
-        s.type === 'question' &&
-        (s.text.toLowerCase().includes('true') ||
-          s.text.toLowerCase().includes('real') ||
-          s.text.toLowerCase().includes('valid'))
-    );
-
-    return hasKeywords || hasVerificationQuestions;
   }
 
   /**
