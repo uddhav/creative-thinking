@@ -210,7 +210,9 @@ describe('Reflexivity Integration', () => {
         totalSteps: 4,
         output: 'Minimizing complexity: Streamline to direct shipping only',
         minimalSolution: 'Direct manufacturer to customer shipping',
-        nextStepNeeded: false,
+        // Steps 1-2 were skipped on purpose, so the session has nothing to
+        // complete; it stays open and the assertion is about accumulation.
+        nextStepNeeded: true,
       });
 
       const step4Response = JSON.parse(step4Result.content[0].text);

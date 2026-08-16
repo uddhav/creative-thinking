@@ -36,6 +36,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { ValidationStrategyFactory } from '../../core/ValidationStrategies.js';
 import { EXECUTE_THINKING_STEP_TOOL } from '../../server/ToolDefinitions.js';
 import { TechniqueRegistry } from '../../techniques/TechniqueRegistry.js';
 import { ALL_LATERAL_TECHNIQUES } from '../../types/index.js';
@@ -364,5 +365,72 @@ describe('tool schema and handlers agree', () => {
 
     const schema = properties.coherenceScore;
     expect(schema.maximum, 'the scale the bands at 85/70/50 are read on').toBe(100);
+  });
+
+  describe('the request-path validator accepts what the schema declares', () => {
+    it('passes a schema-shaped value for every declared field through ValidationStrategies', () => {
+      // The FOURTH per-field typing surface, found by a steelman rather than by
+      // any of the parity checks above: `ValidationStrategies` has its own
+      // per-technique field validation, it runs BEFORE the handler, and it typed
+      // `metaSynthesis` as an array while the schema, the handler, and the
+      // handler's own error example all said string. Three sources against one,
+      // and the one ran first — a caller obeying the published contract could
+      // not execute the technique.
+      //
+      // This walks every declared field of every technique with the schema's own
+      // canonical value and requires the validator to accept it. A divergence in
+      // any of the four surfaces now fails a test naming the field.
+      const validator = ValidationStrategyFactory.createValidator('execute');
+      const contradictions: string[] = [];
+
+      // The probe overwrites one field at a time on top of a valid base call,
+      // so the base call's own protocol fields must not be the field under
+      // probe — replacing `technique` with a canonical string is a probe
+      // artifact, not a divergence. `isRevision` is excluded for its
+      // cross-field constraint: true legitimately requires `revisesStep`,
+      // which is the validator working.
+      const PROTOCOL_FIELDS = new Set([
+        'planId',
+        'sessionId',
+        'technique',
+        'problem',
+        'currentStep',
+        'totalSteps',
+        'output',
+        'nextStepNeeded',
+        'isRevision',
+        'sessionOperation',
+      ]);
+
+      for (const technique of ALL_LATERAL_TECHNIQUES) {
+        for (const [field, schema] of Object.entries(properties)) {
+          if (field in NO_CANONICAL_VALUE) continue;
+          if (PROTOCOL_FIELDS.has(field)) continue;
+
+          const result = validator.validate({
+            planId: 'plan_probe',
+            technique,
+            problem: 'A probe problem for the validator surface.',
+            currentStep: 1,
+            totalSteps: 3,
+            output: 'A recorded finding for this step, written plainly.',
+            nextStepNeeded: true,
+            [field]: canonical(schema),
+          });
+
+          if (!result.valid) {
+            const complaint = (result.errors ?? []).find(e => e.includes(field));
+            if (complaint) {
+              contradictions.push(`${technique}.${field}: ${complaint}`);
+            }
+          }
+        }
+      }
+
+      expect(
+        [...new Set(contradictions)],
+        'ValidationStrategies refuses a shape the schema declares — fix whichever is wrong'
+      ).toEqual([]);
+    });
   });
 });

@@ -6,6 +6,8 @@ import { randomUUID } from 'crypto';
 import { ExecutionGraphGenerator } from './planning/ExecutionGraphGenerator.js';
 import { TelemetryCollector } from '../telemetry/TelemetryCollector.js';
 import { PersonaResolver } from '../personas/PersonaResolver.js';
+import { ValidationError } from '../errors/types.js';
+import { ErrorCode } from '../errors/types.js';
 import { HumanisticQualityCoverage } from './discovery/HumanisticQualityCoverage.js';
 import { PersonaGuidanceInjector } from '../personas/PersonaGuidanceInjector.js';
 import { DebateOrchestrator } from '../personas/DebateOrchestrator.js';
@@ -13,18 +15,36 @@ import { DebateOrchestrator } from '../personas/DebateOrchestrator.js';
 const personaResolver = new PersonaResolver();
 export function planThinkingSession(input, sessionManager, techniqueRegistry) {
     const { problem, techniques, objectives, constraints, timeframe = 'thorough', executionMode = 'sequential', persona, personas, debateFormat, } = input;
-    // Resolve persona for guidance injection
+    // Resolve persona for guidance injection.
+    //
+    // A persona that does not resolve is an ERROR, not a filter. This used to
+    // drop it silently — `personas: ['rich_hickey', 'nobody_at_all']` returned a
+    // single-voice plan with no debate keys and nothing naming the dropped
+    // persona, so a caller asking for a debate got a monologue and no way to
+    // know why. Duplicates collapse instead: two copies of one persona cannot
+    // hold a debate with each other, and the pre-fix behaviour built two
+    // byte-identical "voices" and called it one.
     let resolvedPersona = null;
     const resolvedPersonas = [];
+    const resolveOrThrow = (name) => {
+        const resolved = personaResolver.resolve(name);
+        if (!resolved) {
+            throw new ValidationError(ErrorCode.INVALID_FIELD_VALUE, `Unknown persona: '${name}'. Use a built-in id, an external catalog id, ` +
+                `or the 'custom:' prefix for a generated persona.`, 'personas', { provided: name });
+        }
+        return resolved;
+    };
     if (persona) {
-        resolvedPersona = personaResolver.resolve(persona);
+        resolvedPersona = resolveOrThrow(persona);
     }
     if (personas && Array.isArray(personas)) {
+        const seenIds = new Set();
         for (const p of personas) {
-            const resolved = personaResolver.resolve(p);
-            if (resolved) {
-                resolvedPersonas.push(resolved);
-            }
+            const resolved = resolveOrThrow(p);
+            if (seenIds.has(resolved.id))
+                continue;
+            seenIds.add(resolved.id);
+            resolvedPersonas.push(resolved);
         }
         // In debate mode with multiple personas, use the first as the primary
         if (!resolvedPersona && resolvedPersonas.length > 0) {

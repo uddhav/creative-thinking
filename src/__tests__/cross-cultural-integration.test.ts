@@ -444,12 +444,14 @@ describe('Cross-Cultural Integration', () => {
           'Indigenous: traditional medicine, spiritual healing',
         ],
         bridgeBuilding: ['Universal desire for health', 'Family care values'],
-        nextStepNeeded: false,
+        nextStepNeeded: true,
       });
 
-      expect(culturalStep.completed).toBe(true);
+      expect(culturalStep.technique).toBe('cultural_integration');
 
       // Then apply design thinking with cultural insights
+      // The session stays open: this test is about the two techniques sharing a
+      // session, not about completing either one.
       const designStep = await executeStep(planId, {
         sessionId: culturalStep.sessionId,
         technique: 'design_thinking',
@@ -463,7 +465,7 @@ describe('Cross-Cultural Integration', () => {
           'Varied trust levels in medical systems',
           'Cultural taboos and sensitivities',
         ],
-        nextStepNeeded: false,
+        nextStepNeeded: true,
       });
 
       expect(designStep.sessionId).toBe(culturalStep.sessionId);

@@ -182,4 +182,27 @@ describe('a session that is running out of room says so', () => {
       'an escape protocol outlived the reading that produced it'
     ).toEqual([]);
   });
+
+  it('never says escape without offering one', async () => {
+    // The reverse of the withdrawal test above, which checks
+    // `hasEscape && action !== 'escape'` and structurally cannot see this
+    // direction. Protocols carry flexibility floors of 0.1-0.5, and a session
+    // deep enough in trouble sat below every floor: from step 18 of a 20-step
+    // committing chain, `recommendedAction: 'escape'` arrived with the
+    // protocol ABSENT — the caller most in need was the one offered nothing.
+    // Below every floor, the lightest protocol is now the offer.
+    const readings = await walk([...COMMITTING, 'context_reframing']);
+
+    const escapesWithoutProtocol = readings.filter(r => r.action === 'escape' && !r.hasEscape);
+    expect(
+      escapesWithoutProtocol.map(r => `step ${r.step}: escape with no protocol`),
+      'a session was told to escape and offered no way to'
+    ).toEqual([]);
+
+    // And the deep end was actually reached, or this asserts nothing.
+    expect(
+      readings.filter(r => r.action === 'escape').length,
+      'the chain never reached escape, so the assertion is vacuous'
+    ).toBeGreaterThan(3);
+  });
 });

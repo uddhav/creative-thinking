@@ -28,8 +28,17 @@ export class CompletionGatekeeper {
         if (this.config.enforcementLevel === EnforcementLevel.NONE) {
             return { allowed: true };
         }
-        // Check if trying to terminate early
-        if (!input.nextStepNeeded && input.currentStep < input.totalSteps) {
+        // Check every termination, not only the ones whose step NUMBER is early.
+        //
+        // This used to fire only when `currentStep < totalSteps`, so a session that
+        // skipped an interior step and then ended on the final step number sailed
+        // past the gate: 14 of 15 steps run, step 7 never sent, and the response
+        // said `completed: true` with zero warnings — while its own
+        // `techniqueStatuses` recorded the gap. The always-block-on-skips check
+        // below only protects terminations that reach it. Ending is what makes a
+        // missing step permanent, so ending is when the check runs; a genuinely
+        // complete session has no skips and passes untouched.
+        if (!input.nextStepNeeded) {
             return this.handleEarlyTermination(input, session, plan);
         }
         return { allowed: true };
@@ -73,8 +82,14 @@ export class CompletionGatekeeper {
                 }
                 return { allowed: true };
             case EnforcementLevel.STANDARD:
-                // Block if below 70% or missing critical steps
-                if (completionPercentage < 0.7 || metadata.criticalGapsIdentified.length > 0) {
+                // Block on what the caller failed to RUN, not on what they never
+                // planned. `criticalGapsIdentified` lists techniques the tracker
+                // thinks the problem deserved — including ones the plan never
+                // contained — so gating on it here refused a fully-run 5-step plan
+                // with "100% complete. MANDATORY: Complete all 0 remaining steps."
+                // Skipped steps are already an unconditional block above; the gaps
+                // stay in the metadata for the caller to weigh.
+                if (completionPercentage < 0.7) {
                     return this.blockTermination(input, metadata, `❌ Early termination BLOCKED: ${Math.round(completionPercentage * 100)}% complete. ` +
                         `MANDATORY: Complete all ${remainingSteps} remaining steps.`);
                 }

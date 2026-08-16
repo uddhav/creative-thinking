@@ -203,14 +203,26 @@ export class SessionCompletionTracker {
                 }
             }
             else {
-                // Multi-technique - always use sequential numbering for consistency
-                // This ensures identical behavior regardless of executionMode
-                const expectedStepMin = globalStepOffset + 1;
-                const expectedStepMax = globalStepOffset + techniqueSteps;
-                if (this.isValidStepForTechnique(entry.currentStep, expectedStepMin, expectedStepMax)) {
+                // Multi-technique. The execution validator accepts BOTH numbering
+                // conventions — plan-wide and technique-local, disambiguated by
+                // totalSteps — and this counter accepted only plan-wide. A session
+                // numbered per technique (six_hats 1-7 behind triz's 4) had its later
+                // steps fall outside the expected global range, so a fully-run session
+                // read as riddled with skips, and once the completion gate checked
+                // every termination that false reading BLOCKED legitimate endings.
+                // Two components disagreeing about the same convention, again; the
+                // entry's own totalSteps says which one its currentStep uses, exactly
+                // as it does for the validator.
+                const planTotal = plan.workflow.reduce((sum, w) => sum + w.steps.length, 0);
+                const entryIsLocal = entry.totalSteps === techniqueSteps && entry.totalSteps !== planTotal
+                    ? true
+                    : entry.totalSteps === planTotal
+                        ? false
+                        : entry.currentStep >= 1 && entry.currentStep <= techniqueSteps;
+                const localStep = entryIsLocal ? entry.currentStep : entry.currentStep - globalStepOffset;
+                if (this.isValidStepForTechnique(localStep, 1, techniqueSteps)) {
                     completedStepsForTechnique++;
-                    // Convert to technique-local step number for tracking
-                    completedStepNumbers.add(entry.currentStep - globalStepOffset);
+                    completedStepNumbers.add(localStep);
                 }
             }
         }

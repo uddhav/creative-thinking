@@ -97,16 +97,23 @@ describe('SessionCompletionTracker', () => {
             {
               technique: 'scamper',
               problem: 'test',
-              currentStep: 8, // Sequential numbering: after six_hats (7 steps)
-              totalSteps: 8,
+              // Plan-wide numbering: totalSteps is the PLAN total, matching the
+              // convention currentStep uses. The old pair (8 of 8) mixed the
+              // conventions, and under the validator's own disambiguation rule
+              // — totalSteps equals the technique's count means technique-local
+              // — it denotes scamper's LAST step, not its first. The tracker
+              // now applies the same rule as the validator, so the fixture has
+              // to say what it means.
+              currentStep: 8,
+              totalSteps: 15,
               output: 'scamper step 1',
               nextStepNeeded: true,
             },
             {
               technique: 'scamper',
               problem: 'test',
-              currentStep: 9, // Sequential numbering: after six_hats (7 steps)
-              totalSteps: 8,
+              currentStep: 9,
+              totalSteps: 15,
               output: 'scamper step 2',
               nextStepNeeded: true,
             },

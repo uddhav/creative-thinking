@@ -80,7 +80,9 @@ describe('SCAMPER Reflexivity Integration', () => {
       // Should accumulate constraints from all executed steps
       expect(step6Response.reflexivity.currentConstraints.length).toBeGreaterThanOrEqual(6);
 
-      // Execute all 8 steps to verify full tracking
+      // Jump to the last step. Only four of SCAMPER's eight steps run here, so
+      // the session stays open — the assertions below are about what reflexivity
+      // accumulated, not about finishing the technique.
       const step8Result = await server.executeThinkingStep({
         planId,
         sessionId: step6Response.sessionId, // Continue the same session
@@ -91,7 +93,7 @@ describe('SCAMPER Reflexivity Integration', () => {
         output: 'Parameterize brewing strength and temperature settings',
         scamperAction: 'parameterize',
         scamperModification: 'Add variable controls for customization',
-        nextStepNeeded: false,
+        nextStepNeeded: true,
       });
 
       const step8Response = JSON.parse(step8Result.content[0].text);

@@ -86,6 +86,7 @@ describe('Technique Implementations', () => {
     it('should execute all six hats in sequence', async () => {
       const planId = createPlan('How to improve team productivity', ['six_hats']);
 
+      // Seven hats, not six — the Purple Hat is the seventh step of the technique.
       const hats: Array<{ color: SixHatsColor; step: number; focus: string }> = [
         { color: 'blue', step: 1, focus: 'process' },
         { color: 'white', step: 2, focus: 'facts' },
@@ -93,6 +94,7 @@ describe('Technique Implementations', () => {
         { color: 'yellow', step: 4, focus: 'benefits' },
         { color: 'black', step: 5, focus: 'caution' },
         { color: 'green', step: 6, focus: 'creativity' },
+        { color: 'purple', step: 7, focus: 'path dependencies' },
       ];
 
       let sessionId: string | undefined;
@@ -102,16 +104,16 @@ describe('Technique Implementations', () => {
           technique: 'six_hats',
           problem: 'How to improve team productivity',
           currentStep: hat.step,
-          totalSteps: 6,
+          totalSteps: hats.length,
           output: `Analyzing with ${hat.color} hat: ${hat.focus}`,
           hatColor: hat.color,
-          nextStepNeeded: hat.step < 6,
+          nextStepNeeded: hat.step < hats.length,
           sessionId,
         });
 
         expect(result.technique).toBe('six_hats');
         expect(result.currentStep).toBe(hat.step);
-        expect(result.totalSteps).toBe(6);
+        expect(result.totalSteps).toBe(hats.length);
 
         // Store sessionId for next steps
         if (!sessionId) {
@@ -123,7 +125,10 @@ describe('Technique Implementations', () => {
     it('should handle purple hat (ergodicity perspective)', async () => {
       const planId = createPlan('Complex strategic decision', ['six_hats']);
 
-      // Execute first few steps to create session
+      // Run every hat before the purple one: the session claims completion at
+      // the end, and a session that skipped steps 2-6 has none to claim.
+      const leadingHats: SixHatsColor[] = ['blue', 'white', 'red', 'yellow', 'black', 'green'];
+
       const step1 = await executeStep(planId, {
         technique: 'six_hats',
         problem: 'Complex strategic decision',
@@ -133,6 +138,19 @@ describe('Technique Implementations', () => {
         hatColor: 'blue',
         nextStepNeeded: true,
       });
+
+      for (let i = 1; i < leadingHats.length; i++) {
+        await executeStep(planId, {
+          sessionId: step1.sessionId,
+          technique: 'six_hats',
+          problem: 'Complex strategic decision',
+          currentStep: i + 1,
+          totalSteps: 7,
+          output: `Analyzing with the ${leadingHats[i]} hat`,
+          hatColor: leadingHats[i],
+          nextStepNeeded: true,
+        });
+      }
 
       // Execute purple hat step
       const purpleResult = await executeStep(planId, {
@@ -528,24 +546,64 @@ describe('Technique Implementations', () => {
 
   describe('Cross-Technique Features', () => {
     it('should track flexibility across techniques', async () => {
-      const planId = createPlan('Complex problem solving', ['po', 'scamper']);
+      const problem = 'Complex problem solving';
+      const planId = createPlan(problem, ['po', 'scamper']);
 
-      // Execute PO technique
-      const poResult = await executeStep(planId, {
+      // The plan holds both techniques, so both have to run before the session
+      // can claim completion: po(4) + scamper(8) = 12 cumulative steps.
+      const scamperActions = [
+        'substitute',
+        'combine',
+        'adapt',
+        'modify',
+        'put_to_other_use',
+        'eliminate',
+        'reverse',
+        'parameterize',
+      ] as const;
+      const totalSteps = 4 + scamperActions.length;
+
+      const step1 = await executeStep(planId, {
         technique: 'po',
-        problem: 'Complex problem solving',
-        currentStep: 4,
-        totalSteps: 4,
-        output: 'Final practical solution',
-        synthesis: 'Problems can be reframed to become opportunities',
-        nextStepNeeded: false, // Complete PO at final step
+        problem,
+        currentStep: 1,
+        totalSteps,
+        output: 'Provocation: problems are opportunities',
+        provocation: 'PO: Problems should never be solved',
+        nextStepNeeded: true,
       });
+      const sessionId = step1.sessionId;
 
-      expect(poResult.completed).toBe(true);
-      expect(poResult.insights).toBeDefined();
+      for (let step = 2; step <= 4; step++) {
+        await executeStep(planId, {
+          sessionId,
+          technique: 'po',
+          problem,
+          currentStep: step,
+          totalSteps,
+          output: `PO step ${step} on complex problem solving`,
+          synthesis: 'Problems can be reframed to become opportunities',
+          nextStepNeeded: true,
+        });
+      }
 
-      // Note: In the actual system, switching techniques mid-session
-      // would require proper workflow management
+      let result = step1;
+      for (let i = 0; i < scamperActions.length; i++) {
+        const currentStep = 4 + i + 1;
+        result = await executeStep(planId, {
+          sessionId,
+          technique: 'scamper',
+          problem,
+          currentStep,
+          totalSteps,
+          output: `SCAMPER ${scamperActions[i]} on complex problem solving`,
+          scamperAction: scamperActions[i],
+          nextStepNeeded: currentStep < totalSteps,
+        });
+      }
+
+      expect(result.completed).toBe(true);
+      expect(result.insights).toBeDefined();
     });
 
     it('should maintain session state across steps', async () => {

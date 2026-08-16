@@ -459,12 +459,14 @@ describe('Temporal Work Design', () => {
           kairosOpportunities: ['Flow state windows'],
         },
         circadianAlignment: ['DMN morning windows', 'ECN afternoon focus'],
-        nextStepNeeded: false,
+        nextStepNeeded: true,
       });
 
-      expect(temporalStep.completed).toBe(true);
+      expect(temporalStep.technique).toBe('temporal_work');
 
       // Then optimize neural state within that structure
+      // The session stays open: this test is about the two techniques sharing a
+      // session, not about completing either one.
       const neuralStep = await executeStep(planId, {
         sessionId: temporalStep.sessionId,
         technique: 'neural_state',
@@ -474,7 +476,7 @@ describe('Temporal Work Design', () => {
         output: 'Neural state aligned with temporal design',
         dominantNetwork: 'dmn',
         switchingRhythm: ['Aligned with circadian peaks'],
-        nextStepNeeded: false,
+        nextStepNeeded: true,
       });
 
       expect(neuralStep.sessionId).toBe(temporalStep.sessionId);

@@ -363,10 +363,21 @@ export class ResponseProtocolSystem {
     const flexibility = pathMemory.currentFlexibility.flexibilityScore;
     const protocols = this.getAvailableProtocols();
 
-    // Filter by flexibility requirement
+    // Filter by flexibility requirement — but never to nothing. The floors run
+    // 0.1 to 0.5, so a session below 0.1 filtered every protocol out and this
+    // returned null: the response said `recommendedAction: 'escape'` with no
+    // escape attached, from step 18 of a 20-step committing chain onward, and
+    // the caller deepest in trouble was the one offered no way out. Below every
+    // floor, the lightest protocol is the honest offer — it is the one whose
+    // requirement is nearest, and recommending it beats recommending nothing.
     const viableProtocols = protocols.filter(p => p.requiredFlexibility <= flexibility);
 
-    if (viableProtocols.length === 0) return null;
+    if (viableProtocols.length === 0) {
+      const lightest = protocols.reduce((best, current) =>
+        current.requiredFlexibility < best.requiredFlexibility ? current : best
+      );
+      return lightest ?? null;
+    }
 
     // Select based on warning severity
     switch (warning.severity) {

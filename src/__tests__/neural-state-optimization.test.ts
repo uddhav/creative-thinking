@@ -427,12 +427,14 @@ describe('Neural State Optimization', () => {
         output: 'Optimized cognitive state for multi-perspective thinking',
         dominantNetwork: 'dmn',
         integrationInsights: ['Ready for systematic analysis with creative openness'],
-        nextStepNeeded: false,
+        nextStepNeeded: true,
       });
 
-      expect(neuralStep.completed).toBe(true);
+      expect(neuralStep.technique).toBe('neural_state');
 
       // Then apply Six Hats with optimized cognition
+      // The session stays open: this test is about the two techniques sharing a
+      // session, not about completing either one.
       const sixHatsStep = await executeStep(planId, {
         sessionId: neuralStep.sessionId,
         technique: 'six_hats',
@@ -441,7 +443,7 @@ describe('Neural State Optimization', () => {
         totalSteps: 1,
         output: 'Applied Blue Hat with enhanced cognitive flexibility',
         hatColor: 'blue',
-        nextStepNeeded: false,
+        nextStepNeeded: true,
       });
 
       expect(sixHatsStep.sessionId).toBe(neuralStep.sessionId);

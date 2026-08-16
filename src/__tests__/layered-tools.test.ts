@@ -286,11 +286,45 @@ describe('Layered Tools Architecture', () => {
 
     it('should complete a session when nextStepNeeded is false', async () => {
       const planId = createTestPlan('How to improve office productivity', ['random_entry']);
+      const problem = 'How to improve office productivity';
+
+      // A session only completes if every planned step actually ran, so run all
+      // three of random_entry's steps in the same session before ending it.
+      const step1 = (await server.executeThinkingStep({
+        planId,
+        technique: 'random_entry' as const,
+        problem,
+        currentStep: 1,
+        totalSteps: 3,
+        output: 'Random stimulus selected: Clock',
+        randomStimulus: 'Clock',
+        nextStepNeeded: true,
+      })) as ServerResponse;
+
+      expect(step1.isError).toBeFalsy();
+      const sessionId = (JSON.parse(step1.content[0]?.text || '{}') as { sessionId: string })
+        .sessionId;
+
+      const step2 = (await server.executeThinkingStep({
+        planId,
+        sessionId,
+        technique: 'random_entry' as const,
+        problem,
+        currentStep: 2,
+        totalSteps: 3,
+        output: 'Connections drawn from the clock to office productivity',
+        randomStimulus: 'Clock',
+        connections: ['Time management', 'Scheduling', 'Deadlines'],
+        nextStepNeeded: true,
+      })) as ServerResponse;
+
+      expect(step2.isError).toBeFalsy();
 
       const result = (await server.executeThinkingStep({
         planId,
+        sessionId,
         technique: 'random_entry' as const,
-        problem: 'How to improve office productivity',
+        problem,
         currentStep: 3,
         totalSteps: 3,
         output: 'Final solution combining all insights',

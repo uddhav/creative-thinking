@@ -149,4 +149,70 @@ describe('a two-persona debate arrives at the caller', () => {
     expect(data.debateOutline).toBeUndefined();
     expect(data.parallelPlans).toBeUndefined();
   });
+
+  it('refuses an unknown persona instead of silently dropping it', async () => {
+    // `personas: ['rich_hickey', 'nobody_at_all']` used to return a
+    // single-voice plan with no debate keys and nothing naming the dropped
+    // persona — a caller asking for a debate got a monologue with no way to
+    // know why. A steelman attack found it; the resolver now refuses.
+    let refusal = '';
+    try {
+      const result = await client.callTool('plan_thinking_session', {
+        problem: PROBLEM,
+        techniques: ['six_hats'],
+        timeframe: 'quick',
+        personas: ['rich_hickey', 'nobody_at_all'],
+        debateFormat: 'structured',
+      });
+      refusal = textOf(result);
+    } catch (error) {
+      refusal = error instanceof Error ? error.message : String(error);
+    }
+
+    expect(refusal, 'the unresolvable persona was not named').toContain('nobody_at_all');
+    expect(refusal).toContain('Unknown persona');
+  });
+
+  it('collapses duplicate personas rather than staging a debate of one voice with itself', async () => {
+    // Two copies of one persona produced two byte-identical "voices" and a
+    // synthesis of their agreement. Duplicates now collapse: one persona means
+    // single-voice mode, visibly.
+    const data = JSON.parse(
+      textOf(
+        await client.callTool('plan_thinking_session', {
+          problem: PROBLEM,
+          techniques: ['six_hats'],
+          timeframe: 'quick',
+          personas: ['rich_hickey', 'rich_hickey'],
+          debateFormat: 'structured',
+        })
+      )
+    ) as DebateResponse;
+
+    expect(data.personaContext?.activePersonas?.map(p => p.id)).toEqual(['rich_hickey']);
+    expect(data.personaContext?.isDebateMode).toBe(false);
+    expect(data.parallelPlans).toBeUndefined();
+  });
+
+  it('keeps a real debate when a duplicate rides along with a distinct pair', async () => {
+    const data = JSON.parse(
+      textOf(
+        await client.callTool('plan_thinking_session', {
+          problem: PROBLEM,
+          techniques: ['six_hats'],
+          timeframe: 'quick',
+          personas: ['rich_hickey', 'rich_hickey', 'nassim_taleb'],
+          debateFormat: 'structured',
+        })
+      )
+    ) as DebateResponse;
+
+    // The control for the collapse: deduplication must not cost a genuine
+    // second voice.
+    expect(data.personaContext?.activePersonas?.map(p => p.id)).toEqual([
+      'rich_hickey',
+      'nassim_taleb',
+    ]);
+    expect(data.parallelPlans).toHaveLength(3);
+  });
 });

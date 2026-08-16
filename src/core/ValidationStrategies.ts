@@ -621,12 +621,20 @@ export class ExecutionValidator extends BaseValidator {
           );
         }
         if (data.metaSynthesis !== undefined) {
-          this.validateArray<string>(
-            data.metaSynthesis,
-            'metaSynthesis',
-            errors,
-            item => typeof item === 'string'
-          );
+          // The schema declares this a string, the handler's own refusal names
+          // it a string, and this validator demanded an array — three sources
+          // against one, and this one runs first, so a caller obeying the
+          // published contract could not execute the technique at all. A
+          // string is the contract; an array of strings stays accepted because
+          // it was the only shape that worked until now, so it is what any
+          // existing caller sends.
+          const value = data.metaSynthesis;
+          const isString = typeof value === 'string';
+          const isStringArray =
+            Array.isArray(value) && value.every(item => typeof item === 'string');
+          if (!isString && !isStringArray) {
+            errors.push('metaSynthesis must be a string (or an array of strings)');
+          }
         }
         break;
     }

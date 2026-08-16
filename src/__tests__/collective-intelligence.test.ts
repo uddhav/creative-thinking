@@ -498,12 +498,14 @@ describe('Collective Intelligence Orchestration', () => {
           'Industry innovators',
         ],
         emergentPatterns: ['Urgency + Hope', 'Local + Global action'],
-        nextStepNeeded: false,
+        nextStepNeeded: true,
       });
 
-      expect(collectiveStep.completed).toBe(true);
+      expect(collectiveStep.technique).toBe('collective_intel');
 
       // Then apply cross-cultural perspective
+      // The session stays open: this test is about the two techniques sharing a
+      // session, not about completing either one.
       const culturalStep = await executeStep(planId, {
         sessionId: collectiveStep.sessionId,
         technique: 'cultural_integration',
@@ -516,7 +518,7 @@ describe('Collective Intelligence Orchestration', () => {
           'Indigenous harmony with nature',
           'Eastern circular thinking',
         ],
-        nextStepNeeded: false,
+        nextStepNeeded: true,
       });
 
       expect(culturalStep.sessionId).toBe(collectiveStep.sessionId);
