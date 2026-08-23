@@ -261,9 +261,17 @@ export class RiskAssessmentOrchestrator {
 
     const needsDiscovery =
       requiresRuinCheck(input.technique, allWords) ||
-      ['invest', 'all', 'commit', 'permanent'].some(word =>
-        outputWords.some(token => matchesRuinKeyword(token, word))
-      );
+      [
+        'invest',
+        'invested',
+        'investing',
+        'all',
+        'commit',
+        'committed',
+        'committing',
+        'permanent',
+        'permanently',
+      ].some(word => outputWords.some(token => matchesRuinKeyword(token, word)));
 
     if (!needsDiscovery) {
       return null;

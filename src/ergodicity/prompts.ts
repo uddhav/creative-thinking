@@ -123,13 +123,26 @@ export function matchesRuinKeyword(token: string, keyword: string): boolean {
 export function requiresRuinCheck(technique: LateralTechnique, keywords: string[]): boolean {
   const ruinKeywords = [
     'invest',
+    // Inflected forms listed explicitly (the token matcher adds only simple
+    // plurals, and stem suffixing cannot reach doubled forms like
+    // "committed"): committal prose is usually past tense.
+    'invested',
+    'investing',
     'spend',
+    'spent',
     'commit',
+    'committed',
+    'committing',
     'eliminate',
+    'eliminated',
     'remove',
+    'removed',
     'delete',
+    'deleted',
     'permanent',
+    'permanently',
     'irreversible',
+    'irreversibly',
     'all-in',
     'bet',
     'risk',

@@ -349,8 +349,9 @@ ergodicity flags, escape recommendations).
 
 **Minimal verbosity** (`--verbosity minimal`, or `RESPONSE_VERBOSITY=minimal` as the process
 default): keeps the step acknowledgment (`sessionId`, `technique`, `currentStep`, `totalSteps`,
-`nextStepNeeded`, `historyLength`, `techniqueProgress`), the steering (`nextStepGuidance`,
-`sequentialThinkingSuggestion`), and every warning/verdict field (`ergodicityMetrics`,
+`nextStepNeeded`, `historyLength`, `techniqueProgress`, `persona` when one is active), the steering
+(`nextStepGuidance`, `sequentialThinkingSuggestion`, `completionMetadata.completionWarnings` when
+any exist), and every warning/verdict field (`ergodicityMetrics`,
 `flexibilityScore`/`flexibilityMessage`, `earlyWarningState`, `escapeRecommendation`,
 `reflexivityWarning`, `reflectionRequired`, `optionGeneration`, `ergodicityCheck`,
 `alternativeSuggestions`, `realityAssessment`, the `ruinAssessment` verdict, and the

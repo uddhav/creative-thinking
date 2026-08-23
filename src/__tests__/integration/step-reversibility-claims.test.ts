@@ -101,6 +101,18 @@ describe('stepReversibility claims', { retry: 0 }, () => {
     expect(finalFlexibility(blankRationale)).toBeCloseTo(finalFlexibility(unclaimed), 10);
   });
 
+  it('a caller cannot plant the audit trail without making a claim', async () => {
+    // appliedReversibility is server-computed; a fabricated copy sent without
+    // stepReversibility must be cleared, not echoed.
+    const responses = await runScamper({
+      3: {
+        appliedReversibility: { prior: 'low', claimed: 'high', applied: 'high', clamped: false },
+      },
+    });
+
+    expect(responses[2].executionMetadata?.appliedReversibility).toBeUndefined();
+  });
+
   it('a downward claim is recorded as a content constraint and fires the warning', async () => {
     // Modify's prior is 'high'; claiming 'low' declares MORE commitment than
     // the server assumed — real caller information, the first

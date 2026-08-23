@@ -25,9 +25,12 @@ const foreclosing = (text: string): ReflexiveEffects => ({
   reversibility: 'low',
 });
 
+// Distinct text per call: reality-state arrays deduplicate by value, so a
+// repeated identical declaration is one constraint, not N.
+let stakeholderSeq = 0;
 const stakeholder = (): ReflexiveEffects => ({
   triggers: ['test'],
-  realityChanges: ['Stakeholder expectations set'],
+  realityChanges: [`Stakeholder expectations set for phase ${++stakeholderSeq}`],
   futureConstraints: [],
   reversibility: 'medium',
 });
@@ -56,6 +59,35 @@ describe('edge-triggered reflexivity warnings', { retry: 0 }, () => {
     // The constraints were still recorded — they are facilitation, not alarm.
     expect(tracker.getRealityState(sessionId)?.templateConstraintCount).toBe(15);
     expect(tracker.getRealityState(sessionId)?.contentConstraintCount).toBe(0);
+  });
+
+  it('a re-declared identical commitment counts once and warns once', () => {
+    const first = tracker.trackStep(
+      sessionId,
+      'scamper',
+      4,
+      'action',
+      's4',
+      undefined,
+      'template',
+      ['Caller-declared: lease signed']
+    );
+    expect(first.warning?.type).toBe('path_foreclosed');
+
+    // A revision or a re-sent step after a gatekeeper veto re-declares the
+    // same fact; it must not re-count or re-warn.
+    const again = tracker.trackStep(
+      sessionId,
+      'scamper',
+      4,
+      'action',
+      's4',
+      undefined,
+      'template',
+      ['Caller-declared: lease signed']
+    );
+    expect(again.warning, 're-declaration must not re-warn').toBeNull();
+    expect(tracker.getRealityState(sessionId)?.contentConstraintCount).toBe(1);
   });
 
   it('fires on a new content-derived foreclosure, carrying only the new entries', () => {

@@ -36,7 +36,11 @@ export class AdaptiveRiskAssessment {
     let pattern = AdaptiveRiskAssessment.indicatorPatterns.get(indicator);
     if (!pattern) {
       const escaped = indicator.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      pattern = new RegExp(`\\b${escaped}(?:e?s)?\\b`, 'i');
+      // Lookarounds, not \b: a \b after a non-word final character (e.g. an
+      // indicator ending in '%') can never hold, silently disabling the
+      // indicator. Lookarounds assert "not glued to a word character" on
+      // either side regardless of what the indicator's edges are.
+      pattern = new RegExp(`(?<!\\w)${escaped}(?:e?s)?(?!\\w)`, 'i');
       AdaptiveRiskAssessment.indicatorPatterns.set(indicator, pattern);
     }
     return pattern.test(text);
@@ -286,7 +290,11 @@ Remember: ${this.getContextualReminder(context)}`;
       'bankruptcy',
       'fatal',
       'destroy',
+      'destroyed',
+      'destroying',
       'ruin',
+      'ruined',
+      'ruining',
     ];
     return this.containsAny(text, indicators);
   }
@@ -379,7 +387,7 @@ Remember: ${this.getContextualReminder(context)}`;
     if (this.matchesIndicator(text, 'years')) return 'years';
     if (this.matchesIndicator(text, 'months')) return 'months';
     if (this.matchesIndicator(text, 'weeks')) return 'weeks';
-    if (this.containsAny(text, ['bankrupt', 'bankruptcy', 'ruin'])) {
+    if (this.containsAny(text, ['bankrupt', 'bankruptcy', 'ruin', 'ruined'])) {
       return 'may not be able to recover';
     }
     return 'unknown timeframe';

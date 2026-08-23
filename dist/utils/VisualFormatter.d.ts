@@ -94,7 +94,7 @@ export declare class VisualFormatter {
      * Format reflexivity warning for display
      */
     formatReflexivityWarning(warning: {
-        level: 'info' | 'caution' | 'warning' | 'critical';
+        level: 'warning' | 'critical';
         message: string;
         currentConstraints: number;
         pathsForeclosed: string[];

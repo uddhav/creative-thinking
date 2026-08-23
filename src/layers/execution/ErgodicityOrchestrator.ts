@@ -48,10 +48,16 @@ export const REVERSIBILITY_COSTS: Record<ReversibilityLevel, number> = {
 /** Most-reversible first; adjacent entries are "one rung" apart. */
 const REVERSIBILITY_LADDER: ReversibilityLevel[] = ['high', 'medium', 'low', 'very_low'];
 
+/** The rungs a caller may claim ('very_low' is handler-declarable only). */
+const CLAIMABLE_LEVELS = new Set<string>(['high', 'medium', 'low']);
+
 /**
  * A caller claim moves the applied rung at most one step from the server's
  * prior — a bounded nudge, never an overwrite. Priors are handler-static, so
- * clamped claims cannot compound across steps.
+ * clamped claims cannot compound across steps. A claim value outside the
+ * ladder returns the prior unchanged: schema enums are not enforced at
+ * runtime by every transport, and an unrecognized string (indexOf −1) would
+ * otherwise read as claiming maximal reversibility.
  */
 export function clampReversibilityClaim(
   prior: ReversibilityLevel,
@@ -59,6 +65,9 @@ export function clampReversibilityClaim(
 ): ReversibilityLevel {
   const priorIndex = REVERSIBILITY_LADDER.indexOf(prior);
   const claimedIndex = REVERSIBILITY_LADDER.indexOf(claimed);
+  if (priorIndex === -1 || claimedIndex === -1) {
+    return prior;
+  }
   const applied = Math.max(priorIndex - 1, Math.min(priorIndex + 1, claimedIndex));
   return REVERSIBILITY_LADDER[applied];
 }
@@ -307,8 +316,14 @@ export class ErgodicityOrchestrator {
     // upward-claimed eliminate still costs ~0.16 against 0.30, a chain of
     // claims still decays monotonically, and the 0.4 gates stay reachable.
     const claim = input.stepReversibility;
+    // Server-computed field: cleared unconditionally so a caller cannot plant
+    // a fabricated audit trail by sending it without a claim.
+    delete input.appliedReversibility;
     let applied: ReversibilityLevel = declared;
-    if (claim && claim.rationale?.trim()) {
+    // The claimable-level check is runtime validation, not type ceremony: the
+    // schema enum is not enforced on every transport, and a typo like 'Low'
+    // must be inert, not a silent maximal-reversibility refund.
+    if (claim && claim.rationale?.trim() && CLAIMABLE_LEVELS.has(claim.level)) {
       applied = clampReversibilityClaim(declared, claim.level);
       input.appliedReversibility = {
         prior: declared,

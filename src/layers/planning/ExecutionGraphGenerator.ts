@@ -57,6 +57,7 @@ export class ExecutionGraphGenerator {
         offset += workflow.steps.length;
         if (techniqueFinal && techniqueFinal !== lastNode && !existing.has(techniqueFinal.id)) {
           lastNode.dependencies.push({ nodeId: techniqueFinal.id, type: 'soft' });
+          existing.add(techniqueFinal.id);
         }
       }
     }

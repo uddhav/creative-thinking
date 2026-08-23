@@ -45,9 +45,11 @@ export interface MemoryStats {
  */
 export type ReflexivityWarningType = 'constraint_threshold' | 'path_foreclosed' | 'low_reversibility';
 /**
- * Warning levels for severity
+ * Warning levels for severity. Two, not four: the tracker emits 'warning'
+ * and the execution layer escalates to 'critical' on a stop-worthy verdict.
+ * 'info' and 'caution' were advertised for years and never produced.
  */
-export type ReflexivityWarningLevel = 'info' | 'caution' | 'warning' | 'critical';
+export type ReflexivityWarningLevel = 'warning' | 'critical';
 /**
  * Reflexivity warning for real-time feedback
  */

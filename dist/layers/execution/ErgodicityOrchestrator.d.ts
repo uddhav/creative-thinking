@@ -26,7 +26,10 @@ export declare const REVERSIBILITY_COSTS: Record<ReversibilityLevel, number>;
 /**
  * A caller claim moves the applied rung at most one step from the server's
  * prior — a bounded nudge, never an overwrite. Priors are handler-static, so
- * clamped claims cannot compound across steps.
+ * clamped claims cannot compound across steps. A claim value outside the
+ * ladder returns the prior unchanged: schema enums are not enforced at
+ * runtime by every transport, and an unrecognized string (indexOf −1) would
+ * otherwise read as claiming maximal reversibility.
  */
 export declare function clampReversibilityClaim(prior: ReversibilityLevel, claimed: ReversibilityLevel): ReversibilityLevel;
 export declare class ErgodicityOrchestrator {

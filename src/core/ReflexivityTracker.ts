@@ -120,9 +120,11 @@ export type ReflexivityWarningType =
   | 'low_reversibility';
 
 /**
- * Warning levels for severity
+ * Warning levels for severity. Two, not four: the tracker emits 'warning'
+ * and the execution layer escalates to 'critical' on a stop-worthy verdict.
+ * 'info' and 'caution' were advertised for years and never produced.
  */
-export type ReflexivityWarningLevel = 'info' | 'caution' | 'warning' | 'critical';
+export type ReflexivityWarningLevel = 'warning' | 'critical';
 
 /**
  * Reflexivity warning for real-time feedback
@@ -387,8 +389,9 @@ export class ReflexivityTracker {
     if (stepType === 'action' && (reflexiveEffects || declaredConstraints.length > 0)) {
       const realityState = this.getOrInitRealityState(sessionId);
       // realityState is a live reference that updateRealityState mutates in
-      // place — the pre-step count must be captured before that call.
+      // place — the pre-step readings must be captured before those calls.
       const previousContentCount = realityState.contentConstraintCount || 0;
+      const alreadyForeclosed = new Set(realityState.pathsForeclosed);
 
       const changes = reflexiveEffects
         ? this.assessReflexiveImpact(reflexiveEffects, realityState)
@@ -403,10 +406,13 @@ export class ReflexivityTracker {
         this.updateRealityState(sessionId, { pathsForeclosed: declaredConstraints }, 'content');
       }
 
+      // Only genuinely new entries fire the composition warning: the state
+      // arrays deduplicate, so a re-declared commitment (revision, or a step
+      // re-sent after a gatekeeper veto) neither counts again nor re-warns.
       const newlyForeclosed = [
         ...(provenance === 'content' ? (changes.pathsForeclosed ?? []) : []),
         ...declaredConstraints,
-      ];
+      ].filter(entry => !alreadyForeclosed.has(entry));
       warning = this.computeEdgeWarning(
         previousContentCount,
         realityState.contentConstraintCount || 0,
@@ -563,13 +569,18 @@ export class ReflexivityTracker {
         if (!state[key]) {
           state[key] = [];
         }
-        // Add new values - state[key] is definitely an array after initialization
         const stateArray = state[key];
-        stateArray.push(...value);
+        // Deduplicate against what the state already holds: the same
+        // declaration re-arriving (a revision, or a re-sent step after a
+        // gatekeeper veto) is one fact about the world, not N constraints —
+        // counting it N times rebuilt the manufactured-warning storm one
+        // layer down.
+        const newValues = value.filter(item => !stateArray.includes(item));
+        stateArray.push(...newValues);
 
         // Update constraint count for relevant arrays
         if (constraintArrays.includes(key)) {
-          deltaConstraints += value.length;
+          deltaConstraints += newValues.length;
         }
       }
     });

@@ -246,8 +246,8 @@ const nextResult = await executeThinkingStep({
 - **Error Context Builder**: Centralized error handling with actionable guidance and examples
 - **Orchestrator Pattern**: Complex workflow management (Ergodicity, Risk Assessment, Response
   Building)
-- **Option Generation Engine**: 12 strategies (8 core + 4 enhanced) with automatic activation at
-  flexibility < 0.4
+- **Option Generation Engine**: 12 strategies (8 core + 4 enhanced), activated once when flexibility
+  drops below 0.4
 - **Early Warning System**: Multi-sensor architecture with 4 warning levels (🟢 SAFE → 🔴 CRITICAL)
 - **Export System**: Multi-format support (JSON, CSV, Markdown) with full session fidelity
 - **Validation Strategy**: Comprehensive input validation using strategy pattern
@@ -1213,6 +1213,8 @@ The server supports environment variables for advanced features:
 - `PERSISTENCE_ADAPTER=filesystem|postgres` - Choose storage backend (default: filesystem)
 - `PERSISTENCE_PATH=/path/to/sessions` - Custom session storage location (filesystem only)
 - `DATABASE_URL=postgres://...` - PostgreSQL connection string (postgres adapter only)
+- `RESPONSE_VERBOSITY=minimal|full` - Default execute-response verbosity when a call omits
+  `verbosity` (default: full; `minimal` is the declared future default)
 
 ### MCP Sampling Configuration
 
@@ -1587,7 +1589,7 @@ Provides consistent, actionable error messages with:
 
 #### 2. Option Generation Engine
 
-12 strategies that activate automatically when flexibility < 0.4:
+12 strategies that activate automatically when flexibility drops below 0.4:
 
 - **Core**: Decomposition, Temporal, Abstraction, Inversion, Stakeholder, Resource, Capability,
   Recombination
