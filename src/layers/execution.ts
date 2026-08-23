@@ -30,7 +30,7 @@ import { ErrorFactory } from '../errors/enhanced-errors.js';
 // Import new orchestrators
 import { ExecutionValidator } from './execution/ExecutionValidator.js';
 import { RiskAssessmentOrchestrator } from './execution/RiskAssessmentOrchestrator.js';
-import { ErgodicityOrchestrator } from './execution/ErgodicityOrchestrator.js';
+import { ErgodicityOrchestrator, REVERSIBILITY_COSTS } from './execution/ErgodicityOrchestrator.js';
 import { ExecutionResponseBuilder } from './execution/ExecutionResponseBuilder.js';
 import { EscalationPromptGenerator } from '../ergodicity/escalationPrompts.js';
 
@@ -336,6 +336,21 @@ export async function executeThinkingStep(
         if ('type' in stepDetails) {
           const reflexiveEffects =
             'reflexiveEffects' in stepDetails ? stepDetails.reflexiveEffects : undefined;
+
+          // A DOWNWARD reversibility claim (more committing than the server's
+          // prior) is real, caller-declared information about the world — the
+          // first content-provenance constraint producer. An upward claim
+          // reduces constraint and records nothing.
+          const audit = input.appliedReversibility;
+          const callerConstraints =
+            audit &&
+            input.stepReversibility &&
+            REVERSIBILITY_COSTS[audit.claimed] > REVERSIBILITY_COSTS[audit.prior]
+              ? [
+                  `Caller-declared (${input.technique} step ${techniqueLocalStep}): ${input.stepReversibility.rationale}`,
+                ]
+              : undefined;
+
           // Handler-declared effects are server-authored templates.
           reflexivityWarning = sessionManager.trackReflexivity(
             sessionId,
@@ -343,7 +358,8 @@ export async function executeThinkingStep(
             techniqueLocalStep,
             stepDetails.type,
             reflexiveEffects,
-            'template'
+            'template',
+            callerConstraints
           );
         }
       } catch {

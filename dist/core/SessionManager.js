@@ -402,11 +402,11 @@ export class SessionManager {
      * once — to stderr and into the response — instead of two call sites
      * recomputing it at different points in the step.
      */
-    trackReflexivity(sessionId, technique, stepNumber, stepType, reflexiveEffects, provenance = 'template') {
+    trackReflexivity(sessionId, technique, stepNumber, stepType, reflexiveEffects, provenance = 'template', callerConstraints) {
         if (stepType) {
             // Use technique and step as action description
             const actionDescription = `${technique} step ${stepNumber}`;
-            const { warning } = this.reflexivityTracker.trackStep(sessionId, technique, stepNumber, stepType, actionDescription, reflexiveEffects, provenance);
+            const { warning } = this.reflexivityTracker.trackStep(sessionId, technique, stepNumber, stepType, actionDescription, reflexiveEffects, provenance, callerConstraints);
             return warning;
         }
         return null;

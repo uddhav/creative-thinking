@@ -148,6 +148,16 @@ export interface ExecuteThinkingStepInput {
     mitigations?: string[];
     antifragileProperties?: string[];
     blackSwans?: string[];
+    stepReversibility?: {
+        level: 'high' | 'medium' | 'low';
+        rationale: string;
+    };
+    appliedReversibility?: {
+        prior: 'high' | 'medium' | 'low' | 'very_low';
+        claimed: 'high' | 'medium' | 'low';
+        applied: 'high' | 'medium' | 'low' | 'very_low';
+        clamped: boolean;
+    };
     isRevision?: boolean;
     revisesStep?: number;
     branchFromStep?: number;
@@ -354,6 +364,16 @@ export interface ThinkingOperationData {
     mitigations?: string[];
     antifragileProperties?: string[];
     blackSwans?: string[];
+    stepReversibility?: {
+        level: 'high' | 'medium' | 'low';
+        rationale: string;
+    };
+    appliedReversibility?: {
+        prior: 'high' | 'medium' | 'low' | 'very_low';
+        claimed: 'high' | 'medium' | 'low';
+        applied: 'high' | 'medium' | 'low' | 'very_low';
+        clamped: boolean;
+    };
     isRevision?: boolean;
     revisesStep?: number;
     branchFromStep?: number;

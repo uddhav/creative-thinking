@@ -155,12 +155,12 @@ describe('PDA-SCAMPER Enhancement', () => {
       expect(step1.pathImpact?.reversible).toBe(true);
       expect(step1.pathImpact?.optionsClosed).toContain('Using original component');
       expect(step1.pathImpact?.optionsOpened).toContain('New material properties to exploit');
-      // What this step retained is SCAMPER's own reading, and it lives on
-      // pathImpact. `flexibilityScore` is no longer echoed back from the
-      // input: the response carries it only as the engine's measurement, and
-      // only once it falls below 0.7 — so `> 0.7` on that key could never be
-      // satisfied again.
-      expect(step1.pathImpact?.flexibilityRetention).toBeGreaterThan(0.7);
+      // What this step retained now reads the same reversibility ladder the
+      // session charges: 1 − the applied rung's cost. Substitute's slot is
+      // declared 'medium' (cost 0.5), so retention reads 0.5 — the verb
+      // table's 0.75 and its history-degradation factors were retired as
+      // fake precision (deliberate recalibration, not a regression).
+      expect(step1.pathImpact?.flexibilityRetention).toBeCloseTo(0.5, 10);
       // `flexibilityScore` on the response is the engine's measurement now,
       // never an echo of the input — nothing was sent for it here. It appears
       // only once flexibility falls below the reporting threshold, which is

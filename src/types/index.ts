@@ -263,6 +263,23 @@ export interface ExecuteThinkingStepInput {
   antifragileProperties?: string[];
   blackSwans?: string[];
 
+  // Bounded caller reversibility claim: moves the step's applied
+  // reversibility at most one rung from the handler-static prior, and only
+  // with a rationale. The audit of what was applied comes back as
+  // executionMetadata.appliedReversibility.
+  stepReversibility?: {
+    level: 'high' | 'medium' | 'low';
+    rationale: string;
+  };
+  // Server-computed audit of a stepReversibility claim (set by the execution
+  // layer; anything the caller sends here is overwritten or ignored).
+  appliedReversibility?: {
+    prior: 'high' | 'medium' | 'low' | 'very_low';
+    claimed: 'high' | 'medium' | 'low';
+    applied: 'high' | 'medium' | 'low' | 'very_low';
+    clamped: boolean;
+  };
+
   // Revision and branching
   isRevision?: boolean;
   revisesStep?: number;
@@ -516,6 +533,23 @@ export interface ThinkingOperationData {
   mitigations?: string[];
   antifragileProperties?: string[];
   blackSwans?: string[];
+
+  // Bounded caller reversibility claim: moves the step's applied
+  // reversibility at most one rung from the handler-static prior, and only
+  // with a rationale. The audit of what was applied comes back as
+  // executionMetadata.appliedReversibility.
+  stepReversibility?: {
+    level: 'high' | 'medium' | 'low';
+    rationale: string;
+  };
+  // Server-computed audit of a stepReversibility claim (set by the execution
+  // layer; anything the caller sends here is overwritten or ignored).
+  appliedReversibility?: {
+    prior: 'high' | 'medium' | 'low' | 'very_low';
+    claimed: 'high' | 'medium' | 'low';
+    applied: 'high' | 'medium' | 'low' | 'very_low';
+    clamped: boolean;
+  };
 
   // Revision and branching
   isRevision?: boolean;

@@ -862,6 +862,22 @@ export const EXECUTE_THINKING_STEP_TOOL = {
                 items: { type: 'string' },
                 description: 'Elements removed to improve the design (via negativa).',
             },
+            stepReversibility: {
+                type: 'object',
+                description: "Bounded claim about how reversible THIS step's action really is, when the technique's static assumption misreads it. The server assumes a reversibility rung per step on the ladder high -> medium -> low -> very_low (most to least reversible); your claim moves the applied rung AT MOST ONE STEP from that assumption, and only when rationale is non-empty. Example: SCAMPER's Eliminate step is assumed 'low' (hard to undo) — for \"eliminate all non-refundable bookings\", which removes a lock-in rather than creating one, send { level: 'high', rationale: 'removes commitments; everything stays refundable' } and the applied rung becomes 'medium' (one rung up from 'low'; the claim cannot reach 'high' from there). The response echoes { prior, claimed, applied, clamped } in executionMetadata.appliedReversibility. A claim of LOWER reversibility than assumed is recorded as a declared commitment and can raise constraint warnings.",
+                properties: {
+                    level: {
+                        type: 'string',
+                        enum: ['high', 'medium', 'low'],
+                        description: 'The reversibility you are claiming for this step.',
+                    },
+                    rationale: {
+                        type: 'string',
+                        description: 'Why the claim holds, on the record. A claim without a rationale is ignored.',
+                    },
+                },
+                required: ['level', 'rationale'],
+            },
             // Revision support
             isRevision: { type: 'boolean' },
             revisesStep: { type: 'number' },

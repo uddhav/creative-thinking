@@ -5,6 +5,17 @@
 import type { LateralThinkingResponse, SessionData } from '../types/index.js';
 import type { DiscoverTechniquesOutput, PlanThinkingSessionOutput } from '../types/planning.js';
 export interface ExecutionMetadata {
+    /**
+     * Audit of a stepReversibility claim: the handler-static prior, what the
+     * caller claimed, what was applied after the one-rung clamp, and whether
+     * clamping occurred. Present only on steps that sent a valid claim.
+     */
+    appliedReversibility?: {
+        prior: 'high' | 'medium' | 'low' | 'very_low';
+        claimed: 'high' | 'medium' | 'low';
+        applied: 'high' | 'medium' | 'low' | 'very_low';
+        clamped: boolean;
+    };
     pathDependenciesCreated: string[];
     flexibilityImpact: number;
     noteworthyMoment?: string;

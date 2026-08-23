@@ -15,6 +15,20 @@ export interface ErgodicityOrchestrationResult {
     optionGenerationResult?: OptionGenerationResult;
     pathMemory?: PathMemory;
 }
+export type ReversibilityLevel = 'very_low' | 'low' | 'medium' | 'high';
+/**
+ * The one cost per declared reversibility rung. Single source for
+ * calculateImpact, the caller-claim clamp, and the execution layer's
+ * claim-direction check — the ladder reads, most to least reversible:
+ * high (0.10) → medium (0.50) → low (0.90) → very_low (0.95).
+ */
+export declare const REVERSIBILITY_COSTS: Record<ReversibilityLevel, number>;
+/**
+ * A caller claim moves the applied rung at most one step from the server's
+ * prior — a bounded nudge, never an overwrite. Priors are handler-static, so
+ * clamped claims cannot compound across steps.
+ */
+export declare function clampReversibilityClaim(prior: ReversibilityLevel, claimed: ReversibilityLevel): ReversibilityLevel;
 export declare class ErgodicityOrchestrator {
     private visualFormatter;
     private ergodicityManager;

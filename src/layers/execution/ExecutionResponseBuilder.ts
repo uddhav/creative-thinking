@@ -645,6 +645,13 @@ export class ExecutionResponseBuilder {
       flexibilityImpact: this.calculateFlexibilityImpact(input, session),
     };
 
+    // Audit trail for a reversibility claim — the caller must be able to see
+    // what the clamp did with what they sent. The rationale is not echoed:
+    // it is the caller's own input, already on the session record.
+    if (input.appliedReversibility) {
+      metadata.appliedReversibility = input.appliedReversibility;
+    }
+
     const noteworthyMoment = this.identifyNoteworthyMoment(input, session, insights);
     if (noteworthyMoment) {
       metadata.noteworthyMoment = noteworthyMoment;

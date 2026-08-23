@@ -180,7 +180,7 @@ export declare class SessionManager {
      * once — to stderr and into the response — instead of two call sites
      * recomputing it at different points in the step.
      */
-    trackReflexivity(sessionId: string, technique: string, stepNumber: number, stepType?: 'thinking' | 'action', reflexiveEffects?: ReflexiveEffects, provenance?: ConstraintProvenance): ReflexivityWarning | null;
+    trackReflexivity(sessionId: string, technique: string, stepNumber: number, stepType?: 'thinking' | 'action', reflexiveEffects?: ReflexiveEffects, provenance?: ConstraintProvenance, callerConstraints?: string[]): ReflexivityWarning | null;
     /**
      * Store recommendations for a session (for later comparison with selected techniques)
      */

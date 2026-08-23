@@ -118,7 +118,7 @@ export declare class ReflexivityTracker {
      * fired on every remaining step; two call sites also read it at different
      * points in the step and could disagree by one step.
      */
-    trackStep(sessionId: string, technique: string, step: number, stepType: StepType, actionDescription: string, reflexiveEffects?: ReflexiveEffects, provenance?: ConstraintProvenance): {
+    trackStep(sessionId: string, technique: string, step: number, stepType: StepType, actionDescription: string, reflexiveEffects?: ReflexiveEffects, provenance?: ConstraintProvenance, callerConstraints?: string[]): {
         record: ActionRecord;
         warning: ReflexivityWarning | null;
     };

@@ -197,7 +197,13 @@ export class ReflexivityTracker {
      * fired on every remaining step; two call sites also read it at different
      * points in the step and could disagree by one step.
      */
-    trackStep(sessionId, technique, step, stepType, actionDescription, reflexiveEffects, provenance = 'template') {
+    trackStep(sessionId, technique, step, stepType, actionDescription, reflexiveEffects, provenance = 'template', 
+    // Caller-declared commitments (e.g. a downward stepReversibility claim).
+    // Always content-provenance, and written into pathsForeclosed directly —
+    // deliberately bypassing the wording filter in assessReflexiveImpact,
+    // which would silently drop "we've signed the lease" for carrying none
+    // of its six stems.
+    callerConstraints) {
         // Validate inputs for security and correctness
         this.validateTrackingInput(sessionId, technique, actionDescription);
         const record = {
@@ -211,17 +217,28 @@ export class ReflexivityTracker {
             realityChanges: {},
         };
         let warning = null;
+        const declaredConstraints = callerConstraints?.filter(c => c.trim().length > 0) ?? [];
         // Only process reflexivity for action steps
-        if (stepType === 'action' && reflexiveEffects) {
+        if (stepType === 'action' && (reflexiveEffects || declaredConstraints.length > 0)) {
             const realityState = this.getOrInitRealityState(sessionId);
             // realityState is a live reference that updateRealityState mutates in
             // place — the pre-step count must be captured before that call.
             const previousContentCount = realityState.contentConstraintCount || 0;
-            const changes = this.assessReflexiveImpact(reflexiveEffects, realityState);
+            const changes = reflexiveEffects
+                ? this.assessReflexiveImpact(reflexiveEffects, realityState)
+                : {};
             record.realityChanges = changes;
             // Update reality state
-            this.updateRealityState(sessionId, changes, provenance);
-            const newlyForeclosed = provenance === 'content' ? (changes.pathsForeclosed ?? []) : [];
+            if (reflexiveEffects) {
+                this.updateRealityState(sessionId, changes, provenance);
+            }
+            if (declaredConstraints.length > 0) {
+                this.updateRealityState(sessionId, { pathsForeclosed: declaredConstraints }, 'content');
+            }
+            const newlyForeclosed = [
+                ...(provenance === 'content' ? (changes.pathsForeclosed ?? []) : []),
+                ...declaredConstraints,
+            ];
             warning = this.computeEdgeWarning(previousContentCount, realityState.contentConstraintCount || 0, newlyForeclosed);
         }
         // Store action record and update timestamp

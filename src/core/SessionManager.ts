@@ -569,7 +569,8 @@ export class SessionManager {
     stepNumber: number,
     stepType?: 'thinking' | 'action',
     reflexiveEffects?: ReflexiveEffects,
-    provenance: ConstraintProvenance = 'template'
+    provenance: ConstraintProvenance = 'template',
+    callerConstraints?: string[]
   ): ReflexivityWarning | null {
     if (stepType) {
       // Use technique and step as action description
@@ -581,7 +582,8 @@ export class SessionManager {
         stepType,
         actionDescription,
         reflexiveEffects,
-        provenance
+        provenance,
+        callerConstraints
       );
       return warning;
     }

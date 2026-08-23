@@ -8,6 +8,31 @@ import { getErgodicityPrompt, getErgodicityGuidance } from '../../ergodicity/pro
 import { OptionGenerationEngine } from '../../ergodicity/optionGeneration/engine.js';
 import { monitorCriticalSectionAsync, wrapErgodicityManager, } from '../../utils/PerformanceIntegration.js';
 import { ErgodicityResultAdapter } from './ErgodicityResultAdapter.js';
+/**
+ * The one cost per declared reversibility rung. Single source for
+ * calculateImpact, the caller-claim clamp, and the execution layer's
+ * claim-direction check — the ladder reads, most to least reversible:
+ * high (0.10) → medium (0.50) → low (0.90) → very_low (0.95).
+ */
+export const REVERSIBILITY_COSTS = {
+    high: 0.1,
+    medium: 0.5,
+    low: 0.9,
+    very_low: 0.95,
+};
+/** Most-reversible first; adjacent entries are "one rung" apart. */
+const REVERSIBILITY_LADDER = ['high', 'medium', 'low', 'very_low'];
+/**
+ * A caller claim moves the applied rung at most one step from the server's
+ * prior — a bounded nudge, never an overwrite. Priors are handler-static, so
+ * clamped claims cannot compound across steps.
+ */
+export function clampReversibilityClaim(prior, claimed) {
+    const priorIndex = REVERSIBILITY_LADDER.indexOf(prior);
+    const claimedIndex = REVERSIBILITY_LADDER.indexOf(claimed);
+    const applied = Math.max(priorIndex - 1, Math.min(priorIndex + 1, claimedIndex));
+    return REVERSIBILITY_LADDER[applied];
+}
 export class ErgodicityOrchestrator {
     visualFormatter;
     ergodicityManager;
@@ -186,8 +211,28 @@ export class ErgodicityOrchestrator {
         // longer pretends to.
         const stepInfo = handler?.getStepInfo(techniqueLocalStep);
         const declared = stepInfo?.reversibility ?? stepInfo?.reflexiveEffects?.reversibility ?? 'high';
+        // A caller may nudge the declared rung with `stepReversibility` — the
+        // semantics the static tables cannot see (eliminating a lock-in ADDS real
+        // freedom, yet every ELIMINATE is declared 'low'). The claim is bounded on
+        // every axis that made the retired caller-assertion holes dangerous: one
+        // rung at most, per step not aggregate, non-compounding (the prior is
+        // handler-static), and only with an on-record rationale, echoed back as
+        // an audit trail. An upward claim is a bounded refund, not control: an
+        // upward-claimed eliminate still costs ~0.16 against 0.30, a chain of
+        // claims still decays monotonically, and the 0.4 gates stay reachable.
+        const claim = input.stepReversibility;
+        let applied = declared;
+        if (claim && claim.rationale?.trim()) {
+            applied = clampReversibilityClaim(declared, claim.level);
+            input.appliedReversibility = {
+                prior: declared,
+                claimed: claim.level,
+                applied,
+                clamped: applied !== claim.level,
+            };
+        }
         // Undoing is hard in inverse proportion to how reversible the step is.
-        const reversibilityCost = declared === 'very_low' ? 0.95 : declared === 'low' ? 0.9 : declared === 'medium' ? 0.5 : 0.1;
+        const reversibilityCost = REVERSIBILITY_COSTS[applied];
         // A thinking step binds nothing; an action step binds in proportion to how
         // hard it is to undo.
         const commitmentLevel = stepInfo?.type === 'action' ? Math.max(0.2, reversibilityCost) : 0.2;
@@ -203,6 +248,13 @@ export class ErgodicityOrchestrator {
         // caller's. Without the action, a caller could hand SCAMPER twenty
         // invented `optionsOpened` and buy back the cost of the step.
         const serverDerived = input.technique === 'scamper' && input.scamperAction ? input.pathImpact : undefined;
+        // The echoed retention reads the same ladder the session actually
+        // charges (1 − applied cost), replacing the verb-static degradation
+        // product the handler used to compute — a history-length artifact that
+        // reported near-zero retention regardless of what the step did.
+        if (serverDerived) {
+            serverDerived.flexibilityRetention = Math.max(0, 1 - reversibilityCost);
+        }
         return {
             optionsClosed: serverDerived?.optionsClosed,
             optionsOpened: serverDerived?.optionsOpened,
