@@ -11,6 +11,7 @@ import type { TechniqueHandler } from '../../techniques/types.js';
 import type { EscalationPromptGenerator } from '../../ergodicity/escalationPrompts.js';
 import type { HybridComplexityAnalyzer } from '../../complexity/analyzer.js';
 import type { SessionManager } from '../../core/SessionManager.js';
+import type { ReflexivityWarning } from '../../core/ReflexivityTracker.js';
 export declare class ExecutionResponseBuilder {
     private complexityAnalyzer;
     private escalationGenerator;
@@ -26,7 +27,7 @@ export declare class ExecutionResponseBuilder {
     /**
      * Build comprehensive execution response
      */
-    buildResponse(input: ExecuteThinkingStepInput, session: SessionData, sessionId: string, handler: TechniqueHandler, techniqueLocalStep: number, techniqueIndex: number, plan: PlanThinkingSessionOutput | undefined, currentFlexibility: number, optionGenerationResult: OptionGenerationResult | undefined, ergodicityMetrics?: ErgodicityResult['metrics']): LateralThinkingResponse;
+    buildResponse(input: ExecuteThinkingStepInput, session: SessionData, sessionId: string, handler: TechniqueHandler, techniqueLocalStep: number, techniqueIndex: number, plan: PlanThinkingSessionOutput | undefined, currentFlexibility: number, optionGenerationResult: OptionGenerationResult | undefined, ergodicityMetrics?: ErgodicityResult['metrics'], reflexivityWarning?: ReflexivityWarning | null): LateralThinkingResponse;
     /**
      * Build core response data object with insights and metadata
      */

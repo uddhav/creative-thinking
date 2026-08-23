@@ -213,17 +213,40 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
                 techniqueLocalStep,
                 timestamp: new Date().toISOString(),
             });
-            // Track reflexivity for ANY technique that provides reflexivity data
+            // Track reflexivity for ANY technique that provides reflexivity data.
+            // The tracker returns an edge-triggered warning (bucket crossing or new
+            // content-derived foreclosure); it is emitted exactly once from here —
+            // to stderr and into the response — so both surfaces always agree.
+            let reflexivityWarning = null;
             try {
                 const stepDetails = handler.getStepInfo(techniqueLocalStep);
                 // Track if the handler provides reflexivity data (type field indicates StepInfo)
                 if ('type' in stepDetails) {
                     const reflexiveEffects = 'reflexiveEffects' in stepDetails ? stepDetails.reflexiveEffects : undefined;
-                    sessionManager.trackReflexivity(sessionId, input.technique, techniqueLocalStep, stepDetails.type, reflexiveEffects);
+                    // Handler-declared effects are server-authored templates.
+                    reflexivityWarning = sessionManager.trackReflexivity(sessionId, input.technique, techniqueLocalStep, stepDetails.type, reflexiveEffects, 'template');
                 }
             }
             catch {
                 // Handler doesn't support StepInfo interface yet - skip reflexivity tracking
+            }
+            if (reflexivityWarning) {
+                // 'critical' is reserved for steps where the server itself holds a
+                // stop-worthy verdict; the tracker alone never escalates past
+                // 'warning'.
+                const recommendedAction = session.earlyWarningState?.recommendedAction;
+                if (session.escapeRecommendation ||
+                    recommendedAction === 'pivot' ||
+                    recommendedAction === 'escape') {
+                    reflexivityWarning = { ...reflexivityWarning, level: 'critical' };
+                }
+                if (process.env.DISABLE_REFLEXIVITY_WARNINGS !== 'true' &&
+                    process.env.DISABLE_THOUGHT_LOGGING !== 'true') {
+                    const warningDisplay = visualFormatter.formatReflexivityWarning(reflexivityWarning);
+                    if (warningDisplay) {
+                        process.stderr.write('\n' + warningDisplay + '\n');
+                    }
+                }
             }
             // Handle revisions and branches
             if (input.isRevision && input.revisesStep !== undefined) {
@@ -258,7 +281,7 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
                 return completionCheck.response;
             }
             // Build comprehensive execution response
-            const response = executionResponseBuilder.buildResponse(input, session, sessionId, handler, techniqueLocalStep, techniqueIndex, plan, currentFlexibility, optionGenerationResult, ergodicityResult.metrics);
+            const response = executionResponseBuilder.buildResponse(input, session, sessionId, handler, techniqueLocalStep, techniqueIndex, plan, currentFlexibility, optionGenerationResult, ergodicityResult.metrics, reflexivityWarning);
             // Final summary for a completed session. buildResponse has already set
             // endTime and refreshed session.insights/metrics; this only renders them.
             if (!input.nextStepNeeded) {

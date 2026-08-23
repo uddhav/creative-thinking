@@ -91,7 +91,11 @@ export class ExecutionResponseBuilder {
     // number. Optional so the handful of call sites that only have flexibility
     // keep working; when absent the response simply carries no metrics block
     // rather than an invented one.
-    ergodicityMetrics?: ErgodicityResult['metrics']
+    ergodicityMetrics?: ErgodicityResult['metrics'],
+    // The edge-triggered warning this step produced, if any — computed once
+    // in ReflexivityTracker.trackStep and threaded here as a value, replacing
+    // a private reach-through that recomputed threshold state per response.
+    reflexivityWarning?: ReflexivityWarning | null
   ): LateralThinkingResponse {
     // Track technique step
     this.telemetry
@@ -177,8 +181,8 @@ export class ExecutionResponseBuilder {
       currentFlexibility,
       input,
       session,
-      sessionId,
-      ergodicityMetrics
+      ergodicityMetrics,
+      reflexivityWarning
     );
 
     // Track flexibility warnings
@@ -367,13 +371,13 @@ export class ExecutionResponseBuilder {
     currentFlexibility: number,
     input: ExecuteThinkingStepInput,
     session: SessionData,
-    sessionId: string,
-    ergodicityMetrics?: ErgodicityResult['metrics']
+    ergodicityMetrics?: ErgodicityResult['metrics'],
+    reflexivityWarning?: ReflexivityWarning | null
   ): void {
     this.addFlexibilityInfo(parsedResponse, currentFlexibility, input.alternativeSuggestions);
     this.addErgodicityMetrics(parsedResponse, ergodicityMetrics);
     this.addPathAnalysis(parsedResponse, session.pathMemory, currentFlexibility);
-    this.addWarnings(parsedResponse, session, sessionId);
+    this.addWarnings(parsedResponse, session, reflexivityWarning);
   }
 
   /**
@@ -777,7 +781,7 @@ export class ExecutionResponseBuilder {
   private addWarnings(
     parsedResponse: Record<string, unknown>,
     session: SessionData,
-    sessionId: string
+    reflexivityWarning?: ReflexivityWarning | null
   ): void {
     if (session.earlyWarningState && session.earlyWarningState.activeWarnings.length > 0) {
       parsedResponse.earlyWarningState = {
@@ -810,34 +814,19 @@ export class ExecutionResponseBuilder {
       };
     }
 
-    // Add reflexivity warnings if available
-    if (this.sessionManager && process.env.DISABLE_REFLEXIVITY_WARNINGS !== 'true') {
-      try {
-        // Using type guard to safely access reflexivityTracker
-        const sessionManagerWithTracker = this.sessionManager as unknown as {
-          reflexivityTracker?: {
-            generateWarning: (sessionId: string) => ReflexivityWarning | null;
-          };
-        };
-        const reflexivityTracker = sessionManagerWithTracker.reflexivityTracker;
-        if (reflexivityTracker && typeof reflexivityTracker.generateWarning === 'function') {
-          const reflexivityWarning: ReflexivityWarning | null =
-            reflexivityTracker.generateWarning(sessionId);
-          if (reflexivityWarning) {
-            parsedResponse.reflexivityWarning = {
-              level: reflexivityWarning.level,
-              type: reflexivityWarning.type,
-              message: reflexivityWarning.message,
-              constraintCount: reflexivityWarning.currentConstraints,
-              pathsForeclosed: reflexivityWarning.pathsForeclosed.slice(0, 5), // Limit to first 5
-              suggestions: reflexivityWarning.suggestions,
-            };
-          }
-        }
-      } catch {
-        // Silently ignore errors to avoid breaking response building
-        // Warnings are informational only
-      }
+    // The edge-triggered warning arrives as a typed value from trackStep —
+    // no private reach-through, no silent catch, no per-response recompute.
+    // pathsForeclosed carries only this step's new entries (capped at
+    // source), replacing the frozen first-five prefix of the aggregate list.
+    if (reflexivityWarning && process.env.DISABLE_REFLEXIVITY_WARNINGS !== 'true') {
+      parsedResponse.reflexivityWarning = {
+        level: reflexivityWarning.level,
+        type: reflexivityWarning.type,
+        message: reflexivityWarning.message,
+        constraintCount: reflexivityWarning.currentConstraints,
+        pathsForeclosed: reflexivityWarning.pathsForeclosed,
+        suggestions: reflexivityWarning.suggestions,
+      };
     }
   }
 

@@ -18,7 +18,7 @@ describe('ReflexivityTracker', () => {
 
   describe('Step Tracking', () => {
     it('should not track reflexivity for thinking steps', () => {
-      const record = tracker.trackStep(
+      const { record } = tracker.trackStep(
         sessionId,
         'six_hats',
         1,
@@ -39,7 +39,7 @@ describe('ReflexivityTracker', () => {
         reversibility: 'low',
       };
 
-      const record = tracker.trackStep(
+      const { record } = tracker.trackStep(
         sessionId,
         'six_hats',
         4,

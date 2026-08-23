@@ -23,6 +23,7 @@ import {
 } from './session/SkipDetector.js';
 import { getSessionLock, type SessionLock } from './session/SessionLock.js';
 import { ReflexivityTracker } from './ReflexivityTracker.js';
+import type { ConstraintProvenance, ReflexivityWarning } from './ReflexivityTracker.js';
 import type { ReflexiveEffects } from '../techniques/types.js';
 import { getNLPService } from '../nlp/NLPService.js';
 import type { NLPService } from '../nlp/NLPService.js';
@@ -557,27 +558,34 @@ export class SessionManager {
   }
 
   /**
-   * Track reflexivity for a step execution
+   * Track reflexivity for a step execution. Returns the edge-triggered
+   * warning (if this step produced one) so the execution layer can emit it
+   * once — to stderr and into the response — instead of two call sites
+   * recomputing it at different points in the step.
    */
   public trackReflexivity(
     sessionId: string,
     technique: string,
     stepNumber: number,
     stepType?: 'thinking' | 'action',
-    reflexiveEffects?: ReflexiveEffects
-  ): void {
+    reflexiveEffects?: ReflexiveEffects,
+    provenance: ConstraintProvenance = 'template'
+  ): ReflexivityWarning | null {
     if (stepType) {
       // Use technique and step as action description
       const actionDescription = `${technique} step ${stepNumber}`;
-      this.reflexivityTracker.trackStep(
+      const { warning } = this.reflexivityTracker.trackStep(
         sessionId,
         technique,
         stepNumber,
         stepType,
         actionDescription,
-        reflexiveEffects
+        reflexiveEffects,
+        provenance
       );
+      return warning;
     }
+    return null;
   }
 
   /**

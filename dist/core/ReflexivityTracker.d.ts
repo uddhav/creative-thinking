@@ -16,8 +16,19 @@ export interface RealityState {
     optionsCreated: string[];
     lastModified: number;
     constraintCount: number;
+    /**
+     * Constraints traceable to caller content (e.g. a declared commitment).
+     * Warning thresholds read ONLY this count: every handler-declared
+     * reflexiveEffect is server-authored boilerplate, and a threshold fed by
+     * boilerplate manufactured a critical warning on every step.
+     */
+    contentConstraintCount: number;
+    /** Constraints from handler-static templates — descriptive, never alarming. */
+    templateConstraintCount: number;
     lastConstraintUpdate: number;
 }
+/** Who authored a constraint: the server's step templates, or the caller. */
+export type ConstraintProvenance = 'template' | 'content';
 /**
  * Memory statistics for monitoring
  */
@@ -98,9 +109,19 @@ export declare class ReflexivityTracker {
      */
     private getOrInitRealityState;
     /**
-     * Track a step execution and assess reflexivity
+     * Track a step execution and assess reflexivity.
+     *
+     * Returns the record plus an edge-triggered warning, computed here — the
+     * one place that knows both the pre-step and post-step state. It used to be
+     * a separate `generateWarning(sessionId)` that reported the threshold
+     * STATE, so once a session crossed a threshold, an identical "critical"
+     * fired on every remaining step; two call sites also read it at different
+     * points in the step and could disagree by one step.
      */
-    trackStep(sessionId: string, technique: string, step: number, stepType: StepType, actionDescription: string, reflexiveEffects?: ReflexiveEffects): ActionRecord;
+    trackStep(sessionId: string, technique: string, step: number, stepType: StepType, actionDescription: string, reflexiveEffects?: ReflexiveEffects, provenance?: ConstraintProvenance): {
+        record: ActionRecord;
+        warning: ReflexivityWarning | null;
+    };
     /**
      * Assess how an action's reflexive effects change reality
      */
@@ -118,10 +139,20 @@ export declare class ReflexivityTracker {
      */
     getActionHistory(sessionId: string): ActionRecord[];
     /**
-     * Generate warnings based on current reality state
-     * Returns null if no warning needed
+     * Bucket index for the content-constraint count: 0 below the warning
+     * threshold, 1 up to the caution threshold, then geometric (×1.25) — a
+     * stateless encoding of "re-fire only on a material increase".
      */
-    generateWarning(sessionId: string): ReflexivityWarning | null;
+    private constraintBucket;
+    /**
+     * Edge-triggered warning: fires when the content-derived constraint count
+     * crosses a bucket boundary, or when this step forecloses new paths from
+     * caller content — never merely for the count being above a threshold.
+     * The tracker emits at most 'warning'; escalation to 'critical' is the
+     * execution layer's call, made only when the server holds a stop-worthy
+     * verdict (an escape recommendation or a pivot/escape early warning).
+     */
+    private computeEdgeWarning;
     /**
      * Analyze action with timeout protection
      */

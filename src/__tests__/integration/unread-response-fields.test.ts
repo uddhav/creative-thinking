@@ -9,11 +9,16 @@
  * same way, and it turned out to be telling every caller that Black Hat had
  * been skipped on step 1 of seven.
  *
- * `reflexivityWarning` is the one worth the most care. It is produced by
- * reaching through an untyped cast into `SessionManager`'s private
- * `reflexivityTracker`, inside a `try`/`catch {}` that swallows everything.
- * Rename that field and the warning stops forever, silently, with every test
- * still green.
+ * `reflexivityWarning` has changed roles here. It used to be produced by an
+ * untyped reach-through into `SessionManager`'s private tracker behind a
+ * silent `catch {}` — this file was the only guard on that. The warning is
+ * now a typed value threaded from trackStep, the catch is gone, and the
+ * thresholds count only CONTENT-derived constraints. Every constraint this
+ * all-template session generates is handler-authored boilerplate, so the pin
+ * inverted: the manufactured warning must NOT fire (its firing on every step
+ * of a long session was the field report's chief complaint). The positive
+ * pin — warnings firing on caller-declared commitments — lives with the
+ * stepReversibility tests, which have a content producer to drive.
  *
  * One session drives all five, because they fire at different depths and a
  * session long enough for the last one has passed the others on the way. The
@@ -130,24 +135,16 @@ describe('the fields nothing was reading do arrive', () => {
     expect(String(seen.flexibilityMessage.value)).toMatch(/Flexibility/i);
   });
 
-  it('warns when constraints accumulate, through the private tracker reach-through', () => {
-    // The silent-catch one. If `SessionManager.reflexivityTracker` is renamed
-    // or `generateWarning` changes shape, the catch swallows it and this is
-    // the only thing that would notice.
-    expect(seen.reflexivityWarning, 'reflexivityWarning never reached the caller').toBeDefined();
-
-    const warning = seen.reflexivityWarning.value as {
-      level?: string;
-      type?: string;
-      message?: string;
-      constraintCount?: number;
-    };
-    expect(['caution', 'warning', 'critical']).toContain(warning.level);
-    expect(warning.message, 'the warning arrived without saying anything').toBeTruthy();
+  it('does not manufacture constraint warnings from template boilerplate', () => {
+    // Deliberately inverted pin. This 26-step session's constraints are all
+    // handler-static template strings; the thresholds now count only
+    // content-derived constraints, so no reflexivityWarning may fire. Before
+    // the split, a "critical" fired on every step from ~step 11 onward,
+    // carrying an identical frozen five-entry pathsForeclosed prefix.
     expect(
-      warning.constraintCount,
-      'a constraint warning that counts no constraints'
-    ).toBeGreaterThan(0);
+      seen.reflexivityWarning,
+      'an all-template session must not produce a constraint warning'
+    ).toBeUndefined();
   });
 
   it('offers an escape with the count of steps beyond the ones shown', () => {

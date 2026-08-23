@@ -9,6 +9,7 @@ import type {
   LateralThinkingResponse,
 } from '../types/index.js';
 import type { SessionManager } from '../core/SessionManager.js';
+import type { ReflexivityWarning } from '../core/ReflexivityTracker.js';
 import type { TechniqueRegistry } from '../techniques/TechniqueRegistry.js';
 import type { VisualFormatter } from '../utils/VisualFormatter.js';
 import type { MetricsCollector } from '../core/MetricsCollector.js';
@@ -323,7 +324,11 @@ export async function executeThinkingStep(
         timestamp: new Date().toISOString(),
       });
 
-      // Track reflexivity for ANY technique that provides reflexivity data
+      // Track reflexivity for ANY technique that provides reflexivity data.
+      // The tracker returns an edge-triggered warning (bucket crossing or new
+      // content-derived foreclosure); it is emitted exactly once from here —
+      // to stderr and into the response — so both surfaces always agree.
+      let reflexivityWarning: ReflexivityWarning | null = null;
       try {
         const stepDetails = handler.getStepInfo(techniqueLocalStep);
 
@@ -331,16 +336,42 @@ export async function executeThinkingStep(
         if ('type' in stepDetails) {
           const reflexiveEffects =
             'reflexiveEffects' in stepDetails ? stepDetails.reflexiveEffects : undefined;
-          sessionManager.trackReflexivity(
+          // Handler-declared effects are server-authored templates.
+          reflexivityWarning = sessionManager.trackReflexivity(
             sessionId,
             input.technique,
             techniqueLocalStep,
             stepDetails.type,
-            reflexiveEffects
+            reflexiveEffects,
+            'template'
           );
         }
       } catch {
         // Handler doesn't support StepInfo interface yet - skip reflexivity tracking
+      }
+
+      if (reflexivityWarning) {
+        // 'critical' is reserved for steps where the server itself holds a
+        // stop-worthy verdict; the tracker alone never escalates past
+        // 'warning'.
+        const recommendedAction = session.earlyWarningState?.recommendedAction;
+        if (
+          session.escapeRecommendation ||
+          recommendedAction === 'pivot' ||
+          recommendedAction === 'escape'
+        ) {
+          reflexivityWarning = { ...reflexivityWarning, level: 'critical' };
+        }
+
+        if (
+          process.env.DISABLE_REFLEXIVITY_WARNINGS !== 'true' &&
+          process.env.DISABLE_THOUGHT_LOGGING !== 'true'
+        ) {
+          const warningDisplay = visualFormatter.formatReflexivityWarning(reflexivityWarning);
+          if (warningDisplay) {
+            process.stderr.write('\n' + warningDisplay + '\n');
+          }
+        }
       }
 
       // Handle revisions and branches
@@ -393,7 +424,8 @@ export async function executeThinkingStep(
         plan,
         currentFlexibility,
         optionGenerationResult,
-        ergodicityResult.metrics
+        ergodicityResult.metrics,
+        reflexivityWarning
       );
 
       // Final summary for a completed session. buildResponse has already set

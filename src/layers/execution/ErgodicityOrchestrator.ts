@@ -8,7 +8,6 @@ import type { VisualFormatter } from '../../utils/VisualFormatter.js';
 import type { TechniqueHandler } from '../../techniques/types.js';
 import { ErgodicityManager } from '../../ergodicity/index.js';
 import type { PathMemory } from '../../ergodicity/types.js';
-import type { ReflexivityWarning } from '../../core/ReflexivityTracker.js';
 import { getErgodicityPrompt, getErgodicityGuidance } from '../../ergodicity/prompts.js';
 import { OptionGenerationEngine } from '../../ergodicity/optionGeneration/engine.js';
 import type {
@@ -176,37 +175,10 @@ export class ErgodicityOrchestrator {
       }
     }
 
-    // Display reflexivity warning if available and not disabled
-    if (
-      this.sessionManager &&
-      process.env.DISABLE_REFLEXIVITY_WARNINGS !== 'true' &&
-      process.env.DISABLE_THOUGHT_LOGGING !== 'true'
-    ) {
-      try {
-        // Access reflexivity tracker through sessionManager
-        // Using type guard to safely access reflexivityTracker
-        const sessionManagerWithTracker = this.sessionManager as unknown as {
-          reflexivityTracker?: {
-            generateWarning: (sessionId: string) => ReflexivityWarning | null;
-          };
-        };
-        const reflexivityTracker = sessionManagerWithTracker.reflexivityTracker;
-        if (reflexivityTracker && typeof reflexivityTracker.generateWarning === 'function') {
-          const reflexivityWarning: ReflexivityWarning | null =
-            reflexivityTracker.generateWarning(sessionId);
-          if (reflexivityWarning) {
-            const warningDisplay =
-              this.visualFormatter.formatReflexivityWarning(reflexivityWarning);
-            if (warningDisplay) {
-              process.stderr.write('\n' + warningDisplay + '\n');
-            }
-          }
-        }
-      } catch {
-        // Silently ignore errors to avoid breaking execution
-        // Warnings are informational only
-      }
-    }
+    // Reflexivity warnings are emitted from the execution layer, which
+    // receives the edge-triggered warning as trackStep's return value. This
+    // used to recompute threshold state here, one step behind the response's
+    // own copy.
 
     // Display escape recommendations if available
     if (session.escapeRecommendation && process.env.DISABLE_THOUGHT_LOGGING !== 'true') {

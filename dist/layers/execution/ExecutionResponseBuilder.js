@@ -51,7 +51,11 @@ export class ExecutionResponseBuilder {
     // number. Optional so the handful of call sites that only have flexibility
     // keep working; when absent the response simply carries no metrics block
     // rather than an invented one.
-    ergodicityMetrics) {
+    ergodicityMetrics, 
+    // The edge-triggered warning this step produced, if any — computed once
+    // in ReflexivityTracker.trackStep and threaded here as a value, replacing
+    // a private reach-through that recomputed threshold state per response.
+    reflexivityWarning) {
         // Track technique step
         this.telemetry
             .trackTechniqueStep(sessionId, input.technique, input.currentStep, input.totalSteps, {
@@ -102,7 +106,7 @@ export class ExecutionResponseBuilder {
         // Enhance response object directly (no parsing needed)
         this.enhanceWithMemoryAndProgress(responseData, input, session, sessionId, handler, techniqueLocalStep, techniqueIndex, plan);
         // Enhance with flexibility and warnings
-        this.enhanceWithFlexibilityAndWarnings(responseData, currentFlexibility, input, session, sessionId, ergodicityMetrics);
+        this.enhanceWithFlexibilityAndWarnings(responseData, currentFlexibility, input, session, ergodicityMetrics, reflexivityWarning);
         // Track flexibility warnings
         if (currentFlexibility < 0.4) {
             const warningLevel = currentFlexibility < 0.2 ? 'critical' : currentFlexibility < 0.3 ? 'high' : 'medium';
@@ -218,11 +222,11 @@ export class ExecutionResponseBuilder {
     /**
      * Enhance response with flexibility and warnings
      */
-    enhanceWithFlexibilityAndWarnings(parsedResponse, currentFlexibility, input, session, sessionId, ergodicityMetrics) {
+    enhanceWithFlexibilityAndWarnings(parsedResponse, currentFlexibility, input, session, ergodicityMetrics, reflexivityWarning) {
         this.addFlexibilityInfo(parsedResponse, currentFlexibility, input.alternativeSuggestions);
         this.addErgodicityMetrics(parsedResponse, ergodicityMetrics);
         this.addPathAnalysis(parsedResponse, session.pathMemory, currentFlexibility);
-        this.addWarnings(parsedResponse, session, sessionId);
+        this.addWarnings(parsedResponse, session, reflexivityWarning);
     }
     /**
      * Enhance response with analysis and option generation
@@ -511,7 +515,7 @@ export class ExecutionResponseBuilder {
             };
         }
     }
-    addWarnings(parsedResponse, session, sessionId) {
+    addWarnings(parsedResponse, session, reflexivityWarning) {
         if (session.earlyWarningState && session.earlyWarningState.activeWarnings.length > 0) {
             parsedResponse.earlyWarningState = {
                 // The verdict, not only the evidence. This reported a list of warnings
@@ -541,30 +545,19 @@ export class ExecutionResponseBuilder {
                 recommendation: 'Consider these alternative approaches to regain flexibility.',
             };
         }
-        // Add reflexivity warnings if available
-        if (this.sessionManager && process.env.DISABLE_REFLEXIVITY_WARNINGS !== 'true') {
-            try {
-                // Using type guard to safely access reflexivityTracker
-                const sessionManagerWithTracker = this.sessionManager;
-                const reflexivityTracker = sessionManagerWithTracker.reflexivityTracker;
-                if (reflexivityTracker && typeof reflexivityTracker.generateWarning === 'function') {
-                    const reflexivityWarning = reflexivityTracker.generateWarning(sessionId);
-                    if (reflexivityWarning) {
-                        parsedResponse.reflexivityWarning = {
-                            level: reflexivityWarning.level,
-                            type: reflexivityWarning.type,
-                            message: reflexivityWarning.message,
-                            constraintCount: reflexivityWarning.currentConstraints,
-                            pathsForeclosed: reflexivityWarning.pathsForeclosed.slice(0, 5), // Limit to first 5
-                            suggestions: reflexivityWarning.suggestions,
-                        };
-                    }
-                }
-            }
-            catch {
-                // Silently ignore errors to avoid breaking response building
-                // Warnings are informational only
-            }
+        // The edge-triggered warning arrives as a typed value from trackStep —
+        // no private reach-through, no silent catch, no per-response recompute.
+        // pathsForeclosed carries only this step's new entries (capped at
+        // source), replacing the frozen first-five prefix of the aggregate list.
+        if (reflexivityWarning && process.env.DISABLE_REFLEXIVITY_WARNINGS !== 'true') {
+            parsedResponse.reflexivityWarning = {
+                level: reflexivityWarning.level,
+                type: reflexivityWarning.type,
+                message: reflexivityWarning.message,
+                constraintCount: reflexivityWarning.currentConstraints,
+                pathsForeclosed: reflexivityWarning.pathsForeclosed,
+                suggestions: reflexivityWarning.suggestions,
+            };
         }
     }
     addRealityAssessment(parsedResponse, input) {

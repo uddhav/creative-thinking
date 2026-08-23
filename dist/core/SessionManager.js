@@ -397,14 +397,19 @@ export class SessionManager {
         };
     }
     /**
-     * Track reflexivity for a step execution
+     * Track reflexivity for a step execution. Returns the edge-triggered
+     * warning (if this step produced one) so the execution layer can emit it
+     * once — to stderr and into the response — instead of two call sites
+     * recomputing it at different points in the step.
      */
-    trackReflexivity(sessionId, technique, stepNumber, stepType, reflexiveEffects) {
+    trackReflexivity(sessionId, technique, stepNumber, stepType, reflexiveEffects, provenance = 'template') {
         if (stepType) {
             // Use technique and step as action description
             const actionDescription = `${technique} step ${stepNumber}`;
-            this.reflexivityTracker.trackStep(sessionId, technique, stepNumber, stepType, actionDescription, reflexiveEffects);
+            const { warning } = this.reflexivityTracker.trackStep(sessionId, technique, stepNumber, stepType, actionDescription, reflexiveEffects, provenance);
+            return warning;
         }
+        return null;
     }
     /**
      * Store recommendations for a session (for later comparison with selected techniques)
