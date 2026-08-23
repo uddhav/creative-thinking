@@ -269,11 +269,25 @@ describe('the response carries what the ergodicity adapter measured', () => {
 
     // context_reframing declares low reversibility, so a chain of it spends
     // room. Measured across the 15-step chain: flexibility 0.995 -> 0.109
-    // (0.221 by step 12), constraint 0.2 -> 0.63, divergence 0.07 -> 1.695.
+    // (0.221 by step 12), constraint 0.2 -> 0.63, divergence 0.065 -> 0.629.
+    // (Divergence values updated deliberately: the raw accumulation is now
+    // saturated raw/(raw+1) so the reported number is 0-1 with documented
+    // bands, instead of unbounded and uninterpretable. Monotonicity — the
+    // intent this test pins — is preserved exactly.)
     expect(last.currentFlexibility, 'flexibility did not fall').toBeLessThan(
       first.currentFlexibility
     );
     expect(last.constraintLevel, 'constraint did not rise').toBeGreaterThan(first.constraintLevel);
     expect(last.pathDivergence, 'divergence did not rise').toBeGreaterThan(first.pathDivergence);
+    for (const [index, reading] of readings.entries()) {
+      expect(
+        reading.pathDivergence,
+        `divergence out of band at step ${index + 1}`
+      ).toBeGreaterThanOrEqual(0);
+      expect(
+        reading.pathDivergence,
+        `divergence out of band at step ${index + 1}`
+      ).toBeLessThanOrEqual(1);
+    }
   }, 60_000);
 });

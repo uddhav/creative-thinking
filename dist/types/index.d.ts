@@ -45,7 +45,12 @@ export interface ScamperPathImpact {
 }
 export interface ScamperModificationHistory {
     action: ScamperAction;
-    modification: string;
+    /**
+     * The prior step's output text. No longer emitted: the caller wrote it,
+     * history holds it, and the session export returns it whole. Optional so
+     * sessions persisted before the field was dropped still load.
+     */
+    modification?: string;
     timestamp: string;
     impact: ScamperPathImpact;
     cumulativeFlexibility: number;
@@ -148,6 +153,17 @@ export interface ExecuteThinkingStepInput {
     mitigations?: string[];
     antifragileProperties?: string[];
     blackSwans?: string[];
+    stepReversibility?: {
+        level: 'high' | 'medium' | 'low';
+        rationale: string;
+    };
+    appliedReversibility?: {
+        prior: 'high' | 'medium' | 'low' | 'very_low';
+        claimed: 'high' | 'medium' | 'low';
+        applied: 'high' | 'medium' | 'low' | 'very_low';
+        clamped: boolean;
+    };
+    verbosity?: 'minimal' | 'full';
     isRevision?: boolean;
     revisesStep?: number;
     branchFromStep?: number;
@@ -354,6 +370,17 @@ export interface ThinkingOperationData {
     mitigations?: string[];
     antifragileProperties?: string[];
     blackSwans?: string[];
+    stepReversibility?: {
+        level: 'high' | 'medium' | 'low';
+        rationale: string;
+    };
+    appliedReversibility?: {
+        prior: 'high' | 'medium' | 'low' | 'very_low';
+        claimed: 'high' | 'medium' | 'low';
+        applied: 'high' | 'medium' | 'low' | 'very_low';
+        clamped: boolean;
+    };
+    verbosity?: 'minimal' | 'full';
     isRevision?: boolean;
     revisesStep?: number;
     branchFromStep?: number;

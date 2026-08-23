@@ -9,6 +9,7 @@ import type { SessionState } from '../persistence/types.js';
 import { type SkipDetectionResult, type SkipPattern } from './session/SkipDetector.js';
 import { type SessionLock } from './session/SessionLock.js';
 import { ReflexivityTracker } from './ReflexivityTracker.js';
+import type { ConstraintProvenance, ReflexivityWarning } from './ReflexivityTracker.js';
 import type { ReflexiveEffects } from '../techniques/types.js';
 import type { SamplingManager } from '../sampling/SamplingManager.js';
 export interface SessionConfig {
@@ -174,9 +175,12 @@ export declare class SessionManager {
         summary: ReturnType<ReflexivityTracker['getSessionSummary']>;
     } | null;
     /**
-     * Track reflexivity for a step execution
+     * Track reflexivity for a step execution. Returns the edge-triggered
+     * warning (if this step produced one) so the execution layer can emit it
+     * once — to stderr and into the response — instead of two call sites
+     * recomputing it at different points in the step.
      */
-    trackReflexivity(sessionId: string, technique: string, stepNumber: number, stepType?: 'thinking' | 'action', reflexiveEffects?: ReflexiveEffects): void;
+    trackReflexivity(sessionId: string, technique: string, stepNumber: number, stepType?: 'thinking' | 'action', reflexiveEffects?: ReflexiveEffects, provenance?: ConstraintProvenance, callerConstraints?: string[]): ReflexivityWarning | null;
     /**
      * Store recommendations for a session (for later comparison with selected techniques)
      */

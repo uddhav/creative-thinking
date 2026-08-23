@@ -21,7 +21,7 @@ export interface LateralThinkingInput {
     scamperAction?: string;
     modificationHistory?: Array<{
         action: string;
-        modification: string;
+        modification?: string;
         timestamp: string;
         impact: {
             reversible: boolean;

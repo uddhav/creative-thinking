@@ -15,7 +15,7 @@ export interface NodeDependency {
 
 export interface ExecutionGraphNode {
   id: string; // Unique node identifier (e.g., "node-1")
-  stepNumber: number; // Step sequence number
+  stepNumber: number; // Plan-global DAG sequence number — parameters.currentStep/totalSteps count technique-locally
   technique: LateralTechnique; // Technique name
   parameters: ExecuteThinkingStepInput; // Complete execute_thinking_step parameters
   dependencies: NodeDependency[]; // Dependencies with type classification

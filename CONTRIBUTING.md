@@ -391,6 +391,13 @@ to the union and counting the errors.
 - [ ] `src/utils/VisualFormatter.ts`: `emojis` — **and** the separate `names` map. Two edits in one
       file
 
+Not compiler-enforced, but in the same drift class: if the technique adds a **risk-bearing or
+antifragile field** (arrays like `failureModes`, `criticRisks`, `temporalEscapeRoutes`), add the
+field name to `RISK_FIELDS` / `ANTIFRAGILE_FIELDS` in `src/core/MetricsCollector.ts` — that constant
+is the single source for the session risk counters, the completion telemetry, and the completeness
+score. A field missing there is silently uncounted, which is exactly how `risksCaught: 0` after a
+full red-team session happened.
+
 #### 6. Discovery and recommendation
 
 - [ ] `src/layers/discovery/TechniqueRecommender.ts`: add the technique to at least one case group

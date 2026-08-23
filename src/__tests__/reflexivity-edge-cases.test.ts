@@ -133,7 +133,7 @@ describe('ReflexivityTracker Edge Cases', () => {
       const sessionId = 'malformed-test';
 
       // Track with undefined effects
-      const record = tracker.trackStep(sessionId, 'triz', 1, 'action', 'Test', undefined);
+      const { record } = tracker.trackStep(sessionId, 'triz', 1, 'action', 'Test', undefined);
       expect(record).toBeDefined();
       expect(record.reflexiveEffects).toBeUndefined();
     });
@@ -147,7 +147,7 @@ describe('ReflexivityTracker Edge Cases', () => {
         reversibility: 'medium',
       };
 
-      const record = tracker.trackStep(sessionId, 'triz', 1, 'action', 'Test', emptyEffects);
+      const { record } = tracker.trackStep(sessionId, 'triz', 1, 'action', 'Test', emptyEffects);
       expect(record).toBeDefined();
 
       const state = tracker.getRealityState(sessionId);

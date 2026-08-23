@@ -10,6 +10,7 @@ import type {
 } from '../../types/index.js';
 import type { VisualFormatter } from '../../utils/VisualFormatter.js';
 import {
+  matchesRuinKeyword,
   requiresRuinCheck,
   assessRuinRisk,
   generateSurvivalConstraints,
@@ -260,10 +261,17 @@ export class RiskAssessmentOrchestrator {
 
     const needsDiscovery =
       requiresRuinCheck(input.technique, allWords) ||
-      input.output.toLowerCase().includes('invest') ||
-      input.output.toLowerCase().includes('all') ||
-      input.output.toLowerCase().includes('commit') ||
-      input.output.toLowerCase().includes('permanent');
+      [
+        'invest',
+        'invested',
+        'investing',
+        'all',
+        'commit',
+        'committed',
+        'committing',
+        'permanent',
+        'permanently',
+      ].some(word => outputWords.some(token => matchesRuinKeyword(token, word)));
 
     if (!needsDiscovery) {
       return null;

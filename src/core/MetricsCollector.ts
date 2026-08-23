@@ -12,6 +12,71 @@ export interface SessionMetrics {
   antifragileFeatures?: number;
 }
 
+/**
+ * Technique-native fields whose entries count as identified risks.
+ *
+ * The counters used to read only the legacy `risks` array — the one risk
+ * field callers were never steered toward — so a session with a fully
+ * populated steelman_red_team `failureModes` still reported `risksCaught: 0`.
+ * Every field here is a string[] on the execute input; `timelineProjections`
+ * nests two further lists and is handled in the extractors below.
+ * `mitigations` is deliberately absent: a mitigation presumes a risk the
+ * other fields already carry, so counting it would double-count.
+ *
+ * When a new technique adds a risk-bearing or antifragile field, add it here
+ * — this constant is the single source for the session counters, the
+ * per-technique completion telemetry, and the completeness score (see
+ * CONTRIBUTING.md, "Adding a New Technique").
+ */
+export const RISK_FIELDS = [
+  'risks',
+  'failureModes',
+  'blackSwans',
+  'blackSwanScenarios',
+  'failureModesPredicted',
+  'failureInsights',
+  'criticRisks',
+  'earlyWarnings',
+  'stressTestResults',
+] as const;
+
+export const ANTIFRAGILE_FIELDS = ['antifragileProperties', 'temporalEscapeRoutes'] as const;
+
+function stringEntries(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === 'string');
+}
+
+/** Every risk entry a single step supplied, across all counted fields. */
+export function riskEntries(entry: ThinkingOperationData): string[] {
+  // Read as a plain record: two of the counted fields (blackSwanScenarios,
+  // earlyWarnings) exist in the tool schema but not on the TS input types.
+  const record = entry as unknown as Record<string, unknown>;
+  const entries: string[] = [];
+  for (const field of RISK_FIELDS) {
+    entries.push(...stringEntries(record[field]));
+  }
+  const projections = record.timelineProjections as Record<string, unknown> | undefined;
+  if (projections) {
+    entries.push(...stringEntries(projections.blackSwanScenarios));
+  }
+  return entries;
+}
+
+/** Every antifragile entry a single step supplied. */
+export function antifragileEntries(entry: ThinkingOperationData): string[] {
+  const record = entry as unknown as Record<string, unknown>;
+  const entries: string[] = [];
+  for (const field of ANTIFRAGILE_FIELDS) {
+    entries.push(...stringEntries(record[field]));
+  }
+  const projections = record.timelineProjections as Record<string, unknown> | undefined;
+  if (projections) {
+    entries.push(...stringEntries(projections.antifragileDesign));
+  }
+  return entries;
+}
+
 export interface DetailedMetrics extends SessionMetrics {
   totalSteps: number;
   revisionsCount: number;
@@ -25,14 +90,15 @@ export interface DetailedMetrics extends SessionMetrics {
 
 export class MetricsCollector {
   /**
-   * Update session metrics based on new input.
+   * Recompute session metrics from the full history.
    *
    * Callers invoke this AFTER pushing the current step onto `session.history`,
-   * so a whole-session recomputation here already accounts for the step being
-   * recorded. That is why `outputCompleteness` is derived from the session
-   * rather than accumulated per call.
+   * so the recomputation already accounts for the step being recorded. Both
+   * counters are derived, never accumulated: entries are deduplicated by
+   * trimmed text, so a caller that re-sends an array on a later step cannot
+   * double-count, and calling this twice is harmless.
    */
-  public updateMetrics(session: SessionData, input: ThinkingOperationData): SessionMetrics {
+  public updateMetrics(session: SessionData): SessionMetrics {
     if (!session.metrics) {
       session.metrics = {
         outputCompleteness: 0,
@@ -41,16 +107,20 @@ export class MetricsCollector {
       };
     }
 
-    // Update risks caught
-    if (input.risks && input.risks.length > 0) {
-      session.metrics.risksCaught = (session.metrics.risksCaught || 0) + input.risks.length;
+    const risks = new Set<string>();
+    const antifragile = new Set<string>();
+    for (const entry of session.history) {
+      for (const item of riskEntries(entry)) {
+        const text = item.trim();
+        if (text) risks.add(text);
+      }
+      for (const item of antifragileEntries(entry)) {
+        const text = item.trim();
+        if (text) antifragile.add(text);
+      }
     }
-
-    // Update antifragile features
-    if (input.antifragileProperties && input.antifragileProperties.length > 0) {
-      session.metrics.antifragileFeatures =
-        (session.metrics.antifragileFeatures || 0) + input.antifragileProperties.length;
-    }
+    session.metrics.risksCaught = risks.size;
+    session.metrics.antifragileFeatures = antifragile.size;
 
     // Recompute last: it reads risksCaught / antifragileFeatures updated above.
     session.metrics.outputCompleteness = this.calculateOutputCompleteness(session);
@@ -147,14 +217,15 @@ export class MetricsCollector {
    * Recompute the derived completeness metric from the session as it stands.
    *
    * Separate from `updateMetrics` because the counters it reads and the
-   * insights it counts are written at different points in a step: risks and
-   * antifragile features arrive with the input, but insights are extracted
+   * insights it counts are written at different points in a step: risk and
+   * antifragile entries arrive with the input, but insights are extracted
    * later, while the response is being built. Computed once with the counters,
    * the metric always reported the previous step's insight count — a completed
    * three-insight session read 0.67 where it should read 0.8.
    *
-   * `updateMetrics` cannot simply be called again: it increments the risk and
-   * antifragile counters, so a second call would double them.
+   * (`updateMetrics` is safe to call twice now that the counters are derived;
+   * this narrower helper remains for the response-building path, which only
+   * needs the completeness refresh.)
    */
   public refreshOutputCompleteness(session: SessionData): number {
     if (!session.metrics) {

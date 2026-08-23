@@ -202,7 +202,7 @@ export class ResponseBuilder {
                     },
                     guidance: output.executionMode === 'parallel'
                         ? 'For parallel execution, you can call execute_thinking_step multiple times in a single message for techniques that have no dependencies. The executionGraph shows which techniques can run in parallel.'
-                        : 'Continue calling execute_thinking_step for each step, incrementing currentStep until nextStepNeeded is false. Note: currentStep uses cumulative numbering across all techniques (e.g., if six_hats has 7 steps, temporal_work starts at step 8).',
+                        : 'Continue calling execute_thinking_step for each step, incrementing currentStep; send nextStepNeeded: false only on the final step of the final technique. Number steps within each technique (as firstCall does — currentStep 1 against the first technique’s own step count); plan-wide cumulative numbering is equally accepted, and totalSteps tells the server which convention currentStep is using.',
                     important: 'Always use the planId returned from this response. Do not skip this step or create your own planId.',
                 }
                 : undefined,

@@ -161,7 +161,7 @@ export const PLAN_THINKING_SESSION_TOOL: Tool = {
 export const EXECUTE_THINKING_STEP_TOOL: Tool = {
   name: 'execute_thinking_step',
   description:
-    'STEP 3 of 3: Executes a single step in the lateral thinking process. CRITICAL: You MUST execute EVERY SINGLE STEP for EACH technique in the plan. DO NOT skip any steps - each step builds on previous insights. Steps must be executed sequentially (1, 2, 3, etc.) without gaps. WARNING: This tool REQUIRES a valid planId from plan_thinking_session. DO NOT call this tool directly - you MUST first call discover_techniques, then plan_thinking_session to get a planId. The workflow is: 1) discover_techniques, 2) plan_thinking_session (get planId), 3) execute_thinking_step repeatedly until ALL steps are complete. Set nextStepNeeded=true until the FINAL step of the FINAL technique. MANDATORY PARAMETERS: planId, technique, problem, currentStep, totalSteps, output, nextStepNeeded.',
+    'STEP 3 of 3: Executes a single step in the lateral thinking process. CRITICAL: You MUST execute EVERY SINGLE STEP for EACH technique in the plan. DO NOT skip any steps - each step builds on previous insights. Steps must be executed sequentially (1, 2, 3, etc.) without gaps. WARNING: This tool REQUIRES a valid planId from plan_thinking_session. DO NOT call this tool directly - you MUST first call discover_techniques, then plan_thinking_session to get a planId. The workflow is: 1) discover_techniques, 2) plan_thinking_session (get planId), 3) execute_thinking_step repeatedly until ALL steps are complete. Set nextStepNeeded=true until the FINAL step of the FINAL technique. MANDATORY PARAMETERS: planId, technique, problem, currentStep, totalSteps, output, nextStepNeeded. Reading the response: ergodicityMetrics.currentFlexibility is the session flexibility (0-1; below 0.4 options are being generated for you), and ergodicityMetrics.pathDivergence is how far the session has moved from its starting frame, 0-1 saturating — below 0.3 near the start, 0.3-0.6 meaningfully evolved, above 0.6 far from where it began.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -855,15 +855,81 @@ export const EXECUTE_THINKING_STEP_TOOL: Tool = {
       },
       finalSynthesis: { type: 'string' },
       // Risk/Adversarial fields (unified framework)
-      risks: { type: 'array', items: { type: 'string' } },
-      failureModes: { type: 'array', items: { type: 'string' } },
-      mitigations: { type: 'array', items: { type: 'string' } },
-      antifragileProperties: { type: 'array', items: { type: 'string' } },
-      blackSwans: { type: 'array', items: { type: 'string' } },
-      failureInsights: { type: 'array', items: { type: 'string' } },
-      stressTestResults: { type: 'array', items: { type: 'string' } },
-      failureModesPredicted: { type: 'array', items: { type: 'string' } },
-      viaNegativaRemovals: { type: 'array', items: { type: 'string' } },
+      risks: {
+        type: 'array',
+        items: { type: 'string' },
+        description:
+          'Risks identified at this step, usable with any technique. Counted in the session risk metrics together with failureModes, blackSwans, and the other technique-native risk fields.',
+      },
+      failureModes: {
+        type: 'array',
+        items: { type: 'string' },
+        description:
+          'Ways the idea under examination can fail. Counted in the session risk metrics.',
+      },
+      mitigations: {
+        type: 'array',
+        items: { type: 'string' },
+        description:
+          'Mitigations for risks already listed. Not counted as risks themselves — each one presumes a risk the other fields already carry.',
+      },
+      antifragileProperties: {
+        type: 'array',
+        items: { type: 'string' },
+        description:
+          'Properties that make the idea gain from stress or disorder. Counted in the session antifragile metrics together with antifragileDesign and temporalEscapeRoutes.',
+      },
+      blackSwans: {
+        type: 'array',
+        items: { type: 'string' },
+        description:
+          'Low-probability, high-impact events that would upend the idea. Counted in the session risk metrics.',
+      },
+      failureInsights: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'What the failure analysis taught. Counted in the session risk metrics.',
+      },
+      stressTestResults: {
+        type: 'array',
+        items: { type: 'string' },
+        description:
+          'Weaknesses surfaced by stress-testing the idea. Counted in the session risk metrics.',
+      },
+      failureModesPredicted: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Failure modes predicted before testing. Counted in the session risk metrics.',
+      },
+      viaNegativaRemovals: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Elements removed to improve the design (via negativa).',
+      },
+      verbosity: {
+        type: 'string',
+        enum: ['minimal', 'full'],
+        description:
+          "Response size control. 'minimal' returns the step acknowledgment (ids, counters, progress), steering (nextStepGuidance), and every warning/verdict field (flexibility, ergodicity metrics, early warnings, escape recommendations, reflexivity warnings, option generation, ruin verdict) — plus newInsights (only this step's additions) and fieldsRecorded (the names of the technique fields the server read). It drops all echoes of your own input: problem, output, technique field values, modificationHistory. The final step's completion summary is always full. Blocked and error responses have their own compact shapes and are unaffected by this setting. Default: 'full' (or the RESPONSE_VERBOSITY env var). DEPRECATION NOTICE: 'minimal' is the intended future default; a later major release will flip it.",
+      },
+      stepReversibility: {
+        type: 'object',
+        description:
+          "Bounded claim about how reversible THIS step's action really is, when the technique's static assumption misreads it. The server assumes a reversibility rung per step on the ladder high -> medium -> low -> very_low (most to least reversible); your claim moves the applied rung AT MOST ONE STEP from that assumption, and only when rationale is non-empty. Example: SCAMPER's Eliminate step is assumed 'low' (hard to undo) — for \"eliminate all non-refundable bookings\", which removes a lock-in rather than creating one, send { level: 'high', rationale: 'removes commitments; everything stays refundable' } and the applied rung becomes 'medium' (one rung up from 'low'; the claim cannot reach 'high' from there). The response echoes { prior, claimed, applied, clamped } in executionMetadata.appliedReversibility. A claim of LOWER reversibility than assumed is recorded as a declared commitment and can raise constraint warnings.",
+        properties: {
+          level: {
+            type: 'string',
+            enum: ['high', 'medium', 'low'],
+            description: 'The reversibility you are claiming for this step.',
+          },
+          rationale: {
+            type: 'string',
+            description:
+              'Why the claim holds, on the record. A claim without a rationale is ignored.',
+          },
+        },
+        required: ['level', 'rationale'],
+      },
       // Revision support
       isRevision: { type: 'boolean' },
       revisesStep: { type: 'number' },

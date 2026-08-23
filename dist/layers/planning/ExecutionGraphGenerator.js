@@ -16,6 +16,28 @@ export class ExecutionGraphGenerator {
             nodeId += techniqueNodes.length;
             globalStepNumber += techniqueNodes.length;
         }
+        // nextStepNeeded: false triggers the executor's completion path, so only
+        // the plan-wide last node may carry it. Per-technique terminal nodes used
+        // to send false too (they were computed from technique-local counts),
+        // which finalized and then blocked the session at every technique
+        // boundary when the graph was executed verbatim.
+        const lastNode = nodes[nodes.length - 1];
+        if (lastNode) {
+            lastNode.parameters.nextStepNeeded = false;
+            // The terminal node ends the session, so every other technique must
+            // finish first even under parallel execution. Soft dependencies order
+            // it last without blocking — parallelizableGroups reads hard deps only.
+            const existing = new Set(lastNode.dependencies.map(d => d.nodeId));
+            let offset = 0;
+            for (const workflow of workflows) {
+                const techniqueFinal = nodes[offset + workflow.steps.length - 1];
+                offset += workflow.steps.length;
+                if (techniqueFinal && techniqueFinal !== lastNode && !existing.has(techniqueFinal.id)) {
+                    lastNode.dependencies.push({ nodeId: techniqueFinal.id, type: 'soft' });
+                    existing.add(techniqueFinal.id);
+                }
+            }
+        }
         // Calculate metadata
         const metadata = this.calculateMetadata(nodes);
         // Generate instructions
@@ -153,7 +175,9 @@ export class ExecutionGraphGenerator {
             currentStep,
             totalSteps,
             output: '',
-            nextStepNeeded: currentStep < totalSteps,
+            // Only the plan-wide last node ends the session; generateExecutionGraph
+            // flips that single node to false after all techniques are laid out.
+            nextStepNeeded: true,
         };
         // Add technique-specific parameters
         const techniqueParams = this.getTechniqueSpecificParams(technique, currentStep, step);
@@ -390,9 +414,11 @@ export class ExecutionGraphGenerator {
         // Generate parallelization benefits description
         const parallelizationBenefits = this.generateParallelizationBenefits(nodes, metadata);
         // Generate execution guidance
-        const executionGuidance = hasParallelNodes
+        const terminalNote = ' The final node carries nextStepNeeded: false and ends the session - execute it only after every other node has completed.';
+        const executionGuidance = (hasParallelNodes
             ? 'Nodes with empty dependencies can execute immediately. For nodes with dependencies, wait for hard dependencies to complete before starting. Soft dependencies are preferential - better results if completed first, but not blocking. Check the dependencies array for each node to determine execution order.'
-            : 'Execute nodes sequentially in the order provided. Each node depends on the previous one completing.';
+            : 'Execute nodes sequentially in the order provided. Each node depends on the previous one completing.') +
+            terminalNote;
         return {
             recommendedStrategy,
             syncPoints,
@@ -414,6 +440,12 @@ export class ExecutionGraphGenerator {
                 syncPoints.push(node.id);
             }
             lastTechnique = node.technique;
+        }
+        // The terminal node is always a sync point: it carries the session-ending
+        // nextStepNeeded: false and must run after everything else.
+        const lastNode = nodes[nodes.length - 1];
+        if (lastNode && !syncPoints.includes(lastNode.id)) {
+            syncPoints.push(lastNode.id);
         }
         return syncPoints;
     }

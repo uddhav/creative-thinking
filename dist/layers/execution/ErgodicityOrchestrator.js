@@ -3,10 +3,44 @@
  * Extracted from executeThinkingStep to improve maintainability
  */
 import { ErgodicityManager } from '../../ergodicity/index.js';
+import { PathMemoryManager } from '../../ergodicity/pathMemory.js';
 import { getErgodicityPrompt, getErgodicityGuidance } from '../../ergodicity/prompts.js';
 import { OptionGenerationEngine } from '../../ergodicity/optionGeneration/engine.js';
 import { monitorCriticalSectionAsync, wrapErgodicityManager, } from '../../utils/PerformanceIntegration.js';
 import { ErgodicityResultAdapter } from './ErgodicityResultAdapter.js';
+/**
+ * The one cost per declared reversibility rung. Single source for
+ * calculateImpact, the caller-claim clamp, and the execution layer's
+ * claim-direction check — the ladder reads, most to least reversible:
+ * high (0.10) → medium (0.50) → low (0.90) → very_low (0.95).
+ */
+export const REVERSIBILITY_COSTS = {
+    high: 0.1,
+    medium: 0.5,
+    low: 0.9,
+    very_low: 0.95,
+};
+/** Most-reversible first; adjacent entries are "one rung" apart. */
+const REVERSIBILITY_LADDER = ['high', 'medium', 'low', 'very_low'];
+/** The rungs a caller may claim ('very_low' is handler-declarable only). */
+const CLAIMABLE_LEVELS = new Set(['high', 'medium', 'low']);
+/**
+ * A caller claim moves the applied rung at most one step from the server's
+ * prior — a bounded nudge, never an overwrite. Priors are handler-static, so
+ * clamped claims cannot compound across steps. A claim value outside the
+ * ladder returns the prior unchanged: schema enums are not enforced at
+ * runtime by every transport, and an unrecognized string (indexOf −1) would
+ * otherwise read as claiming maximal reversibility.
+ */
+export function clampReversibilityClaim(prior, claimed) {
+    const priorIndex = REVERSIBILITY_LADDER.indexOf(prior);
+    const claimedIndex = REVERSIBILITY_LADDER.indexOf(claimed);
+    if (priorIndex === -1 || claimedIndex === -1) {
+        return prior;
+    }
+    const applied = Math.max(priorIndex - 1, Math.min(priorIndex + 1, claimedIndex));
+    return REVERSIBILITY_LADDER[applied];
+}
 export class ErgodicityOrchestrator {
     visualFormatter;
     ergodicityManager;
@@ -113,30 +147,10 @@ export class ErgodicityOrchestrator {
                 process.stderr.write('\n' + flexibilityWarning + '\n');
             }
         }
-        // Display reflexivity warning if available and not disabled
-        if (this.sessionManager &&
-            process.env.DISABLE_REFLEXIVITY_WARNINGS !== 'true' &&
-            process.env.DISABLE_THOUGHT_LOGGING !== 'true') {
-            try {
-                // Access reflexivity tracker through sessionManager
-                // Using type guard to safely access reflexivityTracker
-                const sessionManagerWithTracker = this.sessionManager;
-                const reflexivityTracker = sessionManagerWithTracker.reflexivityTracker;
-                if (reflexivityTracker && typeof reflexivityTracker.generateWarning === 'function') {
-                    const reflexivityWarning = reflexivityTracker.generateWarning(sessionId);
-                    if (reflexivityWarning) {
-                        const warningDisplay = this.visualFormatter.formatReflexivityWarning(reflexivityWarning);
-                        if (warningDisplay) {
-                            process.stderr.write('\n' + warningDisplay + '\n');
-                        }
-                    }
-                }
-            }
-            catch {
-                // Silently ignore errors to avoid breaking execution
-                // Warnings are informational only
-            }
-        }
+        // Reflexivity warnings are emitted from the execution layer, which
+        // receives the edge-triggered warning as trackStep's return value. This
+        // used to recompute threshold state here, one step behind the response's
+        // own copy.
         // Display escape recommendations if available
         if (session.escapeRecommendation && process.env.DISABLE_THOUGHT_LOGGING !== 'true') {
             const escapeRoutes = session.escapeRecommendation.steps.slice(0, 3).map((step, i) => ({
@@ -148,9 +162,14 @@ export class ErgodicityOrchestrator {
                 process.stderr.write('\n' + escapeDisplay + '\n');
             }
         }
-        // Generate options if flexibility is low
+        // Generate options only on the DOWNWARD CROSSING of the 0.4 threshold,
+        // not on every step below it. Flexibility is a monotone-decreasing
+        // product for ordinary steps, so a state-based gate re-emitted the same
+        // canned block on every remaining step of the session; a re-fire now
+        // requires genuine recovery above 0.4 (an escape credit) followed by a
+        // fresh descent.
         let optionGenerationResult;
-        if (currentFlexibility < 0.4) {
+        if (currentFlexibility < 0.4 && this.previousFlexibility(session) >= 0.4) {
             optionGenerationResult = this.generateOptions(input, session, currentFlexibility, sessionId);
         }
         return {
@@ -159,6 +178,18 @@ export class ErgodicityOrchestrator {
             optionGenerationResult,
             pathMemory: session.pathMemory,
         };
+    }
+    /**
+     * The session's flexibility as of the PREVIOUS step. The current step's
+     * path event is already in pathHistory at gate time (recordThinkingStep
+     * runs first), so "previous" is the product over all but the last event —
+     * recomputed with the same clamped, finite-guarded recurrence the live
+     * score uses. Derived from persisted pathMemory, so the crossing gate works
+     * identically across the CLI's process-per-step model.
+     */
+    previousFlexibility(session) {
+        const history = session.pathMemory?.pathHistory ?? [];
+        return PathMemoryManager.computeFlexibilityScore(history.slice(0, -1));
     }
     /**
      * What this step commits, for the path record.
@@ -188,8 +219,34 @@ export class ErgodicityOrchestrator {
         // longer pretends to.
         const stepInfo = handler?.getStepInfo(techniqueLocalStep);
         const declared = stepInfo?.reversibility ?? stepInfo?.reflexiveEffects?.reversibility ?? 'high';
+        // A caller may nudge the declared rung with `stepReversibility` — the
+        // semantics the static tables cannot see (eliminating a lock-in ADDS real
+        // freedom, yet every ELIMINATE is declared 'low'). The claim is bounded on
+        // every axis that made the retired caller-assertion holes dangerous: one
+        // rung at most, per step not aggregate, non-compounding (the prior is
+        // handler-static), and only with an on-record rationale, echoed back as
+        // an audit trail. An upward claim is a bounded refund, not control: an
+        // upward-claimed eliminate still costs ~0.16 against 0.30, a chain of
+        // claims still decays monotonically, and the 0.4 gates stay reachable.
+        const claim = input.stepReversibility;
+        // Server-computed field: cleared unconditionally so a caller cannot plant
+        // a fabricated audit trail by sending it without a claim.
+        delete input.appliedReversibility;
+        let applied = declared;
+        // The claimable-level check is runtime validation, not type ceremony: the
+        // schema enum is not enforced on every transport, and a typo like 'Low'
+        // must be inert, not a silent maximal-reversibility refund.
+        if (claim && claim.rationale?.trim() && CLAIMABLE_LEVELS.has(claim.level)) {
+            applied = clampReversibilityClaim(declared, claim.level);
+            input.appliedReversibility = {
+                prior: declared,
+                claimed: claim.level,
+                applied,
+                clamped: applied !== claim.level,
+            };
+        }
         // Undoing is hard in inverse proportion to how reversible the step is.
-        const reversibilityCost = declared === 'very_low' ? 0.95 : declared === 'low' ? 0.9 : declared === 'medium' ? 0.5 : 0.1;
+        const reversibilityCost = REVERSIBILITY_COSTS[applied];
         // A thinking step binds nothing; an action step binds in proportion to how
         // hard it is to undo.
         const commitmentLevel = stepInfo?.type === 'action' ? Math.max(0.2, reversibilityCost) : 0.2;
@@ -205,6 +262,13 @@ export class ErgodicityOrchestrator {
         // caller's. Without the action, a caller could hand SCAMPER twenty
         // invented `optionsOpened` and buy back the cost of the step.
         const serverDerived = input.technique === 'scamper' && input.scamperAction ? input.pathImpact : undefined;
+        // The echoed retention reads the same ladder the session actually
+        // charges (1 − applied cost), replacing the verb-static degradation
+        // product the handler used to compute — a history-length artifact that
+        // reported near-zero retention regardless of what the step did.
+        if (serverDerived) {
+            serverDerived.flexibilityRetention = Math.max(0, 1 - reversibilityCost);
+        }
         return {
             optionsClosed: serverDerived?.optionsClosed,
             optionsOpened: serverDerived?.optionsOpened,
@@ -254,7 +318,9 @@ export class ErgodicityOrchestrator {
                 insights: session.insights,
                 pathDependencyMetrics: {
                     optionSpaceSize: 100 * currentFlexibility,
-                    pathDivergence: 1 - currentFlexibility,
+                    // The measured value, not an invented 1 − flexibility: divergence
+                    // and flexibility are different quantities under one field name.
+                    pathDivergence: session.pathMemory?.currentFlexibility?.pathDivergence ?? 0,
                     commitmentDepth: session.pathMemory?.pathHistory?.length || session.history.length,
                     reversibilityIndex: currentFlexibility,
                 },
@@ -280,7 +346,9 @@ export class ErgodicityOrchestrator {
                 },
                 currentFlexibility: session.pathMemory?.currentFlexibility || {
                     flexibilityScore: currentFlexibility,
-                    pathDivergence: 1 - currentFlexibility,
+                    // Fallback only (no pathMemory yet): an empty history has zero
+                    // divergence, which is what the shared formula reports for it.
+                    pathDivergence: 0,
                     reversibilityIndex: currentFlexibility,
                     barrierProximity: [],
                     optionVelocity: 0,

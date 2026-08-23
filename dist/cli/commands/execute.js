@@ -27,6 +27,11 @@ export function registerExecute(yargs) {
         type: 'string',
         describe: 'Speaking persona id (debate mode only)',
     })
+        .option('verbosity', {
+        type: 'string',
+        choices: ['minimal', 'full'],
+        describe: "Response size: 'minimal' = ack + steering + warnings/verdicts, no input echoes (intended future default); 'full' = current shape (default)",
+    })
         .epilogue('Reads a JSON object on stdin if piped; flags override stdin fields.\n' +
         'Long-tail technique fields (hatColor, scamperAction, risks, etc.) are easiest to pass on stdin.\n\n' +
         'Parallelism: independent invocations against different sessionIds run concurrently.\n' +
@@ -45,6 +50,7 @@ async function handle(argv) {
         nextStepNeeded: argv.nextStepNeeded,
         autoSave: argv.noAutoSave ? false : true,
         persona: argv.persona,
+        verbosity: argv.verbosity,
     }, stdin);
     const server = getServer();
     const planId = input.planId;

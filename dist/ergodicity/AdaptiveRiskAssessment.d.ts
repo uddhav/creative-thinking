@@ -18,6 +18,15 @@ export interface ContextIndicators {
 }
 export declare class AdaptiveRiskAssessment {
     private contextCache;
+    private static readonly indicatorPatterns;
+    /**
+     * Word-boundary indicator match. A bare `text.includes()` matched fragments
+     * inside unrelated words — 'api' in "rapid", 'all' in "small", 'system' in
+     * "ecosystem" — and mislabeled non-technical problems. Multi-word phrases
+     * match as phrases; single words also match simple plural forms.
+     */
+    private matchesIndicator;
+    private containsAny;
     /**
      * Analyze context from problem and output text
      */

@@ -6,14 +6,16 @@ import type { LateralThinkingResponse, SessionData } from '../types/index.js';
 import type { DiscoverTechniquesOutput, PlanThinkingSessionOutput } from '../types/planning.js';
 export interface ExecutionMetadata {
     /**
-     * How complete THIS step's output was, 0-1.
-     *
-     * Distinct from `metrics.outputCompleteness`, which scores the whole session.
-     * Both used to be called outputCompleteness and appeared in the same response
-     * inches apart, reporting different numbers — an invitation to compare two
-     * things that are not comparable.
+     * Audit of a stepReversibility claim: the handler-static prior, what the
+     * caller claimed, what was applied after the one-rung clamp, and whether
+     * clamping occurred. Present only on steps that sent a valid claim.
      */
-    stepCompleteness: number;
+    appliedReversibility?: {
+        prior: 'high' | 'medium' | 'low' | 'very_low';
+        claimed: 'high' | 'medium' | 'low';
+        applied: 'high' | 'medium' | 'low' | 'very_low';
+        clamped: boolean;
+    };
     pathDependenciesCreated: string[];
     flexibilityImpact: number;
     noteworthyMoment?: string;

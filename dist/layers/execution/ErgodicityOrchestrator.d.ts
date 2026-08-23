@@ -15,6 +15,23 @@ export interface ErgodicityOrchestrationResult {
     optionGenerationResult?: OptionGenerationResult;
     pathMemory?: PathMemory;
 }
+export type ReversibilityLevel = 'very_low' | 'low' | 'medium' | 'high';
+/**
+ * The one cost per declared reversibility rung. Single source for
+ * calculateImpact, the caller-claim clamp, and the execution layer's
+ * claim-direction check — the ladder reads, most to least reversible:
+ * high (0.10) → medium (0.50) → low (0.90) → very_low (0.95).
+ */
+export declare const REVERSIBILITY_COSTS: Record<ReversibilityLevel, number>;
+/**
+ * A caller claim moves the applied rung at most one step from the server's
+ * prior — a bounded nudge, never an overwrite. Priors are handler-static, so
+ * clamped claims cannot compound across steps. A claim value outside the
+ * ladder returns the prior unchanged: schema enums are not enforced at
+ * runtime by every transport, and an unrecognized string (indexOf −1) would
+ * otherwise read as claiming maximal reversibility.
+ */
+export declare function clampReversibilityClaim(prior: ReversibilityLevel, claimed: ReversibilityLevel): ReversibilityLevel;
 export declare class ErgodicityOrchestrator {
     private visualFormatter;
     private ergodicityManager;
@@ -42,6 +59,15 @@ export declare class ErgodicityOrchestrator {
      * Track ergodicity and generate options if needed
      */
     trackErgodicityAndGenerateOptions(input: ExecuteThinkingStepInput, session: SessionData, techniqueLocalStep: number, sessionId?: string, handler?: TechniqueHandler): Promise<ErgodicityOrchestrationResult>;
+    /**
+     * The session's flexibility as of the PREVIOUS step. The current step's
+     * path event is already in pathHistory at gate time (recordThinkingStep
+     * runs first), so "previous" is the product over all but the last event —
+     * recomputed with the same clamped, finite-guarded recurrence the live
+     * score uses. Derived from persisted pathMemory, so the crossing gate works
+     * identically across the CLI's process-per-step model.
+     */
+    private previousFlexibility;
     /**
      * What this step commits, for the path record.
      *

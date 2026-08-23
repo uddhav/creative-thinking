@@ -62,10 +62,11 @@ export interface LateralThinkingInput {
   connections?: string[];
   scamperAction?: string;
 
-  // PDA-SCAMPER fields
+  // PDA-SCAMPER fields (no longer stored per entry — rebuilt from history
+  // each step; optional shape kept so sessions persisted earlier still load)
   modificationHistory?: Array<{
     action: string;
-    modification: string;
+    modification?: string;
     timestamp: string;
     impact: {
       reversible: boolean;

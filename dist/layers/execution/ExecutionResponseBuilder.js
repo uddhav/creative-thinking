@@ -20,6 +20,48 @@ import { SessionCompletionTracker } from '../../core/session/SessionCompletionTr
 import { MetricsCollector } from '../../core/MetricsCollector.js';
 /** Escape steps shown inline; the rest are counted rather than dropped. */
 const ESCAPE_STEPS_SHOWN = 3;
+/**
+ * The response keys minimal verbosity keeps — the contract, pinned by
+ * response-verbosity.test.ts. Everything here is the step acknowledgment,
+ * steering, or a warning/verdict: the fields SOCKETES.md and the
+ * lateral-thinking skill tell callers to read. Echoes of the caller's own
+ * input (problem, output, technique field values, modificationHistory) and
+ * cumulative re-sends are deliberately absent; `insights` is replaced by
+ * `newInsights` (this step's additions only) and field values by
+ * `fieldsRecorded` (their names — a receipt without the echo). Three nested
+ * picks that a flat list cannot reach are handled in slimToMinimal:
+ * completionMetadata.completionWarnings, executionMetadata.appliedReversibility,
+ * and ruinAssessment minus its prompt. The terminal step's completion block
+ * bypasses slimming by mechanism — handleSessionCompletion merges it into the
+ * already-serialized response after this filter runs — as do the autoSave
+ * status fields, added the same way.
+ *
+ * Declared sunset: 'minimal' is the intended future DEFAULT ('full' exists
+ * for compatibility); the default flip will ship as a breaking release.
+ */
+export const MINIMAL_RESPONSE_KEEP_KEYS = [
+    'sessionId',
+    'technique',
+    'currentStep',
+    'totalSteps',
+    'nextStepNeeded',
+    'historyLength',
+    'techniqueProgress',
+    'nextStepGuidance',
+    'sequentialThinkingSuggestion',
+    'ergodicityMetrics',
+    'flexibilityScore',
+    'flexibilityMessage',
+    'alternativeSuggestions',
+    'ergodicityCheck',
+    'earlyWarningState',
+    'escapeRecommendation',
+    'reflexivityWarning',
+    'reflectionRequired',
+    'optionGeneration',
+    'realityAssessment',
+    'persona',
+];
 export class ExecutionResponseBuilder {
     complexityAnalyzer;
     escalationGenerator;
@@ -51,7 +93,15 @@ export class ExecutionResponseBuilder {
     // number. Optional so the handful of call sites that only have flexibility
     // keep working; when absent the response simply carries no metrics block
     // rather than an invented one.
-    ergodicityMetrics) {
+    ergodicityMetrics, 
+    // The edge-triggered warning this step produced, if any — computed once
+    // in ReflexivityTracker.trackStep and threaded here as a value, replacing
+    // a private reach-through that recomputed threshold state per response.
+    reflexivityWarning) {
+        const verbosity = input.verbosity ?? (process.env.RESPONSE_VERBOSITY === 'minimal' ? 'minimal' : 'full');
+        // Captured before buildCoreResponseData, which reassigns session.insights:
+        // minimal mode reports this step's additions, not the cumulative list.
+        const insightsBefore = new Set(session.insights);
         // Track technique step
         this.telemetry
             .trackTechniqueStep(sessionId, input.technique, input.currentStep, input.totalSteps, {
@@ -100,9 +150,9 @@ export class ExecutionResponseBuilder {
             }
         }
         // Enhance response object directly (no parsing needed)
-        this.enhanceWithMemoryAndProgress(responseData, input, session, sessionId, handler, techniqueLocalStep, techniqueIndex, plan);
+        this.enhanceWithMemoryAndProgress(responseData, input, session, sessionId, handler, techniqueLocalStep, techniqueIndex, plan, verbosity === 'minimal');
         // Enhance with flexibility and warnings
-        this.enhanceWithFlexibilityAndWarnings(responseData, currentFlexibility, input, session, sessionId, ergodicityMetrics);
+        this.enhanceWithFlexibilityAndWarnings(responseData, currentFlexibility, input, session, ergodicityMetrics, reflexivityWarning);
         // Track flexibility warnings
         if (currentFlexibility < 0.4) {
             const warningLevel = currentFlexibility < 0.2 ? 'critical' : currentFlexibility < 0.3 ? 'high' : 'medium';
@@ -118,17 +168,24 @@ export class ExecutionResponseBuilder {
                 .trackOptionGeneration(sessionId, optionGenerationResult.options.length, currentFlexibility)
                 .catch(console.error);
         }
-        // Build optimized response with single JSON stringify
-        const response = this.jsonOptimizer.buildOptimizedResponse(responseData);
+        // Build optimized response with single JSON stringify. Minimal verbosity
+        // filters here — after every producer has run, before serialization — so
+        // there is exactly one place that owns what survives.
+        const finalData = verbosity === 'minimal'
+            ? this.slimToMinimal(responseData, input, sessionId, currentInsights, insightsBefore)
+            : responseData;
+        const response = this.jsonOptimizer.buildOptimizedResponse(finalData);
         // Handle session completion
         if (!input.nextStepNeeded) {
             this.handleSessionCompletion(response, session);
-            // Track technique completion
-            const effectiveness = this.assessOutputCompleteness(input, session, currentInsights);
+            // Track technique completion. handleSessionCompletion has just
+            // refreshed outputCompleteness, so this reads the honest session-level
+            // coverage score rather than the retired per-step presence heuristic.
+            const effectiveness = session.metrics?.outputCompleteness ?? 0;
             this.telemetry
                 .trackTechniqueComplete(sessionId, input.technique, effectiveness, {
                 insightCount: currentInsights.length,
-                riskCount: input.risks?.length || 0,
+                riskCount: session.metrics?.risksCaught ?? 0,
                 duration: Date.now() - (session.startTime || Date.now()),
                 revisionCount: session.history.filter(h => h.isRevision).length,
                 branchCount: Object.keys(session.branches).length,
@@ -190,11 +247,15 @@ export class ExecutionResponseBuilder {
     /**
      * Enhance response with memory outputs and technique progress
      */
-    enhanceWithMemoryAndProgress(parsedResponse, input, session, sessionId, handler, techniqueLocalStep, techniqueIndex, plan) {
+    enhanceWithMemoryAndProgress(parsedResponse, input, session, sessionId, handler, techniqueLocalStep, techniqueIndex, plan, 
+    // Minimal verbosity drops the five memory decoration keys anyway, so the
+    // analysis is skipped rather than computed-and-discarded. MemoryAnalyzer
+    // is side-effect-free; nothing else reads its output.
+    skipMemoryOutputs = false) {
         // Optimization: Skip or simplify memory analysis for deep revision chains
         const revisionCount = session.history.filter(h => h.isRevision).length;
         const skipMemoryAnalysis = input.isRevision && revisionCount > 30 && revisionCount % 5 !== 0;
-        const memoryOutputs = skipMemoryAnalysis
+        const memoryOutputs = skipMemoryOutputs || skipMemoryAnalysis
             ? {} // Skip memory analysis for performance
             : this.memoryAnalyzer.generateMemoryOutputs(this.createOperationData(input, sessionId), session);
         // Build technique progress info
@@ -214,13 +275,51 @@ export class ExecutionResponseBuilder {
         this.addCompletionMetadata(parsedResponse, completionMetadata);
     }
     /**
+     * The minimal-verbosity filter: an allowlist over the fully built response.
+     * Built-then-filtered (rather than skipping producers) so warning and
+     * verdict producers always run; the one producer worth skipping outright
+     * (memory decoration) is handled at its call site.
+     */
+    slimToMinimal(responseData, input, sessionId, currentInsights, insightsBefore) {
+        const slim = {};
+        for (const key of MINIMAL_RESPONSE_KEEP_KEYS) {
+            if (key in responseData) {
+                slim[key] = responseData[key];
+            }
+        }
+        // Nested picks a flat allowlist cannot reach.
+        const completionMetadata = responseData.completionMetadata;
+        if (Array.isArray(completionMetadata?.completionWarnings) &&
+            completionMetadata.completionWarnings.length > 0) {
+            slim.completionMetadata = { completionWarnings: completionMetadata.completionWarnings };
+        }
+        if (input.appliedReversibility) {
+            // The clamp audit is verdict-adjacent: a caller whose claim was moved
+            // must see what was applied, in either mode.
+            slim.executionMetadata = { appliedReversibility: input.appliedReversibility };
+        }
+        const ruinAssessment = responseData.ruinAssessment;
+        if (ruinAssessment) {
+            const { prompt: _prompt, ...verdict } = ruinAssessment;
+            slim.ruinAssessment = verdict;
+        }
+        // This step's additions only. Full mode's `insights` stays the cumulative
+        // documented reading (SOCKETES.md); a different key for a different
+        // meaning, so no parser reads one as the other.
+        slim.newInsights = currentInsights.filter(insight => !insightsBefore.has(insight));
+        // Receipt without the echo: the names of the technique fields the server
+        // read from this call.
+        slim.fieldsRecorded = Object.keys(this.extractTechniqueSpecificFields(this.createOperationData(input, sessionId)));
+        return slim;
+    }
+    /**
      * Enhance response with flexibility and warnings
      */
-    enhanceWithFlexibilityAndWarnings(parsedResponse, currentFlexibility, input, session, sessionId, ergodicityMetrics) {
+    enhanceWithFlexibilityAndWarnings(parsedResponse, currentFlexibility, input, session, ergodicityMetrics, reflexivityWarning) {
         this.addFlexibilityInfo(parsedResponse, currentFlexibility, input.alternativeSuggestions);
         this.addErgodicityMetrics(parsedResponse, ergodicityMetrics);
         this.addPathAnalysis(parsedResponse, session.pathMemory, currentFlexibility);
-        this.addWarnings(parsedResponse, session, sessionId);
+        this.addWarnings(parsedResponse, session, reflexivityWarning);
     }
     /**
      * Enhance response with analysis and option generation
@@ -414,10 +513,15 @@ export class ExecutionResponseBuilder {
     }
     generateExecutionMetadata(input, session, insights, pathMemory, currentFlexibility) {
         const metadata = {
-            stepCompleteness: this.assessOutputCompleteness(input, session, insights),
             pathDependenciesCreated: this.extractPathDependencies(input, pathMemory),
             flexibilityImpact: this.calculateFlexibilityImpact(input, session),
         };
+        // Audit trail for a reversibility claim — the caller must be able to see
+        // what the clamp did with what they sent. The rationale is not echoed:
+        // it is the caller's own input, already on the session record.
+        if (input.appliedReversibility) {
+            metadata.appliedReversibility = input.appliedReversibility;
+        }
         const noteworthyMoment = this.identifyNoteworthyMoment(input, session, insights);
         if (noteworthyMoment) {
             metadata.noteworthyMoment = noteworthyMoment;
@@ -510,7 +614,7 @@ export class ExecutionResponseBuilder {
             };
         }
     }
-    addWarnings(parsedResponse, session, sessionId) {
+    addWarnings(parsedResponse, session, reflexivityWarning) {
         if (session.earlyWarningState && session.earlyWarningState.activeWarnings.length > 0) {
             parsedResponse.earlyWarningState = {
                 // The verdict, not only the evidence. This reported a list of warnings
@@ -540,30 +644,19 @@ export class ExecutionResponseBuilder {
                 recommendation: 'Consider these alternative approaches to regain flexibility.',
             };
         }
-        // Add reflexivity warnings if available
-        if (this.sessionManager && process.env.DISABLE_REFLEXIVITY_WARNINGS !== 'true') {
-            try {
-                // Using type guard to safely access reflexivityTracker
-                const sessionManagerWithTracker = this.sessionManager;
-                const reflexivityTracker = sessionManagerWithTracker.reflexivityTracker;
-                if (reflexivityTracker && typeof reflexivityTracker.generateWarning === 'function') {
-                    const reflexivityWarning = reflexivityTracker.generateWarning(sessionId);
-                    if (reflexivityWarning) {
-                        parsedResponse.reflexivityWarning = {
-                            level: reflexivityWarning.level,
-                            type: reflexivityWarning.type,
-                            message: reflexivityWarning.message,
-                            constraintCount: reflexivityWarning.currentConstraints,
-                            pathsForeclosed: reflexivityWarning.pathsForeclosed.slice(0, 5), // Limit to first 5
-                            suggestions: reflexivityWarning.suggestions,
-                        };
-                    }
-                }
-            }
-            catch {
-                // Silently ignore errors to avoid breaking response building
-                // Warnings are informational only
-            }
+        // The edge-triggered warning arrives as a typed value from trackStep —
+        // no private reach-through, no silent catch, no per-response recompute.
+        // pathsForeclosed carries only this step's new entries (capped at
+        // source), replacing the frozen first-five prefix of the aggregate list.
+        if (reflexivityWarning && process.env.DISABLE_REFLEXIVITY_WARNINGS !== 'true') {
+            parsedResponse.reflexivityWarning = {
+                level: reflexivityWarning.level,
+                type: reflexivityWarning.type,
+                message: reflexivityWarning.message,
+                constraintCount: reflexivityWarning.currentConstraints,
+                pathsForeclosed: reflexivityWarning.pathsForeclosed,
+                suggestions: reflexivityWarning.suggestions,
+            };
         }
     }
     addRealityAssessment(parsedResponse, input) {
@@ -603,17 +696,25 @@ export class ExecutionResponseBuilder {
     }
     addOptionGeneration(parsedResponse, currentFlexibility, optionGenerationResult) {
         if (optionGenerationResult && optionGenerationResult.options.length > 0) {
+            // topOptions must follow the evaluator's score order (evaluations are
+            // sorted best-first), not the strategies' generation order — otherwise
+            // `recommendation` (the top-scored option) can name an option absent
+            // from the list. Reading flexibilityGain off the evaluation, not the
+            // option: strategies never populate Option.flexibilityGain.
+            const rankedOptions = optionGenerationResult.evaluations.slice(0, 3).flatMap(evaluation => {
+                const option = optionGenerationResult.options.find(o => o.id === evaluation.optionId);
+                return option ? [{ option, evaluation }] : [];
+            });
             parsedResponse.optionGeneration = {
                 triggered: true,
                 flexibility: currentFlexibility,
                 optionsGenerated: optionGenerationResult.options.length,
                 strategies: optionGenerationResult.strategiesUsed,
-                topOptions: optionGenerationResult.options.slice(0, 3).map(opt => ({
-                    name: opt.name,
-                    description: opt.description,
-                    flexibilityGain: opt.flexibilityGain,
-                    recommendation: optionGenerationResult.evaluations.find(e => e.optionId === opt.id)
-                        ?.recommendation,
+                topOptions: rankedOptions.map(({ option, evaluation }) => ({
+                    name: option.name,
+                    description: option.description,
+                    flexibilityGain: evaluation.flexibilityGain,
+                    recommendation: evaluation.recommendation,
                 })),
                 recommendation: optionGenerationResult.topRecommendation?.name || 'Consider implementing top options',
             };
@@ -638,13 +739,15 @@ export class ExecutionResponseBuilder {
             .trackSessionComplete(sessionId, {
             duration: session.endTime - (session.startTime || Date.now()),
             insightCount: session.insights.length,
-            riskCount: session.history.reduce((sum, h) => sum + (h.risks?.length || 0), 0),
+            // The derived session counter covers every technique-native risk
+            // field, not just the legacy `risks` array.
+            riskCount: session.metrics?.risksCaught ?? 0,
             totalSteps: session.history.length,
             completedSteps: session.history.length,
             revisionCount: session.history.filter(h => h.isRevision).length,
             branchCount: Object.keys(session.branches).length,
             flexibilityScore: session.pathMemory?.currentFlexibility?.flexibilityScore,
-            // effectiveness is 0-1 throughout this file (cf. assessOutputCompleteness).
+            // effectiveness is 0-1 throughout this file.
             // 0.5 is the fallback for sessions persisted before outputCompleteness existed.
             effectiveness: session.metrics?.outputCompleteness ?? 0.5,
         })
@@ -859,31 +962,6 @@ export class ExecutionResponseBuilder {
         if (stepInput.synthesis)
             fields.synthesis = stepInput.synthesis;
         return fields;
-    }
-    /**
-     * How completely a step filled in the outputs its technique asks for.
-     *
-     * This counts whether optional fields were populated — insights, risks,
-     * antifragile properties, provocation/principles. It is a COMPLETENESS
-     * measure, not a quality one: four vacuous insights score higher than two
-     * excellent ones, and nothing here inspects what was actually written.
-     * Named accordingly so it is not mistaken for evidence that a technique
-     * worked. Measuring real quality needs the guidance eval, not this.
-     */
-    assessOutputCompleteness(input, session, insights) {
-        let completeness = 0.5; // Base: a step that produced output at all
-        if (insights.length > 3)
-            completeness += 0.2;
-        else if (insights.length > 1)
-            completeness += 0.1;
-        if (input.risks && input.risks.length > 0)
-            completeness += 0.1;
-        if (input.antifragileProperties && input.antifragileProperties.length > 0) {
-            completeness += 0.15;
-        }
-        if (input.provocation && input.principles)
-            completeness += 0.2;
-        return Math.min(1, completeness);
     }
     extractPathDependencies(input, pathMemory) {
         const dependencies = [];

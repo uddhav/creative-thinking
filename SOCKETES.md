@@ -338,6 +338,7 @@ every step.
 | `--next-step-needed` | boolean                      | Pass when more steps follow. Without it, yargs leaves it `undefined` (often the right thing). |
 | `--no-auto-save`     | boolean                      | Default is auto-save on. Pass this to skip persistence for this step (rarely useful).         |
 | `--persona <id>`     | string                       | Speaking persona id (debate mode only).                                                       |
+| `--verbosity <mode>` | `minimal` \| `full`          | Response size. `minimal` drops all echoes of your own input (see below); default `full`.      |
 
 **Long-tail technique-specific fields** (`hatColor`, `scamperAction`, `risks`, `extractedConcepts`,
 etc.) are easiest to pass via JSON-on-stdin. See [Flags vs JSON-on-stdin](#flags-vs-json-on-stdin).
@@ -345,6 +346,23 @@ etc.) are easiest to pass via JSON-on-stdin. See [Flags vs JSON-on-stdin](#flags
 **Output (success):** JSON with `sessionId`, `historyLength` (after this step), `insights`,
 `technique`, `currentStep`, `nextStepGuidance`, plus any technique-specific feedback (risk warnings,
 ergodicity flags, escape recommendations).
+
+**Minimal verbosity** (`--verbosity minimal`, or `RESPONSE_VERBOSITY=minimal` as the process
+default): keeps the step acknowledgment (`sessionId`, `technique`, `currentStep`, `totalSteps`,
+`nextStepNeeded`, `historyLength`, `techniqueProgress`, `persona` when one is active), the steering
+(`nextStepGuidance`, `sequentialThinkingSuggestion`, `completionMetadata.completionWarnings` when
+any exist), and every warning/verdict field (`ergodicityMetrics`,
+`flexibilityScore`/`flexibilityMessage`, `earlyWarningState`, `escapeRecommendation`,
+`reflexivityWarning`, `reflectionRequired`, `optionGeneration`, `ergodicityCheck`,
+`alternativeSuggestions`, `realityAssessment`, the `ruinAssessment` verdict, and the
+`appliedReversibility` clamp audit). It replaces the echoes with receipts: `newInsights` carries
+only this step's additions (full mode's `insights` stays the cumulative list), and `fieldsRecorded`
+carries the names of the technique fields the server read. `problem`, `output`, technique field
+values, and `modificationHistory` are not echoed back — they are your own input; the session
+`export` returns everything whole. The final step's completion summary is always full.
+
+> Deprecation notice: `minimal` is the intended future default. The flip will ship as a breaking
+> (major) release; until then nothing changes for callers that never pass the flag.
 
 If `--session` is omitted on the first step, the executor derives one as `session_<planId>`. This is
 convenient but has a sharp edge — see [Parallel execution](#parallel-execution) and the

@@ -2,7 +2,7 @@
  * RiskAssessmentOrchestrator - Handles risk assessment pipeline
  * Extracted from executeThinkingStep to improve maintainability
  */
-import { requiresRuinCheck, assessRuinRisk, generateSurvivalConstraints, } from '../../ergodicity/prompts.js';
+import { matchesRuinKeyword, requiresRuinCheck, assessRuinRisk, generateSurvivalConstraints, } from '../../ergodicity/prompts.js';
 import { adaptiveRiskAssessment } from '../../ergodicity/AdaptiveRiskAssessment.js';
 import { CONFIDENCE_THRESHOLDS } from '../../ergodicity/constants.js';
 import { RuinRiskDiscovery } from '../../core/RuinRiskDiscovery.js';
@@ -160,10 +160,17 @@ export class RiskAssessmentOrchestrator {
         const problemWords = input.problem.toLowerCase().split(/\s+/);
         const allWords = [...outputWords, ...problemWords];
         const needsDiscovery = requiresRuinCheck(input.technique, allWords) ||
-            input.output.toLowerCase().includes('invest') ||
-            input.output.toLowerCase().includes('all') ||
-            input.output.toLowerCase().includes('commit') ||
-            input.output.toLowerCase().includes('permanent');
+            [
+                'invest',
+                'invested',
+                'investing',
+                'all',
+                'commit',
+                'committed',
+                'committing',
+                'permanent',
+                'permanently',
+            ].some(word => outputWords.some(token => matchesRuinKeyword(token, word)));
         if (!needsDiscovery) {
             return null;
         }

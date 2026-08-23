@@ -570,17 +570,11 @@ export class VisualFormatter {
         const lines = [];
         const borderLength = this.maxLineLength;
         // Determine color based on warning level
-        const color = warning.level === 'critical'
-            ? chalk.red
-            : warning.level === 'warning'
-                ? chalk.yellow
-                : warning.level === 'caution'
-                    ? chalk.blue
-                    : chalk.gray;
+        const color = warning.level === 'critical' ? chalk.red : chalk.yellow;
         // Header
         lines.push(color('┌' + '─'.repeat(borderLength - 2) + '┐'));
         // Title
-        const icon = warning.level === 'critical' ? '🔴' : warning.level === 'warning' ? '⚠️' : '⚡';
+        const icon = warning.level === 'critical' ? '🔴' : '⚠️';
         const title = ` ${icon}  Reflexivity Alert: ${warning.currentConstraints} constraints `;
         const titlePadding = Math.max(0, borderLength - title.length - 2);
         lines.push(color('│') +

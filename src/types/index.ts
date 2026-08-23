@@ -145,7 +145,12 @@ export interface ScamperPathImpact {
 
 export interface ScamperModificationHistory {
   action: ScamperAction;
-  modification: string;
+  /**
+   * The prior step's output text. No longer emitted: the caller wrote it,
+   * history holds it, and the session export returns it whole. Optional so
+   * sessions persisted before the field was dropped still load.
+   */
+  modification?: string;
   timestamp: string;
   impact: ScamperPathImpact;
   cumulativeFlexibility: number;
@@ -262,6 +267,30 @@ export interface ExecuteThinkingStepInput {
   mitigations?: string[];
   antifragileProperties?: string[];
   blackSwans?: string[];
+
+  // Bounded caller reversibility claim: moves the step's applied
+  // reversibility at most one rung from the handler-static prior, and only
+  // with a rationale. The audit of what was applied comes back as
+  // executionMetadata.appliedReversibility.
+  stepReversibility?: {
+    level: 'high' | 'medium' | 'low';
+    rationale: string;
+  };
+  // Server-computed audit of a stepReversibility claim (set by the execution
+  // layer; anything the caller sends here is overwritten or ignored).
+  appliedReversibility?: {
+    prior: 'high' | 'medium' | 'low' | 'very_low';
+    claimed: 'high' | 'medium' | 'low';
+    applied: 'high' | 'medium' | 'low' | 'very_low';
+    clamped: boolean;
+  };
+
+  // Response shaping. 'minimal' returns the step acknowledgment, steering,
+  // and warnings/verdicts only — no echoes of the caller's own input, and
+  // newInsights (this step's additions) instead of the cumulative insights
+  // list. Default 'full' (also settable via RESPONSE_VERBOSITY); 'minimal'
+  // is the declared future default.
+  verbosity?: 'minimal' | 'full';
 
   // Revision and branching
   isRevision?: boolean;
@@ -516,6 +545,30 @@ export interface ThinkingOperationData {
   mitigations?: string[];
   antifragileProperties?: string[];
   blackSwans?: string[];
+
+  // Bounded caller reversibility claim: moves the step's applied
+  // reversibility at most one rung from the handler-static prior, and only
+  // with a rationale. The audit of what was applied comes back as
+  // executionMetadata.appliedReversibility.
+  stepReversibility?: {
+    level: 'high' | 'medium' | 'low';
+    rationale: string;
+  };
+  // Server-computed audit of a stepReversibility claim (set by the execution
+  // layer; anything the caller sends here is overwritten or ignored).
+  appliedReversibility?: {
+    prior: 'high' | 'medium' | 'low' | 'very_low';
+    claimed: 'high' | 'medium' | 'low';
+    applied: 'high' | 'medium' | 'low' | 'very_low';
+    clamped: boolean;
+  };
+
+  // Response shaping. 'minimal' returns the step acknowledgment, steering,
+  // and warnings/verdicts only — no echoes of the caller's own input, and
+  // newInsights (this step's additions) instead of the cumulative insights
+  // list. Default 'full' (also settable via RESPONSE_VERBOSITY); 'minimal'
+  // is the declared future default.
+  verbosity?: 'minimal' | 'full';
 
   // Revision and branching
   isRevision?: boolean;

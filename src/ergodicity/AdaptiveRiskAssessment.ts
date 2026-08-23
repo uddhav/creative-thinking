@@ -22,6 +22,34 @@ export interface ContextIndicators {
 
 export class AdaptiveRiskAssessment {
   private contextCache = new Map<string, ContextIndicators>();
+
+  // Compiled per indicator once, shared across instances.
+  private static readonly indicatorPatterns = new Map<string, RegExp>();
+
+  /**
+   * Word-boundary indicator match. A bare `text.includes()` matched fragments
+   * inside unrelated words — 'api' in "rapid", 'all' in "small", 'system' in
+   * "ecosystem" — and mislabeled non-technical problems. Multi-word phrases
+   * match as phrases; single words also match simple plural forms.
+   */
+  private matchesIndicator(text: string, indicator: string): boolean {
+    let pattern = AdaptiveRiskAssessment.indicatorPatterns.get(indicator);
+    if (!pattern) {
+      const escaped = indicator.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      // Lookarounds, not \b: a \b after a non-word final character (e.g. an
+      // indicator ending in '%') can never hold, silently disabling the
+      // indicator. Lookarounds assert "not glued to a word character" on
+      // either side regardless of what the indicator's edges are.
+      pattern = new RegExp(`(?<!\\w)${escaped}(?:e?s)?(?!\\w)`, 'i');
+      AdaptiveRiskAssessment.indicatorPatterns.set(indicator, pattern);
+    }
+    return pattern.test(text);
+  }
+
+  private containsAny(text: string, indicators: string[]): boolean {
+    return indicators.some(ind => this.matchesIndicator(text, ind));
+  }
+
   /**
    * Analyze context from problem and output text
    */
@@ -37,7 +65,10 @@ export class AdaptiveRiskAssessment {
 
     // Quick check for creative exploration - if true, skip detailed risk analysis
     const hasCreativeExploration = this.detectCreativeExploration(fullText);
-    if (hasCreativeExploration && !fullText.includes('all') && !fullText.includes('permanent')) {
+    if (
+      hasCreativeExploration &&
+      !this.containsAny(fullText, ['all', 'permanent', 'permanently'])
+    ) {
       // Fast path for pure creative exploration
       return {
         hasPersonalFinance: false,
@@ -110,9 +141,15 @@ export class AdaptiveRiskAssessment {
     const stakeholderSection = this.getStakeholderSection(context);
     const mitigationSection = this.getMitigationSection(context);
 
-    return `${header} for "${problem}":
+    // The problem and the proposed action are NOT interpolated: the caller
+    // just sent both in this very request, and the same response carries
+    // them — embedding truncated copies here paid tokens to quote the caller
+    // to themselves. The parameters stay in the signature so the context
+    // detectors upstream can keep reading them.
+    void problem;
+    void proposedAction;
 
-Proposed action: ${proposedAction}
+    return `${header} for this problem, applied to this step's proposed action:
 
 ${questions}
 
@@ -163,7 +200,7 @@ Remember: ${this.getContextualReminder(context)}`;
       'equity allocation',
       'fixed income',
     ];
-    return indicators.some(ind => text.includes(ind));
+    return this.containsAny(text, indicators);
   }
 
   private detectBusinessContext(text: string): boolean {
@@ -184,7 +221,7 @@ Remember: ${this.getContextualReminder(context)}`;
       'team',
       'department',
     ];
-    return indicators.some(ind => text.includes(ind));
+    return this.containsAny(text, indicators);
   }
 
   private detectHealthSafety(text: string): boolean {
@@ -201,7 +238,7 @@ Remember: ${this.getContextualReminder(context)}`;
       'hospital',
       'medication',
     ];
-    return indicators.some(ind => text.includes(ind));
+    return this.containsAny(text, indicators);
   }
 
   private detectCreativeExploration(text: string): boolean {
@@ -216,7 +253,7 @@ Remember: ${this.getContextualReminder(context)}`;
       'conceptual',
       'ideate',
     ];
-    return indicators.some(ind => text.includes(ind));
+    return this.containsAny(text, indicators);
   }
 
   private detectTechnicalMigration(text: string): boolean {
@@ -232,7 +269,7 @@ Remember: ${this.getContextualReminder(context)}`;
       'database',
       'architecture',
     ];
-    return indicators.some(ind => text.includes(ind));
+    return this.containsAny(text, indicators);
   }
 
   private detectHighStakes(text: string): boolean {
@@ -241,18 +278,25 @@ Remember: ${this.getContextualReminder(context)}`;
       'everything',
       'entire',
       'irreversible',
+      'irreversibly',
       'permanent',
+      'permanently',
       'cannot undo',
       'no going back',
       'critical',
       'essential',
       'survival',
       'bankrupt',
+      'bankruptcy',
       'fatal',
       'destroy',
+      'destroyed',
+      'destroying',
       'ruin',
+      'ruined',
+      'ruining',
     ];
-    return indicators.some(ind => text.includes(ind));
+    return this.containsAny(text, indicators);
   }
 
   private isPortfolioContext(text: string): boolean {
@@ -274,7 +318,7 @@ Remember: ${this.getContextualReminder(context)}`;
       'all-bond',
       'all-weather',
     ];
-    return portfolioIndicators.some(ind => text.includes(ind));
+    return this.containsAny(text, portfolioIndicators);
   }
 
   private detectResourceType(
@@ -283,17 +327,17 @@ Remember: ${this.getContextualReminder(context)}`;
   ): string {
     // Check financial contexts FIRST - they're most common and specific
     if (context.hasPersonalFinance || this.isPortfolioContext(text)) {
-      if (text.includes('portfolio')) return 'investment portfolio';
-      if (text.includes('savings')) return 'personal savings';
-      if (text.includes('retirement')) return 'retirement funds';
-      if (text.includes('allocation')) return 'asset allocation';
+      if (this.matchesIndicator(text, 'portfolio')) return 'investment portfolio';
+      if (this.matchesIndicator(text, 'savings')) return 'personal savings';
+      if (this.matchesIndicator(text, 'retirement')) return 'retirement funds';
+      if (this.matchesIndicator(text, 'allocation')) return 'asset allocation';
       return 'personal financial resources';
     }
 
     if (context.hasBusinessContext) {
-      if (text.includes('budget')) return 'company budget';
-      if (text.includes('runway')) return 'business runway';
-      if (text.includes('revenue')) return 'revenue streams';
+      if (this.matchesIndicator(text, 'budget')) return 'company budget';
+      if (this.matchesIndicator(text, 'runway')) return 'business runway';
+      if (this.matchesIndicator(text, 'revenue')) return 'revenue streams';
       return 'company resources';
     }
 
@@ -314,15 +358,15 @@ Remember: ${this.getContextualReminder(context)}`;
 
     if (context.hasPersonalFinance) {
       stakeholders.push('you');
-      if (text.includes('family')) stakeholders.push('your family');
-      if (text.includes('dependents')) stakeholders.push('your dependents');
+      if (this.matchesIndicator(text, 'family')) stakeholders.push('your family');
+      if (this.matchesIndicator(text, 'dependents')) stakeholders.push('your dependents');
     }
 
     if (context.hasBusinessContext) {
-      if (text.includes('employee')) stakeholders.push('employees');
-      if (text.includes('customer') || text.includes('client')) stakeholders.push('customers');
-      if (text.includes('investor')) stakeholders.push('investors');
-      if (text.includes('partner')) stakeholders.push('partners');
+      if (this.matchesIndicator(text, 'employee')) stakeholders.push('employees');
+      if (this.containsAny(text, ['customer', 'client'])) stakeholders.push('customers');
+      if (this.matchesIndicator(text, 'investor')) stakeholders.push('investors');
+      if (this.matchesIndicator(text, 'partner')) stakeholders.push('partners');
       if (stakeholders.length === 0) stakeholders.push('organization stakeholders');
     }
 
@@ -334,13 +378,18 @@ Remember: ${this.getContextualReminder(context)}`;
   }
 
   private estimateRecoveryTimeframe(text: string): string {
-    if (text.includes('permanent') || text.includes('irreversible')) {
+    // Derived forms are listed explicitly rather than widened into the suffix
+    // rule: a generic '-ly'/'-cy' suffix would readmit fragment matches
+    // ('all' → "ally") that the word-boundary fix exists to remove.
+    if (this.containsAny(text, ['permanent', 'permanently', 'irreversible', 'irreversibly'])) {
       return 'permanent - cannot recover';
     }
-    if (text.includes('years')) return 'years';
-    if (text.includes('months')) return 'months';
-    if (text.includes('weeks')) return 'weeks';
-    if (text.includes('bankrupt') || text.includes('ruin')) return 'may not be able to recover';
+    if (this.matchesIndicator(text, 'years')) return 'years';
+    if (this.matchesIndicator(text, 'months')) return 'months';
+    if (this.matchesIndicator(text, 'weeks')) return 'weeks';
+    if (this.containsAny(text, ['bankrupt', 'bankruptcy', 'ruin', 'ruined'])) {
+      return 'may not be able to recover';
+    }
     return 'unknown timeframe';
   }
 

@@ -12,14 +12,16 @@ import { JsonOptimizer } from '../utils/JsonOptimizer.js';
 // Type for execution metadata
 export interface ExecutionMetadata {
   /**
-   * How complete THIS step's output was, 0-1.
-   *
-   * Distinct from `metrics.outputCompleteness`, which scores the whole session.
-   * Both used to be called outputCompleteness and appeared in the same response
-   * inches apart, reporting different numbers — an invitation to compare two
-   * things that are not comparable.
+   * Audit of a stepReversibility claim: the handler-static prior, what the
+   * caller claimed, what was applied after the one-rung clamp, and whether
+   * clamping occurred. Present only on steps that sent a valid claim.
    */
-  stepCompleteness: number;
+  appliedReversibility?: {
+    prior: 'high' | 'medium' | 'low' | 'very_low';
+    claimed: 'high' | 'medium' | 'low';
+    applied: 'high' | 'medium' | 'low' | 'very_low';
+    clamped: boolean;
+  };
   pathDependenciesCreated: string[];
   flexibilityImpact: number;
   noteworthyMoment?: string;
@@ -266,7 +268,7 @@ export class ResponseBuilder {
               guidance:
                 output.executionMode === 'parallel'
                   ? 'For parallel execution, you can call execute_thinking_step multiple times in a single message for techniques that have no dependencies. The executionGraph shows which techniques can run in parallel.'
-                  : 'Continue calling execute_thinking_step for each step, incrementing currentStep until nextStepNeeded is false. Note: currentStep uses cumulative numbering across all techniques (e.g., if six_hats has 7 steps, temporal_work starts at step 8).',
+                  : 'Continue calling execute_thinking_step for each step, incrementing currentStep; send nextStepNeeded: false only on the final step of the final technique. Number steps within each technique (as firstCall does — currentStep 1 against the first technique’s own step count); plan-wide cumulative numbering is equally accepted, and totalSteps tells the server which convention currentStep is using.',
               important:
                 'Always use the planId returned from this response. Do not skip this step or create your own planId.',
             }

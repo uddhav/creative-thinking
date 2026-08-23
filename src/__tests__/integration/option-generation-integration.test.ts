@@ -172,6 +172,74 @@ describe('Option Generation Integration', () => {
     expect(firstOption).toHaveProperty('recommendation');
   });
 
+  it(
+    'emits the option block once per descent, not on every step below 0.4',
+    { retry: 0 },
+    async () => {
+      // Same chained plan as above, walked to the END this time. The gate used
+      // to be state-based (fire whenever flexibility < 0.4), so once crossed it
+      // re-emitted the same canned block on every remaining step — roughly
+      // seven consecutive re-emissions on this very plan. The gate is now the
+      // downward CROSSING; flexibility is a monotone-decreasing product for
+      // ordinary steps, so exactly one step of this plan may carry the block.
+      // (retry disabled: this is a kill-checked guard; the global retry: 2
+      // would let a flaky pass mask the regression it exists to catch.)
+      const planInput: PlanThinkingSessionInput = {
+        problem: 'Restructure company with strict budget constraints',
+        techniques: ['competing_hypotheses', 'scamper'],
+        constraints: [
+          'Cannot increase budget',
+          'Must maintain all core services',
+          'Cannot reduce headcount',
+          'Must complete in 3 months',
+          'Cannot outsource',
+        ],
+        timeframe: 'thorough',
+      };
+
+      const plan: PlanThinkingSessionOutput = planThinkingSession(
+        planInput,
+        sessionManager,
+        techniqueRegistry
+      );
+      const sequence: LateralTechnique[] = plan.workflow.flatMap(block =>
+        block.steps.map(() => block.technique)
+      );
+
+      let sessionId: string | undefined;
+      const carriers: number[] = [];
+
+      for (let index = 0; index < sequence.length; index++) {
+        const response = await executeThinkingStep(
+          {
+            planId: plan.planId,
+            sessionId,
+            technique: sequence[index],
+            problem: planInput.problem,
+            currentStep: index + 1,
+            totalSteps: sequence.length,
+            output: PLAIN_OUTPUT,
+            nextStepNeeded: index < sequence.length - 1,
+          } as ExecuteThinkingStepInput,
+          sessionManager,
+          techniqueRegistry,
+          visualFormatter,
+          metricsCollector,
+          complexityAnalyzer,
+          ergodicityManager
+        );
+
+        const data = JSON.parse(response.content[0].text) as Record<string, unknown>;
+        sessionId = (data.sessionId as string | undefined) ?? sessionId;
+        if (data.optionGeneration !== undefined) {
+          carriers.push(index + 1);
+        }
+      }
+
+      expect(carriers, 'exactly one step may carry optionGeneration').toHaveLength(1);
+    }
+  );
+
   it('should not trigger option generation when flexibility is high', async () => {
     // Create a plan with minimal constraints
     const planInput: PlanThinkingSessionInput = {

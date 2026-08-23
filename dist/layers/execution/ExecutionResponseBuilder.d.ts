@@ -11,6 +11,27 @@ import type { TechniqueHandler } from '../../techniques/types.js';
 import type { EscalationPromptGenerator } from '../../ergodicity/escalationPrompts.js';
 import type { HybridComplexityAnalyzer } from '../../complexity/analyzer.js';
 import type { SessionManager } from '../../core/SessionManager.js';
+import type { ReflexivityWarning } from '../../core/ReflexivityTracker.js';
+/**
+ * The response keys minimal verbosity keeps — the contract, pinned by
+ * response-verbosity.test.ts. Everything here is the step acknowledgment,
+ * steering, or a warning/verdict: the fields SOCKETES.md and the
+ * lateral-thinking skill tell callers to read. Echoes of the caller's own
+ * input (problem, output, technique field values, modificationHistory) and
+ * cumulative re-sends are deliberately absent; `insights` is replaced by
+ * `newInsights` (this step's additions only) and field values by
+ * `fieldsRecorded` (their names — a receipt without the echo). Three nested
+ * picks that a flat list cannot reach are handled in slimToMinimal:
+ * completionMetadata.completionWarnings, executionMetadata.appliedReversibility,
+ * and ruinAssessment minus its prompt. The terminal step's completion block
+ * bypasses slimming by mechanism — handleSessionCompletion merges it into the
+ * already-serialized response after this filter runs — as do the autoSave
+ * status fields, added the same way.
+ *
+ * Declared sunset: 'minimal' is the intended future DEFAULT ('full' exists
+ * for compatibility); the default flip will ship as a breaking release.
+ */
+export declare const MINIMAL_RESPONSE_KEEP_KEYS: readonly ["sessionId", "technique", "currentStep", "totalSteps", "nextStepNeeded", "historyLength", "techniqueProgress", "nextStepGuidance", "sequentialThinkingSuggestion", "ergodicityMetrics", "flexibilityScore", "flexibilityMessage", "alternativeSuggestions", "ergodicityCheck", "earlyWarningState", "escapeRecommendation", "reflexivityWarning", "reflectionRequired", "optionGeneration", "realityAssessment", "persona"];
 export declare class ExecutionResponseBuilder {
     private complexityAnalyzer;
     private escalationGenerator;
@@ -26,7 +47,7 @@ export declare class ExecutionResponseBuilder {
     /**
      * Build comprehensive execution response
      */
-    buildResponse(input: ExecuteThinkingStepInput, session: SessionData, sessionId: string, handler: TechniqueHandler, techniqueLocalStep: number, techniqueIndex: number, plan: PlanThinkingSessionOutput | undefined, currentFlexibility: number, optionGenerationResult: OptionGenerationResult | undefined, ergodicityMetrics?: ErgodicityResult['metrics']): LateralThinkingResponse;
+    buildResponse(input: ExecuteThinkingStepInput, session: SessionData, sessionId: string, handler: TechniqueHandler, techniqueLocalStep: number, techniqueIndex: number, plan: PlanThinkingSessionOutput | undefined, currentFlexibility: number, optionGenerationResult: OptionGenerationResult | undefined, ergodicityMetrics?: ErgodicityResult['metrics'], reflexivityWarning?: ReflexivityWarning | null): LateralThinkingResponse;
     /**
      * Build core response data object with insights and metadata
      */
@@ -35,6 +56,13 @@ export declare class ExecutionResponseBuilder {
      * Enhance response with memory outputs and technique progress
      */
     private enhanceWithMemoryAndProgress;
+    /**
+     * The minimal-verbosity filter: an allowlist over the fully built response.
+     * Built-then-filtered (rather than skipping producers) so warning and
+     * verdict producers always run; the one producer worth skipping outright
+     * (memory decoration) is handled at its call site.
+     */
+    private slimToMinimal;
     /**
      * Enhance response with flexibility and warnings
      */
@@ -118,17 +146,6 @@ export declare class ExecutionResponseBuilder {
      */
     private static readonly TECHNIQUE_FIELDS;
     private extractTechniqueSpecificFields;
-    /**
-     * How completely a step filled in the outputs its technique asks for.
-     *
-     * This counts whether optional fields were populated — insights, risks,
-     * antifragile properties, provocation/principles. It is a COMPLETENESS
-     * measure, not a quality one: four vacuous insights score higher than two
-     * excellent ones, and nothing here inspects what was actually written.
-     * Named accordingly so it is not mistaken for evidence that a technique
-     * worked. Measuring real quality needs the guidance eval, not this.
-     */
-    private assessOutputCompleteness;
     private extractPathDependencies;
     private calculateFlexibilityImpact;
     private identifyNoteworthyMoment;

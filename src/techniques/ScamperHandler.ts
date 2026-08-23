@@ -6,11 +6,6 @@ import type { ScamperAction, ScamperPathImpact } from '../types/index.js';
 import { BaseTechniqueHandler, firstSentence, type TechniqueInfo, type StepInfo } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
 
-// Constants for path degradation factors
-const HIGH_COMMITMENT_DEGRADATION_FACTOR = 0.7; // Flexibility loss per high commitment action
-const STEP_DEGRADATION_FACTOR = 0.95; // Gradual flexibility loss per step
-const MINIMUM_FLEXIBILITY_THRESHOLD = 0.01; // Minimum flexibility to maintain tracking
-
 interface ScamperActionInfo {
   description: string;
   emoji: string;
@@ -318,7 +313,9 @@ export class ScamperHandler extends BaseTechniqueHandler {
   analyzePathImpact(
     action: ScamperAction,
     modification: string,
-    history: Array<{ scamperAction?: string }>
+    // Kept for call-site compatibility; the history-degradation factors that
+    // read it were retired with the verb-static retention math.
+    _history: Array<{ scamperAction?: string }>
   ): ScamperPathImpact {
     const actionInfo = this.actions[action];
     if (!actionInfo) {
@@ -330,7 +327,11 @@ export class ScamperHandler extends BaseTechniqueHandler {
       );
     }
 
-    // Base impact from action type
+    // Base impact from action type. `flexibilityRetention` here is only a
+    // seed: the execution layer overwrites it with 1 − the applied
+    // reversibility cost — the same ladder the session actually charges —
+    // replacing a verb-static product of three history-degradation factors
+    // that reported near-zero retention from history length alone.
     const baseImpact: ScamperPathImpact = {
       reversible: actionInfo.commitmentLevel === 'low' || actionInfo.commitmentLevel === 'medium',
       dependenciesCreated: this.identifyDependencies(action, modification),
@@ -339,34 +340,6 @@ export class ScamperHandler extends BaseTechniqueHandler {
       flexibilityRetention: 1 - actionInfo.typicalReversibilityCost,
       commitmentLevel: actionInfo.commitmentLevel,
     };
-
-    // Adjust based on history
-    if (history.length > 0) {
-      const cumulativeCommitment = this.calculateCumulativeCommitment(history);
-      // More aggressive degradation for cumulative effects
-      const degradationFactor = Math.max(0.1, 1 - cumulativeCommitment * 0.5);
-      baseImpact.flexibilityRetention *= degradationFactor;
-      // Further reduce based on number of high-commitment actions
-      const highCommitmentCount = history.filter(h => {
-        const action = this.actions[h.scamperAction as ScamperAction];
-        return (
-          action && (action.commitmentLevel === 'high' || action.commitmentLevel === 'irreversible')
-        );
-      }).length;
-      if (highCommitmentCount > 0) {
-        baseImpact.flexibilityRetention *= Math.pow(
-          HIGH_COMMITMENT_DEGRADATION_FACTOR,
-          highCommitmentCount
-        );
-      }
-      // Additional degradation based on step count to ensure monotonic decrease
-      baseImpact.flexibilityRetention *= Math.pow(STEP_DEGRADATION_FACTOR, history.length);
-      // Ensure minimum flexibility for tracking purposes
-      baseImpact.flexibilityRetention = Math.max(
-        MINIMUM_FLEXIBILITY_THRESHOLD,
-        baseImpact.flexibilityRetention
-      );
-    }
 
     // Add recovery path for all actions
     baseImpact.recoveryPath = this.generateRecoveryPath(action);
@@ -472,19 +445,6 @@ export class ScamperHandler extends BaseTechniqueHandler {
     }
 
     return opened;
-  }
-
-  private calculateCumulativeCommitment(history: Array<{ scamperAction?: string }>): number {
-    let commitment = 0;
-    history.forEach(entry => {
-      if (entry.scamperAction) {
-        const actionInfo = this.actions[entry.scamperAction as ScamperAction];
-        if (actionInfo) {
-          commitment += actionInfo.typicalReversibilityCost;
-        }
-      }
-    });
-    return Math.min(commitment, 1);
   }
 
   private generateRecoveryPath(action: ScamperAction): string {

@@ -11,7 +11,7 @@ import { ErrorFactory } from '../errors/enhanced-errors.js';
 // Import new orchestrators
 import { ExecutionValidator } from './execution/ExecutionValidator.js';
 import { RiskAssessmentOrchestrator } from './execution/RiskAssessmentOrchestrator.js';
-import { ErgodicityOrchestrator } from './execution/ErgodicityOrchestrator.js';
+import { ErgodicityOrchestrator, REVERSIBILITY_COSTS } from './execution/ErgodicityOrchestrator.js';
 import { ExecutionResponseBuilder } from './execution/ExecutionResponseBuilder.js';
 import { EscalationPromptGenerator } from '../ergodicity/escalationPrompts.js';
 // Import completion tracking components
@@ -157,7 +157,12 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
             if (input.technique === 'scamper' && input.scamperAction) {
                 const scamperHandler = handler;
                 input.pathImpact = scamperHandler.analyzePathImpact(input.scamperAction, input.output, session.history);
-                // Build modification history from session (previous steps only)
+                // Build modification history from session (previous steps only).
+                // Each entry carries the action and its impact, not the prior step's
+                // output text: the caller wrote that text, it lives in history, and
+                // the session export returns it whole — re-echoing an 800-char
+                // truncated copy of every prior output on every step was most of the
+                // response's weight.
                 input.modificationHistory = [];
                 // Include previous SCAMPER modifications from history
                 session.history.forEach(entry => {
@@ -167,7 +172,6 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
                         input.modificationHistory) {
                         input.modificationHistory.push({
                             action: entry.scamperAction,
-                            modification: entry.output,
                             timestamp: entry.timestamp || new Date().toISOString(),
                             impact: entry.pathImpact,
                             cumulativeFlexibility: entry.pathImpact.flexibilityRetention,
@@ -192,8 +196,12 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
             // pathDivergence on every step, and this call site used to drop all
             // three on the floor.
             const { currentFlexibility, optionGenerationResult, ergodicityResult } = await ergodicityOrchestrator.trackErgodicityAndGenerateOptions(input, session, techniqueLocalStep, sessionId, handler);
-            // Record step in history (exclude realityAssessment from operationData to avoid duplication)
-            const { realityAssessment: inputRealityAssessment, ...inputWithoutReality } = input;
+            // Record step in history. realityAssessment is excluded to avoid
+            // duplication (it travels via realityResult); modificationHistory is
+            // excluded because it is REBUILT from history on every step — storing
+            // each step's copy made session growth quadratic, and nothing reads
+            // the stored copies (the rebuild reads scamperAction/pathImpact).
+            const { realityAssessment: inputRealityAssessment, modificationHistory: _rebuiltEachStep, ...inputWithoutReality } = input;
             // If there's a reality assessment from input, we should handle it separately
             if (inputRealityAssessment) {
                 // Reality assessment is handled through realityResult and added to response separately
@@ -213,17 +221,52 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
                 techniqueLocalStep,
                 timestamp: new Date().toISOString(),
             });
-            // Track reflexivity for ANY technique that provides reflexivity data
+            // Track reflexivity for ANY technique that provides reflexivity data.
+            // The tracker returns an edge-triggered warning (bucket crossing or new
+            // content-derived foreclosure); it is emitted exactly once from here —
+            // to stderr and into the response — so both surfaces always agree.
+            let reflexivityWarning = null;
             try {
                 const stepDetails = handler.getStepInfo(techniqueLocalStep);
                 // Track if the handler provides reflexivity data (type field indicates StepInfo)
                 if ('type' in stepDetails) {
                     const reflexiveEffects = 'reflexiveEffects' in stepDetails ? stepDetails.reflexiveEffects : undefined;
-                    sessionManager.trackReflexivity(sessionId, input.technique, techniqueLocalStep, stepDetails.type, reflexiveEffects);
+                    // A DOWNWARD reversibility claim (more committing than the server's
+                    // prior) is real, caller-declared information about the world — the
+                    // first content-provenance constraint producer. An upward claim
+                    // reduces constraint and records nothing.
+                    const audit = input.appliedReversibility;
+                    const callerConstraints = audit &&
+                        input.stepReversibility &&
+                        REVERSIBILITY_COSTS[audit.claimed] > REVERSIBILITY_COSTS[audit.prior]
+                        ? [
+                            `Caller-declared (${input.technique} step ${techniqueLocalStep}): ${input.stepReversibility.rationale}`,
+                        ]
+                        : undefined;
+                    // Handler-declared effects are server-authored templates.
+                    reflexivityWarning = sessionManager.trackReflexivity(sessionId, input.technique, techniqueLocalStep, stepDetails.type, reflexiveEffects, 'template', callerConstraints);
                 }
             }
             catch {
                 // Handler doesn't support StepInfo interface yet - skip reflexivity tracking
+            }
+            if (reflexivityWarning) {
+                // 'critical' is reserved for steps where the server itself holds a
+                // stop-worthy verdict; the tracker alone never escalates past
+                // 'warning'.
+                const recommendedAction = session.earlyWarningState?.recommendedAction;
+                if (session.escapeRecommendation ||
+                    recommendedAction === 'pivot' ||
+                    recommendedAction === 'escape') {
+                    reflexivityWarning = { ...reflexivityWarning, level: 'critical' };
+                }
+                if (process.env.DISABLE_REFLEXIVITY_WARNINGS !== 'true' &&
+                    process.env.DISABLE_THOUGHT_LOGGING !== 'true') {
+                    const warningDisplay = visualFormatter.formatReflexivityWarning(reflexivityWarning);
+                    if (warningDisplay) {
+                        process.stderr.write('\n' + warningDisplay + '\n');
+                    }
+                }
             }
             // Handle revisions and branches
             if (input.isRevision && input.revisesStep !== undefined) {
@@ -245,21 +288,28 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
                 }
                 session.branches[input.branchId].push(operationData);
             }
-            // Update metrics
-            metricsCollector.updateMetrics(session, operationData);
-            // Build comprehensive execution response
-            const response = executionResponseBuilder.buildResponse(input, session, sessionId, handler, techniqueLocalStep, techniqueIndex, plan, currentFlexibility, optionGenerationResult, ergodicityResult.metrics);
-            // Check completion gatekeeper before allowing termination
+            // Update metrics (recomputed from history; the step is already pushed)
+            metricsCollector.updateMetrics(session);
+            // The gatekeeper must vet a termination BEFORE the response is built:
+            // buildResponse finalizes the session on nextStepNeeded=false (endTime,
+            // completion telemetry, sessionComplete payload), endTime is never
+            // cleared, and persistence reads endTime as status 'completed' — so a
+            // vetoed termination must not reach any of that.
             const completionCheck = completionGatekeeper.canProceedToNextStep(input, session, plan);
             if (!completionCheck.allowed && completionCheck.response) {
                 // If gatekeeper blocks termination, return the blocking response
                 return completionCheck.response;
             }
-            // Handle session completion
+            // Build comprehensive execution response
+            const response = executionResponseBuilder.buildResponse(input, session, sessionId, handler, techniqueLocalStep, techniqueIndex, plan, currentFlexibility, optionGenerationResult, ergodicityResult.metrics, reflexivityWarning);
+            // Final summary for a completed session. buildResponse has already set
+            // endTime and refreshed session.insights/metrics; this only renders them.
             if (!input.nextStepNeeded) {
-                session.endTime = Date.now();
-                // Final summary
-                visualFormatter.formatSessionSummary(input.technique, input.problem, session.insights, session.metrics);
+                const summary = visualFormatter.formatSessionSummary(input.technique, input.problem, session.insights, session.metrics);
+                if (summary && process.env.DISABLE_THOUGHT_LOGGING !== 'true') {
+                    // IMPORTANT: Use stderr for visual output - stdout is reserved for JSON-RPC
+                    process.stderr.write(`${summary}\n`);
+                }
             }
             // Auto-save if enabled
             if (input.autoSave) {

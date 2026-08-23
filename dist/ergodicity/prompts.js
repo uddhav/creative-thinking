@@ -66,18 +66,42 @@ export function getErgodicityPrompt(technique, step, problem) {
     return highRiskPrompts[technique] || null;
 }
 /**
+ * Whole-token keyword match with simple plural forms. The previous substring
+ * test matched fragments — 'bet' inside "between", 'legal' inside "illegal",
+ * 'critical' inside "critically" — so ordinary prose tripped the ruin gate.
+ * Surrounding punctuation is stripped; interior hyphens are kept so 'all-in'
+ * and 'lock-in' still match their token.
+ */
+export function matchesRuinKeyword(token, keyword) {
+    const t = token.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '').toLowerCase();
+    return t === keyword || t === `${keyword}s` || t === `${keyword}es`;
+}
+/**
  * Check if a decision requires ruin risk assessment
  */
 export function requiresRuinCheck(technique, keywords) {
     const ruinKeywords = [
         'invest',
+        // Inflected forms listed explicitly (the token matcher adds only simple
+        // plurals, and stem suffixing cannot reach doubled forms like
+        // "committed"): committal prose is usually past tense.
+        'invested',
+        'investing',
         'spend',
+        'spent',
         'commit',
+        'committed',
+        'committing',
         'eliminate',
+        'eliminated',
         'remove',
+        'removed',
         'delete',
+        'deleted',
         'permanent',
+        'permanently',
         'irreversible',
+        'irreversibly',
         'all-in',
         'bet',
         'risk',
@@ -106,9 +130,11 @@ export function requiresRuinCheck(technique, keywords) {
         'vendor',
         'migration',
         'lock-in',
+        // Spans two whitespace-split tokens, so it can never match a single one —
+        // inert under the old substring test too. Kept as a record of intent.
         'path dependencies',
     ];
-    const hasRuinKeyword = keywords.some(keyword => ruinKeywords.some(ruinWord => keyword.toLowerCase().includes(ruinWord)));
+    const hasRuinKeyword = keywords.some(keyword => ruinKeywords.some(ruinWord => matchesRuinKeyword(keyword, ruinWord)));
     const highRiskTechniques = [
         'scamper',
         'disney_method',
@@ -121,9 +147,12 @@ export function requiresRuinCheck(technique, keywords) {
  * Generate ruin risk assessment prompt
  */
 export function generateRuinAssessmentPrompt(problem, technique, proposedAction) {
-    return `🚨 RUIN RISK ASSESSMENT for "${problem}":
-
-Proposed action: ${proposedAction}
+    // problem and proposedAction are deliberately not interpolated: the caller
+    // sent both in this very request, and echoing truncated copies back paid
+    // tokens to quote them to themselves. Signature kept for call sites.
+    void problem;
+    void proposedAction;
+    return `🚨 RUIN RISK ASSESSMENT for this step's proposed action:
 
 Please evaluate:
 1. **Reversibility**: Can this decision be undone? At what cost?

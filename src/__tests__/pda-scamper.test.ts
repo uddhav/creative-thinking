@@ -155,12 +155,12 @@ describe('PDA-SCAMPER Enhancement', () => {
       expect(step1.pathImpact?.reversible).toBe(true);
       expect(step1.pathImpact?.optionsClosed).toContain('Using original component');
       expect(step1.pathImpact?.optionsOpened).toContain('New material properties to exploit');
-      // What this step retained is SCAMPER's own reading, and it lives on
-      // pathImpact. `flexibilityScore` is no longer echoed back from the
-      // input: the response carries it only as the engine's measurement, and
-      // only once it falls below 0.7 — so `> 0.7` on that key could never be
-      // satisfied again.
-      expect(step1.pathImpact?.flexibilityRetention).toBeGreaterThan(0.7);
+      // What this step retained now reads the same reversibility ladder the
+      // session charges: 1 − the applied rung's cost. Substitute's slot is
+      // declared 'medium' (cost 0.5), so retention reads 0.5 — the verb
+      // table's 0.75 and its history-degradation factors were retired as
+      // fake precision (deliberate recalibration, not a regression).
+      expect(step1.pathImpact?.flexibilityRetention).toBeCloseTo(0.5, 10);
       // `flexibilityScore` on the response is the engine's measurement now,
       // never an echo of the input — nothing was sent for it here. It appears
       // only once flexibility falls below the reporting threshold, which is
@@ -341,6 +341,34 @@ describe('PDA-SCAMPER Enhancement', () => {
 
         // Verify cumulative flexibility tracking
         expect(history[0].cumulativeFlexibility).toBeGreaterThan(history[1].cumulativeFlexibility);
+
+        // The prior steps' output text is NOT re-echoed per entry — history
+        // and the session export hold it; re-sending an 800-char-truncated
+        // copy of every prior output on every step was most of the
+        // response's weight.
+        expect(history[0].modification).toBeUndefined();
+        expect(history[1].modification).toBeUndefined();
+      }
+
+      // The ruin-assessment prompt no longer quotes the caller to themselves:
+      // the same request carried the problem and this step's output already.
+      const ruin = (step3 as Record<string, unknown>).ruinAssessment as
+        | { prompt?: string }
+        | undefined;
+      if (ruin?.prompt) {
+        expect(ruin.prompt).not.toContain('Design for cargo hauling');
+        expect(ruin.prompt).not.toContain('Improve a coffee mug design');
+      }
+
+      // Nor is the rebuilt echo stored back into each history entry — that
+      // made session growth quadratic, and the rebuild never reads it.
+      const session = server.getSessionManager().getSession(step3.sessionId);
+      expect(session, 'session must exist in the manager').toBeDefined();
+      for (const entry of session?.history ?? []) {
+        expect(
+          (entry as Record<string, unknown>).modificationHistory,
+          'history entries must not store the rebuilt echo'
+        ).toBeUndefined();
       }
     });
 

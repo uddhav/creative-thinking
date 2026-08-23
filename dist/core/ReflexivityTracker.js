@@ -176,6 +176,8 @@ export class ReflexivityTracker {
                 optionsCreated: [],
                 lastModified: Date.now(),
                 constraintCount: 0,
+                contentConstraintCount: 0,
+                templateConstraintCount: 0,
                 lastConstraintUpdate: Date.now(),
             });
         }
@@ -186,9 +188,22 @@ export class ReflexivityTracker {
         return state;
     }
     /**
-     * Track a step execution and assess reflexivity
+     * Track a step execution and assess reflexivity.
+     *
+     * Returns the record plus an edge-triggered warning, computed here — the
+     * one place that knows both the pre-step and post-step state. It used to be
+     * a separate `generateWarning(sessionId)` that reported the threshold
+     * STATE, so once a session crossed a threshold, an identical "critical"
+     * fired on every remaining step; two call sites also read it at different
+     * points in the step and could disagree by one step.
      */
-    trackStep(sessionId, technique, step, stepType, actionDescription, reflexiveEffects) {
+    trackStep(sessionId, technique, step, stepType, actionDescription, reflexiveEffects, provenance = 'template', 
+    // Caller-declared commitments (e.g. a downward stepReversibility claim).
+    // Always content-provenance, and written into pathsForeclosed directly —
+    // deliberately bypassing the wording filter in assessReflexiveImpact,
+    // which would silently drop "we've signed the lease" for carrying none
+    // of its six stems.
+    callerConstraints) {
         // Validate inputs for security and correctness
         this.validateTrackingInput(sessionId, technique, actionDescription);
         const record = {
@@ -201,13 +216,34 @@ export class ReflexivityTracker {
             reflexiveEffects,
             realityChanges: {},
         };
+        let warning = null;
+        const declaredConstraints = callerConstraints?.filter(c => c.trim().length > 0) ?? [];
         // Only process reflexivity for action steps
-        if (stepType === 'action' && reflexiveEffects) {
+        if (stepType === 'action' && (reflexiveEffects || declaredConstraints.length > 0)) {
             const realityState = this.getOrInitRealityState(sessionId);
-            const changes = this.assessReflexiveImpact(reflexiveEffects, realityState);
+            // realityState is a live reference that updateRealityState mutates in
+            // place — the pre-step readings must be captured before those calls.
+            const previousContentCount = realityState.contentConstraintCount || 0;
+            const alreadyForeclosed = new Set(realityState.pathsForeclosed);
+            const changes = reflexiveEffects
+                ? this.assessReflexiveImpact(reflexiveEffects, realityState)
+                : {};
             record.realityChanges = changes;
             // Update reality state
-            this.updateRealityState(sessionId, changes);
+            if (reflexiveEffects) {
+                this.updateRealityState(sessionId, changes, provenance);
+            }
+            if (declaredConstraints.length > 0) {
+                this.updateRealityState(sessionId, { pathsForeclosed: declaredConstraints }, 'content');
+            }
+            // Only genuinely new entries fire the composition warning: the state
+            // arrays deduplicate, so a re-declared commitment (revision, or a step
+            // re-sent after a gatekeeper veto) neither counts again nor re-warns.
+            const newlyForeclosed = [
+                ...(provenance === 'content' ? (changes.pathsForeclosed ?? []) : []),
+                ...declaredConstraints,
+            ].filter(entry => !alreadyForeclosed.has(entry));
+            warning = this.computeEdgeWarning(previousContentCount, realityState.contentConstraintCount || 0, newlyForeclosed);
         }
         // Store action record and update timestamp
         if (!this.actionHistory.has(sessionId)) {
@@ -219,7 +255,7 @@ export class ReflexivityTracker {
         }
         // Update session timestamp for cleanup tracking
         this.sessionTimestamps.set(sessionId, Date.now());
-        return record;
+        return { record, warning };
     }
     /**
      * Assess how an action's reflexive effects change reality
@@ -300,7 +336,7 @@ export class ReflexivityTracker {
     /**
      * Update the reality state with changes from an action
      */
-    updateRealityState(sessionId, changes) {
+    updateRealityState(sessionId, changes, provenance = 'template') {
         const state = this.getOrInitRealityState(sessionId);
         let deltaConstraints = 0;
         // Type-safe helper to check if a key is an array property
@@ -327,17 +363,28 @@ export class ReflexivityTracker {
                 if (!state[key]) {
                     state[key] = [];
                 }
-                // Add new values - state[key] is definitely an array after initialization
                 const stateArray = state[key];
-                stateArray.push(...value);
+                // Deduplicate against what the state already holds: the same
+                // declaration re-arriving (a revision, or a re-sent step after a
+                // gatekeeper veto) is one fact about the world, not N constraints —
+                // counting it N times rebuilt the manufactured-warning storm one
+                // layer down.
+                const newValues = value.filter(item => !stateArray.includes(item));
+                stateArray.push(...newValues);
                 // Update constraint count for relevant arrays
                 if (constraintArrays.includes(key)) {
-                    deltaConstraints += value.length;
+                    deltaConstraints += newValues.length;
                 }
             }
         });
-        // Update cached constraint count
+        // Update cached constraint counts, split by who authored the constraint
         state.constraintCount = (state.constraintCount || 0) + deltaConstraints;
+        if (provenance === 'content') {
+            state.contentConstraintCount = (state.contentConstraintCount || 0) + deltaConstraints;
+        }
+        else {
+            state.templateConstraintCount = (state.templateConstraintCount || 0) + deltaConstraints;
+        }
         state.lastConstraintUpdate = Date.now();
         state.lastModified = Date.now();
     }
@@ -354,46 +401,52 @@ export class ReflexivityTracker {
         return this.actionHistory.get(sessionId) || [];
     }
     /**
-     * Generate warnings based on current reality state
-     * Returns null if no warning needed
+     * Bucket index for the content-constraint count: 0 below the warning
+     * threshold, 1 up to the caution threshold, then geometric (×1.25) — a
+     * stateless encoding of "re-fire only on a material increase".
      */
-    generateWarning(sessionId) {
-        const state = this.getRealityState(sessionId);
-        if (!state) {
+    constraintBucket(count) {
+        if (count <= REFLEXIVITY_CONFIG.WARNING_CONSTRAINT_THRESHOLD)
+            return 0;
+        if (count <= REFLEXIVITY_CONFIG.CAUTION_CONSTRAINT_THRESHOLD)
+            return 1;
+        return (2 +
+            Math.floor(Math.log(count / REFLEXIVITY_CONFIG.CAUTION_CONSTRAINT_THRESHOLD) / Math.log(1.25)));
+    }
+    /**
+     * Edge-triggered warning: fires when the content-derived constraint count
+     * crosses a bucket boundary, or when this step forecloses new paths from
+     * caller content — never merely for the count being above a threshold.
+     * The tracker emits at most 'warning'; escalation to 'critical' is the
+     * execution layer's call, made only when the server holds a stop-worthy
+     * verdict (an escape recommendation or a pivot/escape early warning).
+     */
+    computeEdgeWarning(previousCount, newCount, newlyForeclosed) {
+        const crossed = this.constraintBucket(newCount) > this.constraintBucket(previousCount);
+        if (!crossed && newlyForeclosed.length === 0) {
             return null;
         }
-        const constraintCount = state.constraintCount || 0;
-        const pathsForeclosed = state.pathsForeclosed;
-        // Determine warning level based on constraint count
-        let level;
-        let type;
-        let message;
-        const suggestions = [];
-        // Critical level: > 10 constraints
-        if (constraintCount > REFLEXIVITY_CONFIG.CAUTION_CONSTRAINT_THRESHOLD) {
-            level = 'critical';
-            type = 'constraint_threshold';
-            message = `Critical: ${constraintCount} constraints accumulated. Reality highly constrained.`;
-            suggestions.push('Consider escape protocols to preserve future flexibility', 'Document assumptions that led to these constraints', 'Evaluate if any constraints can be temporarily relaxed');
-        }
-        // Warning level: > 5 constraints
-        else if (constraintCount > REFLEXIVITY_CONFIG.WARNING_CONSTRAINT_THRESHOLD) {
-            level = 'warning';
-            type = 'constraint_threshold';
-            message = `Warning: ${constraintCount} constraints detected. Path dependencies building.`;
-            suggestions.push('Generate alternative approaches before committing further', 'Review recent decisions for irreversibility', 'Consider parallel exploration of options');
-        }
-        // No warning needed
-        else {
-            return null;
+        if (crossed) {
+            return {
+                level: 'warning',
+                type: 'constraint_threshold',
+                message: `Warning: ${newCount} content-derived constraints accumulated. Path dependencies building.`,
+                currentConstraints: newCount,
+                pathsForeclosed: newlyForeclosed.slice(0, 5),
+                suggestions: [
+                    'Generate alternative approaches before committing further',
+                    'Review recent decisions for irreversibility',
+                    'Consider parallel exploration of options',
+                ],
+            };
         }
         return {
-            level,
-            type,
-            message,
-            currentConstraints: constraintCount,
-            pathsForeclosed,
-            suggestions,
+            level: 'warning',
+            type: 'path_foreclosed',
+            message: `${newlyForeclosed.length} new path${newlyForeclosed.length === 1 ? '' : 's'} foreclosed by declared commitments.`,
+            currentConstraints: newCount,
+            pathsForeclosed: newlyForeclosed.slice(0, 5),
+            suggestions: ['Review whether the commitment can stay reversible'],
         };
     }
     /**
@@ -628,7 +681,9 @@ export class ReflexivityTracker {
             totalActions: history.length,
             thinkingSteps,
             actionSteps,
-            currentConstraints: state?.pathsForeclosed?.length || 0,
+            // The same three-array count the warning thresholds use — this used to
+            // count only pathsForeclosed while the thresholds counted three arrays.
+            currentConstraints: state?.constraintCount || 0,
             optionsCreated: state?.optionsCreated?.length || 0,
             overallReversibility,
         };

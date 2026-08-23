@@ -9,6 +9,28 @@ export interface SessionMetrics {
     risksCaught?: number;
     antifragileFeatures?: number;
 }
+/**
+ * Technique-native fields whose entries count as identified risks.
+ *
+ * The counters used to read only the legacy `risks` array — the one risk
+ * field callers were never steered toward — so a session with a fully
+ * populated steelman_red_team `failureModes` still reported `risksCaught: 0`.
+ * Every field here is a string[] on the execute input; `timelineProjections`
+ * nests two further lists and is handled in the extractors below.
+ * `mitigations` is deliberately absent: a mitigation presumes a risk the
+ * other fields already carry, so counting it would double-count.
+ *
+ * When a new technique adds a risk-bearing or antifragile field, add it here
+ * — this constant is the single source for the session counters, the
+ * per-technique completion telemetry, and the completeness score (see
+ * CONTRIBUTING.md, "Adding a New Technique").
+ */
+export declare const RISK_FIELDS: readonly ["risks", "failureModes", "blackSwans", "blackSwanScenarios", "failureModesPredicted", "failureInsights", "criticRisks", "earlyWarnings", "stressTestResults"];
+export declare const ANTIFRAGILE_FIELDS: readonly ["antifragileProperties", "temporalEscapeRoutes"];
+/** Every risk entry a single step supplied, across all counted fields. */
+export declare function riskEntries(entry: ThinkingOperationData): string[];
+/** Every antifragile entry a single step supplied. */
+export declare function antifragileEntries(entry: ThinkingOperationData): string[];
 export interface DetailedMetrics extends SessionMetrics {
     totalSteps: number;
     revisionsCount: number;
@@ -21,14 +43,15 @@ export interface DetailedMetrics extends SessionMetrics {
 }
 export declare class MetricsCollector {
     /**
-     * Update session metrics based on new input.
+     * Recompute session metrics from the full history.
      *
      * Callers invoke this AFTER pushing the current step onto `session.history`,
-     * so a whole-session recomputation here already accounts for the step being
-     * recorded. That is why `outputCompleteness` is derived from the session
-     * rather than accumulated per call.
+     * so the recomputation already accounts for the step being recorded. Both
+     * counters are derived, never accumulated: entries are deduplicated by
+     * trimmed text, so a caller that re-sends an array on a later step cannot
+     * double-count, and calling this twice is harmless.
      */
-    updateMetrics(session: SessionData, input: ThinkingOperationData): SessionMetrics;
+    updateMetrics(session: SessionData): SessionMetrics;
     /**
      * Count risks identified in the session
      */
@@ -66,14 +89,15 @@ export declare class MetricsCollector {
      * Recompute the derived completeness metric from the session as it stands.
      *
      * Separate from `updateMetrics` because the counters it reads and the
-     * insights it counts are written at different points in a step: risks and
-     * antifragile features arrive with the input, but insights are extracted
+     * insights it counts are written at different points in a step: risk and
+     * antifragile entries arrive with the input, but insights are extracted
      * later, while the response is being built. Computed once with the counters,
      * the metric always reported the previous step's insight count — a completed
      * three-insight session read 0.67 where it should read 0.8.
      *
-     * `updateMetrics` cannot simply be called again: it increments the risk and
-     * antifragile counters, so a second call would double them.
+     * (`updateMetrics` is safe to call twice now that the counters are derived;
+     * this narrower helper remains for the response-building path, which only
+     * needs the completeness refresh.)
      */
     refreshOutputCompleteness(session: SessionData): number;
     private calculateOutputCompleteness;

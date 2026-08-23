@@ -29,6 +29,14 @@ export interface RuinRiskAssessment {
  */
 export declare function getErgodicityPrompt(technique: LateralTechnique, step: number, problem: string): ErgodicityPrompt | null;
 /**
+ * Whole-token keyword match with simple plural forms. The previous substring
+ * test matched fragments — 'bet' inside "between", 'legal' inside "illegal",
+ * 'critical' inside "critically" — so ordinary prose tripped the ruin gate.
+ * Surrounding punctuation is stripped; interior hyphens are kept so 'all-in'
+ * and 'lock-in' still match their token.
+ */
+export declare function matchesRuinKeyword(token: string, keyword: string): boolean;
+/**
  * Check if a decision requires ruin risk assessment
  */
 export declare function requiresRuinCheck(technique: LateralTechnique, keywords: string[]): boolean;

@@ -18,7 +18,7 @@ export declare class ScamperHandler extends BaseTechniqueHandler {
     getTechniqueInfo(): TechniqueInfo;
     getStepInfo(step: number): StepInfo;
     getStepGuidance(step: number, problem: string): string;
-    analyzePathImpact(action: ScamperAction, modification: string, history: Array<{
+    analyzePathImpact(action: ScamperAction, modification: string, _history: Array<{
         scamperAction?: string;
     }>): ScamperPathImpact;
     private identifyDependencies;
@@ -34,7 +34,6 @@ export declare class ScamperHandler extends BaseTechniqueHandler {
      * a credit for its prose length.
      */
     private identifyOpenedOptions;
-    private calculateCumulativeCommitment;
     private generateRecoveryPath;
     generateAlternatives(action: ScamperAction, currentFlexibility: number): string[];
     /**
