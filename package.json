@@ -56,7 +56,10 @@
     "release:major": "standard-version --release-as major",
     "commit": "cz",
     "prepare": "husky",
-    "evals:baseline": "node scripts/generate-evals-baseline.mjs"
+    "evals:baseline": "node scripts/generate-evals-baseline.mjs",
+    "evals:replay": "node evals/replay/run-replay.mjs --check",
+    "evals:replay:baseline": "node evals/replay/run-replay.mjs --write-baseline",
+    "evals:replay:grade": "node evals/replay/grade.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",

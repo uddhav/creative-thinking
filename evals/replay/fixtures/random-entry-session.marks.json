@@ -1,0 +1,10 @@
+{
+  "markedBy": "author-synthetic",
+  "decisiveSteps": [
+    {
+      "technique": "random_entry",
+      "step": 2,
+      "reason": "The association step produced the reframe (inspect-before-wreck, rotation, standing log) that the application step merely operationalized."
+    }
+  ]
+}

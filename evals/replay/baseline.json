@@ -1,0 +1,63 @@
+{
+  "serverPath": "dist/mcp-server-main.js",
+  "fixtures": [
+    {
+      "fixture": "random-entry-session",
+      "calls": 5,
+      "errors": 0,
+      "normalizedBytes": 18292,
+      "advisoryFindings": 0,
+      "assignedStimuli": 0,
+      "discoveries": [
+        {
+          "topPick": "six_hats",
+          "techniques": ["six_hats"],
+          "hasEvidenceBreadth": false,
+          "hasScoreBreakdown": false,
+          "hasScoreProvenance": false
+        }
+      ]
+    },
+    {
+      "fixture": "refused-calls",
+      "calls": 3,
+      "errors": 2,
+      "normalizedBytes": 4544,
+      "advisoryFindings": 0,
+      "assignedStimuli": 0,
+      "discoveries": [
+        {
+          "topPick": "keeper_test",
+          "techniques": ["keeper_test", "nine_windows", "cognitive_bias_audit", "anecdotal_signal"],
+          "hasEvidenceBreadth": false,
+          "hasScoreBreakdown": false,
+          "hasScoreProvenance": false
+        }
+      ]
+    },
+    {
+      "fixture": "steelman-session",
+      "calls": 9,
+      "errors": 0,
+      "normalizedBytes": 46983,
+      "advisoryFindings": 0,
+      "assignedStimuli": 0,
+      "discoveries": [
+        {
+          "topPick": "six_hats",
+          "techniques": ["six_hats", "quantum_superposition", "first_principles"],
+          "hasEvidenceBreadth": false,
+          "hasScoreBreakdown": false,
+          "hasScoreProvenance": false
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "fixtureCount": 3,
+    "totalCalls": 17,
+    "totalErrors": 2,
+    "totalAdvisoryFindings": 0,
+    "totalAssignedStimuli": 0
+  }
+}

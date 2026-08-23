@@ -1,0 +1,10 @@
+{
+  "markedBy": "author-synthetic",
+  "decisiveSteps": [
+    {
+      "technique": "steelman_red_team",
+      "step": 5,
+      "reason": "The demo-window attack produced the visible-lag finding that changed the decision (read-your-writes gate before cutover); note the step records no failureModes/earlyWarnings fields — deliberately, so the Family-A gate has a true positive to fire on post-change."
+    }
+  ]
+}

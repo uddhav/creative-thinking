@@ -151,9 +151,9 @@ export default [
       '@typescript-eslint/no-unsafe-argument': 'off',
     },
   },
-  // JavaScript files configuration (e.g., scripts)
+  // JavaScript files configuration (e.g., scripts, the replay harness)
   {
-    files: ['scripts/**/*.js', 'scripts/**/*.mjs'],
+    files: ['scripts/**/*.js', 'scripts/**/*.mjs', 'evals/**/*.mjs'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'module',
@@ -161,6 +161,7 @@ export default [
         console: 'readonly',
         process: 'readonly',
         Buffer: 'readonly',
+        structuredClone: 'readonly',
         __dirname: 'readonly',
         __filename: 'readonly',
         URL: 'readonly',
