@@ -220,7 +220,7 @@ export class ExecutionResponseBuilder {
       this.telemetry
         .trackTechniqueComplete(sessionId, input.technique, effectiveness, {
           insightCount: currentInsights.length,
-          riskCount: input.risks?.length || 0,
+          riskCount: session.metrics?.risksCaught ?? 0,
           duration: Date.now() - (session.startTime || Date.now()),
           revisionCount: session.history.filter(h => h.isRevision).length,
           branchCount: Object.keys(session.branches).length,
@@ -966,7 +966,9 @@ export class ExecutionResponseBuilder {
       .trackSessionComplete(sessionId, {
         duration: session.endTime - (session.startTime || Date.now()),
         insightCount: session.insights.length,
-        riskCount: session.history.reduce((sum, h) => sum + (h.risks?.length || 0), 0),
+        // The derived session counter covers every technique-native risk
+        // field, not just the legacy `risks` array.
+        riskCount: session.metrics?.risksCaught ?? 0,
         totalSteps: session.history.length,
         completedSteps: session.history.length,
         revisionCount: session.history.filter(h => h.isRevision).length,

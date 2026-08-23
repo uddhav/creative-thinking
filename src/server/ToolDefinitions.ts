@@ -855,15 +855,57 @@ export const EXECUTE_THINKING_STEP_TOOL: Tool = {
       },
       finalSynthesis: { type: 'string' },
       // Risk/Adversarial fields (unified framework)
-      risks: { type: 'array', items: { type: 'string' } },
-      failureModes: { type: 'array', items: { type: 'string' } },
-      mitigations: { type: 'array', items: { type: 'string' } },
-      antifragileProperties: { type: 'array', items: { type: 'string' } },
-      blackSwans: { type: 'array', items: { type: 'string' } },
-      failureInsights: { type: 'array', items: { type: 'string' } },
-      stressTestResults: { type: 'array', items: { type: 'string' } },
-      failureModesPredicted: { type: 'array', items: { type: 'string' } },
-      viaNegativaRemovals: { type: 'array', items: { type: 'string' } },
+      risks: {
+        type: 'array',
+        items: { type: 'string' },
+        description:
+          'Risks identified at this step, usable with any technique. Counted in the session risk metrics together with failureModes, blackSwans, and the other technique-native risk fields.',
+      },
+      failureModes: {
+        type: 'array',
+        items: { type: 'string' },
+        description:
+          'Ways the idea under examination can fail. Counted in the session risk metrics.',
+      },
+      mitigations: {
+        type: 'array',
+        items: { type: 'string' },
+        description:
+          'Mitigations for risks already listed. Not counted as risks themselves — each one presumes a risk the other fields already carry.',
+      },
+      antifragileProperties: {
+        type: 'array',
+        items: { type: 'string' },
+        description:
+          'Properties that make the idea gain from stress or disorder. Counted in the session antifragile metrics together with antifragileDesign and temporalEscapeRoutes.',
+      },
+      blackSwans: {
+        type: 'array',
+        items: { type: 'string' },
+        description:
+          'Low-probability, high-impact events that would upend the idea. Counted in the session risk metrics.',
+      },
+      failureInsights: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'What the failure analysis taught. Counted in the session risk metrics.',
+      },
+      stressTestResults: {
+        type: 'array',
+        items: { type: 'string' },
+        description:
+          'Weaknesses surfaced by stress-testing the idea. Counted in the session risk metrics.',
+      },
+      failureModesPredicted: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Failure modes predicted before testing. Counted in the session risk metrics.',
+      },
+      viaNegativaRemovals: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Elements removed to improve the design (via negativa).',
+      },
       // Revision support
       isRevision: { type: 'boolean' },
       revisesStep: { type: 'number' },

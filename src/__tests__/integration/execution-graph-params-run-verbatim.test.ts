@@ -85,10 +85,23 @@ describe('executionGraph parameters run verbatim', { retry: 0 }, () => {
     const nodes = await planWithGraph(client, ['triz', 'six_hats']);
     let sessionId: string | undefined;
 
+    // Technique-native risk fields only — never the legacy `risks` /
+    // `antifragileProperties` arrays. The final summary's counters must still
+    // see them (they used to read only the legacy fields and reported 0
+    // after a fully populated red-team session).
+    const riskFieldsByIndex: Record<number, Record<string, unknown>> = {
+      1: { failureModes: ['Single point of failure', 'Schedule slip'] },
+      2: {
+        timelineProjections: { blackSwanScenarios: ['Key dependency vanishes'] },
+        temporalEscapeRoutes: ['Defer the decision', 'Refundable commitments'],
+      },
+    };
+
     for (const [index, node] of nodes.entries()) {
       const data = await client.executeThinkingStep({
         ...node.parameters,
         output: `Step ${node.stepNumber}: working ${PROBLEM} from the ${node.technique} angle`,
+        ...(riskFieldsByIndex[index] ?? {}),
         ...(sessionId ? { sessionId } : {}),
       });
       sessionId = data.sessionId;
@@ -111,6 +124,14 @@ describe('executionGraph parameters run verbatim', { retry: 0 }, () => {
       } else {
         expect(record.sessionComplete).toBe(true);
         expect(record.completed).toBe(true);
+
+        const summary = record.summary as Record<string, unknown> | undefined;
+        const metrics = record.metrics as Record<string, unknown> | undefined;
+        expect(summary?.risksCaught, 'technique-native risk fields must be counted').toBe(3);
+        expect(
+          metrics?.antifragileFeatures,
+          'technique-native antifragile fields must be counted'
+        ).toBe(2);
       }
     }
   });

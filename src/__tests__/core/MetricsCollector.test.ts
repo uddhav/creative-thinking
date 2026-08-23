@@ -24,18 +24,22 @@ describe('MetricsCollector', () => {
     };
   });
 
+  const historyStep = (
+    overrides: Partial<ThinkingOperationData & { timestamp: string }> = {}
+  ): ThinkingOperationData & { timestamp: string } => ({
+    technique: 'six_hats',
+    problem: 'Test',
+    currentStep: 1,
+    totalSteps: 6,
+    output: 'Test output',
+    nextStepNeeded: true,
+    timestamp: new Date().toISOString(),
+    ...overrides,
+  });
+
   describe('updateMetrics', () => {
     it('should initialize metrics if not present', () => {
-      const input: ThinkingOperationData = {
-        technique: 'six_hats',
-        problem: 'Test',
-        currentStep: 1,
-        totalSteps: 6,
-        output: 'Test output',
-        nextStepNeeded: true,
-      };
-
-      const metrics = collector.updateMetrics(mockSession, input);
+      const metrics = collector.updateMetrics(mockSession);
 
       expect(metrics.risksCaught).toBe(0);
       expect(metrics.antifragileFeatures).toBe(0);
@@ -45,68 +49,101 @@ describe('MetricsCollector', () => {
     });
 
     it('should set output completeness from session state', () => {
-      const input: ThinkingOperationData = {
-        technique: 'six_hats',
-        problem: 'Test',
-        currentStep: 1,
-        totalSteps: 6,
-        output:
-          'This is a very creative and diverse output with many unique ideas and concepts that span multiple domains and perspectives',
-        nextStepNeeded: true,
-      };
       // updateMetrics runs after the step is pushed onto history (execution.ts).
-      mockSession.history = [{ ...input, timestamp: new Date().toISOString() }];
+      mockSession.history = [historyStep()];
       mockSession.insights = ['Insight 1', 'Insight 2'];
 
-      const metrics = collector.updateMetrics(mockSession, input);
+      const metrics = collector.updateMetrics(mockSession);
 
       // 2 insights / 1 step = 2 -> clamped to 1 by insightsPerStep * 0.4 = 0.8
       expect(metrics.outputCompleteness).toBeCloseTo(0.8, 5);
       expect(metrics.outputCompleteness).toBeLessThanOrEqual(1);
     });
 
-    it('should accumulate risks caught', () => {
+    it('derives risksCaught from history, replacing any stale counter', () => {
       mockSession.metrics = {
         outputCompleteness: 0,
-        risksCaught: 2,
+        risksCaught: 99, // stale — must be replaced, not added to
         antifragileFeatures: 0,
       };
+      mockSession.history = [historyStep({ risks: ['Risk 1', 'Risk 2', 'Risk 3'] })];
 
-      const input: ThinkingOperationData = {
-        technique: 'six_hats',
-        problem: 'Test',
-        currentStep: 1,
-        totalSteps: 6,
-        output: 'Test output',
-        nextStepNeeded: true,
-        risks: ['Risk 1', 'Risk 2', 'Risk 3'],
-      };
+      const metrics = collector.updateMetrics(mockSession);
 
-      const metrics = collector.updateMetrics(mockSession, input);
-
-      expect(metrics.risksCaught).toBe(5); // 2 + 3
+      expect(metrics.risksCaught).toBe(3);
     });
 
-    it('should accumulate antifragile features', () => {
-      mockSession.metrics = {
-        outputCompleteness: 0,
-        risksCaught: 0,
-        antifragileFeatures: 1,
-      };
+    it('derives antifragileFeatures from history', () => {
+      mockSession.history = [
+        historyStep({ technique: 'triz', antifragileProperties: ['Redundancy', 'Optionality'] }),
+      ];
 
-      const input: ThinkingOperationData = {
-        technique: 'triz',
-        problem: 'Test',
-        currentStep: 1,
-        totalSteps: 4,
-        output: 'Test output',
-        nextStepNeeded: true,
-        antifragileProperties: ['Redundancy', 'Optionality'],
-      };
+      const metrics = collector.updateMetrics(mockSession);
 
-      const metrics = collector.updateMetrics(mockSession, input);
+      expect(metrics.antifragileFeatures).toBe(2);
+    });
+  });
 
-      expect(metrics.antifragileFeatures).toBe(3); // 1 + 2
+  describe('technique-native field counting', () => {
+    it('counts steelman/disney/temporal fields, not just the legacy arrays', () => {
+      // The counters used to read only `risks`/`antifragileProperties`, so a
+      // full red-team session reported risksCaught: 0.
+      mockSession.history = [
+        historyStep({ failureModes: ['Single point of failure', 'Cost overrun'] }),
+        historyStep({ criticRisks: ['Vendor abandons the product'] } as Partial<
+          ThinkingOperationData & { timestamp: string }
+        >),
+        historyStep({
+          timelineProjections: { blackSwanScenarios: ['Border closure'] },
+          temporalEscapeRoutes: ['Refundable bookings', 'Late decision point'],
+        }),
+        // These two exist in the tool schema but not on the TS input types.
+        historyStep({ blackSwanScenarios: ['Market inversion'] } as Partial<
+          ThinkingOperationData & { timestamp: string }
+        >),
+        historyStep({ earlyWarnings: ['Rising cancellation rate'] } as Partial<
+          ThinkingOperationData & { timestamp: string }
+        >),
+      ];
+
+      const metrics = collector.updateMetrics(mockSession);
+
+      expect(metrics.risksCaught).toBe(6);
+      expect(metrics.antifragileFeatures).toBe(2);
+    });
+
+    it('deduplicates re-sent arrays instead of double-counting', () => {
+      const risks = ['Risk A', 'Risk B'];
+      mockSession.history = [
+        historyStep({ risks }),
+        historyStep({ currentStep: 2, risks: [...risks, '  Risk A  '] }),
+      ];
+
+      const metrics = collector.updateMetrics(mockSession);
+
+      expect(metrics.risksCaught).toBe(2);
+    });
+
+    it('does not count mitigations as risks', () => {
+      mockSession.history = [
+        historyStep({ risks: ['Data loss'], mitigations: ['Nightly backups', 'Checksums'] }),
+      ];
+
+      const metrics = collector.updateMetrics(mockSession);
+
+      expect(metrics.risksCaught).toBe(1);
+    });
+
+    it('counts timelineProjections.antifragileDesign as antifragile', () => {
+      mockSession.history = [
+        historyStep({
+          timelineProjections: { antifragileDesign: ['Modular itinerary', 'Slack days'] },
+        }),
+      ];
+
+      const metrics = collector.updateMetrics(mockSession);
+
+      expect(metrics.antifragileFeatures).toBe(2);
     });
   });
 
@@ -125,26 +162,19 @@ describe('MetricsCollector', () => {
       timestamp: new Date().toISOString(),
     });
 
-    const makeInput = (): ThinkingOperationData => ({
-      technique: 'six_hats',
-      problem: 'Test',
-      currentStep: 1,
-      totalSteps: 6,
-      output: 'Step output',
-      nextStepNeeded: true,
-    });
-
     it('should return higher scores for more insights per step', () => {
       const steps = [makeStep('a'), makeStep('b'), makeStep('c'), makeStep('d')];
 
-      const sparse = collector.updateMetrics(
-        { ...mockSession, history: [...steps], insights: ['One'] },
-        makeInput()
-      );
-      const rich = collector.updateMetrics(
-        { ...mockSession, history: [...steps], insights: ['One', 'Two', 'Three', 'Four'] },
-        makeInput()
-      );
+      const sparse = collector.updateMetrics({
+        ...mockSession,
+        history: [...steps],
+        insights: ['One'],
+      });
+      const rich = collector.updateMetrics({
+        ...mockSession,
+        history: [...steps],
+        insights: ['One', 'Two', 'Three', 'Four'],
+      });
 
       expect(sparse.outputCompleteness).toBeCloseTo(0.1, 5); // 1/4 insights per step * 0.4
       expect(rich.outputCompleteness).toBeCloseTo(0.4, 5); // 4/4 insights per step * 0.4
@@ -157,10 +187,9 @@ describe('MetricsCollector', () => {
         history: [makeStep('only step')],
         insights: Array.from({ length: 20 }, (_, i) => `Insight ${i + 1}`),
         endTime: Date.now(),
-        metrics: { outputCompleteness: 0, risksCaught: 4, antifragileFeatures: 2 },
       };
 
-      const metrics = collector.updateMetrics(session, makeInput());
+      const metrics = collector.updateMetrics(session);
 
       // 20 insights over 1 step alone would score 8.0 before weighting.
       expect(metrics.outputCompleteness).toBeLessThanOrEqual(1);
@@ -168,24 +197,22 @@ describe('MetricsCollector', () => {
     });
 
     it('should return 0 for a session that produced nothing', () => {
-      const metrics = collector.updateMetrics({ ...mockSession }, makeInput());
+      const metrics = collector.updateMetrics({ ...mockSession });
 
       expect(metrics.outputCompleteness).toBe(0); // no insights, risks, features, or end
     });
 
     it('should ignore the wording of step outputs', () => {
-      const terse = collector.updateMetrics(
-        { ...mockSession, history: [makeStep('x')], insights: ['One'] },
-        makeInput()
-      );
-      const verbose = collector.updateMetrics(
-        {
-          ...mockSession,
-          history: [makeStep('a florid and extravagantly varied restatement of x')],
-          insights: ['One'],
-        },
-        makeInput()
-      );
+      const terse = collector.updateMetrics({
+        ...mockSession,
+        history: [makeStep('x')],
+        insights: ['One'],
+      });
+      const verbose = collector.updateMetrics({
+        ...mockSession,
+        history: [makeStep('a florid and extravagantly varied restatement of x')],
+        insights: ['One'],
+      });
 
       // The old creativityScore rewarded exactly this difference; this one must not.
       expect(verbose.outputCompleteness).toBe(terse.outputCompleteness);
@@ -197,7 +224,7 @@ describe('MetricsCollector', () => {
 
       ['Insight 1', 'Insight 2'].forEach(insight => {
         session.insights = [...session.insights, insight];
-        const metrics = collector.updateMetrics(session, makeInput());
+        const metrics = collector.updateMetrics(session);
         expect(metrics.outputCompleteness).toBeGreaterThan(previous);
         previous = metrics.outputCompleteness as number;
       });

@@ -245,8 +245,8 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
                 }
                 session.branches[input.branchId].push(operationData);
             }
-            // Update metrics
-            metricsCollector.updateMetrics(session, operationData);
+            // Update metrics (recomputed from history; the step is already pushed)
+            metricsCollector.updateMetrics(session);
             // The gatekeeper must vet a termination BEFORE the response is built:
             // buildResponse finalizes the session on nextStepNeeded=false (endTime,
             // completion telemetry, sessionComplete payload), endTime is never
