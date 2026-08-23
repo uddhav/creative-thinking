@@ -94,6 +94,14 @@ describe('executionGraph parameters run verbatim', { retry: 0 }, () => {
       sessionId = data.sessionId;
 
       const record = data as Record<string, unknown>;
+      if (index === 0) {
+        // stepCompleteness was retired: a 0.5-floored field-presence number
+        // with no consumer. The honest fields stay.
+        const meta = record.executionMetadata as Record<string, unknown> | undefined;
+        expect(meta, 'executionMetadata must be present').toBeDefined();
+        expect(meta?.stepCompleteness).toBeUndefined();
+        expect(meta?.flexibilityImpact).toBeDefined();
+      }
       if (index < nodes.length - 1) {
         expect(record.blocked, `node ${node.id} must not be blocked`).toBeUndefined();
         expect(

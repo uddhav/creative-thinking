@@ -123,8 +123,10 @@ export class ExecutionResponseBuilder {
         // Handle session completion
         if (!input.nextStepNeeded) {
             this.handleSessionCompletion(response, session);
-            // Track technique completion
-            const effectiveness = this.assessOutputCompleteness(input, session, currentInsights);
+            // Track technique completion. handleSessionCompletion has just
+            // refreshed outputCompleteness, so this reads the honest session-level
+            // coverage score rather than the retired per-step presence heuristic.
+            const effectiveness = session.metrics?.outputCompleteness ?? 0;
             this.telemetry
                 .trackTechniqueComplete(sessionId, input.technique, effectiveness, {
                 insightCount: currentInsights.length,
@@ -414,7 +416,6 @@ export class ExecutionResponseBuilder {
     }
     generateExecutionMetadata(input, session, insights, pathMemory, currentFlexibility) {
         const metadata = {
-            stepCompleteness: this.assessOutputCompleteness(input, session, insights),
             pathDependenciesCreated: this.extractPathDependencies(input, pathMemory),
             flexibilityImpact: this.calculateFlexibilityImpact(input, session),
         };
@@ -652,7 +653,7 @@ export class ExecutionResponseBuilder {
             revisionCount: session.history.filter(h => h.isRevision).length,
             branchCount: Object.keys(session.branches).length,
             flexibilityScore: session.pathMemory?.currentFlexibility?.flexibilityScore,
-            // effectiveness is 0-1 throughout this file (cf. assessOutputCompleteness).
+            // effectiveness is 0-1 throughout this file.
             // 0.5 is the fallback for sessions persisted before outputCompleteness existed.
             effectiveness: session.metrics?.outputCompleteness ?? 0.5,
         })
@@ -867,31 +868,6 @@ export class ExecutionResponseBuilder {
         if (stepInput.synthesis)
             fields.synthesis = stepInput.synthesis;
         return fields;
-    }
-    /**
-     * How completely a step filled in the outputs its technique asks for.
-     *
-     * This counts whether optional fields were populated — insights, risks,
-     * antifragile properties, provocation/principles. It is a COMPLETENESS
-     * measure, not a quality one: four vacuous insights score higher than two
-     * excellent ones, and nothing here inspects what was actually written.
-     * Named accordingly so it is not mistaken for evidence that a technique
-     * worked. Measuring real quality needs the guidance eval, not this.
-     */
-    assessOutputCompleteness(input, session, insights) {
-        let completeness = 0.5; // Base: a step that produced output at all
-        if (insights.length > 3)
-            completeness += 0.2;
-        else if (insights.length > 1)
-            completeness += 0.1;
-        if (input.risks && input.risks.length > 0)
-            completeness += 0.1;
-        if (input.antifragileProperties && input.antifragileProperties.length > 0) {
-            completeness += 0.15;
-        }
-        if (input.provocation && input.principles)
-            completeness += 0.2;
-        return Math.min(1, completeness);
     }
     extractPathDependencies(input, pathMemory) {
         const dependencies = [];

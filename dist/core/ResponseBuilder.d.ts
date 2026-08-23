@@ -5,15 +5,6 @@
 import type { LateralThinkingResponse, SessionData } from '../types/index.js';
 import type { DiscoverTechniquesOutput, PlanThinkingSessionOutput } from '../types/planning.js';
 export interface ExecutionMetadata {
-    /**
-     * How complete THIS step's output was, 0-1.
-     *
-     * Distinct from `metrics.outputCompleteness`, which scores the whole session.
-     * Both used to be called outputCompleteness and appeared in the same response
-     * inches apart, reporting different numbers — an invitation to compare two
-     * things that are not comparable.
-     */
-    stepCompleteness: number;
     pathDependenciesCreated: string[];
     flexibilityImpact: number;
     noteworthyMoment?: string;

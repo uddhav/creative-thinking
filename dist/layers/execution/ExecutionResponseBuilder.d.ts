@@ -118,17 +118,6 @@ export declare class ExecutionResponseBuilder {
      */
     private static readonly TECHNIQUE_FIELDS;
     private extractTechniqueSpecificFields;
-    /**
-     * How completely a step filled in the outputs its technique asks for.
-     *
-     * This counts whether optional fields were populated — insights, risks,
-     * antifragile properties, provocation/principles. It is a COMPLETENESS
-     * measure, not a quality one: four vacuous insights score higher than two
-     * excellent ones, and nothing here inspects what was actually written.
-     * Named accordingly so it is not mistaken for evidence that a technique
-     * worked. Measuring real quality needs the guidance eval, not this.
-     */
-    private assessOutputCompleteness;
     private extractPathDependencies;
     private calculateFlexibilityImpact;
     private identifyNoteworthyMoment;
