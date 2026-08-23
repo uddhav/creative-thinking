@@ -301,6 +301,27 @@ export class PathMemoryManager {
         // return, more than half of what remains.
         return Math.max(-MAX_PER_STEP, Math.min(MAX_PER_STEP, binding + netClosed));
     }
+    /**
+     * The session flexibility score for a given event prefix: a running product
+     * of (1 − impact), clamped per event and with non-finite impacts skipped.
+     *
+     * This is THE recurrence — exposed so consumers that need "flexibility as
+     * of step N" (e.g. the option-generation crossing gate) recompute it with
+     * identical clamping. A per-event clamp matters: an escape records a
+     * negative impact (a credit), so an unclamped product can exceed 1 and
+     * bank the excess, where eight escapes once hid a true reading of 8.2; a
+     * single NaN would otherwise poison every later reading.
+     */
+    static computeFlexibilityScore(events) {
+        let flexibilityScore = 1;
+        for (const event of events) {
+            const impact = event.flexibilityImpact;
+            if (impact === undefined || !Number.isFinite(impact))
+                continue;
+            flexibilityScore = Math.min(1, Math.max(0, flexibilityScore * (1 - impact)));
+        }
+        return flexibilityScore;
+    }
     recordPathEvent(technique, step, decision, impact) {
         const event = {
             id: randomUUID(),
@@ -415,22 +436,7 @@ export class PathMemoryManager {
         // than it closes raises the ratio, so flexibility could be spent and then
         // reappear. The option lists are still kept and still feed the
         // option-generation engine; they no longer charge the measure twice.
-        let flexibilityScore = 1;
-        for (const event of this.pathMemory.pathHistory) {
-            const impact = event.flexibilityImpact;
-            // A non-finite impact would propagate through both clamps below —
-            // Math.min(1, Math.max(0, NaN)) is NaN — and poison every later reading.
-            if (impact === undefined || !Number.isFinite(impact))
-                continue;
-            // Clamped per event, not only at the end. An escape records a credit, so
-            // the running product can exceed 1; clamping only the final value left
-            // the excess banked in the product, where eight escapes hid a true
-            // reading of 8.2 and silently absorbed a dozen committing steps.
-            flexibilityScore = Math.min(1, Math.max(0, flexibilityScore * (1 - impact)));
-        }
-        // An escape protocol records a negative impact — a credit, not a cost —
-        // so the product can rise above 1. Thinking steps only ever spend.
-        this.pathMemory.currentFlexibility.flexibilityScore = Math.min(1, Math.max(0, flexibilityScore));
+        this.pathMemory.currentFlexibility.flexibilityScore = PathMemoryManager.computeFlexibilityScore(this.pathMemory.pathHistory);
         // Calculate reversibility index
         const reversibleDecisions = this.pathMemory.pathHistory.filter(e => e.reversibilityCost < 0.5).length;
         const totalDecisions = Math.max(this.pathMemory.pathHistory.length, 1);

@@ -8,6 +8,7 @@ import type { VisualFormatter } from '../../utils/VisualFormatter.js';
 import type { TechniqueHandler } from '../../techniques/types.js';
 import { ErgodicityManager } from '../../ergodicity/index.js';
 import type { PathMemory } from '../../ergodicity/types.js';
+import { PathMemoryManager } from '../../ergodicity/pathMemory.js';
 import { getErgodicityPrompt, getErgodicityGuidance } from '../../ergodicity/prompts.js';
 import { OptionGenerationEngine } from '../../ergodicity/optionGeneration/engine.js';
 import type {
@@ -192,9 +193,14 @@ export class ErgodicityOrchestrator {
       }
     }
 
-    // Generate options if flexibility is low
+    // Generate options only on the DOWNWARD CROSSING of the 0.4 threshold,
+    // not on every step below it. Flexibility is a monotone-decreasing
+    // product for ordinary steps, so a state-based gate re-emitted the same
+    // canned block on every remaining step of the session; a re-fire now
+    // requires genuine recovery above 0.4 (an escape credit) followed by a
+    // fresh descent.
     let optionGenerationResult: OptionGenerationResult | undefined;
-    if (currentFlexibility < 0.4) {
+    if (currentFlexibility < 0.4 && this.previousFlexibility(session) >= 0.4) {
       optionGenerationResult = this.generateOptions(input, session, currentFlexibility, sessionId);
     }
 
@@ -204,6 +210,19 @@ export class ErgodicityOrchestrator {
       optionGenerationResult,
       pathMemory: session.pathMemory,
     };
+  }
+
+  /**
+   * The session's flexibility as of the PREVIOUS step. The current step's
+   * path event is already in pathHistory at gate time (recordThinkingStep
+   * runs first), so "previous" is the product over all but the last event —
+   * recomputed with the same clamped, finite-guarded recurrence the live
+   * score uses. Derived from persisted pathMemory, so the crossing gate works
+   * identically across the CLI's process-per-step model.
+   */
+  private previousFlexibility(session: SessionData): number {
+    const history = session.pathMemory?.pathHistory ?? [];
+    return PathMemoryManager.computeFlexibilityScore(history.slice(0, -1));
   }
 
   /**

@@ -3,6 +3,7 @@
  * Extracted from executeThinkingStep to improve maintainability
  */
 import { ErgodicityManager } from '../../ergodicity/index.js';
+import { PathMemoryManager } from '../../ergodicity/pathMemory.js';
 import { getErgodicityPrompt, getErgodicityGuidance } from '../../ergodicity/prompts.js';
 import { OptionGenerationEngine } from '../../ergodicity/optionGeneration/engine.js';
 import { monitorCriticalSectionAsync, wrapErgodicityManager, } from '../../utils/PerformanceIntegration.js';
@@ -128,9 +129,14 @@ export class ErgodicityOrchestrator {
                 process.stderr.write('\n' + escapeDisplay + '\n');
             }
         }
-        // Generate options if flexibility is low
+        // Generate options only on the DOWNWARD CROSSING of the 0.4 threshold,
+        // not on every step below it. Flexibility is a monotone-decreasing
+        // product for ordinary steps, so a state-based gate re-emitted the same
+        // canned block on every remaining step of the session; a re-fire now
+        // requires genuine recovery above 0.4 (an escape credit) followed by a
+        // fresh descent.
         let optionGenerationResult;
-        if (currentFlexibility < 0.4) {
+        if (currentFlexibility < 0.4 && this.previousFlexibility(session) >= 0.4) {
             optionGenerationResult = this.generateOptions(input, session, currentFlexibility, sessionId);
         }
         return {
@@ -139,6 +145,18 @@ export class ErgodicityOrchestrator {
             optionGenerationResult,
             pathMemory: session.pathMemory,
         };
+    }
+    /**
+     * The session's flexibility as of the PREVIOUS step. The current step's
+     * path event is already in pathHistory at gate time (recordThinkingStep
+     * runs first), so "previous" is the product over all but the last event —
+     * recomputed with the same clamped, finite-guarded recurrence the live
+     * score uses. Derived from persisted pathMemory, so the crossing gate works
+     * identically across the CLI's process-per-step model.
+     */
+    previousFlexibility(session) {
+        const history = session.pathMemory?.pathHistory ?? [];
+        return PathMemoryManager.computeFlexibilityScore(history.slice(0, -1));
     }
     /**
      * What this step commits, for the path record.

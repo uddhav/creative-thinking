@@ -43,6 +43,15 @@ export declare class ErgodicityOrchestrator {
      */
     trackErgodicityAndGenerateOptions(input: ExecuteThinkingStepInput, session: SessionData, techniqueLocalStep: number, sessionId?: string, handler?: TechniqueHandler): Promise<ErgodicityOrchestrationResult>;
     /**
+     * The session's flexibility as of the PREVIOUS step. The current step's
+     * path event is already in pathHistory at gate time (recordThinkingStep
+     * runs first), so "previous" is the product over all but the last event —
+     * recomputed with the same clamped, finite-guarded recurrence the live
+     * score uses. Derived from persisted pathMemory, so the crossing gate works
+     * identically across the CLI's process-per-step model.
+     */
+    private previousFlexibility;
+    /**
      * What this step commits, for the path record.
      *
      * Returns the ingredients only. `PathMemoryManager.recordPathEvent` derives

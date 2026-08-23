@@ -66,6 +66,20 @@ export declare class PathMemoryManager {
      * The constants are a starting point to be measured, not tuned.
      */
     static deriveFlexibilityImpact(reversibilityCost: number, commitmentLevel: number, optionsClosed?: number, optionsOpened?: number): number;
+    /**
+     * The session flexibility score for a given event prefix: a running product
+     * of (1 − impact), clamped per event and with non-finite impacts skipped.
+     *
+     * This is THE recurrence — exposed so consumers that need "flexibility as
+     * of step N" (e.g. the option-generation crossing gate) recompute it with
+     * identical clamping. A per-event clamp matters: an escape records a
+     * negative impact (a credit), so an unclamped product can exceed 1 and
+     * bank the excess, where eight escapes once hid a true reading of 8.2; a
+     * single NaN would otherwise poison every later reading.
+     */
+    static computeFlexibilityScore(events: ReadonlyArray<{
+        flexibilityImpact?: number;
+    }>): number;
     recordPathEvent(technique: LateralTechnique, step: number, decision: string, impact: {
         optionsOpened?: string[];
         optionsClosed?: string[];
