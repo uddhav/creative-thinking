@@ -341,6 +341,34 @@ describe('PDA-SCAMPER Enhancement', () => {
 
         // Verify cumulative flexibility tracking
         expect(history[0].cumulativeFlexibility).toBeGreaterThan(history[1].cumulativeFlexibility);
+
+        // The prior steps' output text is NOT re-echoed per entry — history
+        // and the session export hold it; re-sending an 800-char-truncated
+        // copy of every prior output on every step was most of the
+        // response's weight.
+        expect(history[0].modification).toBeUndefined();
+        expect(history[1].modification).toBeUndefined();
+      }
+
+      // The ruin-assessment prompt no longer quotes the caller to themselves:
+      // the same request carried the problem and this step's output already.
+      const ruin = (step3 as Record<string, unknown>).ruinAssessment as
+        | { prompt?: string }
+        | undefined;
+      if (ruin?.prompt) {
+        expect(ruin.prompt).not.toContain('Design for cargo hauling');
+        expect(ruin.prompt).not.toContain('Improve a coffee mug design');
+      }
+
+      // Nor is the rebuilt echo stored back into each history entry — that
+      // made session growth quadratic, and the rebuild never reads it.
+      const session = server.getSessionManager().getSession(step3.sessionId);
+      expect(session, 'session must exist in the manager').toBeDefined();
+      for (const entry of session?.history ?? []) {
+        expect(
+          (entry as Record<string, unknown>).modificationHistory,
+          'history entries must not store the rebuilt echo'
+        ).toBeUndefined();
       }
     });
 

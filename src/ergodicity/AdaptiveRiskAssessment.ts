@@ -137,9 +137,15 @@ export class AdaptiveRiskAssessment {
     const stakeholderSection = this.getStakeholderSection(context);
     const mitigationSection = this.getMitigationSection(context);
 
-    return `${header} for "${problem}":
+    // The problem and the proposed action are NOT interpolated: the caller
+    // just sent both in this very request, and the same response carries
+    // them — embedding truncated copies here paid tokens to quote the caller
+    // to themselves. The parameters stay in the signature so the context
+    // detectors upstream can keep reading them.
+    void problem;
+    void proposedAction;
 
-Proposed action: ${proposedAction}
+    return `${header} for this problem, applied to this step's proposed action:
 
 ${questions}
 

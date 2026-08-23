@@ -45,7 +45,12 @@ export interface ScamperPathImpact {
 }
 export interface ScamperModificationHistory {
     action: ScamperAction;
-    modification: string;
+    /**
+     * The prior step's output text. No longer emitted: the caller wrote it,
+     * history holds it, and the session export returns it whole. Optional so
+     * sessions persisted before the field was dropped still load.
+     */
+    modification?: string;
     timestamp: string;
     impact: ScamperPathImpact;
     cumulativeFlexibility: number;

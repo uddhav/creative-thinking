@@ -134,9 +134,12 @@ export function requiresRuinCheck(technique, keywords) {
  * Generate ruin risk assessment prompt
  */
 export function generateRuinAssessmentPrompt(problem, technique, proposedAction) {
-    return `🚨 RUIN RISK ASSESSMENT for "${problem}":
-
-Proposed action: ${proposedAction}
+    // problem and proposedAction are deliberately not interpolated: the caller
+    // sent both in this very request, and echoing truncated copies back paid
+    // tokens to quote them to themselves. Signature kept for call sites.
+    void problem;
+    void proposedAction;
+    return `🚨 RUIN RISK ASSESSMENT for this step's proposed action:
 
 Please evaluate:
 1. **Reversibility**: Can this decision be undone? At what cost?

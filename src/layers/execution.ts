@@ -249,7 +249,12 @@ export async function executeThinkingStep(
           session.history
         );
 
-        // Build modification history from session (previous steps only)
+        // Build modification history from session (previous steps only).
+        // Each entry carries the action and its impact, not the prior step's
+        // output text: the caller wrote that text, it lives in history, and
+        // the session export returns it whole — re-echoing an 800-char
+        // truncated copy of every prior output on every step was most of the
+        // response's weight.
         input.modificationHistory = [];
 
         // Include previous SCAMPER modifications from history
@@ -262,7 +267,6 @@ export async function executeThinkingStep(
           ) {
             input.modificationHistory.push({
               action: entry.scamperAction,
-              modification: entry.output,
               timestamp: entry.timestamp || new Date().toISOString(),
               impact: entry.pathImpact,
               cumulativeFlexibility: entry.pathImpact.flexibilityRetention,
@@ -300,8 +304,16 @@ export async function executeThinkingStep(
           handler
         );
 
-      // Record step in history (exclude realityAssessment from operationData to avoid duplication)
-      const { realityAssessment: inputRealityAssessment, ...inputWithoutReality } = input;
+      // Record step in history. realityAssessment is excluded to avoid
+      // duplication (it travels via realityResult); modificationHistory is
+      // excluded because it is REBUILT from history on every step — storing
+      // each step's copy made session growth quadratic, and nothing reads
+      // the stored copies (the rebuild reads scamperAction/pathImpact).
+      const {
+        realityAssessment: inputRealityAssessment,
+        modificationHistory: _rebuiltEachStep,
+        ...inputWithoutReality
+      } = input;
 
       // If there's a reality assessment from input, we should handle it separately
       if (inputRealityAssessment) {
