@@ -7,6 +7,7 @@
 
 import { BaseTechniqueHandler, firstSentence, type StepInfo, type TechniqueInfo } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
+import { RORY_STIMULI } from './decks/randomEntryDeck.js';
 
 interface RandomEntryContext {
   roryMode?: boolean;
@@ -15,61 +16,9 @@ interface RandomEntryContext {
 }
 
 export class RandomEntryHandler extends BaseTechniqueHandler {
-  // Rory Mode wildcards inspired by behavioral economics
-  private readonly roryModeStimuli = {
-    psychological: [
-      'status anxiety',
-      'loss aversion',
-      'social proof',
-      'placebo effect',
-      'commitment device',
-      'framing effect',
-      'anchoring bias',
-      'endowment effect',
-      'availability heuristic',
-      'confirmation bias',
-      'rationality blindspot - what are we missing by being logical?',
-    ],
-    contextual: [
-      'expensive wine in cheap bottle',
-      'same product different context',
-      'changing the comparison set',
-      'reframing the reference point',
-      'making invisible visible',
-      'adding meaningful friction',
-      'removing wrong friction',
-      'changing when decision happens',
-      'changing where decision happens',
-      'changing who is present',
-    ],
-    perceptual: [
-      'progress illusion',
-      'control theater',
-      'competence signaling',
-      'authenticity paradox',
-      'effort justification',
-      'peak-end optimization',
-      'duration neglect',
-      'contrast amplification',
-      'attention misdirection',
-      'expectation management',
-      'costly signaling - spending visibly to prove trustworthiness',
-    ],
-    counterintuitive: [
-      'make it harder to increase value',
-      'reduce features to improve satisfaction',
-      'increase price to boost demand',
-      'add steps to enhance experience',
-      'create scarcity from abundance',
-      'solve different problem entirely',
-      'make weakness the strength',
-      'embrace the constraint',
-      'celebrate the flaw',
-      'reverse the assumption',
-      'design for your most extreme user, not your average one',
-      'dare to be trivial - what tiny change creates disproportionate value?',
-    ],
-  };
+  // Rory Mode wildcards live in the deck module so the planner can draw from
+  // them as data; the handler keeps this alias for its guidance paths.
+  private readonly roryModeStimuli = RORY_STIMULI;
 
   getTechniqueInfo(): TechniqueInfo {
     return {

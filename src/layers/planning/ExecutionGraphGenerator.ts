@@ -321,8 +321,13 @@ export class ExecutionGraphGenerator {
       }
 
       case 'po':
+        // Prefer the plan-time assigned provocation; the description is the
+        // full guidance text and only ever a fallback.
         return {
-          provocation: (step as { description?: string }).description || '',
+          provocation:
+            (step as { stimulus?: string; description?: string }).stimulus ||
+            (step as { description?: string }).description ||
+            '',
         };
 
       case 'random_entry':

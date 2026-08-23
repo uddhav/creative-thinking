@@ -41,6 +41,27 @@ export const TECHNIQUE_FIT = {
     /** Occasionally relevant; included for breadth */
     WEAK: 0.7,
 };
+/** Bound provenance fields to 3 decimals so response size stays predictable. */
+function round3(n) {
+    return Math.round(n * 1000) / 1000;
+}
+/**
+ * Combine crux and persona bias maps by per-technique MAX before the 70/30
+ * blend. Max, not product: two agreeing sub-1 signals must not produce weaker
+ * steering than either alone (0.8 × 0.8 = 0.64 — the first draft's mistake,
+ * caught in vetting).
+ */
+function combineBiasMaps(cruxBias, personaBias) {
+    if (!cruxBias)
+        return personaBias;
+    if (!personaBias)
+        return cruxBias;
+    const combined = { ...personaBias };
+    for (const [technique, value] of Object.entries(cruxBias)) {
+        combined[technique] = Math.max(combined[technique] ?? 0, value);
+    }
+    return combined;
+}
 export class TechniqueRecommender {
     // Wildcard inclusion probability (20% chance)
     WILDCARD_PROBABILITY = parseFloat(process.env.WILDCARD_PROBABILITY || '0.20');
@@ -82,7 +103,7 @@ export class TechniqueRecommender {
     // many categories the problem genuinely implicates — NOT from the
     // readability-complexity level, which rises with any appended sentence and
     // used to change the set whenever a user added harmless context.
-    complexity, techniqueRegistry, techniqueBias) {
+    complexity, techniqueRegistry, techniqueBias, cruxBias) {
         const recommendations = [];
         // Category-based recommendations
         switch (problemCategory) {
@@ -632,19 +653,49 @@ export class TechniqueRecommender {
                 problemCategory === 'organizational',
             preferredOutcome,
         };
+        // A declared crux INJECTS its techniques as candidates before scoring.
+        // Bias alone cannot do this — it only rescales what the category switch
+        // already produced, and the point of a crux is to surface techniques the
+        // keyword categorization missed.
+        if (cruxBias) {
+            const present = new Set(recommendations.map(r => r.technique));
+            for (const [technique, fit] of Object.entries(cruxBias)) {
+                if (!present.has(technique)) {
+                    recommendations.push({
+                        technique,
+                        reasoning: 'Matches the declared crux — surfaced ahead of keyword categorization',
+                        effectiveness: fit,
+                    });
+                }
+            }
+        }
+        // Crux and persona biases combine by per-technique MAX (two agreeing
+        // sub-1 signals must not multiply into weaker steering than either alone),
+        // then the single 70/30 blend applies.
+        const blendBias = combineBiasMaps(cruxBias, techniqueBias);
         // Apply multi-factor scoring to all recommendations, blending in persona
         // bias here so it participates in ranking rather than merely reordering
         // whatever survived truncation.
         const scoredRecommendations = recommendations.map(rec => {
             const multiFactorScore = this.scorer.calculateScore(rec.technique, problemContext, rec.effectiveness // Use initial effectiveness as category score
             );
-            const biasScore = techniqueBias?.[rec.technique];
+            const biasScore = blendBias?.[rec.technique];
             const effectiveness = biasScore === undefined
                 ? multiFactorScore
                 : Math.min(1, multiFactorScore * this.PERSONA_BASE_WEIGHT + biasScore * this.PERSONA_BIAS_WEIGHT);
+            // Provenance for the caller: the four factors behind the blend, rounded
+            // to 3 decimals so response size stays bounded. Quality fillers appended
+            // later never pass through here — their absence of a breakdown is honest.
+            const breakdown = this.scorer.getScoreBreakdown(rec.technique, problemContext, rec.effectiveness);
             return {
                 ...rec,
                 effectiveness,
+                scoreBreakdown: {
+                    categoryFit: round3(breakdown.categoryFit),
+                    complexityMatch: round3(breakdown.complexityMatch),
+                    constraintCompatibility: round3(breakdown.constraintCompatibility),
+                    outcomeAlignment: round3(breakdown.outcomeAlignment),
+                },
             };
         });
         // Sort by multi-factor score

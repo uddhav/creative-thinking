@@ -484,9 +484,10 @@ export class ExecutionResponseBuilder {
                     // naming a technique the registry does not hold, throwing here fails
                     // the *previous* technique's final step, which had already succeeded.
                     const nextHandler = this.techniqueRegistry?.tryGetHandler(nextTechnique);
+                    const assigned = this.assignedStimulusLine(plan, techniqueIndex + 1, nextTechnique);
                     return nextHandler
-                        ? `${duplicateNotice}Transitioning to ${nextTechnique}. ${nextHandler.getStepGuidance(1, input.problem, guidanceContext(input))}`
-                        : `${duplicateNotice}Transitioning to ${nextTechnique}`;
+                        ? `${duplicateNotice}Transitioning to ${nextTechnique}.${assigned} ${nextHandler.getStepGuidance(1, input.problem, guidanceContext(input))}`
+                        : `${duplicateNotice}Transitioning to ${nextTechnique}${assigned}`;
                 }
             }
         }
@@ -504,9 +505,25 @@ export class ExecutionResponseBuilder {
                     }
                 }
             }
-            return `${duplicateNotice}${guidance}`;
+            // Server-assigned stimulus (P3): keep the assigned value in front of the
+            // caller on every remaining step of a stimulus-bearing technique — the
+            // plan carries it, but guidance is what callers actually read.
+            const assigned = this.assignedStimulusLine(plan, techniqueIndex, input.technique);
+            return `${duplicateNotice}${guidance}${assigned}`;
         }
         return undefined;
+    }
+    /**
+     * One-line reminder of a plan-time assigned stimulus, or '' when the plan
+     * carries no assignment for this technique instance.
+     */
+    assignedStimulusLine(plan, techniqueIndex, technique) {
+        const firstStep = plan?.workflow[techniqueIndex]?.steps?.[0];
+        if (firstStep?.stimulusSource === 'assigned' && firstStep.stimulus) {
+            const label = technique === 'po' ? 'assigned provocation' : 'assigned stimulus';
+            return ` 🎲 Work with the ${label}: "${firstStep.stimulus}" — it is not re-rollable within this plan.`;
+        }
+        return '';
     }
     getBaseGuidance(handler, nextLocalStep, input) {
         return handler.getStepGuidance(nextLocalStep, input.problem, guidanceContext(input));
@@ -924,7 +941,9 @@ export class ExecutionResponseBuilder {
         cognitive_bias_audit: [],
         latticework: [],
         keeper_test: [],
-        steelman_red_team: [],
+        // failureModes is the field the step-5 advisory gate reads; a gated field
+        // must also be echoed, or the caller can never see what the gate saw.
+        steelman_red_team: ['failureModes'],
     };
     extractTechniqueSpecificFields(input) {
         const fields = {};

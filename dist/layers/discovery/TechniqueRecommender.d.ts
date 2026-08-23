@@ -4,6 +4,7 @@
  * Enhanced with multi-factor scoring system for intelligent recommendations
  */
 import type { LateralTechnique } from '../../types/index.js';
+import type { TechniqueRecommendation } from '../../types/planning.js';
 import type { TechniqueRegistry } from '../../techniques/TechniqueRegistry.js';
 /**
  * How well a technique fits the problem category recommending it.
@@ -62,12 +63,7 @@ export declare class TechniqueRecommender {
      */
     private readonly PERSONA_BASE_WEIGHT;
     private readonly PERSONA_BIAS_WEIGHT;
-    recommendTechniques(problemCategory: string, preferredOutcome: string | undefined, constraints: string[] | undefined, complexity: 'low' | 'medium' | 'high', techniqueRegistry: TechniqueRegistry, techniqueBias?: Partial<Record<LateralTechnique, number>>): Array<{
-        technique: LateralTechnique;
-        reasoning: string;
-        effectiveness: number;
-        isWildcard?: boolean;
-    }>;
+    recommendTechniques(problemCategory: string, preferredOutcome: string | undefined, constraints: string[] | undefined, complexity: 'low' | 'medium' | 'high', techniqueRegistry: TechniqueRegistry, techniqueBias?: Partial<Record<LateralTechnique, number>>, cruxBias?: Partial<Record<LateralTechnique, number>>): TechniqueRecommendation[];
     /**
      * FNV-1a hash of a string, folded to a unit interval [0, 1). The wildcard
      * path needs repeatable draws, not cryptographic ones.

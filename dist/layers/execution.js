@@ -16,7 +16,8 @@ import { ExecutionResponseBuilder } from './execution/ExecutionResponseBuilder.j
 import { EscalationPromptGenerator } from '../ergodicity/escalationPrompts.js';
 // Import completion tracking components
 import { CompletionGatekeeper } from './execution/CompletionGatekeeper.js';
-export async function executeThinkingStep(input, sessionManager, techniqueRegistry, visualFormatter, metricsCollector, complexityAnalyzer, ergodicityManager) {
+import { evaluateAdvisoryGates } from './execution/advisoryGates.js';
+export async function executeThinkingStep(input, sessionManager, techniqueRegistry, visualFormatter, metricsCollector, complexityAnalyzer, ergodicityManager, validationWarnings) {
     const errorContextBuilder = new ErrorContextBuilder();
     const errorHandler = new ErrorHandler();
     const sessionLock = sessionManager.getSessionLock();
@@ -302,6 +303,17 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
             }
             // Build comprehensive execution response
             const response = executionResponseBuilder.buildResponse(input, session, sessionId, handler, techniqueLocalStep, techniqueIndex, plan, currentFlexibility, optionGenerationResult, ergodicityResult.metrics, reflexivityWarning);
+            // Advisory findings (P1): the server's substance judgments, attached to
+            // the success response instead of discarded. Never blocks; capped;
+            // omitted entirely when empty so quiet steps stay quiet. Attached after
+            // buildResponse the same way the autoSave fields are — deliberately past
+            // the verbosity filter, since findings are steering, not echo.
+            const advisoryFindings = evaluateAdvisoryGates(input, techniqueLocalStep, plan, techniqueIndex, validationWarnings);
+            if (advisoryFindings.length > 0) {
+                const parsedResponse = JSON.parse(response.content[0].text);
+                parsedResponse.advisoryFindings = advisoryFindings;
+                response.content[0].text = JSON.stringify(parsedResponse, null, 2);
+            }
             // Final summary for a completed session. buildResponse has already set
             // endTime and refreshed session.insights/metrics; this only renders them.
             if (!input.nextStepNeeded) {

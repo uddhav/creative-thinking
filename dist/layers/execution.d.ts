@@ -9,5 +9,5 @@ import type { VisualFormatter } from '../utils/VisualFormatter.js';
 import type { MetricsCollector } from '../core/MetricsCollector.js';
 import type { HybridComplexityAnalyzer } from '../complexity/analyzer.js';
 import type { ErgodicityManager } from '../ergodicity/index.js';
-export declare function executeThinkingStep(input: ExecuteThinkingStepInput, sessionManager: SessionManager, techniqueRegistry: TechniqueRegistry, visualFormatter: VisualFormatter, metricsCollector: MetricsCollector, complexityAnalyzer: HybridComplexityAnalyzer, ergodicityManager: ErgodicityManager): Promise<LateralThinkingResponse>;
+export declare function executeThinkingStep(input: ExecuteThinkingStepInput, sessionManager: SessionManager, techniqueRegistry: TechniqueRegistry, visualFormatter: VisualFormatter, metricsCollector: MetricsCollector, complexityAnalyzer: HybridComplexityAnalyzer, ergodicityManager: ErgodicityManager, validationWarnings?: string[]): Promise<LateralThinkingResponse>;
 //# sourceMappingURL=execution.d.ts.map

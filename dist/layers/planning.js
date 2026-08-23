@@ -11,10 +11,12 @@ import { ErrorCode } from '../errors/types.js';
 import { HumanisticQualityCoverage } from './discovery/HumanisticQualityCoverage.js';
 import { PersonaGuidanceInjector } from '../personas/PersonaGuidanceInjector.js';
 import { DebateOrchestrator } from '../personas/DebateOrchestrator.js';
+import { RANDOM_ENTRY_DECK, seededDraw } from '../techniques/decks/randomEntryDeck.js';
+import { PO_DECK } from '../techniques/decks/poDeck.js';
 // Create singleton instances to avoid per-call allocation
 const personaResolver = new PersonaResolver();
 export function planThinkingSession(input, sessionManager, techniqueRegistry) {
-    const { problem, techniques, objectives, constraints, timeframe = 'thorough', executionMode = 'sequential', persona, personas, debateFormat, } = input;
+    const { problem, techniques, objectives, constraints, timeframe = 'thorough', executionMode = 'sequential', persona, personas, debateFormat, strictness, } = input;
     // Resolve persona for guidance injection.
     //
     // A persona that does not resolve is an ERROR, not a filter. This used to
@@ -54,10 +56,14 @@ export function planThinkingSession(input, sessionManager, techniqueRegistry) {
     // Generate unique plan ID
     const planId = `plan_${randomUUID()}`;
     // Build workflow for each technique
-    const workflow = techniques.map(technique => {
+    const workflow = techniques.map((technique, techniqueIndex) => {
         const handler = techniqueRegistry.getHandler(technique);
         const info = handler.getTechniqueInfo();
         const steps = generateStepsForTechnique(technique, problem, info.totalSteps, handler, resolvedPersona);
+        // Server-assigned entropy (P3): the stimulus is a plan-time value — drawn
+        // once, seeded by planId, fixed for the plan's lifetime. The index keeps
+        // repeated instances of one technique from sharing a draw.
+        assignStimulus(technique, techniqueIndex, planId, steps);
         return {
             technique,
             steps,
@@ -110,6 +116,7 @@ export function planThinkingSession(input, sessionManager, techniqueRegistry) {
         planningInsights,
         complexityAssessment,
         executionMode,
+        strictness,
         executionGraph,
         personaContext: resolvedPersona || resolvedPersonas.length > 0
             ? {
@@ -160,6 +167,27 @@ export function planThinkingSession(input, sessionManager, techniqueRegistry) {
         }
     }
     return plan;
+}
+/**
+ * Assign a server-drawn stimulus to step 1 of stimulus-bearing techniques.
+ * The draw is FNV-1a-seeded from `planId:technique:index`, so it is a fact
+ * about the plan: fixed within it (no rerolls), redrawn only by replanning.
+ * The value is prepended to the step description as well as carried in the
+ * structured fields, so callers that only read prose still see it.
+ */
+function assignStimulus(technique, techniqueIndex, planId, steps) {
+    if (steps.length === 0)
+        return;
+    if (technique !== 'random_entry' && technique !== 'po')
+        return;
+    const deck = technique === 'po' ? PO_DECK : RANDOM_ENTRY_DECK;
+    const stimulus = seededDraw(deck, `${planId}:${technique}:${techniqueIndex}`);
+    const label = technique === 'po' ? 'Assigned provocation' : 'Assigned stimulus';
+    steps[0].stimulus = stimulus;
+    steps[0].stimulusSource = 'assigned';
+    steps[0].description =
+        `🎲 ${label}: "${stimulus}" — work with this one; it is not re-rollable within this plan.\n\n` +
+            steps[0].description;
 }
 function generateStepsForTechnique(technique, problem, totalSteps, handler, persona) {
     const steps = [];

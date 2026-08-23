@@ -65,6 +65,23 @@ export type ExecutionMode = 'sequential' | 'parallel' | 'auto';
  */
 export type ParallelizationStrategy = 'technique' | 'step' | 'hybrid';
 
+/**
+ * The caller-declared shape of the problem's stuckness ("crux"). Six values,
+ * deliberately no 'other' — an absent crux is an absent param. PROVISIONAL
+ * until P6 launches; renames after that carry a versioned mapping, because
+ * cross-session priors will be keyed on these strings.
+ */
+export const CRUX_VALUES = [
+  'framing',
+  'contested',
+  'generation',
+  'evaluation',
+  'risk',
+  'path',
+] as const;
+
+export type CruxType = (typeof CRUX_VALUES)[number];
+
 export interface TechniqueRecommendation {
   technique: LateralTechnique;
   reasoning: string;
@@ -72,11 +89,26 @@ export interface TechniqueRecommendation {
   alternativeUses?: string[];
   isWildcard?: boolean;
   isQualityFiller?: boolean;
+  /**
+   * The four factors behind the multi-factor score, rounded to 3 decimals.
+   * Absent on quality fillers, whose effectiveness is a quality-profile score
+   * that never passed through the scorer — the absence is the honesty.
+   */
+  scoreBreakdown?: {
+    categoryFit: number;
+    complexityMatch: number;
+    constraintCompatibility: number;
+    outcomeAlignment: number;
+  };
+  /** How this entry earned its place in the set. */
+  scoreProvenance?: 'fit' | 'quality-fill' | 'wildcard';
 }
 
 export interface DiscoverTechniquesInput {
   problem: string;
   context?: string;
+  /** Caller-declared shape of the stuckness; validated against CRUX_VALUES. */
+  crux?: CruxType;
   preferredOutcome?: 'innovative' | 'systematic' | 'risk-aware' | 'collaborative' | 'analytical';
   constraints?: string[];
   currentFlexibility?: number;
@@ -91,6 +123,19 @@ export interface DiscoverTechniquesInput {
 export interface DiscoverTechniquesOutput {
   problem: string;
   problemCategory: string;
+  /**
+   * How many problem categories cleared the evidence bar — the signal that
+   * sizes the recommendation set (≥3 high, 2 medium, else low). Surfaced so
+   * callers can see the selector's grounds instead of trusting a bare list.
+   */
+  evidenceBreadth?: number;
+  /** Echo of the caller's declared crux, when one was given. */
+  crux?: CruxType;
+  /**
+   * Whether the caller declared a crux. An adoption marker, not a confidence
+   * measure — false means "selection ran on surface vocabulary alone".
+   */
+  cruxDeclared?: boolean;
   recommendations: TechniqueRecommendation[];
   integrationSuggestions?: {
     sequence?: string[];
@@ -173,6 +218,14 @@ export interface ThinkingStep {
   criticalLens?: string;
   risks?: string[];
   successCriteria?: string[];
+  /**
+   * Server-assigned entropy for stimulus-bearing techniques (random_entry: a
+   * word; po: a provocation). Drawn at plan time, seeded by planId — fixed
+   * within a plan, never re-rollable. Absent on steps with no assignment.
+   */
+  stimulus?: string;
+  /** Provenance marker: present (as 'assigned') only for server-drawn stimuli. */
+  stimulusSource?: 'assigned';
   ergodicityCheck?: {
     required: boolean;
     prompt: string;
@@ -254,6 +307,13 @@ export interface PlanThinkingSessionInput {
   persona?: string; // Single persona for guidance injection
   personas?: string[]; // Multiple personas for debate mode
   debateFormat?: 'structured' | 'adversarial' | 'collaborative';
+  /**
+   * Gate strictness for the plan's steps. Round 1 implements 'advisory' only
+   * (findings never block); the value is accepted and echoed so callers can
+   * declare intent today. 'enforcing' is reserved — documented, not built —
+   * pending M0 evidence (open-world contract: unknown values are accepted).
+   */
+  strictness?: string;
 }
 
 export interface PlanThinkingSessionOutput {
@@ -264,6 +324,8 @@ export interface PlanThinkingSessionOutput {
   totalSteps: number;
   objectives?: string[];
   constraints?: string[];
+  /** Echo of the caller's declared gate strictness; 'advisory' is the only implemented level. */
+  strictness?: string;
   executionGraph?: ExecutionGraph;
   integrationStrategy?: {
     approach: 'sequential' | 'parallel' | 'iterative';

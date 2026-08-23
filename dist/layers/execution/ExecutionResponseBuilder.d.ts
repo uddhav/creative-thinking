@@ -98,6 +98,11 @@ export declare class ExecutionResponseBuilder {
     private readTechniqueInsights;
     private createOperationData;
     private generateNextStepGuidance;
+    /**
+     * One-line reminder of a plan-time assigned stimulus, or '' when the plan
+     * carries no assignment for this technique instance.
+     */
+    private assignedStimulusLine;
     private getBaseGuidance;
     private generateExecutionMetadata;
     private addMemoryOutputs;

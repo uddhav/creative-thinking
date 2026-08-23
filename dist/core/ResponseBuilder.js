@@ -127,6 +127,9 @@ export class ResponseBuilder {
             },
             // Include other fields that might be expected
             problemCategory: output.problemCategory,
+            evidenceBreadth: output.evidenceBreadth,
+            crux: output.crux,
+            cruxDeclared: output.cruxDeclared,
             warnings: output.warnings,
             contextAnalysis: output.contextAnalysis,
             complexityAssessment: output.complexityAssessment,
@@ -141,7 +144,9 @@ export class ResponseBuilder {
     buildPlanningResponse(output) {
         const flatWorkflow = [];
         let overallStepNumber = 1;
-        // Flatten the nested workflow structure
+        // Flatten the nested workflow structure. This flattener is an allowlist:
+        // a ThinkingStep field not copied here never reaches the caller — which
+        // is how the assigned stimulus would have shipped dark.
         output.workflow.forEach(techniqueWorkflow => {
             const techniqueSteps = techniqueWorkflow.steps.length;
             techniqueWorkflow.steps.forEach(step => {
@@ -152,6 +157,10 @@ export class ResponseBuilder {
                     riskConsiderations: step.risks,
                     totalSteps: techniqueSteps,
                     expectedOutputs: [step.expectedOutput],
+                    ...(step.stimulus !== undefined && {
+                        stimulus: step.stimulus,
+                        stimulusSource: step.stimulusSource,
+                    }),
                 });
             });
         });
@@ -167,6 +176,7 @@ export class ResponseBuilder {
             planningInsights: output.planningInsights,
             complexityAssessment: output.complexityAssessment,
             executionMode: output.executionMode,
+            strictness: output.strictness,
             qualityCoverage: output.qualityCoverage,
             // Add execution graph for DAG-based parallel execution documentation
             executionGraph: output.executionGraph,

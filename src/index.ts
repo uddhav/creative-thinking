@@ -199,7 +199,9 @@ export class LateralThinkingServer {
 
       const data = input as ExecuteThinkingStepInput;
 
-      // Execute thinking step using the execution layer
+      // Execute thinking step using the execution layer. The validator's
+      // warnings ride along: they were computed on every call and thrown away
+      // on the valid path for years — now they surface as advisory findings.
       const result = await executeThinkingStep(
         data,
         this.sessionManager,
@@ -207,7 +209,8 @@ export class LateralThinkingServer {
         this.visualFormatter,
         this.metricsCollector,
         this.complexityAnalyzer,
-        this.ergodicityManager
+        this.ergodicityManager,
+        validation.warnings
       );
 
       return result;

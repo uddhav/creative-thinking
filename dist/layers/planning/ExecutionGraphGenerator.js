@@ -249,8 +249,12 @@ export class ExecutionGraphGenerator {
                 };
             }
             case 'po':
+                // Prefer the plan-time assigned provocation; the description is the
+                // full guidance text and only ever a fallback.
                 return {
-                    provocation: step.description || '',
+                    provocation: step.stimulus ||
+                        step.description ||
+                        '',
                 };
             case 'random_entry':
                 return {
