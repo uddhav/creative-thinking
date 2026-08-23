@@ -8,6 +8,26 @@
 import { CONFIDENCE_THRESHOLDS, CACHE_LIMITS } from './constants.js';
 export class AdaptiveRiskAssessment {
     contextCache = new Map();
+    // Compiled per indicator once, shared across instances.
+    static indicatorPatterns = new Map();
+    /**
+     * Word-boundary indicator match. A bare `text.includes()` matched fragments
+     * inside unrelated words — 'api' in "rapid", 'all' in "small", 'system' in
+     * "ecosystem" — and mislabeled non-technical problems. Multi-word phrases
+     * match as phrases; single words also match simple plural forms.
+     */
+    matchesIndicator(text, indicator) {
+        let pattern = AdaptiveRiskAssessment.indicatorPatterns.get(indicator);
+        if (!pattern) {
+            const escaped = indicator.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            pattern = new RegExp(`\\b${escaped}(?:e?s)?\\b`, 'i');
+            AdaptiveRiskAssessment.indicatorPatterns.set(indicator, pattern);
+        }
+        return pattern.test(text);
+    }
+    containsAny(text, indicators) {
+        return indicators.some(ind => this.matchesIndicator(text, ind));
+    }
     /**
      * Analyze context from problem and output text
      */
@@ -21,7 +41,8 @@ export class AdaptiveRiskAssessment {
         const fullText = `${problem} ${output}`.toLowerCase();
         // Quick check for creative exploration - if true, skip detailed risk analysis
         const hasCreativeExploration = this.detectCreativeExploration(fullText);
-        if (hasCreativeExploration && !fullText.includes('all') && !fullText.includes('permanent')) {
+        if (hasCreativeExploration &&
+            !this.containsAny(fullText, ['all', 'permanent', 'permanently'])) {
             // Fast path for pure creative exploration
             return {
                 hasPersonalFinance: false,
@@ -125,7 +146,7 @@ Remember: ${this.getContextualReminder(context)}`;
             'equity allocation',
             'fixed income',
         ];
-        return indicators.some(ind => text.includes(ind));
+        return this.containsAny(text, indicators);
     }
     detectBusinessContext(text) {
         const indicators = [
@@ -145,7 +166,7 @@ Remember: ${this.getContextualReminder(context)}`;
             'team',
             'department',
         ];
-        return indicators.some(ind => text.includes(ind));
+        return this.containsAny(text, indicators);
     }
     detectHealthSafety(text) {
         const indicators = [
@@ -161,7 +182,7 @@ Remember: ${this.getContextualReminder(context)}`;
             'hospital',
             'medication',
         ];
-        return indicators.some(ind => text.includes(ind));
+        return this.containsAny(text, indicators);
     }
     detectCreativeExploration(text) {
         const indicators = [
@@ -175,7 +196,7 @@ Remember: ${this.getContextualReminder(context)}`;
             'conceptual',
             'ideate',
         ];
-        return indicators.some(ind => text.includes(ind));
+        return this.containsAny(text, indicators);
     }
     detectTechnicalMigration(text) {
         const indicators = [
@@ -190,7 +211,7 @@ Remember: ${this.getContextualReminder(context)}`;
             'database',
             'architecture',
         ];
-        return indicators.some(ind => text.includes(ind));
+        return this.containsAny(text, indicators);
     }
     detectHighStakes(text) {
         const indicators = [
@@ -198,18 +219,21 @@ Remember: ${this.getContextualReminder(context)}`;
             'everything',
             'entire',
             'irreversible',
+            'irreversibly',
             'permanent',
+            'permanently',
             'cannot undo',
             'no going back',
             'critical',
             'essential',
             'survival',
             'bankrupt',
+            'bankruptcy',
             'fatal',
             'destroy',
             'ruin',
         ];
-        return indicators.some(ind => text.includes(ind));
+        return this.containsAny(text, indicators);
     }
     isPortfolioContext(text) {
         // Check if this is specifically about portfolio/investment decisions
@@ -230,27 +254,27 @@ Remember: ${this.getContextualReminder(context)}`;
             'all-bond',
             'all-weather',
         ];
-        return portfolioIndicators.some(ind => text.includes(ind));
+        return this.containsAny(text, portfolioIndicators);
     }
     detectResourceType(text, context) {
         // Check financial contexts FIRST - they're most common and specific
         if (context.hasPersonalFinance || this.isPortfolioContext(text)) {
-            if (text.includes('portfolio'))
+            if (this.matchesIndicator(text, 'portfolio'))
                 return 'investment portfolio';
-            if (text.includes('savings'))
+            if (this.matchesIndicator(text, 'savings'))
                 return 'personal savings';
-            if (text.includes('retirement'))
+            if (this.matchesIndicator(text, 'retirement'))
                 return 'retirement funds';
-            if (text.includes('allocation'))
+            if (this.matchesIndicator(text, 'allocation'))
                 return 'asset allocation';
             return 'personal financial resources';
         }
         if (context.hasBusinessContext) {
-            if (text.includes('budget'))
+            if (this.matchesIndicator(text, 'budget'))
                 return 'company budget';
-            if (text.includes('runway'))
+            if (this.matchesIndicator(text, 'runway'))
                 return 'business runway';
-            if (text.includes('revenue'))
+            if (this.matchesIndicator(text, 'revenue'))
                 return 'revenue streams';
             return 'company resources';
         }
@@ -265,19 +289,19 @@ Remember: ${this.getContextualReminder(context)}`;
         const stakeholders = [];
         if (context.hasPersonalFinance) {
             stakeholders.push('you');
-            if (text.includes('family'))
+            if (this.matchesIndicator(text, 'family'))
                 stakeholders.push('your family');
-            if (text.includes('dependents'))
+            if (this.matchesIndicator(text, 'dependents'))
                 stakeholders.push('your dependents');
         }
         if (context.hasBusinessContext) {
-            if (text.includes('employee'))
+            if (this.matchesIndicator(text, 'employee'))
                 stakeholders.push('employees');
-            if (text.includes('customer') || text.includes('client'))
+            if (this.containsAny(text, ['customer', 'client']))
                 stakeholders.push('customers');
-            if (text.includes('investor'))
+            if (this.matchesIndicator(text, 'investor'))
                 stakeholders.push('investors');
-            if (text.includes('partner'))
+            if (this.matchesIndicator(text, 'partner'))
                 stakeholders.push('partners');
             if (stakeholders.length === 0)
                 stakeholders.push('organization stakeholders');
@@ -288,17 +312,21 @@ Remember: ${this.getContextualReminder(context)}`;
         return stakeholders;
     }
     estimateRecoveryTimeframe(text) {
-        if (text.includes('permanent') || text.includes('irreversible')) {
+        // Derived forms are listed explicitly rather than widened into the suffix
+        // rule: a generic '-ly'/'-cy' suffix would readmit fragment matches
+        // ('all' → "ally") that the word-boundary fix exists to remove.
+        if (this.containsAny(text, ['permanent', 'permanently', 'irreversible', 'irreversibly'])) {
             return 'permanent - cannot recover';
         }
-        if (text.includes('years'))
+        if (this.matchesIndicator(text, 'years'))
             return 'years';
-        if (text.includes('months'))
+        if (this.matchesIndicator(text, 'months'))
             return 'months';
-        if (text.includes('weeks'))
+        if (this.matchesIndicator(text, 'weeks'))
             return 'weeks';
-        if (text.includes('bankrupt') || text.includes('ruin'))
+        if (this.containsAny(text, ['bankrupt', 'bankruptcy', 'ruin'])) {
             return 'may not be able to recover';
+        }
         return 'unknown timeframe';
     }
     getContextualHeader(context) {

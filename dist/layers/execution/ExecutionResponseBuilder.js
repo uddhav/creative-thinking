@@ -603,17 +603,25 @@ export class ExecutionResponseBuilder {
     }
     addOptionGeneration(parsedResponse, currentFlexibility, optionGenerationResult) {
         if (optionGenerationResult && optionGenerationResult.options.length > 0) {
+            // topOptions must follow the evaluator's score order (evaluations are
+            // sorted best-first), not the strategies' generation order — otherwise
+            // `recommendation` (the top-scored option) can name an option absent
+            // from the list. Reading flexibilityGain off the evaluation, not the
+            // option: strategies never populate Option.flexibilityGain.
+            const rankedOptions = optionGenerationResult.evaluations.slice(0, 3).flatMap(evaluation => {
+                const option = optionGenerationResult.options.find(o => o.id === evaluation.optionId);
+                return option ? [{ option, evaluation }] : [];
+            });
             parsedResponse.optionGeneration = {
                 triggered: true,
                 flexibility: currentFlexibility,
                 optionsGenerated: optionGenerationResult.options.length,
                 strategies: optionGenerationResult.strategiesUsed,
-                topOptions: optionGenerationResult.options.slice(0, 3).map(opt => ({
-                    name: opt.name,
-                    description: opt.description,
-                    flexibilityGain: opt.flexibilityGain,
-                    recommendation: optionGenerationResult.evaluations.find(e => e.optionId === opt.id)
-                        ?.recommendation,
+                topOptions: rankedOptions.map(({ option, evaluation }) => ({
+                    name: option.name,
+                    description: option.description,
+                    flexibilityGain: evaluation.flexibilityGain,
+                    recommendation: evaluation.recommendation,
                 })),
                 recommendation: optionGenerationResult.topRecommendation?.name || 'Consider implementing top options',
             };

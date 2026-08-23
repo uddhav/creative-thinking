@@ -247,19 +247,26 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
             }
             // Update metrics
             metricsCollector.updateMetrics(session, operationData);
-            // Build comprehensive execution response
-            const response = executionResponseBuilder.buildResponse(input, session, sessionId, handler, techniqueLocalStep, techniqueIndex, plan, currentFlexibility, optionGenerationResult, ergodicityResult.metrics);
-            // Check completion gatekeeper before allowing termination
+            // The gatekeeper must vet a termination BEFORE the response is built:
+            // buildResponse finalizes the session on nextStepNeeded=false (endTime,
+            // completion telemetry, sessionComplete payload), endTime is never
+            // cleared, and persistence reads endTime as status 'completed' — so a
+            // vetoed termination must not reach any of that.
             const completionCheck = completionGatekeeper.canProceedToNextStep(input, session, plan);
             if (!completionCheck.allowed && completionCheck.response) {
                 // If gatekeeper blocks termination, return the blocking response
                 return completionCheck.response;
             }
-            // Handle session completion
+            // Build comprehensive execution response
+            const response = executionResponseBuilder.buildResponse(input, session, sessionId, handler, techniqueLocalStep, techniqueIndex, plan, currentFlexibility, optionGenerationResult, ergodicityResult.metrics);
+            // Final summary for a completed session. buildResponse has already set
+            // endTime and refreshed session.insights/metrics; this only renders them.
             if (!input.nextStepNeeded) {
-                session.endTime = Date.now();
-                // Final summary
-                visualFormatter.formatSessionSummary(input.technique, input.problem, session.insights, session.metrics);
+                const summary = visualFormatter.formatSessionSummary(input.technique, input.problem, session.insights, session.metrics);
+                if (summary && process.env.DISABLE_THOUGHT_LOGGING !== 'true') {
+                    // IMPORTANT: Use stderr for visual output - stdout is reserved for JSON-RPC
+                    process.stderr.write(`${summary}\n`);
+                }
             }
             // Auto-save if enabled
             if (input.autoSave) {

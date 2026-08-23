@@ -371,6 +371,17 @@ export async function executeThinkingStep(
       // Update metrics
       metricsCollector.updateMetrics(session, operationData);
 
+      // The gatekeeper must vet a termination BEFORE the response is built:
+      // buildResponse finalizes the session on nextStepNeeded=false (endTime,
+      // completion telemetry, sessionComplete payload), endTime is never
+      // cleared, and persistence reads endTime as status 'completed' — so a
+      // vetoed termination must not reach any of that.
+      const completionCheck = completionGatekeeper.canProceedToNextStep(input, session, plan);
+      if (!completionCheck.allowed && completionCheck.response) {
+        // If gatekeeper blocks termination, return the blocking response
+        return completionCheck.response;
+      }
+
       // Build comprehensive execution response
       const response = executionResponseBuilder.buildResponse(
         input,
@@ -385,24 +396,19 @@ export async function executeThinkingStep(
         ergodicityResult.metrics
       );
 
-      // Check completion gatekeeper before allowing termination
-      const completionCheck = completionGatekeeper.canProceedToNextStep(input, session, plan);
-      if (!completionCheck.allowed && completionCheck.response) {
-        // If gatekeeper blocks termination, return the blocking response
-        return completionCheck.response;
-      }
-
-      // Handle session completion
+      // Final summary for a completed session. buildResponse has already set
+      // endTime and refreshed session.insights/metrics; this only renders them.
       if (!input.nextStepNeeded) {
-        session.endTime = Date.now();
-
-        // Final summary
-        visualFormatter.formatSessionSummary(
+        const summary = visualFormatter.formatSessionSummary(
           input.technique,
           input.problem,
           session.insights,
           session.metrics
         );
+        if (summary && process.env.DISABLE_THOUGHT_LOGGING !== 'true') {
+          // IMPORTANT: Use stderr for visual output - stdout is reserved for JSON-RPC
+          process.stderr.write(`${summary}\n`);
+        }
       }
 
       // Auto-save if enabled
