@@ -67,10 +67,24 @@ export declare class MetricsCalculator {
      */
     private calculateReversibilityIndex;
     /**
-     * Calculate path divergence
-     * How far we've moved from the initial state
+     * Path divergence: how far the session has moved from its initial state,
+     * saturated to 0-1.
+     *
+     * The raw accumulation (0.05/step + 0.1 x commitment per event) grows
+     * monotonically with steps and commitment — that is the intent — but it was
+     * reported unbounded and undocumented, so a caller reading 2.72 had no way
+     * to interpret it. raw/(raw+1) keeps strict per-step monotonicity while
+     * bounding the scale. This is also the ONE formula: pathMemory's
+     * currentFlexibility.pathDivergence delegates here (it used to hold a rival
+     * length x 0.1 that nothing read), and the option-generation context passes
+     * this value instead of inventing 1 - flexibility.
+     *
+     * Bands: < 0.3 near the starting frame; 0.3-0.6 meaningfully evolved;
+     * > 0.6 far from where it began (comparable across sessions of any length).
      */
-    private calculatePathDivergence;
+    static calculatePathDivergence(pathHistory: ReadonlyArray<{
+        commitmentLevel: number;
+    }>): number;
     /**
      * Calculate option velocity
      * Rate of option creation vs destruction

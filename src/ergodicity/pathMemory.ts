@@ -13,7 +13,7 @@ import type {
   CriticalBarrier,
 } from './types.js';
 import type { LateralTechnique } from '../index.js';
-import { COMMITMENT_WINDOW } from './metrics.js';
+import { COMMITMENT_WINDOW, MetricsCalculator } from './metrics.js';
 import { randomUUID } from 'crypto';
 
 /**
@@ -536,8 +536,12 @@ export class PathMemoryManager {
     const totalDecisions = Math.max(this.pathMemory.pathHistory.length, 1);
     this.pathMemory.currentFlexibility.reversibilityIndex = reversibleDecisions / totalDecisions;
 
-    // Calculate path divergence
-    this.pathMemory.currentFlexibility.pathDivergence = this.pathMemory.pathHistory.length * 0.1;
+    // One formula, one number: this used to hold a rival `length * 0.1` that
+    // nothing read while the response reported MetricsCalculator's value —
+    // the same field name carrying two different quantities.
+    this.pathMemory.currentFlexibility.pathDivergence = MetricsCalculator.calculatePathDivergence(
+      this.pathMemory.pathHistory
+    );
 
     // Commitment depth over the same trailing window `MetricsCalculator`
     // uses, and for the same reason: as a mean over every step the session had

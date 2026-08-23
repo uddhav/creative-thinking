@@ -405,7 +405,9 @@ export class ErgodicityOrchestrator {
         insights: session.insights,
         pathDependencyMetrics: {
           optionSpaceSize: 100 * currentFlexibility,
-          pathDivergence: 1 - currentFlexibility,
+          // The measured value, not an invented 1 − flexibility: divergence
+          // and flexibility are different quantities under one field name.
+          pathDivergence: session.pathMemory?.currentFlexibility?.pathDivergence ?? 0,
           commitmentDepth: session.pathMemory?.pathHistory?.length || session.history.length,
           reversibilityIndex: currentFlexibility,
         },
@@ -432,7 +434,9 @@ export class ErgodicityOrchestrator {
         },
         currentFlexibility: session.pathMemory?.currentFlexibility || {
           flexibilityScore: currentFlexibility,
-          pathDivergence: 1 - currentFlexibility,
+          // Fallback only (no pathMemory yet): an empty history has zero
+          // divergence, which is what the shared formula reports for it.
+          pathDivergence: 0,
           reversibilityIndex: currentFlexibility,
           barrierProximity: [],
           optionVelocity: 0,

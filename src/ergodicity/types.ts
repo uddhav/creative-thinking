@@ -105,7 +105,7 @@ export interface Barrier {
 export interface FlexibilityMetrics {
   flexibilityScore: number; // 0.0-1.0, measure of remaining options
   reversibilityIndex: number; // % of decisions that can be undone
-  pathDivergence: number; // How far from initial state (0.0+)
+  pathDivergence: number; // How far from initial state, 0-1 (saturating; <0.3 near start, 0.3-0.6 evolved, >0.6 far)
   barrierProximity: BarrierProximity[];
   optionVelocity: number; // Rate of option creation vs. destruction
   commitmentDepth: number; // Average commitment level of decisions

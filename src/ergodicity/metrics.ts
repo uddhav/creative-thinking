@@ -47,7 +47,7 @@ export class MetricsCalculator {
     return {
       flexibilityScore: this.calculateFlexibilityScore(pathMemory),
       reversibilityIndex: this.calculateReversibilityIndex(pathMemory),
-      pathDivergence: this.calculatePathDivergence(pathMemory),
+      pathDivergence: MetricsCalculator.calculatePathDivergence(pathMemory.pathHistory),
       barrierProximity: pathMemory.currentFlexibility.barrierProximity,
       optionVelocity: this.calculateOptionVelocity(pathMemory),
       commitmentDepth: this.calculateCommitmentDepth(pathMemory),
@@ -93,20 +93,29 @@ export class MetricsCalculator {
   }
 
   /**
-   * Calculate path divergence
-   * How far we've moved from the initial state
+   * Path divergence: how far the session has moved from its initial state,
+   * saturated to 0-1.
+   *
+   * The raw accumulation (0.05/step + 0.1 x commitment per event) grows
+   * monotonically with steps and commitment — that is the intent — but it was
+   * reported unbounded and undocumented, so a caller reading 2.72 had no way
+   * to interpret it. raw/(raw+1) keeps strict per-step monotonicity while
+   * bounding the scale. This is also the ONE formula: pathMemory's
+   * currentFlexibility.pathDivergence delegates here (it used to hold a rival
+   * length x 0.1 that nothing read), and the option-generation context passes
+   * this value instead of inventing 1 - flexibility.
+   *
+   * Bands: < 0.3 near the starting frame; 0.3-0.6 meaningfully evolved;
+   * > 0.6 far from where it began (comparable across sessions of any length).
    */
-  private calculatePathDivergence(pathMemory: PathMemory): number {
-    // Simple model: each step increases divergence
-    const stepDivergence = pathMemory.pathHistory.length * 0.05;
-
-    // High-commitment decisions increase divergence more
-    const commitmentDivergence = pathMemory.pathHistory.reduce(
+  static calculatePathDivergence(pathHistory: ReadonlyArray<{ commitmentLevel: number }>): number {
+    const stepDivergence = pathHistory.length * 0.05;
+    const commitmentDivergence = pathHistory.reduce(
       (sum, event) => sum + event.commitmentLevel * 0.1,
       0
     );
-
-    return stepDivergence + commitmentDivergence;
+    const raw = stepDivergence + commitmentDivergence;
+    return raw / (raw + 1);
   }
 
   /**
