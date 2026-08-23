@@ -14,6 +14,7 @@ interface ExecuteArgs {
   nextStepNeeded?: boolean;
   noAutoSave?: boolean;
   persona?: string;
+  verbosity?: string;
 }
 
 export function registerExecute(yargs: Argv): Argv {
@@ -47,6 +48,12 @@ export function registerExecute(yargs: Argv): Argv {
           type: 'string',
           describe: 'Speaking persona id (debate mode only)',
         })
+        .option('verbosity', {
+          type: 'string',
+          choices: ['minimal', 'full'] as const,
+          describe:
+            "Response size: 'minimal' = ack + steering + warnings/verdicts, no input echoes (intended future default); 'full' = current shape (default)",
+        })
         .epilogue(
           'Reads a JSON object on stdin if piped; flags override stdin fields.\n' +
             'Long-tail technique fields (hatColor, scamperAction, risks, etc.) are easiest to pass on stdin.\n\n' +
@@ -71,6 +78,7 @@ async function handle(argv: ArgumentsCamelCase<ExecuteArgs>): Promise<void> {
       nextStepNeeded: argv.nextStepNeeded,
       autoSave: argv.noAutoSave ? false : true,
       persona: argv.persona,
+      verbosity: argv.verbosity as 'minimal' | 'full' | undefined,
     },
     stdin
   );

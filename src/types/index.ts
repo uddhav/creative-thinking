@@ -285,6 +285,13 @@ export interface ExecuteThinkingStepInput {
     clamped: boolean;
   };
 
+  // Response shaping. 'minimal' returns the step acknowledgment, steering,
+  // and warnings/verdicts only — no echoes of the caller's own input, and
+  // newInsights (this step's additions) instead of the cumulative insights
+  // list. Default 'full' (also settable via RESPONSE_VERBOSITY); 'minimal'
+  // is the declared future default.
+  verbosity?: 'minimal' | 'full';
+
   // Revision and branching
   isRevision?: boolean;
   revisesStep?: number;
@@ -555,6 +562,13 @@ export interface ThinkingOperationData {
     applied: 'high' | 'medium' | 'low' | 'very_low';
     clamped: boolean;
   };
+
+  // Response shaping. 'minimal' returns the step acknowledgment, steering,
+  // and warnings/verdicts only — no echoes of the caller's own input, and
+  // newInsights (this step's additions) instead of the cumulative insights
+  // list. Default 'full' (also settable via RESPONSE_VERBOSITY); 'minimal'
+  // is the declared future default.
+  verbosity?: 'minimal' | 'full';
 
   // Revision and branching
   isRevision?: boolean;

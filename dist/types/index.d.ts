@@ -163,6 +163,7 @@ export interface ExecuteThinkingStepInput {
         applied: 'high' | 'medium' | 'low' | 'very_low';
         clamped: boolean;
     };
+    verbosity?: 'minimal' | 'full';
     isRevision?: boolean;
     revisesStep?: number;
     branchFromStep?: number;
@@ -379,6 +380,7 @@ export interface ThinkingOperationData {
         applied: 'high' | 'medium' | 'low' | 'very_low';
         clamped: boolean;
     };
+    verbosity?: 'minimal' | 'full';
     isRevision?: boolean;
     revisesStep?: number;
     branchFromStep?: number;

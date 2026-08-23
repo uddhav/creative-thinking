@@ -862,6 +862,11 @@ export const EXECUTE_THINKING_STEP_TOOL = {
                 items: { type: 'string' },
                 description: 'Elements removed to improve the design (via negativa).',
             },
+            verbosity: {
+                type: 'string',
+                enum: ['minimal', 'full'],
+                description: "Response size control. 'minimal' returns the step acknowledgment (ids, counters, progress), steering (nextStepGuidance), and every warning/verdict field (flexibility, ergodicity metrics, early warnings, escape recommendations, reflexivity warnings, option generation, ruin verdict) — plus newInsights (only this step's additions) and fieldsRecorded (the names of the technique fields the server read). It drops all echoes of your own input: problem, output, technique field values, modificationHistory. The final step's completion summary is always full. Default: 'full' (or the RESPONSE_VERBOSITY env var). DEPRECATION NOTICE: 'minimal' is the intended future default; a later major release will flip it.",
+            },
             stepReversibility: {
                 type: 'object',
                 description: "Bounded claim about how reversible THIS step's action really is, when the technique's static assumption misreads it. The server assumes a reversibility rung per step on the ladder high -> medium -> low -> very_low (most to least reversible); your claim moves the applied rung AT MOST ONE STEP from that assumption, and only when rationale is non-empty. Example: SCAMPER's Eliminate step is assumed 'low' (hard to undo) — for \"eliminate all non-refundable bookings\", which removes a lock-in rather than creating one, send { level: 'high', rationale: 'removes commitments; everything stays refundable' } and the applied rung becomes 'medium' (one rung up from 'low'; the claim cannot reach 'high' from there). The response echoes { prior, claimed, applied, clamped } in executionMetadata.appliedReversibility. A claim of LOWER reversibility than assumed is recorded as a declared commitment and can raise constraint warnings.",

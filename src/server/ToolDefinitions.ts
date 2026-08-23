@@ -906,6 +906,12 @@ export const EXECUTE_THINKING_STEP_TOOL: Tool = {
         items: { type: 'string' },
         description: 'Elements removed to improve the design (via negativa).',
       },
+      verbosity: {
+        type: 'string',
+        enum: ['minimal', 'full'],
+        description:
+          "Response size control. 'minimal' returns the step acknowledgment (ids, counters, progress), steering (nextStepGuidance), and every warning/verdict field (flexibility, ergodicity metrics, early warnings, escape recommendations, reflexivity warnings, option generation, ruin verdict) — plus newInsights (only this step's additions) and fieldsRecorded (the names of the technique fields the server read). It drops all echoes of your own input: problem, output, technique field values, modificationHistory. The final step's completion summary is always full. Default: 'full' (or the RESPONSE_VERBOSITY env var). DEPRECATION NOTICE: 'minimal' is the intended future default; a later major release will flip it.",
+      },
       stepReversibility: {
         type: 'object',
         description:

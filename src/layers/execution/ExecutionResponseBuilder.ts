@@ -52,6 +52,49 @@ interface ComplexitySuggestion {
 /** Escape steps shown inline; the rest are counted rather than dropped. */
 const ESCAPE_STEPS_SHOWN = 3;
 
+/**
+ * The response keys minimal verbosity keeps — the contract, pinned by
+ * response-verbosity.test.ts. Everything here is the step acknowledgment,
+ * steering, or a warning/verdict: the fields SOCKETES.md and the
+ * lateral-thinking skill tell callers to read. Echoes of the caller's own
+ * input (problem, output, technique field values, modificationHistory) and
+ * cumulative re-sends are deliberately absent; `insights` is replaced by
+ * `newInsights` (this step's additions only) and field values by
+ * `fieldsRecorded` (their names — a receipt without the echo). Three nested
+ * picks that a flat list cannot reach are handled in slimToMinimal:
+ * completionMetadata.completionWarnings, executionMetadata.appliedReversibility,
+ * and ruinAssessment minus its prompt. The terminal step's completion block
+ * bypasses slimming by mechanism — handleSessionCompletion merges it into the
+ * already-serialized response after this filter runs — as do the autoSave
+ * status fields, added the same way.
+ *
+ * Declared sunset: 'minimal' is the intended future DEFAULT ('full' exists
+ * for compatibility); the default flip will ship as a breaking release.
+ */
+export const MINIMAL_RESPONSE_KEEP_KEYS = [
+  'sessionId',
+  'technique',
+  'currentStep',
+  'totalSteps',
+  'nextStepNeeded',
+  'historyLength',
+  'techniqueProgress',
+  'nextStepGuidance',
+  'sequentialThinkingSuggestion',
+  'ergodicityMetrics',
+  'flexibilityScore',
+  'flexibilityMessage',
+  'alternativeSuggestions',
+  'ergodicityCheck',
+  'earlyWarningState',
+  'escapeRecommendation',
+  'reflexivityWarning',
+  'reflectionRequired',
+  'optionGeneration',
+  'realityAssessment',
+  'persona',
+] as const;
+
 export class ExecutionResponseBuilder {
   private responseBuilder = new ResponseBuilder();
   private memoryAnalyzer = new MemoryAnalyzer();
@@ -97,6 +140,12 @@ export class ExecutionResponseBuilder {
     // a private reach-through that recomputed threshold state per response.
     reflexivityWarning?: ReflexivityWarning | null
   ): LateralThinkingResponse {
+    const verbosity =
+      input.verbosity ?? (process.env.RESPONSE_VERBOSITY === 'minimal' ? 'minimal' : 'full');
+    // Captured before buildCoreResponseData, which reassigns session.insights:
+    // minimal mode reports this step's additions, not the cumulative list.
+    const insightsBefore = new Set(session.insights);
+
     // Track technique step
     this.telemetry
       .trackTechniqueStep(sessionId, input.technique, input.currentStep, input.totalSteps, {
@@ -172,7 +221,8 @@ export class ExecutionResponseBuilder {
       handler,
       techniqueLocalStep,
       techniqueIndex,
-      plan
+      plan,
+      verbosity === 'minimal'
     );
 
     // Enhance with flexibility and warnings
@@ -210,8 +260,14 @@ export class ExecutionResponseBuilder {
         .catch(console.error);
     }
 
-    // Build optimized response with single JSON stringify
-    const response = this.jsonOptimizer.buildOptimizedResponse(responseData);
+    // Build optimized response with single JSON stringify. Minimal verbosity
+    // filters here — after every producer has run, before serialization — so
+    // there is exactly one place that owns what survives.
+    const finalData =
+      verbosity === 'minimal'
+        ? this.slimToMinimal(responseData, input, sessionId, currentInsights, insightsBefore)
+        : responseData;
+    const response = this.jsonOptimizer.buildOptimizedResponse(finalData);
 
     // Handle session completion
     if (!input.nextStepNeeded) {
@@ -326,18 +382,23 @@ export class ExecutionResponseBuilder {
     handler: TechniqueHandler,
     techniqueLocalStep: number,
     techniqueIndex: number,
-    plan: PlanThinkingSessionOutput | undefined
+    plan: PlanThinkingSessionOutput | undefined,
+    // Minimal verbosity drops the five memory decoration keys anyway, so the
+    // analysis is skipped rather than computed-and-discarded. MemoryAnalyzer
+    // is side-effect-free; nothing else reads its output.
+    skipMemoryOutputs = false
   ): void {
     // Optimization: Skip or simplify memory analysis for deep revision chains
     const revisionCount = session.history.filter(h => h.isRevision).length;
     const skipMemoryAnalysis = input.isRevision && revisionCount > 30 && revisionCount % 5 !== 0;
 
-    const memoryOutputs = skipMemoryAnalysis
-      ? {} // Skip memory analysis for performance
-      : this.memoryAnalyzer.generateMemoryOutputs(
-          this.createOperationData(input, sessionId),
-          session
-        );
+    const memoryOutputs =
+      skipMemoryOutputs || skipMemoryAnalysis
+        ? {} // Skip memory analysis for performance
+        : this.memoryAnalyzer.generateMemoryOutputs(
+            this.createOperationData(input, sessionId),
+            session
+          );
 
     // Build technique progress info
     const techniqueProgress = {
@@ -361,6 +422,61 @@ export class ExecutionResponseBuilder {
       !input.nextStepNeeded
     );
     this.addCompletionMetadata(parsedResponse, completionMetadata);
+  }
+
+  /**
+   * The minimal-verbosity filter: an allowlist over the fully built response.
+   * Built-then-filtered (rather than skipping producers) so warning and
+   * verdict producers always run; the one producer worth skipping outright
+   * (memory decoration) is handled at its call site.
+   */
+  private slimToMinimal(
+    responseData: Record<string, unknown>,
+    input: ExecuteThinkingStepInput,
+    sessionId: string,
+    currentInsights: string[],
+    insightsBefore: Set<string>
+  ): Record<string, unknown> {
+    const slim: Record<string, unknown> = {};
+    for (const key of MINIMAL_RESPONSE_KEEP_KEYS) {
+      if (key in responseData) {
+        slim[key] = responseData[key];
+      }
+    }
+
+    // Nested picks a flat allowlist cannot reach.
+    const completionMetadata = responseData.completionMetadata as
+      | Record<string, unknown>
+      | undefined;
+    if (
+      Array.isArray(completionMetadata?.completionWarnings) &&
+      completionMetadata.completionWarnings.length > 0
+    ) {
+      slim.completionMetadata = { completionWarnings: completionMetadata.completionWarnings };
+    }
+    if (input.appliedReversibility) {
+      // The clamp audit is verdict-adjacent: a caller whose claim was moved
+      // must see what was applied, in either mode.
+      slim.executionMetadata = { appliedReversibility: input.appliedReversibility };
+    }
+    const ruinAssessment = responseData.ruinAssessment as Record<string, unknown> | undefined;
+    if (ruinAssessment) {
+      const { prompt: _prompt, ...verdict } = ruinAssessment;
+      slim.ruinAssessment = verdict;
+    }
+
+    // This step's additions only. Full mode's `insights` stays the cumulative
+    // documented reading (SOCKETES.md); a different key for a different
+    // meaning, so no parser reads one as the other.
+    slim.newInsights = currentInsights.filter(insight => !insightsBefore.has(insight));
+
+    // Receipt without the echo: the names of the technique fields the server
+    // read from this call.
+    slim.fieldsRecorded = Object.keys(
+      this.extractTechniqueSpecificFields(this.createOperationData(input, sessionId))
+    );
+
+    return slim;
   }
 
   /**
