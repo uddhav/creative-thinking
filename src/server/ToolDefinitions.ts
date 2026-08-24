@@ -4,6 +4,7 @@
  */
 
 import type { Tool } from '../types/index.js';
+import { CRUX_VALUES } from '../types/planning.js';
 
 export const DISCOVER_TECHNIQUES_TOOL: Tool = {
   name: 'discover_techniques',
@@ -23,7 +24,10 @@ export const DISCOVER_TECHNIQUES_TOOL: Tool = {
       },
       crux: {
         type: 'string',
-        enum: ['framing', 'contested', 'generation', 'evaluation', 'risk', 'path'],
+        // Derived, never transcribed: the validator, this schema, and the CLI
+        // choices all read CRUX_VALUES, so a rename cannot leave one surface
+        // rejecting a value another accepts.
+        enum: [...CRUX_VALUES],
         description:
           "The shape of the stuckness at the problem's center: framing (the problem statement " +
           'itself is suspect), contested (named people disagree on a decision), generation (no ' +

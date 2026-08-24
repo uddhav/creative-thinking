@@ -1,8 +1,3 @@
-export declare const STIMULUS_TECHNIQUES: readonly ["random_entry", "po"];
-export declare function isStimulusTechnique(technique: string): boolean;
-export declare function stimulusLabel(technique: string): string;
-/** The plan's assigned stimulus for a technique instance; undefined for non-stimulus techniques. */
-export declare function drawAssignedStimulus(planId: string, technique: string, techniqueIndex: number): string | undefined;
 /**
  * Apply an assignment to a technique's generated steps: structured fields on
  * step 1 plus a description prefix that explicitly overrides the handler's

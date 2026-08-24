@@ -143,4 +143,75 @@ describe('socketes CLI cross-process flow', () => {
     expect(exec2Data.sessionId).toBe(execData.sessionId);
     expect(exec2Data.historyLength).toBe(2);
   }, 30000);
+
+  it('debate persona plans persist and execute cross-process, and --crux reaches discovery', async () => {
+    // --crux is a flag, not stdin-only: a caller reading --help must be able
+    // to find the feature.
+    const discoverRes = await runCli(
+      ['discover', '--problem', 'Plan the quarterly notebook restock', '--crux', 'contested'],
+      { cwd: workDir }
+    );
+    expect(discoverRes.exit).toBe(0);
+    const discovered = discoverRes.json as {
+      crux?: string;
+      cruxDeclared?: boolean;
+      recommendations: Array<{ technique: string }>;
+    };
+    expect(discovered.crux).toBe('contested');
+    expect(discovered.cruxDeclared).toBe(true);
+    expect(discovered.recommendations.map(r => r.technique)).toContain('steelman_red_team');
+
+    const planRes = await runCli(
+      [
+        'plan',
+        '--problem',
+        'How should we name the internal design system',
+        '--techniques',
+        'random_entry',
+        '--personas',
+        'rich_hickey,nassim_taleb',
+      ],
+      { cwd: workDir }
+    );
+    expect(planRes.exit).toBe(0);
+    const planData = planRes.json as {
+      planId: string;
+      parallelPlans?: Array<{ planId: string; techniques?: string[] }>;
+    };
+    const personaPlans = (planData.parallelPlans ?? []).filter(
+      p => !(p.techniques ?? []).includes('competing_hypotheses')
+    );
+    expect(personaPlans.length).toBeGreaterThan(0);
+
+    // Every advertised debate planId must survive to the NEXT process — the
+    // in-memory PlanManager save is invisible to the CLI, where each command
+    // is a fresh process.
+    const planFiles = readdirSync(join(workDir, 'state', 'plans'));
+    for (const parallel of planData.parallelPlans ?? []) {
+      expect(planFiles).toContain(`${parallel.planId}.json`);
+    }
+
+    const personaExec = await runCli(
+      [
+        'execute',
+        '--plan',
+        personaPlans[0].planId,
+        '--technique',
+        'random_entry',
+        '--problem',
+        'How should we name the internal design system',
+        '--step',
+        '1',
+        '--total-steps',
+        '3',
+        '--output',
+        'Working from the assigned stimulus as this persona.',
+        '--next-step-needed',
+      ],
+      { cwd: workDir }
+    );
+    expect(personaExec.exit).toBe(0);
+    const personaData = personaExec.json as { sessionId?: string };
+    expect(personaData.sessionId).toBeDefined();
+  }, 30000);
 });

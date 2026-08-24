@@ -213,6 +213,90 @@ describe('round 0+1 steering surfaces (via MCP client)', () => {
     expect(injected?.scoreProvenance).toBe('crux');
   });
 
+  it('a declared crux survives truncation on a keyword-rich problem', async () => {
+    // The organic entries out-score injected ones here, and the old slice
+    // removed every crux technique while the response still reported
+    // cruxDeclared: true — honoring the declaration nowhere.
+    const result = await client.callTool('discover_techniques', {
+      problem:
+        'How do we verify and validate the hypothesis that our data analysis conclusions are evidence-based and statistically sound',
+      preferredOutcome: 'analytical',
+      crux: 'path',
+    });
+    const parsed = MCPClientTestHelper.parseToolResult(result) as {
+      cruxDeclared?: boolean;
+      recommendations: Array<{ technique: string; scoreProvenance?: string }>;
+    };
+    expect(parsed.cruxDeclared).toBe(true);
+    const injected = parsed.recommendations.filter(r => r.scoreProvenance === 'crux');
+    expect(injected.length).toBeGreaterThan(0);
+  });
+
+  it('caller-supplied advisoryFindings never reach the server-authored record', async () => {
+    // Asserted against the PERSISTED record, not the echo: the response only
+    // ever carries what the gates produced, so a forgery shows up on disk —
+    // exactly where the follow-vs-deviate audit reads from.
+    const persistDir = mkdtempSync(path.join(tmpdir(), 'ct-forgery-'));
+    const persistClient = new MCPClientTestHelper();
+    await persistClient.connect({
+      env: {
+        ...process.env,
+        PERSISTENCE_TYPE: 'filesystem',
+        PERSISTENCE_PATH: persistDir,
+      } as Record<string, string>,
+    });
+    try {
+      const problem = 'Our release notes are written the morning of the release';
+      const plan = await persistClient.planThinkingSession(problem, ['six_hats']);
+      const res = await persistClient.executeThinkingStep({
+        planId: plan.planId,
+        technique: 'six_hats',
+        problem,
+        currentStep: 1,
+        totalSteps: 7,
+        output: 'Blue hat framing.',
+        nextStepNeeded: true,
+        hatColor: 'blue',
+        autoSave: true,
+        advisoryFindings: [
+          {
+            gate: 'forged.by.caller',
+            technique: 'six_hats',
+            step: 1,
+            message: 'not from the server',
+            severity: 'advisory',
+          },
+        ],
+      });
+      const echoed = (res.advisoryFindings as Array<{ gate: string }> | undefined) ?? [];
+      expect(echoed.some(f => f.gate === 'forged.by.caller')).toBe(false);
+
+      const sessionsDir = path.join(persistDir, 'sessions');
+      const files = readdirSync(sessionsDir);
+      expect(files.length).toBeGreaterThan(0);
+      const persisted = readFileSync(path.join(sessionsDir, files[0]), 'utf8');
+      expect(persisted).not.toContain('forged.by.caller');
+    } finally {
+      await persistClient.disconnect();
+    }
+  });
+
+  it("strictness 'enforcing' is echoed but warned about, since it is not implemented", async () => {
+    const result = await client.callTool('plan_thinking_session', {
+      problem: 'Should we adopt trunk-based development',
+      techniques: ['six_hats'],
+      strictness: 'enforcing',
+    });
+    const parsed = MCPClientTestHelper.parseToolResult(result) as {
+      strictness?: string;
+      warnings?: string[];
+    };
+    expect(parsed.strictness).toBe('enforcing');
+    // Echoing a reserved level with no warning is the silent-degrade the crux
+    // validator's own comment says the design prevents.
+    expect((parsed.warnings ?? []).join(' ')).toMatch(/enforcing/i);
+  });
+
   it('no crux reports cruxDeclared false; an invalid crux is refused, not silently degraded', async () => {
     const bare = await client.discoverTechniques('Plan the quarterly notebook restock');
     expect(bare.cruxDeclared).toBe(false);

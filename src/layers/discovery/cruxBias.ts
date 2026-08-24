@@ -16,12 +16,8 @@
  * top pick).
  */
 import type { LateralTechnique } from '../../types/index.js';
-import { CRUX_VALUES, type CruxType } from '../../types/planning.js';
+import type { CruxType } from '../../types/planning.js';
 import { TECHNIQUE_FIT } from './TechniqueRecommender.js';
-
-export function isCruxType(value: unknown): value is CruxType {
-  return typeof value === 'string' && (CRUX_VALUES as readonly string[]).includes(value);
-}
 
 /**
  * Per-crux technique bias, expressed on the TECHNIQUE_FIT ordinal scale so a

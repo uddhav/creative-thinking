@@ -16,8 +16,7 @@
  * top pick).
  */
 import type { LateralTechnique } from '../../types/index.js';
-import { type CruxType } from '../../types/planning.js';
-export declare function isCruxType(value: unknown): value is CruxType;
+import type { CruxType } from '../../types/planning.js';
 /**
  * Per-crux technique bias, expressed on the TECHNIQUE_FIT ordinal scale so a
  * crux-injected candidate competes on the same footing as a category pick.

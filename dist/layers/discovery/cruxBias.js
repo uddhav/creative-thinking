@@ -1,8 +1,4 @@
-import { CRUX_VALUES } from '../../types/planning.js';
 import { TECHNIQUE_FIT } from './TechniqueRecommender.js';
-export function isCruxType(value) {
-    return typeof value === 'string' && CRUX_VALUES.includes(value);
-}
 /**
  * Per-crux technique bias, expressed on the TECHNIQUE_FIT ordinal scale so a
  * crux-injected candidate competes on the same footing as a category pick.

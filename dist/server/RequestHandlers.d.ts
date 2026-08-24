@@ -8,6 +8,14 @@ export declare class RequestHandlers {
     private server;
     private lateralServer;
     private activeRequests;
+    /**
+     * Calls accepted into the batch collector but not yet handed to
+     * processSingleCall. They are in flight from the caller's point of view —
+     * counting only processSingleCall's window let a SIGTERM arriving inside
+     * the collection window see zero active requests, skip the drain loop, and
+     * exit while a caller waited on a response the server had accepted.
+     */
+    private pendingBatchCalls;
     private requestLog;
     private batchCollector;
     private readonly BATCH_COLLECTION_WINDOW;

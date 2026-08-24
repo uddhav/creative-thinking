@@ -37,6 +37,13 @@ export interface ExecutionMetadata {
 }
 
 export class ResponseBuilder {
+  /**
+   * Inline ceiling for session exports, which bypass the response optimizer
+   * because their contract is "everything whole". Beyond this the export is
+   * refused with the CLI file-export alternative rather than truncated.
+   */
+  private static readonly MAX_EXPORT_BYTES = 4 * 1024 * 1024;
+
   // Performance optimization: Cache for expensive session metric calculations
   private metricsCache: Map<
     string,
@@ -310,14 +317,37 @@ export class ResponseBuilder {
     if (operation === 'export') {
       // Export's contract is "returns everything whole" — the optimizer's
       // string cap was truncating result.data at 1000 chars, silently
-      // contradicting it. Exports bypass the optimizer entirely.
+      // contradicting it. Exports bypass the optimizer, but not without a
+      // ceiling: an unbounded message can exceed a client's tool-result limit
+      // or swamp the model's context, and half a transcript delivered as a
+      // wall of JSON is worse than a refusal that names the alternative.
+      const text = JSON.stringify({ operation, success: true, result }, null, 2);
+      if (Buffer.byteLength(text, 'utf8') <= ResponseBuilder.MAX_EXPORT_BYTES) {
+        return { content: [{ type: 'text', text }] };
+      }
+      const mb = (Buffer.byteLength(text, 'utf8') / (1024 * 1024)).toFixed(1);
       return {
         content: [
           {
             type: 'text',
-            text: JSON.stringify({ operation, success: true, result }, null, 2),
+            text: JSON.stringify(
+              {
+                operation,
+                success: false,
+                error: {
+                  message: `Export is ${mb} MB, over the ${ResponseBuilder.MAX_EXPORT_BYTES / (1024 * 1024)} MB inline limit. Exports are never truncated, so this one is refused rather than silently cut.`,
+                  recovery: [
+                    'Write it to a file with the CLI: socketes session export --session-id <id> --format markdown > session.md',
+                    "Try a more compact format ('csv' or 'markdown' instead of 'json')",
+                  ],
+                },
+              },
+              null,
+              2
+            ),
           },
         ],
+        isError: true,
       };
     }
     return this.buildSuccessResponse({

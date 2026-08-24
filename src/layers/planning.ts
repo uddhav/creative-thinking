@@ -115,9 +115,11 @@ export function planThinkingSession(
   // validator's comment names; different posture because this field is
   // deliberately open.
   const planWarnings: string[] = [];
-  if (strictness !== undefined && strictness !== 'advisory' && strictness !== 'enforcing') {
+  if (strictness !== undefined && strictness !== 'advisory') {
     planWarnings.push(
-      `strictness "${strictness}" is not a recognized level ('advisory' now; 'enforcing' reserved) — the plan behaves as 'advisory'.`
+      strictness === 'enforcing'
+        ? "strictness 'enforcing' is reserved and not yet implemented — this plan runs as 'advisory' and its findings never block a step."
+        : `strictness "${strictness}" is not a recognized level ('advisory' now; 'enforcing' reserved) — the plan behaves as 'advisory'.`
     );
   }
 
@@ -136,7 +138,7 @@ export function planThinkingSession(
     // Server-assigned entropy (P3): the stimulus is a plan-time value — drawn
     // once, seeded by planId, fixed for the plan's lifetime. The index keeps
     // repeated instances of one technique from sharing a draw.
-    assignStimulus(technique as string, techniqueIndex, planId, steps);
+    applyAssignedStimulus(technique as string, techniqueIndex, planId, steps);
 
     return {
       technique,
@@ -289,20 +291,6 @@ export function planThinkingSession(
   }
 
   return plan;
-}
-
-/**
- * Assign a server-drawn stimulus to step 1 of stimulus-bearing techniques.
- * Seed and prefix semantics live in techniques/decks/assignment.ts, shared
- * with the debate persona-plan path so the two cannot drift.
- */
-function assignStimulus(
-  technique: string,
-  techniqueIndex: number,
-  planId: string,
-  steps: ThinkingStep[]
-): void {
-  applyAssignedStimulus(technique, techniqueIndex, planId, steps);
 }
 
 function generateStepsForTechnique(

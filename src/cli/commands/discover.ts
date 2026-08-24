@@ -1,6 +1,7 @@
 import type { Argv, ArgumentsCamelCase } from 'yargs';
 import { getServer } from '../server.js';
 import { emit, mergeInput, parseList, parseNumber, readStdinJSON, unwrapResponse } from '../io.js';
+import { CRUX_VALUES } from '../../types/planning.js';
 
 interface DiscoverArgs {
   problem?: string;
@@ -27,7 +28,7 @@ export function registerDiscover(yargs: Argv): Argv {
         .option('context', { type: 'string', describe: 'Additional context' })
         .option('crux', {
           type: 'string',
-          choices: ['framing', 'contested', 'generation', 'evaluation', 'risk', 'path'],
+          choices: [...CRUX_VALUES],
           describe:
             'The shape of the stuckness — matching techniques are surfaced past keyword categorization',
         })

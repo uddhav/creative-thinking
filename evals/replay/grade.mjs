@@ -16,7 +16,7 @@
  *
  * Requires evals/replay/out/ from a prior run-replay.mjs run.
  */
-import { readFileSync, readdirSync, writeFileSync, existsSync, mkdtempSync } from 'node:fs';
+import { readFileSync, readdirSync, writeFileSync, existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -87,17 +87,58 @@ function main() {
     fixtures: perFixture,
   };
   writeFileSync(path.join(OUT_DIR, 'grades.json'), JSON.stringify(grades, null, 2) + '\n');
+  // A failed LLM grade is stored per fixture; without surfacing it here the
+  // qualitative pass could be lost while the run still printed clean rates.
+  const llmErrors = perFixture.filter(g => g.llm?.error).map(g => `${g.fixture}: ${g.llm.error}`);
   process.stdout.write(
     JSON.stringify(
       {
         discoveryHitRate: grades.discoveryHitRate,
         discoveryAnyRate: grades.discoveryAnyRate,
         graded: perFixture.length,
+        ...(llmErrors.length > 0 && { llmGradeErrors: llmErrors }),
       },
       null,
       2
     ) + '\n'
   );
+  if (llmErrors.length > 0) {
+    console.error(`grade: ${llmErrors.length} fixture(s) have no usable LLM grade`);
+    process.exitCode = 1;
+  }
+}
+
+/**
+ * The first BALANCED `{...}` in the text, or null.
+ *
+ * A greedy /\{[\s\S]*\}/ spans from the first brace to the last one in the
+ * whole output, so any brace-bearing preamble or postscript around the rubric
+ * JSON — routine model chatter, and the rubric's "one sentence of evidence"
+ * invites it — made the parse throw and silently turned the fixture's grade
+ * into an error object. Brace counting, string- and escape-aware.
+ */
+function firstBalancedObject(text) {
+  const start = text.indexOf('{');
+  if (start === -1) return null;
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (ch === '\\') escaped = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') inString = true;
+    else if (ch === '{') depth++;
+    else if (ch === '}') {
+      depth--;
+      if (depth === 0) return text.slice(start, i + 1);
+    }
+  }
+  return null;
 }
 
 function llmGrade(fixture, marks) {
@@ -114,11 +155,12 @@ function llmGrade(fixture, marks) {
     JSON.stringify(marks),
     'Return ONLY the JSON object the rubric specifies.',
   ].join('\n\n');
+  // cwd is an empty temp dir: the CLI resolves project context (CLAUDE.md,
+  // session state) from its cwd, and a grader inheriting ambient project
+  // context grades the project's conversation, not the rubric + transcript.
+  let isolatedCwd;
   try {
-    // cwd is an empty temp dir: the CLI resolves project context (CLAUDE.md,
-    // session state) from its cwd, and a grader inheriting ambient project
-    // context grades the project's conversation, not the rubric + transcript.
-    const isolatedCwd = mkdtempSync(path.join(tmpdir(), 'replay-grader-'));
+    isolatedCwd = mkdtempSync(path.join(tmpdir(), 'replay-grader-'));
     const stdout = execFileSync(
       'claude',
       ['-p', '--model', GRADER_MODEL, '--output-format', 'text'],
@@ -129,10 +171,17 @@ function llmGrade(fixture, marks) {
         cwd: isolatedCwd,
       }
     );
-    const match = stdout.match(/\{[\s\S]*\}/);
-    return match ? JSON.parse(match[0]) : { error: 'no JSON in grader output' };
+    const extracted = firstBalancedObject(stdout);
+    if (extracted === null) return { error: 'no JSON object in grader output' };
+    try {
+      return JSON.parse(extracted);
+    } catch (err) {
+      return { error: `grader JSON did not parse: ${String(err?.message ?? err).slice(0, 200)}` };
+    }
   } catch (err) {
     return { error: `grader invocation failed: ${String(err?.message ?? err).slice(0, 200)}` };
+  } finally {
+    if (isolatedCwd) rmSync(isolatedCwd, { recursive: true, force: true });
   }
 }
 

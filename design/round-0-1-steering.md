@@ -189,7 +189,7 @@ stress_tests:
       resolution: 'accepted',
       conflicts_with: [],
     }
-learning_log_entries: 22
+learning_log_entries: 23
 ---
 
 # Round 0+1 — surface what the server already knows; assign what the model cannot
@@ -309,6 +309,35 @@ learning_log_entries: 22
     662ms); export responses bypass the optimizer — export's contract is "returns everything whole".
     Debate executability and export wholeness are kill-checked in the integration suite; the drain
     fix is timing-verified by probe only (timing tests flake).
+23. **RESOLVED-FEEDBACK** (third review: `/code-review 305 ultra`, 9 confirmed + 2 plausible + 1
+    sweep + cleanups; all applied). Several landed on entry 19–22's own fixes: (a) the
+    `activeRequests` fix moved the gap rather than closing it — batched calls parked in the
+    collector were uncounted, so a SIGTERM inside the window could exit past accepted work; counted
+    from acceptance now, released once on settlement; (b) debate executability was MCP-only — the
+    CLI persisted just the main planId, so the repo's preferred surface still answered its own
+    advertised planIds with plan-not-found; every `parallelPlans[]` id now persists; (c) crux
+    injection could be truncated away entirely on keyword-rich problems while `cruxDeclared: true`
+    still claimed honor — the top injected candidate now displaces the weakest organic pick instead
+    of being sliced off; (d) `advisoryFindings` was forgeable — a caller-supplied array spread into
+    the persisted history whenever the gates emitted nothing, letting the audited write the audit
+    record; stripped in the same destructure as realityAssessment; (e) encoded-session recovery
+    re-derived the stimulus from the REBUILT technique list, so a minimal encoding (no ordered
+    array) drew a different word than the plan assigned — assignment is now skipped when plan order
+    is unknown, because a missing gate beats a lying one; (f) `strictness: 'enforcing'` — the one
+    value most likely to mislead — was the only unrecognized level exempted from the warning; (g)
+    the export bypass removed the 1 MB optimizer cap with nothing in its place, so a large session
+    produced an unbounded stdio message: a 4 MB ceiling now refuses with the CLI file-export
+    alternative rather than truncating a contract that promises wholeness. Harness: the grader's
+    greedy `{…}` match silently turned brace-bearing chatter into a lost grade (balanced-object
+    extraction, errors surfaced and exit-coded); the rewriter's assignments map conflated repeated
+    instances (keyed per instance, all draws scrubbed) and could not see debate `parallelPlans`
+    (bound by name prefix, since FIFO cannot express N+1 fresh ids); unbound-session stripping now
+    warns. Sweep: crux values were transcribed in three places — the schema enum and CLI choices
+    derive from `CRUX_VALUES` now. Cleanups: one scoring pass instead of two on the discovery hot
+    path, the provenance booleans dropped from the wire in favor of `scoreProvenance`, and one
+    shared `attachSteeringFields` hook replacing the copy-pasted patch closures. Four new guards,
+    each kill-checked red→green; the forgery guard had to be re-aimed at the persisted record after
+    passing against the response echo under its own kill.
 
 ## Vetting Outcome (2 engineers + advisor; Uddhav's vote pending)
 

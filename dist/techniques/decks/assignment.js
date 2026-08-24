@@ -11,16 +11,10 @@
  */
 import { RANDOM_ENTRY_DECK, seededDraw } from './randomEntryDeck.js';
 import { PO_DECK } from './poDeck.js';
-export const STIMULUS_TECHNIQUES = ['random_entry', 'po'];
-export function isStimulusTechnique(technique) {
-    return STIMULUS_TECHNIQUES.includes(technique);
-}
-export function stimulusLabel(technique) {
-    return technique === 'po' ? 'provocation' : 'stimulus';
-}
+const STIMULUS_TECHNIQUES = ['random_entry', 'po'];
 /** The plan's assigned stimulus for a technique instance; undefined for non-stimulus techniques. */
-export function drawAssignedStimulus(planId, technique, techniqueIndex) {
-    if (!isStimulusTechnique(technique))
+function drawAssignedStimulus(planId, technique, techniqueIndex) {
+    if (!STIMULUS_TECHNIQUES.includes(technique))
         return undefined;
     const deck = technique === 'po' ? PO_DECK : RANDOM_ENTRY_DECK;
     return seededDraw(deck, `${planId}:${technique}:${techniqueIndex}`);

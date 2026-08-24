@@ -95,8 +95,15 @@ async function handle(argv: ArgumentsCamelCase<PlanArgs>): Promise<void> {
   const envelope = server.planThinkingSession(input);
   const { data, isError } = unwrapResponse(envelope);
   if (!isError) {
-    const planId = (data as { planId?: string }).planId;
-    persistPlan(server, planId);
+    const planned = data as { planId?: string; parallelPlans?: Array<{ planId?: string }> };
+    persistPlan(server, planned.planId);
+    // Debate mode advertises persona and synthesis planIds the caller is meant
+    // to execute. Every planId this response hands out must survive to the
+    // next process, or the CLI — the surface skills actually drive — answers
+    // its own instructions with plan-not-found.
+    for (const parallel of planned.parallelPlans ?? []) {
+      persistPlan(server, parallel.planId);
+    }
   }
   emit(data, isError);
 }

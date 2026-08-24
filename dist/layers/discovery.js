@@ -73,16 +73,23 @@ export function discoverTechniques(input, techniqueRegistry, complexityAnalyzer,
     // Provenance stamp: how each entry earned its place. Fillers and wildcards
     // already carried booleans that nothing downstream read; a single labeled
     // field is what a caller can actually act on.
-    recommendations = recommendations.map(rec => ({
-        ...rec,
-        scoreProvenance: rec.isCruxInjected
-            ? 'crux'
-            : rec.isQualityFiller
-                ? 'quality-fill'
-                : rec.isWildcard
-                    ? 'wildcard'
-                    : 'fit',
-    }));
+    // The three internal booleans are consumed here and dropped: shipping them
+    // alongside the label they derive from would put two representations of one
+    // fact on the wire, and callers keying on the booleans would make them
+    // un-removable. scoreProvenance is the published form.
+    recommendations = recommendations.map(rec => {
+        const { isCruxInjected, isQualityFiller, isWildcard, ...published } = rec;
+        return {
+            ...published,
+            scoreProvenance: isCruxInjected
+                ? 'crux'
+                : isQualityFiller
+                    ? 'quality-fill'
+                    : isWildcard
+                        ? 'wildcard'
+                        : 'fit',
+        };
+    });
     // Build integration suggestions
     let integrationSuggestions = workflowBuilder.buildIntegrationSuggestions(recommendations.map(r => r.technique), complexityAssessment.level);
     // Create workflow if multiple techniques recommended

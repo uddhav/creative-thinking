@@ -74,7 +74,14 @@ export class ExecutionValidator {
           // (mismatch gate, 🎲 guidance) on resumed sessions, letting a
           // random_entry/po session re-roll freely after a restart. The
           // assignment is a pure function of `planId:technique:index`, so the
-          // original draw is RECOVERABLE from the decoded planId alone.
+          // original draw is RECOVERABLE — but only when the encoding carries
+          // the plan's ORDERED technique list. `techniques` is optional in the
+          // encoded shape, and a single-technique fallback would rebuild at
+          // index 0 and re-derive a DIFFERENT word than a plan that ran the
+          // technique later, producing a false mismatch against a caller who
+          // used the value the plan actually gave them. When the order is
+          // unknown, assign nothing: a missing gate beats a lying one.
+          const orderKnown = Array.isArray(decodedSession.techniques);
           const workflow = techniques.map((technique, techniqueIndex) => {
             let stepCount = 0;
             try {
@@ -89,7 +96,9 @@ export class ExecutionValidator {
               description: '',
               expectedOutput: '',
             }));
-            applyAssignedStimulus(technique, techniqueIndex, decodedSession.planId, steps);
+            if (orderKnown) {
+              applyAssignedStimulus(technique, techniqueIndex, decodedSession.planId, steps);
+            }
             return { technique, steps };
           });
 
