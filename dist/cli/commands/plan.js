@@ -14,6 +14,10 @@ export function registerPlan(yargs) {
         type: 'string',
         choices: ['quick', 'thorough', 'comprehensive'],
     })
+        .option('strictness', {
+        type: 'string',
+        describe: "Gate strictness ('advisory' is the only implemented level; 'enforcing' reserved). Echoed on the plan.",
+    })
         .option('include-options', { type: 'boolean' })
         .option('session-id', { type: 'string' })
         .option('execution-mode', {
@@ -43,6 +47,7 @@ async function handle(argv) {
         objectives: parseList(argv.objectives),
         constraints: parseList(argv.constraints),
         timeframe: argv.timeframe,
+        strictness: argv.strictness,
         includeOptions: argv.includeOptions,
         sessionId: argv.sessionId,
         executionMode: argv.executionMode,

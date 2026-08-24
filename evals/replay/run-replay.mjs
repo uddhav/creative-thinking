@@ -34,6 +34,14 @@ const SERVER_PATH = path.join(HERE, '../../dist/mcp-server-main.js');
 const args = process.argv.slice(2);
 const CHECK = args.includes('--check');
 const WRITE_BASELINE = args.includes('--write-baseline');
+// Live-archive mode: preserve the recorded randomStimulus/provocation values
+// instead of rewriting them to the fresh plan's assignment. The rewrite keeps
+// the mismatch gate coherent for synthetic fixtures, but it ERASES caller
+// deviation — exactly the evidence an effect analysis of a live CT_CALL_LOG
+// archive needs to observe. (Note: batch-collected calls append to the log in
+// completion order, not causal order — sequence-sensitive analysis over
+// archives must tolerate that.)
+const KEEP_RECORDED_STIMULI = args.includes('--keep-recorded-stimuli');
 
 async function replayFixture(fixtureFile) {
   const lines = readFileSync(path.join(FIXTURES_DIR, fixtureFile), 'utf8')
@@ -43,34 +51,55 @@ async function replayFixture(fixtureFile) {
 
   const client = new ReplayClient({ serverPath: SERVER_PATH });
   await client.connect();
-  const rewriter = createRewriter();
+  const rewriter = createRewriter({ keepRecordedStimuli: KEEP_RECORDED_STIMULI });
   const records = [];
 
   try {
-    for (const { tool, arguments: recordedArgs } of calls) {
+    for (let i = 0; i < calls.length; i++) {
+      const { tool, arguments: recordedArgs } = calls[i];
       const sentArgs = rewriter.rewriteArgs(tool, recordedArgs);
       const { rawText, parsed, isError } = await client.call(tool, sentArgs);
       rewriter.observeResponse(tool, parsed);
+      // A failed plan call cascades: every later execute keeps its dead
+      // recorded planId and degrades into workflow-guard errors that look
+      // like intentional refusals in the counts. Name it when it happens.
+      if (tool === 'plan_thinking_session' && typeof parsed?.planId !== 'string') {
+        process.stderr.write(
+          `  WARNING ${fixtureFile} call ${i + 1}: plan_thinking_session returned no planId — subsequent execute calls will cascade into plan-not-found errors\n`
+        );
+      }
       records.push({ tool, sentArgs, rawText, parsed, isError });
     }
   } finally {
     await client.close();
   }
-  return records;
+  return { records, assignedValues: rewriter.assignedValues() };
 }
 
-function emissionMetrics(fixtureName, records) {
+function emissionMetrics(fixtureName, records, assignedValues) {
   const metrics = {
     fixture: fixtureName,
     calls: records.length,
     errors: records.filter(r => r.isError).length,
+    // Errors by code, so a plan-failure cascade (E207/E208 on every execute)
+    // is distinguishable from a fixture's intentional refusals.
+    errorsByCode: {},
     normalizedBytes: 0,
     advisoryFindings: 0,
     assignedStimuli: 0,
     discoveries: [],
   };
   for (const r of records) {
-    metrics.normalizedBytes += Buffer.byteLength(normalizeForDiff(r.parsed ?? r.rawText));
+    if (r.isError) {
+      const code = r.parsed?.error?.code ?? r.parsed?.code ?? 'uncoded';
+      metrics.errorsByCode[code] = (metrics.errorsByCode[code] ?? 0) + 1;
+    }
+    // Assigned stimuli are fresh draws per run (seeded on the fresh planId),
+    // so they must not leak into the byte metric — scrub them to a
+    // placeholder alongside ids and timestamps.
+    metrics.normalizedBytes += Buffer.byteLength(
+      normalizeForDiff(r.parsed ?? r.rawText, assignedValues)
+    );
     if (Array.isArray(r.parsed?.advisoryFindings)) {
       metrics.advisoryFindings += r.parsed.advisoryFindings.length;
     }
@@ -119,12 +148,37 @@ function checkAgainstBaseline(baseline, current) {
         `${cur.fixture}: normalized response bytes grew >20% (${base.normalizedBytes} → ${cur.normalizedBytes})`
       );
     }
+    // Emission floors: the steering signals this harness exists to measure
+    // must never silently drop below the baseline. Upward moves regenerate
+    // the baseline deliberately; downward moves are the regression class the
+    // ratchet is FOR (a re-broken response flattener would otherwise shrink
+    // responses and pass every other check).
+    if (cur.advisoryFindings < (base.advisoryFindings ?? 0)) {
+      failures.push(
+        `${cur.fixture}: advisory findings emitted dropped ${base.advisoryFindings} → ${cur.advisoryFindings}`
+      );
+    }
+    if (cur.assignedStimuli < (base.assignedStimuli ?? 0)) {
+      failures.push(
+        `${cur.fixture}: assigned stimuli dropped ${base.assignedStimuli} → ${cur.assignedStimuli}`
+      );
+    }
     const basePicks = base.discoveries.map(d => d.topPick);
     const curPicks = cur.discoveries.map(d => d.topPick);
     if (JSON.stringify(basePicks) !== JSON.stringify(curPicks)) {
       failures.push(
         `${cur.fixture}: discovery top pick flipped (${basePicks.join(',')} → ${curPicks.join(',')}) — determinism regression or deliberate rescoring; if deliberate, regenerate the baseline`
       );
+    }
+    for (let i = 0; i < cur.discoveries.length; i++) {
+      const baseD = base.discoveries[i];
+      const curD = cur.discoveries[i];
+      if (!baseD || !curD) continue;
+      for (const flag of ['hasEvidenceBreadth', 'hasScoreBreakdown', 'hasScoreProvenance']) {
+        if (baseD[flag] === true && curD[flag] !== true) {
+          failures.push(`${cur.fixture}: discovery ${flag} regressed true → false`);
+        }
+      }
     }
   }
   return failures;
@@ -144,7 +198,7 @@ async function main() {
   for (const fixtureFile of fixtureFiles) {
     const name = fixtureFile.replace(/\.calls\.jsonl$/, '');
     process.stderr.write(`replaying ${name}...\n`);
-    const records = await replayFixture(fixtureFile);
+    const { records, assignedValues } = await replayFixture(fixtureFile);
     writeFileSync(
       path.join(OUT_DIR, `${name}.responses.jsonl`),
       records
@@ -152,12 +206,12 @@ async function main() {
           JSON.stringify({
             tool: r.tool,
             isError: r.isError,
-            normalized: normalizeForDiff(r.parsed ?? r.rawText),
+            normalized: normalizeForDiff(r.parsed ?? r.rawText, assignedValues),
           })
         )
         .join('\n') + '\n'
     );
-    fixtures.push(emissionMetrics(name, records));
+    fixtures.push(emissionMetrics(name, records, assignedValues));
   }
 
   const result = {

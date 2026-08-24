@@ -75,11 +75,13 @@ export function discoverTechniques(input, techniqueRegistry, complexityAnalyzer,
     // field is what a caller can actually act on.
     recommendations = recommendations.map(rec => ({
         ...rec,
-        scoreProvenance: rec.isQualityFiller
-            ? 'quality-fill'
-            : rec.isWildcard
-                ? 'wildcard'
-                : 'fit',
+        scoreProvenance: rec.isCruxInjected
+            ? 'crux'
+            : rec.isQualityFiller
+                ? 'quality-fill'
+                : rec.isWildcard
+                    ? 'wildcard'
+                    : 'fit',
     }));
     // Build integration suggestions
     let integrationSuggestions = workflowBuilder.buildIntegrationSuggestions(recommendations.map(r => r.technique), complexityAssessment.level);

@@ -789,9 +789,12 @@ Executes a single step in your creative thinking process.
 **Technique-specific inputs:**
 
 - `hatColor` (string, optional): Current hat color for six_hats technique
-- `provocation` (string, optional): The provocative statement for po technique
+- `provocation` (string, optional): The provocative statement for po technique — plans assign one at
+  plan time (`stimulus` on the technique's first workflow step); send the assigned value, or a
+  `stimulus.mismatch` advisory finding is attached
 - `principles` (array, optional): Extracted principles for po technique
-- `randomStimulus` (string, optional): The random word/concept for random_entry
+- `randomStimulus` (string, optional): The random word/concept for random_entry — plans assign one
+  at plan time; send the assigned value, or a `stimulus.mismatch` advisory finding is attached
 - `connections` (array, optional): Generated connections for random_entry
 - `scamperAction` (string, optional): Current SCAMPER action
 - `successExample` (string, optional): Successful solution to analyze for concept_extraction
@@ -1684,8 +1687,10 @@ The pre-push hook will:
 ### Technique-Specific Tips
 
 - **Six Hats** - Begin with the Blue Hat to establish process and objectives
-- **PO** - The more provocative the statement, the better the creative breakthrough
-- **Random Entry** - Use genuinely random stimuli for unexpected connections
+- **PO** - Work with the plan's assigned provocation (`stimulus` on the technique's first workflow
+  step); diverging from it draws a `stimulus.mismatch` advisory finding
+- **Random Entry** - The plan assigns the random stimulus at plan time — externally-sourced entropy
+  is the point; use the assigned value rather than choosing your own
 - **SCAMPER** - Complete all seven transformations for comprehensive exploration
 - **Design Thinking** - Engage real users throughout the process
 - **TRIZ** - Focus on identifying and resolving core contradictions

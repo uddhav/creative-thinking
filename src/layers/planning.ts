@@ -21,8 +21,7 @@ import { ErrorCode } from '../errors/types.js';
 import { HumanisticQualityCoverage } from './discovery/HumanisticQualityCoverage.js';
 import { PersonaGuidanceInjector } from '../personas/PersonaGuidanceInjector.js';
 import { DebateOrchestrator } from '../personas/DebateOrchestrator.js';
-import { RANDOM_ENTRY_DECK, seededDraw } from '../techniques/decks/randomEntryDeck.js';
-import { PO_DECK } from '../techniques/decks/poDeck.js';
+import { applyAssignedStimulus } from '../techniques/decks/assignment.js';
 
 // Create singleton instances to avoid per-call allocation
 const personaResolver = new PersonaResolver();
@@ -109,6 +108,19 @@ export function planThinkingSession(
   // Generate unique plan ID
   const planId = `plan_${randomUUID()}`;
 
+  // The published contract stays open-world (unknown strictness values are
+  // accepted and echoed, never rejected) — but an unrecognized value gets a
+  // warning, or a typo'd 'advisorry' would silently behave as the default
+  // while the clean echo claimed it was honored. Same failure mode the crux
+  // validator's comment names; different posture because this field is
+  // deliberately open.
+  const planWarnings: string[] = [];
+  if (strictness !== undefined && strictness !== 'advisory' && strictness !== 'enforcing') {
+    planWarnings.push(
+      `strictness "${strictness}" is not a recognized level ('advisory' now; 'enforcing' reserved) — the plan behaves as 'advisory'.`
+    );
+  }
+
   // Build workflow for each technique
   const workflow = techniques.map((technique, techniqueIndex) => {
     const handler = techniqueRegistry.getHandler(technique);
@@ -177,6 +189,24 @@ export function planThinkingSession(
       debateFormat || 'structured',
       techniques
     );
+
+    // Every planId the debate structure advertises must be EXECUTABLE — these
+    // were never saved, so executing any advertised persona/synthesis planId
+    // failed (misdiagnosed as a workflow-order violation). Registered as
+    // minimal plans so execute_thinking_step can run the debate the response
+    // itself instructs the caller to run.
+    const debatePlans = [...debateStructure.personaPlans, debateStructure.synthesisPlan];
+    for (const debatePlan of debatePlans) {
+      sessionManager.savePlan(debatePlan.planId, {
+        planId: debatePlan.planId,
+        problem: debatePlan.problem ?? problem,
+        techniques: debatePlan.techniques,
+        workflow: debatePlan.workflow,
+        totalSteps: debatePlan.workflow.reduce((sum, w) => sum + w.steps.length, 0),
+        executionMode: 'sequential',
+        createdAt: Date.now(),
+      });
+    }
   }
 
   // Save plan
@@ -197,6 +227,7 @@ export function planThinkingSession(
     complexityAssessment,
     executionMode,
     strictness,
+    warnings: planWarnings.length > 0 ? planWarnings : undefined,
     executionGraph,
     personaContext:
       resolvedPersona || resolvedPersonas.length > 0
@@ -262,10 +293,8 @@ export function planThinkingSession(
 
 /**
  * Assign a server-drawn stimulus to step 1 of stimulus-bearing techniques.
- * The draw is FNV-1a-seeded from `planId:technique:index`, so it is a fact
- * about the plan: fixed within it (no rerolls), redrawn only by replanning.
- * The value is prepended to the step description as well as carried in the
- * structured fields, so callers that only read prose still see it.
+ * Seed and prefix semantics live in techniques/decks/assignment.ts, shared
+ * with the debate persona-plan path so the two cannot drift.
  */
 function assignStimulus(
   technique: string,
@@ -273,18 +302,7 @@ function assignStimulus(
   planId: string,
   steps: ThinkingStep[]
 ): void {
-  if (steps.length === 0) return;
-  if (technique !== 'random_entry' && technique !== 'po') return;
-
-  const deck = technique === 'po' ? PO_DECK : RANDOM_ENTRY_DECK;
-  const stimulus = seededDraw(deck, `${planId}:${technique}:${techniqueIndex}`);
-  const label = technique === 'po' ? 'Assigned provocation' : 'Assigned stimulus';
-
-  steps[0].stimulus = stimulus;
-  steps[0].stimulusSource = 'assigned';
-  steps[0].description =
-    `🎲 ${label}: "${stimulus}" — work with this one; it is not re-rollable within this plan.\n\n` +
-    steps[0].description;
+  applyAssignedStimulus(technique, techniqueIndex, planId, steps);
 }
 
 function generateStepsForTechnique(

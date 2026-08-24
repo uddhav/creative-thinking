@@ -13,6 +13,9 @@ export default [
       'coverage/',
       'examples/',
       'cloudflare-deployment/',
+      // Replay-harness run artifacts (gitignored; local scratch may hold
+      // probe scripts that are not lintable project code)
+      'evals/replay/out/',
       '*.js',
       '*.d.ts',
       '!eslint.config.js',

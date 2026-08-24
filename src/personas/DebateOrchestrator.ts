@@ -16,6 +16,7 @@ import type {
 import type { LateralTechnique } from '../types/index.js';
 import type { TechniqueRegistry } from '../techniques/TechniqueRegistry.js';
 import { PersonaGuidanceInjector } from './PersonaGuidanceInjector.js';
+import { applyAssignedStimulus } from '../techniques/decks/assignment.js';
 import { logger } from '../utils/Logger.js';
 
 export interface DebateStructure {
@@ -82,7 +83,7 @@ export class DebateOrchestrator {
     );
 
     // Build workflow for each technique
-    const workflow: TechniqueWorkflow[] = selectedTechniques.map(technique => {
+    const workflow: TechniqueWorkflow[] = selectedTechniques.map((technique, techniqueIndex) => {
       const handler = techniqueRegistry.getHandler(technique);
       const info = handler.getTechniqueInfo();
       const steps = this.generatePersonaSteps(
@@ -92,6 +93,12 @@ export class DebateOrchestrator {
         info.totalSteps,
         handler
       );
+
+      // Server-assigned entropy applies to debate plans too — without this,
+      // a persona's random_entry/po script still told the model to pick its
+      // own stimulus, recreating the failure P3 exists to close. Seeded on
+      // the persona plan's own planId: each persona draws distinctly.
+      applyAssignedStimulus(technique, techniqueIndex, planId, steps);
 
       return {
         technique,
@@ -145,14 +152,19 @@ export class DebateOrchestrator {
       .slice(0, count)
       .map(([technique]) => technique as LateralTechnique);
 
-    // Fallback to defaults if no bias matches
+    // Fallback when no bias matches. Prefer the caller's REQUESTED techniques:
+    // they asked for a debate over these. The old fallback filtered the
+    // default pair by the same requested list, so bias ∩ requested = ∅ yielded
+    // defaults ∩ requested = ∅ and the persona got an EMPTY plan — a debate
+    // scheduling voices with nothing to execute.
     if (selected.length === 0) {
-      const fallback = DEFAULT_DEBATE_TECHNIQUES.filter(
-        t =>
-          techniqueRegistry.isValidTechnique(t) &&
-          (!availableTechniques || availableTechniques.includes(t))
+      if (availableTechniques && availableTechniques.length > 0) {
+        return availableTechniques.filter(t => techniqueRegistry.isValidTechnique(t)).slice(0, 1);
+      }
+      return DEFAULT_DEBATE_TECHNIQUES.filter(t => techniqueRegistry.isValidTechnique(t)).slice(
+        0,
+        1
       );
-      return fallback.slice(0, 1);
     }
 
     return selected;

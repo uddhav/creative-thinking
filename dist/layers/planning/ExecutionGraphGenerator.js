@@ -55,6 +55,13 @@ export class ExecutionGraphGenerator {
         const nodes = [];
         const technique = workflow.technique;
         const totalSteps = workflow.steps.length;
+        // A plan-time assigned stimulus lives on the block's step 1 but applies to
+        // EVERY step of the technique — a po/random_entry session works with one
+        // value throughout. Nodes previously carried the per-step description as
+        // provocation on steps 2+, so a caller executing the graph verbatim sent
+        // guidance prose that the stimulus.mismatch gate then flagged.
+        const blockFirst = workflow.steps[0];
+        const assignedStimulus = blockFirst?.stimulusSource === 'assigned' ? blockFirst.stimulus : undefined;
         for (let i = 0; i < workflow.steps.length; i++) {
             const step = workflow.steps[i];
             const nodeId = `node-${startNodeId + i + 1}`;
@@ -62,7 +69,7 @@ export class ExecutionGraphGenerator {
             // Determine dependencies based on technique type
             const dependencies = this.getDependencies(technique, i, startNodeId);
             // Build complete parameters for execute_thinking_step
-            const parameters = this.buildParameters(planId, problem, technique, i + 1, totalSteps, step);
+            const parameters = this.buildParameters(planId, problem, technique, i + 1, totalSteps, assignedStimulus !== undefined ? { ...step, stimulus: assignedStimulus } : step);
             nodes.push({
                 id: nodeId,
                 stepNumber,

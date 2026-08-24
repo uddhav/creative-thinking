@@ -6,6 +6,7 @@ import { ErgodicityManager } from '../../ergodicity/index.js';
 import { wrapErgodicityManager } from '../../utils/PerformanceIntegration.js';
 import { ErrorContextBuilder } from '../../core/ErrorContextBuilder.js';
 import { TelemetryCollector } from '../../telemetry/TelemetryCollector.js';
+import { applyAssignedStimulus } from '../../techniques/decks/assignment.js';
 import { ErrorFactory } from '../../errors/enhanced-errors.js';
 import { ErrorHandler } from '../../errors/ErrorHandler.js';
 import { SessionEncoder } from '../../core/session/SessionEncoder.js';
@@ -35,12 +36,36 @@ export class ExecutionValidator {
                 // Decode the session and create a minimal plan from it
                 const decodedSession = SessionEncoder.decode(input.planId);
                 if (decodedSession) {
-                    // Create a minimal plan from the decoded session
+                    const techniques = decodedSession.techniques || [decodedSession.technique];
+                    // Rebuild a minimal workflow rather than shipping `workflow: []` —
+                    // an empty workflow silently disabled the whole stimulus apparatus
+                    // (mismatch gate, 🎲 guidance) on resumed sessions, letting a
+                    // random_entry/po session re-roll freely after a restart. The
+                    // assignment is a pure function of `planId:technique:index`, so the
+                    // original draw is RECOVERABLE from the decoded planId alone.
+                    const workflow = techniques.map((technique, techniqueIndex) => {
+                        let stepCount = 0;
+                        try {
+                            stepCount = this.techniqueRegistry
+                                .getHandler(technique)
+                                .getTechniqueInfo().totalSteps;
+                        }
+                        catch {
+                            stepCount = 0;
+                        }
+                        const steps = Array.from({ length: stepCount }, (_, i) => ({
+                            stepNumber: i + 1,
+                            description: '',
+                            expectedOutput: '',
+                        }));
+                        applyAssignedStimulus(technique, techniqueIndex, decodedSession.planId, steps);
+                        return { technique, steps };
+                    });
                     const minimalPlan = {
                         planId: decodedSession.planId,
                         problem: decodedSession.problem,
-                        techniques: decodedSession.techniques || [decodedSession.technique],
-                        workflow: [],
+                        techniques,
+                        workflow,
                         totalSteps: decodedSession.totalSteps,
                         objectives: decodedSession.objectives,
                         constraints: decodedSession.constraints,

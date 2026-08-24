@@ -29,5 +29,7 @@ export interface AdvisoryFinding {
     /** Round 1 emits 'advisory' only; 'blocking' is reserved for Round 2. */
     severity: 'advisory';
 }
-export declare function evaluateAdvisoryGates(input: ExecuteThinkingStepInput, techniqueLocalStep: number, plan: PlanThinkingSessionOutput | undefined, techniqueIndex: number, validationWarnings: string[] | undefined): AdvisoryFinding[];
+export declare function evaluateAdvisoryGates(input: ExecuteThinkingStepInput, techniqueLocalStep: number, plan: PlanThinkingSessionOutput | undefined, validationWarnings: string[] | undefined): AdvisoryFinding[];
+/** Every assigned stimulus for a technique across the plan's workflow, in instance order. */
+export declare function assignedStimuliFor(plan: PlanThinkingSessionOutput, technique: LateralTechnique): string[];
 //# sourceMappingURL=advisoryGates.d.ts.map

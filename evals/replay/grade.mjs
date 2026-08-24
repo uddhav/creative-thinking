@@ -16,8 +16,9 @@
  *
  * Requires evals/replay/out/ from a prior run-replay.mjs run.
  */
-import { readFileSync, readdirSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, readdirSync, writeFileSync, existsSync, mkdtempSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -48,7 +49,16 @@ function main() {
   const perFixture = [];
   for (const { fixture, marks } of marked) {
     const fm = metrics.fixtures.find(f => f.fixture === fixture);
-    if (!fm) continue;
+    if (!fm) {
+      // Structural currency, mirroring run-replay's fixture-set guard: a
+      // marked fixture absent from metrics.json means out/ is stale (fixture
+      // added after the last replay) — silently skipping it would compute
+      // RFC-bound rates over the wrong fixture set.
+      console.error(
+        `grade: marked fixture "${fixture}" is not in out/metrics.json — out/ is stale; re-run run-replay.mjs first`
+      );
+      process.exit(1);
+    }
     const decisiveTechniques = (marks.decisiveSteps ?? []).map(d => d.technique);
     const discovery = fm.discoveries[0];
     const graded = {
@@ -63,7 +73,13 @@ function main() {
     perFixture.push(graded);
   }
 
-  const denom = perFixture.length || 1;
+  if (perFixture.length === 0) {
+    // Zero marked fixtures is an error, not a confident 0.0 — rates over an
+    // empty set are not measurements.
+    console.error('grade: no marked fixtures matched — nothing to grade');
+    process.exit(1);
+  }
+  const denom = perFixture.length;
   const grades = {
     graderModel: LLM ? GRADER_MODEL : null,
     discoveryHitRate: perFixture.filter(g => g.topPickHit).length / denom,
@@ -99,11 +115,20 @@ function llmGrade(fixture, marks) {
     'Return ONLY the JSON object the rubric specifies.',
   ].join('\n\n');
   try {
-    const stdout = execFileSync('claude', ['-p', '--model', GRADER_MODEL, '--output-format', 'text'], {
-      input: prompt,
-      encoding: 'utf8',
-      timeout: 120_000,
-    });
+    // cwd is an empty temp dir: the CLI resolves project context (CLAUDE.md,
+    // session state) from its cwd, and a grader inheriting ambient project
+    // context grades the project's conversation, not the rubric + transcript.
+    const isolatedCwd = mkdtempSync(path.join(tmpdir(), 'replay-grader-'));
+    const stdout = execFileSync(
+      'claude',
+      ['-p', '--model', GRADER_MODEL, '--output-format', 'text'],
+      {
+        input: prompt,
+        encoding: 'utf8',
+        timeout: 120_000,
+        cwd: isolatedCwd,
+      }
+    );
     const match = stdout.match(/\{[\s\S]*\}/);
     return match ? JSON.parse(match[0]) : { error: 'no JSON in grader output' };
   } catch (err) {

@@ -242,6 +242,7 @@ export class ResponseBuilder {
       complexityAssessment: output.complexityAssessment,
       executionMode: output.executionMode,
       strictness: output.strictness,
+      warnings: output.warnings,
       qualityCoverage: output.qualityCoverage,
       // Add execution graph for DAG-based parallel execution documentation
       executionGraph: output.executionGraph,
@@ -306,6 +307,19 @@ export class ResponseBuilder {
     operation: string,
     result: unknown
   ): LateralThinkingResponse {
+    if (operation === 'export') {
+      // Export's contract is "returns everything whole" — the optimizer's
+      // string cap was truncating result.data at 1000 chars, silently
+      // contradicting it. Exports bypass the optimizer entirely.
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({ operation, success: true, result }, null, 2),
+          },
+        ],
+      };
+    }
     return this.buildSuccessResponse({
       operation,
       success: true,

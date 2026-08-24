@@ -327,7 +327,10 @@ export async function executeThinkingStep(
         ...inputWithoutReality,
         sessionId,
       };
-      session.history.push({
+      // Kept as a named reference: advisory findings are recorded onto this
+      // entry after the gates run (the push spreads operationData, so
+      // mutating operationData later would touch a different object).
+      const historyEntry = {
         ...operationData,
         // The step within this technique, not within the plan. `currentStep`
         // is the global step, and handlers index their own step tables by it —
@@ -336,7 +339,8 @@ export async function executeThinkingStep(
         // because this is where the offset is already known.
         techniqueLocalStep,
         timestamp: new Date().toISOString(),
-      });
+      };
+      session.history.push(historyEntry);
 
       // Track reflexivity for ANY technique that provides reflexivity data.
       // The tracker returns an edge-triggered warning (bucket crossing or new
@@ -432,6 +436,27 @@ export async function executeThinkingStep(
       // Update metrics (recomputed from history; the step is already pushed)
       metricsCollector.updateMetrics(session);
 
+      // Advisory findings (P1): the server's substance judgments, surfaced
+      // instead of discarded. Never blocks; capped; omitted when empty.
+      // Computed BEFORE the gatekeeper so a blocked termination still carries
+      // them, and recorded onto the history entry so persistence and session
+      // export can audit follow-vs-deviate after the fact.
+      const advisoryFindings = evaluateAdvisoryGates(
+        input,
+        techniqueLocalStep,
+        plan,
+        validationWarnings
+      );
+      if (advisoryFindings.length > 0) {
+        historyEntry.advisoryFindings = advisoryFindings;
+      }
+      const attachFindings = (target: LateralThinkingResponse): void => {
+        if (advisoryFindings.length === 0) return;
+        const parsedResponse = JSON.parse(target.content[0].text) as Record<string, unknown>;
+        parsedResponse.advisoryFindings = advisoryFindings;
+        target.content[0].text = JSON.stringify(parsedResponse, null, 2);
+      };
+
       // The gatekeeper must vet a termination BEFORE the response is built:
       // buildResponse finalizes the session on nextStepNeeded=false (endTime,
       // completion telemetry, sessionComplete payload), endTime is never
@@ -439,7 +464,8 @@ export async function executeThinkingStep(
       // vetoed termination must not reach any of that.
       const completionCheck = completionGatekeeper.canProceedToNextStep(input, session, plan);
       if (!completionCheck.allowed && completionCheck.response) {
-        // If gatekeeper blocks termination, return the blocking response
+        // The blocking response is steering output too — findings ride it.
+        attachFindings(completionCheck.response);
         return completionCheck.response;
       }
 
@@ -458,23 +484,10 @@ export async function executeThinkingStep(
         reflexivityWarning
       );
 
-      // Advisory findings (P1): the server's substance judgments, attached to
-      // the success response instead of discarded. Never blocks; capped;
-      // omitted entirely when empty so quiet steps stay quiet. Attached after
-      // buildResponse the same way the autoSave fields are — deliberately past
-      // the verbosity filter, since findings are steering, not echo.
-      const advisoryFindings = evaluateAdvisoryGates(
-        input,
-        techniqueLocalStep,
-        plan,
-        techniqueIndex,
-        validationWarnings
-      );
-      if (advisoryFindings.length > 0) {
-        const parsedResponse = JSON.parse(response.content[0].text) as Record<string, unknown>;
-        parsedResponse.advisoryFindings = advisoryFindings;
-        response.content[0].text = JSON.stringify(parsedResponse, null, 2);
-      }
+      // Attached after buildResponse the same way the autoSave fields are —
+      // deliberately past the verbosity filter, since findings are steering,
+      // not echo.
+      attachFindings(response);
 
       // Final summary for a completed session. buildResponse has already set
       // endTime and refreshed session.insights/metrics; this only renders them.

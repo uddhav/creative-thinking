@@ -9,6 +9,7 @@ interface PlanArgs {
   objectives?: string;
   constraints?: string;
   timeframe?: string;
+  strictness?: string;
   includeOptions?: boolean;
   sessionId?: string;
   executionMode?: string;
@@ -35,6 +36,11 @@ export function registerPlan(yargs: Argv): Argv {
         .option('timeframe', {
           type: 'string',
           choices: ['quick', 'thorough', 'comprehensive'],
+        })
+        .option('strictness', {
+          type: 'string',
+          describe:
+            "Gate strictness ('advisory' is the only implemented level; 'enforcing' reserved). Echoed on the plan.",
         })
         .option('include-options', { type: 'boolean' })
         .option('session-id', { type: 'string' })
@@ -72,6 +78,7 @@ async function handle(argv: ArgumentsCamelCase<PlanArgs>): Promise<void> {
       objectives: parseList(argv.objectives),
       constraints: parseList(argv.constraints),
       timeframe: argv.timeframe,
+      strictness: argv.strictness,
       includeOptions: argv.includeOptions,
       sessionId: argv.sessionId,
       executionMode: argv.executionMode,

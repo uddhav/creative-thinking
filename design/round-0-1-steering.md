@@ -36,7 +36,8 @@ decisions_made:
     }
   - {
       decision:
-        "P3 assigns stimulus at plan time, seeded FNV-1a(planId+technique+step); replay determinism
+        "P3 assigns stimulus at plan time, seeded FNV-1a(planId:technique:techniqueIndex) — the
+        instance index, not a step number, so repeated instances draw distinctly; replay determinism
         is the rewrite layer's job, not the seed's",
       tradeoff: 'stimulus visible in plan; re-planning redraws (fishable, logged)',
       unmake_cost: 'cheap',
@@ -50,9 +51,11 @@ decisions_made:
     }
   - {
       decision:
-        'P2 splits: provenance fields ship in PR-2; crux enum + cruxDeclared + validation ship in
-        trailing PR-3 behind taxonomy sign-off and the M0 baseline',
-      tradeoff: 'the selection-moving half of P2 waits one PR',
+        'P2 ships whole in the single PR: crux enum (candidate A, signed off) + cruxDeclared +
+        server-side validation + provenance fields — the earlier provenance/crux PR split was
+        superseded (log entries 12/13/15)',
+      tradeoff:
+        "the taxonomy commitment lands with the round instead of behind the referee's first numbers",
       unmake_cost: 'cheap',
     }
   - {
@@ -77,9 +80,11 @@ decisions_made:
     }
   - {
       decision:
-        "Three-PR sequencing: PR-1 M0 alone (pre-change baseline on today's server), PR-2
-        P3+P1+P2-provenance, PR-3 P2-crux",
-      tradeoff: 'three review cycles instead of one',
+        "Single PR (maintainer override of the advisor's three-PR split, log entry 12); the
+        pre-change baseline lives in the first commit, captured against the unmodified dist, so
+        before/after stays real inside one PR",
+      tradeoff:
+        'one revert path for the whole round; the referee shares a diff with its contestants',
       unmake_cost: 'cheap',
     }
 strands_braided:
@@ -147,7 +152,7 @@ spec_compatibility:
       fails_under_future: ['option-B-wins-on-M0'],
     }
   - {
-      option: 'P2-A crux enum + provenance (split across PR-2/PR-3)',
+      option: 'P2-A crux enum + provenance (shipped whole in the single PR)',
       status: active,
       breaking_change_for: [],
       additive_possible: true,
@@ -184,7 +189,7 @@ stress_tests:
       resolution: 'accepted',
       conflicts_with: [],
     }
-learning_log_entries: 18
+learning_log_entries: 22
 ---
 
 # Round 0+1 — surface what the server already knows; assign what the model cannot
@@ -259,6 +264,51 @@ learning_log_entries: 18
     pre-buildResponse position kept; `baseline.json` recaptured against post-#303 main so the
     before/after remains real. #303's response-verbosity and unread-response-fields suites pass
     alongside this round's steering suite.
+19. **RESOLVED-FEEDBACK** (second steelman: 12-agent adversarial workflow, 52 findings, 2026-08-23)
+    — confirmed defects, all fixed and kill-checked red→green: (a) duplicate-instance false mismatch
+    — a technique-local step number cannot name its instance (#301), so the gate now matches the
+    sent value against EVERY instance's assignment and the 🎲 guidance lists all of them, instead of
+    asserting the first instance's value against a caller on the second; (b) the po executionGraph
+    carried guidance prose as `provocation` on steps 2+, so executing the graph verbatim tripped the
+    server's own gate — every node of a stimulus technique now carries the block's assigned value;
+    (c) debate persona plans bypassed assignment — `applyAssignedStimulus`
+    (techniques/decks/assignment.ts) is now shared by the main workflow, DebateOrchestrator (seeded
+    per persona planId), and (d) the encoded-session recovery branch, which shipped `workflow: []`
+    and silently disabled the stimulus apparatus on resume — the deterministic seed makes the
+    original draw recoverable from the decoded planId alone; (e) findings now persist onto the
+    session history entry (the first implementation mutated a spread-copy and was caught by its own
+    new guard) and attach to gatekeeper-blocked responses too; (f) the ratchet gained emission
+    floors, plan-failure-cascade warnings, errors-by-code, and stimulus normalization in the byte
+    metric; grade.mjs gained structural-currency errors and a context-isolated grader subprocess; a
+    po fixture joined the corpus and `--keep-recorded-stimuli` enables deviation-preserving
+    live-archive replay; (g) the promised CI ratchet job now exists (ci.yml, integration job); (h)
+    `--crux` and `--strictness` became CLI flags; (i) an unrecognized strictness draws a plan
+    warning (open-world echo kept); (j) crux-injected candidates report `scoreProvenance: 'crux'`.
+20. **TIGHTENED-SPEC** (supersession notes the audit demanded): the seed keys on the technique's
+    workflow INDEX, not a step number (two instances would collide on step=1); the assignment deck
+    is a NEW 64-word classic deck, with the 44 Rory stimuli moved alongside it for roryMode; DM-4's
+    promised `random_entry` FIELD_GATES row shipped generalized as the source-3 stimulus gate (all
+    steps, structured equality); entry 8's "invalid crux → E1xx" overclaimed — the refusal is
+    message-only on the discovery validation path, and the test asserts the message; the
+    effect-metric claim is narrowed — live CT_CALL_LOG analysis needs `--keep-recorded-stimuli`
+    replay (the default rewrite erases caller deviation) and must tolerate batch-parallel append
+    order.
+21. **PRODUCTION-FEEDBACK** (pre-existing defects the audit surfaced — reported first, per "a
+    finding is not permission"): debate persona plans came back EMPTY when a persona's techniqueBias
+    had no overlap with the requested techniques (the fallback filtered itself to ∅); every debate
+    planId the response advertised was non-executable (never saved to PlanManager; executing one
+    misdiagnosed as E207 "Discovery phase skipped"); `activeRequests` double-incremented per call so
+    every graceful shutdown burned the full 2s drain loop; MCP-mode session-export responses
+    truncated `result.data` at the optimizer's string cap, contradicting "export returns the full
+    text".
+22. **RESOLVED-FEEDBACK** (Uddhav: fold entry 21's four into this PR): all four fixed. Debate
+    fallback now prefers the caller's requested techniques (a voice is never scheduled with nothing
+    to execute); every advertised debate planId is saved as a minimal executable plan (persona
+    plans + synthesis) — which also gives debate branches working stimulus gates and guidance; the
+    unbalanced outer `activeRequests++` deleted (measured shutdown after one served call: 2643ms →
+    662ms); export responses bypass the optimizer — export's contract is "returns everything whole".
+    Debate executability and export wholeness are kill-checked in the integration suite; the drain
+    fix is timing-verified by probe only (timing tests flake).
 
 ## Vetting Outcome (2 engineers + advisor; Uddhav's vote pending)
 
@@ -368,12 +418,17 @@ Effect metrics live outside replay: fixture decisive-marks, and offline analysis
 stimulus?: string;              // random_entry: assigned word · po: assigned provocation
 stimulusSource?: 'assigned';    // provenance marker; absent for caller-supplied values
 
-// planning layer: for random_entry step 1 and po step 1:
-//   stimulus = deck.draw(fnv1a(`${planId}:${technique}:${stepNumber}`))
-// decks: src/techniques/decks/randomEntryDeck.ts (44 entries, moved from handler)
+// planning layer: for random_entry step 1 and po step 1 (shared helper
+// techniques/decks/assignment.ts, also used by debate persona plans and the
+// encoded-session recovery branch):
+//   stimulus = drawAssignedStimulus(planId, technique, techniqueIndex)
+//            = seededDraw(deck, fnv1a(`${planId}:${technique}:${techniqueIndex}`))
+//   (instance INDEX, not step number — repeated instances draw distinctly; entry 20)
+// decks: src/techniques/decks/randomEntryDeck.ts — NEW 64-word classic deck for
+//        assignment + the 44 Rory stimuli moved from the handler (entry 20)
 //        src/techniques/decks/poDeck.ts (new; contents drafted for Uddhav's review)
-// ExecutionGraphGenerator: random_entry case works as-is (:304);
-//   po case EDITED to read step.stimulus ?? step.description (:297-300 is live code).
+// ExecutionGraphGenerator: EVERY node of a stimulus technique carries the block's
+//   assigned value (a graph executed verbatim must never trip the gate; entry 19).
 // ResponseBuilder buildPlanningResponse flattener (:204-217) EXTENDED to carry
 //   stimulus + stimulusSource — without this the feature ships dark (vet-eng-B).
 // Execute-time delivery: builder-side injection (temporal_work precedent) — step-1
@@ -386,7 +441,7 @@ stimulusSource?: 'assigned';    // provenance marker; absent for caller-supplied
 
 ## DM-3 · P2 crux + provenance — A1: the selector cannot see the crux; confidence signals are computed then discarded
 
-|                  | Do-nothing                                                    | **A: crux enum via persona seam + provenance (chosen, split PR-2/PR-3)**   | B: free-string crux, NLP-matched | C: provenance-only                      |
+|                  | Do-nothing                                                    | **A: crux enum via persona seam + provenance (chosen; shipped whole)**     | B: free-string crux, NLP-matched | C: provenance-only                      |
 | ---------------- | ------------------------------------------------------------- | -------------------------------------------------------------------------- | -------------------------------- | --------------------------------------- |
 | Determinism      | keyword-stable post-#296                                      | full — closed validated enum, fixed mapping                                | the escaped pattern              | full                                    |
 | Reuse            | —                                                             | rides `techniqueBias` 70/30 blend (tested)                                 | new matcher subsystem            | none needed                             |
@@ -396,28 +451,30 @@ stimulusSource?: 'assigned';    // provenance marker; absent for caller-supplied
 | Seam-row         | —                                                             | **info-vs-mechanism**                                                      | info-vs-mechanism                | —                                       |
 | Color            | 🔴                                                            | 🟢 _(cost: taxonomy is a P6 commitment — hence PR-3 + provisional values)_ | 🔴                               | 🟡 _(subsumed: it is PR-2's half of A)_ |
 
-**Contract (P2) — revised per entries 7, 8, 9; split per entry 10:**
+**Contract (P2) — as shipped (entries 13/15 chose taxonomy A; entries 19/20 refined):**
 
 ```ts
-// PR-2 (provenance, ships with P3+P1):
+// Provenance:
 evidenceBreadth: number;                  // already computed (ProblemAnalyzer.ts:135)
 recommendations[].scoreBreakdown?: {categoryFit, complexityMatch,
   constraintCompatibility, outcomeAlignment};   // getScoreBreakdown (TechniqueScorer.ts:611), 3 decimals
-recommendations[].scoreProvenance: 'fit' | 'quality-fill' | 'wildcard';
-  // derived from existing isQualityFiller / isWildcard booleans (verified :323, :74)
-// + ResponseBuilder discovery-allowlist entries for the two top-level fields.
+recommendations[].scoreProvenance: 'fit' | 'quality-fill' | 'wildcard' | 'crux';
+  // 'crux' = injected past keyword categorization by the caller's declaration
+  // (entry 19); fillers/wildcards derive from the existing booleans.
 
-// PR-3 (crux, behind taxonomy sign-off + M0 baseline):
-crux?: 'contested-decision' | 'generation-gap' | 'unknown-unknowns'
-     | 'sequencing-constraint' | 'other';       // PROVISIONAL values; frozen only at P6 launch
+// Crux (taxonomy A, "shape of the stuckness" — provisional until P6 launch):
+crux?: 'framing' | 'contested' | 'generation' | 'evaluation' | 'risk' | 'path';
 cruxDeclared: boolean;                          // renamed from lowConfidenceSelection (entry 7)
-// Server-side validateEnum (precedent ValidationStrategies.ts:215-222); integration test:
-//   invalid crux → E1xx (entry 8).
-// Routing: crux-mapped categories' TECHNIQUE_FIT entries → bias map; combined with any
-//   persona bias by per-technique MAX, then the single 70/30 blend (entry 9).
-// Mapping [provisional]: contested-decision → {decision, adversarial};
-//   generation-gap → {creative}; unknown-unknowns → wildcard-weighted {exploratory};
-//   sequencing-constraint → {technical, process}; other → no boost.
+// Server-side enum validation (ValidationStrategies DiscoveryValidator); refusal is
+//   message-only on this path — no E-code (entry 20 corrects entry 8's E1xx claim).
+// Routing: CRUX_BIAS[crux] both INJECTS its techniques as candidates (the bias seam
+//   alone can only rescore what the category switch produced — entry 16) and biases
+//   the blend, combined with persona bias by per-technique MAX (entry 9).
+// Mapping (cruxBias.ts): framing → first_principles/paradoxical_problem/context_reframing;
+//   contested → steelman_red_team/competing_hypotheses/six_hats; generation →
+//   scamper/po/random_entry; evaluation → criteria_based_analysis/latticework/
+//   quantum_superposition; risk → anecdotal_signal/steelman_red_team/six_hats;
+//   path → temporal_creativity/triz/temporal_work.
 ```
 
 ## DM-4 · P1-advisory — A1: the server's substance judgments are computed and discarded; enforcement lives only in an optional client skill

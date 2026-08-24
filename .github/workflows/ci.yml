@@ -249,6 +249,14 @@ jobs:
           timeout 10s node dist/mcp-server-main.js || [ $? -eq 124 ]
           echo "MCP server basic startup test passed"
 
+      - name: 🎞️ Replay ratchet (emission baseline)
+        # Replays the committed fixtures through the freshly built server and
+        # compares against evals/replay/baseline.json — errors, response
+        # bytes, discovery picks, and the steering-emission floors must not
+        # regress. Deliberately NOT a vitest test: vitest's retry:2 masks
+        # intermittent failures, and test:run has no pretest build hook.
+        run: npm run evals:replay
+
       - name: 🔄 Test with Claude Desktop configuration
         run: |
           # Validate that the tool works with Claude Desktop config format

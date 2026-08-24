@@ -119,11 +119,13 @@ export function discoverTechniques(
   // field is what a caller can actually act on.
   recommendations = recommendations.map(rec => ({
     ...rec,
-    scoreProvenance: rec.isQualityFiller
-      ? ('quality-fill' as const)
-      : rec.isWildcard
-        ? ('wildcard' as const)
-        : ('fit' as const),
+    scoreProvenance: rec.isCruxInjected
+      ? ('crux' as const)
+      : rec.isQualityFiller
+        ? ('quality-fill' as const)
+        : rec.isWildcard
+          ? ('wildcard' as const)
+          : ('fit' as const),
   }));
 
   // Build integration suggestions

@@ -169,6 +169,11 @@ How can the forced connections become real innovations?`;
                 return `Complete the Random Entry process for: "${problem}"`;
         }
     }
+    /**
+     * @deprecated Non-deterministic (Math.random) and caller-less in production.
+     * Plan-time assignment (techniques/decks/assignment.ts) is the supported
+     * path: seeded, per-instance, recoverable from the planId.
+     */
     getRandomRoryStimulus() {
         const categories = Object.keys(this.roryModeStimuli);
         const randomCategory = categories[Math.floor(Math.random() * categories.length)];
@@ -235,6 +240,8 @@ How can the forced connections become real innovations?`;
     }
     /**
      * Get a suggested Rory Mode stimulus for a given problem
+     * @deprecated Use the plan-time assignment (techniques/decks/assignment.ts)
+     * — seeded and per-instance — instead of this Math.random draw.
      */
     suggestRoryStimulus() {
         return this.getRandomRoryStimulus();

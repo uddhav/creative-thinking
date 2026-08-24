@@ -77,7 +77,10 @@ export class RequestHandlers {
      */
     setupCallToolHandler() {
         this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-            this.activeRequests++;
+            // No activeRequests++ here: processSingleCall owns the balanced
+            // increment/decrement pair. This outer one had no matching decrement,
+            // so the counter never returned to zero and every graceful shutdown
+            // burned the full drain loop waiting on phantom in-flight requests.
             const requestTimestamp = new Date().toISOString();
             // Early logging to catch requests before any processing
             if (request.params && typeof request.params === 'object' && 'name' in request.params) {

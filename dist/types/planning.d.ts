@@ -84,8 +84,15 @@ export interface TechniqueRecommendation {
         constraintCompatibility: number;
         outcomeAlignment: number;
     };
-    /** How this entry earned its place in the set. */
-    scoreProvenance?: 'fit' | 'quality-fill' | 'wildcard';
+    /**
+     * How this entry earned its place in the set. 'crux' marks a technique the
+     * caller's declared crux injected past keyword categorization — distinct
+     * from 'fit' so downstream consumers (and eventually P6's priors) can tell
+     * declaration-driven selection from vocabulary-driven selection.
+     */
+    scoreProvenance?: 'fit' | 'quality-fill' | 'wildcard' | 'crux';
+    /** Set by the recommender when a declared crux injected this candidate. */
+    isCruxInjected?: boolean;
 }
 export interface DiscoverTechniquesInput {
     problem: string;
@@ -313,6 +320,8 @@ export interface PlanThinkingSessionOutput {
     constraints?: string[];
     /** Echo of the caller's declared gate strictness; 'advisory' is the only implemented level. */
     strictness?: string;
+    /** Plan-level advisories (e.g. an unrecognized strictness value); absent when clean. */
+    warnings?: string[];
     executionGraph?: ExecutionGraph;
     integrationStrategy?: {
         approach: 'sequential' | 'parallel' | 'iterative';

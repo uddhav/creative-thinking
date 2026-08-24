@@ -11,6 +11,9 @@
  * surfacing, echo of the gated field), strictness echo.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { mkdtempSync, readdirSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { MCPClientTestHelper } from '../utils/MCPClientTestHelper.js';
 
 interface FlatWorkflowStep {
@@ -50,7 +53,7 @@ describe('round 0+1 steering surfaces (via MCP client)', () => {
     const recs = res.recommendations as Array<Record<string, unknown>>;
     expect(recs.length).toBeGreaterThan(0);
     for (const rec of recs) {
-      expect(['fit', 'quality-fill', 'wildcard']).toContain(rec.scoreProvenance);
+      expect(['fit', 'quality-fill', 'wildcard', 'crux']).toContain(rec.scoreProvenance);
     }
     // Scored entries carry the four-factor breakdown; quality fillers carry
     // none — their effectiveness never passed through the scorer, and the
@@ -203,6 +206,11 @@ describe('round 0+1 steering surfaces (via MCP client)', () => {
     expect(parsed.cruxDeclared).toBe(true);
     const techniques = parsed.recommendations.map(r => r.technique);
     expect(techniques).toContain('steelman_red_team');
+    // An injected candidate declares HOW it entered the set — 'crux', not
+    // 'fit' — so declaration-driven selection is distinguishable from
+    // vocabulary-driven selection (and P6 can key priors on it).
+    const injected = parsed.recommendations.find(r => r.technique === 'steelman_red_team');
+    expect(injected?.scoreProvenance).toBe('crux');
   });
 
   it('no crux reports cruxDeclared false; an invalid crux is refused, not silently degraded', async () => {
@@ -220,6 +228,263 @@ describe('round 0+1 steering surfaces (via MCP client)', () => {
       error?: { message?: string };
     };
     expect(refusedPayload.error?.message).toMatch(/crux must be one of/);
+  });
+
+  it('po carries an assigned provocation through plan, graph, and gate', async () => {
+    const problem = 'Our onboarding checklist keeps growing and completion keeps falling';
+    const result = await client.callTool('plan_thinking_session', {
+      problem,
+      techniques: ['po'],
+    });
+    const parsed = MCPClientTestHelper.parseToolResult(result) as {
+      planId: string;
+      workflow: FlatWorkflowStep[];
+      executionGraph?: { nodes: Array<{ parameters: { provocation?: string } }> };
+    };
+    const assigned = parsed.workflow.find(s => s.technique === 'po' && s.stimulus);
+    expect(assigned?.stimulusSource).toBe('assigned');
+    const provocation = assigned?.stimulus as string;
+    expect(provocation).toMatch(/^Po:/);
+
+    // EVERY graph node carries the assignment — a caller executing the graph
+    // verbatim must never send a value the gate then flags (the pre-fix graph
+    // put guidance prose in steps 2+, a self-inflicted false mismatch).
+    const nodes = parsed.executionGraph?.nodes ?? [];
+    expect(nodes.length).toBeGreaterThan(1);
+    for (const node of nodes) {
+      expect(node.parameters.provocation).toBe(provocation);
+    }
+
+    const contradicting = await client.executeThinkingStep({
+      planId: parsed.planId,
+      technique: 'po',
+      problem,
+      currentStep: 2,
+      totalSteps: 4,
+      output: 'Working from a different provocation entirely.',
+      nextStepNeeded: true,
+      provocation: 'Po: something the plan never assigned',
+    });
+    const mismatch = (contradicting.advisoryFindings as AdvisoryFindingShape[] | undefined)?.find(
+      f => f.gate === 'stimulus.mismatch'
+    );
+    expect(mismatch).toBeDefined();
+    expect(mismatch?.message).toContain(provocation);
+
+    const compliant = await client.executeThinkingStep({
+      planId: parsed.planId,
+      technique: 'po',
+      problem,
+      currentStep: 2,
+      totalSteps: 4,
+      output: `Movement from the assigned provocation.`,
+      nextStepNeeded: true,
+      provocation,
+    });
+    const compliantFindings = compliant.advisoryFindings as AdvisoryFindingShape[] | undefined;
+    expect(compliantFindings?.find(f => f.gate === 'stimulus.mismatch')).toBeUndefined();
+  });
+
+  it('repeated technique instances draw distinct stimuli and neither draws a false mismatch under local numbering', async () => {
+    const problem = 'Name the two new meeting rooms';
+    const result = await client.callTool('plan_thinking_session', {
+      problem,
+      techniques: ['random_entry', 'six_hats', 'random_entry'],
+    });
+    const parsed = MCPClientTestHelper.parseToolResult(result) as {
+      planId: string;
+      workflow: FlatWorkflowStep[];
+    };
+    const assignments = parsed.workflow.filter(s => s.technique === 'random_entry' && s.stimulus);
+    expect(assignments).toHaveLength(2);
+    const [first, second] = assignments.map(s => s.stimulus as string);
+    expect(first).not.toBe(second);
+
+    // Technique-local numbering cannot name the instance (issue #301), so the
+    // SECOND instance's own assignment must NOT draw a mismatch — the pre-fix
+    // gate compared against the first instance only and told the caller to
+    // abandon the value the plan itself assigned.
+    const secondInstance = await client.executeThinkingStep({
+      planId: parsed.planId,
+      technique: 'random_entry',
+      problem,
+      currentStep: 1,
+      totalSteps: 3,
+      output: `Working with the second instance's stimulus: ${second}.`,
+      nextStepNeeded: true,
+      randomStimulus: second,
+    });
+    const findings = secondInstance.advisoryFindings as AdvisoryFindingShape[] | undefined;
+    expect(findings?.find(f => f.gate === 'stimulus.mismatch')).toBeUndefined();
+    // Guidance must not steer this caller onto the first instance's value.
+    expect((secondInstance.nextStepGuidance as string | undefined) ?? '').toContain(second);
+
+    // A value the plan assigned NOWHERE still draws the finding, listing both.
+    const foreign = await client.executeThinkingStep({
+      planId: parsed.planId,
+      technique: 'random_entry',
+      problem,
+      currentStep: 1,
+      totalSteps: 3,
+      output: 'Choosing my own word.',
+      nextStepNeeded: true,
+      randomStimulus: 'a-value-assigned-nowhere',
+    });
+    const mismatch = (foreign.advisoryFindings as AdvisoryFindingShape[] | undefined)?.find(
+      f => f.gate === 'stimulus.mismatch'
+    );
+    expect(mismatch).toBeDefined();
+    expect(mismatch?.message).toContain(first);
+    expect(mismatch?.message).toContain(second);
+  });
+
+  it('advisory findings survive minimal verbosity', async () => {
+    const problem = 'Proposal: consolidate the three staging environments into one';
+    const plan = await client.planThinkingSession(problem, ['steelman_red_team']);
+    let sessionId: string | undefined;
+    for (let step = 1; step <= 4; step++) {
+      const res = await client.executeThinkingStep({
+        planId: plan.planId,
+        technique: 'steelman_red_team',
+        problem,
+        currentStep: step,
+        totalSteps: 7,
+        output: `Step ${step}.`,
+        nextStepNeeded: true,
+        ...(sessionId && { sessionId }),
+      });
+      sessionId = res.sessionId;
+    }
+    // Minimal mode slims to MINIMAL_RESPONSE_KEEP_KEYS; findings attach past
+    // that filter by the same sanctioned mechanism as the autoSave fields.
+    // This is the regression a refactor moving the attach into buildResponse
+    // would reintroduce silently (design ledger entry 18).
+    const minimal = await client.executeThinkingStep({
+      planId: plan.planId,
+      technique: 'steelman_red_team',
+      problem,
+      currentStep: 5,
+      totalSteps: 7,
+      output: 'The attack, without failure modes recorded.',
+      nextStepNeeded: true,
+      sessionId,
+      verbosity: 'minimal',
+    });
+    const finding = (minimal.advisoryFindings as AdvisoryFindingShape[] | undefined)?.find(
+      f => f.gate === 'fields.steelman_red_team.step5'
+    );
+    expect(finding).toBeDefined();
+  });
+
+  it('debate persona plans are non-empty, carry assigned stimuli, and are executable', async () => {
+    const problem = 'How should we name the internal design system';
+    // rich_hickey and nassim_taleb have no random_entry techniqueBias — the
+    // old fallback filtered itself to the empty set, scheduling two debate
+    // voices with NOTHING to execute.
+    const result = await client.callTool('plan_thinking_session', {
+      problem,
+      techniques: ['random_entry'],
+      personas: ['rich_hickey', 'nassim_taleb'],
+    });
+    const parsed = MCPClientTestHelper.parseToolResult(result) as {
+      parallelPlans?: Array<{
+        planId: string;
+        techniques?: string[];
+        workflow?: Array<{ technique: string; steps: FlatWorkflowStep[] }>;
+      }>;
+    };
+    const allPlans = parsed.parallelPlans ?? [];
+    expect(allPlans.length).toBeGreaterThan(0);
+    // parallelPlans includes the synthesis plan (competing_hypotheses); the
+    // empty-plan defect concerned the per-persona plans.
+    const personaPlans = allPlans.filter(
+      p => !(p.techniques ?? []).includes('competing_hypotheses')
+    );
+    expect(personaPlans.length).toBeGreaterThan(0);
+    for (const plan of allPlans) {
+      // The defect: a debate voice scheduled with NOTHING to execute.
+      expect((plan.techniques ?? []).length).toBeGreaterThan(0);
+    }
+    for (const plan of personaPlans) {
+      // Non-empty: the fallback now prefers the caller's requested techniques.
+      expect(plan.techniques ?? []).toContain('random_entry');
+      for (const entry of plan.workflow ?? []) {
+        if (entry.technique !== 'random_entry' && entry.technique !== 'po') continue;
+        const first = entry.steps?.[0];
+        expect(first?.stimulusSource).toBe('assigned');
+        expect(first?.description).toContain(first?.stimulus as string);
+      }
+    }
+
+    // Executable: every planId the debate structure advertises must accept an
+    // execute call — these were never saved, so following the response's own
+    // instructions failed as a workflow-order violation.
+    const personaStep = await client.executeThinkingStep({
+      planId: personaPlans[0].planId,
+      technique: 'random_entry',
+      problem,
+      currentStep: 1,
+      totalSteps: 3,
+      output: 'Working with the assigned stimulus as this persona.',
+      nextStepNeeded: true,
+    });
+    expect(personaStep.sessionId).toBeTruthy();
+    expect(personaStep.currentStep).toBe(1);
+  });
+
+  it('a mismatch finding is recorded on the persisted session history', async () => {
+    // Dedicated client with filesystem persistence: the guard is about the
+    // DURABLE record (follow-vs-deviate must be auditable after the fact),
+    // and the MCP export echo truncates long fields, so the session file on
+    // disk is the honest assertion surface.
+    const persistDir = mkdtempSync(path.join(tmpdir(), 'ct-advisory-persist-'));
+    const persistClient = new MCPClientTestHelper();
+    await persistClient.connect({
+      env: {
+        ...process.env,
+        PERSISTENCE_TYPE: 'filesystem',
+        PERSISTENCE_PATH: persistDir,
+      } as Record<string, string>,
+    });
+    try {
+      const problem = 'Our sprint demos have become status meetings';
+      const plan = await persistClient.planThinkingSession(problem, ['random_entry']);
+      const step = await persistClient.executeThinkingStep({
+        planId: plan.planId,
+        technique: 'random_entry',
+        problem,
+        currentStep: 1,
+        totalSteps: 3,
+        output: 'Own word.',
+        nextStepNeeded: true,
+        randomStimulus: 'never-assigned-anywhere',
+        autoSave: true,
+      });
+      expect(
+        (step.advisoryFindings as AdvisoryFindingShape[] | undefined)?.find(
+          f => f.gate === 'stimulus.mismatch'
+        )
+      ).toBeDefined();
+
+      const sessionsDir = path.join(persistDir, 'sessions');
+      const files = readdirSync(sessionsDir);
+      expect(files.length).toBeGreaterThan(0);
+      const persisted = readFileSync(path.join(sessionsDir, files[0]), 'utf8');
+      expect(persisted).toContain('stimulus.mismatch');
+
+      // Export returns everything WHOLE — the optimizer's string cap was
+      // truncating result.data at 1000 chars, so the finding (recorded late
+      // in the entry) never survived the echo.
+      const exported = await persistClient.callTool('execute_thinking_step', {
+        sessionOperation: 'export',
+        exportOptions: { sessionId: step.sessionId, format: 'json' },
+      });
+      const exportText = MCPClientTestHelper.extractTextContent(exported);
+      expect(exportText).toContain('stimulus.mismatch');
+      expect(exportText).not.toContain('[truncated]');
+    } finally {
+      await persistClient.disconnect();
+    }
   });
 
   it('validator warnings surface as advisory findings instead of being discarded', async () => {

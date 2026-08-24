@@ -714,7 +714,7 @@ export class ExecutionResponseBuilder {
           // naming a technique the registry does not hold, throwing here fails
           // the *previous* technique's final step, which had already succeeded.
           const nextHandler = this.techniqueRegistry?.tryGetHandler(nextTechnique);
-          const assigned = this.assignedStimulusLine(plan, techniqueIndex + 1, nextTechnique);
+          const assigned = this.assignedStimulusLine(plan, nextTechnique);
           return nextHandler
             ? `${duplicateNotice}Transitioning to ${nextTechnique}.${assigned} ${nextHandler.getStepGuidance(1, input.problem, guidanceContext(input))}`
             : `${duplicateNotice}Transitioning to ${nextTechnique}${assigned}`;
@@ -739,7 +739,7 @@ export class ExecutionResponseBuilder {
       // Server-assigned stimulus (P3): keep the assigned value in front of the
       // caller on every remaining step of a stimulus-bearing technique — the
       // plan carries it, but guidance is what callers actually read.
-      const assigned = this.assignedStimulusLine(plan, techniqueIndex, input.technique);
+      const assigned = this.assignedStimulusLine(plan, input.technique);
 
       return `${duplicateNotice}${guidance}${assigned}`;
     }
@@ -749,19 +749,29 @@ export class ExecutionResponseBuilder {
 
   /**
    * One-line reminder of a plan-time assigned stimulus, or '' when the plan
-   * carries no assignment for this technique instance.
+   * carries no assignment for this technique. When the technique appears more
+   * than once in the plan, ALL assignments are listed by instance — a
+   * technique-local step number cannot name its instance (issue #301), so
+   * asserting the first instance's value here misdirected every later one.
    */
   private assignedStimulusLine(
     plan: PlanThinkingSessionOutput | undefined,
-    techniqueIndex: number,
     technique: string | undefined
   ): string {
-    const firstStep = plan?.workflow[techniqueIndex]?.steps?.[0];
-    if (firstStep?.stimulusSource === 'assigned' && firstStep.stimulus) {
-      const label = technique === 'po' ? 'assigned provocation' : 'assigned stimulus';
-      return ` 🎲 Work with the ${label}: "${firstStep.stimulus}" — it is not re-rollable within this plan.`;
+    if (!plan || !technique) return '';
+    const values: string[] = [];
+    for (const entry of plan.workflow) {
+      if (entry.technique !== technique) continue;
+      const first = entry.steps?.[0];
+      if (first?.stimulusSource === 'assigned' && first.stimulus) values.push(first.stimulus);
     }
-    return '';
+    if (values.length === 0) return '';
+    const label = technique === 'po' ? 'assigned provocation' : 'assigned stimulus';
+    if (values.length === 1) {
+      return ` 🎲 Work with the ${label}: "${values[0]}" — it is not re-rollable within this plan.`;
+    }
+    const listed = values.map((v, i) => `instance ${i + 1}: "${v}"`).join('; ');
+    return ` 🎲 This plan runs ${technique} ${values.length} times with distinct ${label}s — ${listed}. Work with your instance's value; none is re-rollable.`;
   }
 
   private getBaseGuidance(

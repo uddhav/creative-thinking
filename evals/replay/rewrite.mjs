@@ -33,7 +33,7 @@ const VOLATILE_NUMERIC_KEYS = new Set([
   'elapsedMs',
 ]);
 
-export function createRewriter() {
+export function createRewriter({ keepRecordedStimuli = false } = {}) {
   const freshPlanIds = [];
   const planMap = new Map();
   const sessionMap = new Map();
@@ -62,9 +62,11 @@ export function createRewriter() {
             delete args.sessionId; // let the server create; bind on response
           }
         }
+        // Skipped in live-archive mode (--keep-recorded-stimuli): rewriting
+        // erases caller deviation, which effect analysis must observe.
         const key = `${args.planId}:${args.technique}`;
         const assigned = assignments.get(key);
-        if (assigned) {
+        if (assigned && !keepRecordedStimuli) {
           if (assigned.field === 'randomStimulus' && typeof args.randomStimulus === 'string') {
             args.randomStimulus = assigned.value;
           }
@@ -74,6 +76,11 @@ export function createRewriter() {
         }
       }
       return args;
+    },
+
+    /** Every assigned stimulus value observed in plan responses this run. */
+    assignedValues() {
+      return [...assignments.values()].map(a => a.value);
     },
 
     /** Learn fresh identities from a parsed response. */
@@ -114,25 +121,31 @@ function collectAssignments(planResponse, assignments) {
 /**
  * Canonicalize a response for diffing and byte metrics: volatile identities
  * and clocks become stable placeholders; keys are sorted so ordering noise
- * never reads as change.
+ * never reads as change. `volatileStrings` (the run's assigned stimuli, which
+ * are fresh draws seeded on the fresh planId) are scrubbed to «stimulus» so
+ * the byte metric is identical across runs of one build.
  */
-export function normalizeForDiff(value) {
-  return JSON.stringify(sortKeys(scrub(value)));
+export function normalizeForDiff(value, volatileStrings = []) {
+  return JSON.stringify(sortKeys(scrub(value, undefined, volatileStrings)));
 }
 
-function scrub(node, keyName) {
+function scrub(node, keyName, volatileStrings) {
   if (typeof node === 'string') {
-    return node
+    let out = node;
+    for (const v of volatileStrings) {
+      if (v) out = out.split(v).join('«stimulus»');
+    }
+    return out
       .replace(/plan_[0-9a-f-]{36}/gi, '«planId»')
       .replace(/session_[0-9a-zA-Z-]{6,}/g, '«sessionId»')
       .replace(UUID_RE, '«uuid»')
       .replace(ISO_TS_RE, '«timestamp»');
   }
   if (typeof node === 'number' && keyName && VOLATILE_NUMERIC_KEYS.has(keyName)) return 0;
-  if (Array.isArray(node)) return node.map(item => scrub(item));
+  if (Array.isArray(node)) return node.map(item => scrub(item, undefined, volatileStrings));
   if (node && typeof node === 'object') {
     const out = {};
-    for (const [k, v] of Object.entries(node)) out[k] = scrub(v, k);
+    for (const [k, v] of Object.entries(node)) out[k] = scrub(v, k, volatileStrings);
     return out;
   }
   return node;

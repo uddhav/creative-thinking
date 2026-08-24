@@ -132,6 +132,7 @@ export class TechniqueRecommender {
     const recommendations: Array<{
       technique: LateralTechnique;
       reasoning: string;
+      isCruxInjected?: boolean;
       effectiveness: number;
       isWildcard?: boolean;
     }> = [];
@@ -741,6 +742,7 @@ export class TechniqueRecommender {
             technique,
             reasoning: 'Matches the declared crux — surfaced ahead of keyword categorization',
             effectiveness: fit,
+            isCruxInjected: true,
           });
         }
       }
