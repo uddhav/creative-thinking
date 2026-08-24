@@ -1,3 +1,9 @@
+## [v2.3.0] - 2026-08-24
+
+### Changes from PR #305
+
+- feat: Round 0+1 steering — replay harness, assigned stimuli, crux, provenance, advisory findings
+
 ## [v2.2.1] - 2026-08-23
 
 ### Changes from PR #303
