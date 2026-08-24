@@ -22,6 +22,14 @@ import { PromptsHandler } from './PromptsHandler.js';
 
 export class RequestHandlers {
   private activeRequests = 0;
+  /**
+   * Calls accepted into the batch collector but not yet handed to
+   * processSingleCall. They are in flight from the caller's point of view —
+   * counting only processSingleCall's window let a SIGTERM arriving inside
+   * the collection window see zero active requests, skip the drain loop, and
+   * exit while a caller waited on a response the server had accepted.
+   */
+  private pendingBatchCalls = 0;
   private requestLog: Array<{ timestamp: string; method: string; id?: string | number }> = [];
 
   // Batch collection for parallel execution
@@ -56,7 +64,7 @@ export class RequestHandlers {
   }
 
   public getActiveRequests(): number {
-    return this.activeRequests;
+    return this.activeRequests + this.pendingBatchCalls;
   }
 
   /**
@@ -109,7 +117,10 @@ export class RequestHandlers {
    */
   private setupCallToolHandler(): void {
     this.server.setRequestHandler(CallToolRequestSchema, async request => {
-      this.activeRequests++;
+      // No activeRequests++ here: processSingleCall owns the balanced
+      // increment/decrement pair. This outer one had no matching decrement,
+      // so the counter never returned to zero and every graceful shutdown
+      // burned the full drain loop waiting on phantom in-flight requests.
       const requestTimestamp = new Date().toISOString();
 
       // Early logging to catch requests before any processing
@@ -333,6 +344,24 @@ export class RequestHandlers {
     planId: string
   ): Promise<Record<string, unknown>> {
     return new Promise((resolve, reject) => {
+      // Counted from acceptance, released exactly once on settlement — the
+      // collector window is real in-flight time the shutdown drain must see.
+      this.pendingBatchCalls++;
+      let released = false;
+      const release = (): void => {
+        if (released) return;
+        released = true;
+        this.pendingBatchCalls--;
+      };
+      const settleResolve = (result: Record<string, unknown>): void => {
+        release();
+        resolve(result);
+      };
+      const settleReject = (error: unknown): void => {
+        release();
+        reject(error instanceof Error ? error : new Error(String(error)));
+      };
+
       if (!this.batchCollector.has(planId)) {
         // Start collecting for this planId
         const timeout = setTimeout(() => {
@@ -347,8 +376,8 @@ export class RequestHandlers {
 
       // Add this call to the batch
       const batch = this.batchCollector.get(planId);
-      if (!batch) return reject(new Error('Batch collector not found'));
-      batch.calls.push({ request, resolve, reject });
+      if (!batch) return settleReject(new Error('Batch collector not found'));
+      batch.calls.push({ request, resolve: settleResolve, reject: settleReject });
 
       // If we've hit the max parallel executions, process immediately
       if (batch.calls.length >= this.MAX_PARALLEL_EXECUTIONS) {

@@ -15,6 +15,11 @@ export declare class RandomEntryHandler extends BaseTechniqueHandler {
     getTechniqueInfo(): TechniqueInfo;
     getStepInfo(step: number): StepInfo;
     getStepGuidance(step: number, problem: string, context?: RandomEntryContext): string;
+    /**
+     * @deprecated Non-deterministic (Math.random) and caller-less in production.
+     * Plan-time assignment (techniques/decks/assignment.ts) is the supported
+     * path: seeded, per-instance, recoverable from the planId.
+     */
     private getRandomRoryStimulus;
     validateStep(step: number, data: unknown): boolean;
     extractInsights(history: Array<{
@@ -26,6 +31,8 @@ export declare class RandomEntryHandler extends BaseTechniqueHandler {
     }>): string[];
     /**
      * Get a suggested Rory Mode stimulus for a given problem
+     * @deprecated Use the plan-time assignment (techniques/decks/assignment.ts)
+     * — seeded and per-instance — instead of this Math.random draw.
      */
     suggestRoryStimulus(): string;
 }

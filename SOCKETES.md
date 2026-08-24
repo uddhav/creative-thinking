@@ -355,11 +355,13 @@ any exist), and every warning/verdict field (`ergodicityMetrics`,
 `flexibilityScore`/`flexibilityMessage`, `earlyWarningState`, `escapeRecommendation`,
 `reflexivityWarning`, `reflectionRequired`, `optionGeneration`, `ergodicityCheck`,
 `alternativeSuggestions`, `realityAssessment`, the `ruinAssessment` verdict, and the
-`appliedReversibility` clamp audit). It replaces the echoes with receipts: `newInsights` carries
-only this step's additions (full mode's `insights` stays the cumulative list), and `fieldsRecorded`
-carries the names of the technique fields the server read. `problem`, `output`, technique field
-values, and `modificationHistory` are not echoed back — they are your own input; the session
-`export` returns everything whole. The final step's completion summary is always full.
+`appliedReversibility` clamp audit). `advisoryFindings` and the autoSave status fields ride every
+verbosity mode — they attach after the filter, the way the completion block does. It replaces the
+echoes with receipts: `newInsights` carries only this step's additions (full mode's `insights` stays
+the cumulative list), and `fieldsRecorded` carries the names of the technique fields the server
+read. `problem`, `output`, technique field values, and `modificationHistory` are not echoed back —
+they are your own input; the session `export` returns everything whole. The final step's completion
+summary is always full.
 
 > Deprecation notice: `minimal` is the intended future default. The flip will ship as a breaking
 > (major) release; until then nothing changes for callers that never pass the flag.

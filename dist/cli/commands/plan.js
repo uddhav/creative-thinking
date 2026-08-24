@@ -14,6 +14,10 @@ export function registerPlan(yargs) {
         type: 'string',
         choices: ['quick', 'thorough', 'comprehensive'],
     })
+        .option('strictness', {
+        type: 'string',
+        describe: "Gate strictness ('advisory' is the only implemented level; 'enforcing' reserved). Echoed on the plan.",
+    })
         .option('include-options', { type: 'boolean' })
         .option('session-id', { type: 'string' })
         .option('execution-mode', {
@@ -43,6 +47,7 @@ async function handle(argv) {
         objectives: parseList(argv.objectives),
         constraints: parseList(argv.constraints),
         timeframe: argv.timeframe,
+        strictness: argv.strictness,
         includeOptions: argv.includeOptions,
         sessionId: argv.sessionId,
         executionMode: argv.executionMode,
@@ -56,8 +61,15 @@ async function handle(argv) {
     const envelope = server.planThinkingSession(input);
     const { data, isError } = unwrapResponse(envelope);
     if (!isError) {
-        const planId = data.planId;
-        persistPlan(server, planId);
+        const planned = data;
+        persistPlan(server, planned.planId);
+        // Debate mode advertises persona and synthesis planIds the caller is meant
+        // to execute. Every planId this response hands out must survive to the
+        // next process, or the CLI — the surface skills actually drive — answers
+        // its own instructions with plan-not-found.
+        for (const parallel of planned.parallelPlans ?? []) {
+            persistPlan(server, parallel.planId);
+        }
     }
     emit(data, isError);
 }

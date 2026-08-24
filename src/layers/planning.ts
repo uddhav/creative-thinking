@@ -21,6 +21,7 @@ import { ErrorCode } from '../errors/types.js';
 import { HumanisticQualityCoverage } from './discovery/HumanisticQualityCoverage.js';
 import { PersonaGuidanceInjector } from '../personas/PersonaGuidanceInjector.js';
 import { DebateOrchestrator } from '../personas/DebateOrchestrator.js';
+import { applyAssignedStimulus } from '../techniques/decks/assignment.js';
 
 // Create singleton instances to avoid per-call allocation
 const personaResolver = new PersonaResolver();
@@ -57,6 +58,7 @@ export function planThinkingSession(
     persona,
     personas,
     debateFormat,
+    strictness,
   } = input;
 
   // Resolve persona for guidance injection.
@@ -106,8 +108,23 @@ export function planThinkingSession(
   // Generate unique plan ID
   const planId = `plan_${randomUUID()}`;
 
+  // The published contract stays open-world (unknown strictness values are
+  // accepted and echoed, never rejected) — but an unrecognized value gets a
+  // warning, or a typo'd 'advisorry' would silently behave as the default
+  // while the clean echo claimed it was honored. Same failure mode the crux
+  // validator's comment names; different posture because this field is
+  // deliberately open.
+  const planWarnings: string[] = [];
+  if (strictness !== undefined && strictness !== 'advisory') {
+    planWarnings.push(
+      strictness === 'enforcing'
+        ? "strictness 'enforcing' is reserved and not yet implemented — this plan runs as 'advisory' and its findings never block a step."
+        : `strictness "${strictness}" is not a recognized level ('advisory' now; 'enforcing' reserved) — the plan behaves as 'advisory'.`
+    );
+  }
+
   // Build workflow for each technique
-  const workflow = techniques.map(technique => {
+  const workflow = techniques.map((technique, techniqueIndex) => {
     const handler = techniqueRegistry.getHandler(technique);
     const info = handler.getTechniqueInfo();
     const steps = generateStepsForTechnique(
@@ -117,6 +134,11 @@ export function planThinkingSession(
       handler,
       resolvedPersona
     );
+
+    // Server-assigned entropy (P3): the stimulus is a plan-time value — drawn
+    // once, seeded by planId, fixed for the plan's lifetime. The index keeps
+    // repeated instances of one technique from sharing a draw.
+    applyAssignedStimulus(technique as string, techniqueIndex, planId, steps);
 
     return {
       technique,
@@ -169,6 +191,24 @@ export function planThinkingSession(
       debateFormat || 'structured',
       techniques
     );
+
+    // Every planId the debate structure advertises must be EXECUTABLE — these
+    // were never saved, so executing any advertised persona/synthesis planId
+    // failed (misdiagnosed as a workflow-order violation). Registered as
+    // minimal plans so execute_thinking_step can run the debate the response
+    // itself instructs the caller to run.
+    const debatePlans = [...debateStructure.personaPlans, debateStructure.synthesisPlan];
+    for (const debatePlan of debatePlans) {
+      sessionManager.savePlan(debatePlan.planId, {
+        planId: debatePlan.planId,
+        problem: debatePlan.problem ?? problem,
+        techniques: debatePlan.techniques,
+        workflow: debatePlan.workflow,
+        totalSteps: debatePlan.workflow.reduce((sum, w) => sum + w.steps.length, 0),
+        executionMode: 'sequential',
+        createdAt: Date.now(),
+      });
+    }
   }
 
   // Save plan
@@ -188,6 +228,8 @@ export function planThinkingSession(
     planningInsights,
     complexityAssessment,
     executionMode,
+    strictness,
+    warnings: planWarnings.length > 0 ? planWarnings : undefined,
     executionGraph,
     personaContext:
       resolvedPersona || resolvedPersonas.length > 0

@@ -326,6 +326,18 @@ export interface ThinkingOperationData {
      * own step tables, so this is the number they need.
      */
     techniqueLocalStep?: number;
+    /**
+     * Server-computed advisory findings recorded for this step, so persistence
+     * and session export can audit what the server flagged (e.g. an assigned-
+     * stimulus deviation) after the fact. Shape matches the response field.
+     */
+    advisoryFindings?: Array<{
+        gate: string;
+        technique: LateralTechnique;
+        step: number;
+        message: string;
+        severity: 'advisory';
+    }>;
     sessionId?: string;
     technique: LateralTechnique;
     problem: string;

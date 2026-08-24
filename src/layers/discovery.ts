@@ -13,6 +13,7 @@ import { WorkflowBuilder } from './discovery/WorkflowBuilder.js';
 import { MemoryContextGenerator } from './discovery/MemoryContextGenerator.js';
 import { PersonaResolver } from '../personas/PersonaResolver.js';
 import { HumanisticQualityCoverage } from './discovery/HumanisticQualityCoverage.js';
+import { CRUX_BIAS } from './discovery/cruxBias.js';
 
 // Create singleton instances for proper caching across requests
 // This ensures the techniqueInfoCache and catalog cache are reused, improving performance
@@ -25,8 +26,16 @@ export function discoverTechniques(
   complexityAnalyzer: HybridComplexityAnalyzer,
   sessionManager?: SessionManager
 ): DiscoverTechniquesOutput {
-  const { problem, context, preferredOutcome, constraints, currentFlexibility, persona, personas } =
-    input;
+  const {
+    problem,
+    context,
+    crux,
+    preferredOutcome,
+    constraints,
+    currentFlexibility,
+    persona,
+    personas,
+  } = input;
 
   // Resolve persona(s) if provided
   const resolvedPersonas = [];
@@ -85,7 +94,10 @@ export function discoverTechniques(
     constraints,
     recommendationTier,
     techniqueRegistry,
-    resolvedPersonas[0]?.techniqueBias
+    resolvedPersonas[0]?.techniqueBias,
+    // A declared crux injects its techniques as candidates and biases the
+    // blend — the caller's statement of the stuckness beats surface vocabulary.
+    crux ? CRUX_BIAS[crux] : undefined
   );
 
   // Humanistic quality coverage: ensure technique set collectively embodies
@@ -101,6 +113,27 @@ export function discoverTechniques(
   const finalQualityCoverage = coverageWasAdjusted
     ? qualityCoverage
     : HumanisticQualityCoverage.analyzeCoverage(recommendations.map(r => r.technique));
+
+  // Provenance stamp: how each entry earned its place. Fillers and wildcards
+  // already carried booleans that nothing downstream read; a single labeled
+  // field is what a caller can actually act on.
+  // The three internal booleans are consumed here and dropped: shipping them
+  // alongside the label they derive from would put two representations of one
+  // fact on the wire, and callers keying on the booleans would make them
+  // un-removable. scoreProvenance is the published form.
+  recommendations = recommendations.map(rec => {
+    const { isCruxInjected, isQualityFiller, isWildcard, ...published } = rec;
+    return {
+      ...published,
+      scoreProvenance: isCruxInjected
+        ? ('crux' as const)
+        : isQualityFiller
+          ? ('quality-fill' as const)
+          : isWildcard
+            ? ('wildcard' as const)
+            : ('fit' as const),
+    };
+  });
 
   // Build integration suggestions
   let integrationSuggestions = workflowBuilder.buildIntegrationSuggestions(
@@ -189,6 +222,14 @@ export function discoverTechniques(
   return {
     problem,
     problemCategory,
+    // How many categories cleared the evidence bar — the signal that already
+    // sizes the recommendation set, now visible to the caller instead of
+    // computed and discarded.
+    evidenceBreadth,
+    crux,
+    // An adoption marker, not a confidence measure: false = selection ran on
+    // surface vocabulary alone.
+    cruxDeclared: crux !== undefined,
     recommendations,
     integrationSuggestions,
     workflow,

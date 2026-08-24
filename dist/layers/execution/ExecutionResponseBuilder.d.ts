@@ -98,6 +98,14 @@ export declare class ExecutionResponseBuilder {
     private readTechniqueInsights;
     private createOperationData;
     private generateNextStepGuidance;
+    /**
+     * One-line reminder of a plan-time assigned stimulus, or '' when the plan
+     * carries no assignment for this technique. When the technique appears more
+     * than once in the plan, ALL assignments are listed by instance — a
+     * technique-local step number cannot name its instance (issue #301), so
+     * asserting the first instance's value here misdirected every later one.
+     */
+    private assignedStimulusLine;
     private getBaseGuidance;
     private generateExecutionMetadata;
     private addMemoryOutputs;

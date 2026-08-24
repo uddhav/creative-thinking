@@ -1,9 +1,15 @@
 import { getServer } from '../server.js';
 import { emit, mergeInput, parseList, parseNumber, readStdinJSON, unwrapResponse } from '../io.js';
+import { CRUX_VALUES } from '../../types/planning.js';
 export function registerDiscover(yargs) {
     return yargs.command('discover', 'Analyze a problem and recommend thinking techniques', y => y
         .option('problem', { type: 'string', describe: 'Problem statement (required)' })
         .option('context', { type: 'string', describe: 'Additional context' })
+        .option('crux', {
+        type: 'string',
+        choices: [...CRUX_VALUES],
+        describe: 'The shape of the stuckness — matching techniques are surfaced past keyword categorization',
+    })
         .option('preferred-outcome', {
         type: 'string',
         choices: ['innovative', 'systematic', 'risk-aware', 'collaborative', 'analytical'],
@@ -37,6 +43,7 @@ async function handle(argv) {
     const input = mergeInput({
         problem: argv.problem,
         context: argv.context,
+        crux: argv.crux,
         preferredOutcome: argv.preferredOutcome,
         constraints: parseList(argv.constraints),
         currentFlexibility: parseNumber(argv.currentFlexibility),

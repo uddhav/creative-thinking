@@ -30,6 +30,12 @@ export interface ExecutionMetadata {
     };
 }
 export declare class ResponseBuilder {
+    /**
+     * Inline ceiling for session exports, which bypass the response optimizer
+     * because their contract is "everything whole". Beyond this the export is
+     * refused with the CLI file-export alternative rather than truncated.
+     */
+    private static readonly MAX_EXPORT_BYTES;
     private metricsCache;
     private jsonOptimizer;
     constructor();

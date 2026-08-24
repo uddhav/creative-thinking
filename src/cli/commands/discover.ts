@@ -1,10 +1,12 @@
 import type { Argv, ArgumentsCamelCase } from 'yargs';
 import { getServer } from '../server.js';
 import { emit, mergeInput, parseList, parseNumber, readStdinJSON, unwrapResponse } from '../io.js';
+import { CRUX_VALUES } from '../../types/planning.js';
 
 interface DiscoverArgs {
   problem?: string;
   context?: string;
+  crux?: string;
   preferredOutcome?: string;
   constraints?: string;
   currentFlexibility?: number | string;
@@ -24,6 +26,12 @@ export function registerDiscover(yargs: Argv): Argv {
       y
         .option('problem', { type: 'string', describe: 'Problem statement (required)' })
         .option('context', { type: 'string', describe: 'Additional context' })
+        .option('crux', {
+          type: 'string',
+          choices: [...CRUX_VALUES],
+          describe:
+            'The shape of the stuckness — matching techniques are surfaced past keyword categorization',
+        })
         .option('preferred-outcome', {
           type: 'string',
           choices: ['innovative', 'systematic', 'risk-aware', 'collaborative', 'analytical'],
@@ -63,6 +71,7 @@ async function handle(argv: ArgumentsCamelCase<DiscoverArgs>): Promise<void> {
     {
       problem: argv.problem,
       context: argv.context,
+      crux: argv.crux,
       preferredOutcome: argv.preferredOutcome,
       constraints: parseList(argv.constraints),
       currentFlexibility: parseNumber(argv.currentFlexibility),

@@ -4,6 +4,7 @@
  */
 
 import type { Tool } from '../types/index.js';
+import { CRUX_VALUES } from '../types/planning.js';
 
 export const DISCOVER_TECHNIQUES_TOOL: Tool = {
   name: 'discover_techniques',
@@ -20,6 +21,20 @@ export const DISCOVER_TECHNIQUES_TOOL: Tool = {
       context: {
         type: 'string',
         description: 'Additional context about the situation',
+      },
+      crux: {
+        type: 'string',
+        // Derived, never transcribed: the validator, this schema, and the CLI
+        // choices all read CRUX_VALUES, so a rename cannot leave one surface
+        // rejecting a value another accepts.
+        enum: [...CRUX_VALUES],
+        description:
+          "The shape of the stuckness at the problem's center: framing (the problem statement " +
+          'itself is suspect), contested (named people disagree on a decision), generation (no ' +
+          'options exist yet), evaluation (options exist but cannot be compared), risk (unknown ' +
+          'failure modes dominate), path (sequencing/irreversibility constrains everything). ' +
+          'Declaring it lets selection beat surface vocabulary; techniques matching the crux are ' +
+          'surfaced even when keyword categorization missed them.',
       },
       preferredOutcome: {
         type: 'string',
@@ -121,6 +136,13 @@ export const PLAN_THINKING_SESSION_TOOL: Tool = {
         type: 'string',
         enum: ['quick', 'thorough', 'comprehensive'],
         description: 'How much time/depth to invest',
+      },
+      strictness: {
+        type: 'string',
+        description:
+          "Gate strictness for this plan's steps. 'advisory' (the default and the only " +
+          'implemented level) attaches non-blocking advisoryFindings to step responses. ' +
+          "'enforcing' is reserved for a future release and currently behaves as 'advisory'.",
       },
       executionMode: {
         type: 'string',

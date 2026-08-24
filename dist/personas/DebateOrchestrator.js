@@ -6,6 +6,7 @@
  */
 import { randomUUID } from 'crypto';
 import { PersonaGuidanceInjector } from './PersonaGuidanceInjector.js';
+import { applyAssignedStimulus } from '../techniques/decks/assignment.js';
 import { logger } from '../utils/Logger.js';
 /** Default fallback techniques when persona bias yields no matches */
 const DEFAULT_DEBATE_TECHNIQUES = ['six_hats', 'first_principles'];
@@ -36,10 +37,15 @@ export class DebateOrchestrator {
         // Select 1-2 techniques that match this persona's bias
         const selectedTechniques = this.selectPersonaTechniques(persona, techniqueRegistry, availableTechniques);
         // Build workflow for each technique
-        const workflow = selectedTechniques.map(technique => {
+        const workflow = selectedTechniques.map((technique, techniqueIndex) => {
             const handler = techniqueRegistry.getHandler(technique);
             const info = handler.getTechniqueInfo();
             const steps = this.generatePersonaSteps(problem, persona, technique, info.totalSteps, handler);
+            // Server-assigned entropy applies to debate plans too — without this,
+            // a persona's random_entry/po script still told the model to pick its
+            // own stimulus, recreating the failure P3 exists to close. Seeded on
+            // the persona plan's own planId: each persona draws distinctly.
+            applyAssignedStimulus(technique, techniqueIndex, planId, steps);
             return {
                 technique,
                 steps,
@@ -83,11 +89,16 @@ export class DebateOrchestrator {
         const selected = biasEntries
             .slice(0, count)
             .map(([technique]) => technique);
-        // Fallback to defaults if no bias matches
+        // Fallback when no bias matches. Prefer the caller's REQUESTED techniques:
+        // they asked for a debate over these. The old fallback filtered the
+        // default pair by the same requested list, so bias ∩ requested = ∅ yielded
+        // defaults ∩ requested = ∅ and the persona got an EMPTY plan — a debate
+        // scheduling voices with nothing to execute.
         if (selected.length === 0) {
-            const fallback = DEFAULT_DEBATE_TECHNIQUES.filter(t => techniqueRegistry.isValidTechnique(t) &&
-                (!availableTechniques || availableTechniques.includes(t)));
-            return fallback.slice(0, 1);
+            if (availableTechniques && availableTechniques.length > 0) {
+                return availableTechniques.filter(t => techniqueRegistry.isValidTechnique(t)).slice(0, 1);
+            }
+            return DEFAULT_DEBATE_TECHNIQUES.filter(t => techniqueRegistry.isValidTechnique(t)).slice(0, 1);
         }
         return selected;
     }

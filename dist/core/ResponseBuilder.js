@@ -6,6 +6,12 @@ import { ALL_LATERAL_TECHNIQUES } from '../types/index.js';
 import { CreativeThinkingError, ValidationError, ErrorCode } from '../errors/types.js';
 import { JsonOptimizer } from '../utils/JsonOptimizer.js';
 export class ResponseBuilder {
+    /**
+     * Inline ceiling for session exports, which bypass the response optimizer
+     * because their contract is "everything whole". Beyond this the export is
+     * refused with the CLI file-export alternative rather than truncated.
+     */
+    static MAX_EXPORT_BYTES = 4 * 1024 * 1024;
     // Performance optimization: Cache for expensive session metric calculations
     metricsCache = new Map();
     // JSON optimizer for response size management
@@ -127,6 +133,9 @@ export class ResponseBuilder {
             },
             // Include other fields that might be expected
             problemCategory: output.problemCategory,
+            evidenceBreadth: output.evidenceBreadth,
+            crux: output.crux,
+            cruxDeclared: output.cruxDeclared,
             warnings: output.warnings,
             contextAnalysis: output.contextAnalysis,
             complexityAssessment: output.complexityAssessment,
@@ -141,7 +150,9 @@ export class ResponseBuilder {
     buildPlanningResponse(output) {
         const flatWorkflow = [];
         let overallStepNumber = 1;
-        // Flatten the nested workflow structure
+        // Flatten the nested workflow structure. This flattener is an allowlist:
+        // a ThinkingStep field not copied here never reaches the caller — which
+        // is how the assigned stimulus would have shipped dark.
         output.workflow.forEach(techniqueWorkflow => {
             const techniqueSteps = techniqueWorkflow.steps.length;
             techniqueWorkflow.steps.forEach(step => {
@@ -152,6 +163,10 @@ export class ResponseBuilder {
                     riskConsiderations: step.risks,
                     totalSteps: techniqueSteps,
                     expectedOutputs: [step.expectedOutput],
+                    ...(step.stimulus !== undefined && {
+                        stimulus: step.stimulus,
+                        stimulusSource: step.stimulusSource,
+                    }),
                 });
             });
         });
@@ -167,6 +182,8 @@ export class ResponseBuilder {
             planningInsights: output.planningInsights,
             complexityAssessment: output.complexityAssessment,
             executionMode: output.executionMode,
+            strictness: output.strictness,
+            warnings: output.warnings,
             qualityCoverage: output.qualityCoverage,
             // Add execution graph for DAG-based parallel execution documentation
             executionGraph: output.executionGraph,
@@ -222,6 +239,38 @@ export class ResponseBuilder {
      * Build a session operation response
      */
     buildSessionOperationResponse(operation, result) {
+        if (operation === 'export') {
+            // Export's contract is "returns everything whole" — the optimizer's
+            // string cap was truncating result.data at 1000 chars, silently
+            // contradicting it. Exports bypass the optimizer, but not without a
+            // ceiling: an unbounded message can exceed a client's tool-result limit
+            // or swamp the model's context, and half a transcript delivered as a
+            // wall of JSON is worse than a refusal that names the alternative.
+            const text = JSON.stringify({ operation, success: true, result }, null, 2);
+            if (Buffer.byteLength(text, 'utf8') <= ResponseBuilder.MAX_EXPORT_BYTES) {
+                return { content: [{ type: 'text', text }] };
+            }
+            const mb = (Buffer.byteLength(text, 'utf8') / (1024 * 1024)).toFixed(1);
+            return {
+                content: [
+                    {
+                        type: 'text',
+                        text: JSON.stringify({
+                            operation,
+                            success: false,
+                            error: {
+                                message: `Export is ${mb} MB, over the ${ResponseBuilder.MAX_EXPORT_BYTES / (1024 * 1024)} MB inline limit. Exports are never truncated, so this one is refused rather than silently cut.`,
+                                recovery: [
+                                    'Write it to a file with the CLI: socketes session export --session-id <id> --format markdown > session.md',
+                                    "Try a more compact format ('csv' or 'markdown' instead of 'json')",
+                                ],
+                            },
+                        }, null, 2),
+                    },
+                ],
+                isError: true,
+            };
+        }
         return this.buildSuccessResponse({
             operation,
             success: true,

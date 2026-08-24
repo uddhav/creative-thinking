@@ -36,6 +36,8 @@ import { EscalationPromptGenerator } from '../ergodicity/escalationPrompts.js';
 
 // Import completion tracking components
 import { CompletionGatekeeper } from './execution/CompletionGatekeeper.js';
+import { evaluateAdvisoryGates } from './execution/advisoryGates.js';
+import { attachSteeringFields } from './execution/attachSteeringFields.js';
 
 export async function executeThinkingStep(
   input: ExecuteThinkingStepInput,
@@ -44,7 +46,8 @@ export async function executeThinkingStep(
   visualFormatter: VisualFormatter,
   metricsCollector: MetricsCollector,
   complexityAnalyzer: HybridComplexityAnalyzer,
-  ergodicityManager: ErgodicityManager
+  ergodicityManager: ErgodicityManager,
+  validationWarnings?: string[]
 ): Promise<LateralThinkingResponse> {
   const errorContextBuilder = new ErrorContextBuilder();
   const errorHandler = new ErrorHandler();
@@ -309,11 +312,17 @@ export async function executeThinkingStep(
       // excluded because it is REBUILT from history on every step — storing
       // each step's copy made session growth quadratic, and nothing reads
       // the stored copies (the rebuild reads scamperAction/pathImpact).
+      // advisoryFindings is stripped for a different reason than the other
+      // two: it is SERVER-AUTHORED. The history entry is the audit record of
+      // what the server flagged, so a caller-supplied array must never reach
+      // it — otherwise a caller could forge the record that exists to catch
+      // callers deviating.
       const {
         realityAssessment: inputRealityAssessment,
         modificationHistory: _rebuiltEachStep,
+        advisoryFindings: _serverAuthoredOnly,
         ...inputWithoutReality
-      } = input;
+      } = input as ExecuteThinkingStepInput & { advisoryFindings?: unknown };
 
       // If there's a reality assessment from input, we should handle it separately
       if (inputRealityAssessment) {
@@ -325,7 +334,10 @@ export async function executeThinkingStep(
         ...inputWithoutReality,
         sessionId,
       };
-      session.history.push({
+      // Kept as a named reference: advisory findings are recorded onto this
+      // entry after the gates run (the push spreads operationData, so
+      // mutating operationData later would touch a different object).
+      const historyEntry = {
         ...operationData,
         // The step within this technique, not within the plan. `currentStep`
         // is the global step, and handlers index their own step tables by it —
@@ -334,7 +346,8 @@ export async function executeThinkingStep(
         // because this is where the offset is already known.
         techniqueLocalStep,
         timestamp: new Date().toISOString(),
-      });
+      };
+      session.history.push(historyEntry);
 
       // Track reflexivity for ANY technique that provides reflexivity data.
       // The tracker returns an edge-triggered warning (bucket crossing or new
@@ -430,6 +443,23 @@ export async function executeThinkingStep(
       // Update metrics (recomputed from history; the step is already pushed)
       metricsCollector.updateMetrics(session);
 
+      // Advisory findings (P1): the server's substance judgments, surfaced
+      // instead of discarded. Never blocks; capped; omitted when empty.
+      // Computed BEFORE the gatekeeper so a blocked termination still carries
+      // them, and recorded onto the history entry so persistence and session
+      // export can audit follow-vs-deviate after the fact.
+      const advisoryFindings = evaluateAdvisoryGates(
+        input,
+        techniqueLocalStep,
+        plan,
+        validationWarnings
+      );
+      if (advisoryFindings.length > 0) {
+        historyEntry.advisoryFindings = advisoryFindings;
+      }
+      const attachFindings = (target: LateralThinkingResponse): void =>
+        attachSteeringFields(target, advisoryFindings.length > 0 ? { advisoryFindings } : {});
+
       // The gatekeeper must vet a termination BEFORE the response is built:
       // buildResponse finalizes the session on nextStepNeeded=false (endTime,
       // completion telemetry, sessionComplete payload), endTime is never
@@ -437,7 +467,8 @@ export async function executeThinkingStep(
       // vetoed termination must not reach any of that.
       const completionCheck = completionGatekeeper.canProceedToNextStep(input, session, plan);
       if (!completionCheck.allowed && completionCheck.response) {
-        // If gatekeeper blocks termination, return the blocking response
+        // The blocking response is steering output too — findings ride it.
+        attachFindings(completionCheck.response);
         return completionCheck.response;
       }
 
@@ -455,6 +486,11 @@ export async function executeThinkingStep(
         ergodicityResult.metrics,
         reflexivityWarning
       );
+
+      // Attached after buildResponse the same way the autoSave fields are —
+      // deliberately past the verbosity filter, since findings are steering,
+      // not echo.
+      attachFindings(response);
 
       // Final summary for a completed session. buildResponse has already set
       // endTime and refreshed session.insights/metrics; this only renders them.
@@ -480,24 +516,21 @@ export async function executeThinkingStep(
             { sessionId }
           );
         } catch (error) {
-          // Add auto-save failure to response with context
-          const parsedResponse = JSON.parse(response.content[0].text) as Record<string, unknown>;
-
-          // Provide more context about the error
-          if (
-            error instanceof PersistenceError &&
-            error.code === ErrorCode.PERSISTENCE_NOT_AVAILABLE
-          ) {
-            parsedResponse.autoSaveStatus = 'disabled';
-            parsedResponse.autoSaveMessage =
-              'Persistence is not configured. Session data is stored in memory only.';
-          } else {
-            parsedResponse.autoSaveStatus = 'failed';
-            parsedResponse.autoSaveError =
-              error instanceof Error ? error.message : 'Auto-save failed';
-          }
-
-          response.content[0].text = JSON.stringify(parsedResponse, null, 2);
+          // Auto-save status rides the same past-the-verbosity-filter attach
+          // point as advisory findings — one mechanism, named once.
+          attachSteeringFields(
+            response,
+            error instanceof PersistenceError && error.code === ErrorCode.PERSISTENCE_NOT_AVAILABLE
+              ? {
+                  autoSaveStatus: 'disabled',
+                  autoSaveMessage:
+                    'Persistence is not configured. Session data is stored in memory only.',
+                }
+              : {
+                  autoSaveStatus: 'failed',
+                  autoSaveError: error instanceof Error ? error.message : 'Auto-save failed',
+                }
+          );
         }
       }
 

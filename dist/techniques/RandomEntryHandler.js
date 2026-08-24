@@ -6,62 +6,11 @@
  */
 import { BaseTechniqueHandler, firstSentence } from './types.js';
 import { ValidationError, ErrorCode } from '../errors/types.js';
+import { RORY_STIMULI } from './decks/randomEntryDeck.js';
 export class RandomEntryHandler extends BaseTechniqueHandler {
-    // Rory Mode wildcards inspired by behavioral economics
-    roryModeStimuli = {
-        psychological: [
-            'status anxiety',
-            'loss aversion',
-            'social proof',
-            'placebo effect',
-            'commitment device',
-            'framing effect',
-            'anchoring bias',
-            'endowment effect',
-            'availability heuristic',
-            'confirmation bias',
-            'rationality blindspot - what are we missing by being logical?',
-        ],
-        contextual: [
-            'expensive wine in cheap bottle',
-            'same product different context',
-            'changing the comparison set',
-            'reframing the reference point',
-            'making invisible visible',
-            'adding meaningful friction',
-            'removing wrong friction',
-            'changing when decision happens',
-            'changing where decision happens',
-            'changing who is present',
-        ],
-        perceptual: [
-            'progress illusion',
-            'control theater',
-            'competence signaling',
-            'authenticity paradox',
-            'effort justification',
-            'peak-end optimization',
-            'duration neglect',
-            'contrast amplification',
-            'attention misdirection',
-            'expectation management',
-            'costly signaling - spending visibly to prove trustworthiness',
-        ],
-        counterintuitive: [
-            'make it harder to increase value',
-            'reduce features to improve satisfaction',
-            'increase price to boost demand',
-            'add steps to enhance experience',
-            'create scarcity from abundance',
-            'solve different problem entirely',
-            'make weakness the strength',
-            'embrace the constraint',
-            'celebrate the flaw',
-            'reverse the assumption',
-            'design for your most extreme user, not your average one',
-            'dare to be trivial - what tiny change creates disproportionate value?',
-        ],
-    };
+    // Rory Mode wildcards live in the deck module so the planner can draw from
+    // them as data; the handler keeps this alias for its guidance paths.
+    roryModeStimuli = RORY_STIMULI;
     getTechniqueInfo() {
         return {
             name: 'Random Entry',
@@ -220,6 +169,11 @@ How can the forced connections become real innovations?`;
                 return `Complete the Random Entry process for: "${problem}"`;
         }
     }
+    /**
+     * @deprecated Non-deterministic (Math.random) and caller-less in production.
+     * Plan-time assignment (techniques/decks/assignment.ts) is the supported
+     * path: seeded, per-instance, recoverable from the planId.
+     */
     getRandomRoryStimulus() {
         const categories = Object.keys(this.roryModeStimuli);
         const randomCategory = categories[Math.floor(Math.random() * categories.length)];
@@ -286,6 +240,8 @@ How can the forced connections become real innovations?`;
     }
     /**
      * Get a suggested Rory Mode stimulus for a given problem
+     * @deprecated Use the plan-time assignment (techniques/decks/assignment.ts)
+     * — seeded and per-instance — instead of this Math.random draw.
      */
     suggestRoryStimulus() {
         return this.getRandomRoryStimulus();

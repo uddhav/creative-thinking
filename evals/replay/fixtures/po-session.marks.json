@@ -1,0 +1,10 @@
+{
+  "markedBy": "author-synthetic",
+  "decisiveSteps": [
+    {
+      "technique": "po",
+      "step": 2,
+      "reason": "The movement step produced the delivery-not-content reframe (docs surface at the moment of the error) that the remaining steps only operationalized."
+    }
+  ]
+}

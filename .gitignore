@@ -45,5 +45,8 @@ coverage/
 *.temp
 .cache/
 
+# Replay harness output (fixtures and baseline ARE committed; runs are not)
+evals/replay/out/
+
 # npm
 # package-lock.json # Needed for CI dependency caching

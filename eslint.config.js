@@ -13,6 +13,9 @@ export default [
       'coverage/',
       'examples/',
       'cloudflare-deployment/',
+      // Replay-harness run artifacts (gitignored; local scratch may hold
+      // probe scripts that are not lintable project code)
+      'evals/replay/out/',
       '*.js',
       '*.d.ts',
       '!eslint.config.js',
@@ -151,9 +154,9 @@ export default [
       '@typescript-eslint/no-unsafe-argument': 'off',
     },
   },
-  // JavaScript files configuration (e.g., scripts)
+  // JavaScript files configuration (e.g., scripts, the replay harness)
   {
-    files: ['scripts/**/*.js', 'scripts/**/*.mjs'],
+    files: ['scripts/**/*.js', 'scripts/**/*.mjs', 'evals/**/*.mjs'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'module',
@@ -161,6 +164,7 @@ export default [
         console: 'readonly',
         process: 'readonly',
         Buffer: 'readonly',
+        structuredClone: 'readonly',
         __dirname: 'readonly',
         __filename: 'readonly',
         URL: 'readonly',

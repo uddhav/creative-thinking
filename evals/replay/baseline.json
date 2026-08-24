@@ -1,0 +1,86 @@
+{
+  "serverPath": "dist/mcp-server-main.js",
+  "fixtures": [
+    {
+      "fixture": "po-session",
+      "calls": 6,
+      "errors": 0,
+      "errorsByCode": {},
+      "normalizedBytes": 20481,
+      "advisoryFindings": 0,
+      "assignedStimuli": 1,
+      "discoveries": [
+        {
+          "topPick": "keeper_test",
+          "techniques": ["keeper_test", "nine_windows", "cognitive_bias_audit", "anecdotal_signal"],
+          "hasEvidenceBreadth": true,
+          "hasScoreBreakdown": true,
+          "hasScoreProvenance": true
+        }
+      ]
+    },
+    {
+      "fixture": "random-entry-session",
+      "calls": 5,
+      "errors": 0,
+      "errorsByCode": {},
+      "normalizedBytes": 19014,
+      "advisoryFindings": 0,
+      "assignedStimuli": 1,
+      "discoveries": [
+        {
+          "topPick": "six_hats",
+          "techniques": ["six_hats"],
+          "hasEvidenceBreadth": true,
+          "hasScoreBreakdown": true,
+          "hasScoreProvenance": true
+        }
+      ]
+    },
+    {
+      "fixture": "refused-calls",
+      "calls": 3,
+      "errors": 2,
+      "errorsByCode": {
+        "uncoded": 2
+      },
+      "normalizedBytes": 5026,
+      "advisoryFindings": 0,
+      "assignedStimuli": 0,
+      "discoveries": [
+        {
+          "topPick": "keeper_test",
+          "techniques": ["keeper_test", "nine_windows", "cognitive_bias_audit", "anecdotal_signal"],
+          "hasEvidenceBreadth": true,
+          "hasScoreBreakdown": true,
+          "hasScoreProvenance": true
+        }
+      ]
+    },
+    {
+      "fixture": "steelman-session",
+      "calls": 9,
+      "errors": 0,
+      "errorsByCode": {},
+      "normalizedBytes": 47738,
+      "advisoryFindings": 1,
+      "assignedStimuli": 0,
+      "discoveries": [
+        {
+          "topPick": "six_hats",
+          "techniques": ["six_hats", "quantum_superposition", "first_principles"],
+          "hasEvidenceBreadth": true,
+          "hasScoreBreakdown": true,
+          "hasScoreProvenance": true
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "fixtureCount": 4,
+    "totalCalls": 23,
+    "totalErrors": 2,
+    "totalAdvisoryFindings": 1,
+    "totalAssignedStimuli": 2
+  }
+}

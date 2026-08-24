@@ -2,6 +2,7 @@
  * ToolDefinitions - MCP tool definitions for the creative thinking server
  * Extracted from index.ts to improve maintainability
  */
+import { CRUX_VALUES } from '../types/planning.js';
 export const DISCOVER_TECHNIQUES_TOOL = {
     name: 'discover_techniques',
     description: 'STEP 1 of 3: Analyzes a problem and recommends appropriate lateral thinking techniques. This is the FIRST tool you must call when starting any creative thinking session. Returns recommendations and available techniques that can be used in the next step. MANDATORY PARAMETER: You MUST provide the "problem" parameter as a string describing the challenge to solve. DO NOT call this with an empty object {}. Example: {"problem": "How to improve team communication"}. Valid techniques: six_hats, po, random_entry, scamper, concept_extraction, yes_and, design_thinking, triz, neural_state, temporal_work, cultural_integration, collective_intel, disney_method, nine_windows, quantum_superposition, temporal_creativity, paradoxical_problem, meta_learning, biomimetic_path, first_principles, neuro_computational, criteria_based_analysis, linguistic_forensics, competing_hypotheses, reverse_benchmarking, context_reframing, perception_optimization, anecdotal_signal, cognitive_bias_audit, latticework, keeper_test, steelman_red_team.',
@@ -15,6 +16,19 @@ export const DISCOVER_TECHNIQUES_TOOL = {
             context: {
                 type: 'string',
                 description: 'Additional context about the situation',
+            },
+            crux: {
+                type: 'string',
+                // Derived, never transcribed: the validator, this schema, and the CLI
+                // choices all read CRUX_VALUES, so a rename cannot leave one surface
+                // rejecting a value another accepts.
+                enum: [...CRUX_VALUES],
+                description: "The shape of the stuckness at the problem's center: framing (the problem statement " +
+                    'itself is suspect), contested (named people disagree on a decision), generation (no ' +
+                    'options exist yet), evaluation (options exist but cannot be compared), risk (unknown ' +
+                    'failure modes dominate), path (sequencing/irreversibility constrains everything). ' +
+                    'Declaring it lets selection beat surface vocabulary; techniques matching the crux are ' +
+                    'surfaced even when keyword categorization missed them.',
             },
             preferredOutcome: {
                 type: 'string',
@@ -111,6 +125,12 @@ export const PLAN_THINKING_SESSION_TOOL = {
                 type: 'string',
                 enum: ['quick', 'thorough', 'comprehensive'],
                 description: 'How much time/depth to invest',
+            },
+            strictness: {
+                type: 'string',
+                description: "Gate strictness for this plan's steps. 'advisory' (the default and the only " +
+                    'implemented level) attaches non-blocking advisoryFindings to step responses. ' +
+                    "'enforcing' is reserved for a future release and currently behaves as 'advisory'.",
             },
             executionMode: {
                 type: 'string',

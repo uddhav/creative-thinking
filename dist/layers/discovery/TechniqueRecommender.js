@@ -41,6 +41,27 @@ export const TECHNIQUE_FIT = {
     /** Occasionally relevant; included for breadth */
     WEAK: 0.7,
 };
+/** Bound provenance fields to 3 decimals so response size stays predictable. */
+function round3(n) {
+    return Math.round(n * 1000) / 1000;
+}
+/**
+ * Combine crux and persona bias maps by per-technique MAX before the 70/30
+ * blend. Max, not product: two agreeing sub-1 signals must not produce weaker
+ * steering than either alone (0.8 × 0.8 = 0.64 — the first draft's mistake,
+ * caught in vetting).
+ */
+function combineBiasMaps(cruxBias, personaBias) {
+    if (!cruxBias)
+        return personaBias;
+    if (!personaBias)
+        return cruxBias;
+    const combined = { ...personaBias };
+    for (const [technique, value] of Object.entries(cruxBias)) {
+        combined[technique] = Math.max(combined[technique] ?? 0, value);
+    }
+    return combined;
+}
 export class TechniqueRecommender {
     // Wildcard inclusion probability (20% chance)
     WILDCARD_PROBABILITY = parseFloat(process.env.WILDCARD_PROBABILITY || '0.20');
@@ -82,7 +103,7 @@ export class TechniqueRecommender {
     // many categories the problem genuinely implicates — NOT from the
     // readability-complexity level, which rises with any appended sentence and
     // used to change the set whenever a user added harmless context.
-    complexity, techniqueRegistry, techniqueBias) {
+    complexity, techniqueRegistry, techniqueBias, cruxBias) {
         const recommendations = [];
         // Category-based recommendations
         switch (problemCategory) {
@@ -632,19 +653,52 @@ export class TechniqueRecommender {
                 problemCategory === 'organizational',
             preferredOutcome,
         };
+        // A declared crux INJECTS its techniques as candidates before scoring.
+        // Bias alone cannot do this — it only rescales what the category switch
+        // already produced, and the point of a crux is to surface techniques the
+        // keyword categorization missed.
+        if (cruxBias) {
+            const present = new Set(recommendations.map(r => r.technique));
+            for (const [technique, fit] of Object.entries(cruxBias)) {
+                if (!present.has(technique)) {
+                    recommendations.push({
+                        technique,
+                        reasoning: 'Matches the declared crux — surfaced ahead of keyword categorization',
+                        effectiveness: fit,
+                        isCruxInjected: true,
+                    });
+                }
+            }
+        }
+        // Crux and persona biases combine by per-technique MAX (two agreeing
+        // sub-1 signals must not multiply into weaker steering than either alone),
+        // then the single 70/30 blend applies.
+        const blendBias = combineBiasMaps(cruxBias, techniqueBias);
         // Apply multi-factor scoring to all recommendations, blending in persona
         // bias here so it participates in ranking rather than merely reordering
         // whatever survived truncation.
         const scoredRecommendations = recommendations.map(rec => {
-            const multiFactorScore = this.scorer.calculateScore(rec.technique, problemContext, rec.effectiveness // Use initial effectiveness as category score
+            // One scoring pass, not two: getScoreBreakdown computes the same four
+            // factors as calculateScore and its `final` IS that weighted blend, so
+            // taking the score from the breakdown halves the scorer work on the
+            // discovery hot path. Quality fillers and wildcards are appended after
+            // this map and carry no breakdown — that absence is the honest report
+            // that their effectiveness never passed through the scorer.
+            const breakdown = this.scorer.getScoreBreakdown(rec.technique, problemContext, rec.effectiveness // Use initial effectiveness as category score
             );
-            const biasScore = techniqueBias?.[rec.technique];
+            const biasScore = blendBias?.[rec.technique];
             const effectiveness = biasScore === undefined
-                ? multiFactorScore
-                : Math.min(1, multiFactorScore * this.PERSONA_BASE_WEIGHT + biasScore * this.PERSONA_BIAS_WEIGHT);
+                ? breakdown.final
+                : Math.min(1, breakdown.final * this.PERSONA_BASE_WEIGHT + biasScore * this.PERSONA_BIAS_WEIGHT);
             return {
                 ...rec,
                 effectiveness,
+                scoreBreakdown: {
+                    categoryFit: round3(breakdown.categoryFit),
+                    complexityMatch: round3(breakdown.complexityMatch),
+                    constraintCompatibility: round3(breakdown.constraintCompatibility),
+                    outcomeAlignment: round3(breakdown.outcomeAlignment),
+                },
             };
         });
         // Sort by multi-factor score
@@ -674,6 +728,29 @@ export class TechniqueRecommender {
         const baseRecommendationCount = Math.min(validatedRecommendations.length, maxRecommendations);
         // Get top recommendations based on dynamic limit
         const topRecommendations = validatedRecommendations.slice(0, baseRecommendationCount);
+        // A declared crux must survive truncation. On keyword-rich problems the
+        // organic entries out-score the injected ones and the slice removed every
+        // crux technique — leaving a response that reports cruxDeclared: true
+        // while honoring the declaration nowhere, the silent degrade the crux
+        // validator exists to prevent. Reserve the top-scoring injected entry by
+        // displacing the weakest non-injected pick (the set size is a budget, so
+        // this substitutes rather than grows).
+        if (cruxBias) {
+            const bestInjected = validatedRecommendations.find(rec => rec.isCruxInjected && !topRecommendations.some(t => t.technique === rec.technique));
+            if (bestInjected && topRecommendations.length > 0) {
+                let displaceAt = -1;
+                for (let i = topRecommendations.length - 1; i >= 0; i--) {
+                    if (!topRecommendations[i].isCruxInjected) {
+                        displaceAt = i;
+                        break;
+                    }
+                }
+                if (displaceAt >= 0) {
+                    topRecommendations[displaceAt] = bestInjected;
+                    topRecommendations.sort((a, b) => b.effectiveness - a.effectiveness);
+                }
+            }
+        }
         // The wildcard draw is deterministic, seeded from what was chosen: the
         // same category and set always draw the same wildcard, or none. It used
         // to be Math.random(), which made discover_techniques non-deterministic —

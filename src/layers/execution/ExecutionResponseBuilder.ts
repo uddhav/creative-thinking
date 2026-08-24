@@ -714,9 +714,10 @@ export class ExecutionResponseBuilder {
           // naming a technique the registry does not hold, throwing here fails
           // the *previous* technique's final step, which had already succeeded.
           const nextHandler = this.techniqueRegistry?.tryGetHandler(nextTechnique);
+          const assigned = this.assignedStimulusLine(plan, nextTechnique);
           return nextHandler
-            ? `${duplicateNotice}Transitioning to ${nextTechnique}. ${nextHandler.getStepGuidance(1, input.problem, guidanceContext(input))}`
-            : `${duplicateNotice}Transitioning to ${nextTechnique}`;
+            ? `${duplicateNotice}Transitioning to ${nextTechnique}.${assigned} ${nextHandler.getStepGuidance(1, input.problem, guidanceContext(input))}`
+            : `${duplicateNotice}Transitioning to ${nextTechnique}${assigned}`;
         }
       }
     } else {
@@ -735,10 +736,42 @@ export class ExecutionResponseBuilder {
         }
       }
 
-      return `${duplicateNotice}${guidance}`;
+      // Server-assigned stimulus (P3): keep the assigned value in front of the
+      // caller on every remaining step of a stimulus-bearing technique — the
+      // plan carries it, but guidance is what callers actually read.
+      const assigned = this.assignedStimulusLine(plan, input.technique);
+
+      return `${duplicateNotice}${guidance}${assigned}`;
     }
 
     return undefined;
+  }
+
+  /**
+   * One-line reminder of a plan-time assigned stimulus, or '' when the plan
+   * carries no assignment for this technique. When the technique appears more
+   * than once in the plan, ALL assignments are listed by instance — a
+   * technique-local step number cannot name its instance (issue #301), so
+   * asserting the first instance's value here misdirected every later one.
+   */
+  private assignedStimulusLine(
+    plan: PlanThinkingSessionOutput | undefined,
+    technique: string | undefined
+  ): string {
+    if (!plan || !technique) return '';
+    const values: string[] = [];
+    for (const entry of plan.workflow) {
+      if (entry.technique !== technique) continue;
+      const first = entry.steps?.[0];
+      if (first?.stimulusSource === 'assigned' && first.stimulus) values.push(first.stimulus);
+    }
+    if (values.length === 0) return '';
+    const label = technique === 'po' ? 'assigned provocation' : 'assigned stimulus';
+    if (values.length === 1) {
+      return ` 🎲 Work with the ${label}: "${values[0]}" — it is not re-rollable within this plan.`;
+    }
+    const listed = values.map((v, i) => `instance ${i + 1}: "${v}"`).join('; ');
+    return ` 🎲 This plan runs ${technique} ${values.length} times with distinct ${label}s — ${listed}. Work with your instance's value; none is re-rollable.`;
   }
 
   private getBaseGuidance(
@@ -1264,7 +1297,9 @@ export class ExecutionResponseBuilder {
     cognitive_bias_audit: [],
     latticework: [],
     keeper_test: [],
-    steelman_red_team: [],
+    // failureModes is the field the step-5 advisory gate reads; a gated field
+    // must also be echoed, or the caller can never see what the gate saw.
+    steelman_red_team: ['failureModes'],
   };
 
   private extractTechniqueSpecificFields(input: ThinkingOperationData): Record<string, unknown> {

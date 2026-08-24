@@ -146,8 +146,10 @@ export class LateralThinkingServer {
                 return this.responseBuilder.buildErrorResponse(new Error(validation.errors.join('; ')), 'execution');
             }
             const data = input;
-            // Execute thinking step using the execution layer
-            const result = await executeThinkingStep(data, this.sessionManager, this.techniqueRegistry, this.visualFormatter, this.metricsCollector, this.complexityAnalyzer, this.ergodicityManager);
+            // Execute thinking step using the execution layer. The validator's
+            // warnings ride along: they were computed on every call and thrown away
+            // on the valid path for years — now they surface as advisory findings.
+            const result = await executeThinkingStep(data, this.sessionManager, this.techniqueRegistry, this.visualFormatter, this.metricsCollector, this.complexityAnalyzer, this.ergodicityManager, validation.warnings);
             return result;
         }
         catch (error) {

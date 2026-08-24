@@ -6,6 +6,7 @@
 import { ValidationError, ErrorCode } from '../errors/types.js';
 import { ObjectFieldValidator } from './validators/ObjectFieldValidator.js';
 import { TechniqueCache } from './techniqueCache.js';
+import { CRUX_VALUES } from '../types/planning.js';
 
 export interface ValidationResult {
   valid: boolean;
@@ -142,6 +143,20 @@ export class DiscoveryValidator extends BaseValidator {
     // Optional fields
     if (data.context !== undefined) {
       this.validateString(data.context, 'context', errors);
+    }
+
+    // crux IS enum-validated, unlike preferredOutcome below: a typo here would
+    // silently degrade to no-crux behavior while cruxDeclared reported true —
+    // the caller told us their crux and we'd claim we honored it.
+    if (data.crux !== undefined) {
+      if (
+        typeof data.crux !== 'string' ||
+        !(CRUX_VALUES as readonly string[]).includes(data.crux)
+      ) {
+        errors.push(
+          `crux must be one of: ${CRUX_VALUES.join(', ')} (got ${JSON.stringify(data.crux)})`
+        );
+      }
     }
 
     if (data.preferredOutcome !== undefined) {
