@@ -36,7 +36,6 @@ export declare class ResponseBuilder {
      * refused with the CLI file-export alternative rather than truncated.
      */
     private static readonly MAX_EXPORT_BYTES;
-    private metricsCache;
     private jsonOptimizer;
     constructor();
     /**
@@ -60,7 +59,23 @@ export declare class ResponseBuilder {
      */
     buildSessionOperationResponse(operation: string, result: unknown): LateralThinkingResponse;
     /**
-     * Add completion data to a response
+     * Add completion data to a response.
+     *
+     * Builds the block fresh every time. It used to be memoised under
+     * `completion-${technique}-${history.length}` — a key that named nothing
+     * about whose session it was, while the value carried that session's
+     * insights, problem, metrics and summary. Two sessions agreeing on technique
+     * and history length, which any two full six_hats runs do, were the same
+     * entry as far as the map was concerned (#313).
+     *
+     * Nothing had leaked: `executeThinkingStep` constructs its
+     * `ExecutionResponseBuilder`, and with it this class, once per tool call, so
+     * the map was written on the way out and dropped with the object. That also
+     * means the memoisation never returned a single hit — this method is called
+     * once per session, at the end. It was a cache that could not help and could
+     * only ever be wrong, so it is gone rather than re-keyed: the block is an
+     * object literal over state already in memory, and removing it takes the
+     * only cross-session mutable state in this class with it.
      */
     addCompletionData(response: Record<string, unknown>, session: SessionData): Record<string, unknown>;
     /**
