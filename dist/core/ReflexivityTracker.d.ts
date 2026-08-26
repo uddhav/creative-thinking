@@ -75,6 +75,35 @@ export interface ActionRecord {
     realityChanges: Partial<RealityState>;
 }
 /**
+ * One action, reduced to what a later process cannot recompute cheaply.
+ *
+ * `reflexiveEffects` and `realityChanges` are dropped: the first is a static
+ * handler declaration recoverable from (technique, step), and the second is
+ * already folded into the persisted `RealityState`. `reversibility` is the one
+ * scalar kept out of the effects, because `getSessionSummary` averages it to
+ * report `overallReversibility` — without it every restored session would come
+ * back reading 'low', which is a wrong number rather than a missing one.
+ */
+export interface PersistedActionRecord {
+    technique: string;
+    step: number;
+    stepType: StepType;
+    timestamp: number;
+    reversibility?: ReflexiveEffects['reversibility'];
+}
+/**
+ * The tracker state that belongs to a session rather than to the process.
+ *
+ * Both halves matter and they break differently. `realityState` carries
+ * `pathsForeclosed`, which is the set a re-declared commitment is deduplicated
+ * against, and the three constraint counters the 5/10 warning buckets read.
+ * `actionHistory` carries the step tally `getSessionSummary` reports.
+ */
+export interface PersistedReflexivity {
+    realityState: RealityState;
+    actionHistory: PersistedActionRecord[];
+}
+/**
  * Tracks reflexive effects across a session
  */
 export declare class ReflexivityTracker {
@@ -140,6 +169,21 @@ export declare class ReflexivityTracker {
      * Get action history for a session
      */
     getActionHistory(sessionId: string): ActionRecord[];
+    /**
+     * Snapshot a session's tracker state for persistence, or undefined if the
+     * session has none yet (no action step has been tracked).
+     */
+    exportSessionState(sessionId: string): PersistedReflexivity | undefined;
+    /**
+     * Restore a session's tracker state after a restart.
+     *
+     * Refuses to overwrite state this process has already built. A load can
+     * arrive after tracking has begun — the execution layer hydrates a session
+     * mid-request — and the in-memory state is then strictly newer than the file.
+     * Dropping a stale restore loses nothing; applying it would roll the session
+     * back to the last save and re-open commitments the caller has already made.
+     */
+    importSessionState(sessionId: string, state: PersistedReflexivity | undefined): void;
     /**
      * Bucket index for the content-constraint count: 0 below the warning
      * threshold, 1 up to the caution threshold, then geometric (×1.25) — a

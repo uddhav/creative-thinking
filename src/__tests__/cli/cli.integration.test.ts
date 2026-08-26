@@ -6,9 +6,11 @@
  * execute in process B, execute again in process C, with state surviving
  * via the filesystem store.
  *
- * Kept to a single test (one combined flow) to limit subprocess spawn
- * pressure on the worker pool — the input-parsing surface is covered by
- * the in-process unit tests in io.test.ts.
+ * Each test combines a whole flow rather than splitting per assertion, to
+ * limit subprocess spawn pressure on the worker pool — the input-parsing
+ * surface is covered by the in-process unit tests in io.test.ts. A claim
+ * earns a test here only if it is untrue in a single process; everything
+ * else belongs somewhere cheaper.
  */
 
 import { spawn } from 'child_process';
@@ -214,4 +216,112 @@ describe('socketes CLI cross-process flow', () => {
     const personaData = personaExec.json as { sessionId?: string };
     expect(personaData.sessionId).toBeDefined();
   }, 30000);
+
+  /**
+   * A second test in a file that says it keeps to one, because this claim is
+   * only true across processes and the CLI is the only surface where it can be
+   * asserted end to end. The MCP server cannot stand in: it does not rehydrate
+   * plans across processes, so a second server process answers plan-not-found
+   * before reaching the behaviour (which is why the sibling
+   * session-resumes-across-processes test re-plans in its second process).
+   *
+   * `ReflexivityTracker` holds `realityStates` and `actionHistory` in private
+   * in-memory Maps that nothing persisted. In one process the tracker
+   * deduplicates against `realityState.pathsForeclosed`, so re-sending a step
+   * that declares the same commitment "neither counts again nor re-warns" —
+   * its own words. One process per step empties that set every time.
+   *
+   * Measured on socketes before the fix, same session, same step, same
+   * rationale, sent twice:
+   *
+   *                 first send    re-send
+   *   one process      warning       none    (deduplicated)
+   *   per-process      warning    warning    (false repeat)
+   *
+   * So the defect is not that reflexivity warnings are dead on this surface —
+   * a fresh declaration warns identically on both. It is that they over-fire,
+   * reporting a commitment as newly foreclosed after the session already
+   * recorded it. Re-sending a step is what a caller does after a completion
+   * gatekeeper veto (#307), so the false repeat is easy to reach.
+   */
+  it('does not re-announce a commitment the session already recorded', async () => {
+    const problem = 'Merge two support teams with different escalation cultures';
+    // Requires no field on any step, so only reflexivity is under test.
+    const technique = 'cultural_integration';
+    // Its step 5 is the action step whose handler prior (medium) is loose
+    // enough that a 'low' claim counts as downward — the one content-provenance
+    // constraint producer there is.
+    const actionStep = 5;
+    const stdin = JSON.stringify({
+      stepReversibility: {
+        level: 'low',
+        rationale: 'Signs the one-year vendor commitment that cannot be unwound',
+      },
+    });
+
+    const planRes = await runCli(['plan', '--problem', problem, '--techniques', technique], {
+      cwd: workDir,
+    });
+    expect(planRes.exit).toBe(0);
+    const planId = (planRes.json as { planId: string }).planId;
+
+    interface StepJson {
+      sessionId?: string;
+      reflexivityWarning?: { level?: string };
+      reflexivity?: { summary?: { totalActions?: number } };
+    }
+
+    let sessionId: string | undefined;
+    const send = async (step: number): Promise<StepJson> => {
+      const res = await runCli(
+        [
+          'execute',
+          '--plan',
+          planId,
+          ...(sessionId ? ['--session', sessionId] : []),
+          '--technique',
+          technique,
+          '--problem',
+          problem,
+          '--step',
+          String(step),
+          '--total-steps',
+          '5',
+          '--output',
+          `Step ${step}: merged-rota work for the two escalation cultures.`,
+          '--next-step-needed',
+        ],
+        { cwd: workDir, stdin }
+      );
+      expect(res.exit, `step ${step} failed: ${res.stderr}`).toBe(0);
+      const json = res.json as StepJson;
+      sessionId ??= json.sessionId;
+      return json;
+    };
+
+    let firstSend: StepJson = {};
+    for (let step = 1; step <= actionStep; step++) firstSend = await send(step);
+
+    // The declaration has to register first, or the re-send assertion holds
+    // over a warning that never fired at all.
+    expect(
+      firstSend.reflexivityWarning?.level,
+      'the first declaration did not warn, so there is no dedup to test'
+    ).toBe('warning');
+
+    const resent = await send(actionStep);
+
+    expect(
+      resent.reflexivityWarning,
+      'a commitment the session had already recorded was re-announced as newly foreclosed'
+    ).toBeUndefined();
+
+    // The counters are the other half of the same loss. Without this, restoring
+    // only pathsForeclosed would satisfy the assertion above while the 5/10
+    // thresholds stayed permanently unreachable on this surface.
+    expect(
+      resent.reflexivity?.summary?.totalActions,
+      'the fresh process saw only the step in front of it'
+    ).toBeGreaterThan(1);
+  }, 60000);
 });

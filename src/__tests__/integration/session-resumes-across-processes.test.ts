@@ -21,8 +21,10 @@
  * notes say persistence does not save `pathMemory`; it does — read out of the
  * stored JSON at flexibility 0.4754 with six events. And a first pass here
  * reported nothing written to disk at all, which was a probe looking under
- * `state/sessions/`: that prefix is the CLI's, and the server writes to
- * `sessions/`.
+ * `state/sessions/` — a path neither binary writes. Both write `sessions/`
+ * directly under `PERSISTENCE_PATH`. The `state/` prefix came from
+ * `src/__tests__/cli/cli.integration.test.ts`, which names its own temp
+ * persistence root `state`; that is a fixture's directory name, not a layout.
  */
 
 import { describe, it, expect, afterAll } from 'vitest';

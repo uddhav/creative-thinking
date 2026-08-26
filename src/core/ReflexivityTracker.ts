@@ -153,6 +153,37 @@ export interface ActionRecord {
 }
 
 /**
+ * One action, reduced to what a later process cannot recompute cheaply.
+ *
+ * `reflexiveEffects` and `realityChanges` are dropped: the first is a static
+ * handler declaration recoverable from (technique, step), and the second is
+ * already folded into the persisted `RealityState`. `reversibility` is the one
+ * scalar kept out of the effects, because `getSessionSummary` averages it to
+ * report `overallReversibility` — without it every restored session would come
+ * back reading 'low', which is a wrong number rather than a missing one.
+ */
+export interface PersistedActionRecord {
+  technique: string;
+  step: number;
+  stepType: StepType;
+  timestamp: number;
+  reversibility?: ReflexiveEffects['reversibility'];
+}
+
+/**
+ * The tracker state that belongs to a session rather than to the process.
+ *
+ * Both halves matter and they break differently. `realityState` carries
+ * `pathsForeclosed`, which is the set a re-declared commitment is deduplicated
+ * against, and the three constraint counters the 5/10 warning buckets read.
+ * `actionHistory` carries the step tally `getSessionSummary` reports.
+ */
+export interface PersistedReflexivity {
+  realityState: RealityState;
+  actionHistory: PersistedActionRecord[];
+}
+
+/**
  * Tracks reflexive effects across a session
  */
 export class ReflexivityTracker {
@@ -608,6 +639,65 @@ export class ReflexivityTracker {
    */
   public getActionHistory(sessionId: string): ActionRecord[] {
     return this.actionHistory.get(sessionId) || [];
+  }
+
+  /**
+   * Snapshot a session's tracker state for persistence, or undefined if the
+   * session has none yet (no action step has been tracked).
+   */
+  public exportSessionState(sessionId: string): PersistedReflexivity | undefined {
+    const realityState = this.realityStates.get(sessionId);
+    if (!realityState) {
+      return undefined;
+    }
+    return {
+      realityState: { ...realityState },
+      actionHistory: (this.actionHistory.get(sessionId) ?? []).map(record => ({
+        technique: record.technique,
+        step: record.step,
+        stepType: record.stepType,
+        timestamp: record.timestamp,
+        ...(record.reflexiveEffects
+          ? { reversibility: record.reflexiveEffects.reversibility }
+          : {}),
+      })),
+    };
+  }
+
+  /**
+   * Restore a session's tracker state after a restart.
+   *
+   * Refuses to overwrite state this process has already built. A load can
+   * arrive after tracking has begun — the execution layer hydrates a session
+   * mid-request — and the in-memory state is then strictly newer than the file.
+   * Dropping a stale restore loses nothing; applying it would roll the session
+   * back to the last save and re-open commitments the caller has already made.
+   */
+  public importSessionState(sessionId: string, state: PersistedReflexivity | undefined): void {
+    if (!state?.realityState || this.realityStates.has(sessionId)) {
+      return;
+    }
+    this.realityStates.set(sessionId, { ...state.realityState });
+    this.actionHistory.set(
+      sessionId,
+      (state.actionHistory ?? []).map(record => ({
+        sessionId,
+        technique: record.technique,
+        step: record.step,
+        stepType: record.stepType,
+        // trackStep builds exactly this string; a restored record has to read
+        // the same as one that never left the process.
+        actionDescription: `${record.technique} step ${record.step}`,
+        timestamp: record.timestamp,
+        ...(record.reversibility
+          ? { reflexiveEffects: { reversibility: record.reversibility } as ReflexiveEffects }
+          : {}),
+        // Already folded into realityState above; kept empty rather than
+        // reconstructed, since nothing reads a past step's deltas.
+        realityChanges: {},
+      }))
+    );
+    this.sessionTimestamps.set(sessionId, Date.now());
   }
 
   /**

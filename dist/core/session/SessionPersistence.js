@@ -48,13 +48,13 @@ export class SessionPersistence {
     /**
      * Save session to persistent storage
      */
-    async saveSession(sessionId, session) {
+    async saveSession(sessionId, session, reflexivity) {
         await this.initialize();
         if (!this.persistenceAdapter) {
             throw new PersistenceError(ErrorCode.PERSISTENCE_NOT_AVAILABLE, 'Persistence adapter is not available');
         }
         try {
-            const sessionState = this.convertToSessionState(sessionId, session);
+            const sessionState = this.convertToSessionState(sessionId, session, reflexivity);
             await this.persistenceAdapter.save(sessionId, sessionState);
         }
         catch (error) {
@@ -65,9 +65,13 @@ export class SessionPersistence {
         }
     }
     /**
-     * Load session from persistent storage
+     * Load session from persistent storage.
+     *
+     * Reflexivity is returned alongside rather than on the SessionData, because
+     * it belongs to `ReflexivityTracker` and not to the session record — only
+     * `SessionManager`, which owns both, can put it back.
      */
-    async loadSession(sessionId) {
+    async loadSessionWithReflexivity(sessionId) {
         await this.initialize();
         if (!this.persistenceAdapter) {
             throw new PersistenceError(ErrorCode.PERSISTENCE_NOT_AVAILABLE, 'Persistence adapter is not available');
@@ -77,7 +81,10 @@ export class SessionPersistence {
             if (!sessionState) {
                 throw new PersistenceError(ErrorCode.SESSION_NOT_FOUND, `Session ${sessionId} not found`, 'loadSession', { sessionId });
             }
-            return this.convertFromSessionState(sessionState);
+            return {
+                session: this.convertFromSessionState(sessionState),
+                reflexivity: sessionState.reflexivity,
+            };
         }
         catch (error) {
             if (error instanceof PersistenceError) {
@@ -85,6 +92,14 @@ export class SessionPersistence {
             }
             throw new PersistenceError(ErrorCode.PERSISTENCE_ERROR, `Failed to load session ${sessionId}`, 'loadSession', { originalError: error });
         }
+    }
+    /**
+     * Load session from persistent storage, discarding tracker state.
+     *
+     * Kept for callers that only want the session record.
+     */
+    async loadSession(sessionId) {
+        return (await this.loadSessionWithReflexivity(sessionId)).session;
     }
     /**
      * List persisted sessions with optional filtering
@@ -140,9 +155,10 @@ export class SessionPersistence {
     /**
      * Convert SessionData to SessionState for persistence
      */
-    convertToSessionState(sessionId, session) {
+    convertToSessionState(sessionId, session, reflexivity) {
         return {
             id: sessionId,
+            ...(reflexivity ? { reflexivity } : {}),
             problem: session.problem,
             technique: session.technique,
             currentStep: session.history.length,

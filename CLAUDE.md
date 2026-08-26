@@ -86,12 +86,18 @@ form never completes, and an incomplete session emits no final synthesis.
 
 State on disk under `PERSISTENCE_PATH` (default `~/.creative-thinking`):
 
-- `state/plans/<planId>.json` — full plan with `techniques` field that the executor needs (the
+- `plans/<planId>.json` — full plan with `techniques` field that the executor needs (the
   CLI-side plan store mirrors the in-memory `PlanManager` because `ResponseBuilder` strips fields
   the executor relies on; see `src/cli/planStore.ts`)
-- `state/sessions/<sessionId>.json` — session history (auto-saved every `execute` step via
+- `sessions/<sessionId>.json` — session history (auto-saved every `execute` step via
   `autoSave: true` defaulted in `src/cli/commands/execute.ts`)
-- `state/metadata/` — filesystem adapter housekeeping
+- `metadata/` — filesystem adapter housekeeping
+
+There is no `state/` level. These sat under a `state/` prefix here until a probe looked in the
+documented place and found nothing: `src/__tests__/cli/cli.integration.test.ts` points
+`PERSISTENCE_PATH` at a temp directory it happens to name `state`, and that fixture's own layout
+was written up as the product's. A real `~/.creative-thinking` holds `plans`, `sessions` and
+`metadata` at the top level.
 
 Each command also reads a JSON object on stdin (when piped). Flags override stdin fields. Use the
 flag form for the common 5–6 params and the stdin form for technique-specific long-tail fields (e.g.
@@ -99,7 +105,7 @@ flag form for the common 5–6 params and the stdin form for technique-specific 
 
 **Cross-process state hydration.** Because each invocation is a fresh process:
 
-- `socketes plan` writes the plan to `state/plans/`
+- `socketes plan` writes the plan to `plans/`
 - `socketes execute --plan X --session Y` first checks if `X` and `Y` are in the in-process
   `PlanManager` / `SessionManager`. If not, it loads them from disk via `hydratePlan` /
   `loadSessionFromPersistence`. See `src/cli/commands/execute.ts`.
