@@ -552,6 +552,59 @@ describe('ResponseBuilder', () => {
       expect(enhanced.warnings).toBeUndefined();
       expect(enhanced.escapeOptions).toBeUndefined();
     });
+
+    it('does not serve one session the completion block of another (#313)', () => {
+      // The block used to be cached under `completion-${technique}-${length}`,
+      // a key naming nothing about whose session it was, while the value
+      // carried insights, problem, metrics and summary. Two sessions agreeing
+      // on technique and history length were indistinguishable to it.
+      //
+      // Both calls go through ONE builder deliberately. Every other test here
+      // gets a fresh builder from beforeEach, and in production the builder is
+      // rebuilt per tool call — which is the only reason the collision never
+      // reached a caller. This asserts the invariant directly rather than
+      // resting on that lifetime, so hoisting the builder to a field or a
+      // singleton cannot quietly turn a dead defect into a live one.
+      const shared = new ResponseBuilder();
+      const sessionOf = (problem: string, insight: string): SessionData => ({
+        technique: 'six_hats',
+        problem,
+        history: Array.from({ length: 6 }, (_, i) => ({
+          output: 'Step output',
+          currentStep: i + 1,
+          totalSteps: 6,
+          technique: 'six_hats' as const,
+          problem,
+          nextStepNeeded: i < 5,
+          timestamp: new Date().toISOString(),
+        })),
+        branches: {},
+        insights: [insight],
+        lastActivityTime: Date.now(),
+      });
+
+      const first = shared.addCompletionData(
+        { sessionId: 'session-a' },
+        sessionOf('Problem A', 'Insight belonging to A')
+      );
+      const second = shared.addCompletionData(
+        { sessionId: 'session-b' },
+        sessionOf('Problem B', 'Insight belonging to B')
+      );
+
+      // The first has to be right too, or a builder that returns nothing at
+      // all would satisfy the assertions about the second.
+      expect(first.insights).toEqual(['Insight belonging to A']);
+      expect((first.summary as { problem: string }).problem).toBe('Problem A');
+
+      expect(second.insights, "session B was handed session A's insights").toEqual([
+        'Insight belonging to B',
+      ]);
+      expect(
+        (second.summary as { problem: string }).problem,
+        "session B was handed session A's problem"
+      ).toBe('Problem B');
+    });
   });
 
   describe('formatSessionList', () => {

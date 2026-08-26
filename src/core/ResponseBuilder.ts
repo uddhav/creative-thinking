@@ -44,15 +44,6 @@ export class ResponseBuilder {
    */
   private static readonly MAX_EXPORT_BYTES = 4 * 1024 * 1024;
 
-  // Performance optimization: Cache for expensive session metric calculations
-  private metricsCache: Map<
-    string,
-    {
-      value: Record<string, unknown>;
-      historyLength: number;
-    }
-  > = new Map();
-
   // JSON optimizer for response size management
   private jsonOptimizer: JsonOptimizer;
 
@@ -358,20 +349,28 @@ export class ResponseBuilder {
   }
 
   /**
-   * Add completion data to a response
+   * Add completion data to a response.
+   *
+   * Builds the block fresh every time. It used to be memoised under
+   * `completion-${technique}-${history.length}` — a key that named nothing
+   * about whose session it was, while the value carried that session's
+   * insights, problem, metrics and summary. Two sessions agreeing on technique
+   * and history length, which any two full six_hats runs do, were the same
+   * entry as far as the map was concerned (#313).
+   *
+   * Nothing had leaked: `executeThinkingStep` constructs its
+   * `ExecutionResponseBuilder`, and with it this class, once per tool call, so
+   * the map was written on the way out and dropped with the object. That also
+   * means the memoisation never returned a single hit — this method is called
+   * once per session, at the end. It was a cache that could not help and could
+   * only ever be wrong, so it is gone rather than re-keyed: the block is an
+   * object literal over state already in memory, and removing it takes the
+   * only cross-session mutable state in this class with it.
    */
   public addCompletionData(
     response: Record<string, unknown>,
     session: SessionData
   ): Record<string, unknown> {
-    // Performance optimization: Check cache first
-    const cacheKey = `completion-${session.technique}-${session.history.length}`;
-    const cached = this.metricsCache.get(cacheKey);
-
-    if (cached && cached.historyLength === session.history.length) {
-      return { ...response, ...cached.value };
-    }
-
     const completionData: Record<string, unknown> = {
       sessionComplete: true,
       completed: true, // Add for backward compatibility
@@ -411,12 +410,6 @@ export class ResponseBuilder {
         steps: session.escapeRecommendation.steps.slice(0, 3),
       };
     }
-
-    // Cache the computed result
-    this.metricsCache.set(cacheKey, {
-      value: completionData,
-      historyLength: session.history.length,
-    });
 
     return { ...response, ...completionData };
   }
