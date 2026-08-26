@@ -230,6 +230,9 @@ export function discoverTechniques(
     // An adoption marker, not a confidence measure: false = selection ran on
     // surface vocabulary alone.
     cruxDeclared: crux !== undefined,
+    // Carried so nextStepGuidance can hand the caller's own constraints back
+    // in the suggested plan call rather than inventing a substitute.
+    constraints,
     recommendations,
     integrationSuggestions,
     workflow,
