@@ -1,3 +1,9 @@
+## [v2.4.1] - 2026-08-26
+
+### Changes from PR #317
+
+- fix: persist reflexivity state so a re-sent step stops re-warning
+
 ## [v2.4.0] - 2026-08-24
 
 ### Changes from PR #305
