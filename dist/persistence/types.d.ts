@@ -2,6 +2,7 @@
  * Core types and interfaces for session persistence
  */
 import type { PathMemory } from '../ergodicity/types.js';
+import type { PersistedReflexivity } from '../core/ReflexivityTracker.js';
 export type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 'concept_extraction' | 'yes_and' | 'design_thinking' | 'triz' | 'neural_state' | 'temporal_work' | 'collective_intel' | 'disney_method' | 'nine_windows' | 'quantum_superposition' | 'temporal_creativity' | 'paradoxical_problem' | 'meta_learning' | 'biomimetic_path' | 'first_principles' | 'cultural_integration' | 'neuro_computational' | 'criteria_based_analysis' | 'linguistic_forensics' | 'competing_hypotheses' | 'reverse_benchmarking' | 'context_reframing' | 'perception_optimization' | 'anecdotal_signal' | 'cognitive_bias_audit' | 'latticework' | 'keeper_test' | 'steelman_red_team';
 /**
  * Represents input data for a lateral thinking step
@@ -139,6 +140,17 @@ export interface SessionState {
      * number is measured, dropping this is dropping the measurement.
      */
     pathMemory?: PathMemory;
+    /**
+     * What the session has foreclosed, and how many times it has acted.
+     *
+     * `ReflexivityTracker` held this in process-local Maps, so one process per
+     * step meant an empty dedup set on every invocation: a re-sent step
+     * re-announced a commitment the session had already recorded, and the
+     * constraint counters never reached the 5/10 warning buckets. Absent on
+     * sessions written before this field existed, which restores as "no tracker
+     * state yet" — the same position a fresh session starts from.
+     */
+    reflexivity?: PersistedReflexivity;
 }
 /**
  * Session metadata for listings (lightweight)

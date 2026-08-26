@@ -231,10 +231,17 @@ export class SessionManager {
         if (size > this.config.maxSessionSize) {
             throw new SessionError(ErrorCode.SESSION_TOO_LARGE, `Session ${sessionId} exceeds maximum size (${size} > ${this.config.maxSessionSize})`);
         }
-        await this.sessionPersistence.saveSession(sessionId, session);
+        await this.sessionPersistence.saveSession(sessionId, session, 
+        // The tracker is process-local state that belongs to the session; this
+        // manager owns both, so it is the only place that can pair them.
+        this.reflexivityTracker.exportSessionState(sessionId));
     }
     async loadSessionFromPersistence(sessionId) {
-        const session = await this.sessionPersistence.loadSession(sessionId);
+        const { session, reflexivity } = await this.sessionPersistence.loadSessionWithReflexivity(sessionId);
+        // Before the lock: the tracker keys off sessionId, not the session record,
+        // and importSessionState declines to overwrite state this process already
+        // built — so restoring here cannot race the in-memory copy.
+        this.reflexivityTracker.importSessionState(sessionId, reflexivity);
         // Add to in-memory sessions with lock
         return this.sessionLock.withLock(sessionId, () => {
             this.sessions.set(sessionId, session);

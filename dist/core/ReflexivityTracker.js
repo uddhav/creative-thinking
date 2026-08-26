@@ -401,6 +401,60 @@ export class ReflexivityTracker {
         return this.actionHistory.get(sessionId) || [];
     }
     /**
+     * Snapshot a session's tracker state for persistence, or undefined if the
+     * session has none yet (no action step has been tracked).
+     */
+    exportSessionState(sessionId) {
+        const realityState = this.realityStates.get(sessionId);
+        if (!realityState) {
+            return undefined;
+        }
+        return {
+            realityState: { ...realityState },
+            actionHistory: (this.actionHistory.get(sessionId) ?? []).map(record => ({
+                technique: record.technique,
+                step: record.step,
+                stepType: record.stepType,
+                timestamp: record.timestamp,
+                ...(record.reflexiveEffects
+                    ? { reversibility: record.reflexiveEffects.reversibility }
+                    : {}),
+            })),
+        };
+    }
+    /**
+     * Restore a session's tracker state after a restart.
+     *
+     * Refuses to overwrite state this process has already built. A load can
+     * arrive after tracking has begun — the execution layer hydrates a session
+     * mid-request — and the in-memory state is then strictly newer than the file.
+     * Dropping a stale restore loses nothing; applying it would roll the session
+     * back to the last save and re-open commitments the caller has already made.
+     */
+    importSessionState(sessionId, state) {
+        if (!state?.realityState || this.realityStates.has(sessionId)) {
+            return;
+        }
+        this.realityStates.set(sessionId, { ...state.realityState });
+        this.actionHistory.set(sessionId, (state.actionHistory ?? []).map(record => ({
+            sessionId,
+            technique: record.technique,
+            step: record.step,
+            stepType: record.stepType,
+            // trackStep builds exactly this string; a restored record has to read
+            // the same as one that never left the process.
+            actionDescription: `${record.technique} step ${record.step}`,
+            timestamp: record.timestamp,
+            ...(record.reversibility
+                ? { reflexiveEffects: { reversibility: record.reversibility } }
+                : {}),
+            // Already folded into realityState above; kept empty rather than
+            // reconstructed, since nothing reads a past step's deltas.
+            realityChanges: {},
+        })));
+        this.sessionTimestamps.set(sessionId, Date.now());
+    }
+    /**
      * Bucket index for the content-constraint count: 0 below the warning
      * threshold, 1 up to the caution threshold, then geometric (×1.25) — a
      * stateless encoding of "re-fire only on a material increase".

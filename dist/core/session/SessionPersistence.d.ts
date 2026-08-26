@@ -5,6 +5,7 @@
 import type { SessionData } from '../../types/index.js';
 import type { PersistenceAdapter } from '../../persistence/adapter.js';
 import type { SessionState } from '../../persistence/types.js';
+import type { PersistedReflexivity } from '../ReflexivityTracker.js';
 export declare class SessionPersistence {
     private persistenceAdapter;
     private initializationPromise;
@@ -20,9 +21,22 @@ export declare class SessionPersistence {
     /**
      * Save session to persistent storage
      */
-    saveSession(sessionId: string, session: SessionData): Promise<void>;
+    saveSession(sessionId: string, session: SessionData, reflexivity?: PersistedReflexivity): Promise<void>;
     /**
-     * Load session from persistent storage
+     * Load session from persistent storage.
+     *
+     * Reflexivity is returned alongside rather than on the SessionData, because
+     * it belongs to `ReflexivityTracker` and not to the session record — only
+     * `SessionManager`, which owns both, can put it back.
+     */
+    loadSessionWithReflexivity(sessionId: string): Promise<{
+        session: SessionData;
+        reflexivity?: PersistedReflexivity;
+    }>;
+    /**
+     * Load session from persistent storage, discarding tracker state.
+     *
+     * Kept for callers that only want the session record.
      */
     loadSession(sessionId: string): Promise<SessionData>;
     /**

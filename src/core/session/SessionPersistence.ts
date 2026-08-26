@@ -6,6 +6,7 @@
 import type { SessionData, ThinkingOperationData } from '../../types/index.js';
 import type { PersistenceAdapter } from '../../persistence/adapter.js';
 import type { SessionState, PersistenceConfig } from '../../persistence/types.js';
+import type { PersistedReflexivity } from '../ReflexivityTracker.js';
 import { createAdapter, getDefaultConfig } from '../../persistence/factory.js';
 import { PersistenceError, ErrorCode } from '../../errors/types.js';
 
@@ -59,7 +60,11 @@ export class SessionPersistence {
   /**
    * Save session to persistent storage
    */
-  async saveSession(sessionId: string, session: SessionData): Promise<void> {
+  async saveSession(
+    sessionId: string,
+    session: SessionData,
+    reflexivity?: PersistedReflexivity
+  ): Promise<void> {
     await this.initialize();
 
     if (!this.persistenceAdapter) {
@@ -70,7 +75,7 @@ export class SessionPersistence {
     }
 
     try {
-      const sessionState = this.convertToSessionState(sessionId, session);
+      const sessionState = this.convertToSessionState(sessionId, session, reflexivity);
       await this.persistenceAdapter.save(sessionId, sessionState);
     } catch (error) {
       if (error instanceof PersistenceError) {
@@ -86,9 +91,15 @@ export class SessionPersistence {
   }
 
   /**
-   * Load session from persistent storage
+   * Load session from persistent storage.
+   *
+   * Reflexivity is returned alongside rather than on the SessionData, because
+   * it belongs to `ReflexivityTracker` and not to the session record — only
+   * `SessionManager`, which owns both, can put it back.
    */
-  async loadSession(sessionId: string): Promise<SessionData> {
+  async loadSessionWithReflexivity(
+    sessionId: string
+  ): Promise<{ session: SessionData; reflexivity?: PersistedReflexivity }> {
     await this.initialize();
 
     if (!this.persistenceAdapter) {
@@ -108,7 +119,10 @@ export class SessionPersistence {
           { sessionId }
         );
       }
-      return this.convertFromSessionState(sessionState);
+      return {
+        session: this.convertFromSessionState(sessionState),
+        reflexivity: sessionState.reflexivity,
+      };
     } catch (error) {
       if (error instanceof PersistenceError) {
         throw error;
@@ -120,6 +134,15 @@ export class SessionPersistence {
         { originalError: error }
       );
     }
+  }
+
+  /**
+   * Load session from persistent storage, discarding tracker state.
+   *
+   * Kept for callers that only want the session record.
+   */
+  async loadSession(sessionId: string): Promise<SessionData> {
+    return (await this.loadSessionWithReflexivity(sessionId)).session;
   }
 
   /**
@@ -185,9 +208,14 @@ export class SessionPersistence {
   /**
    * Convert SessionData to SessionState for persistence
    */
-  private convertToSessionState(sessionId: string, session: SessionData): SessionState {
+  private convertToSessionState(
+    sessionId: string,
+    session: SessionData,
+    reflexivity?: PersistedReflexivity
+  ): SessionState {
     return {
       id: sessionId,
+      ...(reflexivity ? { reflexivity } : {}),
       problem: session.problem,
       technique: session.technique,
       currentStep: session.history.length,

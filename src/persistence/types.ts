@@ -5,6 +5,7 @@
 // Type-only, so it is erased at compile time and creates no runtime cycle —
 // unlike LateralTechnique below, which is redeclared for exactly that reason.
 import type { PathMemory } from '../ergodicity/types.js';
+import type { PersistedReflexivity } from '../core/ReflexivityTracker.js';
 
 // Define LateralTechnique type locally to avoid circular dependency
 export type LateralTechnique =
@@ -202,6 +203,18 @@ export interface SessionState {
    * number is measured, dropping this is dropping the measurement.
    */
   pathMemory?: PathMemory;
+
+  /**
+   * What the session has foreclosed, and how many times it has acted.
+   *
+   * `ReflexivityTracker` held this in process-local Maps, so one process per
+   * step meant an empty dedup set on every invocation: a re-sent step
+   * re-announced a commitment the session had already recorded, and the
+   * constraint counters never reached the 5/10 warning buckets. Absent on
+   * sessions written before this field existed, which restores as "no tracker
+   * state yet" — the same position a fresh session starts from.
+   */
+  reflexivity?: PersistedReflexivity;
 }
 
 /**
