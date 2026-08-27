@@ -559,8 +559,13 @@ export class ResponseBuilder {
       return undefined;
     }
 
-    const topRecommendations = output.recommendations.slice(0, 3);
-    const selectedTechniques = topRecommendations.map(r => r.technique);
+    // Every recommendation, not a prefix of the array. This took
+    // `.slice(0, 3)`, which selects by POSITION — and `fillCoverageGaps`
+    // appends quality-coverage picks after the sort, so the highest-scoring
+    // entries sit at the end and were exactly what the slice cut. The field
+    // labelled "here is your next call" proposed the three weakest, against a
+    // `scoreProvenance` in the same response saying otherwise.
+    const selectedTechniques = output.recommendations.map(r => r.technique);
 
     return {
       message: `To apply ${selectedTechniques.length > 1 ? 'these techniques' : 'this technique'}, use the plan_thinking_session tool next.`,
@@ -568,25 +573,30 @@ export class ResponseBuilder {
       suggestedParameters: {
         problem: output.problem,
         techniques: selectedTechniques,
-        objectives: output.contextAnalysis?.collaborationNeeded
-          ? ['Achieve team consensus', 'Generate diverse perspectives']
-          : ['Generate innovative solutions', 'Identify potential risks'],
-        constraints: output.warnings?.filter(w => w.includes('constraint')) || undefined,
-        timeframe: output.contextAnalysis?.timeConstraint ? 'quick' : 'thorough',
+        // The caller's own, verbatim. This filtered `warnings` for the
+        // substring "constraint", which returned the server's warnings about
+        // constraints rather than the constraints the caller declared.
+        constraints: output.constraints,
         executionMode: selectedTechniques.length > 1 ? 'parallel' : 'sequential',
+        // `objectives` and `timeframe` are deliberately absent: neither is an
+        // input to discover_techniques, so any value here would be invented.
+        // Filling them is what proposed "Achieve team consensus" for a solo
+        // planning problem. They are real parameters of plan_thinking_session,
+        // where the caller supplies them.
       },
       example: {
         tool: 'plan_thinking_session',
+        note: 'Illustrates the call shape only. The techniques to plan with are in suggestedParameters above, not here.',
         parameters: {
           problem: output.problem,
           techniques: [selectedTechniques[0]],
-          objectives: ['Generate innovative solutions'],
+          objectives: ['<your objectives for this session>'],
           timeframe: 'thorough',
         },
       },
       alternativeApproach:
         selectedTechniques.length > 1
-          ? `You can also plan with multiple techniques: ${selectedTechniques.join(', ')}. The planning tool will create an integrated workflow.`
+          ? `These ${selectedTechniques.length} techniques have no ordering dependency between them; the planning tool returns an executionGraph showing which can run concurrently.`
           : undefined,
     };
   }

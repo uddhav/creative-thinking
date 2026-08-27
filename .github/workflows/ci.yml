@@ -181,11 +181,28 @@ jobs:
         with:
           args: --severity-threshold=high
 
+      # `base` must be the commit to diff FROM, and on a push to the default
+      # branch `github.event.repository.default_branch` resolves to the commit
+      # we just pushed — the same commit as HEAD. TruffleHog then exits 1 with
+      # "BASE and HEAD commits are the same. TruffleHog won't scan anything",
+      # which is what made this job red on every push to main while passing on
+      # every PR, where the two genuinely differ.
+      #
+      # The failure read as noise for long enough that nobody chased it, and
+      # the cost was not the red badge: secret scanning had never actually run
+      # on main. On a push, diff from the commit the branch was at before it
+      # (`github.event.before`), so the range scanned is the range pushed.
+      #
+      # One arm per trigger this workflow declares: a pull_request diffs against
+      # the default branch as before, a push diffs against its own `before`, and
+      # a workflow_dispatch — where `before` is unset — falls back to the last
+      # commit. Verified by CI on this PR rather than locally; a workflow
+      # expression cannot be exercised any other way.
       - name: 🔐 Check for secrets
         uses: trufflesecurity/trufflehog@main
         with:
           path: ./
-          base: ${{ github.event.repository.default_branch }}
+          base: ${{ github.event_name == 'pull_request' && github.event.repository.default_branch || github.event.before || 'HEAD~1' }}
           head: HEAD
 
   # Job 5: Dependency Management

@@ -177,9 +177,16 @@ export interface PersistedActionRecord {
  * `pathsForeclosed`, which is the set a re-declared commitment is deduplicated
  * against, and the three constraint counters the 5/10 warning buckets read.
  * `actionHistory` carries the step tally `getSessionSummary` reports.
+ *
+ * `realityState` is optional because the two halves do not begin at the same
+ * time. `trackStep` records every step it is called for, but only creates a
+ * reality state on the first ACTION step carrying effects or a declared
+ * constraint — so a session that has run three thinking steps has history and
+ * no reality state. Requiring both here made the export return nothing in that
+ * window and silently drop the history with it.
  */
 export interface PersistedReflexivity {
-  realityState: RealityState;
+  realityState?: RealityState;
   actionHistory: PersistedActionRecord[];
 }
 
@@ -643,16 +650,25 @@ export class ReflexivityTracker {
 
   /**
    * Snapshot a session's tracker state for persistence, or undefined if the
-   * session has none yet (no action step has been tracked).
+   * session has neither half yet.
+   *
+   * Gated on EITHER half being present, not on `realityState` alone. That
+   * earlier gate discarded `actionHistory` for every step before the first
+   * action step — `trackStep` records all of them, but only creates a reality
+   * state once a step carries effects or a declared constraint. A five-step
+   * session run one process per step came back reporting three tracked steps
+   * where one process reports five, and the guard that was meant to catch it
+   * asserted only `> 1`, which three satisfies.
    */
   public exportSessionState(sessionId: string): PersistedReflexivity | undefined {
     const realityState = this.realityStates.get(sessionId);
-    if (!realityState) {
+    const history = this.actionHistory.get(sessionId) ?? [];
+    if (!realityState && history.length === 0) {
       return undefined;
     }
     return {
-      realityState: { ...realityState },
-      actionHistory: (this.actionHistory.get(sessionId) ?? []).map(record => ({
+      ...(realityState ? { realityState: { ...realityState } } : {}),
+      actionHistory: history.map(record => ({
         technique: record.technique,
         step: record.step,
         stepType: record.stepType,
@@ -674,10 +690,15 @@ export class ReflexivityTracker {
    * back to the last save and re-open commitments the caller has already made.
    */
   public importSessionState(sessionId: string, state: PersistedReflexivity | undefined): void {
-    if (!state?.realityState || this.realityStates.has(sessionId)) {
+    // Either map having an entry means this process has already tracked this
+    // session, so the file is the older copy. Checking both, not just
+    // `realityStates`: history exists on its own before the first action step.
+    if (!state || this.realityStates.has(sessionId) || this.actionHistory.has(sessionId)) {
       return;
     }
-    this.realityStates.set(sessionId, { ...state.realityState });
+    if (state.realityState) {
+      this.realityStates.set(sessionId, { ...state.realityState });
+    }
     this.actionHistory.set(
       sessionId,
       (state.actionHistory ?? []).map(record => ({

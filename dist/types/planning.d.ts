@@ -113,6 +113,13 @@ export interface DiscoverTechniquesOutput {
     problem: string;
     problemCategory: string;
     /**
+     * Echo of the caller's declared constraints, carried so `nextStepGuidance`
+     * can hand them back in the suggested plan call. It used to synthesise that
+     * field by grepping `warnings` for the word "constraint", which returned the
+     * server's remarks rather than the caller's declarations.
+     */
+    constraints?: string[];
+    /**
      * How many problem categories cleared the evidence bar — the signal that
      * sizes the recommendation set (≥3 high, 2 medium, else low). Surfaced so
      * callers can see the selector's grounds instead of trusting a bare list.

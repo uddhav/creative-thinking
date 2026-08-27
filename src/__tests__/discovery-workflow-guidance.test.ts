@@ -92,11 +92,19 @@ describe('Discovery Workflow Guidance', () => {
     if (response.recommendations.length > 1) {
       expect(response.nextStepGuidance?.message).toContain('these techniques');
       expect(response.nextStepGuidance?.alternativeApproach).toBeDefined();
-      expect(response.nextStepGuidance?.alternativeApproach).toContain('multiple techniques');
+      // Points at the execution graph rather than re-offering the techniques
+      // already in suggestedParameters. That sentence read as an alternative
+      // back when the suggestion was a three-item slice; now that it carries
+      // every recommendation, offering the same list again said nothing.
+      expect(response.nextStepGuidance?.alternativeApproach).toContain('executionGraph');
     }
   });
 
-  it('should adjust timeframe based on time constraints', () => {
+  it('does not put a timeframe in the suggested call', () => {
+    // `timeframe` is a plan_thinking_session parameter, not a discovery one,
+    // so discovery has nothing to echo and used to derive a value instead.
+    // The caller chooses it at plan time; a server guess in the field labelled
+    // "your next call" reads as an instruction.
     const input: DiscoverTechniquesInput = {
       problem: 'Urgent deadline for project completion',
       constraints: ['Must complete by end of day'],
@@ -105,11 +113,16 @@ describe('Discovery Workflow Guidance', () => {
     const result = server.discoverTechniques(input);
     const response = JSON.parse(result.content[0].text) as DiscoveryResponse;
 
+    // The signal itself still has to be reported — it is real, and dropping
+    // the derived parameter must not take the observation with it.
     expect(response.contextAnalysis?.timeConstraint).toBe(true);
-    expect(response.nextStepGuidance?.suggestedParameters.timeframe).toBe('quick');
+    expect(response.nextStepGuidance?.suggestedParameters.timeframe).toBeUndefined();
   });
 
-  it('should suggest collaborative objectives when needed', () => {
+  it('does not invent objectives, and still reports that collaboration is needed', () => {
+    // Same shape as the timeframe case: `objectives` is not a discovery input.
+    // Deriving it from `collaborationNeeded` is what proposed "Achieve team
+    // consensus" for a solo planning problem in a production session.
     const input: DiscoverTechniquesInput = {
       problem: 'Team collaboration and stakeholder alignment',
       context: 'Multiple team members need to contribute',
@@ -119,12 +132,22 @@ describe('Discovery Workflow Guidance', () => {
     const response = JSON.parse(result.content[0].text) as DiscoveryResponse;
 
     expect(response.contextAnalysis?.collaborationNeeded).toBe(true);
-    expect(response.nextStepGuidance?.suggestedParameters.objectives).toContain(
-      'Achieve team consensus'
-    );
-    expect(response.nextStepGuidance?.suggestedParameters.objectives).toContain(
-      'Generate diverse perspectives'
-    );
+    expect(response.nextStepGuidance?.suggestedParameters.objectives).toBeUndefined();
+  });
+
+  it("echoes the caller's constraints into the suggested call", () => {
+    const constraints = ['Must complete by end of day', 'No external vendors'];
+    const input: DiscoverTechniquesInput = {
+      problem: 'Urgent deadline for project completion',
+      constraints,
+    };
+
+    const result = server.discoverTechniques(input);
+    const response = JSON.parse(result.content[0].text) as DiscoveryResponse;
+
+    // Previously this field was `warnings.filter(w => w.includes('constraint'))`
+    // — the server's own remarks about constraints, not the caller's.
+    expect(response.nextStepGuidance?.suggestedParameters.constraints).toEqual(constraints);
   });
 
   it('should not provide guidance when no techniques are recommended', () => {

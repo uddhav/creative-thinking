@@ -98,9 +98,16 @@ export interface PersistedActionRecord {
  * `pathsForeclosed`, which is the set a re-declared commitment is deduplicated
  * against, and the three constraint counters the 5/10 warning buckets read.
  * `actionHistory` carries the step tally `getSessionSummary` reports.
+ *
+ * `realityState` is optional because the two halves do not begin at the same
+ * time. `trackStep` records every step it is called for, but only creates a
+ * reality state on the first ACTION step carrying effects or a declared
+ * constraint — so a session that has run three thinking steps has history and
+ * no reality state. Requiring both here made the export return nothing in that
+ * window and silently drop the history with it.
  */
 export interface PersistedReflexivity {
-    realityState: RealityState;
+    realityState?: RealityState;
     actionHistory: PersistedActionRecord[];
 }
 /**
@@ -171,7 +178,15 @@ export declare class ReflexivityTracker {
     getActionHistory(sessionId: string): ActionRecord[];
     /**
      * Snapshot a session's tracker state for persistence, or undefined if the
-     * session has none yet (no action step has been tracked).
+     * session has neither half yet.
+     *
+     * Gated on EITHER half being present, not on `realityState` alone. That
+     * earlier gate discarded `actionHistory` for every step before the first
+     * action step — `trackStep` records all of them, but only creates a reality
+     * state once a step carries effects or a declared constraint. A five-step
+     * session run one process per step came back reporting three tracked steps
+     * where one process reports five, and the guard that was meant to catch it
+     * asserted only `> 1`, which three satisfies.
      */
     exportSessionState(sessionId: string): PersistedReflexivity | undefined;
     /**
