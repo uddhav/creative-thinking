@@ -1,8 +1,31 @@
-## [v2.4.1] - 2026-08-26
+## [v2.4.3] - 2026-08-27
+
+### Changes from PR #323
+
+- fix: stop discovery from advising against its own scoring — `nextStepGuidance` proposed the three
+  lowest-scoring techniques because it sliced the recommendation array by position, and
+  quality-coverage picks are appended after the sort. It now carries every recommendation, echoes
+  the caller's `constraints`, and no longer invents `objectives` or `timeframe`, neither of which is
+  an input to `discover_techniques`.
+- fix: persist tracker history from the first step, not the first action step. **This corrects a
+  defect in v2.4.2:** a restored session under-reported `reflexivity.summary.totalActions`, omitting
+  every step that ran before the session's first action step. The dedup behaviour v2.4.2 shipped was
+  correct throughout; only the count was low.
+- fix(ci): TruffleHog was passed a base and head that resolve to the same commit on a push to
+  `main`, so it exited before scanning. Secret scanning had never actually run on the release
+  branch.
+
+## [v2.4.2] - 2026-08-26
 
 ### Changes from PR #317
 
 - fix: persist reflexivity state so a re-sent step stops re-warning
+
+## [v2.4.1] - 2026-08-26
+
+### Changes from PR #315
+
+- fix: drop the completion-block cache that could only ever be wrong
 
 ## [v2.4.0] - 2026-08-24
 
