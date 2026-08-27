@@ -151,12 +151,28 @@ describe('a plan whose nodes omit the problem is still executable', () => {
       'executing the node verbatim did not start a session'
     ).toBeDefined();
 
-    // Hydration is the point: the plan stores one copy, and the guidance the
-    // caller acts on is still about their actual problem. Without this, a fix
-    // that dropped the problem everywhere and never resolved it would pass
-    // every assertion above.
-    const echoed = `${stepResponse.problem ?? ''}${stepResponse.nextStepGuidance ?? ''}`;
-    expect(echoed, 'the server never resolved the problem from the plan').toContain(PROBLEM);
+    // Resolution reached the response at all.
+    expect(stepResponse.problem, 'the server never resolved the problem from the plan').toBe(
+      PROBLEM
+    );
+
+    // And separately, the guidance the caller acts on names the problem
+    // concretely. Asserted on nextStepGuidance ALONE on purpose: an earlier
+    // version concatenated it with the `problem` echo before matching, so it
+    // passed on the echo and proved nothing about interpolation — which is the
+    // central claim of moving the reference to plan time only.
+    expect(
+      stepResponse.nextStepGuidance ?? '',
+      'execute-time guidance was not interpolated with the real problem'
+    ).toContain(PROBLEM);
+
+    // The plan-time stand-in must never reach a caller at execute time. If a
+    // stored step description were surfaced here, the caller would be told to
+    // work on "the problem stated in this plan" instead of their problem.
+    expect(
+      JSON.stringify(stepResponse),
+      'the plan-time reference phrase leaked into an execute response'
+    ).not.toContain('the problem stated in this plan');
   }, 60_000);
 
   it('refuses when the problem is absent and the plan is unknown', async () => {

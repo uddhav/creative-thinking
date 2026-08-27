@@ -28,6 +28,7 @@ import { executeThinkingStep } from './layers/execution.js';
 export * from './types/index.js';
 export * from './types/planning.js';
 // Server modules
+import { SessionEncoder } from './core/session/SessionEncoder.js';
 import { SessionOperationsHandler } from './server/SessionOperationsHandler.js';
 import { SamplingHandler } from './server/SamplingHandler.js';
 /**
@@ -140,7 +141,14 @@ export class LateralThinkingServer {
             if (input && typeof input === 'object') {
                 const raw = input;
                 if ((raw.problem === undefined || raw.problem === '') && typeof raw.planId === 'string') {
-                    const planned = this.sessionManager.getPlan(raw.planId)?.problem;
+                    // Two homes, because a planId has two forms. An ordinary id is in
+                    // the PlanManager; an ENCODED id carries the session inside itself
+                    // and is decoded further down, in ExecutionValidator — too late to
+                    // help here. Consulting only the manager would refuse an encoded
+                    // resume with "no plan to resolve from" while the problem sat
+                    // encoded in the id it was handed.
+                    const planned = this.sessionManager.getPlan(raw.planId)?.problem ??
+                        SessionEncoder.decode(raw.planId)?.problem;
                     if (planned) {
                         raw.problem = planned;
                     }

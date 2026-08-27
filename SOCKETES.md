@@ -331,7 +331,7 @@ every step.
 | `--plan <id>`        | string (required)            | `planId` from `socketes plan`.                                                                |
 | `--session <id>`     | string                       | Omit on the first step; pass it back on every subsequent step.                                |
 | `--technique <id>`   | string (required)            | Must be one of the techniques in the plan.                                                    |
-| `--problem <s>`      | string (required)            | Must match the plan's problem.                                                                |
+| `--problem <s>`      | string (optional)            | Resolved from `--plan` when omitted. Send it only to override; a sent value wins.             |
 | `--step <n>`         | number (required, 1-indexed) | Step within this technique.                                                                   |
 | `--total-steps <n>`  | number (required)            | Total steps for this technique.                                                               |
 | `--output <s>`       | string (required)            | The model's thinking for this step. May be empty string but the field must be present.        |
