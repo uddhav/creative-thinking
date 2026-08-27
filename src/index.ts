@@ -167,6 +167,42 @@ export class LateralThinkingServer {
         return this.handleSessionOperation(input);
       }
 
+      // Resolve the problem from the plan before validating.
+      //
+      // The plan response states the problem once at plan scope, and its
+      // execution-graph nodes omit it, so a caller executing those nodes
+      // verbatim sends no `problem` at all — 25 copies of it per plan were
+      // half the payload that pushed the plan response past a host's
+      // tool-result limit. A caller-sent value wins: only the caller can
+      // revise its own statement of the problem mid-session.
+      //
+      // Done here rather than deeper because this is the last point where the
+      // value may legitimately be absent; every layer below is entitled to a
+      // string, and making the field optional on ExecuteThinkingStepInput
+      // propagates `string | undefined` through ThinkingOperationData and
+      // every validator and orchestrator that reads it.
+      if (input && typeof input === 'object') {
+        const raw = input as Record<string, unknown>;
+        if ((raw.problem === undefined || raw.problem === '') && typeof raw.planId === 'string') {
+          const planned = this.sessionManager.getPlan(raw.planId)?.problem;
+          if (planned) {
+            raw.problem = planned;
+          } else {
+            // Optional must not mean silent: with no plan to resolve from,
+            // there is no problem anywhere, and the step would otherwise run
+            // against an empty string.
+            return this.responseBuilder.buildErrorResponse(
+              new Error(
+                `execute_thinking_step needs a problem: none was sent, and plan ${raw.planId} ` +
+                  `is not available to resolve one from. Send \`problem\`, or use a planId from ` +
+                  `plan_thinking_session in this session.`
+              ),
+              'execution'
+            );
+          }
+        }
+      }
+
       // Validate as thinking operation
       const validator = ValidationStrategyFactory.createValidator('execute');
       const validation = validator.validate(input);

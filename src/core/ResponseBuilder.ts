@@ -229,6 +229,14 @@ export class ResponseBuilder {
 
     const transformedOutput: Record<string, unknown> = {
       planId: output.planId,
+      // The one authoritative copy. Step descriptions used to interpolate the
+      // problem and every graph node used to carry it in `parameters`, so a
+      // five-technique plan shipped 51 copies — 50.6% of the payload on a
+      // 622-byte problem, and past the host's tool-result limit on a longer
+      // one. The plan states it once; steps reference it; execute resolves it
+      // from the plan. This allowlist never copied it at all, which is why
+      // "reference the plan's problem" had nothing to reference.
+      problem: output.problem,
       workflow: flatWorkflow,
       estimatedSteps: output.totalSteps,
       successCriteria: output.successMetrics || [],

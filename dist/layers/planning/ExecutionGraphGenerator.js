@@ -69,7 +69,7 @@ export class ExecutionGraphGenerator {
             // Determine dependencies based on technique type
             const dependencies = this.getDependencies(technique, i, startNodeId);
             // Build complete parameters for execute_thinking_step
-            const parameters = this.buildParameters(planId, problem, technique, i + 1, totalSteps, assignedStimulus !== undefined ? { ...step, stimulus: assignedStimulus } : step);
+            const parameters = this.buildParameters(planId, technique, i + 1, totalSteps, assignedStimulus !== undefined ? { ...step, stimulus: assignedStimulus } : step);
             nodes.push({
                 id: nodeId,
                 stepNumber,
@@ -172,13 +172,18 @@ export class ExecutionGraphGenerator {
         }
     }
     /**
-     * Build complete parameters for execute_thinking_step
+     * Build complete parameters for execute_thinking_step.
+     *
+     * These parameters are the contract: a caller runs them verbatim, filling
+     * only `output` and threading `sessionId`. `problem` is deliberately absent
+     * — one copy per node meant 25 copies of the caller's problem in a
+     * five-technique plan, half the total echo. `execute_thinking_step` resolves
+     * it from `planId` instead, which is why `problem` is optional there.
      */
-    static buildParameters(planId, problem, technique, currentStep, totalSteps, step) {
+    static buildParameters(planId, technique, currentStep, totalSteps, step) {
         const baseParams = {
             planId,
             technique,
-            problem,
             currentStep,
             totalSteps,
             output: '',

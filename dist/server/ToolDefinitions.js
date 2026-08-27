@@ -980,15 +980,11 @@ export const EXECUTE_THINKING_STEP_TOOL = {
         // session operation needs none of them.
         oneOf: [
             {
-                required: [
-                    'planId',
-                    'technique',
-                    'problem',
-                    'currentStep',
-                    'totalSteps',
-                    'output',
-                    'nextStepNeeded',
-                ],
+                // `problem` is NOT required: the plan states it once at plan scope and
+                // the execution graph's nodes omit it, so a caller running those nodes
+                // verbatim sends none. The server resolves it from `planId`. Sending it
+                // still works and still wins — this is a relaxation, not a removal.
+                required: ['planId', 'technique', 'currentStep', 'totalSteps', 'output', 'nextStepNeeded'],
             },
             { required: ['sessionOperation'] },
         ],

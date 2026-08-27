@@ -70,7 +70,9 @@ export function planThinkingSession(input, sessionManager, techniqueRegistry) {
     const workflow = techniques.map((technique, techniqueIndex) => {
         const handler = techniqueRegistry.getHandler(technique);
         const info = handler.getTechniqueInfo();
-        const steps = generateStepsForTechnique(technique, problem, info.totalSteps, handler, resolvedPersona);
+        // No problem passed: plan-time guidance references it rather than
+        // inlining it. See PLAN_TIME_PROBLEM_REFERENCE.
+        const steps = generateStepsForTechnique(technique, info.totalSteps, handler, resolvedPersona);
         // Server-assigned entropy (P3): the stimulus is a plan-time value — drawn
         // once, seeded by planId, fixed for the plan's lifetime. The index keeps
         // repeated instances of one technique from sharing a draw.
@@ -197,10 +199,26 @@ export function planThinkingSession(input, sessionManager, techniqueRegistry) {
     }
     return plan;
 }
-function generateStepsForTechnique(technique, problem, totalSteps, handler, persona) {
+/**
+ * Stands in for the problem when guidance is generated at PLAN time.
+ *
+ * Handlers interpolate whatever they are given, so passing a reference phrase
+ * yields "Excavate the decision history for the problem stated in this plan"
+ * without any rewriting of interpolated output. The plan carries the problem
+ * once at plan scope; this phrase points at it.
+ *
+ * Execute time still passes the real problem — `ExecutionResponseBuilder`
+ * regenerates guidance per step — so the text a caller actually acts on names
+ * the problem concretely. That also keeps the evals interpolation ratchet
+ * meaningful: it measures `handler.getStepGuidance(step, PROBLEM_SENTINEL)`
+ * directly, so handlers must still interpolate, and this changes only what the
+ * planning layer hands them.
+ */
+const PLAN_TIME_PROBLEM_REFERENCE = 'the problem stated in this plan';
+function generateStepsForTechnique(technique, totalSteps, handler, persona) {
     const steps = [];
     for (let i = 1; i <= totalSteps; i++) {
-        let guidance = handler.getStepGuidance(i, problem);
+        let guidance = handler.getStepGuidance(i, PLAN_TIME_PROBLEM_REFERENCE);
         // Inject persona guidance if active (using static method)
         if (persona) {
             guidance = PersonaGuidanceInjector.injectGuidance(guidance, persona, i, totalSteps);

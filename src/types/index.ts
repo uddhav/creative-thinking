@@ -211,6 +211,16 @@ export interface ExecuteThinkingStepInput {
   planId: string;
   sessionId?: string;
   technique: LateralTechnique;
+  /**
+   * Always a string by the time the execution layer sees it, but callers may
+   * omit it: the plan states the problem once at plan scope rather than
+   * copying it into every graph node, so a caller running those nodes verbatim
+   * sends none. `processLateralThinking` resolves it from `planId` before this
+   * type is constructed — deliberately there rather than here, because making
+   * the field optional on this interface propagates `string | undefined`
+   * through ThinkingOperationData and every validator and orchestrator that
+   * reads it, for a value that is guaranteed present downstream anyway.
+   */
   problem: string;
   currentStep: number;
   totalSteps: number;
