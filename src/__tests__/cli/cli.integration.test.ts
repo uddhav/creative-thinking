@@ -319,9 +319,16 @@ describe('socketes CLI cross-process flow', () => {
     // The counters are the other half of the same loss. Without this, restoring
     // only pathsForeclosed would satisfy the assertion above while the 5/10
     // thresholds stayed permanently unreachable on this surface.
+    //
+    // Asserted as an EXACT count, not a floor. The first version of this used
+    // `toBeGreaterThan(1)` and passed at 3 against a build that persisted only
+    // from the first action step onward, silently dropping the two thinking
+    // steps before it — a floor cannot tell partial restoration from complete,
+    // which is the one distinction this guard exists to make. One record per
+    // execute call: five steps, then the re-send.
     expect(
       resent.reflexivity?.summary?.totalActions,
-      'the fresh process saw only the step in front of it'
-    ).toBeGreaterThan(1);
+      'the restored session lost steps that ran before its first action step'
+    ).toBe(actionStep + 1);
   }, 60000);
 });
