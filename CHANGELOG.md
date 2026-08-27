@@ -1,3 +1,9 @@
+## [v2.4.2] - 2026-08-27
+
+### Changes from PR #323
+
+- fix: stop discovery from advising against its own scoring
+
 ## [v2.4.0] - 2026-08-24
 
 ### Changes from PR #305
