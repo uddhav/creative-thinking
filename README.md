@@ -1215,7 +1215,7 @@ The server supports environment variables for advanced features:
 - `NEURAL_OPTIMIZATION=true` - Enable neural state optimization features
 - `CULTURAL_FRAMEWORKS=framework1,framework2` - Specify available cultural frameworks
 - `DISABLE_THOUGHT_LOGGING=true` - Disable visual output logging
-- `PERSISTENCE_ADAPTER=filesystem|postgres` - Choose storage backend (default: filesystem)
+- `PERSISTENCE_TYPE=filesystem|postgres` - Choose storage backend (default: filesystem)
 - `PERSISTENCE_PATH=/path/to/sessions` - Custom session storage location (filesystem only)
 - `DATABASE_URL=postgres://...` - PostgreSQL connection string (postgres adapter only)
 - `RESPONSE_VERBOSITY=minimal|full` - Default execute-response verbosity when a call omits
@@ -1408,7 +1408,7 @@ The server supports two persistence backends for session storage:
 Simple file-based storage ideal for single-server deployments and development:
 
 ```bash
-export PERSISTENCE_ADAPTER=filesystem
+export PERSISTENCE_TYPE=filesystem
 export PERSISTENCE_PATH=~/.creative-thinking  # Optional, defaults to home directory
 ```
 
@@ -1427,7 +1427,7 @@ Recommended for production deployments requiring:
 - Advanced querying and search capabilities
 
 ```bash
-export PERSISTENCE_ADAPTER=postgres
+export PERSISTENCE_TYPE=postgres
 export DATABASE_URL=postgres://user:pass@localhost/creative_thinking
 ```
 

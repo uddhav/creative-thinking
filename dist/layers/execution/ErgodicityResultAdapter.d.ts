@@ -51,7 +51,8 @@ export interface ErgodicityResult {
         currentFlexibility: number;
         pathDivergence: number;
         constraintLevel: number;
-        optionSpaceSize: number;
+        /** Absent when nothing measured it — only SCAMPER reports options. */
+        optionSpaceSize?: number;
     };
     warnings: Array<{
         type: string;

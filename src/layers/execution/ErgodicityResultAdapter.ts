@@ -56,7 +56,8 @@ export interface ErgodicityResult {
     currentFlexibility: number;
     pathDivergence: number;
     constraintLevel: number;
-    optionSpaceSize: number;
+    /** Absent when nothing measured it — only SCAMPER reports options. */
+    optionSpaceSize?: number;
   };
   warnings: Array<{
     type: string;
@@ -150,10 +151,17 @@ export class ErgodicityResultAdapter {
     // since only SCAMPER reports options at all. So the one number meant to
     // say how much room is left was at its most reassuring when it knew
     // nothing.
-    const measuredVelocity = metrics.optionVelocity ?? 0;
-    const adjustedOptionSpace = pathMemory
-      ? measuredVelocity * Math.max(0.5, 1 - pathMemory.pathHistory.length * 0.01)
-      : measuredVelocity;
+    // Undefined when nothing measured it, rather than 0. Only SCAMPER reports
+    // options, so `?? 0` published a hard zero on every other technique — and
+    // a zero option space reads as "no room left", which is a claim, where
+    // absence reads as "not measured", which is the truth.
+    const measuredVelocity = metrics.optionVelocity;
+    const adjustedOptionSpace =
+      measuredVelocity === undefined
+        ? undefined
+        : pathMemory
+          ? measuredVelocity * Math.max(0.5, 1 - pathMemory.pathHistory.length * 0.01)
+          : measuredVelocity;
 
     return {
       currentFlexibility,

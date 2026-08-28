@@ -200,6 +200,15 @@ export const EXECUTE_THINKING_STEP_TOOL: Tool = {
         type: 'string',
         description: 'REQUIRED: The problem being solved. Must match previous calls.',
       },
+      numbering: {
+        type: 'string',
+        enum: ['technique', 'plan'],
+        description:
+          "OPTIONAL: which convention currentStep uses. 'technique' (default) counts within " +
+          "the current technique; 'plan' counts across the whole plan. Both are accepted " +
+          'either way — send this to state it outright instead of leaving the server to ' +
+          'infer it from totalSteps, which is the only other thing that can tell them apart.',
+      },
       currentStep: {
         type: 'number',
         description:

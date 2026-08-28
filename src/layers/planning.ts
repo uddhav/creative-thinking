@@ -531,32 +531,36 @@ function createIntegrationStrategy(
   };
 }
 
+/**
+ * Success criteria for the plan.
+ *
+ * A caller's own objectives come first and by name. This function received
+ * `objectives` and used them only to keyword-match 'innovative' / 'practical'
+ * / 'consensus' and append MORE generic strings, so four specific objectives
+ * produced four criteria mentioning none of them — the plan echoed the
+ * objectives back under `objectives` and then measured something else.
+ *
+ * The generic metrics still appear, after the caller's, because they cover
+ * ground an objective usually does not state (risks, problem clarity). When no
+ * objectives are supplied they are all there is.
+ */
 function generateSuccessMetrics(objectives?: string[], timeframe?: string): string[] {
+  const declared = (objectives ?? [])
+    .map(objective => objective.trim())
+    .filter(objective => objective.length > 0)
+    .map(objective => `Objective met: ${objective}`);
+
   const baseMetrics = [
     'Generated at least 3 viable solutions',
     'Identified and addressed key risks',
     'Achieved clarity on problem definition',
   ];
 
-  if (objectives) {
-    objectives.forEach(obj => {
-      if (obj.toLowerCase().includes('innovative')) {
-        baseMetrics.push('Created at least 1 breakthrough concept');
-      }
-      if (obj.toLowerCase().includes('practical')) {
-        baseMetrics.push('Developed implementable solution');
-      }
-      if (obj.toLowerCase().includes('consensus')) {
-        baseMetrics.push('Achieved stakeholder alignment');
-      }
-    });
-  }
-
   if (timeframe === 'thorough') {
     baseMetrics.push('Thorough analysis from all angles');
   }
 
-  return baseMetrics;
+  return [...declared, ...baseMetrics];
 }
 
 function generateRiskMitigation(
