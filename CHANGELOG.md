@@ -1,3 +1,9 @@
+## [v2.4.6] - 2026-08-28
+
+### Changes from PR #329
+
+- fix(ci): make the version bump a consequence of the tag, not a race with it
+
 ## [v2.4.5] - 2026-08-28
 
 ### Changes from PR #327
