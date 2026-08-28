@@ -1,8 +1,14 @@
-## [v2.4.4] - 2026-08-28
+## [v2.4.5] - 2026-08-28
 
 ### Changes from PR #327
 
 - fix: the field-report batch, and a graph that contradicted itself
+
+## [v2.4.4] - 2026-08-28
+
+### Changes from PR #326
+
+- fix: state the problem once in the plan instead of fifty-one times
 
 ## [v2.4.3] - 2026-08-27
 
