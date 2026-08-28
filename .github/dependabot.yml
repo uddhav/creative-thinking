@@ -9,7 +9,18 @@ updates:
       time: '09:00'
       timezone: 'America/New_York'
     open-pull-requests-limit: 10
-    target-branch: 'develop'
+    # No target-branch: updates go to the default branch.
+    #
+    # This said `target-branch: 'develop'`, and `develop` does not exist.
+    # Scheduled updates therefore went nowhere. Security updates were
+    # unaffected because they ignore target-branch, which is why npm PRs
+    # kept arriving and hid the problem -- but github-actions has no
+    # security path, so its last update was 2025-07-21.
+    #
+    # That gap is why the workflows were still on floating @master/@main
+    # refs when a full-SHA pinning policy took effect. Pins matter more
+    # here than tags did: a tag drifts forward on its own, a pin is frozen
+    # until Dependabot moves it.
     reviewers:
       - 'uddhav'
     labels:
@@ -78,7 +89,7 @@ updates:
       time: '09:00'
       timezone: 'America/New_York'
     open-pull-requests-limit: 5
-    target-branch: 'develop'
+    # No target-branch: see the note on the npm ecosystem above.
     reviewers:
       - 'uddhav'
     labels:
