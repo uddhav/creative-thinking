@@ -104,7 +104,7 @@ jobs:
       # action logs, but the SARIF upload will fail on personal public repos.
       # continue-on-error keeps the overall check green.
       - name: 🔍 Initialize CodeQL
-        uses: github/codeql-action/init@6f5948dfacef28e207b48d0905cf90c03365536d # v3
+        uses: github/codeql-action/init@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28 # v4.37.8
         continue-on-error: true
         with:
           languages: javascript-typescript
