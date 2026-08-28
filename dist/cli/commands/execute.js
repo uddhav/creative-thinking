@@ -1,5 +1,6 @@
 import { getServer } from '../server.js';
 import { emit, mergeInput, parseNumber, readStdinJSON, unwrapResponse } from '../io.js';
+import { recordCall, recordResult } from '../../server/callLog.js';
 import { hydratePlan } from '../planStore.js';
 export function registerExecute(yargs) {
     return yargs.command('execute', 'Run a single step of a planned thinking session', y => y
@@ -68,7 +69,9 @@ async function handle(argv) {
         hydratePlan(server, planId);
     if (sessionId)
         await hydrateSession(server, sessionId);
+    recordCall('execute_thinking_step', input);
     const envelope = await server.executeThinkingStep(input);
+    recordResult('execute_thinking_step', envelope);
     const { data, isError } = unwrapResponse(envelope);
     emit(data, isError);
 }

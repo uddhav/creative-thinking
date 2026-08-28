@@ -47,7 +47,10 @@ async function replayFixture(fixtureFile) {
   const lines = readFileSync(path.join(FIXTURES_DIR, fixtureFile), 'utf8')
     .split('\n')
     .filter(l => l.trim());
-  const calls = lines.map(l => JSON.parse(l));
+  // A live CT_CALL_LOG interleaves `kind: 'call'` and `kind: 'result'` lines;
+  // only the calls are replayable. Fixtures recorded before the result lines
+  // existed carry no `kind` at all, so absence means call.
+  const calls = lines.map(l => JSON.parse(l)).filter(entry => entry.kind !== 'result');
 
   const client = new ReplayClient({ serverPath: SERVER_PATH });
   await client.connect();

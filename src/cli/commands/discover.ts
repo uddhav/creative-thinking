@@ -1,6 +1,7 @@
 import type { Argv, ArgumentsCamelCase } from 'yargs';
 import { getServer } from '../server.js';
 import { emit, mergeInput, parseList, parseNumber, readStdinJSON, unwrapResponse } from '../io.js';
+import { recordCall, recordResult } from '../../server/callLog.js';
 import { CRUX_VALUES } from '../../types/planning.js';
 
 interface DiscoverArgs {
@@ -86,7 +87,12 @@ async function handle(argv: ArgumentsCamelCase<DiscoverArgs>): Promise<void> {
   );
 
   const server = getServer();
+  // Same instrument the MCP path writes to, so evidence accumulates from
+  // socketes too — it recorded nothing here until the log moved out of
+  // RequestHandlers, which the CLI never reaches.
+  recordCall('discover_techniques', input);
   const envelope = server.discoverTechniques(input);
+  recordResult('discover_techniques', envelope);
   const { data, isError } = unwrapResponse(envelope);
   emit(data, isError);
 }
