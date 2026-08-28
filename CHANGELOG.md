@@ -1,3 +1,9 @@
+## [v2.4.7] - 2026-08-28
+
+### Changes from PR #332
+
+- fix(ci): pin every action to a full commit SHA
+
 ## [v2.4.6] - 2026-08-28
 
 ### Changes from PR #329
