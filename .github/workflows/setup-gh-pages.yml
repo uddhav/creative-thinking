@@ -12,29 +12,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout default branch
-        uses: actions/checkout@v4
-        
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
       - name: Create and push gh-pages branch
         run: |
           git config user.name github-actions[bot]
           git config user.email github-actions[bot]@users.noreply.github.com
-          
+
           # Check if gh-pages exists
           if git ls-remote --heads origin gh-pages | grep gh-pages; then
             echo "gh-pages branch already exists"
             exit 0
           fi
-          
+
           # Create orphan gh-pages branch
           git checkout --orphan gh-pages
-          
+
           # Remove all files
           git rm -rf .
-          
+
           # Create initial benchmark structure
           mkdir -p benchmarks
           echo '{"lastUpdate": 0, "entries": {}}' > benchmarks/data.json
-          
+
           # Create index.html for GitHub Pages
           cat > index.html << 'EOF'
           <!DOCTYPE html>
@@ -59,12 +59,12 @@ jobs:
           </body>
           </html>
           EOF
-          
+
           # Add files and commit
           git add .
           git commit -m "Initialize gh-pages branch for benchmarks"
-          
+
           # Push to origin
           git push -u origin gh-pages
-          
+
           echo "✅ gh-pages branch created successfully"
