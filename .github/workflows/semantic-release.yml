@@ -91,7 +91,13 @@ jobs:
         # Dispatching from here removes the race by construction: the tag
         # exists before the bump job starts, because this step cannot run until
         # the release step above has finished creating it.
-        if: steps.release.outputs.tag != ''
+        #
+        # `!cancelled()` rather than a bare condition: this step follows the
+        # binary-build dispatch, and a default `if:` would skip it whenever
+        # that step failed. Two unrelated concerns would then share a fate — a
+        # transient failure dispatching a binary build would also silently cost
+        # the version bump. They both depend on the tag and on nothing else.
+        if: ${{ !cancelled() && steps.release.outputs.tag != '' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
