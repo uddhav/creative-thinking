@@ -273,11 +273,18 @@ jobs:
       #
       # Closing runs after creation, so a failure here leaves the new PR in
       # place rather than none.
+      #
+      # Deliberately NOT gated on `skip`. When package.json already equals the
+      # tag no PR is created, but any bump PR still open is then redundant by
+      # definition — main already holds the version it proposes — and skipping
+      # this step would leave it sitting there mergeable. `!cancelled()` also
+      # keeps it running if an earlier step failed, since a half-finished run
+      # is exactly when a stale PR is most likely to be left behind.
       - name: Close superseded bump PRs
-        if: steps.bump.outputs.skip != 'true'
+        if: ${{ !cancelled() }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NEW_VERSION: ${{ steps.bump.outputs.new_version }}
+          TAG: ${{ inputs.tag }}
         run: |
           gh pr list --state open --label release --json number,headRefName \
             --jq '.[] | select(.headRefName | startswith("chore/version-bump-")) | .number' \
@@ -285,10 +292,15 @@ jobs:
                 if [ -z "$num" ]; then
                   continue
                 fi
-                # Everything except the one just created.
-                CURRENT_HEAD=$(gh pr view "$num" --json headRefName --jq '.headRefName')
-                if [ "$CURRENT_HEAD" != "$branch_name" ]; then
+                # `|| continue` because this runs in a pipeline subshell under
+                # `bash -e`: an unguarded failure here would end the loop and
+                # silently leave every remaining stale PR open.
+                CURRENT_HEAD=$(gh pr view "$num" --json headRefName --jq '.headRefName') || continue
+                # Everything except the one just created. `branch_name` is
+                # unset when no PR was created, so nothing matches and all
+                # stale PRs are closed, which is the intent in that case.
+                if [ "$CURRENT_HEAD" != "${branch_name:-}" ]; then
                   gh pr close "$num" --delete-branch \
-                    --comment "Superseded by the bump to $NEW_VERSION. This PR names a version that is no longer the newest tag; merging it could move the version backwards." || true
+                    --comment "Superseded by the release of $TAG. This PR names a version that is no longer the newest tag; merging it could move the version backwards." || true
                 fi
               done
