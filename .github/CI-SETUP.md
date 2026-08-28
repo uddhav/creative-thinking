@@ -86,15 +86,19 @@ Automated documentation generation and deployment.
 - GitHub Pages deployment
 - Documentation index creation
 
-## 📋 Required Secrets
+## 📋 Secrets
 
-Configure these secrets in your GitHub repository settings:
+Every secret the workflows actually reference, and nothing else — checked with
+`grep -ro 'secrets\.[A-Z_]*' .github/workflows/`:
 
-- `NPM_TOKEN`: npm registry authentication token
-- `CODECOV_TOKEN`: Codecov.io upload token
-- `SNYK_TOKEN`: Snyk security scanning token
-- `DOCKERHUB_USERNAME`: Docker Hub username
-- `DOCKERHUB_TOKEN`: Docker Hub access token
+- `GITHUB_TOKEN`: provided by Actions; no configuration needed.
+- `CODECOV_TOKEN`: Codecov.io upload token.
+- `SNYK_TOKEN`: Snyk security scanning. Optional — the Snyk step is guarded by
+  `if: env.SNYK_TOKEN != ''` and is skipped when unset.
+- `CLAUDE_CODE_OAUTH_TOKEN`: used by the Claude review workflows.
+
+`NPM_TOKEN`, `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` were listed here and are referenced by no
+workflow — they date from the deleted `release.yml`. This project publishes to neither registry.
 
 ## 🛠️ Local Development Setup
 
@@ -157,14 +161,29 @@ All PRs must pass these checks:
 
 ## 🚢 Release Process
 
-1. Update version in `package.json`
-2. Commit with message: `chore: bump version to x.y.z`
-3. Create and push tag: `git tag vx.y.z && git push --tags`
-4. GitHub Actions automatically:
-   - Creates release with notes
-   - Builds platform packages
-   - Publishes to npm
-   - Builds Docker images
+Releases are automatic. Nothing here is done by hand, and `package.json` is **not** edited to start
+one — it is written afterwards, to record what was released.
+
+1. Merge a PR to `main` with a Conventional Commit title (`fix:` → patch, `feat:` → minor, `feat!:`
+   or a `BREAKING CHANGE:` footer → major).
+2. `semantic-release.yml` analyses the commits, creates the tag and the GitHub Release, then
+   dispatches:
+   - `release-binaries.yml`, which builds the `socketes` binaries for macOS and Linux and uploads
+     them with `SHA256SUMS`;
+   - `pr-version-bump.yml`, which opens a `chore(release):` PR copying that version into
+     `package.json` and `CHANGELOG.md`.
+3. Merge the bump PR. It is a `chore`, so it produces no release of its own and the cycle ends.
+
+**Cutting an ad-hoc release** (bypassing semantic-release): bump `package.json`, update
+`CHANGELOG.md`, then `git tag vX.Y.Z && git push origin vX.Y.Z`. `release-binaries.yml` fires from
+the tag push directly. Note this path does **not** dispatch the bump workflow, which is why the
+version is edited by hand here and nowhere else.
+
+**Never roll back a published Release** — fix forward with the next release-worthy commit.
+
+This project publishes **neither to npm nor to Docker Hub**; distribution is via GitHub only, which
+is why `dist/` is committed. An earlier version of this section described both, and `release.yml`,
+which did them, was deleted (see the note under Release above).
 
 ## 📈 Monitoring
 
