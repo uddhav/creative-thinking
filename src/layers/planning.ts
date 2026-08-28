@@ -127,9 +127,10 @@ export function planThinkingSession(
   const workflow = techniques.map((technique, techniqueIndex) => {
     const handler = techniqueRegistry.getHandler(technique);
     const info = handler.getTechniqueInfo();
+    // No problem passed: plan-time guidance references it rather than
+    // inlining it. See PLAN_TIME_PROBLEM_REFERENCE.
     const steps = generateStepsForTechnique(
       technique as string,
-      problem,
       info.totalSteps,
       handler,
       resolvedPersona
@@ -293,9 +294,25 @@ export function planThinkingSession(
   return plan;
 }
 
+/**
+ * Stands in for the problem when guidance is generated at PLAN time.
+ *
+ * Handlers interpolate whatever they are given, so passing a reference phrase
+ * yields "Excavate the decision history for the problem stated in this plan"
+ * without any rewriting of interpolated output. The plan carries the problem
+ * once at plan scope; this phrase points at it.
+ *
+ * Execute time still passes the real problem — `ExecutionResponseBuilder`
+ * regenerates guidance per step — so the text a caller actually acts on names
+ * the problem concretely. That also keeps the evals interpolation ratchet
+ * meaningful: it measures `handler.getStepGuidance(step, PROBLEM_SENTINEL)`
+ * directly, so handlers must still interpolate, and this changes only what the
+ * planning layer hands them.
+ */
+const PLAN_TIME_PROBLEM_REFERENCE = 'the problem stated in this plan';
+
 function generateStepsForTechnique(
   technique: string,
-  problem: string,
   totalSteps: number,
   handler: TechniqueHandler,
   persona?: PersonaDefinition | null
@@ -303,7 +320,7 @@ function generateStepsForTechnique(
   const steps: ThinkingStep[] = [];
 
   for (let i = 1; i <= totalSteps; i++) {
-    let guidance = handler.getStepGuidance(i, problem);
+    let guidance = handler.getStepGuidance(i, PLAN_TIME_PROBLEM_REFERENCE);
 
     // Inject persona guidance if active (using static method)
     if (persona) {

@@ -111,7 +111,6 @@ export class ExecutionGraphGenerator {
       // Build complete parameters for execute_thinking_step
       const parameters = this.buildParameters(
         planId,
-        problem,
         technique,
         i + 1,
         totalSteps,
@@ -236,20 +235,24 @@ export class ExecutionGraphGenerator {
   }
 
   /**
-   * Build complete parameters for execute_thinking_step
+   * Build complete parameters for execute_thinking_step.
+   *
+   * These parameters are the contract: a caller runs them verbatim, filling
+   * only `output` and threading `sessionId`. `problem` is deliberately absent
+   * — one copy per node meant 25 copies of the caller's problem in a
+   * five-technique plan, half the total echo. `execute_thinking_step` resolves
+   * it from `planId` instead, which is why `problem` is optional there.
    */
   private static buildParameters(
     planId: string,
-    problem: string,
     technique: LateralTechnique,
     currentStep: number,
     totalSteps: number,
     step: { description?: string; stimulus?: string; contradiction?: string }
-  ): ExecuteThinkingStepInput {
-    const baseParams: ExecuteThinkingStepInput = {
+  ): Omit<ExecuteThinkingStepInput, 'problem'> {
+    const baseParams: Omit<ExecuteThinkingStepInput, 'problem'> = {
       planId,
       technique,
-      problem,
       currentStep,
       totalSteps,
       output: '',

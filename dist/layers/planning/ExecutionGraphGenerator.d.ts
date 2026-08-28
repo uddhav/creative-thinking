@@ -21,7 +21,13 @@ export declare class ExecutionGraphGenerator {
      */
     private static getHybridDependencies;
     /**
-     * Build complete parameters for execute_thinking_step
+     * Build complete parameters for execute_thinking_step.
+     *
+     * These parameters are the contract: a caller runs them verbatim, filling
+     * only `output` and threading `sessionId`. `problem` is deliberately absent
+     * — one copy per node meant 25 copies of the caller's problem in a
+     * five-technique plan, half the total echo. `execute_thinking_step` resolves
+     * it from `planId` instead, which is why `problem` is optional there.
      */
     private static buildParameters;
     /**

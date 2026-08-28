@@ -780,7 +780,9 @@ Executes a single step in your creative thinking process.
 
 - `planId` (string, required): ID from plan_thinking_session
 - `technique` (string, required): The lateral thinking technique to use
-- `problem` (string, required): The problem or challenge to address
+- `problem` (string, optional): Resolved from `planId` when omitted — the plan states it once and
+  its `executionGraph` nodes leave it out, so nodes run verbatim without it. Send it only to
+  override; a sent value wins.
 - `currentStep` (integer, required): Current step number in the technique
 - `totalSteps` (integer, required): Total steps for this technique
 - `output` (string, required): Your creative output for this step

@@ -55,10 +55,13 @@ describe('the session-operation mode is in the contract', () => {
     const branches = schema.oneOf ?? [];
     expect(branches).toHaveLength(2);
     expect(branches.map(b => b.required)).toContainEqual(['sessionOperation']);
+    // `problem` is not in this list. The plan states it once at plan scope and
+    // its execution-graph nodes omit it, so a caller running those nodes
+    // verbatim sends none; the server resolves it from `planId`. Sending it is
+    // still accepted, which is why this is a relaxation rather than a removal.
     expect(branches.map(b => b.required)).toContainEqual([
       'planId',
       'technique',
-      'problem',
       'currentStep',
       'totalSteps',
       'output',

@@ -29,7 +29,10 @@ export function registerExecute(yargs: Argv): Argv {
           type: 'string',
           describe: 'Technique id for this node (e.g. six_hats)',
         })
-        .option('problem', { type: 'string', describe: 'Problem statement (must match plan)' })
+        .option('problem', {
+          type: 'string',
+          describe: 'Problem statement; resolved from --plan when omitted',
+        })
         .option('step', { type: 'number', describe: 'Current step number (1-indexed)' })
         .option('total-steps', { type: 'number', describe: 'Total steps in this technique' })
         .option('output', { type: 'string', describe: "The LLM's thinking for this step" })

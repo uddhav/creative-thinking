@@ -62,7 +62,9 @@ describe('Input Validation', () => {
       const input = {
         planId,
         technique: 'six_hats',
-        // Missing problem
+        // Deliberately absent: the plan states the problem once at plan scope
+        // and its execution-graph nodes omit it, so a caller running those
+        // nodes verbatim sends none. The server resolves it from the planId.
         currentStep: 1,
         totalSteps: 6,
         output: 'Test output',
@@ -70,8 +72,12 @@ describe('Input Validation', () => {
       };
 
       const result = await server.processLateralThinking(input);
-      expect(result.isError).toBe(true);
-      expect(result.content[0].text).toContain('Invalid problem');
+      expect(result.isError, 'a step naming a real plan was refused for its own problem').not.toBe(
+        true
+      );
+      // Resolved from the plan, not invented: the text has to be the problem
+      // the plan was created with.
+      expect(result.content[0].text).toContain('Test problem');
     });
 
     it('should not use dummy values for thinking operations', async () => {
@@ -80,13 +86,18 @@ describe('Input Validation', () => {
       const input = {
         planId,
         technique: 'six_hats',
-        // Missing problem, currentStep, totalSteps, output, nextStepNeeded
+        // Missing currentStep, totalSteps, output, nextStepNeeded. `problem`
+        // is resolvable from the plan; these are not resolvable from anywhere,
+        // and the server must say so rather than substitute defaults.
       };
 
       const result = await server.processLateralThinking(input);
       expect(result.isError).toBe(true);
-      // Should fail validation, not proceed with dummy values
-      expect(result.content[0].text).toContain('Invalid problem');
+      // Names a field that is genuinely missing. This asserted 'Invalid
+      // problem' when `problem` was required; the no-dummy-values claim it
+      // exists to make is about fields the server cannot know, and `problem`
+      // stopped being one of those.
+      expect(result.content[0].text).toMatch(/currentStep|totalSteps|output|nextStepNeeded/);
     });
   });
 

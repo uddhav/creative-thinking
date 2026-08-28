@@ -187,8 +187,12 @@ export class RequestHandlers {
                     missingParams.push('planId (from plan_thinking_session)');
                 if (!params.technique)
                     missingParams.push('technique');
-                if (!params.problem)
-                    missingParams.push('problem');
+                // `problem` is deliberately absent from this gate. The plan states it
+                // once at plan scope and its execution-graph nodes omit it, so a caller
+                // running those nodes verbatim sends none — this gate rejected exactly
+                // the calls the plan tells callers to make. `processLateralThinking`
+                // resolves it from `planId` and refuses there if it cannot, which is
+                // the only place with the plan in hand.
                 if (typeof params.currentStep !== 'number')
                     missingParams.push('currentStep (number)');
                 if (typeof params.totalSteps !== 'number')

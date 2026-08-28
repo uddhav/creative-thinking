@@ -14,7 +14,14 @@ export interface ExecutionGraphNode {
     id: string;
     stepNumber: number;
     technique: LateralTechnique;
-    parameters: ExecuteThinkingStepInput;
+    /**
+     * execute_thinking_step parameters, complete except for `problem`.
+     *
+     * The plan states the problem once at plan scope; copying it into every node
+     * put 25 copies in a five-technique plan, half the payload. A caller runs
+     * these verbatim and the server resolves the problem from `planId`.
+     */
+    parameters: Omit<ExecuteThinkingStepInput, 'problem'>;
     dependencies: NodeDependency[];
     canSkipIfFailed?: boolean;
 }
