@@ -1,3 +1,9 @@
+## [v2.5.1] - 2026-08-28
+
+### Changes from PR #336
+
+- ci(deps): bump actions/github-script from 7.1.0 to 9.0.0
+
 ## [v2.5.0] - 2026-08-28
 
 ### Changes from PR #331
