@@ -1,3 +1,9 @@
+## [v2.5.0] - 2026-08-28
+
+### Changes from PR #331
+
+- feat(evals): measure whether a steering signal changed the caller's next move
+
 ## [v2.4.6] - 2026-08-28
 
 ### Changes from PR #329
