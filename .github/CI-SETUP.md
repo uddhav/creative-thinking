@@ -44,12 +44,18 @@ Automated checks specifically for pull requests.
 The release path is split across three workflows because a repository ruleset requires every change
 to `main` to arrive through a pull request. Nothing may push to `main` directly.
 
-1. `pr-version-bump.yml` — on any PR merging to `main`, works out the bump from Conventional
-   Commits, updates `package.json` and `CHANGELOG.md`, and opens a `chore(release):` PR with the
-   result.
-2. `semantic-release.yml` — on push to `main`, creates the tag and the GitHub Release. It does not
+1. `semantic-release.yml` — on push to `main`, creates the tag and the GitHub Release. It does not
    write to `main`; tags are not covered by the pull-request rule. Requires Node 22+
-   (semantic-release v25).
+   (semantic-release v25). Having tagged, it dispatches the two workflows below.
+2. `pr-version-bump.yml` — `workflow_dispatch` only, dispatched by `semantic-release.yml` with the
+   tag it just created. Copies that version into `package.json` and `CHANGELOG.md` and opens a
+   `chore(release):` PR. It does no version arithmetic: the tag is the decision, this records it.
+
+   It used to run on any PR merging to `main` and derive the bump itself, which raced
+   `semantic-release` for the tag and lost every time — five consecutive merges produced a bump PR
+   naming an already-published version, one of them lower than `package.json` already held. See
+   #325.
+
 3. `release-binaries.yml` — on `v*.*.*` tag push, builds the standalone `socketes` binaries for
    macOS and Linux and uploads them with `SHA256SUMS`.
 

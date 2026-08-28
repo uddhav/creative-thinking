@@ -86,18 +86,18 @@ form never completes, and an incomplete session emits no final synthesis.
 
 State on disk under `PERSISTENCE_PATH` (default `~/.creative-thinking`):
 
-- `plans/<planId>.json` — full plan with `techniques` field that the executor needs (the
-  CLI-side plan store mirrors the in-memory `PlanManager` because `ResponseBuilder` strips fields
-  the executor relies on; see `src/cli/planStore.ts`)
+- `plans/<planId>.json` — full plan with `techniques` field that the executor needs (the CLI-side
+  plan store mirrors the in-memory `PlanManager` because `ResponseBuilder` strips fields the
+  executor relies on; see `src/cli/planStore.ts`)
 - `sessions/<sessionId>.json` — session history (auto-saved every `execute` step via
   `autoSave: true` defaulted in `src/cli/commands/execute.ts`)
 - `metadata/` — filesystem adapter housekeeping
 
 There is no `state/` level. These sat under a `state/` prefix here until a probe looked in the
 documented place and found nothing: `src/__tests__/cli/cli.integration.test.ts` points
-`PERSISTENCE_PATH` at a temp directory it happens to name `state`, and that fixture's own layout
-was written up as the product's. A real `~/.creative-thinking` holds `plans`, `sessions` and
-`metadata` at the top level.
+`PERSISTENCE_PATH` at a temp directory it happens to name `state`, and that fixture's own layout was
+written up as the product's. A real `~/.creative-thinking` holds `plans`, `sessions` and `metadata`
+at the top level.
 
 Each command also reads a JSON object on stdin (when piped). Flags override stdin fields. Use the
 flag form for the common 5–6 params and the stdin form for technique-specific long-tail fields (e.g.
@@ -392,15 +392,29 @@ pull request. `@semantic-release/git` used to push the version commit directly a
 every time (`GH013: changes must be made through a pull request`), which is why nothing released
 between May and August 2026. Version bumps now go through a PR; semantic-release only tags.
 
-1. **`.github/workflows/pr-version-bump.yml`** — runs when any PR merges to `main`. Determines the
-   bump from the PR title/body/commits, updates `package.json` + `CHANGELOG.md`, and opens a
-   `chore(release):` PR with the result. Its `if:` guard skips `chore(release)` titles so merging
-   that PR cannot re-trigger it.
+1. **`.github/workflows/pr-version-bump.yml`** — `workflow_dispatch` only, dispatched by
+   `semantic-release.yml` with the tag it just created. Copies that tag into `package.json` +
+   `package-lock.json`, writes a `CHANGELOG.md` entry, and opens a `chore(release):` PR. It does no
+   version arithmetic at all: semantic-release decides, this records.
 
-   Everything user-controlled (PR title, body, author login, merging actor) reaches the shell via
-   `env:`, never by interpolating `${{ … }}` into a `run:` block. Interpolation puts the text into
-   the script _before_ bash parses it, so backticks in a PR description execute — that is what made
-   this workflow fail every run until August 2026. Keep new steps to the same rule.
+   **It used to run on `pull_request: closed`, and that was a race it lost every time.** Both
+   workflows fired on the same merge, and this one read `git describe --tags` before
+   semantic-release had written the new tag — so it proposed the _previous_ release's version. Five
+   consecutive merges produced a wrong bump PR (#315, #317, #323, #326, #327); one proposed 2.4.2
+   against a `package.json` already at 2.4.3, which would have published a version older than one
+   already shipped. The old comment called this self-correcting because "the next merge closes the
+   gap", but the next merge tags too, so the gap moves instead of closing. Every instance was caught
+   only because someone was looking. See #325.
+
+   Because a dispatch carries no PR context, the released PR is recovered from the commit the tag
+   points at (`repos/…/commits/{sha}/pulls`) purely to describe the release; a lookup that finds
+   nothing produces a plainer changelog entry rather than a wrong version. There is also a guard
+   that refuses to move `package.json` backwards.
+
+   Everything user-controlled (PR title, body) reaches the shell via `env:`, never by interpolating
+   `${{ … }}` into a `run:` block. Interpolation puts the text into the script _before_ bash parses
+   it, so backticks in a PR description execute — that is what made this workflow fail every run
+   until August 2026. Keep new steps to the same rule.
 
 2. **`.github/workflows/semantic-release.yml`** — runs on every push to `main`. Calls
    `npx semantic-release`, which analyzes commits since the last tag, determines the version bump
@@ -408,7 +422,13 @@ between May and August 2026. Version bumps now go through a PR; semantic-release
    major), and creates the tag plus the GitHub Release with auto-generated notes. It does **not**
    write to `main` — tags are not covered by the pull-request rule. After `semantic-release`
    returns, a follow-up step runs `git describe --tags --exact-match HEAD` to detect whether a new
-   tag was created this run; if so, it dispatches `release-binaries.yml` against that tag.
+   tag was created this run; if so, it dispatches **both** `release-binaries.yml` and
+   `pr-version-bump.yml` against that tag.
+
+   Dispatching the bump from here is what removes the race: the tag provably exists before the bump
+   job starts, because the dispatch step cannot run until the release step that creates it has
+   finished. If a dispatch fails, no bump PR appears and `package.json` simply does not advance —
+   which is the benign failure, unlike proposing a version that is wrong.
 
 3. **`.github/workflows/release-binaries.yml`** — builds standalone single-file binaries via
    `bun build --compile`. Triggered by:

@@ -75,3 +75,26 @@ jobs:
           gh workflow run release-binaries.yml \
             --ref "${{ steps.release.outputs.tag }}" \
             -f tag="${{ steps.release.outputs.tag }}"
+
+      - name: 🔖 Trigger version bump PR
+        # The bump PR is a CONSEQUENCE of the tag, not a race against it.
+        #
+        # pr-version-bump.yml used to fire on the same merge as this workflow
+        # and read `git describe` before semantic-release had written the new
+        # tag, so it proposed the previous release's version. Four consecutive
+        # bump PRs were wrong; the fourth proposed 2.4.2 while package.json
+        # already held 2.4.3, which would have written the version backwards.
+        # Its own comment called that "eventually correct", but the catch-up
+        # only lands if the next merge does not also tag, and in a run of
+        # merges it never does.
+        #
+        # Dispatching from here removes the race by construction: the tag
+        # exists before the bump job starts, because this step cannot run until
+        # the release step above has finished creating it.
+        if: steps.release.outputs.tag != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run pr-version-bump.yml \
+            --ref main \
+            -f tag="${{ steps.release.outputs.tag }}"
