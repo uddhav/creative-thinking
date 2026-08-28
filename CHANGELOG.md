@@ -1,3 +1,9 @@
+## [v2.4.4] - 2026-08-28
+
+### Changes from PR #327
+
+- fix: the field-report batch, and a graph that contradicted itself
+
 ## [v2.4.3] - 2026-08-27
 
 ### Changes from PR #323
