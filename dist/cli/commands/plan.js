@@ -1,5 +1,6 @@
 import { getServer } from '../server.js';
 import { emit, mergeInput, parseList, parseNumber, readStdinJSON, unwrapResponse } from '../io.js';
+import { recordCall, recordResult } from '../../server/callLog.js';
 import { persistPlan } from '../planStore.js';
 export function registerPlan(yargs) {
     return yargs.command('plan', 'Build a structured workflow from a problem and chosen techniques', y => y
@@ -58,7 +59,9 @@ async function handle(argv) {
         debateFormat: argv.debateFormat,
     }, stdin);
     const server = getServer();
+    recordCall('plan_thinking_session', input);
     const envelope = server.planThinkingSession(input);
+    recordResult('plan_thinking_session', envelope);
     const { data, isError } = unwrapResponse(envelope);
     if (!isError) {
         const planned = data;

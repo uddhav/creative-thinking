@@ -38,6 +38,7 @@ import { MCPClientTestHelper } from '../utils/MCPClientTestHelper.js';
 const PROBLEM = 'Cut the release train from monthly to weekly';
 
 interface LoggedCall {
+  kind?: 'call' | 'result';
   tool: string;
   arguments: Record<string, unknown> | null;
 }
@@ -68,12 +69,32 @@ describe('the server records the calls it was given', () => {
     rmSync(dir, { recursive: true, force: true });
   }, 30_000);
 
+  /**
+   * The call lines only.
+   *
+   * The log interleaves `kind: 'call'` with `kind: 'result'` — what the server
+   * answered, added so the live-log analyser can tell whether a steering signal
+   * changed the caller's next move. Both carry `tool`, so an unfiltered read
+   * counts every call twice. Logs written before result lines existed carry no
+   * `kind` at all, so absence means call.
+   */
   function logged(): LoggedCall[] {
     if (!existsSync(logPath)) return [];
     return readFileSync(logPath, 'utf8')
       .split('\n')
       .filter(Boolean)
-      .map(line => JSON.parse(line) as LoggedCall);
+      .map(line => JSON.parse(line) as LoggedCall)
+      .filter(entry => entry.kind !== 'result');
+  }
+
+  /** The result lines only — what the server told the caller. */
+  function loggedResults(): Array<Record<string, unknown>> {
+    if (!existsSync(logPath)) return [];
+    return readFileSync(logPath, 'utf8')
+      .split('\n')
+      .filter(Boolean)
+      .map(line => JSON.parse(line) as Record<string, unknown>)
+      .filter(entry => entry.kind === 'result');
   }
 
   it('records each call with the arguments that actually arrived', async () => {
@@ -137,5 +158,30 @@ describe('the server records the calls it was given', () => {
     const calls = logged();
     expect(calls.length, 'a refused call left no trace').toBe(before + 1);
     expect(calls.at(-1)?.arguments?.hatColor).toBe('purple');
+  }, 30_000);
+
+  it('records what the server answered, as a summary and not a copy', () => {
+    const results = loggedResults();
+
+    // The result lines exist at all. Without them the live-log analyser has
+    // only the caller's half and cannot tell whether a finding changed
+    // anything — which is the measurement Round 2 is gated on.
+    expect(results.length, 'the server recorded no results').toBeGreaterThan(0);
+
+    for (const entry of results) {
+      expect(entry.tool).toBeDefined();
+      expect(typeof entry.isError).toBe('boolean');
+    }
+
+    // A summary, not the response. The caller's problem statement appears in
+    // the CALL lines because that is what arrived; it must not be copied into
+    // the result lines as well. A plan response alone measured 62KB before
+    // #319, and the telemetry sanitizer deliberately keeps caller content out
+    // of stored records — this log should not quietly reintroduce it.
+    const resultText = JSON.stringify(results);
+    expect(resultText, 'a result line copied the caller problem statement').not.toContain(PROBLEM);
+    expect(resultText, 'a result line copied the caller output').not.toContain(
+      'A recorded finding for this step'
+    );
   }, 30_000);
 });

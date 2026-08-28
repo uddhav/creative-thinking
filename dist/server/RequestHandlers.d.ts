@@ -55,24 +55,6 @@ export declare class RequestHandlers {
      * Process a batch of calls in parallel
      */
     private processBatch;
-    /**
-     * Process a single tool call
-     */
-    /**
-     * Append every incoming tool call to `CT_CALL_LOG`, if it is set.
-     *
-     * Off unless the variable is present, so it costs a single undefined check in
-     * normal operation. It exists because a record of what was called has to be
-     * written by the thing being called: an agent asked to log its own calls
-     * writes what it believes it sent, which is the same evidence as its prose
-     * and fails in the same way. This is the only version of that record that can
-     * contradict the caller.
-     *
-     * Failures are swallowed deliberately. A logging path that can take the
-     * server down is worse than no logging, and stderr is the only place it could
-     * complain to anyway.
-     */
-    private recordCallToLog;
     private processSingleCall;
     /**
      * Get required parameters message for a tool

@@ -1,6 +1,7 @@
 import type { Argv, ArgumentsCamelCase } from 'yargs';
 import { getServer } from '../server.js';
 import { emit, mergeInput, parseList, parseNumber, readStdinJSON, unwrapResponse } from '../io.js';
+import { recordCall, recordResult } from '../../server/callLog.js';
 import { persistPlan } from '../planStore.js';
 
 interface PlanArgs {
@@ -92,7 +93,9 @@ async function handle(argv: ArgumentsCamelCase<PlanArgs>): Promise<void> {
   );
 
   const server = getServer();
+  recordCall('plan_thinking_session', input);
   const envelope = server.planThinkingSession(input);
+  recordResult('plan_thinking_session', envelope);
   const { data, isError } = unwrapResponse(envelope);
   if (!isError) {
     const planned = data as { planId?: string; parallelPlans?: Array<{ planId?: string }> };
