@@ -98,11 +98,26 @@ export declare class SessionCompletionTracker {
      */
     private calculateOverallProgress;
     /**
-     * Identify skipped techniques
+     * Identify skipped techniques.
+     *
+     * Returns every unstarted technique, mid-run included. That is deliberate
+     * and guarded by completion-warning-timing.test.ts: the completion
+     * gatekeeper reads this data, and withholding it here would change
+     * enforcement rather than presentation.
+     *
+     * "No steps yet" is not the same as "skipped" for a CALLER, though — the
+     * first step of a two-technique plan reported the second one skipped. That
+     * is suppressed where the response is built, not here, so the data stays
+     * whole for the gatekeeper. See ExecutionResponseBuilder.addCompletionMetadata.
      */
     private identifySkippedTechniques;
     /**
-     * Identify missed perspectives
+     * Identify missed perspectives.
+     *
+     * Gated on the same condition as skipped techniques, and for the same
+     * reason: a perspective a session has not reached yet has not been missed.
+     * Reported unconditionally, this named "Systematic modification strategies"
+     * as missed on the first step of a plan whose second technique was scamper.
      */
     private identifyMissedPerspectives;
     /**

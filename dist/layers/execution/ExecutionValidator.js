@@ -352,7 +352,20 @@ export class ExecutionValidator {
             const callerNumbersWithinTechnique = currentTechniqueSteps > 0 &&
                 input.totalSteps === currentTechniqueSteps &&
                 input.totalSteps !== totalPlanSteps;
-            if (callerNumbersWithinTechnique &&
+            // An explicit `numbering` is taken at its word, including when the step
+            // it names is out of range. Routing it through the inference ladder
+            // below would silently re-read a declared technique-local step as a
+            // plan-wide one the moment it exceeded the technique's length — turning
+            // a statement into another guess, which is the opposite of why the
+            // parameter exists. An out-of-range step is then caught and reported by
+            // step validation, where a wrong number belongs.
+            if (input.numbering === 'technique') {
+                techniqueLocalStep = input.currentStep;
+            }
+            else if (input.numbering === 'plan') {
+                techniqueLocalStep = input.currentStep - stepsBeforeThisTechnique;
+            }
+            else if (callerNumbersWithinTechnique &&
                 input.currentStep >= 1 &&
                 input.currentStep <= currentTechniqueSteps) {
                 techniqueLocalStep = input.currentStep;

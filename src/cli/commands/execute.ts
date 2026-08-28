@@ -10,6 +10,7 @@ interface ExecuteArgs {
   problem?: string;
   step?: number | string;
   totalSteps?: number | string;
+  numbering?: string;
   output?: string;
   nextStepNeeded?: boolean;
   noAutoSave?: boolean;
@@ -35,6 +36,11 @@ export function registerExecute(yargs: Argv): Argv {
         })
         .option('step', { type: 'number', describe: 'Current step number (1-indexed)' })
         .option('total-steps', { type: 'number', describe: 'Total steps in this technique' })
+        .option('numbering', {
+          type: 'string',
+          choices: ['technique', 'plan'] as const,
+          describe: 'How --step is counted: within the technique (default) or across the plan',
+        })
         .option('output', { type: 'string', describe: "The LLM's thinking for this step" })
         .option('next-step-needed', {
           type: 'boolean',
@@ -77,6 +83,7 @@ async function handle(argv: ArgumentsCamelCase<ExecuteArgs>): Promise<void> {
       problem: argv.problem,
       currentStep: parseNumber(argv.step),
       totalSteps: parseNumber(argv.totalSteps),
+      numbering: argv.numbering as 'technique' | 'plan' | undefined,
       output: argv.output,
       nextStepNeeded: argv.nextStepNeeded,
       autoSave: argv.noAutoSave ? false : true,

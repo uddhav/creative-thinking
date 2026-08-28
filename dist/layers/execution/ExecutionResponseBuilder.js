@@ -258,12 +258,23 @@ export class ExecutionResponseBuilder {
         const memoryOutputs = skipMemoryOutputs || skipMemoryAnalysis
             ? {} // Skip memory analysis for performance
             : this.memoryAnalyzer.generateMemoryOutputs(this.createOperationData(input, sessionId), session);
-        // Build technique progress info
+        // Build technique progress info.
+        //
+        // `global*` are computed against the plan, not echoed from the request.
+        // They were `input.currentStep` / `input.totalSteps`, and step numbering is
+        // technique-local by default — so on triz step 1 of 4 they reported
+        // "globalStep 1, globalTotalSteps 4", duplicating the technique counters
+        // beside them while `completionMetadata.totalPlannedSteps` correctly said
+        // 25. A field named global that mirrors the local one is worse than absent:
+        // a caller reading it believes it knows where it is in the plan.
+        const stepsBeforeThisTechnique = (plan?.workflow ?? [])
+            .slice(0, techniqueIndex)
+            .reduce((sum, entry) => sum + entry.steps.length, 0);
         const techniqueProgress = {
             techniqueStep: techniqueLocalStep,
             techniqueTotalSteps: plan?.workflow[techniqueIndex]?.steps.length || handler.getTechniqueInfo().totalSteps,
-            globalStep: input.currentStep,
-            globalTotalSteps: input.totalSteps,
+            globalStep: plan ? stepsBeforeThisTechnique + techniqueLocalStep : input.currentStep,
+            globalTotalSteps: plan?.totalSteps ?? input.totalSteps,
             currentTechnique: input.technique,
             techniqueIndex: techniqueIndex + 1,
             totalTechniques: plan?.techniques.length || 1,
@@ -272,7 +283,7 @@ export class ExecutionResponseBuilder {
         this.addTechniqueProgress(parsedResponse, techniqueProgress);
         // Add completion tracking metadata
         const completionMetadata = this.completionTracker.calculateCompletionMetadata(session, plan, !input.nextStepNeeded);
-        this.addCompletionMetadata(parsedResponse, completionMetadata);
+        this.addCompletionMetadata(parsedResponse, completionMetadata, !input.nextStepNeeded);
     }
     /**
      * The minimal-verbosity filter: an allowlist over the fully built response.
@@ -570,7 +581,21 @@ export class ExecutionResponseBuilder {
     addTechniqueProgress(parsedResponse, techniqueProgress) {
         parsedResponse.techniqueProgress = techniqueProgress;
     }
-    addCompletionMetadata(parsedResponse, completionMetadata) {
+    addCompletionMetadata(parsedResponse, completionMetadata, isTerminating) {
+        // A technique the session has not reached is pending, not skipped. The
+        // tracker reports every unstarted technique on purpose — the completion
+        // gatekeeper reads that, and thinning it there would change enforcement
+        // rather than presentation (completion-warning-timing.test.ts guards
+        // exactly that line). So the suppression happens here, on the way to the
+        // caller, alongside the warning string that is already gated this way.
+        //
+        // Unsuppressed, the FIRST step of a two-technique plan told the caller the
+        // second was skipped and named a missed perspective for it — false on
+        // every early step of every multi-technique plan, in the same channel as
+        // advisory findings. A warning true of every session at step one carries
+        // no information and teaches its reader to discount the ones that do.
+        const skippedTechniques = isTerminating ? completionMetadata.skippedTechniques : [];
+        const missedPerspectives = isTerminating ? completionMetadata.missedPerspectives : [];
         // Add completion metadata
         parsedResponse.completionMetadata = {
             overallProgress: completionMetadata.overallProgress,
@@ -581,10 +606,13 @@ export class ExecutionResponseBuilder {
                 completionPercentage: status.completionPercentage,
                 skippedSteps: status.skippedSteps,
             })),
-            skippedTechniques: completionMetadata.skippedTechniques,
-            missedPerspectives: completionMetadata.missedPerspectives,
+            skippedTechniques,
+            missedPerspectives,
             completionWarnings: completionMetadata.completionWarnings,
-            minimumThresholdMet: completionMetadata.minimumThresholdMet,
+            // Reported only at termination for the same reason: a session in
+            // progress has not failed to meet a threshold it is still working
+            // toward, and `false` on step one reads as a verdict.
+            minimumThresholdMet: isTerminating ? completionMetadata.minimumThresholdMet : undefined,
         };
         // Add visual progress indicator
         if (completionMetadata.overallProgress < 0.8) {
@@ -628,7 +656,10 @@ export class ExecutionResponseBuilder {
         parsedResponse.ergodicityMetrics = {
             currentFlexibility: ergodicityMetrics.currentFlexibility,
             constraintLevel: ergodicityMetrics.constraintLevel,
-            optionSpaceSize: ergodicityMetrics.optionSpaceSize,
+            // Omitted rather than zeroed when unmeasured — see ErgodicityResultAdapter.
+            ...(ergodicityMetrics.optionSpaceSize === undefined
+                ? {}
+                : { optionSpaceSize: ergodicityMetrics.optionSpaceSize }),
             pathDivergence: ergodicityMetrics.pathDivergence,
         };
     }

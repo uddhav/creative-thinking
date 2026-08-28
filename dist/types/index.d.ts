@@ -120,6 +120,16 @@ export interface ExecuteThinkingStepInput {
      * reads it, for a value that is guaranteed present downstream anyway.
      */
     problem: string;
+    /**
+     * Which convention `currentStep` uses. Default `'technique'`.
+     *
+     * Both are accepted, and without this the server infers it from `totalSteps`
+     * — the only thing that can distinguish them, since for any technique after
+     * the first the two ranges overlap. That inference is correct but implicit,
+     * and it costs three paragraphs of tool description plus more in the
+     * consuming skill. Declaring it removes the guess.
+     */
+    numbering?: 'technique' | 'plan';
     currentStep: number;
     totalSteps: number;
     output: string;

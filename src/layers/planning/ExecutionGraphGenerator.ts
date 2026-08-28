@@ -138,8 +138,20 @@ export class ExecutionGraphGenerator {
     stepIndex: number,
     startNodeId: number
   ): NodeDependency[] {
-    // Techniques with parallel steps (no dependencies between steps)
-    const parallelTechniques: LateralTechnique[] = ['six_hats', 'scamper', 'nine_windows'];
+    // There is no parallel-steps class any more.
+    //
+    // `six_hats`, `scamper` and `nine_windows` were listed here and emitted no
+    // dependencies at all, on the reasoning that their steps are independent
+    // perspectives. As a claim about the method that is defensible; as a claim
+    // about execution it was not. The steps of one technique run against one
+    // sessionId, and concurrent writes to a session are last-writer-wins and
+    // unprotected across processes — so the graph was advertising a race, and
+    // contradicting the documented guarantee that steps within one technique
+    // are ordered.
+    //
+    // They now chain like the other 29. Dependencies and parallelizableGroups
+    // say the same thing, rather than a client getting a different schedule
+    // depending on which field it reads.
 
     // Techniques with sequential steps (each depends on previous)
     const sequentialTechniques: LateralTechnique[] = [
@@ -157,11 +169,6 @@ export class ExecutionGraphGenerator {
       'cultural_integration',
       'collective_intel',
     ];
-
-    if (parallelTechniques.includes(technique)) {
-      // No dependencies - all steps can run in parallel
-      return [];
-    }
 
     if (sequentialTechniques.includes(technique)) {
       // Each step depends on the previous one (hard dependency)
@@ -419,10 +426,24 @@ export class ExecutionGraphGenerator {
   /**
    * Find groups of nodes that can execute in parallel
    * Optimized from O(n²) to O(n) using Map for grouping
+   *
+   * Never groups two steps of the SAME technique, even when the dependency
+   * classification says their steps are independent — `six_hats`, `scamper`
+   * and `nine_windows` are listed as parallel techniques, so all seven
+   * six_hats nodes shared one empty dependency signature and landed in a
+   * single group of seven.
+   *
+   * Two reasons that was wrong to emit. It contradicted the documented
+   * guarantee that steps within one technique are ordered, naming this very
+   * field as the authority on what may run concurrently. And the steps of one
+   * technique run against one sessionId: concurrent writes there are
+   * last-writer-wins, and unprotected across processes. Whether the six hats
+   * are conceptually independent is a separate question from whether they can
+   * safely share a session, and only the second one decides this field.
    */
   private static findParallelizableGroups(nodes: ExecutionGraphNode[]): string[][] {
     // Group nodes by their hard dependency signature (soft deps don't block parallel execution)
-    const depGroups = new Map<string, string[]>();
+    const depGroups = new Map<string, ExecutionGraphNode[]>();
 
     for (const node of nodes) {
       // Create a consistent key from hard dependencies only
@@ -441,12 +462,27 @@ export class ExecutionGraphGenerator {
       }
       const group = depGroups.get(depKey);
       if (group) {
-        group.push(node.id);
+        group.push(node);
       }
     }
 
-    // Return groups with at least one node
-    return Array.from(depGroups.values()).filter(group => group.length > 0);
+    // Split each dependency group so no technique appears twice in one round.
+    // Nodes keep their order, so a technique's k-th node lands in round k and
+    // different techniques' k-th nodes share it — techniques advance
+    // concurrently, steps within a technique do not.
+    const rounds: string[][] = [];
+    for (const group of depGroups.values()) {
+      const seenPerTechnique = new Map<string, number>();
+      const localRounds: string[][] = [];
+      for (const node of group) {
+        const round = seenPerTechnique.get(node.technique) ?? 0;
+        seenPerTechnique.set(node.technique, round + 1);
+        (localRounds[round] ??= []).push(node.id);
+      }
+      rounds.push(...localRounds);
+    }
+
+    return rounds.filter(group => group.length > 0);
   }
 
   /**
@@ -595,35 +631,49 @@ export class ExecutionGraphGenerator {
    */
   private static generateParallelizationBenefits(
     nodes: ExecutionGraphNode[],
-    metadata: { maxParallelism: number; parallelizableGroups: string[][] }
+    metadata: {
+      maxParallelism: number;
+      parallelizableGroups: string[][];
+      sequentialTimeMultiplier: string;
+    }
   ): string {
     if (metadata.maxParallelism <= 1) {
       return 'Sequential execution ensures each step builds on previous insights for maximum coherence.';
     }
 
-    const techniques = new Set(nodes.map(n => n.technique));
-    const techniqueCount = techniques.size;
+    const techniqueCount = new Set(nodes.map(n => n.technique)).size;
 
-    if (techniques.has('six_hats')) {
-      return 'Running Six Hats perspectives in parallel provides diverse viewpoints simultaneously, reducing cognitive bias from sequential influence.';
-    } else if (techniques.has('scamper')) {
-      return 'Parallel SCAMPER transformations allow exploring multiple modification approaches simultaneously, increasing creative output.';
-    } else if (techniques.has('nine_windows')) {
-      return 'Examining all nine windows in parallel provides a comprehensive system view across time and scale simultaneously.';
-    } else if (techniqueCount > 1) {
-      return `Running ${techniqueCount} techniques in parallel provides diverse problem-solving approaches simultaneously, reducing overall thinking time by approximately ${metadata.maxParallelism}x.`;
+    // The per-technique strings that were here promised parallel Six Hats,
+    // parallel SCAMPER and parallel Nine Windows — the steps of ONE technique
+    // running at once, which the graph no longer offers because those steps
+    // share a session. What is parallel is techniques against each other.
+    //
+    // The speedup cites `sequentialTimeMultiplier` rather than computing a
+    // second figure from `maxParallelism`. Those were two different numbers
+    // for one quantity in one response: a plan reporting "10x" in metadata
+    // said "approximately 7x" here.
+    if (techniqueCount > 1) {
+      return `Running ${techniqueCount} techniques concurrently explores different approaches at the same time, cutting wall-clock time by roughly ${metadata.sequentialTimeMultiplier} versus running them end to end. Steps within a technique stay ordered.`;
     }
 
-    return 'Parallel execution enables exploring multiple perspectives simultaneously, reducing time and increasing diversity of insights.';
+    return 'Independent techniques can run concurrently; the steps within each stay ordered, so a single-technique plan runs end to end.';
   }
 
   /**
    * Determine if a step can be skipped if it fails
    */
   private static canSkipIfFailed(technique: LateralTechnique): boolean {
-    // For parallel techniques, individual steps can often be skipped
-    const parallelTechniques: LateralTechnique[] = ['six_hats', 'scamper', 'nine_windows'];
+    // Techniques whose steps are independent perspectives on one problem, so
+    // losing one does not invalidate the rest. A separate question from
+    // whether they may run CONCURRENTLY, which they may not — they share a
+    // session, and concurrent writes there are last-writer-wins. These three
+    // used to answer both questions from one list.
+    const independentPerspectiveTechniques: LateralTechnique[] = [
+      'six_hats',
+      'scamper',
+      'nine_windows',
+    ];
 
-    return parallelTechniques.includes(technique);
+    return independentPerspectiveTechniques.includes(technique);
   }
 }

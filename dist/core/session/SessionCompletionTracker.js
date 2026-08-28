@@ -45,7 +45,7 @@ export class SessionCompletionTracker {
         const techniqueStatuses = this.calculateTechniqueStatuses(session, plan, isTerminating);
         const overallProgress = this.calculateOverallProgress(techniqueStatuses, plan);
         const skippedTechniques = this.identifySkippedTechniques(techniqueStatuses);
-        const missedPerspectives = this.identifyMissedPerspectives(techniqueStatuses);
+        const missedPerspectives = this.identifyMissedPerspectives(techniqueStatuses, skippedTechniques);
         const criticalGaps = this.identifyCriticalGaps(session.problem, techniqueStatuses);
         const warnings = this.generateCompletionWarnings(overallProgress, techniqueStatuses, criticalGaps, isTerminating);
         return {
@@ -304,16 +304,32 @@ export class SessionCompletionTracker {
         return totalSteps > 0 ? completedSteps / totalSteps : 0;
     }
     /**
-     * Identify skipped techniques
+     * Identify skipped techniques.
+     *
+     * Returns every unstarted technique, mid-run included. That is deliberate
+     * and guarded by completion-warning-timing.test.ts: the completion
+     * gatekeeper reads this data, and withholding it here would change
+     * enforcement rather than presentation.
+     *
+     * "No steps yet" is not the same as "skipped" for a CALLER, though — the
+     * first step of a two-technique plan reported the second one skipped. That
+     * is suppressed where the response is built, not here, so the data stays
+     * whole for the gatekeeper. See ExecutionResponseBuilder.addCompletionMetadata.
      */
     identifySkippedTechniques(statuses) {
         return statuses.filter(s => s.completedSteps === 0).map(s => s.technique);
     }
     /**
-     * Identify missed perspectives
+     * Identify missed perspectives.
+     *
+     * Gated on the same condition as skipped techniques, and for the same
+     * reason: a perspective a session has not reached yet has not been missed.
+     * Reported unconditionally, this named "Systematic modification strategies"
+     * as missed on the first step of a plan whose second technique was scamper.
      */
-    identifyMissedPerspectives(statuses) {
+    identifyMissedPerspectives(statuses, skipped) {
         const missed = [];
+        const isSkipped = new Set(skipped);
         // Check Six Hats
         const sixHats = statuses.find(s => s.technique === 'six_hats');
         if (sixHats && sixHats.skippedSteps.length > 0) {
@@ -324,12 +340,13 @@ export class SessionCompletionTracker {
                 }
             });
         }
-        // Check other techniques
+        // Check other techniques. `isSkipped` rather than `completedSteps === 0`:
+        // a technique the session has not reached is pending, not missed.
         statuses.forEach(status => {
-            if (status.technique === 'triz' && status.completedSteps === 0) {
+            if (status.technique === 'triz' && isSkipped.has('triz')) {
                 missed.push('Systematic contradiction resolution');
             }
-            if (status.technique === 'scamper' && status.completedSteps === 0) {
+            if (status.technique === 'scamper' && isSkipped.has('scamper')) {
                 missed.push('Systematic modification strategies');
             }
             if (status.technique === 'design_thinking' && status.skippedSteps.includes(1)) {

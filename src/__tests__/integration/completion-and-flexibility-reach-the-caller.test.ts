@@ -56,6 +56,9 @@ interface StepResponse {
     completionWarnings?: string[];
     overallProgress?: number;
     completedSteps?: number;
+    skippedTechniques?: string[];
+    missedPerspectives?: string[];
+    minimumThresholdMet?: boolean;
   };
   ergodicityMetrics?: { currentFlexibility?: number };
   nextStepGuidance?: string;
@@ -109,6 +112,58 @@ describe('the completion nag does not reach the caller on an early step', () => 
       data.completionMetadata?.completionWarnings,
       'a warning fired about a step the session had not reached'
     ).toEqual([]);
+  }, 30_000);
+
+  it('does not call a technique skipped before the session has reached it', async () => {
+    // The tracker reports EVERY unstarted technique, deliberately — the
+    // completion gatekeeper reads that, and thinning it there would change
+    // enforcement rather than presentation (guarded by
+    // completion-warning-timing.test.ts). The suppression therefore lives in
+    // `ExecutionResponseBuilder.addCompletionMetadata`, on the way out.
+    //
+    // Which means the suppression has to be asserted HERE, from a response.
+    // Every existing test on this reads the tracker directly, so the gate
+    // could have been deleted or inverted with the whole suite green.
+    //
+    // Measured before the fix: the first step of this two-technique plan came
+    // back with skippedTechniques ["scamper"] and missedPerspectives
+    // ["Systematic modification strategies"], for a technique the session had
+    // not reached, on every early step of every multi-technique plan.
+    const { planId, estimatedSteps } = await plan(['six_hats', 'scamper']);
+    const data = JSON.parse(
+      textOf(
+        await client.callTool('execute_thinking_step', {
+          planId,
+          technique: 'six_hats',
+          problem: PROBLEM,
+          currentStep: 1,
+          totalSteps: 7,
+          output: 'A recorded finding for this step, written plainly and at length.',
+          nextStepNeeded: true,
+          hatColor: 'blue',
+        })
+      )
+    ) as StepResponse;
+
+    // Present, or everything below passes over a response carrying no
+    // completion information at all.
+    expect(data.completionMetadata, 'completionMetadata never reached the caller').toBeDefined();
+    expect(estimatedSteps).toBeGreaterThan(7);
+
+    expect(
+      data.completionMetadata?.skippedTechniques,
+      'a technique the session had not reached was reported skipped'
+    ).toEqual([]);
+    expect(
+      data.completionMetadata?.missedPerspectives,
+      'a perspective the session had not reached was reported missed'
+    ).toEqual([]);
+    // A session in progress has not failed to meet a threshold it is still
+    // working toward; `false` on step 1 reads as a verdict.
+    expect(
+      data.completionMetadata?.minimumThresholdMet,
+      'a mid-run session was judged against the completion threshold'
+    ).toBeUndefined();
   }, 30_000);
 
   it('reports a finished session as finished', async () => {

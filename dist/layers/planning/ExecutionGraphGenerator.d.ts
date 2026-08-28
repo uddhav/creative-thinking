@@ -50,6 +50,20 @@ export declare class ExecutionGraphGenerator {
     /**
      * Find groups of nodes that can execute in parallel
      * Optimized from O(n²) to O(n) using Map for grouping
+     *
+     * Never groups two steps of the SAME technique, even when the dependency
+     * classification says their steps are independent — `six_hats`, `scamper`
+     * and `nine_windows` are listed as parallel techniques, so all seven
+     * six_hats nodes shared one empty dependency signature and landed in a
+     * single group of seven.
+     *
+     * Two reasons that was wrong to emit. It contradicted the documented
+     * guarantee that steps within one technique are ordered, naming this very
+     * field as the authority on what may run concurrently. And the steps of one
+     * technique run against one sessionId: concurrent writes there are
+     * last-writer-wins, and unprotected across processes. Whether the six hats
+     * are conceptually independent is a separate question from whether they can
+     * safely share a session, and only the second one decides this field.
      */
     private static findParallelizableGroups;
     /**
