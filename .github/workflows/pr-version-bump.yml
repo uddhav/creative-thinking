@@ -1,18 +1,47 @@
 name: PR Version Bump
 
+# Runs AFTER a release tag exists, dispatched by semantic-release.yml.
+#
+# It used to run on `pull_request: closed` — the same merge that starts
+# semantic-release — and read `git describe --tags` before the new tag was
+# written. It therefore mirrored the PREVIOUS release: four consecutive bump
+# PRs proposed an already-published version, and the fourth proposed 2.4.2
+# while package.json held 2.4.3, which would have moved the version backwards.
+#
+# The old comment called this self-correcting, on the reasoning that the next
+# merge closes the gap. It does not: the next merge tags too, so the gap moves
+# rather than closing. Across #315, #317, #323, #326 and #327 it never closed
+# once, and every instance was caught only because someone was watching.
+#
+# There is no version arithmetic left here. semantic-release decides the
+# version and this job copies it, so the two cannot disagree.
 on:
-  pull_request:
-    types: [closed]
-    branches:
-      - main
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to align package.json with (e.g. v2.4.5)'
+        required: true
+        type: string
+
+# One bump job at a time, and never cancelled: each run records a tag that has
+# already been published, so a cancelled run loses that record permanently.
+concurrency:
+  group: version-bump
+  cancel-in-progress: false
 
 jobs:
   create-version-bump-pr:
-    if: github.event.pull_request.merged == true && !contains(github.event.pull_request.title, 'chore(release)')
     runs-on: ubuntu-latest
     permissions:
       contents: write
       pull-requests: write
+    env:
+      # This job commits and pushes. Without this, `npm ci` installs husky and
+      # the hooks fire on the runner: pre-commit runs the full suite again, and
+      # pre-push prompts on a stale dist with `read -r response` against a
+      # closed stdin, which exits 1. semantic-release.yml already sets this;
+      # this job did not.
+      HUSKY: '0'
 
     steps:
       - name: Checkout
@@ -35,55 +64,47 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      # PR title and body are attacker-controlled text. They reach the shell
-      # through `env:` so the runner sets them as variables; interpolating
-      # `${{ github.event.pull_request.body }}` into the script body instead
-      # lets backticks in any PR description run as command substitution,
-      # which is what took this job down with exit 127 on every previous run.
-      - name: Analyze PR and determine version bump
+      # Which PR produced the tagged commit.
+      #
+      # The old trigger handed this over in `github.event.pull_request`; a
+      # dispatch does not, so it is recovered from the commit the tag points
+      # at. Used only to describe the release in the CHANGELOG and commit
+      # message — the version itself comes from the tag, so a lookup that finds
+      # nothing degrades to a less specific entry rather than a wrong version.
+      #
+      # PR titles are untrusted text and reach the shell through `env:` in the
+      # steps that use them, never interpolated into a `run:` body: backticks
+      # in a PR description would otherwise run as command substitution, which
+      # took this job down with exit 127 on every run until August 2026.
+      - name: Identify the released PR
         id: analyze
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_TITLE: ${{ github.event.pull_request.title }}
-          PR_BODY: ${{ github.event.pull_request.body }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          TAG: ${{ inputs.tag }}
         run: |
-          COMMITS=$(gh pr view "$PR_NUMBER" --json commits -q '.commits[].commit.message')
+          SHA=$(git rev-list -n 1 "$TAG")
+          echo "Tag $TAG points at $SHA"
 
-          # Collect the signals first and decide once at the end. Deciding as we
-          # went let a later `feat:` check overwrite an earlier major with minor,
-          # so a breaking change announced in the PR body but implemented in a
-          # `feat:` commit was released as a minor.
-          IS_MAJOR=""
-          IS_MINOR=""
+          PR_JSON=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${SHA}/pulls" \
+            --jq '.[0] | {number, title}' 2>/dev/null || echo '')
 
-          # Conventional Commits marks a breaking change with `!` before the
-          # colon, or a `BREAKING CHANGE:` footer at the start of a line — never
-          # in running prose. The previous unanchored `grep -qi "breaking
-          # change"` matched any mention: #285 documented the detection in a
-          # table and was scored 2.0.0 for what was a `fix(ci):` change.
-          if printf '%s\n' "$PR_TITLE" "$COMMITS" | grep -qE "^[a-z]+(\(.+\))?!:"; then
-            IS_MAJOR=1
-          fi
-
-          if printf '%s\n' "$PR_BODY" "$COMMITS" | grep -qE "^BREAKING[ -]CHANGE:"; then
-            IS_MAJOR=1
-          fi
-
-          if printf '%s\n' "$PR_TITLE" "$COMMITS" | grep -qE "^(feat|feature)(\(.+\))?!?:"; then
-            IS_MINOR=1
-          fi
-
-          if [ -n "$IS_MAJOR" ]; then
-            BUMP_TYPE="major"
-          elif [ -n "$IS_MINOR" ]; then
-            BUMP_TYPE="minor"
+          if [ -n "$PR_JSON" ] && [ "$PR_JSON" != "null" ]; then
+            PR_NUMBER=$(printf '%s' "$PR_JSON" | jq -r '.number // empty')
+            PR_TITLE=$(printf '%s' "$PR_JSON" | jq -r '.title // empty')
           else
-            BUMP_TYPE="patch"
+            PR_NUMBER=""
+            PR_TITLE=""
           fi
 
-          echo "bump_type=$BUMP_TYPE" >> $GITHUB_OUTPUT
-          echo "Determined bump type: $BUMP_TYPE"
+          # Multiline-safe, because a PR title is arbitrary text.
+          {
+            printf 'pr_number=%s\n' "$PR_NUMBER"
+            # Delimiter is randomised: a PR titled exactly __EOF__ would
+            # otherwise close this block early and corrupt $GITHUB_OUTPUT.
+            DELIM="EOF_$(openssl rand -hex 8)"
+            printf 'pr_title<<%s\n%s\n%s\n' "$DELIM" "$PR_TITLE" "$DELIM"
+          } >> "$GITHUB_OUTPUT"
+          echo "Released by PR #${PR_NUMBER:-unknown}"
 
       - name: Create version bump branch
         run: |
@@ -91,68 +112,83 @@ jobs:
           git checkout -b $BRANCH_NAME
           echo "branch_name=$BRANCH_NAME" >> $GITHUB_ENV
 
-      # package.json mirrors the newest tag rather than being a second opinion.
-      # semantic-release decides the version and publishes it; incrementing a
-      # local value in parallel produced two independent estimates that drifted
-      # apart -- package.json sat at 1.1.0 from May while the tags reached
-      # v2.1.3, and the bump PR proposed 1.1.1 for work released as v2.1.3.
+      # package.json copies the dispatched tag. No arithmetic, no second
+      # opinion, and nothing read from `git describe` — semantic-release has
+      # already decided the version and this job records it.
       #
-      # If this job wins the race against semantic-release the tag is still the
-      # previous release, package.json lands one behind, and the next merge
-      # closes the gap. Eventually correct beats independently wrong.
+      # The `git describe` this replaced was the whole defect: it ran while
+      # semantic-release was still creating the tag, so it read the PREVIOUS
+      # release and proposed a version already published.
       - name: Bump version
         id: bump
         env:
-          BUMP_TYPE: ${{ steps.analyze.outputs.bump_type }}
+          TAG: ${{ inputs.tag }}
         run: |
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || true)
-          TAG_VERSION="${LATEST_TAG#v}"
+          TAG_VERSION="${TAG#v}"
 
-          if [ -z "$TAG_VERSION" ]; then
-            # No tags yet, so there is nothing to mirror. Fall back to the
-            # Conventional Commits bump so a first release can still be cut.
-            npm version "$BUMP_TYPE" --no-git-tag-version
-            NEW_VERSION=$(node -p "require('./package.json').version")
-            echo "No tags found; bumped $CURRENT_VERSION -> $NEW_VERSION ($BUMP_TYPE)"
-          elif [ "$TAG_VERSION" = "$CURRENT_VERSION" ]; then
-            echo "package.json already matches the newest tag ($TAG_VERSION); nothing to do"
-            echo "skip=true" >> $GITHUB_OUTPUT
-            exit 0
-          else
-            npm version "$TAG_VERSION" --no-git-tag-version --allow-same-version
-            NEW_VERSION="$TAG_VERSION"
-            echo "Aligned $CURRENT_VERSION -> $NEW_VERSION (newest tag $LATEST_TAG)"
+          # A dispatch can be fired by hand with anything in the box.
+          if ! printf '%s' "$TAG_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::Tag '$TAG' is not a semver release tag"
+            exit 1
           fi
 
-          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          # Refuse to move the version backwards. The old race produced a PR
+          # proposing 2.4.2 against a package.json already at 2.4.3, which
+          # would have published a version older than one already shipped.
+          # Nothing downstream would have caught that, so it is caught here.
+          LOWEST=$(printf '%s\n%s\n' "$TAG_VERSION" "$CURRENT_VERSION" | sort -V | head -1)
+          if [ "$TAG_VERSION" != "$CURRENT_VERSION" ] && [ "$TAG_VERSION" = "$LOWEST" ]; then
+            echo "::error::Refusing to move package.json backwards: $CURRENT_VERSION -> $TAG_VERSION"
+            exit 1
+          fi
+
+          if [ "$TAG_VERSION" = "$CURRENT_VERSION" ]; then
+            echo "package.json already at $TAG_VERSION; nothing to do"
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          npm version "$TAG_VERSION" --no-git-tag-version --allow-same-version
+          echo "Aligned $CURRENT_VERSION -> $TAG_VERSION (tag $TAG)"
+          echo "new_version=$TAG_VERSION" >> $GITHUB_OUTPUT
 
       - name: Generate changelog entry
         if: steps.bump.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NEW_VERSION: ${{ steps.bump.outputs.new_version }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          PR_TITLE: ${{ github.event.pull_request.title }}
+          TAG: ${{ inputs.tag }}
+          PR_NUMBER: ${{ steps.analyze.outputs.pr_number }}
+          PR_TITLE: ${{ steps.analyze.outputs.pr_title }}
         run: |
           # Built with printf into a file rather than accumulated into a shell
           # string: the PR title and commit subjects are untrusted text, and
           # `echo -e` on them would also expand backslash escapes they contain.
           {
             printf '## [v%s] - %s\n\n' "$NEW_VERSION" "$(date +%Y-%m-%d)"
-            printf '### Changes from PR #%s\n\n' "$PR_NUMBER"
-            printf -- '- %s\n' "$PR_TITLE"
 
-            gh pr view "$PR_NUMBER" --json commits -q '.commits[].commit.message' \
-              | head -5 \
-              | while IFS= read -r commit; do
-                  # `[ -n "$c" ] && printf` leaves the loop's exit status at 1
-                  # whenever the last line read is blank, and this step runs
-                  # under `bash -e`, which failed the job on every merge.
-                  if [ -n "$commit" ]; then
-                    printf -- '  - %s\n' "$commit"
-                  fi
-                done
+            # The PR lookup can come up empty — a tag on a direct push, or an
+            # ad-hoc tag. The version is already known from the tag, so this
+            # degrades to a plainer entry instead of failing the job.
+            if [ -n "$PR_NUMBER" ]; then
+              printf '### Changes from PR #%s\n\n' "$PR_NUMBER"
+              printf -- '- %s\n' "$PR_TITLE"
+
+              gh pr view "$PR_NUMBER" --json commits -q '.commits[].commit.message' \
+                | head -5 \
+                | while IFS= read -r commit; do
+                    # `[ -n "$c" ] && printf` leaves the loop's exit status at 1
+                    # whenever the last line read is blank, and this step runs
+                    # under `bash -e`, which failed the job on every merge.
+                    if [ -n "$commit" ]; then
+                      printf -- '  - %s\n' "$commit"
+                    fi
+                  done
+            else
+              printf '### Released as %s\n\n' "$TAG"
+              printf -- '- No pull request found for the tagged commit.\n'
+            fi
             printf '\n'
           } > CHANGELOG.entry
 
@@ -168,13 +204,13 @@ jobs:
         if: steps.bump.outputs.skip != 'true'
         env:
           NEW_VERSION: ${{ steps.bump.outputs.new_version }}
-          BUMP_TYPE: ${{ steps.analyze.outputs.bump_type }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          PR_TITLE: ${{ github.event.pull_request.title }}
+          TAG: ${{ inputs.tag }}
+          PR_NUMBER: ${{ steps.analyze.outputs.pr_number }}
+          PR_TITLE: ${{ steps.analyze.outputs.pr_title }}
         run: |
           git add package.json package-lock.json CHANGELOG.md
-          printf 'chore(release): bump version to %s\n\nAutomated version bump after merging PR #%s\n- %s\n- Bump type: %s\n' \
-            "$NEW_VERSION" "$PR_NUMBER" "$PR_TITLE" "$BUMP_TYPE" > /tmp/bump-commit-msg
+          printf 'chore(release): bump version to %s\n\nRecords the version semantic-release published as %s.\nReleased by PR #%s\n- %s\n' \
+            "$NEW_VERSION" "$TAG" "${PR_NUMBER:-unknown}" "${PR_TITLE:-title unavailable}" > /tmp/bump-commit-msg
           git commit -F /tmp/bump-commit-msg
 
       - name: Push branch
@@ -187,25 +223,25 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NEW_VERSION: ${{ steps.bump.outputs.new_version }}
-          BUMP_TYPE: ${{ steps.analyze.outputs.bump_type }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          PR_TITLE: ${{ github.event.pull_request.title }}
-          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
-          MERGED_BY: ${{ github.actor }}
+          TAG: ${{ inputs.tag }}
+          PR_NUMBER: ${{ steps.analyze.outputs.pr_number }}
+          PR_TITLE: ${{ steps.analyze.outputs.pr_title }}
         run: |
           # --body-file rather than --body: the title and login below are
           # untrusted, and building the body inline would put them back into
           # the command line this step is trying to keep them out of.
           {
             printf '## Automated Version Bump\n\n'
-            printf 'This PR was automatically created after merging PR #%s.\n\n' "$PR_NUMBER"
+            printf 'Records the version semantic-release published as **%s**.\n\n' "$TAG"
+            printf 'The tag is the decision; this PR only writes it down. It is dispatched\n'
+            printf 'by semantic-release AFTER tagging, so it cannot propose a version that\n'
+            printf 'does not exist yet.\n\n'
             printf '### Version Change\n'
-            printf -- '- **Bump Type**: %s\n' "$BUMP_TYPE"
-            printf -- '- **New Version**: %s\n\n' "$NEW_VERSION"
-            printf '### Merged PR Details\n'
-            printf -- '- **Title**: %s\n' "$PR_TITLE"
-            printf -- '- **Author**: @%s\n' "$PR_AUTHOR"
-            printf -- '- **Merged by**: @%s\n\n' "$MERGED_BY"
+            printf -- '- **New Version**: %s\n' "$NEW_VERSION"
+            printf -- '- **Release Tag**: %s\n\n' "$TAG"
+            printf '### Released PR\n'
+            printf -- '- **Number**: #%s\n' "${PR_NUMBER:-unknown}"
+            printf -- '- **Title**: %s\n\n' "${PR_TITLE:-unavailable}"
             printf "### What's included\n"
             printf -- '- Updated `package.json` with new version\n'
             printf -- '- Updated `package-lock.json`\n'
@@ -225,3 +261,46 @@ jobs:
             --head "$branch_name" \
             --label "release" \
             --label "automated"
+
+      # Exactly one open bump PR, always the newest.
+      #
+      # The backwards guard in the bump step reads package.json when the PR is
+      # CREATED, which says nothing about the state when it is merged. With two
+      # open — v2.4.5 and v2.4.6, say — merging the newer first leaves the older
+      # one mergeable and writing the version backwards, which is the defect
+      # this workflow exists to stop. It happened: #324 and #328 were open
+      # together, proposing 2.4.2 and 2.4.4 against a package.json at 2.4.3.
+      #
+      # Closing runs after creation, so a failure here leaves the new PR in
+      # place rather than none.
+      #
+      # Deliberately NOT gated on `skip`. When package.json already equals the
+      # tag no PR is created, but any bump PR still open is then redundant by
+      # definition — main already holds the version it proposes — and skipping
+      # this step would leave it sitting there mergeable. `!cancelled()` also
+      # keeps it running if an earlier step failed, since a half-finished run
+      # is exactly when a stale PR is most likely to be left behind.
+      - name: Close superseded bump PRs
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          gh pr list --state open --label release --json number,headRefName \
+            --jq '.[] | select(.headRefName | startswith("chore/version-bump-")) | .number' \
+            | while IFS= read -r num; do
+                if [ -z "$num" ]; then
+                  continue
+                fi
+                # `|| continue` because this runs in a pipeline subshell under
+                # `bash -e`: an unguarded failure here would end the loop and
+                # silently leave every remaining stale PR open.
+                CURRENT_HEAD=$(gh pr view "$num" --json headRefName --jq '.headRefName') || continue
+                # Everything except the one just created. `branch_name` is
+                # unset when no PR was created, so nothing matches and all
+                # stale PRs are closed, which is the intent in that case.
+                if [ "$CURRENT_HEAD" != "${branch_name:-}" ]; then
+                  gh pr close "$num" --delete-branch \
+                    --comment "Superseded by the release of $TAG. This PR names a version that is no longer the newest tag; merging it could move the version backwards." || true
+                fi
+              done
