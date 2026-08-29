@@ -1,3 +1,9 @@
+## [v2.5.3] - 2026-08-29
+
+### Changes from PR #360
+
+- fix: keep a vetoed step, and stop the risk scans matching word fragments
+
 ## [v2.5.1] - 2026-08-28
 
 ### Changes from PR #336
