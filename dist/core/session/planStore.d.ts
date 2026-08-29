@@ -19,8 +19,13 @@
  * the async `PersistenceAdapter` instead would have turned all three async for
  * a read that is one small local file.
  *
- * Consequence of that choice: this is filesystem-only. A server configured with
- * `PERSISTENCE_TYPE=postgres` persists its sessions and not its plans.
+ * Consequence of that choice: plans always go to the local filesystem, even
+ * under `PERSISTENCE_TYPE=postgres`, where sessions go to the database. For a
+ * single machine that is merely inconsistent. For the multi-instance
+ * deployment postgres exists to serve it means #316 is not fixed at all —
+ * instance A writes the plan to its own disk and instance B cannot see it.
+ * Recorded rather than solved here: putting plans in the adapter is the async
+ * change this deliberately avoided.
  */
 import type { SessionManager } from '../SessionManager.js';
 /**

@@ -22,10 +22,11 @@
  */
 
 import { describe, it, expect, afterAll } from 'vitest';
-import { mkdtempSync, rmSync, existsSync, readdirSync } from 'node:fs';
+import { mkdtempSync, rmSync, existsSync, readdirSync, writeFileSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { MCPClientTestHelper } from '../utils/MCPClientTestHelper.js';
+import { SessionManager } from '../../core/SessionManager.js';
 
 const PROBLEM = 'Decide whether to keep the nightly reconciliation job';
 const TECHNIQUES = ['six_hats'];
@@ -125,6 +126,99 @@ describe('a plan survives the process that issued it', () => {
       expect(after.sessionId, 'no session was started for the resumed plan').toBeTruthy();
     } finally {
       await second.disconnect();
+    }
+  });
+});
+
+/**
+ * The plan store turns a planId into a filename, and `planId` is caller-
+ * supplied. `ValidationStrategies` checks that it is a string and stops there,
+ * so nothing upstream constrains its shape.
+ *
+ * This mattered less while the store was CLI-only — the id came from the local
+ * user's own shell. Making it shared put it on the MCP tool surface, so the
+ * containment is asserted rather than assumed. Measured before the guard
+ * existed: `planId: '../outside'` loaded a JSON file from outside `plans/`.
+ */
+/**
+ * Debate mode advertises per-persona and synthesis planIds the caller is told
+ * to execute, so each has to survive the same restart. They are not named
+ * `plan_*` — `DebateOrchestrator` issues `debate_${persona.id}_${uuid}` and
+ * `debate_synthesis_${uuid}` — and the first version of the containment pattern
+ * below accepted only `plan_`, which silently switched debate persistence back
+ * off. Nothing caught it, because the loop that persists those ids had no test.
+ * This is that test.
+ */
+describe('the planIds a debate hands out survive too', () => {
+  it('persists every advertised debate plan', async () => {
+    const client = await connectedClient();
+    try {
+      const debate = JSON.parse(
+        textOf(
+          await client.callTool('plan_thinking_session', {
+            problem: 'Should the reconciliation job stay nightly?',
+            techniques: ['six_hats'],
+            personas: ['rory_sutherland', 'nassim_taleb'],
+          })
+        )
+      ) as { planId?: string; parallelPlans?: Array<{ planId: string }> };
+
+      const advertised = [
+        ...(debate.planId ? [debate.planId] : []),
+        ...(debate.parallelPlans ?? []).map(p => p.planId),
+      ];
+      expect(advertised.length, 'debate mode advertised no planIds').toBeGreaterThan(1);
+
+      const written = readdirSync(path.join(stateDir, 'plans'));
+      for (const id of advertised) {
+        expect(
+          written.some(name => name === `${id}.json`),
+          `advertised planId ${id} was not persisted`
+        ).toBe(true);
+      }
+    } finally {
+      await client.disconnect();
+    }
+  });
+});
+
+describe('the plan store stays inside its own directory', () => {
+  it('refuses a planId that would escape plans/', () => {
+    const base = mkdtempSync(path.join(tmpdir(), 'ct-plan-escape-'));
+    const previousType = process.env.PERSISTENCE_TYPE;
+    const previousPath = process.env.PERSISTENCE_PATH;
+    process.env.PERSISTENCE_TYPE = 'filesystem';
+    process.env.PERSISTENCE_PATH = base;
+
+    try {
+      mkdirSync(path.join(base, 'plans'), { recursive: true });
+
+      // A well-formed plan file sitting outside plans/, whose own planId field
+      // matches the traversal string — so the store's "does the id match the
+      // file" check cannot be what rejects it.
+      const escapingId = '../outside';
+      writeFileSync(
+        path.join(base, 'outside.json'),
+        JSON.stringify({
+          planId: escapingId,
+          problem: 'contents from outside the plans directory',
+          techniques: ['six_hats'],
+          workflow: [],
+          totalSteps: 6,
+          executionMode: 'sequential',
+        })
+      );
+
+      expect(
+        new SessionManager().getPlan(escapingId),
+        'a planId escaped the plans directory'
+      ).toBeUndefined();
+    } finally {
+      if (previousType === undefined) delete process.env.PERSISTENCE_TYPE;
+      else process.env.PERSISTENCE_TYPE = previousType;
+      if (previousPath === undefined) delete process.env.PERSISTENCE_PATH;
+      else process.env.PERSISTENCE_PATH = previousPath;
+      rmSync(base, { recursive: true, force: true });
     }
   });
 });
