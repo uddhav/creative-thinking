@@ -86,9 +86,25 @@ form never completes, and an incomplete session emits no final synthesis.
 
 State on disk under `PERSISTENCE_PATH` (default `~/.creative-thinking`):
 
-- `plans/<planId>.json` — full plan with `techniques` field that the executor needs (the CLI-side
-  plan store mirrors the in-memory `PlanManager` because `ResponseBuilder` strips fields the
-  executor relies on; see `src/cli/planStore.ts`)
+- `plans/<planId>.json` — full plan with `techniques` field that the executor needs. The plan store
+  mirrors the in-memory `PlanManager` because `ResponseBuilder` strips fields the executor relies
+  on; see `src/core/session/planStore.ts`. **Both binaries write and read this.** It began as a CLI
+  affordance, which meant the same planId resolved under `socketes` and returned `PLAN_NOT_FOUND`
+  under the MCP server after a restart; it was promoted to shared so the two cannot drift again.
+  `SessionManager.getPlan` does the disk fallback, so every caller gets it — `WorkflowGuard` reads a
+  found plan as proof discovery ran, and hydrating only in `ExecutionValidator` fixed execution
+  while the guard still refused the call. Writes are gated on `PERSISTENCE_TYPE` being exactly
+  `filesystem` or `postgres` — naming the two adapters rather than excluding `memory`, because
+  `getDefaultConfig` throws for anything else and a "not memory" test would write plans for a server
+  whose sessions failed to initialise. A default MCP server (in-memory) writes nothing, and under
+  `PERSISTENCE_TYPE=memory` the CLI persists nothing either — it was already broken across
+  invocations there, since sessions never persisted under that setting. An id that names a file must
+  match `^(plan|debate)_[A-Za-z0-9_-]{1,200}$`: `planId` is caller-supplied and validated only as a
+  string, so `../outside` otherwise read a file outside `plans/`. Encoded planIds are excluded
+  deliberately — they are standard base64, whose alphabet includes `/`, and they carry their own
+  plan anyway. **Plans always go to the local filesystem, including under
+  `PERSISTENCE_TYPE=postgres`** — fine on one machine, but a multi-instance server still loses them
+  (#358), and nothing ever deletes a plan file (#357).
 - `sessions/<sessionId>.json` — session history (auto-saved every `execute` step via
   `autoSave: true` defaulted in `src/cli/commands/execute.ts`)
 - `metadata/` — filesystem adapter housekeeping

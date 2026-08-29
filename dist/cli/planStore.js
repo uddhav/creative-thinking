@@ -1,67 +1,23 @@
 /**
- * CLI-side plan store.
+ * CLI-side plan store — now a thin adapter over the shared one.
  *
- * The core PlanManager is in-memory only — fine for a long-running MCP
- * server but useless for a one-shot CLI where every invocation starts a
- * fresh process. We mirror plans to disk under PERSISTENCE_PATH/plans/ so
- * a `socketes plan` in one process can be looked up by `socketes execute`
- * in a later process. Sessions already persist via the existing filesystem
- * adapter; this fills the matching gap for plans.
- */
-import { mkdirSync, writeFileSync, readFileSync, existsSync } from 'fs';
-import { homedir } from 'os';
-import { join } from 'path';
-function plansDir() {
-    const base = process.env.PERSISTENCE_PATH || join(homedir(), '.creative-thinking');
-    return join(base, 'plans');
-}
-function planFile(planId) {
-    return join(plansDir(), `${planId}.json`);
-}
-/**
- * Persist the full in-memory plan after `socketes plan` succeeds.
+ * The implementation moved to `src/core/session/planStore.ts` when the MCP
+ * server needed the same durability and had none, so that the same planId
+ * behaves the same way whichever binary is holding it (#316). These wrappers
+ * remain because the CLI commands hold a `LateralThinkingServer` while the
+ * shared functions take a `SessionManager` — core must not import the
+ * top-level server class.
  *
- * We can't use the unwrapped MCP response because ResponseBuilder strips
- * fields the executor needs (notably `techniques`). Read the canonical
- * plan from PlanManager instead.
+ * `persistPlan` is still called from `socketes plan` even though
+ * `planThinkingSession` now persists on its own: both are idempotent writes of
+ * the same plan, and leaving the CLI call in place means the CLI does not
+ * silently depend on where in the shared path the write happens.
  */
+import { persistPlan as persistPlanShared, hydratePlan as hydratePlanShared, } from '../core/session/planStore.js';
 export function persistPlan(server, planId) {
-    if (!planId)
-        return;
-    const plan = server.getSessionManager().getPlan(planId);
-    if (!plan)
-        return;
-    try {
-        mkdirSync(plansDir(), { recursive: true });
-        writeFileSync(planFile(planId), JSON.stringify(plan), 'utf8');
-    }
-    catch (err) {
-        process.stderr.write(`[socketes] Warning: failed to persist plan ${planId}: ${err.message}\n`);
-    }
+    persistPlanShared(server.getSessionManager(), planId);
 }
-/**
- * Inject a previously-persisted plan into the in-memory PlanManager so
- * the execution layer can look it up by ID. Idempotent — if the plan is
- * already in memory or the file doesn't exist, this is a no-op.
- */
 export function hydratePlan(server, planId) {
-    if (!planId)
-        return;
-    const sessionManager = server.getSessionManager();
-    if (sessionManager.getPlan(planId))
-        return;
-    const path = planFile(planId);
-    if (!existsSync(path))
-        return;
-    try {
-        const raw = readFileSync(path, 'utf8');
-        const plan = JSON.parse(raw);
-        if (plan && plan.planId === planId) {
-            sessionManager.savePlan(planId, plan);
-        }
-    }
-    catch (err) {
-        process.stderr.write(`[socketes] Warning: failed to load plan ${planId}: ${err.message}\n`);
-    }
+    hydratePlanShared(server.getSessionManager(), planId);
 }
 //# sourceMappingURL=planStore.js.map
