@@ -43,7 +43,10 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: ['18.x', '20.x', '22.x']
+        # Tracks the engines range in package.json. Node 18 left the matrix
+        # when yargs 18 raised its floor to ^20.19; it had been EOL since
+        # 2025-04-30, and the dev toolchain had already moved past it.
+        node-version: ['20.x', '22.x']
     steps:
       - name: 🛎️ Checkout code
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4

@@ -20,7 +20,7 @@ will help you get started.
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 20.19+ (the `engines` range in `package.json`; CI covers 20.x and 22.x)
 - npm or yarn
 - Git
 - TypeScript knowledge
@@ -799,9 +799,7 @@ npm test -- path/to/test.ts
 describe('Component', () => {
   it('should handle normal operation', async () => {
     // Arrange
-    const input = {
-      /* test data */
-    };
+    const input = {/* test data */};
 
     // Act
     const result = await component.process(input);
