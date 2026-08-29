@@ -638,7 +638,7 @@ function isValidPersonaDefinition(obj: unknown): boolean {
   }
   // Reject keys that aren't valid technique names (defense against prototype pollution)
   const validTechniques = new Set<string>(ALL_LATERAL_TECHNIQUES);
-  const biasKeys = Object.keys(def.techniqueBias as Record<string, unknown>);
+  const biasKeys = Object.keys(def.techniqueBias);
   for (const key of biasKeys) {
     if (!validTechniques.has(key)) {
       return false;

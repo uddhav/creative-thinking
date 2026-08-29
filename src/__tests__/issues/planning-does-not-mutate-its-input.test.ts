@@ -40,13 +40,13 @@ import { MCPClientTestHelper } from '../utils/MCPClientTestHelper.js';
 import { planThinkingSession } from '../../layers/planning.js';
 import { SessionManager } from '../../core/SessionManager.js';
 import { TechniqueRegistry } from '../../techniques/TechniqueRegistry.js';
-import type { PlanThinkingSessionInput, LateralTechnique } from '../../types/index.js';
+import type { LateralTechnique } from '../../types/index.js';
 
 const PROBLEM = 'Cut the release train from monthly to weekly';
 
 function plan(techniques: LateralTechnique[]) {
   return planThinkingSession(
-    { problem: PROBLEM, techniques, timeframe: 'thorough' } as PlanThinkingSessionInput,
+    { problem: PROBLEM, techniques, timeframe: 'thorough' },
     new SessionManager(),
     TechniqueRegistry.getInstance()
   );

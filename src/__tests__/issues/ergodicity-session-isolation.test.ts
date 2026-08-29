@@ -25,7 +25,7 @@ import { VisualFormatter } from '../../utils/VisualFormatter.js';
 import { MetricsCollector } from '../../core/MetricsCollector.js';
 import { HybridComplexityAnalyzer } from '../../complexity/analyzer.js';
 import { ErgodicityManager } from '../../ergodicity/index.js';
-import type { PlanThinkingSessionInput, ExecuteThinkingStepInput } from '../../types/index.js';
+import type { ExecuteThinkingStepInput } from '../../types/index.js';
 
 describe('Ergodicity state is per session', () => {
   let sessionManager: SessionManager;
@@ -47,7 +47,7 @@ describe('Ergodicity state is per session', () => {
 
   async function runSession(problem: string, outputs: string[]): Promise<string> {
     const plan = planThinkingSession(
-      { problem, techniques: ['triz'], timeframe: 'thorough' } as PlanThinkingSessionInput,
+      { problem, techniques: ['triz'], timeframe: 'thorough' },
       sessionManager,
       techniqueRegistry
     );

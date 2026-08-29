@@ -12,11 +12,6 @@ import type {
   ScamperPathImpact,
 } from '../index.js';
 
-interface ServerResponse {
-  content: Array<{ type: string; text: string }>;
-  isError?: boolean;
-}
-
 interface PlanResponse {
   planId: string;
   workflow: Array<{
@@ -69,7 +64,7 @@ describe('PDA-SCAMPER Enhancement', () => {
       techniques: ['scamper'] as LateralTechnique[],
     };
 
-    const result = server.planThinkingSession(input) as ServerResponse;
+    const result = server.planThinkingSession(input);
     expect(result.isError).toBeFalsy();
     const planData = JSON.parse(result.content[0]?.text || '{}') as PlanResponse;
     return planData.planId;
@@ -96,7 +91,7 @@ describe('PDA-SCAMPER Enhancement', () => {
       sessionId,
     };
 
-    const result = (await server.executeThinkingStep(input)) as ServerResponse;
+    const result = await server.executeThinkingStep(input);
     if (result.isError) {
       console.error('ExecuteStep error:', result.content[0]?.text);
     }
@@ -113,7 +108,7 @@ describe('PDA-SCAMPER Enhancement', () => {
         techniques: ['scamper'] as LateralTechnique[],
       };
 
-      const result = server.planThinkingSession(input) as ServerResponse;
+      const result = server.planThinkingSession(input);
       const planData = JSON.parse(result.content[0]?.text || '{}') as PlanResponse;
 
       // Check that each step has path indicators
@@ -353,8 +348,7 @@ describe('PDA-SCAMPER Enhancement', () => {
       // The ruin-assessment prompt no longer quotes the caller to themselves:
       // the same request carried the problem and this step's output already.
       const ruin = (step3 as Record<string, unknown>).ruinAssessment as
-        | { prompt?: string }
-        | undefined;
+        { prompt?: string } | undefined;
       if (ruin?.prompt) {
         expect(ruin.prompt).not.toContain('Design for cargo hauling');
         expect(ruin.prompt).not.toContain('Improve a coffee mug design');

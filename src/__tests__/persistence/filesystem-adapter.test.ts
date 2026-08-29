@@ -6,7 +6,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { FilesystemAdapter } from '../../persistence/filesystem-adapter.js';
 import { PersistenceError, PersistenceErrorCode } from '../../persistence/types.js';
-import type { SessionState, ExportFormat } from '../../persistence/types.js';
+import type { SessionState } from '../../persistence/types.js';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import os from 'os';
@@ -240,7 +240,7 @@ describe('FilesystemAdapter', () => {
 
       await adapter.initialize({ adapter: 'filesystem', options: { path: tempDir } });
 
-      await expect(adapter.import(data, 'csv' as ExportFormat)).rejects.toThrow(PersistenceError);
+      await expect(adapter.import(data, 'csv')).rejects.toThrow(PersistenceError);
     });
 
     it('should throw error for invalid JSON data', async () => {

@@ -209,7 +209,7 @@ How can the forced connections become real innovations?`;
 
     // Additional validation for Rory Mode
     if (data && typeof data === 'object' && 'roryMode' in data) {
-      const dataWithRoryMode = data as { roryMode: unknown };
+      const dataWithRoryMode = data;
       if (typeof dataWithRoryMode.roryMode !== 'boolean') {
         return false;
       }

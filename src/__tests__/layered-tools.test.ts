@@ -2,11 +2,6 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { LateralThinkingServer } from '../index.js';
 
 // Type for the response from server methods
-type ServerResponse = {
-  content: Array<{ type: string; text: string }>;
-  isError?: boolean;
-};
-
 describe('Layered Tools Architecture', () => {
   let server: LateralThinkingServer;
 
@@ -21,7 +16,7 @@ describe('Layered Tools Architecture', () => {
         preferredOutcome: 'systematic' as const,
       };
 
-      const result = server.discoverTechniques(input) as ServerResponse;
+      const result = server.discoverTechniques(input);
 
       expect(result.isError).toBeFalsy();
       expect(result.content).toBeDefined();
@@ -40,7 +35,7 @@ describe('Layered Tools Architecture', () => {
         context: 'Engineering challenge with conflicting requirements',
       };
 
-      const result = server.discoverTechniques(input) as ServerResponse;
+      const result = server.discoverTechniques(input);
 
       expect(result.isError).toBeFalsy();
       const text = result.content[0]?.text || '';
@@ -53,7 +48,7 @@ describe('Layered Tools Architecture', () => {
         problem: 'General problem that needs solving',
       };
 
-      const result = server.discoverTechniques(input) as ServerResponse;
+      const result = server.discoverTechniques(input);
 
       expect(result.isError).toBeFalsy();
       expect(result.content.length).toBeGreaterThan(0);
@@ -66,7 +61,7 @@ describe('Layered Tools Architecture', () => {
       const riskAwareResult = server.discoverTechniques({
         problem: 'How to launch a new product',
         preferredOutcome: 'risk-aware' as const,
-      }) as ServerResponse;
+      });
 
       expect(riskAwareResult.isError).toBeFalsy();
       const riskText = riskAwareResult.content[0]?.text || '';
@@ -76,7 +71,7 @@ describe('Layered Tools Architecture', () => {
       const collaborativeResult = server.discoverTechniques({
         problem: 'Team brainstorming session needed',
         preferredOutcome: 'collaborative' as const,
-      }) as ServerResponse;
+      });
 
       expect(collaborativeResult.isError).toBeFalsy();
       const collabText = collaborativeResult.content[0]?.text || '';
@@ -93,7 +88,7 @@ describe('Layered Tools Architecture', () => {
         preferredOutcome: 'systematic' as const,
       };
 
-      const result = server.discoverTechniques(input) as ServerResponse;
+      const result = server.discoverTechniques(input);
 
       expect(result.isError).toBeFalsy();
       const text = result.content[0]?.text || '';
@@ -108,7 +103,7 @@ describe('Layered Tools Architecture', () => {
       const result = server.discoverTechniques({
         // Missing required 'problem' field
         preferredOutcome: 'systematic' as const,
-      }) as ServerResponse;
+      });
 
       expect(result.isError).toBeTruthy();
       const errorText = result.content[0]?.text || '';
@@ -124,7 +119,7 @@ describe('Layered Tools Architecture', () => {
         objectives: ['Better team communication'],
       };
 
-      const result = server.planThinkingSession(input) as ServerResponse;
+      const result = server.planThinkingSession(input);
 
       expect(result.isError).toBeFalsy();
       const text = result.content[0]?.text || '';
@@ -142,7 +137,7 @@ describe('Layered Tools Architecture', () => {
         objectives: ['Improve UX', 'Reduce complexity'],
       };
 
-      const result = server.planThinkingSession(input) as ServerResponse;
+      const result = server.planThinkingSession(input);
 
       expect(result.isError).toBeFalsy();
       const text = result.content[0]?.text || '';
@@ -159,7 +154,7 @@ describe('Layered Tools Architecture', () => {
         objectives: ['Optimize performance'],
       };
 
-      const result = server.planThinkingSession(input) as ServerResponse;
+      const result = server.planThinkingSession(input);
 
       expect(result.isError).toBeFalsy();
       const text = result.content[0]?.text || '';
@@ -175,7 +170,7 @@ describe('Layered Tools Architecture', () => {
         timeframe: 'thorough' as const,
       };
 
-      const result = server.planThinkingSession(input) as ServerResponse;
+      const result = server.planThinkingSession(input);
 
       expect(result.isError).toBeFalsy();
       const text = result.content[0]?.text || '';
@@ -188,7 +183,7 @@ describe('Layered Tools Architecture', () => {
         problem: 'Test problem',
         techniques: [], // Empty techniques array
         objectives: ['Test objective'],
-      }) as ServerResponse;
+      });
 
       expect(result.isError).toBeTruthy();
       const errorText = result.content[0]?.text || '';
@@ -214,7 +209,7 @@ describe('Layered Tools Architecture', () => {
       const planResult = server.planThinkingSession({
         problem,
         techniques,
-      }) as ServerResponse;
+      });
 
       const planData = JSON.parse(planResult.content[0]?.text || '{}') as { planId: string };
       return planData.planId;
@@ -235,7 +230,7 @@ describe('Layered Tools Architecture', () => {
         nextStepNeeded: true,
       };
 
-      const result = (await server.executeThinkingStep(input)) as ServerResponse;
+      const result = await server.executeThinkingStep(input);
 
       expect(result.isError).toBeFalsy();
       expect(result.content.length).toBeGreaterThan(0);
@@ -248,7 +243,7 @@ describe('Layered Tools Architecture', () => {
       const planId = createTestPlan('How to make meetings more productive', ['po']);
 
       // First step
-      const step1Result = (await server.executeThinkingStep({
+      const step1Result = await server.executeThinkingStep({
         planId,
         technique: 'po' as const,
         problem: 'How to make meetings more productive',
@@ -257,7 +252,7 @@ describe('Layered Tools Architecture', () => {
         output: 'PO: Meetings should have no agenda',
         provocation: 'Meetings should have no agenda',
         nextStepNeeded: true,
-      })) as ServerResponse;
+      });
 
       expect(step1Result.isError).toBeFalsy();
       const step1Text = step1Result.content[0]?.text || '';
@@ -266,7 +261,7 @@ describe('Layered Tools Architecture', () => {
       expect(sessionId).toBeDefined();
 
       // Second step using session ID
-      const step2Result = (await server.executeThinkingStep({
+      const step2Result = await server.executeThinkingStep({
         planId,
         technique: 'po' as const,
         problem: 'How to make meetings more productive',
@@ -276,7 +271,7 @@ describe('Layered Tools Architecture', () => {
         output: 'This challenges the assumption that structure is necessary',
         principles: ['Flexibility over rigidity', 'Emergence over planning'],
         nextStepNeeded: true,
-      })) as ServerResponse;
+      });
 
       expect(step2Result.isError).toBeFalsy();
       const step2Text = step2Result.content[0]?.text || '';
@@ -290,7 +285,7 @@ describe('Layered Tools Architecture', () => {
 
       // A session only completes if every planned step actually ran, so run all
       // three of random_entry's steps in the same session before ending it.
-      const step1 = (await server.executeThinkingStep({
+      const step1 = await server.executeThinkingStep({
         planId,
         technique: 'random_entry' as const,
         problem,
@@ -299,13 +294,13 @@ describe('Layered Tools Architecture', () => {
         output: 'Random stimulus selected: Clock',
         randomStimulus: 'Clock',
         nextStepNeeded: true,
-      })) as ServerResponse;
+      });
 
       expect(step1.isError).toBeFalsy();
       const sessionId = (JSON.parse(step1.content[0]?.text || '{}') as { sessionId: string })
         .sessionId;
 
-      const step2 = (await server.executeThinkingStep({
+      const step2 = await server.executeThinkingStep({
         planId,
         sessionId,
         technique: 'random_entry' as const,
@@ -316,11 +311,11 @@ describe('Layered Tools Architecture', () => {
         randomStimulus: 'Clock',
         connections: ['Time management', 'Scheduling', 'Deadlines'],
         nextStepNeeded: true,
-      })) as ServerResponse;
+      });
 
       expect(step2.isError).toBeFalsy();
 
-      const result = (await server.executeThinkingStep({
+      const result = await server.executeThinkingStep({
         planId,
         sessionId,
         technique: 'random_entry' as const,
@@ -331,7 +326,7 @@ describe('Layered Tools Architecture', () => {
         randomStimulus: 'Clock',
         connections: ['Time management', 'Scheduling', 'Deadlines'],
         nextStepNeeded: false,
-      })) as ServerResponse;
+      });
 
       expect(result.isError).toBeFalsy();
       const text = result.content[0]?.text || '';
@@ -342,7 +337,7 @@ describe('Layered Tools Architecture', () => {
     it('should handle technique-specific fields correctly', async () => {
       const planId = createTestPlan('Improve customer onboarding', ['design_thinking']);
 
-      const result = (await server.executeThinkingStep({
+      const result = await server.executeThinkingStep({
         planId,
         technique: 'design_thinking' as const,
         problem: 'Improve customer onboarding',
@@ -357,7 +352,7 @@ describe('Layered Tools Architecture', () => {
         ],
         risks: ['Selection bias in interviews'],
         nextStepNeeded: true,
-      })) as ServerResponse;
+      });
 
       expect(result.isError).toBeFalsy();
       const text = result.content[0]?.text || '';
@@ -367,7 +362,7 @@ describe('Layered Tools Architecture', () => {
     });
 
     it('should require planId', async () => {
-      const result = (await server.executeThinkingStep({
+      const result = await server.executeThinkingStep({
         // Missing planId - intentionally omitted for test
         technique: 'six_hats' as const,
         problem: 'Test problem',
@@ -375,7 +370,7 @@ describe('Layered Tools Architecture', () => {
         totalSteps: 6,
         output: 'Test output',
         nextStepNeeded: true,
-      } as unknown)) as ServerResponse;
+      });
 
       expect(result.isError).toBeTruthy();
       const errorText = result.content[0]?.text || '';
@@ -398,7 +393,7 @@ describe('Layered Tools Architecture', () => {
     });
 
     it('should validate planId exists', async () => {
-      const result = (await server.executeThinkingStep({
+      const result = await server.executeThinkingStep({
         planId: 'invalid_plan_id',
         technique: 'six_hats' as const,
         problem: 'Test problem',
@@ -406,7 +401,7 @@ describe('Layered Tools Architecture', () => {
         totalSteps: 6,
         output: 'Test output',
         nextStepNeeded: true,
-      })) as ServerResponse;
+      });
 
       expect(result.isError).toBeTruthy();
       const errorText = result.content[0]?.text || '';
@@ -421,7 +416,7 @@ describe('Layered Tools Architecture', () => {
       const planId = createTestPlan('Test problem', ['six_hats']);
 
       // Try to execute with different technique
-      const result = (await server.executeThinkingStep({
+      const result = await server.executeThinkingStep({
         planId,
         technique: 'po' as const, // Wrong technique
         problem: 'Test problem',
@@ -429,7 +424,7 @@ describe('Layered Tools Architecture', () => {
         totalSteps: 4,
         output: 'Test output',
         nextStepNeeded: true,
-      })) as ServerResponse;
+      });
 
       expect(result.isError).toBeTruthy();
       const errorText = result.content[0]?.text || '';
@@ -446,7 +441,7 @@ describe('Layered Tools Architecture', () => {
       const discoveryResult = server.discoverTechniques({
         problem: 'How to reduce software bugs in production',
         preferredOutcome: 'systematic' as const,
-      }) as ServerResponse;
+      });
 
       expect(discoveryResult.isError).toBeFalsy();
 
@@ -455,7 +450,7 @@ describe('Layered Tools Architecture', () => {
         problem: 'How to reduce software bugs in production',
         techniques: ['triz'] as const, // Based on discovery
         objectives: ['Identify root causes', 'Find systematic solutions'],
-      }) as ServerResponse;
+      });
 
       expect(planResult.isError).toBeFalsy();
 
@@ -465,7 +460,7 @@ describe('Layered Tools Architecture', () => {
       expect(planData.planId).toBeDefined();
 
       // Step 3: Execution
-      const execResult = (await server.executeThinkingStep({
+      const execResult = await server.executeThinkingStep({
         planId: planData.planId,
         technique: 'triz' as const,
         problem: 'How to reduce software bugs in production',
@@ -475,7 +470,7 @@ describe('Layered Tools Architecture', () => {
         contradiction: 'Need thorough testing BUT need fast deployment',
         risks: ['Testing takes time', 'Fast deployment may skip tests'],
         nextStepNeeded: true,
-      })) as ServerResponse;
+      });
 
       expect(execResult.isError).toBeFalsy();
       const text = execResult.content[0]?.text || '';

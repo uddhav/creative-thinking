@@ -4,11 +4,6 @@ import { ErgodicityManager } from '../ergodicity/index.js';
 import { ErgodicityWarningLevel } from '../ergodicity/types.js';
 
 // Type for the response from server methods
-type ServerResponse = {
-  content: Array<{ type: string; text: string }>;
-  isError?: boolean;
-};
-
 describe('Ergodicity and Path Dependency Tracking', () => {
   let server: LateralThinkingServer;
 
@@ -23,7 +18,7 @@ describe('Ergodicity and Path Dependency Tracking', () => {
         techniques: ['six_hats'] as const,
       };
 
-      const planResult = server.planThinkingSession(input) as ServerResponse;
+      const planResult = server.planThinkingSession(input);
       expect(planResult.isError).toBeFalsy();
 
       const planText = planResult.content[0]?.text || '';
@@ -42,12 +37,12 @@ describe('Ergodicity and Path Dependency Tracking', () => {
       const planResult = server.planThinkingSession({
         problem: 'How to improve team collaboration',
         techniques: ['six_hats'] as const,
-      }) as ServerResponse;
+      });
 
       const planData = JSON.parse(planResult.content[0]?.text || '{}') as { planId: string };
 
       // Execute first step to create session
-      const firstResult = (await server.executeThinkingStep({
+      const firstResult = await server.executeThinkingStep({
         planId: planData.planId,
         technique: 'six_hats' as const,
         problem: 'How to improve team collaboration',
@@ -56,14 +51,14 @@ describe('Ergodicity and Path Dependency Tracking', () => {
         output: 'Setting up the thinking process',
         hatColor: 'blue' as const,
         nextStepNeeded: true,
-      })) as ServerResponse;
+      });
 
       const sessionData = JSON.parse(firstResult.content[0]?.text || '{}') as {
         sessionId: string;
       };
 
       // Now execute Purple Hat step
-      const result = (await server.executeThinkingStep({
+      const result = await server.executeThinkingStep({
         planId: planData.planId,
         sessionId: sessionData.sessionId,
         technique: 'six_hats' as const,
@@ -73,7 +68,7 @@ describe('Ergodicity and Path Dependency Tracking', () => {
         output: 'Analyzing path dependencies and constraints created by previous decisions',
         hatColor: 'purple' as const,
         nextStepNeeded: false,
-      })) as ServerResponse;
+      });
 
       if (result.isError) {
         console.error('Error response:', result.content[0]?.text);
@@ -219,14 +214,14 @@ describe('Ergodicity and Path Dependency Tracking', () => {
       const planResult = server.planThinkingSession({
         problem: 'Complex decision with many constraints',
         techniques: ['scamper'] as const,
-      }) as ServerResponse;
+      });
 
       const planData = JSON.parse(planResult.content[0]?.text || '{}') as { planId: string };
 
       // Execute several SCAMPER steps to create path dependencies
 
       // Step 1: Eliminate (high commitment)
-      const step1Result = (await server.executeThinkingStep({
+      const step1Result = await server.executeThinkingStep({
         planId: planData.planId,
         technique: 'scamper' as const,
         problem: 'Complex decision with many constraints',
@@ -236,7 +231,7 @@ describe('Ergodicity and Path Dependency Tracking', () => {
         scamperAction: 'eliminate' as const,
         risks: ['Cannot restore eliminated components'],
         nextStepNeeded: true,
-      })) as ServerResponse;
+      });
 
       const step1Data = JSON.parse(step1Result.content[0]?.text || '{}') as {
         sessionId: string;
@@ -244,7 +239,7 @@ describe('Ergodicity and Path Dependency Tracking', () => {
       const sessionIdFromStep1 = step1Data.sessionId;
 
       // Step 2: Combine (medium commitment)
-      const step2Result = (await server.executeThinkingStep({
+      const step2Result = await server.executeThinkingStep({
         planId: planData.planId,
         sessionId: sessionIdFromStep1,
         technique: 'scamper' as const,
@@ -254,7 +249,7 @@ describe('Ergodicity and Path Dependency Tracking', () => {
         output: 'Combining separate modules',
         scamperAction: 'combine' as const,
         nextStepNeeded: false,
-      })) as ServerResponse;
+      });
 
       expect(step2Result.isError).toBeFalsy();
 

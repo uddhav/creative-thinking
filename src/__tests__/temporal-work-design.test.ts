@@ -11,11 +11,6 @@ import type {
   LateralTechnique,
 } from '../index.js';
 
-interface ServerResponse {
-  content: Array<{ type: string; text: string }>;
-  isError?: boolean;
-}
-
 interface PlanResponse {
   planId: string;
   workflow: Array<{
@@ -95,7 +90,7 @@ describe('Temporal Work Design', () => {
       techniques: techniques as LateralTechnique[],
     };
 
-    const result = server.planThinkingSession(input) as ServerResponse;
+    const result = server.planThinkingSession(input);
     expect(result.isError).toBeFalsy();
     const planData = JSON.parse(result.content[0]?.text || '{}') as PlanResponse;
     return planData.planId;
@@ -106,10 +101,10 @@ describe('Temporal Work Design', () => {
     planId: string,
     input: Partial<ExecuteThinkingStepInput>
   ): Promise<ExecutionResponse> {
-    const result = (await server.executeThinkingStep({
+    const result = await server.executeThinkingStep({
       planId,
       ...input,
-    } as ExecuteThinkingStepInput)) as ServerResponse;
+    });
 
     expect(result.isError).toBeFalsy();
     return JSON.parse(result.content[0]?.text || '{}') as ExecutionResponse;
@@ -122,7 +117,7 @@ describe('Temporal Work Design', () => {
         context: 'Multiple projects with conflicting deadlines and limited time',
       };
 
-      const result = server.discoverTechniques(input) as ServerResponse;
+      const result = server.discoverTechniques(input);
       expect(result.isError).toBeFalsy();
       const response = JSON.parse(result.content[0]?.text || '{}') as DiscoveryResponse;
 
@@ -151,7 +146,7 @@ describe('Temporal Work Design', () => {
         context: 'Need to balance deadline pressure with kairos opportunities',
       };
 
-      const result = server.discoverTechniques(input) as ServerResponse;
+      const result = server.discoverTechniques(input);
       expect(result.isError).toBeFalsy();
       const response = JSON.parse(result.content[0]?.text || '{}') as DiscoveryResponse;
 
@@ -179,7 +174,7 @@ describe('Temporal Work Design', () => {
         techniques: ['temporal_work'] as LateralTechnique[],
       };
 
-      const result = server.planThinkingSession(input) as ServerResponse;
+      const result = server.planThinkingSession(input);
       expect(result.isError).toBeFalsy();
       const planData = JSON.parse(result.content[0]?.text || '{}') as PlanResponse;
 

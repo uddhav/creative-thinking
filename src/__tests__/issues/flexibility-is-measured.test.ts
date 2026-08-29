@@ -23,11 +23,7 @@ import { VisualFormatter } from '../../utils/VisualFormatter.js';
 import { MetricsCollector } from '../../core/MetricsCollector.js';
 import { HybridComplexityAnalyzer } from '../../complexity/analyzer.js';
 import { ErgodicityManager } from '../../ergodicity/index.js';
-import type {
-  PlanThinkingSessionInput,
-  ExecuteThinkingStepInput,
-  LateralTechnique,
-} from '../../types/index.js';
+import type { LateralTechnique } from '../../types/index.js';
 
 /**
  * Wording is identical across every run below. The measure reads what each
@@ -51,7 +47,7 @@ async function runChain(
   const registry = TechniqueRegistry.getInstance();
   const problem = 'Retire the legacy pipeline';
   const plan = planThinkingSession(
-    { problem, techniques, timeframe: 'thorough' } as PlanThinkingSessionInput,
+    { problem, techniques, timeframe: 'thorough' },
     sessionManager,
     registry
   );
@@ -76,7 +72,7 @@ async function runChain(
         output: PLAIN,
         nextStepNeeded: index < steps.length - 1,
         ...extraPerStep,
-      } as ExecuteThinkingStepInput,
+      },
       sessionManager,
       registry,
       new VisualFormatter(true),

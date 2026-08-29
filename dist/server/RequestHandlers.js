@@ -124,9 +124,7 @@ export class RequestHandlers {
      */
     validateRequiredParameters(toolName, args) {
         // Check for empty or missing arguments object
-        if (!args ||
-            typeof args !== 'object' ||
-            Object.keys(args).length === 0) {
+        if (!args || typeof args !== 'object' || Object.keys(args).length === 0) {
             return (`❌ ERROR: ${toolName} called with empty parameters!\n\n` +
                 `REQUIRED PARAMETERS MISSING:\n` +
                 this.getRequiredParametersMessage(toolName) +

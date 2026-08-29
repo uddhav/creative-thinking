@@ -33,8 +33,7 @@ export class SessionPersistence {
   private async initializePersistence(): Promise<void> {
     // Check if persistence is explicitly configured
     const persistenceType = process.env.PERSISTENCE_TYPE as
-      | PersistenceConfig['adapter']
-      | undefined;
+      PersistenceConfig['adapter'] | undefined;
 
     if (!persistenceType) {
       // No persistence configured - use memory-only
@@ -232,8 +231,8 @@ export class SessionPersistence {
       history: session.history.map((entry, index) => ({
         step: index + 1,
         timestamp: entry.timestamp || new Date().toISOString(),
-        input: entry as ThinkingOperationData,
-        output: entry as ThinkingOperationData,
+        input: entry,
+        output: entry,
       })),
     };
   }

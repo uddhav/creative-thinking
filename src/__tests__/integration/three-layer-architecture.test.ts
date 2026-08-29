@@ -412,7 +412,7 @@ describe('Three-Layer Architecture', () => {
       // Discovery without problem
       const discoveryResult = server.discoverTechniques({
         context: 'Some context',
-      } as unknown as DiscoverTechniquesInput);
+      });
 
       expect(discoveryResult.isError).toBe(true);
 

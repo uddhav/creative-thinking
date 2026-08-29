@@ -136,9 +136,7 @@ export function loadEnforcementConfigFromEnv(): CompletionGatekeeperConfig {
   }
 
   if (process.env.COMPLETION_CRITICAL_TECHNIQUES) {
-    envConfig.criticalTechniques = process.env.COMPLETION_CRITICAL_TECHNIQUES.split(
-      ','
-    ) as LateralTechnique[];
+    envConfig.criticalTechniques = process.env.COMPLETION_CRITICAL_TECHNIQUES.split(',');
   }
 
   // If we have overrides, create custom config

@@ -243,7 +243,7 @@ describe('round 0+1 steering surfaces (via MCP client)', () => {
         ...process.env,
         PERSISTENCE_TYPE: 'filesystem',
         PERSISTENCE_PATH: persistDir,
-      } as Record<string, string>,
+      },
     });
     try {
       const problem = 'Our release notes are written the morning of the release';
@@ -528,7 +528,7 @@ describe('round 0+1 steering surfaces (via MCP client)', () => {
         ...process.env,
         PERSISTENCE_TYPE: 'filesystem',
         PERSISTENCE_PATH: persistDir,
-      } as Record<string, string>,
+      },
     });
     try {
       const problem = 'Our sprint demos have become status meetings';

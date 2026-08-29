@@ -5,14 +5,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { AbsorbingBarrierEarlyWarning } from '../../../ergodicity/earlyWarning/warningSystem.js';
 import { BarrierWarningLevel } from '../../../ergodicity/earlyWarning/types.js';
-import type {
-  PathMemory,
-  Barrier,
-  BarrierType,
-  CreativeBarrier,
-  CriticalBarrier,
-} from '../../../ergodicity/types.js';
-import type { SessionData, LateralTechnique } from '../../../types/index.js';
+import type { PathMemory, Barrier } from '../../../ergodicity/types.js';
+import type { SessionData } from '../../../types/index.js';
 
 // Mock the sensors
 vi.mock('../../../ergodicity/earlyWarning/sensors/resourceMonitor.js', () => ({
@@ -132,7 +126,7 @@ describe('AbsorbingBarrierEarlyWarning', () => {
         {
           id: 'event-1',
           timestamp: new Date().toISOString(),
-          technique: 'six_hats' as LateralTechnique,
+          technique: 'six_hats',
           step: 1,
           decision: 'Initial approach',
           optionsOpened: ['option1', 'option2'],
@@ -157,8 +151,8 @@ describe('AbsorbingBarrierEarlyWarning', () => {
       absorbingBarriers: [
         {
           id: 'barrier-1',
-          type: 'creative' as BarrierType,
-          subtype: 'resource_depletion' as CreativeBarrier,
+          type: 'creative',
+          subtype: 'resource_depletion',
           name: 'Budget Limit',
           description: 'Budget limit',
           proximity: 0.4,
@@ -169,8 +163,8 @@ describe('AbsorbingBarrierEarlyWarning', () => {
         },
         {
           id: 'barrier-2',
-          type: 'critical' as BarrierType,
-          subtype: 'over_optimization' as CriticalBarrier,
+          type: 'critical',
+          subtype: 'over_optimization',
           name: 'Technical Complexity',
           description: 'Technical complexity ceiling',
           proximity: 0.7,
@@ -212,8 +206,8 @@ describe('AbsorbingBarrierEarlyWarning', () => {
       // Add a barrier that should trigger warnings
       const criticalBarrier: Barrier = {
         id: 'critical-barrier',
-        type: 'critical' as BarrierType,
-        subtype: 'over_optimization' as CriticalBarrier,
+        type: 'critical',
+        subtype: 'over_optimization',
         name: 'Over-optimization',
         description: 'Analysis paralysis',
         proximity: 0.1, // Very close to barrier
@@ -230,7 +224,7 @@ describe('AbsorbingBarrierEarlyWarning', () => {
         mockPathMemory.pathHistory.push({
           id: `critical-event-${i}`,
           timestamp: new Date(Date.now() - i * 60000).toISOString(),
-          technique: 'triz' as LateralTechnique,
+          technique: 'triz',
           step: i + 2,
           decision: `Over-analyzing option ${i}`,
           optionsOpened: [],
@@ -258,8 +252,8 @@ describe('AbsorbingBarrierEarlyWarning', () => {
       // Create multiple barriers with different proximity levels
       const fastApproachingBarrier: Barrier = {
         id: 'fast-barrier',
-        type: 'critical' as BarrierType,
-        subtype: 'analysis_paralysis' as CriticalBarrier,
+        type: 'critical',
+        subtype: 'analysis_paralysis',
         name: 'Fast Approaching Deadline',
         description: 'Deadline approaching fast',
         proximity: 0.9, // Very close (high value = close)
@@ -271,8 +265,8 @@ describe('AbsorbingBarrierEarlyWarning', () => {
 
       const slowApproachingBarrier: Barrier = {
         id: 'slow-barrier',
-        type: 'critical' as BarrierType,
-        subtype: 'over_optimization' as CriticalBarrier,
+        type: 'critical',
+        subtype: 'over_optimization',
         name: 'Slow Approaching Risk',
         description: 'Risk approaching slowly',
         proximity: 0.3, // Far away
@@ -337,9 +331,8 @@ describe('AbsorbingBarrierEarlyWarning', () => {
 
     it('should handle sensor failures gracefully', async () => {
       // Mock sensor to throw error
-      const { ResourceMonitor } = await import(
-        '../../../ergodicity/earlyWarning/sensors/resourceMonitor.js'
-      );
+      const { ResourceMonitor } =
+        await import('../../../ergodicity/earlyWarning/sensors/resourceMonitor.js');
       vi.mocked(ResourceMonitor).mockImplementationOnce(() => ({
         type: 'resource',
         measure: vi.fn().mockRejectedValue(new Error('Sensor failure')),
@@ -382,8 +375,8 @@ describe('AbsorbingBarrierEarlyWarning', () => {
       // Add a barrier that creates warnings
       const criticalBarrier: Barrier = {
         id: 'critical-barrier',
-        type: 'critical' as BarrierType,
-        subtype: 'over_optimization' as CriticalBarrier,
+        type: 'critical',
+        subtype: 'over_optimization',
         name: 'Over-optimization',
         description: 'Analysis paralysis',
         proximity: 0.2,
@@ -481,9 +474,8 @@ describe('AbsorbingBarrierEarlyWarning', () => {
 
     it('should detect patterns in warning history', async () => {
       // Create consistent warning pattern
-      const { TechnicalDebtAnalyzer } = await import(
-        '../../../ergodicity/earlyWarning/sensors/technicalDebtAnalyzer.js'
-      );
+      const { TechnicalDebtAnalyzer } =
+        await import('../../../ergodicity/earlyWarning/sensors/technicalDebtAnalyzer.js');
 
       let debtLevel = 0.5;
       vi.mocked(TechnicalDebtAnalyzer).mockImplementation(() => ({
@@ -558,15 +550,12 @@ describe('AbsorbingBarrierEarlyWarning', () => {
       warningSystem.reset();
 
       // Verify all sensors were reset
-      const { ResourceMonitor } = await import(
-        '../../../ergodicity/earlyWarning/sensors/resourceMonitor.js'
-      );
-      const { CognitiveAssessor } = await import(
-        '../../../ergodicity/earlyWarning/sensors/cognitiveAssessor.js'
-      );
-      const { TechnicalDebtAnalyzer } = await import(
-        '../../../ergodicity/earlyWarning/sensors/technicalDebtAnalyzer.js'
-      );
+      const { ResourceMonitor } =
+        await import('../../../ergodicity/earlyWarning/sensors/resourceMonitor.js');
+      const { CognitiveAssessor } =
+        await import('../../../ergodicity/earlyWarning/sensors/cognitiveAssessor.js');
+      const { TechnicalDebtAnalyzer } =
+        await import('../../../ergodicity/earlyWarning/sensors/technicalDebtAnalyzer.js');
 
       [ResourceMonitor, CognitiveAssessor, TechnicalDebtAnalyzer].forEach(Sensor => {
         const mockConstructor = vi.mocked(Sensor);

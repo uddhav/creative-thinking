@@ -9,7 +9,6 @@ import type {
   CallToolRequest,
   CallToolResult,
   ListToolsResult,
-  Implementation,
 } from '@modelcontextprotocol/sdk/types.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -44,7 +43,7 @@ export class MCPClientTestHelper {
     this.client = new Client({
       name: clientName,
       version: clientVersion,
-    } as Implementation);
+    });
 
     // Set up error handler
     this.client.onerror = error => {

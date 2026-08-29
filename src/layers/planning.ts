@@ -129,17 +129,12 @@ export function planThinkingSession(
     const info = handler.getTechniqueInfo();
     // No problem passed: plan-time guidance references it rather than
     // inlining it. See PLAN_TIME_PROBLEM_REFERENCE.
-    const steps = generateStepsForTechnique(
-      technique as string,
-      info.totalSteps,
-      handler,
-      resolvedPersona
-    );
+    const steps = generateStepsForTechnique(technique, info.totalSteps, handler, resolvedPersona);
 
     // Server-assigned entropy (P3): the stimulus is a plan-time value — drawn
     // once, seeded by planId, fixed for the plan's lifetime. The index keeps
     // repeated instances of one technique from sharing a draw.
-    applyAssignedStimulus(technique as string, techniqueIndex, planId, steps);
+    applyAssignedStimulus(technique, techniqueIndex, planId, steps);
 
     return {
       technique,
@@ -490,7 +485,7 @@ function getIntegrationPoints(
   // Six Hats can integrate with everything at black hat step
   if (technique === 'six_hats' && allTechniques.includes('scamper')) {
     points.push({
-      withTechnique: 'scamper' as LateralTechnique,
+      withTechnique: 'scamper',
       atStep: 5, // Black hat
       purpose: 'Risk assessment of modifications',
     });
@@ -499,7 +494,7 @@ function getIntegrationPoints(
   // Design Thinking can integrate at test phase
   if (technique === 'design_thinking' && allTechniques.includes('po')) {
     points.push({
-      withTechnique: 'po' as LateralTechnique,
+      withTechnique: 'po',
       atStep: 5, // Test
       purpose: 'Challenge prototype assumptions',
     });

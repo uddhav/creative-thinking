@@ -163,11 +163,17 @@ describe('Objective Concurrent Request Proof', () => {
 
     // All 15 requests execute concurrently
     const startTime = Date.now();
+    // planThinkingSession is synchronous (src/index.ts), so these arrays hold
+    // plain values and the aggregate settles immediately. Kept as-is rather
+    // than unwound, because whether these tests should be driving an async
+    // surface is a separate question from what the aggregate does today.
+    /* eslint-disable @typescript-eslint/await-thenable */
     const [client1Results, client2Results, client3Results] = await Promise.all([
       Promise.all(client1Requests),
       Promise.all(client2Requests),
       Promise.all(client3Requests),
     ]);
+    /* eslint-enable @typescript-eslint/await-thenable */
     const duration = Date.now() - startTime;
 
     // Multi-client concurrency metrics:

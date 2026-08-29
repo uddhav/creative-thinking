@@ -11,11 +11,6 @@ import type {
   LateralTechnique,
 } from '../index.js';
 
-interface ServerResponse {
-  content: Array<{ type: string; text: string }>;
-  isError?: boolean;
-}
-
 interface PlanResponse {
   planId: string;
   workflow: Array<{
@@ -94,7 +89,7 @@ describe('Cross-Cultural Integration', () => {
       techniques: techniques as LateralTechnique[],
     };
 
-    const result = server.planThinkingSession(input) as ServerResponse;
+    const result = server.planThinkingSession(input);
     expect(result.isError).toBeFalsy();
     const planData = JSON.parse(result.content[0]?.text || '{}') as PlanResponse;
     return planData.planId;
@@ -105,10 +100,10 @@ describe('Cross-Cultural Integration', () => {
     planId: string,
     input: Partial<ExecuteThinkingStepInput>
   ): Promise<ExecutionResponse> {
-    const result = (await server.executeThinkingStep({
+    const result = await server.executeThinkingStep({
       planId,
       ...input,
-    } as ExecuteThinkingStepInput)) as ServerResponse;
+    });
 
     expect(result.isError).toBeFalsy();
     return JSON.parse(result.content[0]?.text || '{}') as ExecutionResponse;
@@ -121,7 +116,7 @@ describe('Cross-Cultural Integration', () => {
         context: 'Need to create something that works in Eastern and Western markets',
       };
 
-      const result = server.discoverTechniques(input) as ServerResponse;
+      const result = server.discoverTechniques(input);
       expect(result.isError).toBeFalsy();
       const response = JSON.parse(result.content[0]?.text || '{}') as DiscoveryResponse;
 
@@ -147,7 +142,7 @@ describe('Cross-Cultural Integration', () => {
         context: 'Working with multicultural team and diverse user base across cultures',
       };
 
-      const result = server.discoverTechniques(input) as ServerResponse;
+      const result = server.discoverTechniques(input);
       expect(result.isError).toBeFalsy();
       const response = JSON.parse(result.content[0]?.text || '{}') as DiscoveryResponse;
 
@@ -176,7 +171,7 @@ describe('Cross-Cultural Integration', () => {
         techniques: ['cultural_integration'] as LateralTechnique[],
       };
 
-      const result = server.planThinkingSession(input) as ServerResponse;
+      const result = server.planThinkingSession(input);
       expect(result.isError).toBeFalsy();
       const planData = JSON.parse(result.content[0]?.text || '{}') as PlanResponse;
 

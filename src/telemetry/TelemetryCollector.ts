@@ -96,7 +96,7 @@ export class TelemetryCollector {
     technique: LateralTechnique,
     metadata: Partial<TelemetryMetadata> = {}
   ): Promise<void> {
-    await this.trackEvent('technique_start', sessionId, metadata as TelemetryMetadata, technique);
+    await this.trackEvent('technique_start', sessionId, metadata, technique);
   }
 
   /**
@@ -116,7 +116,7 @@ export class TelemetryCollector {
         ...metadata,
         step,
         totalSteps,
-      } as TelemetryMetadata,
+      },
       technique
     );
   }
@@ -136,7 +136,7 @@ export class TelemetryCollector {
       {
         ...metadata,
         effectiveness,
-      } as TelemetryMetadata,
+      },
       technique
     );
   }
@@ -149,12 +149,7 @@ export class TelemetryCollector {
     technique: LateralTechnique,
     insightCount: number
   ): Promise<void> {
-    await this.trackEvent(
-      'insight_generated',
-      sessionId,
-      { insightCount } as TelemetryMetadata,
-      technique
-    );
+    await this.trackEvent('insight_generated', sessionId, { insightCount }, technique);
   }
 
   /**
@@ -165,12 +160,7 @@ export class TelemetryCollector {
     technique: LateralTechnique,
     riskCount: number
   ): Promise<void> {
-    await this.trackEvent(
-      'risk_identified',
-      sessionId,
-      { riskCount } as TelemetryMetadata,
-      technique
-    );
+    await this.trackEvent('risk_identified', sessionId, { riskCount }, technique);
   }
 
   /**
@@ -184,7 +174,7 @@ export class TelemetryCollector {
     await this.trackEvent('flexibility_warning', sessionId, {
       flexibilityScore,
       warningLevel,
-    } as TelemetryMetadata);
+    });
   }
 
   /**
@@ -198,7 +188,7 @@ export class TelemetryCollector {
     await this.trackEvent('option_generated', sessionId, {
       optionCount,
       flexibilityScore,
-    } as TelemetryMetadata);
+    });
   }
 
   /**
@@ -207,7 +197,7 @@ export class TelemetryCollector {
   async trackSessionStart(sessionId: string, problemLength: number): Promise<void> {
     await this.trackEvent('session_start', sessionId, {
       problemLength,
-    } as TelemetryMetadata);
+    });
   }
 
   /**
@@ -217,7 +207,7 @@ export class TelemetryCollector {
     sessionId: string,
     metadata: Partial<TelemetryMetadata> = {}
   ): Promise<void> {
-    await this.trackEvent('session_complete', sessionId, metadata as TelemetryMetadata);
+    await this.trackEvent('session_complete', sessionId, metadata);
   }
 
   /**
@@ -231,7 +221,7 @@ export class TelemetryCollector {
     await this.trackEvent('workflow_transition', sessionId, {
       previousTechnique: fromTechnique,
       nextTechnique: toTechnique,
-    } as TelemetryMetadata);
+    });
   }
 
   /**
@@ -248,7 +238,7 @@ export class TelemetryCollector {
       pairSequence: [technique1, technique2],
       pairCompletionRate: completionRate,
       pairEffectiveness: effectiveness,
-    } as TelemetryMetadata);
+    });
   }
 
   /**
@@ -262,7 +252,7 @@ export class TelemetryCollector {
     await this.trackEvent('technique_recommended', sessionId, {
       recommendedTechniques,
       selectedTechnique,
-    } as TelemetryMetadata);
+    });
   }
 
   /**
@@ -314,7 +304,7 @@ export class TelemetryCollector {
       privacyLevel,
       events: privacyLevel !== 'aggregated' ? events : undefined,
       eventCount: events.length,
-    } as unknown;
+    };
   }
 
   /**

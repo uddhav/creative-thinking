@@ -13,11 +13,6 @@ import type {
   DesignThinkingStage,
 } from '../index.js';
 
-interface ServerResponse {
-  content: Array<{ type: string; text: string }>;
-  isError?: boolean;
-}
-
 interface PlanResponse {
   planId: string;
   steps: Array<{
@@ -62,7 +57,7 @@ describe('Technique Implementations', () => {
       techniques,
     };
 
-    const result = server.planThinkingSession(input) as ServerResponse;
+    const result = server.planThinkingSession(input);
     expect(result.isError).toBeFalsy();
     const planData = JSON.parse(result.content[0]?.text || '{}') as PlanResponse;
     return planData.planId;
@@ -73,10 +68,10 @@ describe('Technique Implementations', () => {
     planId: string,
     input: Partial<ExecuteThinkingStepInput>
   ): Promise<ExecutionResponse> {
-    const result = (await server.executeThinkingStep({
+    const result = await server.executeThinkingStep({
       planId,
       ...input,
-    } as ExecuteThinkingStepInput)) as ServerResponse;
+    });
 
     expect(result.isError).toBeFalsy();
     return JSON.parse(result.content[0]?.text || '{}') as ExecutionResponse;
@@ -689,7 +684,7 @@ describe('Technique Implementations', () => {
         totalSteps: 6,
         // Missing required 'output' field
         nextStepNeeded: true,
-      } as ExecuteThinkingStepInput);
+      });
 
       expect(result.isError).toBeTruthy();
       const errorData = JSON.parse(result.content[0]?.text || '{}') as {
@@ -717,7 +712,7 @@ describe('Technique Implementations', () => {
         output: 'Testing',
         scamperAction: 'substitute',
         nextStepNeeded: true,
-      } as ExecuteThinkingStepInput);
+      });
 
       expect(result.isError).toBeTruthy();
     });

@@ -158,7 +158,7 @@ describe('response verbosity (default-full server)', { retry: 0 }, () => {
     let sessionId: string | undefined;
     let last: Record<string, unknown> = {};
     for (let step = 1; step <= 4; step++) {
-      last = (await client.executeThinkingStep({
+      last = await client.executeThinkingStep({
         planId: id,
         technique: 'triz',
         problem: PROBLEM,
@@ -168,7 +168,7 @@ describe('response verbosity (default-full server)', { retry: 0 }, () => {
         nextStepNeeded: step < 4,
         verbosity: 'minimal',
         ...(sessionId ? { sessionId } : {}),
-      })) as Record<string, unknown>;
+      });
       sessionId = last.sessionId as string;
     }
 
@@ -217,7 +217,7 @@ describe('response verbosity (env-default-minimal server)', { retry: 0 }, () => 
       output: 'White hat: the facts',
       nextStepNeeded: true,
       hatColor: 'white',
-      sessionId: slim.sessionId as string,
+      sessionId: slim.sessionId,
       verbosity: 'full',
     })) as Record<string, unknown>;
     expect(full.problem, 'per-call full must override the env default').toBe(PROBLEM);

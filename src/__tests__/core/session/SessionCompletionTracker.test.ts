@@ -19,7 +19,7 @@ describe('SessionCompletionTracker', () => {
     describe('single technique execution', () => {
       it('should calculate progress for single technique with no plan', () => {
         const session: SessionData = {
-          technique: 'six_hats' as LateralTechnique,
+          technique: 'six_hats',
           problem: 'test problem',
           history: [
             {
@@ -67,7 +67,7 @@ describe('SessionCompletionTracker', () => {
     describe('parallel execution', () => {
       it('should handle parallel execution with sequential step numbering', () => {
         const session: SessionData = {
-          technique: 'six_hats' as LateralTechnique,
+          technique: 'six_hats',
           problem: 'test problem',
           history: [
             {
@@ -132,7 +132,7 @@ describe('SessionCompletionTracker', () => {
           executionMode: 'parallel',
           workflow: [
             {
-              technique: 'six_hats' as LateralTechnique,
+              technique: 'six_hats',
               steps: [
                 { name: 'Blue Hat', emoji: '🔵', focus: 'Process' },
                 { name: 'White Hat', emoji: '⚪', focus: 'Facts' },
@@ -144,7 +144,7 @@ describe('SessionCompletionTracker', () => {
               ],
             },
             {
-              technique: 'scamper' as LateralTechnique,
+              technique: 'scamper',
               steps: [
                 { name: 'Substitute', emoji: '🔄', focus: 'Replace elements' },
                 { name: 'Combine', emoji: '🔗', focus: 'Merge concepts' },
@@ -183,7 +183,7 @@ describe('SessionCompletionTracker', () => {
 
       it('should detect skipped steps in parallel execution', () => {
         const session: SessionData = {
-          technique: 'six_hats' as LateralTechnique,
+          technique: 'six_hats',
           problem: 'test problem',
           history: [
             {
@@ -225,7 +225,7 @@ describe('SessionCompletionTracker', () => {
           executionMode: 'parallel',
           workflow: [
             {
-              technique: 'six_hats' as LateralTechnique,
+              technique: 'six_hats',
               steps: Array(7)
                 .fill(null)
                 .map((_, i) => ({
@@ -258,7 +258,7 @@ describe('SessionCompletionTracker', () => {
     describe('sequential execution', () => {
       it('should handle sequential multi-technique execution with global steps', () => {
         const session: SessionData = {
-          technique: 'po' as LateralTechnique,
+          technique: 'po',
           problem: 'test problem',
           history: [
             // Six hats steps (1-7)
@@ -318,7 +318,7 @@ describe('SessionCompletionTracker', () => {
           executionMode: 'sequential',
           workflow: [
             {
-              technique: 'six_hats' as LateralTechnique,
+              technique: 'six_hats',
               steps: Array(7)
                 .fill(null)
                 .map((_, i) => ({
@@ -328,7 +328,7 @@ describe('SessionCompletionTracker', () => {
                 })),
             },
             {
-              technique: 'po' as LateralTechnique,
+              technique: 'po',
               steps: Array(4)
                 .fill(null)
                 .map((_, i) => ({
@@ -363,7 +363,7 @@ describe('SessionCompletionTracker', () => {
     describe('edge cases', () => {
       it('should handle empty history', () => {
         const session: SessionData = {
-          technique: 'six_hats' as LateralTechnique,
+          technique: 'six_hats',
           problem: 'test problem',
           history: [],
           branches: {},
@@ -380,7 +380,7 @@ describe('SessionCompletionTracker', () => {
           executionMode: 'sequential',
           workflow: [
             {
-              technique: 'six_hats' as LateralTechnique,
+              technique: 'six_hats',
               steps: Array(7)
                 .fill(null)
                 .map((_, i) => ({
@@ -406,7 +406,7 @@ describe('SessionCompletionTracker', () => {
 
       it('should handle out-of-range step numbers gracefully', () => {
         const session: SessionData = {
-          technique: 'six_hats' as LateralTechnique,
+          technique: 'six_hats',
           problem: 'test problem',
           history: [
             {
@@ -448,7 +448,7 @@ describe('SessionCompletionTracker', () => {
           executionMode: 'parallel',
           workflow: [
             {
-              technique: 'six_hats' as LateralTechnique,
+              technique: 'six_hats',
               steps: Array(7)
                 .fill(null)
                 .map((_, i) => ({
@@ -477,7 +477,7 @@ describe('SessionCompletionTracker', () => {
     describe('critical steps detection', () => {
       it('should identify critical Black Hat step as skipped', () => {
         const session: SessionData = {
-          technique: 'six_hats' as LateralTechnique,
+          technique: 'six_hats',
           problem: 'Risk assessment for new investment',
           history: [
             {
@@ -536,7 +536,7 @@ describe('SessionCompletionTracker', () => {
           executionMode: 'parallel',
           workflow: [
             {
-              technique: 'six_hats' as LateralTechnique,
+              technique: 'six_hats',
               steps: [
                 { name: 'Blue Hat', emoji: '🔵', focus: 'Process' },
                 { name: 'White Hat', emoji: '⚪', focus: 'Facts' },

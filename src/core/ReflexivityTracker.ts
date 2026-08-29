@@ -115,9 +115,7 @@ export interface MemoryStats {
  * Warning types for reflexivity tracking
  */
 export type ReflexivityWarningType =
-  | 'constraint_threshold'
-  | 'path_foreclosed'
-  | 'low_reversibility';
+  'constraint_threshold' | 'path_foreclosed' | 'low_reversibility';
 
 /**
  * Warning levels for severity. Two, not four: the tracker emits 'warning'

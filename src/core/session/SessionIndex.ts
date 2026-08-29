@@ -112,7 +112,7 @@ export class SessionIndex {
 
     return {
       totalSessions: allSessions.size,
-      techniqueDistribution: techniqueDistribution as Record<LateralTechnique, number>,
+      techniqueDistribution: techniqueDistribution,
       statusDistribution,
     };
   }

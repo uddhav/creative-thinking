@@ -8,7 +8,7 @@ import { CognitiveAssessor } from '../../../../ergodicity/earlyWarning/sensors/c
 import { TechnicalDebtAnalyzer } from '../../../../ergodicity/earlyWarning/sensors/technicalDebtAnalyzer.js';
 import { BarrierWarningLevel } from '../../../../ergodicity/earlyWarning/types.js';
 import type { PathMemory } from '../../../../ergodicity/types.js';
-import type { SessionData, LateralTechnique } from '../../../../types/index.js';
+import type { SessionData } from '../../../../types/index.js';
 
 describe('Early Warning Sensors - Basic Tests', () => {
   let mockPathMemory: PathMemory;
@@ -20,7 +20,7 @@ describe('Early Warning Sensors - Basic Tests', () => {
         {
           id: 'event-1',
           timestamp: new Date().toISOString(),
-          technique: 'six_hats' as LateralTechnique,
+          technique: 'six_hats',
           step: 1,
           decision: 'Initial decision',
           optionsOpened: ['option1', 'option2'],
@@ -144,7 +144,7 @@ describe('Early Warning Sensors - Basic Tests', () => {
         {
           id: 'event-2',
           timestamp: new Date().toISOString(),
-          technique: 'six_hats' as LateralTechnique,
+          technique: 'six_hats',
           step: 2,
           decision: 'Implement complex algorithm with multiple nested conditions',
           optionsOpened: [],
@@ -157,7 +157,7 @@ describe('Early Warning Sensors - Basic Tests', () => {
         {
           id: 'event-3',
           timestamp: new Date().toISOString(),
-          technique: 'six_hats' as LateralTechnique,
+          technique: 'six_hats',
           step: 3,
           decision: 'Integrate with external APIs and handle edge cases',
           optionsOpened: [],
@@ -204,7 +204,7 @@ describe('Early Warning Sensors - Basic Tests', () => {
         mockPathMemory.pathHistory.push({
           id: `event-${i + 4}`,
           timestamp: new Date(Date.now() - (5 - i) * 3600000).toISOString(),
-          technique: 'six_hats' as LateralTechnique,
+          technique: 'six_hats',
           step: i + 2,
           decision: `Technical decision ${i}`,
           optionsOpened: [],

@@ -21,7 +21,7 @@ import {
   wrapErgodicityManager,
 } from '../../utils/PerformanceIntegration.js';
 import { ErgodicityResultAdapter } from './ErgodicityResultAdapter.js';
-import type { ErgodicityResult, ErgodicityManagerResult } from './ErgodicityResultAdapter.js';
+import type { ErgodicityResult } from './ErgodicityResultAdapter.js';
 
 export interface ErgodicityOrchestrationResult {
   ergodicityResult: ErgodicityResult;
@@ -176,7 +176,7 @@ export class ErgodicityOrchestrator {
 
     // Adapt the result to the expected format
     const adaptedErgodicityResult = this.resultAdapter.adapt(
-      ergodicityResult as ErgodicityManagerResult,
+      ergodicityResult,
       currentFlexibility,
       session.pathMemory
     );

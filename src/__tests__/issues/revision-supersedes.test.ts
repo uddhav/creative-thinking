@@ -26,11 +26,7 @@ import { VisualFormatter } from '../../utils/VisualFormatter.js';
 import { MetricsCollector } from '../../core/MetricsCollector.js';
 import { HybridComplexityAnalyzer } from '../../complexity/analyzer.js';
 import { ErgodicityManager } from '../../ergodicity/index.js';
-import type {
-  PlanThinkingSessionInput,
-  ExecuteThinkingStepInput,
-  SessionData,
-} from '../../types/index.js';
+import type { SessionData } from '../../types/index.js';
 
 const PROBLEM = 'Decide whether to keep the nightly batch job';
 
@@ -81,7 +77,7 @@ async function runWithRevisionInProcess(): Promise<SessionData> {
       problem: PROBLEM,
       techniques: ['six_hats'],
       timeframe: 'thorough',
-    } as PlanThinkingSessionInput,
+    },
     sessionManager,
     registry
   );
@@ -100,7 +96,7 @@ async function runWithRevisionInProcess(): Promise<SessionData> {
         output: call.output,
         nextStepNeeded: i < CALLS.length - 1,
         ...(call.revision ? { isRevision: true, revisesStep: call.step } : {}),
-      } as ExecuteThinkingStepInput,
+      },
       sessionManager,
       registry,
       new VisualFormatter(true),

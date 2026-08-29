@@ -100,12 +100,7 @@ export type DisneyRole = 'dreamer' | 'realist' | 'critic';
 // Reality Assessment types
 export type PossibilityLevel = 'impossible' | 'breakthrough-required' | 'difficult' | 'feasible';
 export type ImpossibilityType =
-  | 'logical'
-  | 'physical'
-  | 'technical'
-  | 'regulatory'
-  | 'resource'
-  | 'social';
+  'logical' | 'physical' | 'technical' | 'regulatory' | 'resource' | 'social';
 
 export interface RealityAssessment {
   possibilityLevel: PossibilityLevel;

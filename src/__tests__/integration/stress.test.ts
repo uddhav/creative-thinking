@@ -112,6 +112,9 @@ describe('Stress Tests - Extreme Loads', () => {
             });
           });
 
+          // discoverTechniques is synchronous (src/index.ts), so this array
+          // holds plain values and the aggregate settles immediately.
+          // eslint-disable-next-line @typescript-eslint/await-thenable
           const batchResults = await Promise.all(batchPromises);
           results.push(...batchResults);
 

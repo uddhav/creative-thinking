@@ -6,11 +6,7 @@
 import type { LateralTechnique } from '../types/index.js';
 
 export type PreferredOutcome =
-  | 'innovative'
-  | 'systematic'
-  | 'risk-aware'
-  | 'collaborative'
-  | 'analytical';
+  'innovative' | 'systematic' | 'risk-aware' | 'collaborative' | 'analytical';
 
 export interface PersonaDefinition {
   id: string;

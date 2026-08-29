@@ -20,7 +20,7 @@ describe('CognitiveAssessor', () => {
         {
           id: 'event-1',
           timestamp: new Date().toISOString(),
-          technique: 'six_hats' as LateralTechnique,
+          technique: 'six_hats',
           step: 1,
           decision: 'Initial decision',
           optionsOpened: ['option1', 'option2'],
@@ -87,7 +87,7 @@ describe('CognitiveAssessor', () => {
         mockPathMemory.pathHistory.push({
           id: `event-${i + 2}`,
           timestamp: new Date(Date.now() - (10 - i) * 60000).toISOString(), // 1 minute intervals
-          technique: 'six_hats' as LateralTechnique,
+          technique: 'six_hats',
           step: i + 2,
           decision: `Decision ${i + 2}: ${complexScenarios[i % complexScenarios.length]}`,
           optionsOpened: [],
@@ -108,7 +108,7 @@ describe('CognitiveAssessor', () => {
         mockPathMemory.pathHistory.push({
           id: `event-${i + 12}`,
           timestamp: new Date().toISOString(),
-          technique: 'six_hats' as LateralTechnique,
+          technique: 'six_hats',
           step: i + 12,
           decision: `Decision ${i + 12}: ${complexScenarios[i % complexScenarios.length]}`,
           optionsOpened: [],
@@ -138,7 +138,7 @@ describe('CognitiveAssessor', () => {
         mockPathMemory.pathHistory.push({
           id: `event-${i + 2}`,
           timestamp: new Date(Date.now() - (20 - i) * 10000).toISOString(), // 10 second intervals
-          technique: 'six_hats' as LateralTechnique,
+          technique: 'six_hats',
           step: i + 2,
           decision: `Quick decision ${i + 2}`,
           optionsOpened: [],
@@ -201,7 +201,7 @@ describe('CognitiveAssessor', () => {
         ...mockPathMemory,
         pathHistory: mockPathMemory.pathHistory.map(event => ({
           ...event,
-          technique: 'six_hats' as LateralTechnique,
+          technique: 'six_hats',
         })),
       };
       const uniform = await single.measure(monotone, mockSession);
@@ -223,7 +223,7 @@ describe('CognitiveAssessor', () => {
         mockPathMemory.pathHistory.push({
           id: `event-${i + 2}`,
           timestamp: new Date(Date.now() - (5 - i) * 60000).toISOString(),
-          technique: 'concept_extraction' as LateralTechnique,
+          technique: 'concept_extraction',
           step: i + 2,
           decision,
           optionsOpened: [],
@@ -247,7 +247,7 @@ describe('CognitiveAssessor', () => {
         mockPathMemory.pathHistory.push({
           id: `event-${i + 2}`,
           timestamp: new Date(Date.now() - (20 - i) * 60000).toISOString(),
-          technique: 'six_hats' as LateralTechnique,
+          technique: 'six_hats',
           step: i + 2,
           decision: i < 5 ? 'High complexity decision' : 'Simple recovery decision',
           optionsOpened: i < 5 ? [] : ['recovery_option1', 'recovery_option2'],
@@ -334,7 +334,7 @@ describe('CognitiveAssessor', () => {
         mockPathMemory.pathHistory.push({
           id: `event-${i + 2}`,
           timestamp: new Date(Date.now() - (5 - i) * 60000).toISOString(),
-          technique: 'six_hats' as LateralTechnique,
+          technique: 'six_hats',
           step: i + 2,
           decision,
           optionsOpened: [],
@@ -363,7 +363,7 @@ describe('CognitiveAssessor', () => {
         mockPathMemory.pathHistory.push({
           id: `event-${i + 2}`,
           timestamp: new Date(Date.now() - (15 - i) * 30000).toISOString(), // 30 second intervals
-          technique: 'six_hats' as LateralTechnique,
+          technique: 'six_hats',
           step: i + 2,
           decision: `${contexts[i % contexts.length]} decision`,
           optionsOpened: [`${contexts[i % contexts.length]}_option`],
@@ -395,7 +395,7 @@ describe('CognitiveAssessor', () => {
         mockPathMemory.pathHistory.push({
           id: `event-${i + 2}`,
           timestamp: new Date(Date.now() - (5 - i) * 60000).toISOString(),
-          technique: 'concept_extraction' as LateralTechnique,
+          technique: 'concept_extraction',
           step: i + 2,
           decision,
           optionsOpened: [],

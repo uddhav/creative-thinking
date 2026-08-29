@@ -108,6 +108,9 @@ describe('Performance Integration Tests', () => {
         })
       );
 
+      // discoverTechniques is synchronous (src/index.ts), so this array holds
+      // plain values and the aggregate settles immediately.
+      // eslint-disable-next-line @typescript-eslint/await-thenable
       const results = await Promise.all(promises);
       const duration = Date.now() - startTime;
 
@@ -156,6 +159,9 @@ describe('Performance Integration Tests', () => {
         })
       );
 
+      // planThinkingSession is synchronous (src/index.ts), so this array holds
+      // plain values and the aggregate settles immediately.
+      // eslint-disable-next-line @typescript-eslint/await-thenable
       const results = await Promise.all(promises);
       const duration = Date.now() - startTime;
 

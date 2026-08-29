@@ -160,7 +160,7 @@ describe('Discovery Workflow Guidance', () => {
     };
 
     const builder = server['responseBuilder'];
-    const response = builder.buildDiscoveryResponse(mockDiscoveryOutput as any);
+    const response = builder.buildDiscoveryResponse(mockDiscoveryOutput);
     const parsed = JSON.parse(response.content[0].text) as DiscoveryResponse;
 
     expect(parsed.nextStepGuidance).toBeUndefined();

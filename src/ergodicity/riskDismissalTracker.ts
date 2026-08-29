@@ -94,7 +94,7 @@ export class RiskDismissalTracker {
     // Update escalation level based on patterns
     metrics.escalationLevel = this.calculateEscalationLevel(metrics, sessionData);
 
-    return metrics as RiskEngagementMetrics;
+    return metrics;
   }
 
   /**

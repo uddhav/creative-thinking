@@ -327,7 +327,7 @@ Output: Complete implementation plan with timeline and success metrics`,
 
     // Step 2: Validate vacant spaces structure
     if (step === 2 && data && typeof data === 'object' && 'vacantSpaces' in data) {
-      const dataWithSpaces = data as { vacantSpaces: unknown };
+      const dataWithSpaces = data;
       const vacantSpaces = dataWithSpaces.vacantSpaces;
       if (!Array.isArray(vacantSpaces)) {
         return false;

@@ -264,12 +264,12 @@ export class SessionEncoder {
     return {
       ...planData,
       planId: decoded.planId,
-      problem: decoded.problem || (planData.problem as string),
-      techniques: decoded.techniques || (planData.techniques as LateralTechnique[]),
+      problem: decoded.problem || planData.problem,
+      techniques: decoded.techniques || planData.techniques,
       currentStep: decoded.currentStep,
       totalSteps: decoded.totalSteps,
-      objectives: decoded.objectives || (planData.objectives as string[]),
-      constraints: decoded.constraints || (planData.constraints as string[]),
+      objectives: decoded.objectives || planData.objectives,
+      constraints: decoded.constraints || planData.constraints,
     };
   }
 
