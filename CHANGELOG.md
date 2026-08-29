@@ -1,3 +1,9 @@
+## [v2.6.0] - 2026-08-29
+
+### Changes from PR #362
+
+- feat: count irreversible nine_windows cells as declared constraints
+
 ## [v2.5.3] - 2026-08-29
 
 ### Changes from PR #360
