@@ -39,6 +39,64 @@ import { CompletionGatekeeper } from './execution/CompletionGatekeeper.js';
 import { evaluateAdvisoryGates } from './execution/advisoryGates.js';
 import { attachSteeringFields } from './execution/attachSteeringFields.js';
 
+/**
+ * Cells of a nine_windows matrix the caller marked irreversible, as declared
+ * constraints.
+ *
+ * The second content-provenance producer (#310). `nineWindowsMatrix[]` already
+ * carries `irreversible: boolean` per cell — caller-supplied, validated cell by
+ * cell by `ObjectFieldValidator` — and marking a cell irreversible is the same
+ * shape as a downward `stepReversibility` claim: the caller declaring the world
+ * is more committed than the server assumed. It reached `extractInsights` as
+ * prose and never reached `pathsForeclosed`, which is the asymmetry this
+ * closes.
+ *
+ * `past` cells are excluded. They describe what the system used to be, which is
+ * history rather than a commitment made in this session; `present` and `future`
+ * both count. The text is the cell's own `content` plus its `pathDependencies`,
+ * matching the existing producer's use of the caller's own words and the
+ * insight line `NineWindowsHandler` already emits for the same cell.
+ *
+ * Only reaches the reality state on ACTION steps — `trackAction` gates on that,
+ * and nine_windows steps 7-9 are the action ones. Callers repeat the whole
+ * matrix on every step, so the same cell arrives many times; the reality-state
+ * arrays deduplicate by value, so it is counted and warned about once.
+ */
+function irreversibleMatrixCells(input: ExecuteThinkingStepInput): string[] {
+  // Read as a plain record: the matrix is schema-declared and validated, but
+  // this reads it defensively because it is caller input.
+  const cells = (input as unknown as { nineWindowsMatrix?: unknown }).nineWindowsMatrix;
+  if (!Array.isArray(cells)) return [];
+
+  const declared: string[] = [];
+  for (const raw of cells) {
+    const cell = raw as {
+      timeFrame?: unknown;
+      systemLevel?: unknown;
+      content?: unknown;
+      pathDependencies?: unknown;
+      irreversible?: unknown;
+    };
+    if (cell?.irreversible !== true) continue;
+    if (cell.timeFrame !== 'present' && cell.timeFrame !== 'future') continue;
+    if (typeof cell.content !== 'string' || cell.content.trim().length === 0) continue;
+
+    const dependencies = Array.isArray(cell.pathDependencies)
+      ? cell.pathDependencies.filter(
+          (d): d is string => typeof d === 'string' && d.trim().length > 0
+        )
+      : [];
+    const suffix =
+      dependencies.length > 0 ? ` (path dependencies: ${dependencies.join(', ')})` : '';
+    const where =
+      typeof cell.systemLevel === 'string'
+        ? `${cell.timeFrame} ${cell.systemLevel}`
+        : cell.timeFrame;
+    declared.push(`Caller-declared (nine_windows ${where}): ${cell.content.trim()}${suffix}`);
+  }
+  return declared;
+}
+
 export async function executeThinkingStep(
   input: ExecuteThinkingStepInput,
   sessionManager: SessionManager,
@@ -367,14 +425,16 @@ export async function executeThinkingStep(
           // first content-provenance constraint producer. An upward claim
           // reduces constraint and records nothing.
           const audit = input.appliedReversibility;
-          const callerConstraints =
+          const reversibilityConstraint =
             audit &&
             input.stepReversibility &&
             REVERSIBILITY_COSTS[audit.claimed] > REVERSIBILITY_COSTS[audit.prior]
               ? [
                   `Caller-declared (${input.technique} step ${techniqueLocalStep}): ${input.stepReversibility.rationale}`,
                 ]
-              : undefined;
+              : [];
+
+          const callerConstraints = [...reversibilityConstraint, ...irreversibleMatrixCells(input)];
 
           // Handler-declared effects are server-authored templates.
           reflexivityWarning = sessionManager.trackReflexivity(
