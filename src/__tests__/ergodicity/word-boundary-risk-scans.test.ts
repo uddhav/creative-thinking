@@ -15,6 +15,8 @@
 import { describe, expect, it } from 'vitest';
 import { AdaptiveRiskAssessment } from '../../ergodicity/AdaptiveRiskAssessment.js';
 import { matchesRuinKeyword, requiresRuinCheck } from '../../ergodicity/prompts.js';
+import { StakesDiscovery } from '../../ergodicity/stakesDiscovery.js';
+import { RiskDismissalTracker } from '../../ergodicity/riskDismissalTracker.js';
 
 describe('AdaptiveRiskAssessment word boundaries', { retry: 0 }, () => {
   const assessment = new AdaptiveRiskAssessment();
@@ -119,5 +121,80 @@ describe('requiresRuinCheck word boundaries', { retry: 0 }, () => {
     expect(matchesRuinKeyword('"Invest,"', 'invest')).toBe(true);
     expect(matchesRuinKeyword('lock-in.', 'lock-in')).toBe(true);
     expect(matchesRuinKeyword('between', 'bet')).toBe(false);
+  });
+});
+
+/**
+ * The three scans downstream of the ones above kept the substring behaviour
+ * until #309. These drive them through their public methods rather than through
+ * the matcher, because a helper test cannot show that a module actually calls
+ * the helper — the modules are what the caller reaches.
+ */
+describe('StakesDiscovery word boundaries', { retry: 0 }, () => {
+  const stakes = new StakesDiscovery();
+
+  it('does not read total commitment out of "small" or "finally"', () => {
+    const context = stakes.generateHistoricalContext({}, [
+      'a small schema change',
+      'finally shipped the migration',
+    ]);
+    expect(context).not.toContain('LTCM');
+  });
+
+  it('still matches the standalone words', () => {
+    expect(stakes.generateHistoricalContext({}, ['all of the runway'])).toContain('LTCM');
+    expect(stakes.generateHistoricalContext({}, ['total commitment'])).toContain('LTCM');
+  });
+
+  it('does not read irreversibility out of a longer token', () => {
+    expect(stakes.generateHistoricalContext({}, ['irreversibly committed'])).not.toContain(
+      'Blockbuster'
+    );
+    expect(stakes.generateHistoricalContext({}, ['irreversible'])).toContain('Blockbuster');
+  });
+});
+
+describe('RiskDismissalTracker word boundaries', { retry: 0 }, () => {
+  const tracker = new RiskDismissalTracker();
+  const metrics = {
+    dismissalCount: 0,
+    averageConfidence: 0,
+    escalationLevel: 1,
+    discoveredRiskIndicators: [],
+    consecutiveLowConfidence: 0,
+    totalAssessments: 0,
+  };
+
+  /** Long enough to clear the 50-word minimum, so scoring is what is measured. */
+  const pad =
+    'We considered the rollout carefully and wrote down what we expect to happen. '.repeat(6);
+
+  it('does not count stakeholder consideration from "steam"', () => {
+    const result = tracker.evaluateUnlockResponse(
+      `${pad} The project is running out of steam after 3 months.`,
+      0.9,
+      { ...metrics }
+    );
+    expect(result.isValid).toBe(false);
+    expect(result.feedback).toContain('stakeholder impact analysis');
+  });
+
+  it('still counts it from the standalone word', () => {
+    const result = tracker.evaluateUnlockResponse(
+      `${pad} The team and our customers were consulted over 3 months.`,
+      0.9,
+      { ...metrics }
+    );
+    expect(result.feedback).not.toContain('stakeholder impact analysis');
+  });
+
+  it('keeps % and $ as substring checks, since word boundaries cannot match them', () => {
+    // Anchoring these silently disabled the calculation check — it failed open.
+    const result = tracker.evaluateUnlockResponse(
+      `${pad} We would lose 40% of revenue, about $2m, if this fails.`,
+      0.9,
+      { ...metrics }
+    );
+    expect(result.feedback).not.toContain('specific calculations');
   });
 });

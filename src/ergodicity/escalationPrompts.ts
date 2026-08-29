@@ -8,6 +8,17 @@
 import type { RiskEngagementMetrics, DismissalPattern } from './riskDismissalTracker.js';
 import type { SessionData } from '../types/index.js';
 import { adaptiveRiskAssessment } from './AdaptiveRiskAssessment.js';
+import { matchesWord, matchesAnyWord } from './wordMatch.js';
+
+/**
+ * Language that reads as staking everything, used to pick the action an
+ * escalation prompt is written about and to detect risk/action contradictions.
+ *
+ * Matched as whole words. As substrings these were unusable: 'all' matches
+ * "small", "finally" and "challenge"; 'bet' matches "between" and "better" —
+ * so ordinary prose scored as total commitment and drove escalation severity.
+ */
+const TOTAL_COMMITMENT_WORDS = ['all', 'everything', 'bet'] as const;
 
 export interface EscalationPrompt {
   level: number;
@@ -156,12 +167,7 @@ This is not procedural. Your pattern indicates dangerous overconfidence in the f
     // Extract the most recent high-stakes action from session
     const recentActions = this.extractProposedActions(sessionData);
     const criticalAction =
-      recentActions.find(
-        a =>
-          a.toLowerCase().includes('all') ||
-          a.toLowerCase().includes('everything') ||
-          a.toLowerCase().includes('bet')
-      ) ||
+      recentActions.find(a => matchesAnyWord(a, TOTAL_COMMITMENT_WORDS)) ||
       recentActions[0] ||
       'your proposed action';
 
@@ -256,16 +262,9 @@ This is not procedural. Your pattern indicates dangerous overconfidence in the f
     const contradictions: string[] = [];
 
     // Check for high-commitment language despite risks
-    const hasHighRisk = risks.some(
-      r => r.toLowerCase().includes('irreversible') || r.toLowerCase().includes('survival')
-    );
+    const hasHighRisk = risks.some(r => matchesAnyWord(r, ['irreversible', 'survival']));
 
-    const hasHighCommitment = actions.some(
-      a =>
-        a.toLowerCase().includes('all') ||
-        a.toLowerCase().includes('everything') ||
-        a.toLowerCase().includes('bet')
-    );
+    const hasHighCommitment = actions.some(a => matchesAnyWord(a, TOTAL_COMMITMENT_WORDS));
 
     if (hasHighRisk && hasHighCommitment) {
       contradictions.push(
@@ -277,11 +276,17 @@ This is not procedural. Your pattern indicates dangerous overconfidence in the f
     actions.forEach((action, i) => {
       const actionLower = action.toLowerCase();
 
-      if (risks.some(r => r.includes('time pressure')) && !actionLower.includes('deadline')) {
+      if (
+        risks.some(r => matchesWord(r, 'time pressure')) &&
+        !matchesWord(actionLower, 'deadline')
+      ) {
         contradictions.push(`Action ${i + 1} ignores time pressure you discovered`);
       }
 
-      if (risks.some(r => r.includes('uncertainty')) && actionLower.includes('certain')) {
+      // 'certain' as a substring matches "uncertain", so this fired on the
+      // action that acknowledged the uncertainty rather than the one that
+      // ignored it — the check reported the opposite of what it names.
+      if (risks.some(r => matchesWord(r, 'uncertainty')) && matchesWord(actionLower, 'certain')) {
         contradictions.push(`Action ${i + 1} shows certainty despite acknowledged uncertainty`);
       }
     });
@@ -296,18 +301,21 @@ This is not procedural. Your pattern indicates dangerous overconfidence in the f
     const calculations: string[] = [];
 
     if (
-      risks.some(r => r.toLowerCase().includes('financial') || r.toLowerCase().includes('invest'))
+      // 'invest' listed with its inflections rather than widened to a suffix
+      // rule: bare `includes` also matched "investigation", and stem suffixing
+      // cannot reach doubled forms. Same lesson as `requiresRuinCheck`.
+      risks.some(r => matchesAnyWord(r, ['financial', 'invest', 'invested', 'investing']))
     ) {
       calculations.push('- Maximum financial loss in dollars: $_______');
       calculations.push('- Percentage of net worth at risk: ____%');
     }
 
-    if (risks.some(r => r.toLowerCase().includes('time'))) {
+    if (risks.some(r => matchesWord(r, 'time'))) {
       calculations.push('- Time to recover from worst case: _____ months');
       calculations.push('- Deadline for decision reversal: _______');
     }
 
-    if (risks.some(r => r.toLowerCase().includes('irreversible'))) {
+    if (risks.some(r => matchesWord(r, 'irreversible'))) {
       calculations.push('- Cost to partially reverse: $_______');
       calculations.push('- Probability of successful reversal: ____%');
     }
@@ -330,16 +338,12 @@ This is not procedural. Your pattern indicates dangerous overconfidence in the f
 
     // Business context calculations
     if (context.hasBusinessContext) {
-      if (
-        risks.some(r => r.toLowerCase().includes('vendor') || r.toLowerCase().includes('migration'))
-      ) {
+      if (risks.some(r => matchesAnyWord(r, ['vendor', 'migration']))) {
         calculations.push('- Migration cost estimate: _______');
         calculations.push('- Cost of staying with current solution: _______');
         calculations.push('- Switching costs if vendor fails: _______');
       }
-      if (
-        risks.some(r => r.toLowerCase().includes('financial') || r.toLowerCase().includes('budget'))
-      ) {
+      if (risks.some(r => matchesAnyWord(r, ['financial', 'budget']))) {
         calculations.push(`- Maximum ${context.resourceType} at risk: _______`);
         calculations.push('- Percentage of annual budget: ____%');
         calculations.push('- Impact on cash flow: _______');
@@ -371,13 +375,13 @@ This is not procedural. Your pattern indicates dangerous overconfidence in the f
     }
 
     // Time-based calculations (universal)
-    if (risks.some(r => r.toLowerCase().includes('time'))) {
+    if (risks.some(r => matchesWord(r, 'time'))) {
       calculations.push(`- Time to recover from worst case: ${context.recoveryTimeframe}`);
       calculations.push('- Deadline for decision reversal: _______');
     }
 
     // Irreversibility calculations (universal)
-    if (risks.some(r => r.toLowerCase().includes('irreversible'))) {
+    if (risks.some(r => matchesWord(r, 'irreversible'))) {
       calculations.push('- Cost/effort to partially reverse: _______');
       calculations.push('- Probability of successful reversal: ____%');
     }

@@ -5,6 +5,7 @@
  * behavioral escalations. Domain-agnostic - responds to engagement
  * quality, not content categories.
  */
+import { matchesAnyWord } from './wordMatch.js';
 export class RiskDismissalTracker {
     LOW_CONFIDENCE_THRESHOLD = 0.3;
     RAPID_DISMISSAL_WINDOW = 60000; // 1 minute
@@ -111,27 +112,43 @@ export class RiskDismissalTracker {
      */
     evaluateUnlockResponse(response, requiredConfidence, metrics) {
         const responseLower = response.toLowerCase();
-        // Check for specific commitments
-        const hasExitCriteria = responseLower.includes('will exit if') ||
-            responseLower.includes('abandon if') ||
-            responseLower.includes('stop if');
+        // Whole-word matching throughout. As substrings these scored the caller's
+        // unlock response on fragments: 'team' matches "steam", 'all' matches
+        // "small". The matcher adds simple plurals only, so irregular inflections
+        // and the compounds that genuinely mean the same thing are listed rather
+        // than reached by widening the suffix rule (#309).
+        const hasExitCriteria = matchesAnyWord(responseLower, [
+            'will exit if',
+            'abandon if',
+            'stop if',
+        ]);
         const hasSpecificCalculations = /\d+/.test(response) && // Contains numbers
-            (responseLower.includes('percent') ||
+            (matchesAnyWord(responseLower, ['percent', 'percentage', 'month', 'year', 'dollar']) ||
+                // '%' and '$' stay substring checks, and must. Word-boundary matching
+                // asks that neither side be glued to a word character, and in real
+                // money and percentages one side always is — "40%" fails the leading
+                // test, "$2m" the trailing one. Anchoring them silently disabled the
+                // symbols this check exists to find. Measured, not assumed: converting
+                // them turned `matchesWord('about 40% of revenue', '%')` false.
                 responseLower.includes('%') ||
-                responseLower.includes('months') ||
-                responseLower.includes('years') ||
-                responseLower.includes('dollars') ||
                 responseLower.includes('$'));
-        const hasStakeholderConsideration = responseLower.includes('employee') ||
-            responseLower.includes('customer') ||
-            responseLower.includes('partner') ||
-            responseLower.includes('investor') ||
-            responseLower.includes('family') ||
-            responseLower.includes('team');
-        const hasContingencyPlan = responseLower.includes('if fails') ||
-            responseLower.includes('backup') ||
-            responseLower.includes('contingency') ||
-            responseLower.includes('rollback');
+        const hasStakeholderConsideration = matchesAnyWord(responseLower, [
+            'employee',
+            'customer',
+            'partner',
+            'partnership',
+            'investor',
+            'family',
+            'families',
+            'team',
+        ]);
+        const hasContingencyPlan = matchesAnyWord(responseLower, [
+            'if fails',
+            'backup',
+            'contingency',
+            'contingencies',
+            'rollback',
+        ]);
         // Calculate response quality score
         let qualityScore = 0;
         if (hasExitCriteria)

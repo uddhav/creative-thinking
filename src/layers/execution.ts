@@ -467,6 +467,29 @@ export async function executeThinkingStep(
       // vetoed termination must not reach any of that.
       const completionCheck = completionGatekeeper.canProceedToNextStep(input, session, plan);
       if (!completionCheck.allowed && completionCheck.response) {
+        // Save before returning. The step is already in session.history, and
+        // the veto is a decision about the shape of the response, not a
+        // rollback — it happened either way. Returning here used to jump over
+        // the autoSave block below, which a long-running server survives
+        // because the next call saves the step, and the CLI does not: the
+        // process exits and the caller has to re-send work the server accepted
+        // (#307).
+        //
+        // Saving here cannot mark the session complete. buildResponse is what
+        // sets endTime, and it has not run — this writes an active session.
+        if (input.autoSave) {
+          try {
+            await monitorCriticalSectionAsync(
+              'session_autosave',
+              () => sessionManager.saveSessionToPersistence(sessionId),
+              { sessionId }
+            );
+          } catch {
+            // A blocking response has no room to report save status, and the
+            // veto is the more important message. The step stays in memory,
+            // which is where it was before this call.
+          }
+        }
         // The blocking response is steering output too — findings ride it.
         attachFindings(completionCheck.response);
         return completionCheck.response;
