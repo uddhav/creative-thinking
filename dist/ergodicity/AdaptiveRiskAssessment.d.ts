@@ -18,12 +18,15 @@ export interface ContextIndicators {
 }
 export declare class AdaptiveRiskAssessment {
     private contextCache;
-    private static readonly indicatorPatterns;
     /**
      * Word-boundary indicator match. A bare `text.includes()` matched fragments
      * inside unrelated words — 'api' in "rapid", 'all' in "small", 'system' in
      * "ecosystem" — and mislabeled non-technical problems. Multi-word phrases
      * match as phrases; single words also match simple plural forms.
+     *
+     * The implementation moved to `wordMatch.ts` so the escalation, dismissal
+     * and stakes scans could stop matching the same text a different way (#309).
+     * Kept as a method because it is used throughout this class.
      */
     private matchesIndicator;
     private containsAny;

@@ -318,6 +318,39 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
             // vetoed termination must not reach any of that.
             const completionCheck = completionGatekeeper.canProceedToNextStep(input, session, plan);
             if (!completionCheck.allowed && completionCheck.response) {
+                // Save before returning. The step is already in session.history, and
+                // the veto is a decision about the shape of the response, not a
+                // rollback — it happened either way. Returning here used to jump over
+                // the autoSave block below, which a long-running server survives
+                // because the next call saves the step, and the CLI does not: the
+                // process exits and the caller has to re-send work the server accepted
+                // (#307).
+                //
+                // Saving here cannot mark the session complete. buildResponse is what
+                // sets endTime, and it has not run — this writes an active session.
+                if (input.autoSave) {
+                    try {
+                        await monitorCriticalSectionAsync('session_autosave', () => sessionManager.saveSessionToPersistence(sessionId), { sessionId });
+                    }
+                    catch (error) {
+                        // Report it the same way the success path does. An earlier version
+                        // swallowed this, reasoning that a blocking response has no room
+                        // for save status — but `attachFindings` below writes to this very
+                        // object, and a silent failure is worst exactly where this fix
+                        // matters: the CLI caller is told the step was refused, cannot tell
+                        // it was also not saved, and loses it on exit anyway.
+                        attachSteeringFields(completionCheck.response, error instanceof PersistenceError &&
+                            error.code === ErrorCode.PERSISTENCE_NOT_AVAILABLE
+                            ? {
+                                autoSaveStatus: 'disabled',
+                                autoSaveMessage: 'Persistence is not configured. Session data is stored in memory only.',
+                            }
+                            : {
+                                autoSaveStatus: 'failed',
+                                autoSaveError: error instanceof Error ? error.message : 'Auto-save failed',
+                            });
+                    }
+                }
                 // The blocking response is steering output too — findings ride it.
                 attachFindings(completionCheck.response);
                 return completionCheck.response;

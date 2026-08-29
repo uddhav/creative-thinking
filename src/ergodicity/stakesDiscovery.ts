@@ -8,6 +8,7 @@
 
 import type { SessionData } from '../types/index.js';
 import type { RiskEngagementMetrics } from './riskDismissalTracker.js';
+import { matchesWord, matchesAnyWord } from './wordMatch.js';
 
 export interface StakesDeclaration {
   whatIsAtRisk: string;
@@ -79,27 +80,38 @@ This is not a form. Think about YOUR specific situation and the risks YOU discov
     prompts.push('- This represents ____% of available resources');
 
     // Add prompts based on discovered indicators
-    if (indicators.some(i => i.includes('financial') || i.includes('invest'))) {
+    if (
+      indicators.some(i =>
+        matchesAnyWord(i, [
+          'financial',
+          'invest',
+          'invested',
+          'investing',
+          'investment',
+          'investor',
+        ])
+      )
+    ) {
       prompts.push('- Dollar amount that could be lost: $_______');
       prompts.push('- Months of income this represents: _______');
     }
 
-    if (indicators.some(i => i.includes('time'))) {
+    if (indicators.some(i => matchesAnyWord(i, ['time', 'timeline', 'timeframe', 'downtime']))) {
       prompts.push('- Hours/days/years that cannot be recovered: _______');
       prompts.push('- Opportunity cost in time: _______');
     }
 
-    if (indicators.some(i => i.includes('reputation') || i.includes('social'))) {
+    if (indicators.some(i => matchesAnyWord(i, ['reputation', 'social']))) {
       prompts.push('- Relationships that could be damaged: _______');
       prompts.push('- Years to rebuild reputation if damaged: _______');
     }
 
-    if (indicators.some(i => i.includes('health') || i.includes('physical'))) {
+    if (indicators.some(i => matchesAnyWord(i, ['health', 'physical']))) {
       prompts.push('- Physical/mental health impact severity (1-10): _____');
       prompts.push('- Recovery time if health is impacted: _______');
     }
 
-    if (indicators.some(i => i.includes('career') || i.includes('professional'))) {
+    if (indicators.some(i => matchesAnyWord(i, ['career', 'professional']))) {
       prompts.push('- Career setback in years: _______');
       prompts.push('- Transferable skills that remain: _______');
     }
@@ -220,21 +232,21 @@ This is not a form. Think about YOUR specific situation and the risks YOU discov
     const examples: string[] = [];
 
     // Select relevant historical examples based on indicators
-    if (indicators.some(i => i.includes('total commitment') || i.includes('all'))) {
+    if (indicators.some(i => matchesAnyWord(i, ['total commitment', 'all']))) {
       examples.push(
         'LTCM (1998): "Our models account for everything" → Lost 90% in 4 months',
         'Amaranth (2006): "Natural gas prices are predictable" → Lost $6.6B in 1 week'
       );
     }
 
-    if (indicators.some(i => i.includes('irreversible'))) {
+    if (indicators.some(i => matchesWord(i, 'irreversible'))) {
       examples.push(
         'Blockbuster (2000): "Streaming will never replace stores" → Bankrupt by 2010',
         'Kodak (1975): "Digital will never match film quality" → Lost 90% of workforce'
       );
     }
 
-    if (indicators.some(i => i.includes('survival threat'))) {
+    if (indicators.some(i => matchesWord(i, 'survival threat'))) {
       examples.push(
         'Lehman Brothers (2008): "Real estate always recovers" → 158-year firm collapsed',
         'Enron (2001): "Mark-to-market accounting is innovative" → Complete destruction'

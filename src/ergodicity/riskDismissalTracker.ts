@@ -8,6 +8,7 @@
 
 import type { RuinRiskAssessment } from './prompts.js';
 import type { SessionData } from '../types/index.js';
+import { matchesAnyWord } from './wordMatch.js';
 
 export interface RiskEngagementMetrics {
   dismissalCount: number;
@@ -154,34 +155,64 @@ export class RiskDismissalTracker {
   ): { isValid: boolean; feedback: string } {
     const responseLower = response.toLowerCase();
 
-    // Check for specific commitments
-    const hasExitCriteria =
-      responseLower.includes('will exit if') ||
-      responseLower.includes('abandon if') ||
-      responseLower.includes('stop if');
+    // Whole-word matching for the vocabulary checks, because as substrings they
+    // scored the caller's unlock response on fragments — 'team' matches
+    // "steam". The unit check below is deliberately NOT converted; see its own
+    // note. The matcher adds simple plurals only, so irregular inflections and
+    // the compounds that genuinely mean the same thing are listed rather than
+    // reached by widening the suffix rule (#309).
+    const hasExitCriteria = matchesAnyWord(responseLower, [
+      'will exit if',
+      'abandon if',
+      'stop if',
+    ]);
 
+    // This whole check stays substring, deliberately, unlike the others in
+    // this file. It looks for units of measurement, where a fragment match is
+    // the true positive rather than the bug: "monthly", "12months", "yearly",
+    // "percentage", "$2m" and "40%" are all exactly what it wants to find, and
+    // no ordinary word contains "month", "dollar" or "percent" by accident.
+    //
+    // Word-boundary matching was tried here and was wrong twice over. It loses
+    // the glued forms, because \w includes digits — "12months" fails the
+    // leading test and "$2m" the trailing one — and it loses the derived forms
+    // like "monthly". Both failures are silent: the check just stops finding
+    // calculations and fails open.
     const hasSpecificCalculations =
       /\d+/.test(response) && // Contains numbers
-      (responseLower.includes('percent') ||
-        responseLower.includes('%') ||
-        responseLower.includes('months') ||
-        responseLower.includes('years') ||
-        responseLower.includes('dollars') ||
-        responseLower.includes('$'));
+      ['percent', '%', 'month', 'year', 'dollar', '$'].some(unit => responseLower.includes(unit));
 
-    const hasStakeholderConsideration =
-      responseLower.includes('employee') ||
-      responseLower.includes('customer') ||
-      responseLower.includes('partner') ||
-      responseLower.includes('investor') ||
-      responseLower.includes('family') ||
-      responseLower.includes('team');
+    // Whole-word here, because 'team' as a substring matches "steam". Derived
+    // forms the substring scan used to catch are listed explicitly — the
+    // matcher only adds simple plurals, and a suffix rule wide enough to reach
+    // "teamwork" would also reach the fragments this is avoiding.
+    const hasStakeholderConsideration = matchesAnyWord(responseLower, [
+      'employee',
+      'customer',
+      'partner',
+      'partnership',
+      'partnering',
+      'investor',
+      'family',
+      'families',
+      'team',
+      'teamwork',
+      'teammate',
+    ]);
 
     const hasContingencyPlan =
-      responseLower.includes('if fails') ||
-      responseLower.includes('backup') ||
-      responseLower.includes('contingency') ||
-      responseLower.includes('rollback');
+      matchesAnyWord(responseLower, [
+        'if fails',
+        'backup',
+        'contingency',
+        'contingencies',
+        'rollback',
+      ]) ||
+      // snake_case is one token to the matcher, because '_' is a word
+      // character — "rollback_plan" does not match 'rollback'. Plausible in an
+      // engineer's unlock response, so the underscore forms are checked too.
+      responseLower.includes('rollback_') ||
+      responseLower.includes('backup_');
 
     // Calculate response quality score
     let qualityScore = 0;

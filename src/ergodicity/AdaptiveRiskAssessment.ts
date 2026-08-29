@@ -7,6 +7,7 @@
  */
 
 import { CONFIDENCE_THRESHOLDS, CACHE_LIMITS } from './constants.js';
+import { matchesWord, matchesAnyWord } from './wordMatch.js';
 
 export interface ContextIndicators {
   hasPersonalFinance: boolean;
@@ -23,31 +24,22 @@ export interface ContextIndicators {
 export class AdaptiveRiskAssessment {
   private contextCache = new Map<string, ContextIndicators>();
 
-  // Compiled per indicator once, shared across instances.
-  private static readonly indicatorPatterns = new Map<string, RegExp>();
-
   /**
    * Word-boundary indicator match. A bare `text.includes()` matched fragments
    * inside unrelated words — 'api' in "rapid", 'all' in "small", 'system' in
    * "ecosystem" — and mislabeled non-technical problems. Multi-word phrases
    * match as phrases; single words also match simple plural forms.
+   *
+   * The implementation moved to `wordMatch.ts` so the escalation, dismissal
+   * and stakes scans could stop matching the same text a different way (#309).
+   * Kept as a method because it is used throughout this class.
    */
   private matchesIndicator(text: string, indicator: string): boolean {
-    let pattern = AdaptiveRiskAssessment.indicatorPatterns.get(indicator);
-    if (!pattern) {
-      const escaped = indicator.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      // Lookarounds, not \b: a \b after a non-word final character (e.g. an
-      // indicator ending in '%') can never hold, silently disabling the
-      // indicator. Lookarounds assert "not glued to a word character" on
-      // either side regardless of what the indicator's edges are.
-      pattern = new RegExp(`(?<!\\w)${escaped}(?:e?s)?(?!\\w)`, 'i');
-      AdaptiveRiskAssessment.indicatorPatterns.set(indicator, pattern);
-    }
-    return pattern.test(text);
+    return matchesWord(text, indicator);
   }
 
   private containsAny(text: string, indicators: string[]): boolean {
-    return indicators.some(ind => this.matchesIndicator(text, ind));
+    return matchesAnyWord(text, indicators);
   }
 
   /**
