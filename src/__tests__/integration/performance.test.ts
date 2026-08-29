@@ -90,7 +90,34 @@ describe('Performance Integration Tests', () => {
   });
 
   describe('Concurrent Operations', () => {
-    it('should handle 50 concurrent discovery requests', async () => {
+    // These drive executeThinkingStep, the only one of the three tools that is
+    // async. They used to aggregate discoverTechniques and planThinkingSession,
+    // which are synchronous, so "concurrent" described work that never
+    // overlapped and the thresholds could not fail for the stated reason (#352).
+    // Plans are built up front and excluded from the timed window, so the
+    // measurement covers the concurrent part only.
+
+    /** A six_hats plan; step 2 (white hat) avoids the step-1 ergodicity check. */
+    const planFor = (problem: string): string =>
+      safeJsonParse(
+        server.planThinkingSession({ problem, techniques: ['six_hats'] }).content[0].text
+      ).planId;
+
+    const stepOn = (planId: string, i: number) =>
+      server.executeThinkingStep({
+        planId,
+        technique: 'six_hats',
+        problem: `Concurrent step case ${i}`,
+        currentStep: 2,
+        totalSteps: 6,
+        hatColor: 'white',
+        output: `Test output ${i}`,
+        nextStepNeeded: true,
+      });
+
+    it('should handle 50 concurrent step executions without leaking memory', async () => {
+      const planIds = Array.from({ length: 50 }, (_, i) => planFor(`Memory probe ${i}`));
+
       // Force garbage collection if available (requires --expose-gc flag)
       if (global.gc) {
         global.gc();
@@ -100,18 +127,7 @@ describe('Performance Integration Tests', () => {
       const memoryBefore = getMemoryUsageMB();
       const startTime = Date.now();
 
-      const promises = Array.from({ length: 50 }, (_, i) =>
-        server.discoverTechniques({
-          problem: `Concurrent discovery problem ${i}`,
-          context: `Context for problem ${i}`,
-          preferredOutcome: ['innovative', 'systematic', 'risk-aware'][i % 3] as any,
-        })
-      );
-
-      // discoverTechniques is synchronous (src/index.ts), so this array holds
-      // plain values and the aggregate settles immediately.
-      // eslint-disable-next-line @typescript-eslint/await-thenable
-      const results = await Promise.all(promises);
+      const results = await Promise.all(planIds.map((planId, i) => stepOn(planId, i)));
       const duration = Date.now() - startTime;
 
       // Force another GC before measuring memory
@@ -124,19 +140,14 @@ describe('Performance Integration Tests', () => {
 
       // All should succeed
       expect(results.every(r => !r.isError)).toBe(true);
-      expect(
-        results.every(r => {
-          const data = safeJsonParse(r.content[0].text);
-          return data.recommendations && data.recommendations.length > 0;
-        })
-      ).toBe(true);
+      expect(results.every(r => safeJsonParse(r.content[0].text).currentStep === 2)).toBe(true);
 
       // Should complete reasonably quickly (adjust threshold as needed)
       expect(duration).toBeLessThan(TIMEOUT_50_CONCURRENT); // 3 seconds for 50 requests (configurable)
 
       // Memory usage check
       const memoryIncrease = memoryAfter.heapUsed - memoryBefore.heapUsed;
-      console.log(`[${env.environmentName}] 50 concurrent discoveries completed in ${duration}ms`);
+      console.log(`[${env.environmentName}] 50 concurrent steps completed in ${duration}ms`);
       console.log(
         `[${env.environmentName}] Memory usage - Before: ${memoryBefore.heapUsed}MB, After: ${memoryAfter.heapUsed}MB, Increase: ${memoryIncrease}MB`
       );
@@ -146,36 +157,26 @@ describe('Performance Integration Tests', () => {
       expect(memoryIncrease).toBeLessThan(100);
     });
 
-    it('should handle 100 concurrent planning requests', async () => {
+    it('should keep 100 concurrent step executions on distinct sessions', async () => {
+      const planIds = Array.from({ length: 100 }, (_, i) => planFor(`Isolation probe ${i}`));
+
       const startTime = Date.now();
-
-      const techniques = ['six_hats', 'scamper', 'po', 'random_entry'];
-
-      const promises = Array.from({ length: 100 }, (_, i) =>
-        server.planThinkingSession({
-          problem: `Concurrent planning problem ${i}`,
-          techniques: [techniques[i % techniques.length]] as any,
-          timeframe: ['quick', 'thorough', 'comprehensive'][i % 3] as any,
-        })
-      );
-
-      // planThinkingSession is synchronous (src/index.ts), so this array holds
-      // plain values and the aggregate settles immediately.
-      // eslint-disable-next-line @typescript-eslint/await-thenable
-      const results = await Promise.all(promises);
+      const results = await Promise.all(planIds.map((planId, i) => stepOn(planId, i)));
       const duration = Date.now() - startTime;
 
       // All should succeed
       expect(results.every(r => !r.isError)).toBe(true);
 
-      // Each should have unique planId
-      const planIds = results.map(r => safeJsonParse(r.content[0].text).planId);
-      expect(new Set(planIds).size).toBe(100);
+      // One session per plan, and no two steps landed on the same one. This is
+      // the assertion the old planId-uniqueness check becomes once it drives
+      // the execution layer: identity has to survive concurrent arrival.
+      const sessionIds = results.map(r => safeJsonParse(r.content[0].text).sessionId);
+      expect(new Set(sessionIds).size).toBe(100);
 
       // Performance check
-      expect(duration).toBeLessThan(TIMEOUT_100_CONCURRENT); // 5 seconds for 100 plans (configurable)
+      expect(duration).toBeLessThan(TIMEOUT_100_CONCURRENT); // 5 seconds for 100 steps (configurable)
 
-      console.log(`100 concurrent plans created in ${duration}ms`);
+      console.log(`100 concurrent steps executed in ${duration}ms`);
     });
 
     it('should handle 100 concurrent step executions', async () => {
@@ -225,6 +226,80 @@ describe('Performance Integration Tests', () => {
       expect(duration).toBeLessThan(TIMEOUT_100_CONCURRENT); // 5 seconds for 100 executions (configurable)
 
       console.log(`100 concurrent executions completed in ${duration}ms`);
+    });
+  });
+
+  // discoverTechniques and planThinkingSession are synchronous, so nothing
+  // here is concurrent and none of it is named as if it were. What these keep
+  // is the part of the old "concurrent" tests that was always real: that the
+  // scoring and DAG-generation paths hold up under volume without leaking
+  // memory or colliding on identity. Retargeting those tests at the async
+  // surface (#352) would otherwise have left these paths with no volume
+  // coverage at all.
+  describe('Sequential Volume', () => {
+    it('should run 50 discovery requests within the memory budget', async () => {
+      if (global.gc) {
+        global.gc();
+        await new Promise(resolve => setTimeout(resolve, 100)); // Let GC settle
+      }
+
+      const memoryBefore = getMemoryUsageMB();
+      const startTime = Date.now();
+
+      const results = Array.from({ length: 50 }, (_, i) =>
+        server.discoverTechniques({
+          problem: `Discovery volume problem ${i}`,
+          context: `Context for problem ${i}`,
+          preferredOutcome: ['innovative', 'systematic', 'risk-aware'][i % 3] as any,
+        })
+      );
+      const duration = Date.now() - startTime;
+
+      if (global.gc) {
+        global.gc();
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
+      const memoryAfter = getMemoryUsageMB();
+
+      expect(results.every(r => !r.isError)).toBe(true);
+      expect(
+        results.every(r => {
+          const data = safeJsonParse(r.content[0].text);
+          return data.recommendations && data.recommendations.length > 0;
+        })
+      ).toBe(true);
+
+      expect(duration).toBeLessThan(TIMEOUT_50_CONCURRENT);
+
+      const memoryIncrease = memoryAfter.heapUsed - memoryBefore.heapUsed;
+      console.log(`[${env.environmentName}] 50 discoveries completed in ${duration}ms`);
+      console.log(
+        `[${env.environmentName}] Memory usage - Before: ${memoryBefore.heapUsed}MB, After: ${memoryAfter.heapUsed}MB, Increase: ${memoryIncrease}MB`
+      );
+      expect(memoryIncrease).toBeLessThan(100);
+    });
+
+    it('should give 100 planning requests distinct plan ids', () => {
+      const startTime = Date.now();
+      const techniques = ['six_hats', 'scamper', 'po', 'random_entry'];
+
+      const results = Array.from({ length: 100 }, (_, i) =>
+        server.planThinkingSession({
+          problem: `Planning volume problem ${i}`,
+          techniques: [techniques[i % techniques.length]] as any,
+          timeframe: ['quick', 'thorough', 'comprehensive'][i % 3] as any,
+        })
+      );
+      const duration = Date.now() - startTime;
+
+      expect(results.every(r => !r.isError)).toBe(true);
+
+      const planIds = results.map(r => safeJsonParse(r.content[0].text).planId);
+      expect(new Set(planIds).size).toBe(100);
+
+      expect(duration).toBeLessThan(TIMEOUT_100_CONCURRENT);
+      console.log(`100 plans created in ${duration}ms`);
     });
   });
 

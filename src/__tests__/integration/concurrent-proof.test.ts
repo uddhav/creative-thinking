@@ -1,194 +1,134 @@
 /**
- * Definitive proof that the MCP server handles multiple concurrent requests
- * This test objectively demonstrates concurrent processing capability
+ * Concurrency guarantees of the execution path.
+ *
+ * This file used to assert concurrency over `discoverTechniques` and
+ * `planThinkingSession`. Both are synchronous (src/index.ts), so the aggregate
+ * settled immediately and the claims could not fail for the reason they named:
+ * "if sequential: ~150ms minimum" described work that was always sequential.
+ * See #352.
+ *
+ * `executeThinkingStep` is the only async surface of the three, so these tests
+ * drive it instead, and assert properties that can actually fail: that a
+ * contended session loses no history entry, and that separate sessions stay
+ * separate.
+ *
+ * They are deliberately not described as testing the lock in
+ * `src/layers/execution.ts`. Disabling it leaves the whole suite green, so what
+ * it protects is still uncovered — recorded on #354 rather than papered over
+ * here. (That lock is keyed `sessionId:technique`, not per session, so steps of
+ * different techniques on one session never contend for it anyway.)
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { LateralThinkingServer } from '../../index.js';
 
-describe('Objective Concurrent Request Proof', () => {
-  it('PROOF: Server processes multiple requests simultaneously, not sequentially', async () => {
-    const server = new LateralThinkingServer();
+interface ExecutionResponse {
+  sessionId: string;
+  currentStep: number;
+  historyLength: number;
+  nextStepNeeded: boolean;
+}
 
-    // Create timestamps to track when each request starts and ends
-    const requestTimings: Array<{
-      id: number;
-      startTime: number;
-      endTime?: number;
-      duration?: number;
-    }> = [];
+const parse = (result: { content: Array<{ text: string }> }): ExecutionResponse =>
+  JSON.parse(result.content[0].text) as ExecutionResponse;
 
-    // Create 10 requests that each simulate some processing time
-    const promises = Array.from({ length: 10 }, (_, i) => {
-      const timing = {
-        id: i,
-        startTime: Date.now(),
-      };
-      requestTimings.push(timing);
+describe('Execution concurrency', () => {
+  let server: LateralThinkingServer;
 
-      // Wrap synchronous call in Promise for timing
-      return Promise.resolve().then(() => {
-        const result = server.discoverTechniques({
-          problem: `Test problem ${i}`,
-          context: `This is request number ${i} to test concurrency`,
-        });
-        timing.endTime = Date.now();
-        timing.duration = timing.endTime - timing.startTime;
-        return result;
-      });
+  beforeEach(() => {
+    server = new LateralThinkingServer();
+  });
+
+  /** A six_hats plan; step 2 (white hat) avoids the step-1 ergodicity check. */
+  function createPlan(problem: string): string {
+    const result = server.planThinkingSession({ problem, techniques: ['six_hats'] });
+    expect(result.isError).toBeFalsy();
+    return (JSON.parse(result.content[0].text) as { planId: string }).planId;
+  }
+
+  function step(planId: string, i: number, sessionId?: string) {
+    return server.executeThinkingStep({
+      planId,
+      ...(sessionId ? { sessionId } : {}),
+      technique: 'six_hats',
+      problem: 'Concurrency probe',
+      currentStep: 2,
+      totalSteps: 6,
+      hatColor: 'white',
+      output: `Concurrent output ${i}`,
+      nextStepNeeded: true,
     });
+  }
 
-    // Execute all requests concurrently
-    const overallStart = Date.now();
-    const results = await Promise.all(promises);
-    const overallDuration = Date.now() - overallStart;
+  it('loses no history entry when concurrent steps contend for one session', async () => {
+    const planId = createPlan('Same-session concurrency');
 
-    // PROOF POINT 1: All requests succeeded
-    expect(results.length).toBe(10);
-    results.forEach(result => {
-      expect(result.content).toBeDefined();
-      expect(result.content[0].text).toBeDefined();
-    });
+    // Establish the session with one step, then contend on it.
+    const seed = parse(await step(planId, 0));
+    const { sessionId } = seed;
+    expect(sessionId).toBeTruthy();
 
-    // PROOF POINT 2: Calculate if requests were concurrent or sequential
-    const individualDurations = requestTimings.map(t => t.duration || 0);
-    const averageIndividualDuration =
-      individualDurations.reduce((a, b) => a + b, 0) / individualDurations.length;
-    const theoreticalSequentialTime = averageIndividualDuration * 10;
+    const CONTENDERS = 12;
+    const results = await Promise.all(
+      Array.from({ length: CONTENDERS }, (_, i) => step(planId, i + 1, sessionId))
+    );
 
-    // Proof metrics - requests run 7-8x faster than sequential
-    // Average individual: ~28ms, Sequential: ~280ms, Concurrent: ~36ms
-
-    // PROOF POINT 3: Concurrent execution is significantly faster than sequential
-    // If requests were sequential, total time would be ~10x individual time
-    // With concurrent execution, total time should be close to individual time
-    expect(overallDuration).toBeLessThan(theoreticalSequentialTime * 0.5); // At least 2x faster
-
-    // PROOF POINT 4: Requests started at nearly the same time
-    const startTimes = requestTimings.map(t => t.startTime);
-    const startTimeSpread = Math.max(...startTimes) - Math.min(...startTimes);
-    // Start time spread should be <5ms for true concurrency
-    expect(startTimeSpread).toBeLessThan(5); // All started within 5ms
-
-    // PROOF POINT 5: Requests overlapped in execution
-    let overlappingRequests = 0;
-    for (let i = 0; i < requestTimings.length; i++) {
-      for (let j = i + 1; j < requestTimings.length; j++) {
-        const req1 = requestTimings[i];
-        const req2 = requestTimings[j];
-        // Check if requests overlapped in time
-        if (
-          req1.endTime &&
-          req2.endTime &&
-          req1.startTime <= req2.endTime &&
-          req2.startTime <= req1.endTime
-        ) {
-          overlappingRequests++;
-        }
-      }
+    // Every call has to land on the session it was given.
+    for (const r of results) {
+      expect(parse(r).sessionId).toBe(sessionId);
     }
-    // Overlapping request pairs: ~45 out of 45 possible pairs
-    expect(overlappingRequests).toBeGreaterThan(40); // Most requests should overlap
 
-    server.destroy();
+    // Each caller sees a distinct history length and no entry is lost.
+    //
+    // Do not read this as a test of the lock. Disabling
+    // `sessionLock.acquireLock` in src/layers/execution.ts leaves this — and
+    // the entire suite — green, because `history.push` is atomic on a single
+    // thread even though an await sits between the lock and the push. What the
+    // lock actually protects is not covered by anything here; see #354.
+    //
+    // Asserting the set rather than the count still earns its keep: a duplicate
+    // length cannot hide behind a coincidentally correct total.
+    const lengths = results.map(r => parse(r).historyLength).sort((a, b) => a - b);
+    const expected = Array.from({ length: CONTENDERS }, (_, i) => seed.historyLength + i + 1);
+    expect(lengths).toEqual(expected);
+    expect(new Set(lengths).size).toBe(CONTENDERS);
   });
 
-  it('PROOF: Server handles 100 simultaneous requests without blocking', async () => {
-    const server = new LateralThinkingServer();
+  it('keeps concurrent sessions isolated from one another', async () => {
+    // A step with no sessionId attaches to the plan's existing session rather
+    // than opening a new one, so distinct sessions need distinct plans. (That
+    // is also why performance.test.ts's "100 concurrent step executions" all
+    // land on a single session.)
+    const SESSIONS = 10;
+    const planIds = Array.from({ length: SESSIONS }, (_, i) => createPlan(`Isolation plan ${i}`));
 
-    // Test that server can handle many requests submitted simultaneously
-    // Note: The server processes synchronously, but should handle all requests correctly
-    const requestCount = 100;
+    const seeds = await Promise.all(planIds.map((planId, i) => step(planId, i)));
+    const sessionIds = seeds.map(r => parse(r).sessionId);
+    expect(new Set(sessionIds).size).toBe(SESSIONS);
 
-    // Submit all requests at once
-    const startTime = Date.now();
-    const promises = Array.from({ length: requestCount }, (_, i) =>
-      Promise.resolve().then(() =>
-        server.discoverTechniques({
-          problem: `Test problem ${i}`,
-        })
-      )
-    );
-
-    // Wait for all to complete
-    const results = await Promise.all(promises);
-    const duration = Date.now() - startTime;
-
-    // PROOF POINTS:
-    // 1. All requests should succeed
-    expect(results.length).toBe(requestCount);
-
-    // 2. Each result should be valid
-    results.forEach(result => {
-      expect(result.content).toBeDefined();
-      expect(result.content[0].text).toBeDefined();
-    });
-
-    // 3. Results should be unique (not shared between requests)
-    const uniqueResults = new Set(results.map(r => JSON.stringify(r)));
-    expect(uniqueResults.size).toBeGreaterThan(1);
-
-    // 4. Performance should be reasonable (not timing out)
-    // Allow generous time for Node 18 with NLP: up to 50ms per request
-    const maxAcceptableTime = requestCount * 50;
-    expect(duration).toBeLessThan(maxAcceptableTime);
-
-    server.destroy();
+    // A second concurrent round, one step per session. Each must see only its
+    // own history — a leak across sessions would push some counts past two.
+    const second = await Promise.all(sessionIds.map((id, i) => step(planIds[i], i, id)));
+    for (const r of second) {
+      expect(parse(r).historyLength).toBe(2);
+    }
+    expect(new Set(second.map(r => parse(r).sessionId)).size).toBe(SESSIONS);
   });
 
-  it('PROOF: Multiple clients can make requests simultaneously', async () => {
-    const server = new LateralThinkingServer();
+  it('completes 50 concurrent steps on one session without error', async () => {
+    // One plan and no sessionId, so all 50 land on the same session (see the
+    // note in the isolation test above) — this is volume against a contended
+    // session, not across independent ones.
+    const planId = createPlan('Contended session throughput');
 
-    // Simulate 3 different "clients" making requests at the same time
-    const client1Requests = Array.from({ length: 5 }, (_, i) =>
-      server.planThinkingSession({
-        problem: `Client 1 problem ${i}`,
-        techniques: ['six_hats'],
-      })
-    );
+    const CALLS = 50;
+    const results = await Promise.all(Array.from({ length: CALLS }, (_, i) => step(planId, i)));
 
-    const client2Requests = Array.from({ length: 5 }, (_, i) =>
-      server.planThinkingSession({
-        problem: `Client 2 problem ${i}`,
-        techniques: ['scamper'],
-      })
-    );
-
-    const client3Requests = Array.from({ length: 5 }, (_, i) =>
-      server.planThinkingSession({
-        problem: `Client 3 problem ${i}`,
-        techniques: ['po'],
-      })
-    );
-
-    // All 15 requests execute concurrently
-    const startTime = Date.now();
-    // planThinkingSession is synchronous (src/index.ts), so these arrays hold
-    // plain values and the aggregate settles immediately. Kept as-is rather
-    // than unwound, because whether these tests should be driving an async
-    // surface is a separate question from what the aggregate does today.
-    /* eslint-disable @typescript-eslint/await-thenable */
-    const [client1Results, client2Results, client3Results] = await Promise.all([
-      Promise.all(client1Requests),
-      Promise.all(client2Requests),
-      Promise.all(client3Requests),
-    ]);
-    /* eslint-enable @typescript-eslint/await-thenable */
-    const duration = Date.now() - startTime;
-
-    // Multi-client concurrency metrics:
-    // 3 clients × 5 requests = 15 total requests
-    // Typically completes in <1ms (near-instant)
-    // If sequential: ~150ms minimum
-
-    // Verify all succeeded
-    expect(client1Results.length).toBe(5);
-    expect(client2Results.length).toBe(5);
-    expect(client3Results.length).toBe(5);
-
-    // Should be much faster than sequential
-    expect(duration).toBeLessThan(100); // Concurrent execution proof
-
-    server.destroy();
+    expect(results).toHaveLength(CALLS);
+    for (const r of results) {
+      expect(r.isError).toBeFalsy();
+      expect(parse(r).currentStep).toBe(2);
+    }
+    expect(new Set(results.map(r => parse(r).sessionId)).size).toBe(1);
   });
 });

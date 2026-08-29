@@ -21,10 +21,6 @@ import type {
 } from '../../index.js';
 import { safeJsonParse, type ServerResponse } from '../helpers/types.js';
 
-interface DiscoveryResponse {
-  recommendations: unknown[];
-}
-
 interface PlanResponse {
   planId: string;
 }
@@ -38,7 +34,7 @@ describe('Stress Tests - Extreme Loads', () => {
 
   // Extended timeouts for stress tests
   const STRESS_TIMEOUT_MULTIPLIER = parseFloat(process.env.STRESS_TIMEOUT_MULTIPLIER || '2');
-  const TIMEOUT_1000_DISCOVERIES = 30000 * STRESS_TIMEOUT_MULTIPLIER; // 30s base
+  const TIMEOUT_1000_CONCURRENT_STEPS = 30000 * STRESS_TIMEOUT_MULTIPLIER; // 30s base
   const TIMEOUT_1000_STEPS = 60000 * STRESS_TIMEOUT_MULTIPLIER; // 60s base
   const TIMEOUT_500_SESSIONS = 45000 * STRESS_TIMEOUT_MULTIPLIER; // 45s base
 
@@ -80,15 +76,34 @@ describe('Stress Tests - Extreme Loads', () => {
 
   describe('Extreme Concurrent Load', () => {
     it(
-      'should handle 1000 concurrent discovery requests',
+      'should handle 1000 concurrent step executions',
       async () => {
+        // Drives executeThinkingStep, the only async surface of the three
+        // (src/index.ts). This used to batch discoverTechniques, which is
+        // synchronous, so nothing overlapped and "concurrent" named work that
+        // was always sequential — see #352.
+        //
+        // Plans are built before the timed window: planThinkingSession is
+        // synchronous and cheap, and including it would fold sequential setup
+        // into a measurement about concurrent execution.
+        const totalRequests = 1000;
+        const planIds = Array.from(
+          { length: totalRequests },
+          (_, i) =>
+            safeJsonParse<{ planId: string }>(
+              server.planThinkingSession({
+                problem: `Stress test problem ${i}`,
+                techniques: ['six_hats'],
+              }).content[0].text
+            ).planId
+        );
+
         const memoryBefore = getMemoryUsageMB();
         const startTime = Date.now();
         const batchSize = 100; // Process in batches to avoid overwhelming the system
-        const totalRequests = 1000;
         const results: ServerResponse[] = [];
 
-        console.log(`Starting stress test: ${totalRequests} discovery requests`);
+        console.log(`Starting stress test: ${totalRequests} step executions`);
         console.log(
           `Initial memory: Heap ${formatMemory(memoryBefore.heapUsed)}, RSS ${formatMemory(memoryBefore.rss)}`
         );
@@ -97,24 +112,19 @@ describe('Stress Tests - Extreme Loads', () => {
         for (let batch = 0; batch < totalRequests / batchSize; batch++) {
           const batchPromises = Array.from({ length: batchSize }, (_, i) => {
             const index = batch * batchSize + i;
-            const outcomes = [
-              'innovative',
-              'systematic',
-              'risk-aware',
-              'collaborative',
-              'analytical',
-            ] as const;
-            return server.discoverTechniques({
+            // Step 2 (white hat) avoids the step-1 ergodicity check.
+            return server.executeThinkingStep({
+              planId: planIds[index],
+              technique: 'six_hats',
               problem: `Stress test problem ${index}`,
-              context: `This is a complex problem requiring deep analysis and multiple technique recommendations ${index}`,
-              preferredOutcome: outcomes[index % 5],
-              constraints: [`Time constraint ${index}`, `Resource constraint ${index}`],
+              currentStep: 2,
+              totalSteps: 6,
+              hatColor: 'white',
+              output: `Stress output ${index} covering the analysis for this step`,
+              nextStepNeeded: true,
             });
           });
 
-          // discoverTechniques is synchronous (src/index.ts), so this array
-          // holds plain values and the aggregate settles immediately.
-          // eslint-disable-next-line @typescript-eslint/await-thenable
           const batchResults = await Promise.all(batchPromises);
           results.push(...batchResults);
 
@@ -138,8 +148,10 @@ describe('Stress Tests - Extreme Loads', () => {
         expect(
           results.every(r => {
             if (r.isError) return false;
-            const data = safeJsonParse<DiscoveryResponse>(r.content[0].text);
-            return data.recommendations && data.recommendations.length > 0;
+            const data = safeJsonParse<{ currentStep: number; sessionId: string }>(
+              r.content[0].text
+            );
+            return data.currentStep === 2 && Boolean(data.sessionId);
           })
         ).toBe(true);
 
@@ -158,11 +170,11 @@ describe('Stress Tests - Extreme Loads', () => {
         );
 
         // Assertions
-        expect(duration).toBeLessThan(TIMEOUT_1000_DISCOVERIES);
+        expect(duration).toBeLessThan(TIMEOUT_1000_CONCURRENT_STEPS);
         expect(avgTimePerRequest).toBeLessThan(AVG_REQUEST_TIME_THRESHOLD); // Adjusted for CI environment
         expect(memoryPerRequest).toBeLessThan(0.5); // Should use less than 0.5MB per request
       },
-      TIMEOUT_1000_DISCOVERIES
+      TIMEOUT_1000_CONCURRENT_STEPS
     );
   });
 
