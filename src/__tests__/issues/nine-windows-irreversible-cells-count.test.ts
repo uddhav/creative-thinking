@@ -40,11 +40,16 @@ const PRESENT_CELL = 'The cluster already holds three years of ledger state';
 const PAST_CELL = 'Billing was originally a single mainframe batch';
 const DEPENDENCY = 'ledger export format is frozen';
 const LEAK_MARKER = 'Matrix cell smuggled in on a scamper step';
+const DUPE_CELL = 'The same future system cell sent more than once';
 
 const stateDir = mkdtempSync(path.join(tmpdir(), 'ct-ninewindows-'));
+// A separate root, so counting entries in one test is not confused by sessions
+// another test wrote.
+const dupeDir = mkdtempSync(path.join(tmpdir(), 'ct-ninewindows-dupe-'));
 
 afterAll(() => {
   rmSync(stateDir, { recursive: true, force: true });
+  rmSync(dupeDir, { recursive: true, force: true });
 });
 
 function textOf(result: { content: Array<{ type: string }> }): string {
@@ -68,8 +73,8 @@ function textOf(result: { content: Array<{ type: string }> }): string {
  * either way, echoed in the stored history entry and again in the insight
  * prose, so a whole-file assertion is green with no producer at all.
  */
-function foreclosedPaths(): string[] {
-  const dir = path.join(stateDir, 'sessions');
+function foreclosedPaths(root: string = stateDir): string[] {
+  const dir = path.join(root, 'sessions');
   const found: string[] = [];
   for (const name of readdirSync(dir)) {
     const envelope = JSON.parse(readFileSync(path.join(dir, name), 'utf8')) as { data?: unknown };
@@ -159,6 +164,79 @@ describe('an irreversible nine_windows cell is a declared constraint', () => {
       expect(foreclosed, 'the present cell was not recorded as foreclosed').toContain(PRESENT_CELL);
       expect(foreclosed, 'a past cell was counted as a new commitment').not.toContain(PAST_CELL);
       expect(foreclosed, 'a reversible cell was counted').not.toContain('Finance reporting');
+    } finally {
+      await client.disconnect();
+    }
+  });
+
+  it('counts a repeated cell once, and bounds what it records', async () => {
+    // ReflexivityTracker filters an incoming batch against the array as it
+    // stood BEFORE the push, not against the batch itself — so duplicates
+    // within one matrix all survived. Measured before the fix: three identical
+    // cells recorded three constraints and contentConstraintCount read 3.
+    //
+    // Nothing had exercised that path, because the only other content producer
+    // emits exactly one string per call and a batch of one cannot contain
+    // duplicates. This producer is the first that can.
+    const client = new MCPClientTestHelper();
+    const env: Record<string, string> = {};
+    for (const [key, value] of Object.entries(process.env)) {
+      if (value !== undefined) env[key] = value;
+    }
+    env.PERSISTENCE_TYPE = 'filesystem';
+    env.PERSISTENCE_PATH = dupeDir;
+    await client.connect({ env });
+
+    try {
+      const plan = JSON.parse(
+        textOf(
+          await client.callTool('plan_thinking_session', {
+            problem: PROBLEM,
+            techniques: ['nine_windows'],
+          })
+        )
+      ) as { planId: string };
+
+      const cell = {
+        timeFrame: 'future',
+        systemLevel: 'system',
+        content: DUPE_CELL,
+        irreversible: true,
+      };
+
+      await client.callTool('execute_thinking_step', {
+        planId: plan.planId,
+        technique: 'nine_windows',
+        problem: PROBLEM,
+        currentStep: 7,
+        totalSteps: 9,
+        output: 'Committing to the future system.',
+        nineWindowsMatrix: [
+          cell,
+          { ...cell },
+          { ...cell },
+          // Same coordinates, restated: the newest wording wins, still once.
+          { ...cell, content: `${DUPE_CELL} (restated)` },
+          // Caller constraints bypass the tracker's 1000-char cap on purpose,
+          // and nothing else bounds cell content — so the producer caps it.
+          {
+            timeFrame: 'present',
+            systemLevel: 'sub-system',
+            content: 'X'.repeat(5000),
+            irreversible: true,
+          },
+        ],
+        nextStepNeeded: true,
+        autoSave: true,
+      });
+
+      const recorded = foreclosedPaths(dupeDir);
+      const forThatCell = recorded.filter(p => p.includes(DUPE_CELL));
+      expect(forThatCell, `one cell recorded ${forThatCell.length} times`).toHaveLength(1);
+      expect(forThatCell[0], 'the newest wording did not win').toContain('(restated)');
+
+      const longest = Math.max(...recorded.map(p => p.length));
+      expect(longest, 'an unbounded cell body reached pathsForeclosed').toBeLessThan(1200);
     } finally {
       await client.disconnect();
     }
