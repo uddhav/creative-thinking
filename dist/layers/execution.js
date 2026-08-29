@@ -42,6 +42,15 @@ import { attachSteeringFields } from './execution/attachSteeringFields.js';
  * arrays deduplicate by value, so it is counted and warned about once.
  */
 function irreversibleMatrixCells(input) {
+    // Only for the technique the field belongs to. `nineWindowsMatrix` sits on
+    // the shared input type, and its cell-by-cell validation in
+    // `ValidationStrategies` sits under `case 'nine_windows'` — so on any other
+    // technique the field is neither validated nor rejected. Measured before
+    // adding this: a matrix sent on a scamper step recorded
+    // "Caller-declared (nine_windows future system): …" against a scamper
+    // session, from cells `ObjectFieldValidator` had never seen.
+    if (input.technique !== 'nine_windows')
+        return [];
     // Read as a plain record: the matrix is schema-declared and validated, but
     // this reads it defensively because it is caller input.
     const cells = input.nineWindowsMatrix;

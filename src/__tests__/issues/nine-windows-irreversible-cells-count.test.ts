@@ -39,6 +39,7 @@ const FUTURE_CELL = 'Billing runs only in the managed service';
 const PRESENT_CELL = 'The cluster already holds three years of ledger state';
 const PAST_CELL = 'Billing was originally a single mainframe batch';
 const DEPENDENCY = 'ledger export format is frozen';
+const LEAK_MARKER = 'Matrix cell smuggled in on a scamper step';
 
 const stateDir = mkdtempSync(path.join(tmpdir(), 'ct-ninewindows-'));
 
@@ -158,6 +159,61 @@ describe('an irreversible nine_windows cell is a declared constraint', () => {
       expect(foreclosed, 'the present cell was not recorded as foreclosed').toContain(PRESENT_CELL);
       expect(foreclosed, 'a past cell was counted as a new commitment').not.toContain(PAST_CELL);
       expect(foreclosed, 'a reversible cell was counted').not.toContain('Finance reporting');
+    } finally {
+      await client.disconnect();
+    }
+  });
+
+  it('ignores a matrix sent with a different technique', async () => {
+    // `nineWindowsMatrix` sits on the shared input type, and its cell-by-cell
+    // validation in ValidationStrategies sits under `case 'nine_windows'` — so
+    // on any other technique the field is neither validated nor rejected.
+    // Measured before the technique gate existed: this recorded
+    // "Caller-declared (nine_windows future system): …" against a SCAMPER
+    // session, from cells ObjectFieldValidator had never inspected.
+    const client = new MCPClientTestHelper();
+    const env: Record<string, string> = {};
+    for (const [key, value] of Object.entries(process.env)) {
+      if (value !== undefined) env[key] = value;
+    }
+    env.PERSISTENCE_TYPE = 'filesystem';
+    env.PERSISTENCE_PATH = stateDir;
+    await client.connect({ env });
+
+    try {
+      const plan = JSON.parse(
+        textOf(
+          await client.callTool('plan_thinking_session', {
+            problem: PROBLEM,
+            techniques: ['scamper'],
+          })
+        )
+      ) as { planId: string };
+
+      await client.callTool('execute_thinking_step', {
+        planId: plan.planId,
+        technique: 'scamper',
+        problem: PROBLEM,
+        currentStep: 4,
+        totalSteps: 8,
+        scamperAction: 'modify',
+        output: 'Modifying the billing batch window.',
+        nineWindowsMatrix: [
+          {
+            timeFrame: 'future',
+            systemLevel: 'system',
+            content: LEAK_MARKER,
+            irreversible: true,
+          },
+        ],
+        nextStepNeeded: true,
+        autoSave: true,
+      });
+
+      expect(
+        foreclosedPaths().join('\n'),
+        'a nine_windows field injected a constraint into another technique'
+      ).not.toContain(LEAK_MARKER);
     } finally {
       await client.disconnect();
     }
