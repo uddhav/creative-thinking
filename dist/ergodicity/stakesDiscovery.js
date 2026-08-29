@@ -55,11 +55,18 @@ This is not a form. Think about YOUR specific situation and the risks YOU discov
         prompts.push('- Specific amount/value at risk: _______');
         prompts.push('- This represents ____% of available resources');
         // Add prompts based on discovered indicators
-        if (indicators.some(i => matchesAnyWord(i, ['financial', 'invest', 'invested', 'investing']))) {
+        if (indicators.some(i => matchesAnyWord(i, [
+            'financial',
+            'invest',
+            'invested',
+            'investing',
+            'investment',
+            'investor',
+        ]))) {
             prompts.push('- Dollar amount that could be lost: $_______');
             prompts.push('- Months of income this represents: _______');
         }
-        if (indicators.some(i => matchesWord(i, 'time'))) {
+        if (indicators.some(i => matchesAnyWord(i, ['time', 'timeline', 'timeframe', 'downtime']))) {
             prompts.push('- Hours/days/years that cannot be recovered: _______');
             prompts.push('- Opportunity cost in time: _______');
         }

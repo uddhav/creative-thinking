@@ -17,6 +17,7 @@ import { AdaptiveRiskAssessment } from '../../ergodicity/AdaptiveRiskAssessment.
 import { matchesRuinKeyword, requiresRuinCheck } from '../../ergodicity/prompts.js';
 import { StakesDiscovery } from '../../ergodicity/stakesDiscovery.js';
 import { RiskDismissalTracker } from '../../ergodicity/riskDismissalTracker.js';
+import { EscalationPromptGenerator } from '../../ergodicity/escalationPrompts.js';
 
 describe('AdaptiveRiskAssessment word boundaries', { retry: 0 }, () => {
   const assessment = new AdaptiveRiskAssessment();
@@ -147,10 +148,123 @@ describe('StakesDiscovery word boundaries', { retry: 0 }, () => {
   });
 
   it('does not read irreversibility out of a longer token', () => {
+    // "irreversibly" does not contain "irreversible" — the 12th letter differs
+    // — so the old substring scan missed this too. Pinning current behaviour,
+    // not a boundary the conversion introduced.
     expect(stakes.generateHistoricalContext({}, ['irreversibly committed'])).not.toContain(
       'Blockbuster'
     );
     expect(stakes.generateHistoricalContext({}, ['irreversible'])).toContain('Blockbuster');
+  });
+
+  it('still matches the derived forms the substring scan used to catch', () => {
+    // These are the true positives word matching would otherwise lose, so the
+    // call sites list them. Each one matched under `includes` before #309.
+    expect(stakes.generateStakesPrompt.length).toBeGreaterThan(0); // sanity: method exists
+    const prompt = (indicators: string[]) =>
+      stakes.generateHistoricalContext({}, indicators) +
+      // generateRiskSpecificPrompts is private; drive it through the public
+      // prompt builder with the indicators on a bare session.
+      stakes.generateStakesPrompt(
+        {
+          problem: 'p',
+          history: [],
+          riskEngagementMetrics: {
+            dismissalCount: 0,
+            averageConfidence: 0,
+            escalationLevel: 1,
+            discoveredRiskIndicators: indicators,
+            consecutiveLowConfidence: 0,
+            totalAssessments: 0,
+          },
+        } as unknown as Parameters<typeof stakes.generateStakesPrompt>[0],
+        'act'
+      );
+
+    expect(prompt(['a $2M investment at risk'])).toContain('Dollar amount');
+    expect(prompt(['the investor pulls out'])).toContain('Dollar amount');
+    expect(prompt(['timeline slippage'])).toContain('cannot be recovered');
+    expect(prompt(['unplanned downtime'])).toContain('cannot be recovered');
+
+    // And the false positive the conversion exists to remove stays removed.
+    expect(prompt(['after some investigation'])).not.toContain('Dollar amount');
+  });
+});
+
+/**
+ * escalationPrompts has the most converted call sites and, until this block,
+ * no test of its own — and its inputs are the least structured of the three,
+ * being free-form caller prose out of `history[].output` and `history[].risks`.
+ */
+describe('EscalationPromptGenerator word boundaries', { retry: 0 }, () => {
+  const generator = new EscalationPromptGenerator();
+
+  const metrics = {
+    dismissalCount: 3,
+    averageConfidence: 0.1,
+    escalationLevel: 3,
+    discoveredRiskIndicators: ['irreversibility'],
+    consecutiveLowConfidence: 3,
+    totalAssessments: 3,
+  };
+
+  /** A session whose single step carries the given risk and action prose. */
+  const sessionWith = (risk: string, action: string) =>
+    ({
+      problem: 'Whether to consolidate the billing services',
+      history: [{ output: action, risks: [risk] }],
+    }) as unknown as Parameters<typeof generator.generatePrompt>[2];
+
+  it('does not call ordinary prose a total commitment', () => {
+    // 'all' inside "small"/"finally" and 'bet' inside "between" used to make
+    // this contradiction fire on any prose at all.
+    const prompt = generator.generatePrompt(
+      metrics,
+      [],
+      sessionWith(
+        'irreversible schema change once it ships',
+        'We made a small change between the two services and finally shipped it.'
+      )
+    );
+    expect(prompt?.prompt).not.toContain('propose total commitment');
+  });
+
+  it('still calls a real total commitment what it is', () => {
+    const prompt = generator.generatePrompt(
+      metrics,
+      [],
+      sessionWith(
+        'irreversible schema change once it ships',
+        'We are going to bet everything on the single cutover with no rollback.'
+      )
+    );
+    expect(prompt?.prompt).toContain('propose total commitment');
+  });
+
+  it('does not read certainty out of "uncertain"', () => {
+    // includes('certain') matched "uncertain", so this contradiction fired on
+    // the action that ACKNOWLEDGED the uncertainty — the opposite of its name.
+    const prompt = generator.generatePrompt(
+      metrics,
+      [],
+      sessionWith(
+        'uncertainty about the migration window',
+        'The outcome here is genuinely uncertain and we should hedge.'
+      )
+    );
+    expect(prompt?.prompt).not.toContain('shows certainty despite');
+  });
+
+  it('still reads certainty out of "certainly"', () => {
+    const prompt = generator.generatePrompt(
+      metrics,
+      [],
+      sessionWith(
+        'uncertainty about the migration window',
+        'We are certainly proceeding with the cutover as planned this quarter.'
+      )
+    );
+    expect(prompt?.prompt).toContain('shows certainty despite');
   });
 });
 

@@ -332,10 +332,23 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
                     try {
                         await monitorCriticalSectionAsync('session_autosave', () => sessionManager.saveSessionToPersistence(sessionId), { sessionId });
                     }
-                    catch {
-                        // A blocking response has no room to report save status, and the
-                        // veto is the more important message. The step stays in memory,
-                        // which is where it was before this call.
+                    catch (error) {
+                        // Report it the same way the success path does. An earlier version
+                        // swallowed this, reasoning that a blocking response has no room
+                        // for save status — but `attachFindings` below writes to this very
+                        // object, and a silent failure is worst exactly where this fix
+                        // matters: the CLI caller is told the step was refused, cannot tell
+                        // it was also not saved, and loses it on exit anyway.
+                        attachSteeringFields(completionCheck.response, error instanceof PersistenceError &&
+                            error.code === ErrorCode.PERSISTENCE_NOT_AVAILABLE
+                            ? {
+                                autoSaveStatus: 'disabled',
+                                autoSaveMessage: 'Persistence is not configured. Session data is stored in memory only.',
+                            }
+                            : {
+                                autoSaveStatus: 'failed',
+                                autoSaveError: error instanceof Error ? error.message : 'Auto-save failed',
+                            });
                     }
                 }
                 // The blocking response is steering output too — findings ride it.

@@ -205,7 +205,8 @@ This is not procedural. Your pattern indicates dangerous overconfidence in the f
             // 'certain' as a substring matches "uncertain", so this fired on the
             // action that acknowledged the uncertainty rather than the one that
             // ignored it — the check reported the opposite of what it names.
-            if (risks.some(r => matchesWord(r, 'uncertainty')) && matchesWord(actionLower, 'certain')) {
+            if (risks.some(r => matchesAnyWord(r, ['uncertainty', 'uncertainties'])) &&
+                matchesAnyWord(actionLower, ['certain', 'certainly', 'certainty'])) {
                 contradictions.push(`Action ${i + 1} shows certainty despite acknowledged uncertainty`);
             }
         });
@@ -220,11 +221,18 @@ This is not procedural. Your pattern indicates dangerous overconfidence in the f
         // 'invest' listed with its inflections rather than widened to a suffix
         // rule: bare `includes` also matched "investigation", and stem suffixing
         // cannot reach doubled forms. Same lesson as `requiresRuinCheck`.
-        risks.some(r => matchesAnyWord(r, ['financial', 'invest', 'invested', 'investing']))) {
+        risks.some(r => matchesAnyWord(r, [
+            'financial',
+            'invest',
+            'invested',
+            'investing',
+            'investment',
+            'investor',
+        ]))) {
             calculations.push('- Maximum financial loss in dollars: $_______');
             calculations.push('- Percentage of net worth at risk: ____%');
         }
-        if (risks.some(r => matchesWord(r, 'time'))) {
+        if (risks.some(r => matchesAnyWord(r, ['time', 'timeline', 'timeframe', 'downtime']))) {
             calculations.push('- Time to recover from worst case: _____ months');
             calculations.push('- Deadline for decision reversal: _______');
         }
@@ -249,7 +257,7 @@ This is not procedural. Your pattern indicates dangerous overconfidence in the f
                 calculations.push('- Cost of staying with current solution: _______');
                 calculations.push('- Switching costs if vendor fails: _______');
             }
-            if (risks.some(r => matchesAnyWord(r, ['financial', 'budget']))) {
+            if (risks.some(r => matchesAnyWord(r, ['financial', 'budget', 'budgeting', 'budgetary']))) {
                 calculations.push(`- Maximum ${context.resourceType} at risk: _______`);
                 calculations.push('- Percentage of annual budget: ____%');
                 calculations.push('- Impact on cash flow: _______');
@@ -277,7 +285,7 @@ This is not procedural. Your pattern indicates dangerous overconfidence in the f
             calculations.push('- Quality of life impact (1-10): _____');
         }
         // Time-based calculations (universal)
-        if (risks.some(r => matchesWord(r, 'time'))) {
+        if (risks.some(r => matchesAnyWord(r, ['time', 'timeline', 'timeframe', 'downtime']))) {
             calculations.push(`- Time to recover from worst case: ${context.recoveryTimeframe}`);
             calculations.push('- Deadline for decision reversal: _______');
         }

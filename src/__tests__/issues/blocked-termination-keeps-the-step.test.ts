@@ -62,8 +62,10 @@ describe('a vetoed termination does not lose the step', () => {
         )
       ) as { planId: string; estimatedSteps: number };
 
-      // End on step 1 of six. Every later step is skipped, so the gatekeeper
-      // refuses the termination.
+      // End on step 1 of seven (SixHatsHandler declares 7). Every later step is
+      // skipped, so the gatekeeper refuses the termination. The veto comes from
+      // the skipped steps in techniqueStatuses rather than from this number,
+      // but it should still say what the technique says.
       const blocked = JSON.parse(
         textOf(
           await client.callTool('execute_thinking_step', {
@@ -71,7 +73,7 @@ describe('a vetoed termination does not lose the step', () => {
             technique: 'six_hats',
             problem: PROBLEM,
             currentStep: 1,
-            totalSteps: 6,
+            totalSteps: 7,
             hatColor: 'blue',
             output: MARKER,
             nextStepNeeded: false,

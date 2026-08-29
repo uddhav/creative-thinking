@@ -112,35 +112,46 @@ export class RiskDismissalTracker {
      */
     evaluateUnlockResponse(response, requiredConfidence, metrics) {
         const responseLower = response.toLowerCase();
-        // Whole-word matching throughout. As substrings these scored the caller's
-        // unlock response on fragments: 'team' matches "steam", 'all' matches
-        // "small". The matcher adds simple plurals only, so irregular inflections
-        // and the compounds that genuinely mean the same thing are listed rather
-        // than reached by widening the suffix rule (#309).
+        // Whole-word matching for the vocabulary checks, because as substrings they
+        // scored the caller's unlock response on fragments — 'team' matches
+        // "steam". The unit check below is deliberately NOT converted; see its own
+        // note. The matcher adds simple plurals only, so irregular inflections and
+        // the compounds that genuinely mean the same thing are listed rather than
+        // reached by widening the suffix rule (#309).
         const hasExitCriteria = matchesAnyWord(responseLower, [
             'will exit if',
             'abandon if',
             'stop if',
         ]);
+        // This whole check stays substring, deliberately, unlike the others in
+        // this file. It looks for units of measurement, where a fragment match is
+        // the true positive rather than the bug: "monthly", "12months", "yearly",
+        // "percentage", "$2m" and "40%" are all exactly what it wants to find, and
+        // no ordinary word contains "month", "dollar" or "percent" by accident.
+        //
+        // Word-boundary matching was tried here and was wrong twice over. It loses
+        // the glued forms, because \w includes digits — "12months" fails the
+        // leading test and "$2m" the trailing one — and it loses the derived forms
+        // like "monthly". Both failures are silent: the check just stops finding
+        // calculations and fails open.
         const hasSpecificCalculations = /\d+/.test(response) && // Contains numbers
-            (matchesAnyWord(responseLower, ['percent', 'percentage', 'month', 'year', 'dollar']) ||
-                // '%' and '$' stay substring checks, and must. Word-boundary matching
-                // asks that neither side be glued to a word character, and in real
-                // money and percentages one side always is — "40%" fails the leading
-                // test, "$2m" the trailing one. Anchoring them silently disabled the
-                // symbols this check exists to find. Measured, not assumed: converting
-                // them turned `matchesWord('about 40% of revenue', '%')` false.
-                responseLower.includes('%') ||
-                responseLower.includes('$'));
+            ['percent', '%', 'month', 'year', 'dollar', '$'].some(unit => responseLower.includes(unit));
+        // Whole-word here, because 'team' as a substring matches "steam". Derived
+        // forms the substring scan used to catch are listed explicitly — the
+        // matcher only adds simple plurals, and a suffix rule wide enough to reach
+        // "teamwork" would also reach the fragments this is avoiding.
         const hasStakeholderConsideration = matchesAnyWord(responseLower, [
             'employee',
             'customer',
             'partner',
             'partnership',
+            'partnering',
             'investor',
             'family',
             'families',
             'team',
+            'teamwork',
+            'teammate',
         ]);
         const hasContingencyPlan = matchesAnyWord(responseLower, [
             'if fails',
@@ -148,7 +159,12 @@ export class RiskDismissalTracker {
             'contingency',
             'contingencies',
             'rollback',
-        ]);
+        ]) ||
+            // snake_case is one token to the matcher, because '_' is a word
+            // character — "rollback_plan" does not match 'rollback'. Plausible in an
+            // engineer's unlock response, so the underscore forms are checked too.
+            responseLower.includes('rollback_') ||
+            responseLower.includes('backup_');
         // Calculate response quality score
         let qualityScore = 0;
         if (hasExitCriteria)

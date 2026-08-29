@@ -33,9 +33,17 @@ describe('word matching in the risk scans', () => {
     // 'team' reached "steam".
     expect(matchesWord('running out of steam', 'team')).toBe(false);
 
-    // 'time' reached "timeline" and "estimate".
-    expect(matchesWord('the timeline slipped', 'time')).toBe(false);
+    // 'time' does not reach "estimate" — "estimate" contains "tima", not
+    // "time", so the old substring scan did not match it either. Pinned as a
+    // boundary anyway, since it is the shape people assume is a false positive.
     expect(matchesWord('a rough estimate', 'time')).toBe(false);
+
+    // What 'time' DOES lose to word matching is real: "timeline", "timeframe"
+    // and "downtime" all matched under `includes` and no longer do. The call
+    // sites list those forms explicitly rather than widening the suffix rule,
+    // because a rule loose enough to reach them also reaches "estimate".
+    expect(matchesWord('the timeline slipped', 'time')).toBe(false);
+    expect(matchesAnyWord('the timeline slipped', ['time', 'timeline'])).toBe(true);
   });
 
   it('still matches the words it is meant to', () => {
