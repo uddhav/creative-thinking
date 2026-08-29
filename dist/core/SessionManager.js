@@ -10,6 +10,7 @@ import { SessionCleaner } from './session/SessionCleaner.js';
 import { SessionPersistence } from './session/SessionPersistence.js';
 import { SessionMetrics } from './session/SessionMetrics.js';
 import { PlanManager } from './session/PlanManager.js';
+import { hydratePlan } from './session/planStore.js';
 import { SessionIndex } from './session/SessionIndex.js';
 import { SkipDetector, } from './session/SkipDetector.js';
 import { getSessionLock } from './session/SessionLock.js';
@@ -204,7 +205,22 @@ export class SessionManager {
         }
         this.planManager.savePlan(planId, plan);
     }
+    /**
+     * Look a plan up, falling back to disk for one this process did not issue.
+     *
+     * The fallback lives here rather than at the call sites because there are
+     * three of them and they need different things: `WorkflowGuard` treats a
+     * found plan as proof that discovery ran, `ExecutionValidator` needs the
+     * workflow, `index.ts` needs the problem text. Hydrating in only one of them
+     * fixes execution and still refuses the call at the guard (#316).
+     *
+     * Costs one Map lookup when the plan is in memory, which is the normal case.
+     */
     getPlan(planId) {
+        const inMemory = this.planManager.getPlan(planId);
+        if (inMemory)
+            return inMemory;
+        hydratePlan(this, planId);
         return this.planManager.getPlan(planId);
     }
     deletePlan(planId) {

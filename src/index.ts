@@ -9,6 +9,7 @@
 
 // Core modules
 import { SessionManager } from './core/SessionManager.js';
+import { persistPlan } from './core/session/planStore.js';
 import { ResponseBuilder } from './core/ResponseBuilder.js';
 import { MetricsCollector } from './core/MetricsCollector.js';
 import { ValidationStrategyFactory } from './core/ValidationStrategies.js';
@@ -330,6 +331,20 @@ export class LateralThinkingServer {
 
       const data = input as PlanThinkingSessionInput;
       const output = planThinkingSession(data, this.sessionManager, this.techniqueRegistry);
+
+      // Mirror the plan to disk so a later process can execute it. Both
+      // binaries go through here, which is the point: this used to live only
+      // in the CLI, so the same planId worked under `socketes` and returned
+      // PLAN_NOT_FOUND under the MCP server (#316). No-ops unless persistence
+      // is configured.
+      persistPlan(this.sessionManager, output.planId);
+      // Debate mode advertises per-persona and synthesis planIds the caller is
+      // told to execute. Every planId a response hands out has to survive to
+      // the next process, or the server answers its own instructions with
+      // plan-not-found.
+      for (const parallel of output.parallelPlans ?? []) {
+        persistPlan(this.sessionManager, parallel.planId);
+      }
 
       return this.responseBuilder.buildPlanningResponse(output);
     } catch (error) {
