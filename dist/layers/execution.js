@@ -18,6 +18,94 @@ import { EscalationPromptGenerator } from '../ergodicity/escalationPrompts.js';
 import { CompletionGatekeeper } from './execution/CompletionGatekeeper.js';
 import { evaluateAdvisoryGates } from './execution/advisoryGates.js';
 import { attachSteeringFields } from './execution/attachSteeringFields.js';
+/**
+ * Cells of a nine_windows matrix the caller marked irreversible, as declared
+ * constraints.
+ *
+ * The second content-provenance producer (#310). `nineWindowsMatrix[]` already
+ * carries `irreversible: boolean` per cell — caller-supplied, validated cell by
+ * cell by `ObjectFieldValidator` — and marking a cell irreversible is the same
+ * shape as a downward `stepReversibility` claim: the caller declaring the world
+ * is more committed than the server assumed. It reached `extractInsights` as
+ * prose and never reached `pathsForeclosed`, which is the asymmetry this
+ * closes.
+ *
+ * `past` cells are excluded. They describe what the system used to be, which is
+ * history rather than a commitment made in this session; `present` and `future`
+ * both count. The text is the cell's own `content` plus its `pathDependencies`,
+ * matching the existing producer's use of the caller's own words and the
+ * insight line `NineWindowsHandler` already emits for the same cell.
+ *
+ * Only reaches the reality state on ACTION steps — `trackStep` gates on that,
+ * and nine_windows steps 7-9 are the action ones. A caller who marks cells on
+ * the present row at steps 4-6 has them computed and discarded.
+ *
+ * Two things about counting, stated precisely because an earlier version of
+ * this comment overclaimed and the overclaim was wrong.
+ *
+ * Within one matrix, cells are deduplicated here by their coordinates, last one
+ * winning. `ReflexivityTracker` filters an incoming batch against the array as
+ * it stood BEFORE the push, not against the batch itself, so three identical
+ * cells in one call recorded three constraints — measured, `pathsForeclosed`
+ * held the same string three times and `contentConstraintCount` read 3. Nothing
+ * had exercised that path before, because the only other content producer emits
+ * exactly one string per call and a batch of one cannot contain duplicates.
+ *
+ * Across calls, dedup is exact string equality, so repeating an unchanged
+ * matrix on steps 7, 8 and 9 counts once — but a cell whose wording changes
+ * between steps is a new string and counts again. That is why the step number
+ * is deliberately NOT part of this text, though the sibling producer includes
+ * it: adding it would make every repeat a new string and defeat the dedup
+ * entirely.
+ */
+function irreversibleMatrixCells(input) {
+    // Only for the technique the field belongs to. `nineWindowsMatrix` sits on
+    // the shared input type, and its cell-by-cell validation in
+    // `ValidationStrategies` sits under `case 'nine_windows'` — so on any other
+    // technique the field is neither validated nor rejected. Measured before
+    // adding this: a matrix sent on a scamper step recorded
+    // "Caller-declared (nine_windows future system): …" against a scamper
+    // session, from cells `ObjectFieldValidator` had never seen.
+    if (input.technique !== 'nine_windows')
+        return [];
+    // The field is declared on the input type; every value below is still checked
+    // at runtime, because it is caller input.
+    const cells = input.nineWindowsMatrix;
+    if (!Array.isArray(cells))
+        return [];
+    // Caller constraints deliberately bypass `validateTrackingInput`, which caps
+    // actionDescription at 1000 characters — the bypass exists so a commitment
+    // phrased without the tracker's six stems is not silently dropped. Nothing
+    // else bounds them: `content` has no maxLength in the tool schema or the
+    // validator, and the matrix has no length limit. These constraints are
+    // persisted on every autosave and echoed into warnings, so cap both here.
+    const MAX_CONTENT = 500;
+    const MAX_CELLS = 64;
+    // Keyed by cell coordinates so a matrix that repeats or restates a cell
+    // contributes it once; later entries win, which keeps the newest wording.
+    const byCoordinate = new Map();
+    for (const raw of cells.slice(0, MAX_CELLS)) {
+        const cell = raw;
+        if (cell?.irreversible !== true)
+            continue;
+        if (cell.timeFrame !== 'present' && cell.timeFrame !== 'future')
+            continue;
+        if (typeof cell.content !== 'string' || cell.content.trim().length === 0)
+            continue;
+        const dependencies = Array.isArray(cell.pathDependencies)
+            ? cell.pathDependencies
+                .filter((d) => typeof d === 'string' && d.trim().length > 0)
+                .map(d => d.trim())
+            : [];
+        const suffix = dependencies.length > 0 ? ` (path dependencies: ${dependencies.join(', ')})` : '';
+        const where = typeof cell.systemLevel === 'string'
+            ? `${cell.timeFrame} ${cell.systemLevel}`
+            : cell.timeFrame;
+        const content = cell.content.trim().slice(0, MAX_CONTENT);
+        byCoordinate.set(where, `Caller-declared (nine_windows ${where}): ${content}${suffix}`.slice(0, MAX_CONTENT * 2));
+    }
+    return [...byCoordinate.values()];
+}
 export async function executeThinkingStep(input, sessionManager, techniqueRegistry, visualFormatter, metricsCollector, complexityAnalyzer, ergodicityManager, validationWarnings) {
     const errorContextBuilder = new ErrorContextBuilder();
     const errorHandler = new ErrorHandler();
@@ -247,13 +335,14 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
                     // first content-provenance constraint producer. An upward claim
                     // reduces constraint and records nothing.
                     const audit = input.appliedReversibility;
-                    const callerConstraints = audit &&
+                    const reversibilityConstraint = audit &&
                         input.stepReversibility &&
                         REVERSIBILITY_COSTS[audit.claimed] > REVERSIBILITY_COSTS[audit.prior]
                         ? [
                             `Caller-declared (${input.technique} step ${techniqueLocalStep}): ${input.stepReversibility.rationale}`,
                         ]
-                        : undefined;
+                        : [];
+                    const callerConstraints = [...reversibilityConstraint, ...irreversibleMatrixCells(input)];
                     // Handler-declared effects are server-authored templates.
                     reflexivityWarning = sessionManager.trackReflexivity(sessionId, input.technique, techniqueLocalStep, stepDetails.type, reflexiveEffects, 'template', callerConstraints);
                 }
