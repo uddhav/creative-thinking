@@ -95,8 +95,7 @@ export class ExecutionGraphGenerator {
     // provocation on steps 2+, so a caller executing the graph verbatim sent
     // guidance prose that the stimulus.mismatch gate then flagged.
     const blockFirst = workflow.steps[0] as
-      | { stimulus?: string; stimulusSource?: string }
-      | undefined;
+      { stimulus?: string; stimulusSource?: string } | undefined;
     const assignedStimulus =
       blockFirst?.stimulusSource === 'assigned' ? blockFirst.stimulus : undefined;
 

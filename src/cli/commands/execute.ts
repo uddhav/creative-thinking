@@ -84,12 +84,12 @@ async function handle(argv: ArgumentsCamelCase<ExecuteArgs>): Promise<void> {
       problem: argv.problem,
       currentStep: parseNumber(argv.step),
       totalSteps: parseNumber(argv.totalSteps),
-      numbering: argv.numbering as 'technique' | 'plan' | undefined,
+      numbering: argv.numbering,
       output: argv.output,
       nextStepNeeded: argv.nextStepNeeded,
       autoSave: argv.noAutoSave ? false : true,
       persona: argv.persona,
-      verbosity: argv.verbosity as 'minimal' | 'full' | undefined,
+      verbosity: argv.verbosity,
     },
     stdin
   );

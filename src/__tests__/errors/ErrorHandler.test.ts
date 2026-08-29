@@ -186,7 +186,7 @@ describe('ErrorHandler', () => {
     });
 
     it('should return generic suggestions for unknown codes', () => {
-      const suggestions = errorHandler.getRecoverySuggestions('UNKNOWN_CODE' as any);
+      const suggestions = errorHandler.getRecoverySuggestions('UNKNOWN_CODE');
 
       expect(suggestions).toContain('Review the specific error details provided above');
       expect(suggestions).toContain('Ensure you are following the correct workflow sequence');

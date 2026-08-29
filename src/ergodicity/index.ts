@@ -59,7 +59,7 @@ import type {
   OptionGenerationContext,
   OptionGenerationResult,
 } from './optionGeneration/types.js';
-import type { SessionState, LateralThinkingInput } from '../persistence/types.js';
+import type { SessionState } from '../persistence/types.js';
 
 /**
  * Main ergodicity manager that coordinates path tracking and metrics
@@ -690,8 +690,8 @@ export class ErgodicityManager {
       history: sessionData.history.map((h, index) => ({
         step: index + 1,
         timestamp: h.timestamp,
-        input: h as LateralThinkingInput,
-        output: h as LateralThinkingInput,
+        input: h,
+        output: h,
       })),
       branches: {},
       insights: sessionData.insights || [],

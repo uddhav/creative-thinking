@@ -457,8 +457,7 @@ export class ExecutionResponseBuilder {
 
     // Nested picks a flat allowlist cannot reach.
     const completionMetadata = responseData.completionMetadata as
-      | Record<string, unknown>
-      | undefined;
+      Record<string, unknown> | undefined;
     if (
       Array.isArray(completionMetadata?.completionWarnings) &&
       completionMetadata.completionWarnings.length > 0

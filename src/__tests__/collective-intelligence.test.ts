@@ -11,11 +11,6 @@ import type {
   LateralTechnique,
 } from '../index.js';
 
-interface ServerResponse {
-  content: Array<{ type: string; text: string }>;
-  isError?: boolean;
-}
-
 interface PlanResponse {
   planId: string;
   workflow: Array<{
@@ -96,7 +91,7 @@ describe('Collective Intelligence Orchestration', () => {
       techniques: techniques as LateralTechnique[],
     };
 
-    const result = server.planThinkingSession(input) as ServerResponse;
+    const result = server.planThinkingSession(input);
     expect(result.isError).toBeFalsy();
     const planData = JSON.parse(result.content[0]?.text || '{}') as PlanResponse;
     return planData.planId;
@@ -107,10 +102,10 @@ describe('Collective Intelligence Orchestration', () => {
     planId: string,
     input: Partial<ExecuteThinkingStepInput>
   ): Promise<ExecutionResponse> {
-    const result = (await server.executeThinkingStep({
+    const result = await server.executeThinkingStep({
       planId,
       ...input,
-    } as ExecuteThinkingStepInput)) as ServerResponse;
+    });
 
     expect(result.isError).toBeFalsy();
     return JSON.parse(result.content[0]?.text || '{}') as ExecutionResponse;
@@ -124,7 +119,7 @@ describe('Collective Intelligence Orchestration', () => {
         context: 'Need to synthesize views from residents, businesses, government, and experts',
       };
 
-      const result = server.discoverTechniques(input) as ServerResponse;
+      const result = server.discoverTechniques(input);
       expect(result.isError).toBeFalsy();
       const response = JSON.parse(result.content[0]?.text || '{}') as DiscoveryResponse;
 
@@ -148,7 +143,7 @@ describe('Collective Intelligence Orchestration', () => {
         context: 'Need to aggregate distributed knowledge and find emergent patterns',
       };
 
-      const result = server.discoverTechniques(input) as ServerResponse;
+      const result = server.discoverTechniques(input);
       expect(result.isError).toBeFalsy();
       const response = JSON.parse(result.content[0]?.text || '{}') as DiscoveryResponse;
 
@@ -183,7 +178,7 @@ describe('Collective Intelligence Orchestration', () => {
           problem: `How to ${keyword} for product innovation`,
         };
 
-        const result = server.discoverTechniques(input) as ServerResponse;
+        const result = server.discoverTechniques(input);
         expect(result.isError).toBeFalsy();
         const response = JSON.parse(result.content[0]?.text || '{}') as DiscoveryResponse;
 
@@ -212,7 +207,7 @@ describe('Collective Intelligence Orchestration', () => {
         techniques: ['collective_intel'] as LateralTechnique[],
       };
 
-      const result = server.planThinkingSession(input) as ServerResponse;
+      const result = server.planThinkingSession(input);
       expect(result.isError).toBeFalsy();
       const planData = JSON.parse(result.content[0]?.text || '{}') as PlanResponse;
 

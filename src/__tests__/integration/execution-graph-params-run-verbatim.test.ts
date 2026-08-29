@@ -46,8 +46,7 @@ async function planWithGraph(
 ): Promise<GraphNode[]> {
   const plan = await client.planThinkingSession(PROBLEM, techniques);
   const graph = (plan as Record<string, unknown>).executionGraph as
-    | { nodes: GraphNode[] }
-    | undefined;
+    { nodes: GraphNode[] } | undefined;
   expect(graph, 'plan response must carry executionGraph').toBeDefined();
   expect(graph?.nodes.length).toBeGreaterThan(0);
   return graph?.nodes ?? [];

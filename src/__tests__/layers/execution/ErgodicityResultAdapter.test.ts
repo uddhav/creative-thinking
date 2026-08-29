@@ -19,7 +19,6 @@ import type { ErgodicityManagerResult } from '../../../layers/execution/Ergodici
 import { PathMemoryManager } from '../../../ergodicity/pathMemory.js';
 import { MetricsCalculator } from '../../../ergodicity/metrics.js';
 import type { PathMemory } from '../../../ergodicity/types.js';
-import type { LateralTechnique } from '../../../types/index.js';
 
 const adapter = new ErgodicityResultAdapter();
 const metricsCalculator = new MetricsCalculator();
@@ -44,14 +43,14 @@ function managerResult(pathMemory: PathMemory): ErgodicityManagerResult {
 }
 
 function commit(manager: PathMemoryManager, step: number): void {
-  manager.recordPathEvent('scamper' as LateralTechnique, step, 'Committing step.', {
+  manager.recordPathEvent('scamper', step, 'Committing step.', {
     reversibilityCost: 0.9,
     commitmentLevel: 0.9,
   });
 }
 
 function think(manager: PathMemoryManager, step: number): void {
-  manager.recordPathEvent('six_hats' as LateralTechnique, step, 'Reflective step.', {
+  manager.recordPathEvent('six_hats', step, 'Reflective step.', {
     reversibilityCost: 0.1,
     commitmentLevel: 0.2,
   });

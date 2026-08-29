@@ -78,8 +78,7 @@ export class PerformanceProfiler {
 
     // Get metadata if stored
     const metadata = this.activeOperations.get(`${operationId}_metadata`) as
-      | Record<string, unknown>
-      | undefined;
+      Record<string, unknown> | undefined;
 
     // Extract operation name from ID
     const operationName = operationId.substring(

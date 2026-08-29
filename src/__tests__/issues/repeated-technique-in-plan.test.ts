@@ -24,11 +24,7 @@ import { VisualFormatter } from '../../utils/VisualFormatter.js';
 import { MetricsCollector } from '../../core/MetricsCollector.js';
 import { HybridComplexityAnalyzer } from '../../complexity/analyzer.js';
 import { ErgodicityManager } from '../../ergodicity/index.js';
-import type {
-  PlanThinkingSessionInput,
-  ExecuteThinkingStepInput,
-  LateralTechnique,
-} from '../../types/index.js';
+import type { ExecuteThinkingStepInput, LateralTechnique } from '../../types/index.js';
 
 describe('A plan that names the same technique twice', () => {
   let sessionManager: SessionManager;
@@ -72,7 +68,7 @@ describe('A plan that names the same technique twice', () => {
 
   it('lays out one block per occurrence', () => {
     const plan = planThinkingSession(
-      { problem, techniques, timeframe: 'thorough' } as PlanThinkingSessionInput,
+      { problem, techniques, timeframe: 'thorough' },
       sessionManager,
       techniqueRegistry
     );
@@ -87,7 +83,7 @@ describe('A plan that names the same technique twice', () => {
 
   it('executes every global step, including the second block', async () => {
     const plan = planThinkingSession(
-      { problem, techniques, timeframe: 'thorough' } as PlanThinkingSessionInput,
+      { problem, techniques, timeframe: 'thorough' },
       sessionManager,
       techniqueRegistry
     );

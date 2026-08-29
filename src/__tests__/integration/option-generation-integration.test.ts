@@ -87,7 +87,7 @@ describe('Option Generation Integration', () => {
           output: PLAIN_OUTPUT,
           // Required on every call, and true until the final step.
           nextStepNeeded: index < sequence.length - 1,
-        } as ExecuteThinkingStepInput,
+        },
         sessionManager,
         techniqueRegistry,
         visualFormatter,
@@ -220,7 +220,7 @@ describe('Option Generation Integration', () => {
             totalSteps: sequence.length,
             output: PLAIN_OUTPUT,
             nextStepNeeded: index < sequence.length - 1,
-          } as ExecuteThinkingStepInput,
+          },
           sessionManager,
           techniqueRegistry,
           visualFormatter,

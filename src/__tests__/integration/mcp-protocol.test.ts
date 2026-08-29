@@ -53,7 +53,7 @@ describe('MCP Protocol Integration', () => {
       };
 
       // Cast to unknown first to satisfy TypeScript
-      const result = server.discoverTechniques(input as unknown as DiscoverTechniquesInput);
+      const result = server.discoverTechniques(input);
 
       expect(result.isError).toBe(true);
       const errorData = JSON.parse(result.content[0].text) as { error: { message: string } };
@@ -382,11 +382,7 @@ describe('MCP Protocol Integration', () => {
       const discoveryResult = server.discoverTechniques({
         problem: 'Test problem',
         preferredOutcome: 'invalid_outcome' as
-          | 'innovative'
-          | 'systematic'
-          | 'risk-aware'
-          | 'collaborative'
-          | 'analytical',
+          'innovative' | 'systematic' | 'risk-aware' | 'collaborative' | 'analytical',
       });
 
       // Server doesn't validate preferredOutcome enum, it just uses it as guidance
@@ -407,7 +403,7 @@ describe('MCP Protocol Integration', () => {
 
     it('should handle missing required fields gracefully', async () => {
       // Missing problem in discovery
-      const discoveryResult = server.discoverTechniques({} as DiscoverTechniquesInput);
+      const discoveryResult = server.discoverTechniques({});
       expect(discoveryResult.isError).toBe(true);
 
       // Missing planId in execution
@@ -418,7 +414,7 @@ describe('MCP Protocol Integration', () => {
         totalSteps: 6,
         output: 'Test',
         nextStepNeeded: true,
-      } as ExecuteThinkingStepInput);
+      });
       expect(execResult.isError).toBe(true);
     });
   });

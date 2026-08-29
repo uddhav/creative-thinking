@@ -707,7 +707,7 @@ export class SessionOperationValidator extends BaseValidator {
     switch (data.sessionOperation) {
       case 'save':
         if (data.saveOptions) {
-          this.validateSaveOptions(data.saveOptions as Record<string, unknown>, errors);
+          this.validateSaveOptions(data.saveOptions, errors);
         }
         break;
 
@@ -719,7 +719,7 @@ export class SessionOperationValidator extends BaseValidator {
 
       case 'list':
         if (data.listOptions) {
-          this.validateListOptions(data.listOptions as Record<string, unknown>, errors);
+          this.validateListOptions(data.listOptions, errors);
         }
         break;
 

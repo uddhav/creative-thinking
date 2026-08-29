@@ -525,7 +525,7 @@ export class ExecutionValidator {
       const withoutField = { ...input } as Record<string, unknown>;
       delete withoutField[field];
       try {
-        return handler.validateStep(step, withoutField as unknown as ExecuteThinkingStepInput);
+        return handler.validateStep(step, withoutField);
       } catch {
         return false;
       }

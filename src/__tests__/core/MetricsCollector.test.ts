@@ -90,9 +90,7 @@ describe('MetricsCollector', () => {
       // full red-team session reported risksCaught: 0.
       mockSession.history = [
         historyStep({ failureModes: ['Single point of failure', 'Cost overrun'] }),
-        historyStep({ criticRisks: ['Vendor abandons the product'] } as Partial<
-          ThinkingOperationData & { timestamp: string }
-        >),
+        historyStep({ criticRisks: ['Vendor abandons the product'] }),
         historyStep({
           timelineProjections: { blackSwanScenarios: ['Border closure'] },
           temporalEscapeRoutes: ['Refundable bookings', 'Late decision point'],

@@ -77,7 +77,7 @@ describe('Parallel Execution Robustness', () => {
         // Missing hatColor - should cause validation error
         output: 'Invalid step 3',
         nextStepNeeded: true,
-      } as any),
+      }),
       // Valid step 4
       server.executeThinkingStep({
         sessionId,
@@ -252,7 +252,7 @@ describe('Parallel Execution Robustness', () => {
       scamperAction: 'substitute',
       output: 'Missing problem field',
       nextStepNeeded: true,
-    } as any);
+    });
 
     const invalidParsed = parseResponse(invalidResult);
 

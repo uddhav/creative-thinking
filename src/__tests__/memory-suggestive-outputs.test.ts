@@ -10,11 +10,6 @@ import type {
   LateralTechnique,
 } from '../index.js';
 
-interface ServerResponse {
-  content: Array<{ type: string; text: string }>;
-  isError?: boolean;
-}
-
 interface PlanResponse {
   planId: string;
   steps: Array<{
@@ -74,7 +69,7 @@ describe('Memory-Suggestive Outputs', () => {
       techniques,
     };
 
-    const result = server.planThinkingSession(input) as ServerResponse;
+    const result = server.planThinkingSession(input);
     expect(result.isError).toBeFalsy();
     const planData = JSON.parse(result.content[0]?.text || '{}') as PlanResponse;
     return planData.planId;
@@ -85,10 +80,10 @@ describe('Memory-Suggestive Outputs', () => {
     planId: string,
     input: Partial<ExecuteThinkingStepInput>
   ): Promise<ExecutionResponse> {
-    const result = (await server.executeThinkingStep({
+    const result = await server.executeThinkingStep({
       planId,
       ...input,
-    } as ExecuteThinkingStepInput)) as ServerResponse;
+    });
 
     expect(result.isError).toBeFalsy();
     return JSON.parse(result.content[0]?.text || '{}') as ExecutionResponse;

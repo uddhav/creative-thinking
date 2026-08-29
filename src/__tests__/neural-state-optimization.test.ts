@@ -12,11 +12,6 @@ import type {
   LateralTechnique,
 } from '../index.js';
 
-interface ServerResponse {
-  content: Array<{ type: string; text: string }>;
-  isError?: boolean;
-}
-
 interface PlanResponse {
   planId: string;
   workflow: Array<{
@@ -100,7 +95,7 @@ describe('Neural State Optimization', () => {
       techniques: techniques as LateralTechnique[],
     };
 
-    const result = server.planThinkingSession(input) as ServerResponse;
+    const result = server.planThinkingSession(input);
     expect(result.isError).toBeFalsy();
     const planData = JSON.parse(result.content[0]?.text || '{}') as PlanResponse;
     return planData.planId;
@@ -111,10 +106,10 @@ describe('Neural State Optimization', () => {
     planId: string,
     input: Partial<ExecuteThinkingStepInput>
   ): Promise<ExecutionResponse> {
-    const result = (await server.executeThinkingStep({
+    const result = await server.executeThinkingStep({
       planId,
       ...input,
-    } as ExecuteThinkingStepInput)) as ServerResponse;
+    });
 
     expect(result.isError).toBeFalsy();
     return JSON.parse(result.content[0]?.text || '{}') as ExecutionResponse;
@@ -127,7 +122,7 @@ describe('Neural State Optimization', () => {
         context: 'Struggling with attention and switching between analytical and creative tasks',
       };
 
-      const result = server.discoverTechniques(input) as ServerResponse;
+      const result = server.discoverTechniques(input);
       expect(result.isError).toBeFalsy();
       const response = JSON.parse(result.content[0]?.text || '{}') as DiscoveryResponse;
 
@@ -157,7 +152,7 @@ describe('Neural State Optimization', () => {
         problem: 'Enhance productivity and mental state management',
       };
 
-      const result = server.discoverTechniques(input) as ServerResponse;
+      const result = server.discoverTechniques(input);
       expect(result.isError).toBeFalsy();
       const response = JSON.parse(result.content[0]?.text || '{}') as DiscoveryResponse;
 
@@ -185,7 +180,7 @@ describe('Neural State Optimization', () => {
         techniques: ['neural_state'] as LateralTechnique[],
       };
 
-      const result = server.planThinkingSession(input) as ServerResponse;
+      const result = server.planThinkingSession(input);
       expect(result.isError).toBeFalsy();
       const planData = JSON.parse(result.content[0]?.text || '{}') as PlanResponse;
 
@@ -464,7 +459,7 @@ describe('Neural State Optimization', () => {
         output: 'Testing invalid suppression depth',
         suppressionDepth: 15, // Should be 0-10
         nextStepNeeded: true,
-      } as ExecuteThinkingStepInput);
+      });
 
       // The system should reject invalid suppressionDepth values
       const data = JSON.parse(result.content[0]?.text || '{}') as { error?: string };

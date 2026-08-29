@@ -29,11 +29,7 @@ import { TechniqueRegistry } from '../../techniques/TechniqueRegistry.js';
 import { VisualFormatter } from '../../utils/VisualFormatter.js';
 import { MetricsCollector } from '../../core/MetricsCollector.js';
 import { HybridComplexityAnalyzer } from '../../complexity/analyzer.js';
-import type {
-  PlanThinkingSessionInput,
-  ExecuteThinkingStepInput,
-  SessionData,
-} from '../../types/index.js';
+import type { SessionData } from '../../types/index.js';
 
 const PROBLEM = 'Retire the legacy pipeline';
 /**
@@ -57,7 +53,7 @@ async function runSteps(outputs: string[]): Promise<SessionData> {
       problem: PROBLEM,
       techniques: ['scamper'],
       timeframe: 'thorough',
-    } as PlanThinkingSessionInput,
+    },
     sessionManager,
     registry
   );
@@ -74,7 +70,7 @@ async function runSteps(outputs: string[]): Promise<SessionData> {
         totalSteps: 8,
         output: outputs[index],
         nextStepNeeded: true,
-      } as ExecuteThinkingStepInput,
+      },
       sessionManager,
       registry,
       new VisualFormatter(true),
@@ -109,7 +105,7 @@ describe('flexibility survives a restart', () => {
     const restored: SessionData = {
       ...spent,
       ergodicityManager: undefined,
-    } as SessionData;
+    };
 
     const sessionManager = new SessionManager();
     const registry = TechniqueRegistry.getInstance();
@@ -118,7 +114,7 @@ describe('flexibility survives a restart', () => {
         problem: PROBLEM,
         techniques: ['scamper'],
         timeframe: 'thorough',
-      } as PlanThinkingSessionInput,
+      },
       sessionManager,
       registry
     );
@@ -141,7 +137,7 @@ describe('flexibility survives a restart', () => {
         output: 'Modify the base profile, recorded plainly and at length.',
         nextStepNeeded: true,
         scamperAction: 'modify',
-      } as ExecuteThinkingStepInput,
+      },
       sessionManager,
       registry,
       new VisualFormatter(true),

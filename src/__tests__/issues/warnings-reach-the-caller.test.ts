@@ -93,8 +93,7 @@ async function walk(techniques: LateralTechnique[]): Promise<StepReading[]> {
 
     sessionId = (data.sessionId as string) ?? sessionId;
     const warning = data.earlyWarningState as
-      | { overallRisk?: string; recommendedAction?: string }
-      | undefined;
+      { overallRisk?: string; recommendedAction?: string } | undefined;
 
     readings.push({
       step: index + 1,

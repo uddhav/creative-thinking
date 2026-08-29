@@ -210,8 +210,7 @@ describe('the fields nothing was reading do arrive', () => {
       ) as Record<string, unknown>;
 
       const suggestion = data.sequentialThinkingSuggestion as
-        | { complexityNote?: string; suggestedApproach?: Record<string, string> }
-        | undefined;
+        { complexityNote?: string; suggestedApproach?: Record<string, string> } | undefined;
 
       expect(suggestion, 'sequentialThinkingSuggestion never reached the caller').toBeDefined();
       expect(suggestion?.complexityNote).toMatch(/complex/i);

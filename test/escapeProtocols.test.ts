@@ -14,7 +14,7 @@ import {
   StrategicPivotProtocol,
   EscapeVelocityCalculator,
 } from '../src/ergodicity/escapeProtocols/index.js';
-import type { SessionData, LateralTechnique } from '../src/index.js';
+import type { SessionData } from '../src/index.js';
 import type { EscapeContext } from '../src/ergodicity/escapeProtocols/types.js';
 import type { PathEvent } from '../src/ergodicity/types.js';
 import { ErgodicityWarningLevel } from '../src/ergodicity/types.js';
@@ -327,7 +327,7 @@ describe('Escape Velocity Protocols', () => {
         {
           id: 'test1',
           timestamp: new Date().toISOString(),
-          technique: 'random_entry' as LateralTechnique,
+          technique: 'random_entry',
           step: 1,
           decision: 'Exploring options',
           optionsOpened: ['a', 'b', 'c'],

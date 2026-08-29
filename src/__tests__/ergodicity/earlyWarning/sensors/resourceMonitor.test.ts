@@ -20,7 +20,7 @@ describe('ResourceMonitor', () => {
         {
           id: 'event-1',
           timestamp: new Date().toISOString(),
-          technique: 'six_hats' as LateralTechnique,
+          technique: 'six_hats',
           step: 1,
           decision: 'Start project',
           optionsOpened: ['option1', 'option2'],
@@ -89,7 +89,7 @@ describe('ResourceMonitor', () => {
         {
           id: 'event-2',
           timestamp: new Date(Date.now() - 3600000).toISOString(),
-          technique: 'six_hats' as LateralTechnique,
+          technique: 'six_hats',
           step: 2,
           decision: 'Expand scope',
           optionsOpened: [],
@@ -102,7 +102,7 @@ describe('ResourceMonitor', () => {
         {
           id: 'event-3',
           timestamp: new Date(Date.now() - 1800000).toISOString(),
-          technique: 'six_hats' as LateralTechnique,
+          technique: 'six_hats',
           step: 3,
           decision: 'More resources',
           optionsOpened: [],
@@ -127,7 +127,7 @@ describe('ResourceMonitor', () => {
         mockPathMemory.pathHistory.push({
           id: `event-${i + 2}`,
           timestamp: new Date(Date.now() - (10 - i) * 600000).toISOString(),
-          technique: 'six_hats' as LateralTechnique,
+          technique: 'six_hats',
           step: i + 2,
           decision: `Resource allocation ${i}`,
           optionsOpened: [],
@@ -160,7 +160,7 @@ describe('ResourceMonitor', () => {
         mockPathMemory.pathHistory.push({
           id: `event-${i + 2}`,
           timestamp: new Date(Date.now() - (5 - i) * 1800000).toISOString(),
-          technique: 'six_hats' as LateralTechnique,
+          technique: 'six_hats',
           step: i + 2,
           decision: `Decision ${i}`,
           optionsOpened: i % 2 === 0 ? [`new_option${i}`] : [],
@@ -261,7 +261,7 @@ describe('ResourceMonitor', () => {
         mockPathMemory.pathHistory.push({
           id: `event-${i + 2}`,
           timestamp: new Date(Date.now() - (5 - i) * 7200000).toISOString(),
-          technique: 'six_hats' as LateralTechnique,
+          technique: 'six_hats',
           step: i + 2,
           decision: `Reserve resources for ${i}`,
           optionsOpened: [`reserve_option${i}`],
@@ -285,7 +285,7 @@ describe('ResourceMonitor', () => {
         mockPathMemory.pathHistory.push({
           id: `event-${i + 2}`,
           timestamp: new Date(Date.now() - (10 - i) * 1800000).toISOString(),
-          technique: 'six_hats' as LateralTechnique,
+          technique: 'six_hats',
           step: i + 2,
           decision: isFeast ? 'Major expenditure' : 'Minimal activity',
           optionsOpened: isFeast ? [] : ['saving_option'],
@@ -307,7 +307,7 @@ describe('ResourceMonitor', () => {
       mockPathMemory.pathHistory.push({
         id: 'event-2',
         timestamp: new Date(Date.now() - 7200000).toISOString(),
-        technique: 'six_hats' as LateralTechnique,
+        technique: 'six_hats',
         step: 2,
         decision: 'Long-term contract commitment',
         optionsOpened: [],
@@ -360,7 +360,7 @@ describe('ResourceMonitor', () => {
       mockPathMemory.pathHistory.push({
         id: 'event-shock',
         timestamp: new Date(Date.now() - 300000).toISOString(), // 5 minutes ago
-        technique: 'six_hats' as LateralTechnique,
+        technique: 'six_hats',
         step: 4,
         decision: 'Emergency response - major budget cut',
         optionsOpened: [],
