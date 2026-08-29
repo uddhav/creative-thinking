@@ -1,3 +1,9 @@
+## [v2.5.2] - 2026-08-29
+
+### Changes from PR #356
+
+- fix: let a plan outlive the process that issued it
+
 ## [v2.5.1] - 2026-08-28
 
 ### Changes from PR #336
