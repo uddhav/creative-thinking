@@ -47,10 +47,9 @@ The `creative-thinking` package exposes **two binaries with different shapes**:
 
 Both binaries dispatch through the same in-process handlers; the contract is identical — three
 tools, the same technique set (`ALL_LATERAL_TECHNIQUES` in `src/types/index.ts`), the same built-in
-personas (`BUILTIN_PERSONAS` in `src/personas/catalog.ts`), debate mode. Counts are cited rather
-than restated because nothing checks a number written here, and both of the ones that used to sit in
-this sentence had gone stale. The CLI exists because skill-driven flows where the model is the
-orchestrator are easier to build against short-lived processes than against a long-running server.
+personas (`BUILTIN_PERSONAS` in `src/personas/catalog.ts`), debate mode. The CLI exists because
+skill-driven flows where the model is the orchestrator are easier to build against short-lived
+processes than against a long-running server.
 
 If you don't already have an MCP client open and you want to drive structured thinking from a skill
 or terminal, use `socketes`. Otherwise, the `creative-thinking` MCP server may fit better.
@@ -329,19 +328,19 @@ Run one step of a planned thinking session. Mints a `sessionId` on the first cal
 provide one); appends to history; auto-saves the session to `sessions/<sessionId>.json` after every
 step.
 
-| Flag                 | Type                         | Notes                                                                                         |
-| -------------------- | ---------------------------- | --------------------------------------------------------------------------------------------- |
-| `--plan <id>`        | string (required)            | `planId` from `socketes plan`.                                                                |
-| `--session <id>`     | string                       | Omit on the first step; pass it back on every subsequent step.                                |
-| `--technique <id>`   | string (required)            | Must be one of the techniques in the plan.                                                    |
-| `--problem <s>`      | string (optional)            | Resolved from `--plan` when omitted. Send it only to override; a sent value wins.             |
-| `--step <n>`         | number (required, 1-indexed) | Step within this technique.                                                                   |
-| `--total-steps <n>`  | number (required)            | Total steps for this technique.                                                               |
-| `--output <s>`       | string (required)            | The model's thinking for this step. May be empty string but the field must be present.        |
-| `--next-step-needed` | boolean                      | Pass when more steps follow. Without it, yargs leaves it `undefined` (often the right thing). |
-| `--no-auto-save`     | boolean                      | Default is auto-save on. Pass this to skip persistence for this step (rarely useful).         |
-| `--persona <id>`     | string                       | Speaking persona id (debate mode only).                                                       |
-| `--verbosity <mode>` | `minimal` \| `full`          | Response size. `minimal` drops all echoes of your own input (see below); default `full`.      |
+| Flag                 | Type                         | Notes                                                                                          |
+| -------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------- |
+| `--plan <id>`        | string (required)            | `planId` from `socketes plan`.                                                                 |
+| `--session <id>`     | string                       | Omit on the first step; pass it back on every subsequent step.                                 |
+| `--technique <id>`   | string (required)            | Must be one of the techniques in the plan.                                                     |
+| `--problem <s>`      | string (optional)            | Resolved from `--plan` when omitted. Send it only to override; a sent value wins.              |
+| `--step <n>`         | number (required, 1-indexed) | Step within this technique.                                                                    |
+| `--total-steps <n>`  | number (required)            | Total steps for this technique.                                                                |
+| `--output <s>`       | string (required)            | The model's thinking for this step. Must be non-empty — `""` and whitespace are both rejected. |
+| `--next-step-needed` | boolean (required)           | Pass it while steps remain, `--no-next-step-needed` on the last. No default; see gotcha 9.     |
+| `--no-auto-save`     | boolean                      | Default is auto-save on. Pass this to skip persistence for this step (rarely useful).          |
+| `--persona <id>`     | string                       | Speaking persona id (debate mode only).                                                        |
+| `--verbosity <mode>` | `minimal` \| `full`          | Response size. `minimal` drops all echoes of your own input (see below); default `full`.       |
 
 **Long-tail technique-specific fields** (`hatColor`, `scamperAction`, `risks`, `extractedConcepts`,
 etc.) are easiest to pass via JSON-on-stdin. See [Flags vs JSON-on-stdin](#flags-vs-json-on-stdin).
@@ -703,10 +702,11 @@ In rough order of how often they bite people:
    bin explicitly: `npx -y -p github:uddhav/creative-thinking socketes <command>`.
 
 4. **Parallel execution against the same sessionId silently corrupts state.** `SessionLock` is
-   in-process only; two concurrent CLI invocations each load → mutate → write the same session file,
-   and the last writer wins. Use distinct sessionIds for parallel branches. The plan's
-   `parallelizableGroups` does not encode session safety — it only describes data dependencies
-   between nodes. You are responsible for routing them to safe sessions.
+   in-process only, and even there it is keyed `sessionId:technique`, so it serialises nothing
+   across two techniques on one session. Two concurrent CLI invocations each load → mutate → write
+   the same session file, and the last writer wins. Use distinct sessionIds for parallel branches.
+   The plan's `parallelizableGroups` does not encode session safety — it only describes data
+   dependencies between nodes. You are responsible for routing them to safe sessions.
 
 5. **`session_<planId>` is the auto-derived sessionId when you omit `--session`.** This is fine for
    sequential single-technique flows but a footgun for multi-technique plans: every technique
@@ -721,19 +721,21 @@ In rough order of how often they bite people:
    invocation starts with no plans and no sessions — the disk store is bypassed. Either unset it or
    set it to `filesystem` explicitly.
 
-8. **`--output` is required, and an empty one does not satisfy it.** Both omitting it and passing
-   `--output ""` fail with `Invalid output`; whitespace-only (`--output "   "`) fails with
-   `output cannot be empty; Invalid output`. So this is not a presence check you can wave through
-   with an empty string — a step has to carry actual text. (This entry used to say the opposite:
-   that `--output ""` was acceptable and that omission produced
-   `E101 / Missing required field: output`. Neither is what the CLI does.)
+8. **`output` is required and must be non-empty.** `--output ""` fails with `Invalid output`, and
+   whitespace-only (`--output "   "`) fails with `output cannot be empty; Invalid output`. It is not
+   a presence check you can wave through with an empty string — a step has to carry actual text.
+   What is required is the **field**, not the flag: supplying `{"output": "..."}` on stdin and
+   omitting `--output` works fine (see [Flags vs JSON-on-stdin](#flags-vs-json-on-stdin)). Note the
+   merge rule bites here — a flag you passed wins over stdin even when empty, so `--output ""`
+   combined with a good stdin `output` still fails.
 
-9. **`--next-step-needed` is required on every `execute`, and has no default.** Pass it while steps
-   remain and `--no-next-step-needed` on the final step. Omitting it is not a third option — the
-   call fails with `nextStepNeeded must be a boolean`, on any step, not just the last. The negated
-   form is what triggers session-completion logic (final summary, telemetry), so a session that
-   never receives it never completes and emits no final synthesis. (This entry used to describe a
-   tri-state with an omit-to-default branch. There is no such branch.)
+9. **`nextStepNeeded` is required on every `execute`, and has no default.** Pass
+   `--next-step-needed` while steps remain and `--no-next-step-needed` on the final step. There is
+   no omit-to-default branch: leave the field unset and the call fails with
+   `nextStepNeeded must be a boolean`, on any step, not just the last. As with `output`, it is the
+   field that is required — `{"nextStepNeeded": true}` on stdin satisfies it with no flag at all.
+   The negated form is what triggers session-completion logic (final summary, telemetry), so a
+   session that never receives it never completes and emits no final synthesis.
 
 10. **Encoded session tokens (the base64 `planId`/`sessionId` from the MCP server) are not used in
     CLI mode.** The CLI uses short opaque IDs and disk lookup. If you somehow paste an encoded token
@@ -759,10 +761,10 @@ In rough order of how often they bite people:
     the whole MCP bootstrap (transport, signal handlers, shutdown) lives in
     `src/mcp-server-main.ts`, which is the `creative-thinking` bin's entry point. If you fork or
     wrap socketes, keep `src/index.ts` import-safe — put new side effects in `mcp-server-main.ts` or
-    a separate entry file. (This entry used to say the boot was gated behind an `isMcpEntryPoint`
-    check. That guard was removed: it relied on `import.meta.url`, which bundlers like
-    `bun build --compile` collapse onto the bundle entry, so it returned `true` inside the compiled
-    `socketes` binary and started an MCP server nobody asked for.)
+    a separate entry file. An earlier `isMcpEntryPoint` guard did this job and was deliberately
+    removed: it relied on `import.meta.url`, which `bun build --compile` collapses onto the bundle
+    entry, so it returned `true` inside the compiled `socketes` binary and started an MCP server
+    nobody asked for. Don't reintroduce that pattern in a fork.
 
 ## Troubleshooting
 
