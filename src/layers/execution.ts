@@ -304,8 +304,26 @@ export async function executeThinkingStep(
       throw ErrorFactory.sessionNotFound(input.sessionId || 'unknown');
     }
 
-    // Acquire technique-specific lock for parallel execution
-    // This allows different techniques to execute in parallel for the same plan
+    // Serialise same-technique steps on one session; different techniques get
+    // different keys and advance concurrently, which is what the lock was
+    // built for (#185).
+    //
+    // VERDICT, decided rather than assumed (#354): this lock is DEFENSIVE.
+    // Three independent observable hunts could not tell it from a no-op —
+    // history shape, ergodicityMetrics (which sits directly on the pathMemory
+    // read/write spanning the await below), and persistence/insights/metrics/
+    // reflexivity ordering — and the whole suite stays green with the acquire
+    // replaced by `() => {}`. It also does not protect the shape that actually
+    // races: concurrent CLI processes on one session are last-writer-wins,
+    // measured losing a step five runs of five, because each process has its
+    // own lock instance.
+    //
+    // It is kept because single-threaded atomicity of `history.push` is a
+    // property of today's code, not a contract, and the stale-read window
+    // between the ergodicity await and the push is real even though no probe
+    // has caught it. Do not delete it on the strength of the negative results
+    // above — and if you do, session-lock-is-acquired.test.ts goes red, which
+    // is that test's entire job.
     const releaseLock = await sessionLock.acquireLock(sessionId, input.technique);
 
     try {
