@@ -94,6 +94,56 @@ describe('out-of-order guidance reads the run it is guiding', () => {
     );
   });
 
+  it('works when the FIRST run was left incomplete', async () => {
+    // The shape that defeated the previous rule, and the one that matters most:
+    // the guidance exists to catch a hole, so it must work when a hole is
+    // already present. Advancing the stamp only once a run held every step
+    // meant an incomplete run 1 never advanced, so run 2's entries were stamped
+    // as run 1 — confidently wrong rather than absent, which defeats the
+    // pool-on-doubt fallback.
+    const planId = planFor(['po', 'triz', 'po']);
+    const sessionId = 'session_incomplete_first_run';
+
+    // Run 1 leaves a hole at step 3.
+    await step(planId, sessionId, 'po', 1);
+    await step(planId, sessionId, 'po', 2);
+    await step(planId, sessionId, 'po', 4);
+    for (let i = 1; i <= 4; i++) await step(planId, sessionId, 'triz', i);
+
+    const first = await step(planId, sessionId, 'po', 1);
+    expect(
+      first.nextStepGuidance ?? '',
+      'run 2 step 1 was called a duplicate because the stamp pointed at run 1'
+    ).not.toMatch(/had already been recorded/);
+
+    const third = await step(planId, sessionId, 'po', 3);
+    expect(
+      third.nextStepGuidance ?? '',
+      "run 2's own hole went unreported after an incomplete run 1"
+    ).toMatch(/Step 2 of po has not been recorded/);
+  });
+
+  it('does not treat an unflagged re-send as the start of a new run', async () => {
+    // The shape that defeated the rule before that one. A re-sent step 2 is not
+    // a run boundary; only a step 1 is. `isRevision` cannot be relied on — it
+    // is caller-supplied and defaults to false.
+    const planId = planFor(['po', 'triz', 'po']);
+    const sessionId = 'session_unflagged_resend';
+
+    await step(planId, sessionId, 'po', 1);
+    await step(planId, sessionId, 'po', 2);
+    await step(planId, sessionId, 'po', 3);
+    await step(planId, sessionId, 'po', 2); // re-sent, no isRevision
+    const fourth = await step(planId, sessionId, 'po', 4);
+
+    // Still run 1: step 4 completes it, so nothing is missing and the guidance
+    // must not claim a hole.
+    expect(
+      fourth.nextStepGuidance ?? '',
+      'a re-sent step opened a new run, inventing a hole'
+    ).not.toMatch(/has not been recorded/);
+  });
+
   it('still reports a real duplicate within one run', async () => {
     // The warning must not simply be switched off — that would be the other
     // failure, and this is the case it exists for.
