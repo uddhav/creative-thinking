@@ -541,9 +541,10 @@ The orchestrator decides the cadence. To run a parallelizable group concurrently
 | N concurrent `socketes execute` calls against the **same** sessionId  | No — last-writer-wins |
 | Sequential calls against the same sessionId                           | Yes                   |
 
-The codebase enforces sequential per-session in-process via `SessionLock`, but the lock is **not**
-cross-process. Two CLI invocations are two processes; they each load the session from disk, append a
-step, and write it back. Only one of those writes survives.
+In-process, `SessionLock` serialises only same-technique steps — its key is `sessionId:technique`,
+so two different techniques on one session interleave freely — and it is **not** cross-process
+either. Two CLI invocations are two processes; they each load the session from disk, append a step,
+and write it back. Only one of those writes survives.
 
 In practice, when you fan out, give each parallel branch its own sessionId. The simplest pattern:
 pass `--session "branch-${i}-${planId}"` for branch `i`. The session is mostly an ID; what binds the
