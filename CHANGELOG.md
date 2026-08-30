@@ -1,3 +1,9 @@
+## [v2.6.4] - 2026-08-30
+
+### Changes from PR #372
+
+- fix: read the run being guided, not every run of the technique
+
 ## [v2.6.3] - 2026-08-30
 
 ### Changes from PR #369
