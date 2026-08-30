@@ -519,7 +519,13 @@ export class ExecutionGraphGenerator {
         // for one quantity in one response: a plan reporting "10x" in metadata
         // said "approximately 7x" here.
         if (techniqueCount > 1) {
-            return `Running ${techniqueCount} techniques concurrently explores different approaches at the same time, cutting wall-clock time by roughly ${metadata.sequentialTimeMultiplier} versus running them end to end. Steps within a technique stay ordered.`;
+            // The multiplier assumes every node in a round runs at once. Say so:
+            // with 32 techniques the figure is 17.1x, which is true of the schedule
+            // and false of a client running three branches at a time (3.0x). The
+            // `maxParallelism` INPUT that expresses client capability never reaches
+            // this generator, so the number cannot account for it and should not
+            // pretend to.
+            return `Running ${techniqueCount} techniques concurrently explores different approaches at the same time, cutting wall-clock time by roughly ${metadata.sequentialTimeMultiplier} versus running them end to end — assuming you run a whole round at once; less if you cap concurrency below ${metadata.maxParallelism}. Steps within a technique stay ordered.`;
         }
         return 'Independent techniques can run concurrently; the steps within each stay ordered, so a single-technique plan runs end to end.';
     }

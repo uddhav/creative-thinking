@@ -379,21 +379,13 @@ Manage stored sessions: `list`, `load`, `delete`, `export`, `save`. Form:
 socketes session <op> [options]
 ```
 
-| Op | Useful flags | Behavior | | -------- | --------------------------------------------------- |
-----------------------------------------------------------------------------------------------------------
-
-| ---------------------------- |
-------------------------------------------------------------------------------------------- | |
-`list` | `--limit <n>`, `--technique <id>`,
-`--status active | completed                                                                                                  | all`,
-`--search-term` | Returns `{ count, sessions[] }` with metadata for each session on disk. | | `load`
-| `--session-id <id>` | Returns metadata for a single session (`sessionId`, `technique`, `problem`,
-`stepsCompleted`, `lastStep`). | | `export` | `--session-id <id>`,
-`--format json                 | markdown                                                                                                   | csv`,
-`--output-path <path>` | Returns the formatted session in `result.data`. With `--output-path`, also
-writes the file. | | `delete` | `--session-id <id>`, `--confirm` | Removes the session file.
-`--confirm` is required to actually delete. | | `save` | `--name <s>`, `--tags <list>`,
-`--as-template` | **Broken in CLI mode.** See gotcha 1 below. |
+| Op       | Useful flags                                                                          | Behavior                                                                                                   |
+| -------- | ------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `list`   | `--limit <n>`, `--technique <id>`, `--status active\|completed\|all`, `--search-term` | Returns `{ count, sessions[] }` with metadata for each session on disk.                                    |
+| `load`   | `--session-id <id>`                                                                   | Returns metadata for a single session (`sessionId`, `technique`, `problem`, `stepsCompleted`, `lastStep`). |
+| `export` | `--session-id <id>`, `--format json\|markdown\|csv`, `--output-path <path>`           | Returns the formatted session in `result.data`. With `--output-path`, also writes the file.                |
+| `delete` | `--session-id <id>`, `--confirm`                                                      | Removes the session file. `--confirm` is required to actually delete.                                      |
+| `save`   | `--name <s>`, `--tags <list>`, `--as-template`                                        | **Broken in CLI mode.** See gotcha 1 below.                                                                |
 
 For all session ops, output shape is `{ operation, success, result }` on stdout (success) or
 `{ error: { code, message, ... } }` on stderr (error, exit 1).
@@ -521,7 +513,11 @@ branch on exit code, not on whether stdout has content.
         ["node-7", "node-14"],
         ["node-15"],
       ],
-      "criticalPath": ["node-8", "node-9", "node-10", "node-11"],
+      // Eight nodes; abbreviated here. Note it disagrees with the round
+      // count above — criticalPath walks hard dependencies only, while
+      // parallelizableGroups also honours the soft edges that order the
+      // session-ending node last.
+      "criticalPath": ["node-8", "node-9", "..."],
       "sequentialTimeMultiplier": "1.9x",
     },
     "instructions": {

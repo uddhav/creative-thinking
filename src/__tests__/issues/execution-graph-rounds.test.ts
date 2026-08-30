@@ -188,30 +188,39 @@ describe('the execution graph advertises a schedule that works', () => {
     //
     // Now that rounds are the real schedule length, the honest figure is
     // nodes / rounds.
+    // Literal expectations, NOT `totalNodes / parallelizableGroups.length`.
+    // That is production's own expression read back off the same object, so it
+    // holds for any internally consistent formula — including a regression to
+    // the #308 signature grouping, where 23 nodes become 21 singleton rounds,
+    // the multiplier becomes "1.1x", and a derived assertion stays green while
+    // the graph advertises no parallelism at all.
+    //
+    // These numbers come from the technique step counts: six_hats 7, scamper 8,
+    // po 4, triz 4. Rounds track the longest technique plus one for the
+    // session-ending node when it is not already deepest.
+    const cases: Array<[LateralTechnique[], number, number, string]> = [
+      [['six_hats'], 7, 7, '1x'],
+      [['six_hats', 'po'], 11, 8, '1.4x'],
+      [['six_hats', 'scamper'], 15, 8, '1.9x'],
+      [['six_hats', 'scamper', 'po', 'triz'], 23, 9, '2.6x'],
+    ];
+
     const server = new LateralThinkingServer();
-    for (const techniques of [
-      ['six_hats'],
-      ['six_hats', 'po'],
-      ['six_hats', 'scamper', 'po'],
-      ['six_hats', 'scamper', 'po', 'triz'],
-    ] as LateralTechnique[][]) {
+    for (const [techniques, nodes, rounds, multiplier] of cases) {
       const graph = planFor(server, techniques).executionGraph;
       const md = graph?.metadata as unknown as {
         totalNodes: number;
         sequentialTimeMultiplier: string;
         parallelizableGroups: string[][];
       };
-      const rounds = md.parallelizableGroups.length;
-      const actual = md.totalNodes / rounds;
-      const claimed = parseFloat(md.sequentialTimeMultiplier);
+      const label = techniques.join('+');
 
+      expect(md.totalNodes, `${label}: node count`).toBe(nodes);
+      expect(md.parallelizableGroups.length, `${label}: round count`).toBe(rounds);
       expect(
-        claimed,
-        `${techniques.join('+')}: claims ${md.sequentialTimeMultiplier} but the schedule is ${md.totalNodes} nodes over ${rounds} rounds (${actual.toFixed(1)}x)`
-      ).toBeLessThanOrEqual(actual + 0.05);
-      expect(claimed, `${techniques.join('+')}: understates the speedup`).toBeGreaterThanOrEqual(
-        actual - 0.05
-      );
+        md.sequentialTimeMultiplier,
+        `${label}: ${nodes} nodes over ${rounds} rounds should read ${multiplier}`
+      ).toBe(multiplier);
     }
   });
 
