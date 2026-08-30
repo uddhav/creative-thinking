@@ -378,13 +378,20 @@ Manage stored sessions: `list`, `load`, `delete`, `export`, `save`. Form:
 socketes session <op> [options]
 ```
 
-| Op       | Useful flags                                        | Behavior                                                                                                   |
-| -------- | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------- |
-| `list`   | `--limit <n>`, `--technique <id>`, `--status active | completed                                                                                                  | all`, `--search-term`        | Returns `{ count, sessions[] }` with metadata for each session on disk.                     |
-| `load`   | `--session-id <id>`                                 | Returns metadata for a single session (`sessionId`, `technique`, `problem`, `stepsCompleted`, `lastStep`). |
-| `export` | `--session-id <id>`, `--format json                 | markdown                                                                                                   | csv`, `--output-path <path>` | Returns the formatted session in `result.data`. With `--output-path`, also writes the file. |
-| `delete` | `--session-id <id>`, `--confirm`                    | Removes the session file. `--confirm` is required to actually delete.                                      |
-| `save`   | `--name <s>`, `--tags <list>`, `--as-template`      | **Broken in CLI mode.** See gotcha 1 below.                                                                |
+| Op | Useful flags | Behavior | | -------- | --------------------------------------------------- |
+----------------------------------------------------------------------------------------------------------
+| ---------------------------- |
+------------------------------------------------------------------------------------------- | |
+`list` | `--limit <n>`, `--technique <id>`,
+`--status active | completed                                                                                                  | all`,
+`--search-term` | Returns `{ count, sessions[] }` with metadata for each session on disk. | | `load`
+| `--session-id <id>` | Returns metadata for a single session (`sessionId`, `technique`, `problem`,
+`stepsCompleted`, `lastStep`). | | `export` | `--session-id <id>`,
+`--format json                 | markdown                                                                                                   | csv`,
+`--output-path <path>` | Returns the formatted session in `result.data`. With `--output-path`, also
+writes the file. | | `delete` | `--session-id <id>`, `--confirm` | Removes the session file.
+`--confirm` is required to actually delete. | | `save` | `--name <s>`, `--tags <list>`,
+`--as-template` | **Broken in CLI mode.** See gotcha 1 below. |
 
 For all session ops, output shape is `{ operation, success, result }` on stdout (success) or
 `{ error: { code, message, ... } }` on stderr (error, exit 1).
@@ -500,22 +507,27 @@ branch on exit code, not on whether stdout has content.
 {
   "executionGraph": {
     "metadata": {
-      "totalNodes": 7,
-      "maxParallelism": 7,
+      "totalNodes": 15,
+      "maxParallelism": 2,
       "parallelizableGroups": [
-        ["node-1", "node-2", "node-3", "node-4", "node-5", "node-6", "node-7"],
+        ["node-1", "node-8"],
+        ["node-2", "node-9"],
+        ["node-3", "node-10"],
+        ["node-4", "node-11"],
+        ["node-5", "node-12"],
+        ["node-6", "node-13"],
+        ["node-7", "node-14"],
+        ["node-15"],
       ],
-      "criticalPath": ["node-1"],
-      "sequentialTimeMultiplier": "10x",
+      "criticalPath": ["node-8", "node-9", "node-10", "node-11"],
+      "sequentialTimeMultiplier": "1.9x",
     },
     "instructions": {
-      "recommendedStrategy": "parallel",
+      "recommendedStrategy": "hybrid",
       "executionGuidance": "Nodes with empty dependencies can execute immediately...",
       "errorHandling": "continue-on-non-critical-failure",
     },
-    "nodes": [
-      /* per-step parameters with technique, currentStep, totalSteps, etc. */
-    ],
+    "nodes": [/* per-step parameters with technique, currentStep, totalSteps, etc. */],
   },
 }
 ```
