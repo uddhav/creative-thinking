@@ -15,9 +15,10 @@
  * accepted". Inside a repeated technique's second run that protection was
  * silently off.
  *
- * Entries carry `techniqueInstance` since #369, so this reader filters on it
- * with the same fallback: unstamped entries pool, which is what sessions
- * written before that carry.
+ * Entries carry `techniqueInstance` since #369, so this reader filters on it.
+ * An unstamped entry inherits the nearest stamped run before it, else run 0 —
+ * see `runsOf` in SessionCompletionTracker for why neither "pool the session"
+ * nor "literal run 0" survived contact with a mixed-stamp history.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -149,8 +150,9 @@ describe('out-of-order guidance reads the run it is guiding', () => {
     // executor has nothing to disambiguate. Resumed under a plan that repeats
     // the technique, its history is mixed: unstamped then stamped. Treating
     // the stamp as all-or-nothing latched the whole session back to pooling,
-    // so one unstamped entry disabled the fix permanently. Unstamped entries
-    // are run 0, which is the only run the pre-stamp world ever had.
+    // so one unstamped entry disabled the fix permanently. An unstamped
+    // prefix has no stamped entry before it to inherit from, so it is run 0 —
+    // the only run the pre-stamp world ever had.
     const sessionId = 'session_mixed_stamps';
     const single = planFor(['po']);
     for (let i = 1; i <= 4; i++) await step(single, sessionId, 'po', i);
@@ -163,6 +165,34 @@ describe('out-of-order guidance reads the run it is guiding', () => {
       first.nextStepGuidance ?? '',
       'a mixed-stamp session was pooled and called run 2 step 1 a duplicate'
     ).not.toMatch(/had already been recorded/);
+  });
+
+  it('does not report a hole at a step taken under a non-repeating plan mid-run', async () => {
+    // The mirror of the mixed-prefix case, and the shape a literal
+    // "unstamped = run 0" broke. One step of run 1 goes under a plan with no
+    // repeats, so the executor writes no stamp for it; the entries either side
+    // are stamped run 1. Reading the middle one as run 0 left run 1 with a hole
+    // at a step the caller had sent — a FALSE gap, the exact failure the
+    // absence rule exists to prevent. An unstamped entry inherits the nearest
+    // stamped run before it instead.
+    const sessionId = 'session_unstamped_mid_run';
+    const repeated = planFor(['po', 'triz', 'po']);
+    for (let i = 1; i <= 4; i++) await step(repeated, sessionId, 'po', i);
+    for (let i = 1; i <= 4; i++) await step(repeated, sessionId, 'triz', i);
+    await step(repeated, sessionId, 'po', 1);
+    await step(repeated, sessionId, 'po', 2);
+
+    const single = planFor(['po']);
+    await step(single, sessionId, 'po', 3); // unstamped: no repeats to disambiguate
+
+    const fourth = await step(repeated, sessionId, 'po', 4);
+    expect(
+      fourth.nextStepGuidance ?? '',
+      'a step the caller sent was reported as a hole because its stamp was absent'
+    ).not.toMatch(/has not been recorded/);
+    expect(fourth.nextStepGuidance ?? '', 'the completing step was called a duplicate').not.toMatch(
+      /had already been recorded/
+    );
   });
 
   it('still reports a real duplicate within one run', async () => {

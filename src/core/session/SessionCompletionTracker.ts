@@ -57,18 +57,33 @@ const CRITICAL_STEPS: Record<
 };
 
 /**
- * Which run of a repeated technique a history entry belongs to.
+ * Which run of a repeated technique each history entry belongs to, in order.
  *
  * The executor stamps `techniqueInstance` at write time, when it has the plan
- * and the history in hand (#369). An entry with no stamp is run 0: the
- * pre-stamp world only ever had one run, and a plan with no repeats writes no
- * stamp because there is nothing to disambiguate.
+ * and the history in hand (#369). It writes no stamp when it cannot know — a
+ * plan with no repeats has nothing to disambiguate — so absence means "no
+ * answer", not "run 0", and the two have to be told apart.
+ *
+ * An unstamped entry inherits the run of the nearest stamped entry before it,
+ * and is run 0 when there is none. That covers both real shapes at once. A
+ * session begun under a single-technique plan and resumed under a repeating
+ * one has an unstamped prefix with nothing before it: run 0, the only run the
+ * pre-stamp world had. And a session that takes one step under a
+ * non-repeating plan in the MIDDLE of run 1 has an unstamped entry between two
+ * stamped ones: it inherits run 1. Reading that entry as a literal 0 reported
+ * a hole at a step the caller had in fact sent — a false gap, the exact failure
+ * the absence rule exists to prevent.
  *
  * This is the single place both readers get the answer from. They previously
  * each decided for themselves, all-or-nothing per session, and disagreed.
  */
-function runOf(entry: SessionData['history'][number]): number {
-  return (entry as { techniqueInstance?: number }).techniqueInstance ?? 0;
+function runsOf(entries: SessionData['history']): number[] {
+  let current = 0;
+  return entries.map(entry => {
+    const stamp = (entry as { techniqueInstance?: number }).techniqueInstance;
+    if (stamp !== undefined) current = stamp;
+    return current;
+  });
 }
 
 /**
@@ -279,7 +294,8 @@ export class SessionCompletionTracker {
       if (repeats > 1) {
         const index = instanceCursor.get(workflow.technique) ?? 0;
         instanceCursor.set(workflow.technique, index + 1);
-        techniqueHistory = pooled.filter(h => runOf(h) === index);
+        const runs = runsOf(pooled);
+        techniqueHistory = pooled.filter((_, i) => runs[i] === index);
       }
 
       // Count completed steps and track step numbers
@@ -471,9 +487,9 @@ export class SessionCompletionTracker {
     // was called a duplicate on run 2's first step, permanently.
     const pooled = session.history.filter(h => h.technique === technique);
     const repeats = plan.workflow.filter(w => w.technique === technique).length > 1;
-    const last = pooled[pooled.length - 1];
-    const currentRun = last ? runOf(last) : 0;
-    const techniqueHistory = repeats ? pooled.filter(h => runOf(h) === currentRun) : pooled;
+    const runs = runsOf(pooled);
+    const currentRun = runs[runs.length - 1] ?? 0;
+    const techniqueHistory = repeats ? pooled.filter((_, i) => runs[i] === currentRun) : pooled;
 
     const { completedStepNumbers, submissionsByStep } = this.countTechniqueCompletedSteps(
       techniqueHistory,
