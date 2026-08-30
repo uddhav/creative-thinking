@@ -313,7 +313,10 @@ export class ExecutionGraphGenerator {
     const maxParallelism = Math.max(...parallelizableGroups.map(group => group.length), 1);
 
     // Calculate sequential time multiplier
-    const sequentialTimeMultiplier = this.calculateSequentialTimeMultiplier(nodes, maxParallelism);
+    const sequentialTimeMultiplier = this.calculateSequentialTimeMultiplier(
+      nodes,
+      parallelizableGroups
+    );
 
     return {
       totalNodes: nodes.length,
@@ -329,23 +332,32 @@ export class ExecutionGraphGenerator {
    */
   private static calculateSequentialTimeMultiplier(
     nodes: ExecutionGraphNode[],
-    maxParallelism: number
+    rounds: string[][]
   ): string {
-    // If no parallelism is possible, sequential and parallel take the same time
-    if (maxParallelism <= 1) {
+    // Nodes divided by rounds — the length of the sequential schedule over the
+    // length of the parallel one. That is what the number means, and now that
+    // rounds ARE the schedule it can simply be computed.
+    //
+    // It used to be bucketed off maxParallelism alone: >=2 gave "3x", >=4 gave
+    // "5x", >=6 gave "10x", with no reference to how many rounds there were.
+    // That consistently overstated, because a plan's techniques differ in
+    // length so only the early rounds are full — 11 nodes over 8 rounds is
+    // 1.4x, not the 3x it claimed, and 23 over 9 is 2.6x, not 5x.
+    //
+    // The overstatement was load-bearing rather than decorative:
+    // `generateParallelizationBenefits` renders this to the caller as a
+    // wall-clock fact, "cutting wall-clock time by roughly Nx".
+    if (rounds.length === 0 || nodes.length === 0) {
       return '1x';
     }
 
-    // Estimate based on the degree of parallelism
-    // Higher parallelism = greater time difference
-    if (maxParallelism >= 6) {
-      return '10x'; // Highly parallel - sequential is much slower
-    } else if (maxParallelism >= 4) {
-      return '5x'; // Moderate parallelism
-    } else if (maxParallelism >= 2) {
-      return '3x'; // Some parallelism
+    const speedup = nodes.length / rounds.length;
+    if (speedup < 1.05) {
+      return '1x';
     }
-    return '2x'; // Minimal parallelism
+    // One decimal, because the honest figures are small and rounding 1.4 to 1
+    // would understate as badly as the buckets overstated.
+    return `${speedup.toFixed(1)}x`;
   }
 
   /**

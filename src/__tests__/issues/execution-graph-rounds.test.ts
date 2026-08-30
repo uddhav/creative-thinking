@@ -176,6 +176,74 @@ describe('the execution graph advertises a schedule that works', () => {
     }
   });
 
+  it('states a speedup the schedule can actually deliver', () => {
+    // `sequentialTimeMultiplier` was bucketed off `maxParallelism` alone —
+    // >=2 gave "3x", >=4 gave "5x" — with no reference to how many rounds the
+    // schedule actually has. `parallelizationBenefits` renders it to the caller
+    // as a wall-clock fact ("cutting wall-clock time by roughly 3x"), so the
+    // overstatement was load-bearing, not decorative:
+    //
+    //   2 techniques: 11 nodes over 8 rounds -> claimed 3x, actual 1.4x
+    //   4 techniques: 23 nodes over 9 rounds -> claimed 5x, actual 2.6x
+    //
+    // Now that rounds are the real schedule length, the honest figure is
+    // nodes / rounds.
+    const server = new LateralThinkingServer();
+    for (const techniques of [
+      ['six_hats'],
+      ['six_hats', 'po'],
+      ['six_hats', 'scamper', 'po'],
+      ['six_hats', 'scamper', 'po', 'triz'],
+    ] as LateralTechnique[][]) {
+      const graph = planFor(server, techniques).executionGraph;
+      const md = graph?.metadata as unknown as {
+        totalNodes: number;
+        sequentialTimeMultiplier: string;
+        parallelizableGroups: string[][];
+      };
+      const rounds = md.parallelizableGroups.length;
+      const actual = md.totalNodes / rounds;
+      const claimed = parseFloat(md.sequentialTimeMultiplier);
+
+      expect(
+        claimed,
+        `${techniques.join('+')}: claims ${md.sequentialTimeMultiplier} but the schedule is ${md.totalNodes} nodes over ${rounds} rounds (${actual.toFixed(1)}x)`
+      ).toBeLessThanOrEqual(actual + 0.05);
+      expect(claimed, `${techniques.join('+')}: understates the speedup`).toBeGreaterThanOrEqual(
+        actual - 0.05
+      );
+    }
+  });
+
+  it('quotes the same speedup in the prose as in the metadata', () => {
+    // `parallelizationBenefits` renders the figure into a caller-facing
+    // sentence, and the code comment records that these were once two
+    // different numbers for one quantity in one response — metadata said
+    // "10x" while the prose said "approximately 7x". Nothing in the suite
+    // asserted on that sentence at all, so changing the figure to a decimal
+    // could have left it reading wrongly with nothing to notice.
+    const server = new LateralThinkingServer();
+    for (const techniques of [
+      ['six_hats', 'po'],
+      ['six_hats', 'scamper', 'po', 'triz'],
+    ] as LateralTechnique[][]) {
+      const graph = planFor(server, techniques).executionGraph;
+      const md = graph?.metadata as unknown as { sequentialTimeMultiplier: string };
+      const prose = String(
+        (graph?.instructions as { parallelizationBenefits?: string } | undefined)
+          ?.parallelizationBenefits ?? ''
+      );
+
+      expect(prose, 'no parallelization prose emitted').not.toBe('');
+      expect(
+        prose,
+        `prose does not cite the metadata figure ${md.sequentialTimeMultiplier}`
+      ).toContain(md.sequentialTimeMultiplier);
+      // And it should read as a sentence, not a bare number spliced in.
+      expect(prose).toMatch(/cutting wall-clock time by roughly \d+(\.\d)?x versus/);
+    }
+  });
+
   it('tells the caller each parallel branch needs its own session', () => {
     // Measured: two concurrent cross-process writes to ONE session lose a step,
     // 5 runs of 5. The same two writes under distinct sessionIds lose nothing.
