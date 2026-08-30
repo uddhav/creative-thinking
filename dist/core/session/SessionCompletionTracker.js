@@ -308,7 +308,37 @@ export class SessionCompletionTracker {
         const globalStepOffset = plan.workflow
             .slice(0, techniqueIndex)
             .reduce((sum, w) => sum + w.steps.length, 0);
-        const techniqueHistory = session.history.filter(h => h.technique === technique);
+        // Read the RUN being guided, not every run of this technique. Pooling by
+        // name meant the second run of a repeated technique saw the first run's
+        // step numbers as its own, and both outputs went wrong in opposite
+        // directions: a legitimate first step was called a duplicate, and a genuine
+        // hole went unreported while the guidance steered past it (#371) — which is
+        // the exact failure the caller was written to prevent.
+        //
+        // The run is taken from the CURRENT step's own stamp, read off the last
+        // entry for this technique — the step being guided has already been pushed
+        // by the time guidance is built.
+        //
+        // `techniqueIndex` cannot supply it. `ExecutionValidator` resolves that to
+        // the FIRST occurrence under technique-local numbering, saying so in its own
+        // comment: a technique-local number "cannot distinguish one occurrence from
+        // another — nothing in the input says which". Deriving the run from it
+        // therefore reads run 1 while guiding run 2, which is the bug wearing a
+        // different hat. The executor's stamp is the only thing that knows, because
+        // it had the history in hand when it wrote the entry.
+        //
+        // Unstamped entries pool, as they did before #369 and as sessions persisted
+        // before it still do.
+        const pooled = session.history.filter(h => h.technique === technique);
+        const repeats = plan.workflow.filter(w => w.technique === technique).length > 1;
+        const allStamped = pooled.length > 0 &&
+            pooled.every(h => h.techniqueInstance !== undefined);
+        const currentRun = allStamped
+            ? pooled[pooled.length - 1].techniqueInstance
+            : undefined;
+        const techniqueHistory = repeats && currentRun !== undefined
+            ? pooled.filter(h => h.techniqueInstance === currentRun)
+            : pooled;
         const { completedStepNumbers, submissionsByStep } = this.countTechniqueCompletedSteps(techniqueHistory, techniqueSteps, plan, globalStepOffset);
         return { completedStepNumbers, submissionsByStep, techniqueSteps };
     }

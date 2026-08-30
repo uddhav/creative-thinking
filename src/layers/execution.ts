@@ -155,7 +155,8 @@ function irreversibleMatrixCells(input: ExecuteThinkingStepInput): string[] {
 function resolveTechniqueInstance(
   plan: PlanThinkingSessionOutput | undefined,
   session: SessionData,
-  input: ExecuteThinkingStepInput
+  input: ExecuteThinkingStepInput,
+  techniqueLocalStep: number
 ): number | undefined {
   if (!plan) return undefined;
 
@@ -181,22 +182,44 @@ function resolveTechniqueInstance(
     return undefined;
   }
 
-  // Technique-local numbering: advance to the next run only once the current
-  // one holds every step it needs. Advancing on a repeated number instead is
-  // what mistook a re-sent step for a new run.
-  const priorSteps = new Set<number>();
+  // Technique-local numbering: a run begins at step 1, so the cursor advances
+  // when step 1 arrives for a run that already holds one.
+  //
+  // Two earlier rules failed in opposite directions and both are worth naming,
+  // because the shape that breaks each is the other one's normal case.
+  //
+  // Advancing on ANY recurring number mistook a re-sent step for a new run, so
+  // a session where every step had actually executed was refused with "2 steps
+  // were skipped" — a hard block on working input.
+  //
+  // Advancing only once a run held EVERY step never advanced past an
+  // *incomplete* run, so a run 1 of 1,2,4 stamped run 2's entries as run 1.
+  // That was worse than it sounds: the guidance that exists to catch a hole was
+  // then reading the wrong run, precisely when a hole was present.
+  //
+  // Keying on step 1 separates them. A re-sent step 2 is not a run boundary; a
+  // step 1 arriving for a run that already has one is, whether or not that run
+  // finished. The case still ambiguous is a caller re-sending step 1 itself,
+  // which reads as a new run — genuinely undecidable from the input, and rarer
+  // than either shape above.
   let cursor = 0;
+  let held = new Set<number>();
+  const advance = (local: number): boolean =>
+    local === 1 && held.has(1) && cursor < instances.length - 1;
+
   for (const entry of session.history) {
     if (entry.technique !== input.technique) continue;
     const local =
       (entry as { techniqueLocalStep?: number }).techniqueLocalStep ?? entry.currentStep;
-    if (priorSteps.size >= (instances[cursor]?.steps ?? 0) && cursor < instances.length - 1) {
+    if (advance(local)) {
       cursor += 1;
-      priorSteps.clear();
+      held = new Set<number>();
     }
-    priorSteps.add(local);
+    held.add(local);
   }
-  if (priorSteps.size >= (instances[cursor]?.steps ?? 0) && cursor < instances.length - 1) {
+
+  // The step being stamped has not been pushed yet, so it is considered last.
+  if (advance(techniqueLocalStep)) {
     cursor += 1;
   }
   return cursor;
@@ -519,7 +542,7 @@ export async function executeThinkingStep(
         // Absent on entries written before this, and on plans with no repeat.
         // The reader treats absence as "pool them", which is the pre-existing
         // behaviour: a gap that hides rather than a complete session refused.
-        techniqueInstance: resolveTechniqueInstance(plan, session, input),
+        techniqueInstance: resolveTechniqueInstance(plan, session, input, techniqueLocalStep),
         timestamp: new Date().toISOString(),
       };
       session.history.push(historyEntry);
