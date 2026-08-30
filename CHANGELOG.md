@@ -1,3 +1,9 @@
+## [v2.6.1] - 2026-08-30
+
+### Changes from PR #364
+
+- fix: group the execution graph by depth, and chain every technique
+
 ## [v2.6.0] - 2026-08-29
 
 ### Changes from PR #362
