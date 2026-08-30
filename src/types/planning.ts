@@ -39,12 +39,16 @@ export interface ExecutionGraph {
     maxParallelism: number; // Max nodes that can run in parallel
     criticalPath: string[]; // Node IDs forming the longest path
     parallelizableGroups: string[][]; // Groups of nodes that can run in parallel
-    sequentialTimeMultiplier: string; // e.g., "5x" - how much longer sequential takes vs parallel
+    // Node count over round count: how much longer running end to end takes
+    // than following parallelizableGroups. e.g. "1.9x". One decimal, because
+    // the real figures are small — this was once bucketed off maxParallelism
+    // and claimed "3x" for a schedule that delivers 1.4x.
+    sequentialTimeMultiplier: string;
   };
   instructions: {
     recommendedStrategy: 'sequential' | 'parallel' | 'hybrid'; // Recommended execution approach
     syncPoints: string[]; // Node IDs where synchronization is beneficial
-    sequentialTimeMultiplier: string; // e.g., "5x" - relative time difference
+    sequentialTimeMultiplier: string; // Same figure as metadata's, e.g. "1.9x"
     parallelizationBenefits: string; // Why parallel execution might be beneficial
     executionGuidance: string; // How to execute based on dependencies
     errorHandling: string; // How to handle node failures

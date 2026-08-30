@@ -176,6 +176,83 @@ describe('the execution graph advertises a schedule that works', () => {
     }
   });
 
+  it('states a speedup the schedule can actually deliver', () => {
+    // `sequentialTimeMultiplier` was bucketed off `maxParallelism` alone —
+    // >=2 gave "3x", >=4 gave "5x" — with no reference to how many rounds the
+    // schedule actually has. `parallelizationBenefits` renders it to the caller
+    // as a wall-clock fact ("cutting wall-clock time by roughly 3x"), so the
+    // overstatement was load-bearing, not decorative:
+    //
+    //   2 techniques: 11 nodes over 8 rounds -> claimed 3x, actual 1.4x
+    //   4 techniques: 23 nodes over 9 rounds -> claimed 5x, actual 2.6x
+    //
+    // Now that rounds are the real schedule length, the honest figure is
+    // nodes / rounds.
+    // Literal expectations, NOT `totalNodes / parallelizableGroups.length`.
+    // That is production's own expression read back off the same object, so it
+    // holds for any internally consistent formula — including a regression to
+    // the #308 signature grouping, where 23 nodes become 21 singleton rounds,
+    // the multiplier becomes "1.1x", and a derived assertion stays green while
+    // the graph advertises no parallelism at all.
+    //
+    // These numbers come from the technique step counts: six_hats 7, scamper 8,
+    // po 4, triz 4. Rounds track the longest technique plus one for the
+    // session-ending node when it is not already deepest.
+    const cases: Array<[LateralTechnique[], number, number, string]> = [
+      [['six_hats'], 7, 7, '1x'],
+      [['six_hats', 'po'], 11, 8, '1.4x'],
+      [['six_hats', 'scamper'], 15, 8, '1.9x'],
+      [['six_hats', 'scamper', 'po', 'triz'], 23, 9, '2.6x'],
+    ];
+
+    const server = new LateralThinkingServer();
+    for (const [techniques, nodes, rounds, multiplier] of cases) {
+      const graph = planFor(server, techniques).executionGraph;
+      const md = graph?.metadata as unknown as {
+        totalNodes: number;
+        sequentialTimeMultiplier: string;
+        parallelizableGroups: string[][];
+      };
+      const label = techniques.join('+');
+
+      expect(md.totalNodes, `${label}: node count`).toBe(nodes);
+      expect(md.parallelizableGroups.length, `${label}: round count`).toBe(rounds);
+      expect(
+        md.sequentialTimeMultiplier,
+        `${label}: ${nodes} nodes over ${rounds} rounds should read ${multiplier}`
+      ).toBe(multiplier);
+    }
+  });
+
+  it('quotes the same speedup in the prose as in the metadata', () => {
+    // `parallelizationBenefits` renders the figure into a caller-facing
+    // sentence, and the code comment records that these were once two
+    // different numbers for one quantity in one response — metadata said
+    // "10x" while the prose said "approximately 7x". Nothing in the suite
+    // asserted on that sentence at all, so changing the figure to a decimal
+    // could have left it reading wrongly with nothing to notice.
+    const server = new LateralThinkingServer();
+    for (const techniques of [
+      ['six_hats', 'po'],
+      ['six_hats', 'scamper', 'po', 'triz'],
+    ] as LateralTechnique[][]) {
+      const graph = planFor(server, techniques).executionGraph;
+      const md = graph?.metadata as unknown as { sequentialTimeMultiplier: string };
+      const prose = String(
+        (graph?.instructions as { parallelizationBenefits?: string } | undefined)
+          ?.parallelizationBenefits ?? ''
+      );
+
+      expect(prose, 'no parallelization prose emitted').not.toBe('');
+      expect(
+        prose,
+        `prose does not cite the metadata figure ${md.sequentialTimeMultiplier}`
+      ).toContain(md.sequentialTimeMultiplier);
+      // And it should read as a sentence, not a bare number spliced in.
+      expect(prose).toMatch(/cutting wall-clock time by roughly \d+(\.\d)?x versus/);
+    }
+  });
+
   it('tells the caller each parallel branch needs its own session', () => {
     // Measured: two concurrent cross-process writes to ONE session lose a step,
     // 5 runs of 5. The same two writes under distinct sessionIds lose nothing.
