@@ -321,9 +321,14 @@ export async function executeThinkingStep(
     // It is kept because single-threaded atomicity of `history.push` is a
     // property of today's code, not a contract, and the stale-read window
     // between the ergodicity await and the push is real even though no probe
-    // has caught it. Do not delete it on the strength of the negative results
-    // above — and if you do, session-lock-is-acquired.test.ts goes red, which
-    // is that test's entire job.
+    // has caught it. Note what the key means for that window: the lock closes
+    // it only against SAME-technique contenders. Two different techniques on
+    // one session hold different keys and interleave through it freely — so
+    // in-process same-session concurrency is NOT made safe by this lock, any
+    // more than cross-process is. Do not delete it on the strength of the
+    // negative results above — and if you do,
+    // session-lock-is-acquired.test.ts goes red, which is that test's entire
+    // job.
     const releaseLock = await sessionLock.acquireLock(sessionId, input.technique);
 
     try {

@@ -86,6 +86,12 @@ describe('the session lock is really taken', () => {
 
       // The kill-check discriminator: replace the acquire in execution.ts with
       // a no-op and this is 0.
+      //
+      // >= and set-membership on purpose, never exact counts: the lock is a
+      // process-global singleton that SessionManager also acquires (session
+      // touches, persistence loads, some via withLock and so through this same
+      // wrapper), so the wrapper sees more acquires than the six executes.
+      // Tightening to === 6 would chase those phantom acquires.
       expect(
         acquires,
         'executeThinkingStep no longer acquires the session lock'

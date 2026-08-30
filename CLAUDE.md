@@ -129,8 +129,10 @@ flag form for the common 5–6 params and the stdin form for technique-specific 
 **Parallel execution.** The plan response includes `executionGraph.metadata.parallelizableGroups`
 that the LLM/skill can use to fan out concurrent invocations. Concurrent executions against
 **different** sessionIds are safe. Concurrent executions against the **same** sessionId are
-last-writer-wins — the codebase enforces sequential per-session in-process via `SessionLock`, but
-cross-process is unprotected. Coordinate from the client.
+last-writer-wins. In-process, `SessionLock` serialises only same-technique steps — its key is
+`sessionId:technique`, so two different techniques on one session interleave freely — and
+cross-process it protects nothing, since each process constructs its own lock. Coordinate from the
+client; the lock itself is defensive (#354).
 
 ### Running the MCP Server Locally
 
