@@ -216,14 +216,60 @@ export class SessionCompletionTracker {
       ? this.groupHistoryByTechnique(session.history)
       : null;
 
+    // A plan may name the same technique twice, and those are two runs rather
+    // than one pool. Grouping by technique NAME handed both workflow entries
+    // the same history, so one instance's steps filled the other's holes:
+    // measured on ['po','triz','po'] with instance 2 missing step 3, the union
+    // of {1,2,3,4} and {1,2,4} has no gap, and the session ended reporting
+    // completed with skippedSteps empty (#301).
+    //
+    // Instances are filled in order. The input cannot identify them — under
+    // technique-local numbering `po` step 1 is the same request for either
+    // instance — so a new instance is taken to begin when a step number recurs,
+    // step numbers restarting being what separates one run from the next.
+    //
+    // Cost of that choice: a caller genuinely interleaving two instances gets
+    // them attributed by arrival order, so a gap is still caught but may be
+    // named against the wrong instance.
+    const instanceCursor = new Map<string, number>();
+    const repeatCounts = new Map<string, number>();
+    for (const w of plan.workflow) {
+      repeatCounts.set(w.technique, (repeatCounts.get(w.technique) ?? 0) + 1);
+    }
+
     let globalStepOffset = 0;
     for (const workflow of plan.workflow) {
       const techniqueSteps = workflow.steps.length;
 
       // Get the history entries for this technique
-      const techniqueHistory = isMultiTechnique
+      const pooled = isMultiTechnique
         ? historyByTechnique?.get(workflow.technique) || []
         : session.history.filter(h => h.technique === workflow.technique);
+
+      // Repeated techniques: read the instance the EXECUTOR stamped, rather
+      // than inferring one from step numbers. Inference cannot be done without
+      // false positives — a step re-sent without `isRevision` looks exactly
+      // like the start of a new run — and blocked sessions in which every step
+      // had actually been executed (#301).
+      //
+      // Entries without a stamp pool, which is the behaviour that existed
+      // before instances were tracked. That keeps a gap that hides rather than
+      // refusing a complete session, and it is what sessions written before
+      // this change get.
+      const repeats = repeatCounts.get(workflow.technique) ?? 0;
+      let techniqueHistory = pooled;
+      if (repeats > 1) {
+        const index = instanceCursor.get(workflow.technique) ?? 0;
+        instanceCursor.set(workflow.technique, index + 1);
+        const stamped = pooled.filter(
+          h => (h as { techniqueInstance?: number }).techniqueInstance !== undefined
+        );
+        if (stamped.length === pooled.length && pooled.length > 0) {
+          techniqueHistory = pooled.filter(
+            h => (h as { techniqueInstance?: number }).techniqueInstance === index
+          );
+        }
+      }
 
       // Count completed steps and track step numbers
       const { completedStepsForTechnique, completedStepNumbers } =
@@ -261,6 +307,19 @@ export class SessionCompletionTracker {
 
   /**
    * Group history entries by technique (only when needed for performance)
+   */
+  /**
+   * Split one technique's history into its separate runs.
+   *
+   * A new instance begins where a step number recurs, because step numbers
+   * restart per run: `1,2,3,4,1,2,4` is a complete run followed by one missing
+   * step 3, not a single run of seven.
+   *
+   * Revisions are the case that makes this more than a `Set` check. A revision
+   * re-sends a step number it has already sent, and that must NOT open a new
+   * instance — so a repeat only counts as a boundary when the step number is
+   * one the run has seen AND the run has moved past it, i.e. the number is not
+   * simply the previous entry repeated.
    */
   private groupHistoryByTechnique(
     history: SessionData['history']

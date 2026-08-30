@@ -65,6 +65,19 @@ export declare class SessionCompletionTracker {
     /**
      * Group history entries by technique (only when needed for performance)
      */
+    /**
+     * Split one technique's history into its separate runs.
+     *
+     * A new instance begins where a step number recurs, because step numbers
+     * restart per run: `1,2,3,4,1,2,4` is a complete run followed by one missing
+     * step 3, not a single run of seven.
+     *
+     * Revisions are the case that makes this more than a `Set` check. A revision
+     * re-sends a step number it has already sent, and that must NOT open a new
+     * instance — so a repeat only counts as a boundary when the step number is
+     * one the run has seen AND the run has moved past it, i.e. the number is not
+     * simply the previous entry repeated.
+     */
     private groupHistoryByTechnique;
     /**
      * Count completed steps for a technique with proper validation

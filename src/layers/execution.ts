@@ -7,7 +7,9 @@ import type {
   ExecuteThinkingStepInput,
   ThinkingOperationData,
   LateralThinkingResponse,
+  SessionData,
 } from '../types/index.js';
+import type { PlanThinkingSessionOutput } from '../types/planning.js';
 import type { SessionManager } from '../core/SessionManager.js';
 import type { ReflexivityWarning } from '../core/ReflexivityTracker.js';
 import type { TechniqueRegistry } from '../techniques/TechniqueRegistry.js';
@@ -137,6 +139,67 @@ function irreversibleMatrixCells(input: ExecuteThinkingStepInput): string[] {
     );
   }
   return [...byCoordinate.values()];
+}
+
+/**
+ * Which run of a repeated technique this step belongs to, or undefined.
+ *
+ * Undefined whenever the answer is not certain — a plan without repeats, a
+ * technique-local sequence that does not fill its runs cleanly, or anything
+ * else ambiguous. The reader pools on absence, which is the behaviour that
+ * existed before instances were tracked at all. That bias is deliberate: the
+ * failure it keeps is a gap that hides, and the failure it avoids is a
+ * complete session refused. Inferring instead of stamping produced the second
+ * one in four measured shapes (#301).
+ */
+function resolveTechniqueInstance(
+  plan: PlanThinkingSessionOutput | undefined,
+  session: SessionData,
+  input: ExecuteThinkingStepInput
+): number | undefined {
+  if (!plan) return undefined;
+
+  const instances = plan.workflow
+    .map((w, i) => ({ index: i, technique: w.technique, steps: w.steps.length }))
+    .filter(w => w.technique === input.technique);
+  if (instances.length < 2) return undefined;
+
+  // Plan-wide numbering resolves exactly: each run owns a distinct global
+  // range, so the step number alone says which. Offsets are summed over the
+  // whole workflow, not just this technique's entries.
+  const planTotal = plan.workflow.reduce((sum, w) => sum + w.steps.length, 0);
+  if (input.totalSteps === planTotal && planTotal !== instances[0].steps) {
+    let offset = 0;
+    for (const w of plan.workflow) {
+      if (w.technique === input.technique && input.currentStep > offset) {
+        if (input.currentStep <= offset + w.steps.length) {
+          return instances.findIndex(i => i.index === plan.workflow.indexOf(w));
+        }
+      }
+      offset += w.steps.length;
+    }
+    return undefined;
+  }
+
+  // Technique-local numbering: advance to the next run only once the current
+  // one holds every step it needs. Advancing on a repeated number instead is
+  // what mistook a re-sent step for a new run.
+  const priorSteps = new Set<number>();
+  let cursor = 0;
+  for (const entry of session.history) {
+    if (entry.technique !== input.technique) continue;
+    const local =
+      (entry as { techniqueLocalStep?: number }).techniqueLocalStep ?? entry.currentStep;
+    if (priorSteps.size >= (instances[cursor]?.steps ?? 0) && cursor < instances.length - 1) {
+      cursor += 1;
+      priorSteps.clear();
+    }
+    priorSteps.add(local);
+  }
+  if (priorSteps.size >= (instances[cursor]?.steps ?? 0) && cursor < instances.length - 1) {
+    cursor += 1;
+  }
+  return cursor;
 }
 
 export async function executeThinkingStep(
@@ -445,6 +508,18 @@ export async function executeThinkingStep(
         // end of its own table and reported nothing at all. Recorded here
         // because this is where the offset is already known.
         techniqueLocalStep,
+        // Which run of this technique the step belongs to, when the plan names
+        // it more than once. Recorded HERE, at write time, with the plan and
+        // the history both in hand — rather than inferred later from step
+        // numbers, which cannot be done without false positives: a caller
+        // re-sending a step without `isRevision` looks exactly like the start
+        // of a new run, and inferring it that way blocked sessions in which
+        // every step had in fact been executed (#301).
+        //
+        // Absent on entries written before this, and on plans with no repeat.
+        // The reader treats absence as "pool them", which is the pre-existing
+        // behaviour: a gap that hides rather than a complete session refused.
+        techniqueInstance: resolveTechniqueInstance(plan, session, input),
         timestamp: new Date().toISOString(),
       };
       session.history.push(historyEntry);
