@@ -232,6 +232,10 @@ export class SessionCompletionTracker {
     // them attributed by arrival order, so a gap is still caught but may be
     // named against the wrong instance.
     const instanceCursor = new Map<string, number>();
+    const repeatCounts = new Map<string, number>();
+    for (const w of plan.workflow) {
+      repeatCounts.set(w.technique, (repeatCounts.get(w.technique) ?? 0) + 1);
+    }
 
     let globalStepOffset = 0;
     for (const workflow of plan.workflow) {
@@ -242,18 +246,29 @@ export class SessionCompletionTracker {
         ? historyByTechnique?.get(workflow.technique) || []
         : session.history.filter(h => h.technique === workflow.technique);
 
-      const repeats = plan.workflow.filter(w => w.technique === workflow.technique).length > 1;
+      // Repeated techniques: read the instance the EXECUTOR stamped, rather
+      // than inferring one from step numbers. Inference cannot be done without
+      // false positives — a step re-sent without `isRevision` looks exactly
+      // like the start of a new run — and blocked sessions in which every step
+      // had actually been executed (#301).
+      //
+      // Entries without a stamp pool, which is the behaviour that existed
+      // before instances were tracked. That keeps a gap that hides rather than
+      // refusing a complete session, and it is what sessions written before
+      // this change get.
+      const repeats = repeatCounts.get(workflow.technique) ?? 0;
       let techniqueHistory = pooled;
-      if (repeats) {
+      if (repeats > 1) {
         const index = instanceCursor.get(workflow.technique) ?? 0;
         instanceCursor.set(workflow.technique, index + 1);
-        techniqueHistory = this.instanceHistory(
-          pooled,
-          index,
-          globalStepOffset,
-          techniqueSteps,
-          plan.totalSteps
+        const stamped = pooled.filter(
+          h => (h as { techniqueInstance?: number }).techniqueInstance !== undefined
         );
+        if (stamped.length === pooled.length && pooled.length > 0) {
+          techniqueHistory = pooled.filter(
+            h => (h as { techniqueInstance?: number }).techniqueInstance === index
+          );
+        }
       }
 
       // Count completed steps and track step numbers
@@ -306,75 +321,6 @@ export class SessionCompletionTracker {
    * one the run has seen AND the run has moved past it, i.e. the number is not
    * simply the previous entry repeated.
    */
-  /**
-   * The history belonging to one instance of a repeated technique.
-   *
-   * The two accepted numbering conventions fail differently, so each needs its
-   * own rule and neither covers the other.
-   *
-   * Under PLAN-WIDE numbering the instances never collide — `po` is steps 1-4
-   * then 9-12 — so an entry can be assigned by which instance's global range
-   * contains it. Splitting on a recurring step number finds only one instance
-   * here, leaves the second workflow entry empty, and combines with the
-   * "score only techniques the session started" rule to drop it from the gate
-   * entirely.
-   *
-   * Under TECHNIQUE-LOCAL numbering both instances say 1..4, so ranges cannot
-   * separate them and the recurrence rule is what is left.
-   *
-   * An entry is read as plan-wide when its own `totalSteps` matches the plan's
-   * and that differs from the technique's own count — the same signal the
-   * executor uses to tell the conventions apart.
-   */
-  private instanceHistory(
-    pooled: SessionData['history'],
-    index: number,
-    globalStepOffset: number,
-    techniqueSteps: number,
-    planTotalSteps: number
-  ): SessionData['history'] {
-    const usesPlanWide =
-      planTotalSteps !== techniqueSteps &&
-      pooled.some(entry => (entry as { totalSteps?: number }).totalSteps === planTotalSteps);
-
-    if (usesPlanWide) {
-      const low = globalStepOffset + 1;
-      const high = globalStepOffset + techniqueSteps;
-      return pooled.filter(entry => entry.currentStep >= low && entry.currentStep <= high);
-    }
-
-    return this.splitIntoInstances(pooled)[index] ?? [];
-  }
-
-  private splitIntoInstances(history: SessionData['history']): SessionData['history'][] {
-    if (history.length === 0) return [];
-
-    const instances: SessionData['history'][] = [];
-    let current: SessionData['history'] = [];
-    let seen = new Set<number>();
-    let previousStep: number | undefined;
-
-    for (const entry of history) {
-      const step = entry.currentStep;
-      const isRevision = (entry as { isRevision?: boolean }).isRevision === true;
-      const opensNewRun =
-        current.length > 0 && !isRevision && seen.has(step) && step !== previousStep;
-
-      if (opensNewRun) {
-        instances.push(current);
-        current = [];
-        seen = new Set<number>();
-      }
-
-      current.push(entry);
-      seen.add(step);
-      previousStep = step;
-    }
-
-    if (current.length > 0) instances.push(current);
-    return instances;
-  }
-
   private groupHistoryByTechnique(
     history: SessionData['history']
   ): Map<string, SessionData['history']> {

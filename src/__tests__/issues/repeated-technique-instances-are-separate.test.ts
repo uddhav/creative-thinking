@@ -124,6 +124,34 @@ describe('repeated instances of one technique are tracked separately', () => {
     expect(last.completed, 'a complete plan did not report completion').toBe(true);
   });
 
+  it('does not invent a gap when a step is re-sent without the revision flag', async () => {
+    // This is what killed the first design. Inferring instances from step
+    // numbers meant a re-sent step looked exactly like the start of a new run,
+    // so a session in which EVERY step of both instances had actually been
+    // executed was refused with "2 steps were skipped" — a hard block on
+    // working input, traded for the false negative it was meant to fix.
+    //
+    // `isRevision` does not save it: the flag is caller-supplied and defaults
+    // to false (`ErgodicityOrchestrator` writes `input.isRevision === true`),
+    // so the shape that breaks is the one where the caller simply does not set
+    // it. The executor stamps the instance instead, with the plan and the
+    // history both in hand.
+    const planId = planFor(['po', 'triz', 'po']);
+    const sessionId = 'session_resend';
+
+    await step(planId, sessionId, 'po', 1, 4);
+    await step(planId, sessionId, 'po', 2, 4);
+    await step(planId, sessionId, 'po', 3, 4);
+    await step(planId, sessionId, 'po', 2, 4); // re-sent, no isRevision
+    await step(planId, sessionId, 'po', 4, 4);
+    for (let i = 1; i <= 4; i++) await step(planId, sessionId, 'triz', i, 4);
+    for (let i = 1; i <= 3; i++) await step(planId, sessionId, 'po', i, 4);
+    const last = await step(planId, sessionId, 'po', 4, 4, true);
+
+    expect(last.blocked, `a complete session was refused: ${last.reason ?? ''}`).not.toBe(true);
+    expect(last.completed, 'a complete session did not report completion').toBe(true);
+  });
+
   it('leaves single-instance plans alone', async () => {
     const planId = planFor(['po', 'triz']);
     const sessionId = 'session_no_repeat';
