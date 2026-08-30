@@ -1,3 +1,9 @@
+## [v2.6.2] - 2026-08-30
+
+### Changes from PR #366
+
+- fix: state the speedup the schedule can actually deliver
+
 ## [v2.6.1] - 2026-08-30
 
 ### Changes from PR #364
