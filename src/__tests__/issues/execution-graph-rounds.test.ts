@@ -36,8 +36,8 @@ interface PlanResponse {
   executionGraph?: {
     nodes: GraphNode[];
     metadata: { maxParallelism: number; parallelizableGroups: string[][] };
+    instructions?: unknown;
   };
-  parallelizationGuidance?: unknown;
 }
 
 function planFor(server: LateralThinkingServer, techniques: LateralTechnique[]): PlanResponse {
@@ -53,6 +53,7 @@ describe('the execution graph advertises a schedule that works', () => {
 
     for (const technique of ALL_LATERAL_TECHNIQUES) {
       const graph = planFor(server, [technique]).executionGraph;
+      expect(graph?.nodes.length, `${technique} produced no graph nodes`).toBeGreaterThan(0);
       const nodes = graph?.nodes ?? [];
       nodes.forEach((node, i) => {
         const hard = node.dependencies.filter(d => d.type === 'hard');
@@ -97,19 +98,35 @@ describe('the execution graph advertises a schedule that works', () => {
     }
     const longest = Math.max(...perTechnique.values());
 
-    expect(groups.length, `expected about ${longest} rounds, got ${groups.length}`).toBe(longest);
+    // Rounds track the LONGEST technique, plus at most one for the terminal
+    // node — it soft-depends on every technique's final node, so when it is not
+    // already the deepest it claims a round of its own. Under signature
+    // grouping this tracked the NODE TOTAL instead (17 rounds for 19 nodes),
+    // because every later step got its own group.
+    expect(
+      groups.length,
+      `expected ${longest} or ${longest + 1} rounds, got ${groups.length}`
+    ).toBeLessThanOrEqual(longest + 1);
+    expect(groups.length).toBeGreaterThanOrEqual(longest);
 
-    // And more than the first round has to be genuinely parallel.
+    // More than the first round has to be genuinely parallel — that was the
+    // whole defect.
     const parallelRounds = groups.filter(g => g.length > 1).length;
     expect(parallelRounds, 'only the first round was parallel').toBeGreaterThan(1);
 
-    // maxParallelism must agree with the groups it is derived from.
-    expect(graph?.metadata.maxParallelism).toBe(Math.max(...groups.map(g => g.length)));
+    // Deliberately NOT asserting maxParallelism === max(group sizes): the
+    // generator computes it with that exact expression, so the assertion is a
+    // tautology that cannot fail. Assert against the technique count instead,
+    // which is an independent fact about the plan.
+    expect(graph?.metadata.maxParallelism, 'every technique should advance in round 1').toBe(
+      techniques.length
+    );
   });
 
   it('never puts two steps of one technique in the same round', () => {
     const server = new LateralThinkingServer();
     const graph = planFor(server, ['six_hats', 'scamper', 'concept_extraction']).executionGraph;
+    expect(graph?.metadata.parallelizableGroups.length, 'no rounds emitted').toBeGreaterThan(0);
     const byId = new Map((graph?.nodes ?? []).map(n => [n.id, n.technique]));
 
     for (const group of graph?.metadata.parallelizableGroups ?? []) {
@@ -121,6 +138,44 @@ describe('the execution graph advertises a schedule that works', () => {
     }
   });
 
+  it('schedules the session-ending node after everything else', () => {
+    // The terminal node carries nextStepNeeded: false and ends the session. It
+    // takes a SOFT dependency on every technique's final node so it lands last.
+    //
+    // Grouping by depth over hard edges only put it in the wrong round: with
+    // six_hats (7 steps) then po (4), its depth came from its own predecessor
+    // alone, so it landed in round 3 with three six_hats nodes in rounds 4-6 —
+    // telling a caller to end the session and then send more steps to it.
+    // Soft edges are non-blocking for execution but are still ordering, and a
+    // round is an ordering.
+    //
+    // six_hats+po specifically: the shape only breaks when the LAST technique
+    // is shorter than an earlier one.
+    const server = new LateralThinkingServer();
+    for (const techniques of [
+      ['six_hats', 'po'],
+      ['six_hats', 'scamper', 'po', 'triz'],
+    ] as LateralTechnique[][]) {
+      const graph = planFor(server, techniques).executionGraph;
+      const groups = graph?.metadata.parallelizableGroups ?? [];
+      const nodes = graph?.nodes ?? [];
+      const roundOf = (id: string) => groups.findIndex(g => g.includes(id));
+
+      const terminal = nodes.find(
+        n =>
+          (n as unknown as { parameters: { nextStepNeeded?: boolean } }).parameters
+            .nextStepNeeded === false
+      );
+      expect(terminal, 'no terminal node found').toBeDefined();
+
+      const after = nodes.filter(n => roundOf(n.id) > roundOf((terminal as GraphNode).id));
+      expect(
+        after.map(n => n.id),
+        `${techniques.join('+')}: nodes scheduled after the session-ending node`
+      ).toEqual([]);
+    }
+  });
+
   it('tells the caller each parallel branch needs its own session', () => {
     // Measured: two concurrent cross-process writes to ONE session lose a step,
     // 5 runs of 5. The same two writes under distinct sessionIds lose nothing.
@@ -128,7 +183,12 @@ describe('the execution graph advertises a schedule that works', () => {
     // safe has to travel with it rather than living only in the project docs.
     const server = new LateralThinkingServer();
     const plan = planFor(server, ['six_hats', 'scamper']);
-    const guidance = JSON.stringify(plan.parallelizationGuidance ?? plan.executionGraph ?? {});
+    // `executionGraph.instructions.executionGuidance` is where this lands.
+    // An earlier version read a `parallelizationGuidance` key first, which
+    // does not exist anywhere in src/ — a dead branch that would have made
+    // this pass off the fallback regardless.
+    expect(plan.executionGraph, 'no executionGraph on the plan').toBeDefined();
+    const guidance = JSON.stringify(plan.executionGraph?.instructions ?? {});
     expect(guidance.toLowerCase(), 'the plan never mentions a per-branch session').toMatch(
       /sessionid/
     );

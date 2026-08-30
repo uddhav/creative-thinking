@@ -375,25 +375,46 @@ export class ExecutionGraphGenerator {
 
     // Memoised longest-path depth, iterative rather than recursive: a plan can
     // carry hundreds of nodes and this runs on every planning call.
+    const onStack = new Set<string>();
     const depthOf = (start: ExecutionGraphNode): number => {
       const stack: ExecutionGraphNode[] = [start];
+      onStack.add(start.id);
       while (stack.length > 0) {
         const node = stack[stack.length - 1];
         if (depth.has(node.id)) {
           stack.pop();
+          onStack.delete(node.id);
           continue;
         }
         let deepest = -1;
         let waiting = false;
         for (const dep of node.dependencies) {
-          if (dep.type !== 'hard') continue;
+          // Soft dependencies count here, unlike in the old signature grouping.
+          // They are non-blocking for EXECUTION — a caller need not wait — but
+          // they are still ordering constraints, and a round is an ordering.
+          //
+          // Skipping them put the terminal node in the wrong round. It carries
+          // `nextStepNeeded: false`, ends the session, and takes a soft
+          // dependency on every technique's final node so it lands last. With
+          // soft edges ignored its depth came only from its own predecessor, so
+          // a plan of six_hats (7 steps) then po (4) scheduled the
+          // session-ending node in round 3 with three six_hats nodes in rounds
+          // 4-6 — telling a caller to end the session and then send more steps
+          // to it.
           const parent = byId.get(dep.nodeId);
           // A dependency on a node outside this graph cannot be scheduled
           // against, so it does not constrain the round.
           if (!parent) continue;
+          // A dependency already being resolved further down the stack means a
+          // cycle. `getDependencies` only ever points at a lower index so this
+          // is unreachable today, but without the check the stack would grow
+          // without bound and hang the planning call — a worse failure than any
+          // wrong round, and one no caller could recover from.
+          if (onStack.has(parent.id)) continue;
           const known = depth.get(parent.id);
           if (known === undefined) {
             stack.push(parent);
+            onStack.add(parent.id);
             waiting = true;
           } else if (known > deepest) {
             deepest = known;
@@ -402,6 +423,7 @@ export class ExecutionGraphGenerator {
         if (waiting) continue;
         depth.set(node.id, deepest + 1);
         stack.pop();
+        onStack.delete(node.id);
       }
       return depth.get(start.id) ?? 0;
     };
@@ -532,9 +554,20 @@ export class ExecutionGraphGenerator {
       ? ' Run each branch under its own sessionId: concurrent steps naming the same sessionId are last-writer-wins and silently drop work.'
       : '';
 
+    // Only describe soft dependencies when the graph actually contains some.
+    // Chaining every technique removed the last producer of them, and the
+    // guidance went on explaining how to treat a kind of edge no plan emits —
+    // the same shape of untrue statement this change is removing elsewhere.
+    const hasSoftDeps = nodes.some(node => node.dependencies.some(dep => dep.type === 'soft'));
+    const softNote = hasSoftDeps
+      ? ' Soft dependencies are preferential - better results if completed first, but not blocking.'
+      : '';
+
     const executionGuidance =
       (hasParallelNodes
-        ? 'Nodes with empty dependencies can execute immediately. For nodes with dependencies, wait for hard dependencies to complete before starting. Soft dependencies are preferential - better results if completed first, but not blocking. Check the dependencies array for each node to determine execution order.'
+        ? 'Nodes with empty dependencies can execute immediately. For nodes with dependencies, wait for hard dependencies to complete before starting.' +
+          softNote +
+          ' Check the dependencies array for each node to determine execution order.'
         : 'Execute nodes sequentially in the order provided. Each node depends on the previous one completing.') +
       sessionNote +
       terminalNote;

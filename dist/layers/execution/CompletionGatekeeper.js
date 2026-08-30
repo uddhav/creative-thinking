@@ -65,10 +65,36 @@ export class CompletionGatekeeper {
         // Both gatekeeper paths run only when the session is trying to end, so
         // incompleteness here is a real finding rather than progress.
         const metadata = this.completionTracker.calculateCompletionMetadata(session, plan, true);
-        const completionPercentage = metadata.overallProgress;
         const remainingSteps = input.totalSteps - input.currentStep;
-        // CRITICAL: Always block early termination if steps are skipped
-        const totalSkippedSteps = metadata.techniqueStatuses.reduce((sum, s) => sum + s.skippedSteps.length, 0);
+        // Score termination over the techniques this session actually STARTED.
+        //
+        // The plan advertises cross-technique parallelism, and running those
+        // branches concurrently needs one sessionId each — concurrent executions
+        // sharing a session lose a step, measured five runs out of five. But a
+        // branch session could not then finish: scoring against the whole plan made
+        // the other branches' steps read as skips, so a session holding all four
+        // `po` steps of a `po` + `triz` plan was refused with "4 steps were
+        // skipped". Shared session loses work, separate sessions could not
+        // complete, and the advertised schedule had no valid execution (#308).
+        //
+        // A technique with no history here was not skipped, it was not this
+        // session's business. The protection that matters is untouched: a started
+        // technique with an internal gap still blocks.
+        //
+        // The cost, stated rather than hidden: this cannot distinguish a deliberate
+        // branch from an abandoned plan, so a caller running one technique of five
+        // in one session can now terminate where it was previously refused. The
+        // unstarted techniques stay in the metadata, and the response names them.
+        const startedStatuses = metadata.techniqueStatuses.filter(s => s.completedSteps > 0);
+        // A session that ran nothing at all is degenerate; fall back to the
+        // plan-wide view rather than calling an empty session complete.
+        const scoredStatuses = startedStatuses.length > 0 ? startedStatuses : metadata.techniqueStatuses;
+        // Progress is scored over the same set, for the same reason: judging a
+        // finished branch against the whole plan reads 50% and blocks it below.
+        const scoredTotal = scoredStatuses.reduce((sum, s) => sum + s.totalSteps, 0);
+        const scoredDone = scoredStatuses.reduce((sum, s) => sum + s.completedSteps, 0);
+        const completionPercentage = scoredTotal > 0 ? scoredDone / scoredTotal : metadata.overallProgress;
+        const totalSkippedSteps = scoredStatuses.reduce((sum, s) => sum + s.skippedSteps.length, 0);
         if (totalSkippedSteps > 0) {
             return this.blockTermination(input, metadata, `❌ BLOCKED: ${totalSkippedSteps} steps were skipped. ALL steps MUST be completed sequentially.`);
         }
