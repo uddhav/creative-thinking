@@ -111,6 +111,6 @@ jobs:
           else
             gh release create "$TAG" \
               --title "$TAG" \
-              --notes "Standalone \`socketes\` binaries for macOS and Linux. Verify with \`shasum -a 256 -c SHA256SUMS\`. See [SOCKETES.md](https://github.com/${{ github.repository }}/blob/main/SOCKETES.md#installing-the-standalone-binary) for install + Gatekeeper bypass." \
+              --notes "Standalone \`socketes\` binaries for macOS and Linux. Verify with \`shasum -a 256 -c SHA256SUMS\`. See [SOCKETES.md](https://github.com/${{ github.repository }}/blob/main/SOCKETES.md#install) for install + Gatekeeper bypass." \
               dist/bin/socketes-* dist/bin/SHA256SUMS
           fi

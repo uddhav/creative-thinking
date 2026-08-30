@@ -79,10 +79,14 @@ match the convention `--step` is using. Note the plan response carries the plan-
 `estimatedSteps`; there is no `totalSteps` key on it. Both forms were accepted and neither was
 documented, which is how a technique running second in a plan came to report no insights at all.
 
-**`--next-step-needed` is required on every `execute` call and has no default.** Omitting it fails
-with `nextStepNeeded must be a boolean` — on any step, not just the last. Pass it while steps
-remain, and `--no-next-step-needed` on the final step. A session that never receives the negated
-form never completes, and an incomplete session emits no final synthesis.
+**`nextStepNeeded` is required on every `execute` call and has no default.** Leave the field unset
+and the call fails with `nextStepNeeded must be a boolean` — on any step, not just the last. Pass
+`--next-step-needed` while steps remain, and `--no-next-step-needed` on the final step. It is the
+**field** that is required, not the flag: `{"nextStepNeeded": true}` on stdin satisfies it with no
+flag at all, as does `{"output": "..."}` for `output`. `output` is required too, but fails
+differently — `Invalid output`, and it must be non-empty, so `""` and whitespace are both rejected.
+A session that never receives the negated form never completes, and an incomplete session emits no
+final synthesis.
 
 State on disk under `PERSISTENCE_PATH` (default `~/.creative-thinking`):
 
