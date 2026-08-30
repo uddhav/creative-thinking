@@ -57,6 +57,21 @@ const CRITICAL_STEPS: Record<
 };
 
 /**
+ * Which run of a repeated technique a history entry belongs to.
+ *
+ * The executor stamps `techniqueInstance` at write time, when it has the plan
+ * and the history in hand (#369). An entry with no stamp is run 0: the
+ * pre-stamp world only ever had one run, and a plan with no repeats writes no
+ * stamp because there is nothing to disambiguate.
+ *
+ * This is the single place both readers get the answer from. They previously
+ * each decided for themselves, all-or-nothing per session, and disagreed.
+ */
+function runOf(entry: SessionData['history'][number]): number {
+  return (entry as { techniqueInstance?: number }).techniqueInstance ?? 0;
+}
+
+/**
  * Tracks session completion and provides warnings
  */
 export class SessionCompletionTracker {
@@ -252,23 +267,19 @@ export class SessionCompletionTracker {
       // like the start of a new run — and blocked sessions in which every step
       // had actually been executed (#301).
       //
-      // Entries without a stamp pool, which is the behaviour that existed
-      // before instances were tracked. That keeps a gap that hides rather than
-      // refusing a complete session, and it is what sessions written before
-      // this change get.
+      // An entry without a stamp is run 0. The pre-stamp world only ever had
+      // one run, so that is what an unstamped entry always was — and a session
+      // started under a plan with no repeats, then resumed under one that has
+      // them, carries exactly that mix. Treating the stamp as all-or-nothing
+      // latched such a session back to pooling, so a single unstamped entry
+      // disabled instance tracking for the whole session and run 2's gap was
+      // masked by run 1 again — the original #301 defect, reachable today.
       const repeats = repeatCounts.get(workflow.technique) ?? 0;
       let techniqueHistory = pooled;
       if (repeats > 1) {
         const index = instanceCursor.get(workflow.technique) ?? 0;
         instanceCursor.set(workflow.technique, index + 1);
-        const stamped = pooled.filter(
-          h => (h as { techniqueInstance?: number }).techniqueInstance !== undefined
-        );
-        if (stamped.length === pooled.length && pooled.length > 0) {
-          techniqueHistory = pooled.filter(
-            h => (h as { techniqueInstance?: number }).techniqueInstance === index
-          );
-        }
+        techniqueHistory = pooled.filter(h => runOf(h) === index);
       }
 
       // Count completed steps and track step numbers
@@ -453,20 +464,16 @@ export class SessionCompletionTracker {
     // different hat. The executor's stamp is the only thing that knows, because
     // it had the history in hand when it wrote the entry.
     //
-    // Unstamped entries pool, as they did before #369 and as sessions persisted
-    // before it still do.
+    // An unstamped entry is run 0 — see `runOf`. This used to require EVERY
+    // entry to carry a stamp before separating runs at all, which latched any
+    // session with one unstamped entry back to pooling for good: a session
+    // started under a single-technique plan and resumed under a repeating one
+    // was called a duplicate on run 2's first step, permanently.
     const pooled = session.history.filter(h => h.technique === technique);
     const repeats = plan.workflow.filter(w => w.technique === technique).length > 1;
-    const allStamped =
-      pooled.length > 0 &&
-      pooled.every(h => (h as { techniqueInstance?: number }).techniqueInstance !== undefined);
-    const currentRun = allStamped
-      ? (pooled[pooled.length - 1] as { techniqueInstance?: number }).techniqueInstance
-      : undefined;
-    const techniqueHistory =
-      repeats && currentRun !== undefined
-        ? pooled.filter(h => (h as { techniqueInstance?: number }).techniqueInstance === currentRun)
-        : pooled;
+    const last = pooled[pooled.length - 1];
+    const currentRun = last ? runOf(last) : 0;
+    const techniqueHistory = repeats ? pooled.filter(h => runOf(h) === currentRun) : pooled;
 
     const { completedStepNumbers, submissionsByStep } = this.countTechniqueCompletedSteps(
       techniqueHistory,

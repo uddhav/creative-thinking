@@ -144,6 +144,27 @@ describe('out-of-order guidance reads the run it is guiding', () => {
     ).not.toMatch(/has not been recorded/);
   });
 
+  it('still separates runs when earlier entries carry no stamp', async () => {
+    // A session started under a plan with no repeats writes no stamp — the
+    // executor has nothing to disambiguate. Resumed under a plan that repeats
+    // the technique, its history is mixed: unstamped then stamped. Treating
+    // the stamp as all-or-nothing latched the whole session back to pooling,
+    // so one unstamped entry disabled the fix permanently. Unstamped entries
+    // are run 0, which is the only run the pre-stamp world ever had.
+    const sessionId = 'session_mixed_stamps';
+    const single = planFor(['po']);
+    for (let i = 1; i <= 4; i++) await step(single, sessionId, 'po', i);
+
+    const repeated = planFor(['po', 'triz', 'po']);
+    for (let i = 1; i <= 4; i++) await step(repeated, sessionId, 'triz', i);
+    const first = await step(repeated, sessionId, 'po', 1);
+
+    expect(
+      first.nextStepGuidance ?? '',
+      'a mixed-stamp session was pooled and called run 2 step 1 a duplicate'
+    ).not.toMatch(/had already been recorded/);
+  });
+
   it('still reports a real duplicate within one run', async () => {
     // The warning must not simply be switched off — that would be the other
     // failure, and this is the case it exists for.
