@@ -65,6 +65,41 @@ export declare class SessionCompletionTracker {
     /**
      * Group history entries by technique (only when needed for performance)
      */
+    /**
+     * Split one technique's history into its separate runs.
+     *
+     * A new instance begins where a step number recurs, because step numbers
+     * restart per run: `1,2,3,4,1,2,4` is a complete run followed by one missing
+     * step 3, not a single run of seven.
+     *
+     * Revisions are the case that makes this more than a `Set` check. A revision
+     * re-sends a step number it has already sent, and that must NOT open a new
+     * instance — so a repeat only counts as a boundary when the step number is
+     * one the run has seen AND the run has moved past it, i.e. the number is not
+     * simply the previous entry repeated.
+     */
+    /**
+     * The history belonging to one instance of a repeated technique.
+     *
+     * The two accepted numbering conventions fail differently, so each needs its
+     * own rule and neither covers the other.
+     *
+     * Under PLAN-WIDE numbering the instances never collide — `po` is steps 1-4
+     * then 9-12 — so an entry can be assigned by which instance's global range
+     * contains it. Splitting on a recurring step number finds only one instance
+     * here, leaves the second workflow entry empty, and combines with the
+     * "score only techniques the session started" rule to drop it from the gate
+     * entirely.
+     *
+     * Under TECHNIQUE-LOCAL numbering both instances say 1..4, so ranges cannot
+     * separate them and the recurrence rule is what is left.
+     *
+     * An entry is read as plan-wide when its own `totalSteps` matches the plan's
+     * and that differs from the technique's own count — the same signal the
+     * executor uses to tell the conventions apart.
+     */
+    private instanceHistory;
+    private splitIntoInstances;
     private groupHistoryByTechnique;
     /**
      * Count completed steps for a technique with proper validation

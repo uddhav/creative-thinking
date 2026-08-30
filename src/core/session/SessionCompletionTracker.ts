@@ -216,14 +216,45 @@ export class SessionCompletionTracker {
       ? this.groupHistoryByTechnique(session.history)
       : null;
 
+    // A plan may name the same technique twice, and those are two runs rather
+    // than one pool. Grouping by technique NAME handed both workflow entries
+    // the same history, so one instance's steps filled the other's holes:
+    // measured on ['po','triz','po'] with instance 2 missing step 3, the union
+    // of {1,2,3,4} and {1,2,4} has no gap, and the session ended reporting
+    // completed with skippedSteps empty (#301).
+    //
+    // Instances are filled in order. The input cannot identify them — under
+    // technique-local numbering `po` step 1 is the same request for either
+    // instance — so a new instance is taken to begin when a step number recurs,
+    // step numbers restarting being what separates one run from the next.
+    //
+    // Cost of that choice: a caller genuinely interleaving two instances gets
+    // them attributed by arrival order, so a gap is still caught but may be
+    // named against the wrong instance.
+    const instanceCursor = new Map<string, number>();
+
     let globalStepOffset = 0;
     for (const workflow of plan.workflow) {
       const techniqueSteps = workflow.steps.length;
 
       // Get the history entries for this technique
-      const techniqueHistory = isMultiTechnique
+      const pooled = isMultiTechnique
         ? historyByTechnique?.get(workflow.technique) || []
         : session.history.filter(h => h.technique === workflow.technique);
+
+      const repeats = plan.workflow.filter(w => w.technique === workflow.technique).length > 1;
+      let techniqueHistory = pooled;
+      if (repeats) {
+        const index = instanceCursor.get(workflow.technique) ?? 0;
+        instanceCursor.set(workflow.technique, index + 1);
+        techniqueHistory = this.instanceHistory(
+          pooled,
+          index,
+          globalStepOffset,
+          techniqueSteps,
+          plan.totalSteps
+        );
+      }
 
       // Count completed steps and track step numbers
       const { completedStepsForTechnique, completedStepNumbers } =
@@ -262,6 +293,88 @@ export class SessionCompletionTracker {
   /**
    * Group history entries by technique (only when needed for performance)
    */
+  /**
+   * Split one technique's history into its separate runs.
+   *
+   * A new instance begins where a step number recurs, because step numbers
+   * restart per run: `1,2,3,4,1,2,4` is a complete run followed by one missing
+   * step 3, not a single run of seven.
+   *
+   * Revisions are the case that makes this more than a `Set` check. A revision
+   * re-sends a step number it has already sent, and that must NOT open a new
+   * instance — so a repeat only counts as a boundary when the step number is
+   * one the run has seen AND the run has moved past it, i.e. the number is not
+   * simply the previous entry repeated.
+   */
+  /**
+   * The history belonging to one instance of a repeated technique.
+   *
+   * The two accepted numbering conventions fail differently, so each needs its
+   * own rule and neither covers the other.
+   *
+   * Under PLAN-WIDE numbering the instances never collide — `po` is steps 1-4
+   * then 9-12 — so an entry can be assigned by which instance's global range
+   * contains it. Splitting on a recurring step number finds only one instance
+   * here, leaves the second workflow entry empty, and combines with the
+   * "score only techniques the session started" rule to drop it from the gate
+   * entirely.
+   *
+   * Under TECHNIQUE-LOCAL numbering both instances say 1..4, so ranges cannot
+   * separate them and the recurrence rule is what is left.
+   *
+   * An entry is read as plan-wide when its own `totalSteps` matches the plan's
+   * and that differs from the technique's own count — the same signal the
+   * executor uses to tell the conventions apart.
+   */
+  private instanceHistory(
+    pooled: SessionData['history'],
+    index: number,
+    globalStepOffset: number,
+    techniqueSteps: number,
+    planTotalSteps: number
+  ): SessionData['history'] {
+    const usesPlanWide =
+      planTotalSteps !== techniqueSteps &&
+      pooled.some(entry => (entry as { totalSteps?: number }).totalSteps === planTotalSteps);
+
+    if (usesPlanWide) {
+      const low = globalStepOffset + 1;
+      const high = globalStepOffset + techniqueSteps;
+      return pooled.filter(entry => entry.currentStep >= low && entry.currentStep <= high);
+    }
+
+    return this.splitIntoInstances(pooled)[index] ?? [];
+  }
+
+  private splitIntoInstances(history: SessionData['history']): SessionData['history'][] {
+    if (history.length === 0) return [];
+
+    const instances: SessionData['history'][] = [];
+    let current: SessionData['history'] = [];
+    let seen = new Set<number>();
+    let previousStep: number | undefined;
+
+    for (const entry of history) {
+      const step = entry.currentStep;
+      const isRevision = (entry as { isRevision?: boolean }).isRevision === true;
+      const opensNewRun =
+        current.length > 0 && !isRevision && seen.has(step) && step !== previousStep;
+
+      if (opensNewRun) {
+        instances.push(current);
+        current = [];
+        seen = new Set<number>();
+      }
+
+      current.push(entry);
+      seen.add(step);
+      previousStep = step;
+    }
+
+    if (current.length > 0) instances.push(current);
+    return instances;
+  }
+
   private groupHistoryByTechnique(
     history: SessionData['history']
   ): Map<string, SessionData['history']> {
