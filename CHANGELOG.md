@@ -1,3 +1,9 @@
+## [v2.6.3] - 2026-08-30
+
+### Changes from PR #369
+
+- fix: track repeated instances of a technique separately
+
 ## [v2.6.2] - 2026-08-30
 
 ### Changes from PR #366
