@@ -152,6 +152,38 @@ describe('repeated instances of one technique are tracked separately', () => {
     expect(last.completed, 'a complete session did not report completion').toBe(true);
   });
 
+  it('catches a gap in run 2 when run 1 predates the stamp', async () => {
+    // A session started under a plan with NO repeats writes no stamp — there is
+    // nothing to disambiguate. Resumed under a plan that repeats the technique,
+    // its history is mixed: unstamped, then stamped. The tracker treated the
+    // stamp as all-or-nothing and pooled the whole session on seeing one
+    // unstamped entry, so run 1's steps masked run 2's hole — the original
+    // #301 defect, reachable today rather than only from legacy data.
+    //
+    // An unstamped entry is run 0, because the pre-stamp world only ever had
+    // one run. That is what lets the two halves of this session be told apart.
+    const sessionId = 'session_mixed_stamp_gap';
+    const single = planFor(['po']);
+    for (let i = 1; i <= 4; i++) await step(single, sessionId, 'po', i, 4);
+
+    const repeated = planFor(['po', 'triz', 'po']);
+    for (let i = 1; i <= 4; i++) await step(repeated, sessionId, 'triz', i, 4);
+    // Run 2 leaves a hole at step 3.
+    await step(repeated, sessionId, 'po', 1, 4);
+    await step(repeated, sessionId, 'po', 2, 4);
+    const last = await step(repeated, sessionId, 'po', 4, 4, true);
+
+    expect(last.blocked, "run 2's gap was masked by the unstamped run 1").toBe(true);
+    expect(last.reason ?? '').toMatch(/skipped/i);
+    // Exactly one step is missing across the whole plan: run 2's step 3. A
+    // pooled read reports zero; a read that mis-assigned the unstamped entries
+    // would report more.
+    expect(
+      (last as { completionStatus?: { skippedSteps?: number } }).completionStatus?.skippedSteps,
+      'expected exactly the one hole in run 2'
+    ).toBe(1);
+  });
+
   it('leaves single-instance plans alone', async () => {
     const planId = planFor(['po', 'triz']);
     const sessionId = 'session_no_repeat';

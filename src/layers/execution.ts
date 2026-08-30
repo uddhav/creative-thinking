@@ -144,13 +144,15 @@ function irreversibleMatrixCells(input: ExecuteThinkingStepInput): string[] {
 /**
  * Which run of a repeated technique this step belongs to, or undefined.
  *
- * Undefined whenever the answer is not certain — a plan without repeats, a
- * technique-local sequence that does not fill its runs cleanly, or anything
- * else ambiguous. The reader pools on absence, which is the behaviour that
- * existed before instances were tracked at all. That bias is deliberate: the
- * failure it keeps is a gap that hides, and the failure it avoids is a
- * complete session refused. Inferring instead of stamping produced the second
- * one in four measured shapes (#301).
+ * Undefined whenever the executor cannot know — a plan without repeats has
+ * nothing to disambiguate. The reader gives an absent stamp the run of the
+ * nearest stamped entry before it, else run 0 (see `runsOf` in
+ * SessionCompletionTracker). So an entry written under a non-repeating plan in
+ * the middle of run 1 stays in run 1, rather than being read as run 0 and
+ * reported as a hole at a step the caller had sent. An earlier reader pooled
+ * the whole session on any absence, which latched it back to the original
+ * gap-masking; before that, inferring instead of stamping produced false
+ * blocks in four measured shapes (#301).
  */
 function resolveTechniqueInstance(
   plan: PlanThinkingSessionOutput | undefined,
@@ -540,8 +542,10 @@ export async function executeThinkingStep(
         // every step had in fact been executed (#301).
         //
         // Absent on entries written before this, and on plans with no repeat.
-        // The reader treats absence as "pool them", which is the pre-existing
-        // behaviour: a gap that hides rather than a complete session refused.
+        // The reader gives an absent stamp the run of the nearest stamped entry
+        // before it, else run 0 — see `runsOf`. It must NOT read absence as a
+        // literal 0: an entry written under a non-repeating plan mid-run-1 would
+        // then be reported as a hole in run 1 at a step the caller had sent.
         techniqueInstance: resolveTechniqueInstance(plan, session, input, techniqueLocalStep),
         timestamp: new Date().toISOString(),
       };
