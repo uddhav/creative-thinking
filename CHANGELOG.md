@@ -1,3 +1,9 @@
+## [v2.6.5] - 2026-08-30
+
+### Changes from PR #374
+
+- fix: treat an unstamped history entry as run 0, in both readers
+
 ## [v2.6.4] - 2026-08-30
 
 ### Changes from PR #372
