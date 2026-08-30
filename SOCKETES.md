@@ -57,8 +57,9 @@ or terminal, use `socketes`. Otherwise, the `creative-thinking` MCP server may f
 
 For the npm-based install paths (A, B, C):
 
-- **Node.js 18+** (the build targets ES2022; older Node versions will fail at module load). Check
-  with `node --version`.
+- **Node.js 20.19+** — the `engines` range in `package.json`, and what CI covers (20.x and 22.x).
+  Node 18 was dropped when yargs 18 raised its floor; it had been EOL since 2025-04-30. Check with
+  `node --version`.
 - **Git** if you intend to install from GitHub (the package is not currently on the npm registry, so
   npm pulls source via Git).
 
@@ -380,6 +381,7 @@ socketes session <op> [options]
 
 | Op | Useful flags | Behavior | | -------- | --------------------------------------------------- |
 ----------------------------------------------------------------------------------------------------------
+
 | ---------------------------- |
 ------------------------------------------------------------------------------------------- | |
 `list` | `--limit <n>`, `--technique <id>`,
