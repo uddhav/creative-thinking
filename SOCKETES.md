@@ -45,8 +45,9 @@ The `creative-thinking` package exposes **two binaries with different shapes**:
 | `socketes`          | Short-lived CLI. One subcommand per invocation, then exits. State on disk. | Skills, shell scripts, ad-hoc terminal use, anywhere subprocess fan-out is easy. |
 | `creative-thinking` | Long-running stdio MCP server. Speaks JSON-RPC over stdin/stdout.          | Clients that already speak MCP (Claude Desktop, Cursor, etc.).                   |
 
-Both binaries dispatch through the same in-process handlers; the contract (three tools, 28
-techniques, 8 built-in personas, debate mode, etc.) is identical. The CLI exists because
+Both binaries dispatch through the same in-process handlers; the contract is identical — three
+tools, the same technique set (`ALL_LATERAL_TECHNIQUES` in `src/types/index.ts`), the same built-in
+personas (`BUILTIN_PERSONAS` in `src/personas/catalog.ts`), debate mode. The CLI exists because
 skill-driven flows where the model is the orchestrator are easier to build against short-lived
 processes than against a long-running server.
 
@@ -227,9 +228,9 @@ socketes execute \
   --next-step-needed
 ```
 
-The plan is now under `state/plans/<planId>.json` and the session under
-`state/sessions/<sessionId>.json`. They survive shell restarts, machine reboots, and month-long gaps
-between steps.
+The plan is now under `$PERSISTENCE_PATH/plans/<planId>.json` and the session under
+`$PERSISTENCE_PATH/sessions/<sessionId>.json`. They survive shell restarts, machine reboots, and
+month-long gaps between steps.
 
 ## Mental model
 
@@ -255,9 +256,9 @@ flowchart LR
     Skill[Skill / Shell] -->|"socketes discover"| D[discover output]
     D -->|techniques| Skill
     Skill -->|"socketes plan"| P[planId]
-    P -->|persisted| Disk[(state/plans/)]
+    P -->|persisted| Disk[(plans/)]
     Skill -->|"socketes execute"| E[sessionId, history]
-    E -->|persisted| Disk2[(state/sessions/)]
+    E -->|persisted| Disk2[(sessions/)]
     Skill -->|"loop until done"| Skill
 ```
 
@@ -295,7 +296,7 @@ the response is just structured advice.
 ### `socketes plan`
 
 Build a structured workflow from chosen techniques. Returns a `planId` and persists the plan to
-`state/plans/<planId>.json`.
+`plans/<planId>.json`.
 
 | Flag                         | Type                                         | Notes                                                         |
 | ---------------------------- | -------------------------------------------- | ------------------------------------------------------------- |
@@ -324,22 +325,22 @@ hand.
 ### `socketes execute`
 
 Run one step of a planned thinking session. Mints a `sessionId` on the first call (or you can
-provide one); appends to history; auto-saves the session to `state/sessions/<sessionId>.json` after
-every step.
+provide one); appends to history; auto-saves the session to `sessions/<sessionId>.json` after every
+step.
 
-| Flag                 | Type                         | Notes                                                                                         |
-| -------------------- | ---------------------------- | --------------------------------------------------------------------------------------------- |
-| `--plan <id>`        | string (required)            | `planId` from `socketes plan`.                                                                |
-| `--session <id>`     | string                       | Omit on the first step; pass it back on every subsequent step.                                |
-| `--technique <id>`   | string (required)            | Must be one of the techniques in the plan.                                                    |
-| `--problem <s>`      | string (optional)            | Resolved from `--plan` when omitted. Send it only to override; a sent value wins.             |
-| `--step <n>`         | number (required, 1-indexed) | Step within this technique.                                                                   |
-| `--total-steps <n>`  | number (required)            | Total steps for this technique.                                                               |
-| `--output <s>`       | string (required)            | The model's thinking for this step. May be empty string but the field must be present.        |
-| `--next-step-needed` | boolean                      | Pass when more steps follow. Without it, yargs leaves it `undefined` (often the right thing). |
-| `--no-auto-save`     | boolean                      | Default is auto-save on. Pass this to skip persistence for this step (rarely useful).         |
-| `--persona <id>`     | string                       | Speaking persona id (debate mode only).                                                       |
-| `--verbosity <mode>` | `minimal` \| `full`          | Response size. `minimal` drops all echoes of your own input (see below); default `full`.      |
+| Flag                 | Type                         | Notes                                                                                          |
+| -------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------- |
+| `--plan <id>`        | string (required)            | `planId` from `socketes plan`.                                                                 |
+| `--session <id>`     | string                       | Omit on the first step; pass it back on every subsequent step.                                 |
+| `--technique <id>`   | string (required)            | Must be one of the techniques in the plan.                                                     |
+| `--problem <s>`      | string (optional)            | Resolved from `--plan` when omitted. Send it only to override; a sent value wins.              |
+| `--step <n>`         | number (required, 1-indexed) | Step within this technique.                                                                    |
+| `--total-steps <n>`  | number (required)            | Total steps for this technique.                                                                |
+| `--output <s>`       | string (required)            | The model's thinking for this step. Must be non-empty — `""` and whitespace are both rejected. |
+| `--next-step-needed` | boolean (required)           | Pass it while steps remain, `--no-next-step-needed` on the last. No default; see gotcha 9.     |
+| `--no-auto-save`     | boolean                      | Default is auto-save on. Pass this to skip persistence for this step (rarely useful).          |
+| `--persona <id>`     | string                       | Speaking persona id (debate mode only).                                                        |
+| `--verbosity <mode>` | `minimal` \| `full`          | Response size. `minimal` drops all echoes of your own input (see below); default `full`.       |
 
 **Long-tail technique-specific fields** (`hatColor`, `scamperAction`, `risks`, `extractedConcepts`,
 etc.) are easiest to pass via JSON-on-stdin. See [Flags vs JSON-on-stdin](#flags-vs-json-on-stdin).
@@ -556,7 +557,8 @@ collide.
 
 ## Personas and debate mode
 
-Personas inject viewpoint and bias into the thinking process. Built-in IDs (8 of them):
+Personas inject viewpoint and bias into the thinking process. The built-in IDs, from
+`BUILTIN_PERSONAS` in `src/personas/catalog.ts` — which is the list that decides, not this one:
 
 ```
 rory_sutherland
@@ -567,6 +569,7 @@ security_engineer
 veritasium
 design_thinker
 nassim_taleb
+charlie_munger
 ```
 
 Three ways to use them:
@@ -686,8 +689,8 @@ In rough order of how often they bite people:
    in-memory session, so the save handler returns `SESSION_NOT_FOUND: No active session to save`.
    Sessions are already auto-saved by every `execute` step (`autoSave: true` is defaulted by the
    CLI). To label or tag a session post-hoc, you currently need to edit the session file under
-   `state/sessions/` directly — which is unsafe because of the version envelope. Treat session
-   metadata as set-on-create.
+   `sessions/` directly — which is unsafe because of the version envelope. Treat session metadata as
+   set-on-create.
 
 2. **Don't merge stderr into stdout.** stderr carries diagnostic logs that aren't JSON
    (`[SessionManager] Persistence adapter initialized successfully` and friends). Piping
@@ -699,17 +702,18 @@ In rough order of how often they bite people:
    bin explicitly: `npx -y -p github:uddhav/creative-thinking socketes <command>`.
 
 4. **Parallel execution against the same sessionId silently corrupts state.** `SessionLock` is
-   in-process only; two concurrent CLI invocations each load → mutate → write the same session file,
-   and the last writer wins. Use distinct sessionIds for parallel branches. The plan's
-   `parallelizableGroups` does not encode session safety — it only describes data dependencies
-   between nodes. You are responsible for routing them to safe sessions.
+   in-process only, and even there it is keyed `sessionId:technique`, so it serialises nothing
+   across two techniques on one session. Two concurrent CLI invocations each load → mutate → write
+   the same session file, and the last writer wins. Use distinct sessionIds for parallel branches.
+   The plan's `parallelizableGroups` does not encode session safety — it only describes data
+   dependencies between nodes. You are responsible for routing them to safe sessions.
 
 5. **`session_<planId>` is the auto-derived sessionId when you omit `--session`.** This is fine for
    sequential single-technique flows but a footgun for multi-technique plans: every technique
    without an explicit `--session` collides on the same derived id. For multi-technique parallel
    plans, pass `--session <distinct-id>` per technique.
 
-6. **Plans are never auto-deleted from disk.** The CLI writes `state/plans/<planId>.json` and never
+6. **Plans are never auto-deleted from disk.** The CLI writes `plans/<planId>.json` and never
    garbage-collects. Sessions are managed by the filesystem persistence adapter (TTL policies live
    there). For plans, periodic `find` cleanup is on you.
 
@@ -717,14 +721,21 @@ In rough order of how often they bite people:
    invocation starts with no plans and no sessions — the disk store is bypassed. Either unset it or
    set it to `filesystem` explicitly.
 
-8. **The `output` field is required even when empty.** `execute` validates field presence, not
-   content. `--output ""` is acceptable; omitting `--output` is a validation error
-   (`E101 / Missing required field: output`).
+8. **`output` is required and must be non-empty.** `--output ""` fails with `Invalid output`, and
+   whitespace-only (`--output "   "`) fails with `output cannot be empty; Invalid output`. It is not
+   a presence check you can wave through with an empty string — a step has to carry actual text.
+   What is required is the **field**, not the flag: supplying `{"output": "..."}` on stdin and
+   omitting `--output` works fine (see [Flags vs JSON-on-stdin](#flags-vs-json-on-stdin)). Note the
+   merge rule bites here — a flag you passed wins over stdin even when empty, so `--output ""`
+   combined with a good stdin `output` still fails.
 
-9. **`--next-step-needed` is a tri-state.** Pass it (true), pass `--no-next-step-needed` (false), or
-   omit it (undefined → server defaults to whatever the technique workflow says). The third option
-   is usually what you want, but be explicit on the final step: `--no-next-step-needed` triggers
-   session-completion logic (final summary, telemetry, etc.).
+9. **`nextStepNeeded` is required on every `execute`, and has no default.** Pass
+   `--next-step-needed` while steps remain and `--no-next-step-needed` on the final step. There is
+   no omit-to-default branch: leave the field unset and the call fails with
+   `nextStepNeeded must be a boolean`, on any step, not just the last. As with `output`, it is the
+   field that is required — `{"nextStepNeeded": true}` on stdin satisfies it with no flag at all.
+   The negated form is what triggers session-completion logic (final summary, telemetry), so a
+   session that never receives it never completes and emits no final synthesis.
 
 10. **Encoded session tokens (the base64 `planId`/`sessionId` from the MCP server) are not used in
     CLI mode.** The CLI uses short opaque IDs and disk lookup. If you somehow paste an encoded token
@@ -741,21 +752,26 @@ In rough order of how often they bite people:
     `executionGraph.metadata.parallelizableGroups`, `executionGraph.instructions`).
 
 13. **Stale plans cause `E202: Plan not found`.** This means the planId is missing from the
-    in-process `PlanManager` **and** from `state/plans/`. The most common cause is mixing two
+    in-process `PlanManager` **and** from `plans/`. The most common cause is mixing two
     `PERSISTENCE_PATH` values across a session — for example, an env var change between
     `socketes plan` and `socketes execute`. Lock the path early.
 
 14. **The MCP server bin and the CLI share the same source.** Importing `LateralThinkingServer` from
-    `src/index.ts` does **not** start an MCP server (the boot is gated behind an `isMcpEntryPoint`
-    check). If you fork or wrap socketes, keep that gate intact.
+    `src/index.ts` does **not** start an MCP server: that file has no top-level side effects, and
+    the whole MCP bootstrap (transport, signal handlers, shutdown) lives in
+    `src/mcp-server-main.ts`, which is the `creative-thinking` bin's entry point. If you fork or
+    wrap socketes, keep `src/index.ts` import-safe — put new side effects in `mcp-server-main.ts` or
+    a separate entry file. An earlier `isMcpEntryPoint` guard did this job and was deliberately
+    removed: it relied on `import.meta.url`, which `bun build --compile` collapses onto the bundle
+    entry, so it returned `true` inside the compiled `socketes` binary and started an MCP server
+    nobody asked for. Don't reintroduce that pattern in a fork.
 
 ## Troubleshooting
 
 ### "Plan 'plan_XYZ' not found"
 
-Error code `E202`. Either the planId is wrong, the file under `state/plans/<planId>.json` was
-deleted, or `PERSISTENCE_PATH` differs from the one used by the original `socketes plan` call.
-Check:
+Error code `E202`. Either the planId is wrong, the file under `plans/<planId>.json` was deleted, or
+`PERSISTENCE_PATH` differs from the one used by the original `socketes plan` call. Check:
 
 ```bash
 ls "$PERSISTENCE_PATH/plans/" | grep "$PLAN"
@@ -777,7 +793,7 @@ The error JSON went to stderr. Re-run with `2>err.log`, then read `err.log`.
 
 The previous step's session didn't get persisted, or the current step's process didn't load it. Most
 often this means `PERSISTENCE_TYPE` is `memory` (disk bypassed), or `PERSISTENCE_PATH` differs
-across calls. Either way, the session file under `state/sessions/<sessionId>.json` should exist and
+across calls. Either way, the session file under `sessions/<sessionId>.json` should exist and
 contain the prior history.
 
 ### `[SessionManager] No persistence configured. Using in-memory storage only.`
