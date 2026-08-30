@@ -85,99 +85,33 @@ export class ExecutionGraphGenerator {
      * Determine dependencies based on technique characteristics
      */
     static getDependencies(technique, stepIndex, startNodeId) {
-        // There is no parallel-steps class any more.
+        // Every technique chains. There is no parallel class, no sequential class
+        // and no hybrid class any more, because all three produced the same edges
+        // or produced edges that were unsafe to follow.
         //
-        // `six_hats`, `scamper` and `nine_windows` were listed here and emitted no
-        // dependencies at all, on the reasoning that their steps are independent
-        // perspectives. As a claim about the method that is defensible; as a claim
-        // about execution it was not. The steps of one technique run against one
-        // sessionId, and concurrent writes to a session are last-writer-wins and
-        // unprotected across processes — so the graph was advertising a race, and
-        // contradicting the documented guarantee that steps within one technique
-        // are ordered.
+        // #327 removed the parallel class: six_hats, scamper and nine_windows
+        // emitted no dependencies at all, on the reasoning that their steps are
+        // independent perspectives. Defensible about the method, false about
+        // execution — the steps of one technique run against one sessionId.
         //
-        // They now chain like the other 29. Dependencies and parallelizableGroups
-        // say the same thing, rather than a client getting a different schedule
-        // depending on which field it reads.
-        // Techniques with sequential steps (each depends on previous)
-        const sequentialTechniques = [
-            'design_thinking',
-            'disney_method',
-            'triz',
-            'po',
-        ];
-        // Hybrid techniques with custom patterns
-        const hybridTechniques = [
-            'concept_extraction',
-            'neural_state',
-            'temporal_work',
-            'cultural_integration',
-            'collective_intel',
-        ];
-        if (sequentialTechniques.includes(technique)) {
-            // Each step depends on the previous one (hard dependency)
-            if (stepIndex === 0) {
-                return [];
-            }
-            return [{ nodeId: `node-${startNodeId + stepIndex}`, type: 'hard' }];
-        }
-        if (hybridTechniques.includes(technique)) {
-            // Custom dependency patterns for hybrid techniques
-            return this.getHybridDependencies(technique, stepIndex, startNodeId);
-        }
-        // Default to sequential (hard dependency)
+        // The sequential class then had a body byte-identical to the default, so
+        // listing a technique in it changed nothing, and two of the five hybrids
+        // fell through to a hybrid default that was itself identical to the outer
+        // one. Of the three hybrids that did differ, all emitted fan-out: two steps
+        // depending on the same earlier step, i.e. concurrent with each other.
+        //
+        // That is the same shape #327 removed, and it is now measured rather than
+        // argued. Two concurrent cross-process writes to one session lose a step,
+        // five runs out of five; the same two writes under distinct sessionIds lose
+        // nothing. neural_state's fan-out was reachable; its `return []` for a
+        // fifth step was not, because the technique has three.
+        //
+        // Cross-technique parallelism is unaffected: independent techniques still
+        // advance concurrently, which is what `parallelizableGroups` expresses.
         if (stepIndex === 0) {
             return [];
         }
         return [{ nodeId: `node-${startNodeId + stepIndex}`, type: 'hard' }];
-    }
-    /**
-     * Get dependencies for hybrid techniques
-     */
-    static getHybridDependencies(technique, stepIndex, startNodeId) {
-        switch (technique) {
-            case 'concept_extraction':
-                // Steps 2-3 can be parallel after step 1
-                if (stepIndex === 0)
-                    return [];
-                if (stepIndex === 1 || stepIndex === 2)
-                    return [{ nodeId: `node-${startNodeId + 1}`, type: 'hard' }];
-                // Step 4 has soft dependency on 2-3 for better synthesis
-                return [
-                    { nodeId: `node-${startNodeId + 2}`, type: 'soft' },
-                    { nodeId: `node-${startNodeId + 3}`, type: 'hard' },
-                ];
-            case 'neural_state':
-                // Steps 2-3 can be parallel after step 1, step 4 depends on all
-                if (stepIndex === 0)
-                    return [];
-                if (stepIndex === 1 || stepIndex === 2)
-                    return [{ nodeId: `node-${startNodeId + 1}`, type: 'hard' }];
-                if (stepIndex === 3)
-                    return [
-                        { nodeId: `node-${startNodeId + 2}`, type: 'hard' },
-                        { nodeId: `node-${startNodeId + 3}`, type: 'hard' },
-                    ];
-                return [];
-            case 'temporal_work':
-                // First 3 steps can inform each other (soft deps), last 2 depend on them
-                if (stepIndex === 0)
-                    return [];
-                if (stepIndex === 1)
-                    return [{ nodeId: `node-${startNodeId + 1}`, type: 'soft' }];
-                if (stepIndex === 2)
-                    return [
-                        { nodeId: `node-${startNodeId + 1}`, type: 'soft' },
-                        { nodeId: `node-${startNodeId + 2}`, type: 'soft' },
-                    ];
-                // Steps 4-5 need the temporal context from earlier steps
-                return [{ nodeId: `node-${startNodeId + 3}`, type: 'hard' }];
-            default:
-                // Default to sequential for other hybrid techniques
-                if (stepIndex === 0)
-                    return [];
-                return [{ nodeId: `node-${startNodeId + stepIndex}`, type: 'hard' }];
-        }
     }
     /**
      * Build complete parameters for execute_thinking_step.
@@ -331,61 +265,99 @@ export class ExecutionGraphGenerator {
         return '2x'; // Minimal parallelism
     }
     /**
-     * Find groups of nodes that can execute in parallel
-     * Optimized from O(n²) to O(n) using Map for grouping
+     * Rounds of nodes that may run concurrently.
      *
-     * Never groups two steps of the SAME technique, even when the dependency
-     * classification says their steps are independent — `six_hats`, `scamper`
-     * and `nine_windows` are listed as parallel techniques, so all seven
-     * six_hats nodes shared one empty dependency signature and landed in a
-     * single group of seven.
+     * Grouped by depth in the dependency graph: a node's round is one past the
+     * deepest node it hard-depends on, so two nodes share a round exactly when
+     * neither can reach the other. Soft dependencies are advisory and do not
+     * block, so they do not affect depth.
      *
-     * Two reasons that was wrong to emit. It contradicted the documented
-     * guarantee that steps within one technique are ordered, naming this very
-     * field as the authority on what may run concurrently. And the steps of one
-     * technique run against one sessionId: concurrent writes there are
-     * last-writer-wins, and unprotected across processes. Whether the six hats
-     * are conceptually independent is a separate question from whether they can
-     * safely share a session, and only the second one decides this field.
+     * This replaced grouping by identical hard-dependency signature, which was
+     * sufficient but not necessary and under-reported badly. Step 2 of technique
+     * A depends on A's step 1 and step 2 of B on B's step 1, so their signatures
+     * differed and they never shared a round even though the techniques are
+     * independent. A four-technique plan reported `maxParallelism: 4` and then
+     * placed all twenty remaining nodes in groups of one — only the first round
+     * was ever parallel, and the metadata contradicted itself (#308).
+     *
+     * The invariant #327 established still holds, and now holds by construction
+     * rather than by a post-hoc split: two steps of one technique are always
+     * chained, so one is always deeper than the other and they cannot land in the
+     * same round.
      */
     static findParallelizableGroups(nodes) {
-        // Group nodes by their hard dependency signature (soft deps don't block parallel execution)
-        const depGroups = new Map();
-        for (const node of nodes) {
-            // Create a consistent key from hard dependencies only
-            // Optimized: build array in single pass without intermediate filter/map
-            const hardDeps = [];
-            for (const dep of node.dependencies) {
-                if (dep.type === 'hard') {
-                    hardDeps.push(dep.nodeId);
+        const byId = new Map(nodes.map(node => [node.id, node]));
+        const depth = new Map();
+        // Memoised longest-path depth, iterative rather than recursive: a plan can
+        // carry hundreds of nodes and this runs on every planning call.
+        const onStack = new Set();
+        const depthOf = (start) => {
+            const stack = [start];
+            onStack.add(start.id);
+            while (stack.length > 0) {
+                const node = stack[stack.length - 1];
+                if (depth.has(node.id)) {
+                    stack.pop();
+                    onStack.delete(node.id);
+                    continue;
                 }
+                let deepest = -1;
+                let waiting = false;
+                for (const dep of node.dependencies) {
+                    // Soft dependencies count here, unlike in the old signature grouping.
+                    // They are non-blocking for EXECUTION — a caller need not wait — but
+                    // they are still ordering constraints, and a round is an ordering.
+                    //
+                    // Skipping them put the terminal node in the wrong round. It carries
+                    // `nextStepNeeded: false`, ends the session, and takes a soft
+                    // dependency on every technique's final node so it lands last. With
+                    // soft edges ignored its depth came only from its own predecessor, so
+                    // a plan of six_hats (7 steps) then po (4) scheduled the
+                    // session-ending node in round 3 with three six_hats nodes in rounds
+                    // 4-6 — telling a caller to end the session and then send more steps
+                    // to it.
+                    const parent = byId.get(dep.nodeId);
+                    // A dependency on a node outside this graph cannot be scheduled
+                    // against, so it does not constrain the round.
+                    if (!parent)
+                        continue;
+                    // A dependency already being resolved further down the stack means a
+                    // cycle. `getDependencies` only ever points at a lower index so this
+                    // is unreachable today, but without the check the stack would grow
+                    // without bound and hang the planning call — a worse failure than any
+                    // wrong round, and one no caller could recover from.
+                    if (onStack.has(parent.id))
+                        continue;
+                    const known = depth.get(parent.id);
+                    if (known === undefined) {
+                        stack.push(parent);
+                        onStack.add(parent.id);
+                        waiting = true;
+                    }
+                    else if (known > deepest) {
+                        deepest = known;
+                    }
+                }
+                if (waiting)
+                    continue;
+                depth.set(node.id, deepest + 1);
+                stack.pop();
+                onStack.delete(node.id);
             }
-            hardDeps.sort();
-            const depKey = JSON.stringify(hardDeps);
-            if (!depGroups.has(depKey)) {
-                depGroups.set(depKey, []);
+            return depth.get(start.id) ?? 0;
+        };
+        const rounds = new Map();
+        for (const node of nodes) {
+            const level = depthOf(node);
+            const round = rounds.get(level);
+            if (round) {
+                round.push(node.id);
             }
-            const group = depGroups.get(depKey);
-            if (group) {
-                group.push(node);
+            else {
+                rounds.set(level, [node.id]);
             }
         }
-        // Split each dependency group so no technique appears twice in one round.
-        // Nodes keep their order, so a technique's k-th node lands in round k and
-        // different techniques' k-th nodes share it — techniques advance
-        // concurrently, steps within a technique do not.
-        const rounds = [];
-        for (const group of depGroups.values()) {
-            const seenPerTechnique = new Map();
-            const localRounds = [];
-            for (const node of group) {
-                const round = seenPerTechnique.get(node.technique) ?? 0;
-                seenPerTechnique.set(node.technique, round + 1);
-                (localRounds[round] ??= []).push(node.id);
-            }
-            rounds.push(...localRounds);
-        }
-        return rounds.filter(group => group.length > 0);
+        return [...rounds.entries()].sort((a, b) => a[0] - b[0]).map(([, ids]) => ids);
     }
     /**
      * Find the critical path through the graph
@@ -467,9 +439,30 @@ export class ExecutionGraphGenerator {
         const parallelizationBenefits = this.generateParallelizationBenefits(nodes, metadata);
         // Generate execution guidance
         const terminalNote = ' The final node carries nextStepNeeded: false and ends the session - execute it only after every other node has completed.';
+        // The condition that makes this schedule safe travels with the schedule.
+        // Measured: two concurrent executions naming ONE sessionId lose a step,
+        // five runs out of five, because each process loads the session, appends
+        // its own step and writes the whole thing back. The same two executions
+        // under distinct sessionIds lose nothing. Saying so only in the project
+        // docs left the graph handing out a schedule whose safety condition the
+        // caller had no way to read (#308).
+        const sessionNote = hasParallelNodes
+            ? ' Run each branch under its own sessionId: concurrent steps naming the same sessionId are last-writer-wins and silently drop work.'
+            : '';
+        // Only describe soft dependencies when the graph actually contains some.
+        // Chaining every technique removed the last producer of them, and the
+        // guidance went on explaining how to treat a kind of edge no plan emits —
+        // the same shape of untrue statement this change is removing elsewhere.
+        const hasSoftDeps = nodes.some(node => node.dependencies.some(dep => dep.type === 'soft'));
+        const softNote = hasSoftDeps
+            ? ' Soft dependencies are preferential - better results if completed first, but not blocking.'
+            : '';
         const executionGuidance = (hasParallelNodes
-            ? 'Nodes with empty dependencies can execute immediately. For nodes with dependencies, wait for hard dependencies to complete before starting. Soft dependencies are preferential - better results if completed first, but not blocking. Check the dependencies array for each node to determine execution order.'
+            ? 'Nodes with empty dependencies can execute immediately. For nodes with dependencies, wait for hard dependencies to complete before starting.' +
+                softNote +
+                ' Check the dependencies array for each node to determine execution order.'
             : 'Execute nodes sequentially in the order provided. Each node depends on the previous one completing.') +
+            sessionNote +
             terminalNote;
         return {
             recommendedStrategy,

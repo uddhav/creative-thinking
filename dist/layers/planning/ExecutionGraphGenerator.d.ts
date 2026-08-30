@@ -17,10 +17,6 @@ export declare class ExecutionGraphGenerator {
      */
     private static getDependencies;
     /**
-     * Get dependencies for hybrid techniques
-     */
-    private static getHybridDependencies;
-    /**
      * Build complete parameters for execute_thinking_step.
      *
      * These parameters are the contract: a caller runs them verbatim, filling
@@ -48,22 +44,25 @@ export declare class ExecutionGraphGenerator {
      */
     private static calculateSequentialTimeMultiplier;
     /**
-     * Find groups of nodes that can execute in parallel
-     * Optimized from O(n²) to O(n) using Map for grouping
+     * Rounds of nodes that may run concurrently.
      *
-     * Never groups two steps of the SAME technique, even when the dependency
-     * classification says their steps are independent — `six_hats`, `scamper`
-     * and `nine_windows` are listed as parallel techniques, so all seven
-     * six_hats nodes shared one empty dependency signature and landed in a
-     * single group of seven.
+     * Grouped by depth in the dependency graph: a node's round is one past the
+     * deepest node it hard-depends on, so two nodes share a round exactly when
+     * neither can reach the other. Soft dependencies are advisory and do not
+     * block, so they do not affect depth.
      *
-     * Two reasons that was wrong to emit. It contradicted the documented
-     * guarantee that steps within one technique are ordered, naming this very
-     * field as the authority on what may run concurrently. And the steps of one
-     * technique run against one sessionId: concurrent writes there are
-     * last-writer-wins, and unprotected across processes. Whether the six hats
-     * are conceptually independent is a separate question from whether they can
-     * safely share a session, and only the second one decides this field.
+     * This replaced grouping by identical hard-dependency signature, which was
+     * sufficient but not necessary and under-reported badly. Step 2 of technique
+     * A depends on A's step 1 and step 2 of B on B's step 1, so their signatures
+     * differed and they never shared a round even though the techniques are
+     * independent. A four-technique plan reported `maxParallelism: 4` and then
+     * placed all twenty remaining nodes in groups of one — only the first round
+     * was ever parallel, and the metadata contradicted itself (#308).
+     *
+     * The invariant #327 established still holds, and now holds by construction
+     * rather than by a post-hoc split: two steps of one technique are always
+     * chained, so one is always deeper than the other and they cannot land in the
+     * same round.
      */
     private static findParallelizableGroups;
     /**
