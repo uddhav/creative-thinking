@@ -1,3 +1,9 @@
+## [v2.6.6] - 2026-08-31
+
+### Changes from PR #380
+
+- fix: stop a documented pathImpact from ending the session, and say what flexibility measures
+
 ## [v2.6.5] - 2026-08-30
 
 ### Changes from PR #374
