@@ -255,8 +255,16 @@ After each ACTION, the problem space fundamentally changes:
 
 ### Reflexivity in Creative Technique Application
 
-Each creative thinking technique contains both THINKING and ACTION steps. Reflexivity emerges only
-after ACTION steps:
+Reflexivity emerges only after ACTION steps. Most techniques mix THINKING and ACTION steps, but not
+all do: `six_hats`, `random_entry` and `neural_state` declare no action steps at all, and that is a
+supported shape rather than an omission — see the externality rule in
+[CONTRIBUTING.md](./CONTRIBUTING.md) and #299.
+
+The examples below illustrate the **concept** — a practitioner acting on the world partway through a
+technique — and are not a transcript of any technique's declared `type` fields. Where the two
+differ, the handler's `getStepInfo()` decides; `six_hats` step 4 is the Black Hat, not the board
+presentation written in below, and SCAMPER's "Substitute" is declared an action step even though the
+narrative splits it into a thinking half and a separate ACTION line:
 
 **Example: Six Thinking Hats Process**
 
@@ -2135,9 +2143,10 @@ def reframe_context(current_situation, desired_behavior):
 
 **Case Examples**:
 
-**Maserati at Yacht Shows**: By changing the context from car shows (where $300K seems expensive) to
-yacht shows (where $300K seems cheap), Maserati reframed their pricing perception without changing
-the price.
+**Maserati at Yacht Shows**: By changing the context from car shows (where
+$300K seems expensive) to
+yacht shows (where $300K seems cheap), Maserati reframed their pricing
+perception without changing the price.
 
 **London Overground Map**: Adding rail lines to the Tube map reframed unused infrastructure as
 valuable transit, quadrupling usage overnight through pure context change.

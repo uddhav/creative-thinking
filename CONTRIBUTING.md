@@ -347,6 +347,31 @@ When designing technique steps, you MUST distinguish between THINKING and ACTION
 - Consider reversibility: high/medium/low
 - Examples: "Share findings with team", "Implement solution", "Allocate resources"
 
+**When a step is arguable, the deciding test is externality: does the change leave the
+practitioner's head?** A step that only rearranges the practitioner's own understanding is THINKING,
+however much it changes _them_. It is ACTION when something outside the session is different
+afterwards — a person told, a resource committed, an artifact built. "It changed how I think" is not
+externality; that is what thinking steps are for. This is the rule that settled #299, where
+`neural_state` step 2 ("Develop Switching") was read as an action step because it alters the
+practitioner's state.
+
+**An all-thinking technique is a supported shape, not an omission to correct.** `six_hats`,
+`random_entry` and `neural_state` declare no action steps by design, and the suite uses exactly
+those three as its reflective control to prove the flexibility measure is a sensor rather than a
+session-length counter (`src/__tests__/issues/flexibility-is-measured.test.ts`). Reclassifying a
+step inside that set degrades the instrument, so
+`src/__tests__/techniques/reflective-techniques-stay-thinking.test.ts` pins it. Note that type and
+reversibility are independent axes — six action steps ship at reversibility `high` (in their
+`reflexiveEffects`, which is where an action step declares its rung; thinking steps declare it
+directly on `StepInfo`) — so classifying a step as ACTION does not oblige you to lower its rung.
+
+**The rule is forward-looking, and some shipped declarations do not satisfy it.** It was written
+while settling #299 and has not been applied backwards over the 70 existing action steps. At least
+one plainly fails it: `linguistic_forensics` step 4 ("Complexity Assessment") is declared ACTION
+with a single `realityChanges` entry of `"Understanding of speaker's cognitive state"` — internal,
+by this rule's own words. Re-auditing the corpus is separate work. Until it happens, apply the rule
+to new and changed steps, and do not read an existing declaration as precedent.
+
 For each ACTION step, define `ReflexiveEffects`:
 
 ```typescript
