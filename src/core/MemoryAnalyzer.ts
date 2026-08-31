@@ -280,8 +280,13 @@ export class MemoryAnalyzer {
     session.history
       .filter(h => h.pathImpact)
       .forEach(h => {
-        // TypeScript doesn't narrow the type after filter, so we need to check again
-        if (h.pathImpact && h.pathImpact.dependenciesCreated.length > 0) {
+        // The array is optional in the tool schema, so a pathImpact can arrive
+        // without it — README documented exactly that shape. Checking only that
+        // pathImpact existed and then reading `.length` threw, and because this
+        // runs on session completion the caller lost the whole session to an
+        // E999 after every step had already been recorded.
+        // `ExecutionResponseBuilder` guards the same field; this one did not.
+        if (h.pathImpact?.dependenciesCreated?.length) {
           dependencies.push(...h.pathImpact.dependenciesCreated);
         }
       });

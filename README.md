@@ -485,7 +485,23 @@ Best for: Complex decision-making, handling contradictory evidence, reducing con
 The server now tracks path dependencies and non-ergodic effects in creative thinking:
 
 - **Path Memory System** - Tracks how each decision creates irreversible constraints
-- **Flexibility Metrics** - Real-time monitoring of remaining creative options
+- **Flexibility Metrics** - How much room the session has left, measured from the declared shape of
+  the steps it ran — **never from the prose you wrote in them**. Every step declares how hard it is
+  to undo, and the measure is a running product over those declarations. Two sessions running the
+  same technique with the same declarations score identically to the last digit, whether their
+  recorded decisions read as reversible experiments or as one-way doors. This is deliberate: the
+  server cannot honestly read commitment out of prose, and an earlier version that scanned your
+  output for six words got it backwards often enough to be removed — "we should NOT remove the
+  fallback" read as maximal commitment.
+
+  One caller input does move the number, and it is a **declaration rather than prose**:
+  `stepReversibility`, where you claim a level with a rationale. The rationale must be non-empty for
+  the claim to count, but its wording is never read, and the claim is clamped to ±1 rung per step.
+  Measured on a 7-step `six_hats` run with byte-identical output: `0.9655206468094844` with no
+  claim, `0.8375915934997556` claiming `low` on every step, and `0.9655206468094844` again when the
+  rationale is empty. So read `currentFlexibility` as path shape plus what you formally declared —
+  never as a reading on what your decisions actually were.
+
 - **Absorbing Barrier Detection** - Warns about approaching irreversible states like:
   - Cognitive lock-in (stuck in one way of thinking)
   - Analysis paralysis (overthinking preventing action)
@@ -615,7 +631,9 @@ user-friendly warnings.
 **Key Features:**
 
 - **Path Memory**: Records all decisions and their irreversible effects
-- **Flexibility Metrics**: Real-time monitoring of remaining creative options (0-1 scale)
+- **Flexibility Metrics**: Room left in the session (0-1 scale), measured from the declared shape of
+  the steps run and never from their prose — a `stepReversibility` claim is the one caller input
+  that moves it (see "Ergodicity Awareness" above)
 - **Absorbing Barrier Detection**: Warns about approaching irreversible states
 - **Visual Indicators**: Shows path metrics in every thinking step output
 - **Escape Routes**: Suggests ways to regain flexibility when options are limited
@@ -1198,15 +1216,23 @@ Six-step process for maintaining multiple solution states simultaneously:
     "currentStep": 5,
     "totalSteps": 9,
     "output": "Current system: Mix of cars, public transit, bikes. Key issues: congestion, emissions, accessibility",
-    "nextStepNeeded": true,
-    "pathImpact": {
-      "systemLevel": "current",
-      "constraints": ["Infrastructure limits", "Budget restrictions"],
-      "flexibilityScore": 0.6
-    }
+    "nextStepNeeded": true
   }
 }
 ```
+
+This example used to send a `pathImpact` object alongside the step. Don't. `pathImpact` is SCAMPER's
+measurement of what a modification costs in future freedom, and on a scamper step carrying a
+`scamperAction` the server derives it and replaces anything you sent. On other techniques there is
+nothing to derive it from, so what you send is **not** replaced — it is carried into the response
+and into the session's recorded path dependencies, which means a `nine_windows` call like this one
+was writing caller-authored values into the server's own reading of the session. The three keys the
+old example used (`systemLevel`, `constraints`, `flexibilityScore`) are not in the `pathImpact`
+schema at all.
+
+It was also worse than ineffective: a `pathImpact` missing `dependenciesCreated`, which the schema
+marks optional, used to end the session with `E999` the moment it completed — after every step had
+already been recorded.
 
 ## Environment Variables
 
