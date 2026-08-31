@@ -485,7 +485,14 @@ Best for: Complex decision-making, handling contradictory evidence, reducing con
 The server now tracks path dependencies and non-ergodic effects in creative thinking:
 
 - **Path Memory System** - Tracks how each decision creates irreversible constraints
-- **Flexibility Metrics** - Real-time monitoring of remaining creative options
+- **Flexibility Metrics** - How much room the session has left, measured from the shape of the steps
+  it ran — **not from what you wrote in them**. Every step declares how hard it is to undo, and the
+  measure is a running product over those declarations, so two sessions running the same technique
+  cost the same flexibility whether their recorded decisions were reversible experiments or one-way
+  doors. This is deliberate: the server cannot honestly read commitment out of prose, and an earlier
+  version that scanned your output for six words got it backwards often enough to be removed — "we
+  should NOT remove the fallback" read as maximal commitment. Read `currentFlexibility` as a reading
+  on path shape, not on decision content.
 - **Absorbing Barrier Detection** - Warns about approaching irreversible states like:
   - Cognitive lock-in (stuck in one way of thinking)
   - Analysis paralysis (overthinking preventing action)
@@ -615,7 +622,9 @@ user-friendly warnings.
 **Key Features:**
 
 - **Path Memory**: Records all decisions and their irreversible effects
-- **Flexibility Metrics**: Real-time monitoring of remaining creative options (0-1 scale)
+- **Flexibility Metrics**: Room left in the session (0-1 scale), measured from the declared shape of
+  the steps run and not from their content — two sessions running the same technique score the same
+  whatever they decided in it (see "Ergodicity Awareness" above)
 - **Absorbing Barrier Detection**: Warns about approaching irreversible states
 - **Visual Indicators**: Shows path metrics in every thinking step output
 - **Escape Routes**: Suggests ways to regain flexibility when options are limited
@@ -1198,15 +1207,17 @@ Six-step process for maintaining multiple solution states simultaneously:
     "currentStep": 5,
     "totalSteps": 9,
     "output": "Current system: Mix of cars, public transit, bikes. Key issues: congestion, emissions, accessibility",
-    "nextStepNeeded": true,
-    "pathImpact": {
-      "systemLevel": "current",
-      "constraints": ["Infrastructure limits", "Budget restrictions"],
-      "flexibilityScore": 0.6
-    }
+    "nextStepNeeded": true
   }
 }
 ```
+
+This example used to send a `pathImpact` object alongside the step. Don't — `pathImpact` is derived
+by the server from its own reading of the step, and the tool schema says plainly that the server
+"REPLACES anything sent here, however fully populated". It appears **on the response**, not in the
+request. Sending one was not merely ineffective: a `pathImpact` missing `dependenciesCreated`, which
+the schema marks optional, used to end the session with `E999` the moment it completed — after every
+step had already been recorded.
 
 ## Environment Variables
 
