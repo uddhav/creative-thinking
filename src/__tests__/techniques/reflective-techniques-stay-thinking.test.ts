@@ -33,10 +33,23 @@ import { ALL_LATERAL_TECHNIQUES } from '../../types/index.js';
 describe('The reflective techniques stay all-thinking', () => {
   const registry = TechniqueRegistry.getInstance();
 
-  // Keep this list in step with the REFLECTIVE control in
-  // issues/flexibility-is-measured.test.ts — they describe the same set, and
-  // the whole point is that the two agree.
+  // The same set as the REFLECTIVE control in
+  // issues/flexibility-is-measured.test.ts. Written out here only so a failure
+  // names what changed — the assertion that actually guards drift derives the
+  // set from the registry and compares (see the last case). A hardcoded list
+  // checked against itself would let the two files drift apart silently, which
+  // is the failure this file exists to prevent, one level up.
   const REFLECTIVE = ['neural_state', 'random_entry', 'six_hats'] as const;
+
+  const allThinkingTechniques = (): string[] =>
+    ALL_LATERAL_TECHNIQUES.filter(technique => {
+      const handler = registry.getHandler(technique);
+      const { totalSteps } = handler.getTechniqueInfo();
+      if (totalSteps < 1) return false;
+      return Array.from({ length: totalSteps }, (_, i) => handler.getStepInfo(i + 1)).every(
+        info => info.type === 'thinking'
+      );
+    }).sort();
 
   REFLECTIVE.forEach(technique => {
     it(`${technique} declares every step as thinking`, () => {
@@ -73,5 +86,20 @@ describe('The reflective techniques stay all-thinking', () => {
       actionSteps.length,
       'no technique declares an action step, so "all thinking" means nothing here'
     ).toBeGreaterThan(0);
+  });
+
+  it('these are the only all-thinking techniques', () => {
+    // The drift guard, and the reason the list above is not merely checked
+    // against itself. Deriving the set from the registry catches the direction
+    // the per-technique cases cannot see: a FOURTH technique quietly becoming
+    // all-thinking joins the reflective shape without anyone deciding it should,
+    // and the control in flexibility-is-measured.test.ts silently stops
+    // describing the corpus.
+    expect(
+      allThinkingTechniques(),
+      'the set of all-thinking techniques changed. If that is deliberate, update ' +
+        'the REFLECTIVE control in issues/flexibility-is-measured.test.ts to match, ' +
+        'and see #299 for the externality rule that decides membership.'
+    ).toEqual([...REFLECTIVE].sort());
   });
 });

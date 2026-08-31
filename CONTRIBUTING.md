@@ -361,8 +361,16 @@ those three as its reflective control to prove the flexibility measure is a sens
 session-length counter (`src/__tests__/issues/flexibility-is-measured.test.ts`). Reclassifying a
 step inside that set degrades the instrument, so
 `src/__tests__/techniques/reflective-techniques-stay-thinking.test.ts` pins it. Note that type and
-reversibility are independent axes — six action steps ship at reversibility `high` — so classifying
-a step as ACTION does not oblige you to lower its rung.
+reversibility are independent axes — six action steps ship at reversibility `high` (in their
+`reflexiveEffects`, which is where an action step declares its rung; thinking steps declare it
+directly on `StepInfo`) — so classifying a step as ACTION does not oblige you to lower its rung.
+
+**The rule is forward-looking, and some shipped declarations do not satisfy it.** It was written
+while settling #299 and has not been applied backwards over the 70 existing action steps. At least
+one plainly fails it: `linguistic_forensics` step 4 ("Complexity Assessment") is declared ACTION
+with a single `realityChanges` entry of `"Understanding of speaker's cognitive state"` — internal,
+by this rule's own words. Re-auditing the corpus is separate work. Until it happens, apply the rule
+to new and changed steps, and do not read an existing declaration as precedent.
 
 For each ACTION step, define `ReflexiveEffects`:
 
