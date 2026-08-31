@@ -29,12 +29,20 @@ import { MCPClientTestHelper } from '../utils/MCPClientTestHelper.js';
 
 const PROBLEM = 'Improve urban transportation';
 
-// Verbatim the shape README documented: no dependenciesCreated, no optionsClosed.
+// README's three keys, and crucially NO `dependenciesCreated` — that absence is
+// the whole bug. `commitmentLevel` is added on top because it is the one field
+// that leaves a visible trace: `extractPathDependencies` turns it into a path
+// dependency in the same function that used to throw, which is how the test
+// below proves the analyzer really read this object rather than skipping it.
+// Adding it does not soften the case — the missing array is untouched.
 const DOCUMENTED_PATH_IMPACT = {
   systemLevel: 'current',
   constraints: ['Infrastructure limits', 'Budget restrictions'],
   flexibilityScore: 0.6,
+  commitmentLevel: 'high',
 };
+
+const SENTINEL_DEPENDENCY = 'nine_windows step 5: high commitment';
 
 let client: MCPClientTestHelper;
 
@@ -60,6 +68,7 @@ interface StepResponse {
   blocked?: boolean;
   error?: { code?: string; message?: string };
   isError?: boolean;
+  sessionFingerprint?: { pathDependencies?: string[] };
 }
 
 async function runNineWindows(pathImpactOnStepFive: object | undefined): Promise<StepResponse> {
@@ -94,13 +103,27 @@ describe('a documented pathImpact survives session completion', () => {
   it('completes the session instead of returning E999', async () => {
     const final = await runNineWindows(DOCUMENTED_PATH_IMPACT);
 
+    // `error` rather than `error?.code` — some error responses carry no code,
+    // so asserting on the code alone passes on a broken response.
     expect(
-      final.error?.code,
+      final.error,
       `completing a session carrying README's pathImpact returned ${final.error?.code}: ` +
-        `${final.error?.message}. A caller-supplied field the schema says is ignored ` +
-        `must not be able to end the session.`
+        `${final.error?.message}. A caller-supplied pathImpact must not be able to ` +
+        `end the session.`
     ).toBeUndefined();
     expect(final.completed, 'the nine-step session did not complete').toBe(true);
+
+    // Without this the guard can pass vacuously. On a non-scamper technique the
+    // server does not derive pathImpact, so a caller's value is carried through
+    // to the recorded path dependencies — which is what MemoryAnalyzer then
+    // reads, and where the crash came from. If an allowlist ever stops the
+    // field reaching history, completing cleanly would no longer prove the
+    // analyzer saw anything, and this test would guard nothing.
+    expect(
+      final.sessionFingerprint?.pathDependencies ?? [],
+      'the caller pathImpact never reached recorded path dependencies, so completing ' +
+        'cleanly does not show the analyzer handled it'
+    ).toContain(SENTINEL_DEPENDENCY);
   }, 60_000);
 
   it('control: the same session without pathImpact also completes', async () => {
