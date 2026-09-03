@@ -1,3 +1,9 @@
+## [v2.6.7] - 2026-09-03
+
+### Changes from PR #396
+
+- fix(deps): move fast-uri to 3.1.7 in the lockfile, and only there
+
 ## [v2.6.6] - 2026-08-31
 
 ### Changes from PR #380
