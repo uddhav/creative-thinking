@@ -356,13 +356,21 @@ default): keeps the step acknowledgment (`sessionId`, `technique`, `currentStep`
 any exist), and every warning/verdict field (`ergodicityMetrics`,
 `flexibilityScore`/`flexibilityMessage`, `earlyWarningState`, `escapeRecommendation`,
 `reflexivityWarning`, `reflectionRequired`, `optionGeneration`, `ergodicityCheck`,
-`alternativeSuggestions`, `realityAssessment`, the `ruinAssessment` verdict, and the
-`appliedReversibility` clamp audit). `advisoryFindings` and the autoSave status fields ride every
-verbosity mode — they attach after the filter, the way the completion block does. It replaces the
-echoes with receipts: `newInsights` carries only this step's additions (full mode's `insights` stays
-the cumulative list), and `fieldsRecorded` carries the names of the technique fields the server
-read. `problem`, `output`, technique field values, and `modificationHistory` are not echoed back —
-they are your own input; the session `export` returns everything whole. The final step's completion
+`alternativeSuggestions`, `realityAssessment`, the `ruinAssessment` verdict, the
+`appliedReversibility` clamp audit, and on scamper steps `pathImpact` — the server's reversibility
+judgment about this step, with its per-step `reversible` flag). `advisoryFindings` and the autoSave
+status fields ride every verbosity mode — they attach after the filter, the way the completion block
+does.
+
+The rule is: **this step's verdicts stay; echoes and cumulative re-sends drop.** Two kinds of field
+go. Echoes of your own input — `problem`, `output`, technique field values — are replaced by
+receipts: `fieldsRecorded` carries the names of the technique fields the server read, and the
+session `export` returns everything whole. Cumulative re-sends — fields that repeat on every step
+what an earlier step already delivered — are cut to this step's share: `newInsights` carries only
+this step's additions (full mode's `insights` stays the cumulative list), and `modificationHistory`
+is dropped outright. That last one is not an echo: the server rebuilds it from history every step
+and discards anything you send. It is dropped because it re-sends every prior scamper step's
+`pathImpact`, each of which you received on the step that produced it. The final step's completion
 summary is always full.
 
 > Deprecation notice: `minimal` is the intended future default. The flip will ship as a breaking
