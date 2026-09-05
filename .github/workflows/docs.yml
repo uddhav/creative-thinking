@@ -164,15 +164,13 @@ jobs:
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
 
       - name: 📤 Upload artifact
-        # v3 resolved `actions/upload-artifact@v4` internally without a SHA, and this
-        # repo requires every action to be pinned to a full-length commit SHA — so
-        # every run failed at "Getting action download info" with "The action
-        # actions/upload-artifact@v4 is not allowed". v4.0.0 pins that same major
-        # (upload-artifact v4.6.2), so what actually runs is unchanged and
-        # deploy-pages v4 still consumes the artifact; only the unpinned reference
-        # is gone. Newer releases jump to upload-artifact v7, which is a real
-        # compatibility question against the v4 deployer below and not one worth
-        # opening to fix a pinning violation.
+        # Pinned by full SHA because this repo requires every action to be; the
+        # earlier v3 pin resolved `actions/upload-artifact@v4` internally without
+        # one and every run died at "Getting action download info". v5.0.0 pins
+        # upload-artifact v7 inside, and the pairing with the v4 deployer below
+        # was a question until it was answered by running it: the dispatch run
+        # after the bump built and deployed the site cleanly. If deploy-pages
+        # ever refuses a v7-uploaded artifact, this line is the one to revisit.
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: 'docs'

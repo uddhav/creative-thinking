@@ -22,6 +22,13 @@ export default defineConfig({
     isolate: true,
     coverage: {
       provider: 'v8',
+      // Vitest 4 removed `coverage.all`: without an explicit include, the
+      // report covers only files loaded during the run, so a never-imported
+      // source file silently drops out of the denominator and the percentage
+      // moves for reasons that have nothing to do with tests. Pin the
+      // denominator to the whole source tree, which is what the Codecov
+      // targets in codecov.yml were set against.
+      include: ['src/**/*.ts'],
       reporter: ['text', 'json', 'html', 'lcov'],
       exclude: [
         'node_modules/**',
