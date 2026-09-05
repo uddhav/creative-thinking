@@ -63,15 +63,10 @@ jobs:
       - name: 🧪 Run tests with coverage
         run: npm run test:coverage
 
-      - name: 📊 Upload coverage to Codecov
-        uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage/coverage-final.json
-          flags: unittests
-          name: codecov-umbrella
-          fail_ci_if_error: false
-
+      # Coverage lives in the vitest text report above and in the artifact
+      # below. A Codecov upload step used to sit here; no CODECOV_TOKEN was ever
+      # set, every upload failed with "Token required", and fail_ci_if_error was
+      # off - so it was green and measured nothing for the whole time it existed.
       - name: 📁 Upload coverage reports
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:

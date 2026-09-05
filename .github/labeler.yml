@@ -57,7 +57,6 @@ config:
           - '.eslintrc*'
           - '.prettierrc*'
           - '.prettierignore'
-          - 'codecov.yml'
 
 build:
   - changed-files:

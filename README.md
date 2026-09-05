@@ -3,7 +3,6 @@
 ## Badges
 
 [![CI Pipeline](https://github.com/uddhav/creative-thinking/actions/workflows/ci.yml/badge.svg)](https://github.com/uddhav/creative-thinking/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/uddhav/creative-thinking/branch/main/graph/badge.svg)](https://codecov.io/gh/uddhav/creative-thinking)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![npm version](https://badge.fury.io/js/creative-thinking.svg)](https://badge.fury.io/js/creative-thinking)
 
