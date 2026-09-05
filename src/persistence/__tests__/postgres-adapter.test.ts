@@ -19,7 +19,12 @@ vi.mock('pg', () => {
 
   return {
     default: {
-      Pool: vi.fn().mockImplementation(createMockPool),
+      // `new Pool()` in the adapter constructs this. Vitest 4 refuses to
+      // construct an arrow-function implementation, so the factory is wrapped
+      // in a real `function` that returns the same object.
+      Pool: vi.fn().mockImplementation(function () {
+        return createMockPool();
+      }),
     },
   };
 });

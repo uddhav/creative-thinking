@@ -10,102 +10,108 @@ import type { SessionData } from '../../../types/index.js';
 
 // Mock the sensors
 vi.mock('../../../ergodicity/earlyWarning/sensors/resourceMonitor.js', () => ({
-  ResourceMonitor: vi.fn().mockImplementation(() => ({
-    type: 'resource',
-    measure: vi.fn().mockResolvedValue({
-      sensorType: 'resource',
-      timestamp: new Date().toISOString(),
-      rawValue: 0.6,
-      warningLevel: BarrierWarningLevel.SAFE,
-      distance: 0.6,
-      approachRate: -0.1,
-      confidence: 0.9,
-      indicators: ['Budget healthy'],
-      context: {},
-    }),
-    calibrate: vi.fn(),
-    reset: vi.fn(),
-    getMonitoredBarriers: vi.fn().mockReturnValue([]),
-    getCalibration: vi.fn().mockReturnValue({
-      sensitivity: 0.7,
-      warningThresholds: { caution: 0.5, warning: 0.3, critical: 0.15 },
-      noiseFilter: 0.05,
-      historicalWeight: 0.3,
-      contextFactors: {},
-    }),
-    getStatus: vi.fn().mockReturnValue({
+  ResourceMonitor: vi.fn().mockImplementation(function () {
+    return {
       type: 'resource',
-      lastReading: null,
-      historySize: 0,
-      calibration: {},
-    }),
-  })),
+      measure: vi.fn().mockResolvedValue({
+        sensorType: 'resource',
+        timestamp: new Date().toISOString(),
+        rawValue: 0.6,
+        warningLevel: BarrierWarningLevel.SAFE,
+        distance: 0.6,
+        approachRate: -0.1,
+        confidence: 0.9,
+        indicators: ['Budget healthy'],
+        context: {},
+      }),
+      calibrate: vi.fn(),
+      reset: vi.fn(),
+      getMonitoredBarriers: vi.fn().mockReturnValue([]),
+      getCalibration: vi.fn().mockReturnValue({
+        sensitivity: 0.7,
+        warningThresholds: { caution: 0.5, warning: 0.3, critical: 0.15 },
+        noiseFilter: 0.05,
+        historicalWeight: 0.3,
+        contextFactors: {},
+      }),
+      getStatus: vi.fn().mockReturnValue({
+        type: 'resource',
+        lastReading: null,
+        historySize: 0,
+        calibration: {},
+      }),
+    };
+  }),
 }));
 
 vi.mock('../../../ergodicity/earlyWarning/sensors/cognitiveAssessor.js', () => ({
-  CognitiveAssessor: vi.fn().mockImplementation(() => ({
-    type: 'cognitive',
-    measure: vi.fn().mockResolvedValue({
-      sensorType: 'cognitive',
-      timestamp: new Date().toISOString(),
-      rawValue: 0.7,
-      warningLevel: BarrierWarningLevel.SAFE,
-      distance: 0.7,
-      approachRate: 0,
-      confidence: 0.8,
-      indicators: ['Good cognitive state'],
-      context: {},
-    }),
-    calibrate: vi.fn(),
-    reset: vi.fn(),
-    getMonitoredBarriers: vi.fn().mockReturnValue([]),
-    getCalibration: vi.fn().mockReturnValue({
-      sensitivity: 0.7,
-      warningThresholds: { caution: 0.5, warning: 0.3, critical: 0.15 },
-      noiseFilter: 0.05,
-      historicalWeight: 0.3,
-      contextFactors: {},
-    }),
-    getStatus: vi.fn().mockReturnValue({
+  CognitiveAssessor: vi.fn().mockImplementation(function () {
+    return {
       type: 'cognitive',
-      lastReading: null,
-      historySize: 0,
-      calibration: {},
-    }),
-  })),
+      measure: vi.fn().mockResolvedValue({
+        sensorType: 'cognitive',
+        timestamp: new Date().toISOString(),
+        rawValue: 0.7,
+        warningLevel: BarrierWarningLevel.SAFE,
+        distance: 0.7,
+        approachRate: 0,
+        confidence: 0.8,
+        indicators: ['Good cognitive state'],
+        context: {},
+      }),
+      calibrate: vi.fn(),
+      reset: vi.fn(),
+      getMonitoredBarriers: vi.fn().mockReturnValue([]),
+      getCalibration: vi.fn().mockReturnValue({
+        sensitivity: 0.7,
+        warningThresholds: { caution: 0.5, warning: 0.3, critical: 0.15 },
+        noiseFilter: 0.05,
+        historicalWeight: 0.3,
+        contextFactors: {},
+      }),
+      getStatus: vi.fn().mockReturnValue({
+        type: 'cognitive',
+        lastReading: null,
+        historySize: 0,
+        calibration: {},
+      }),
+    };
+  }),
 }));
 
 vi.mock('../../../ergodicity/earlyWarning/sensors/technicalDebtAnalyzer.js', () => ({
-  TechnicalDebtAnalyzer: vi.fn().mockImplementation(() => ({
-    type: 'technical_debt',
-    measure: vi.fn().mockResolvedValue({
-      sensorType: 'technical_debt',
-      timestamp: new Date().toISOString(),
-      rawValue: 0.5,
-      warningLevel: BarrierWarningLevel.CAUTION,
-      distance: 0.5,
-      approachRate: 0.2,
-      confidence: 0.85,
-      indicators: ['Complexity increasing'],
-      context: {},
-    }),
-    calibrate: vi.fn(),
-    reset: vi.fn(),
-    getMonitoredBarriers: vi.fn().mockReturnValue([]),
-    getCalibration: vi.fn().mockReturnValue({
-      sensitivity: 0.7,
-      warningThresholds: { caution: 0.5, warning: 0.3, critical: 0.15 },
-      noiseFilter: 0.05,
-      historicalWeight: 0.3,
-      contextFactors: {},
-    }),
-    getStatus: vi.fn().mockReturnValue({
+  TechnicalDebtAnalyzer: vi.fn().mockImplementation(function () {
+    return {
       type: 'technical_debt',
-      lastReading: null,
-      historySize: 0,
-      calibration: {},
-    }),
-  })),
+      measure: vi.fn().mockResolvedValue({
+        sensorType: 'technical_debt',
+        timestamp: new Date().toISOString(),
+        rawValue: 0.5,
+        warningLevel: BarrierWarningLevel.CAUTION,
+        distance: 0.5,
+        approachRate: 0.2,
+        confidence: 0.85,
+        indicators: ['Complexity increasing'],
+        context: {},
+      }),
+      calibrate: vi.fn(),
+      reset: vi.fn(),
+      getMonitoredBarriers: vi.fn().mockReturnValue([]),
+      getCalibration: vi.fn().mockReturnValue({
+        sensitivity: 0.7,
+        warningThresholds: { caution: 0.5, warning: 0.3, critical: 0.15 },
+        noiseFilter: 0.05,
+        historicalWeight: 0.3,
+        contextFactors: {},
+      }),
+      getStatus: vi.fn().mockReturnValue({
+        type: 'technical_debt',
+        lastReading: null,
+        historySize: 0,
+        calibration: {},
+      }),
+    };
+  }),
 }));
 
 describe('AbsorbingBarrierEarlyWarning', () => {
@@ -333,26 +339,30 @@ describe('AbsorbingBarrierEarlyWarning', () => {
       // Mock sensor to throw error
       const { ResourceMonitor } =
         await import('../../../ergodicity/earlyWarning/sensors/resourceMonitor.js');
-      vi.mocked(ResourceMonitor).mockImplementationOnce(() => ({
-        type: 'resource',
-        measure: vi.fn().mockRejectedValue(new Error('Sensor failure')),
-        calibrate: vi.fn(),
-        reset: vi.fn(),
-        getMonitoredBarriers: vi.fn().mockReturnValue([]),
-        getCalibration: vi.fn().mockReturnValue({
-          sensitivity: 0.7,
-          warningThresholds: { caution: 0.5, warning: 0.3, critical: 0.15 },
-          noiseFilter: 0.05,
-          historicalWeight: 0.3,
-          contextFactors: {},
-        }),
-        getStatus: vi.fn().mockReturnValue({
+      // Constructed by `new ResourceMonitor(...)`; Vitest 4 will not construct
+      // an arrow-function implementation, hence the `function`.
+      vi.mocked(ResourceMonitor).mockImplementationOnce(function () {
+        return {
           type: 'resource',
-          lastReading: null,
-          historySize: 0,
-          calibration: {},
-        }),
-      }));
+          measure: vi.fn().mockRejectedValue(new Error('Sensor failure')),
+          calibrate: vi.fn(),
+          reset: vi.fn(),
+          getMonitoredBarriers: vi.fn().mockReturnValue([]),
+          getCalibration: vi.fn().mockReturnValue({
+            sensitivity: 0.7,
+            warningThresholds: { caution: 0.5, warning: 0.3, critical: 0.15 },
+            noiseFilter: 0.05,
+            historicalWeight: 0.3,
+            contextFactors: {},
+          }),
+          getStatus: vi.fn().mockReturnValue({
+            type: 'resource',
+            lastReading: null,
+            historySize: 0,
+            calibration: {},
+          }),
+        };
+      });
 
       const errorHandler = vi.fn();
       const faultTolerantSystem = new AbsorbingBarrierEarlyWarning({
@@ -478,40 +488,42 @@ describe('AbsorbingBarrierEarlyWarning', () => {
         await import('../../../ergodicity/earlyWarning/sensors/technicalDebtAnalyzer.js');
 
       let debtLevel = 0.5;
-      vi.mocked(TechnicalDebtAnalyzer).mockImplementation(() => ({
-        type: 'technical_debt',
-        measure: vi.fn().mockImplementation(() => {
-          debtLevel -= 0.1; // Consistently worsening
-          return {
-            sensorType: 'technical_debt',
-            timestamp: new Date().toISOString(),
-            rawValue: debtLevel,
-            warningLevel:
-              debtLevel < 0.3 ? BarrierWarningLevel.WARNING : BarrierWarningLevel.CAUTION,
-            distance: debtLevel,
-            approachRate: 0.2,
-            confidence: 0.9,
-            indicators: ['Complexity increasing'],
-            context: {},
-          };
-        }),
-        calibrate: vi.fn(),
-        reset: vi.fn(),
-        getMonitoredBarriers: vi.fn().mockReturnValue([]),
-        getCalibration: vi.fn().mockReturnValue({
-          sensitivity: 0.7,
-          warningThresholds: { caution: 0.5, warning: 0.3, critical: 0.15 },
-          noiseFilter: 0.05,
-          historicalWeight: 0.3,
-          contextFactors: {},
-        }),
-        getStatus: vi.fn().mockReturnValue({
+      vi.mocked(TechnicalDebtAnalyzer).mockImplementation(function () {
+        return {
           type: 'technical_debt',
-          lastReading: null,
-          historySize: 0,
-          calibration: {},
-        }),
-      }));
+          measure: vi.fn().mockImplementation(() => {
+            debtLevel -= 0.1; // Consistently worsening
+            return {
+              sensorType: 'technical_debt',
+              timestamp: new Date().toISOString(),
+              rawValue: debtLevel,
+              warningLevel:
+                debtLevel < 0.3 ? BarrierWarningLevel.WARNING : BarrierWarningLevel.CAUTION,
+              distance: debtLevel,
+              approachRate: 0.2,
+              confidence: 0.9,
+              indicators: ['Complexity increasing'],
+              context: {},
+            };
+          }),
+          calibrate: vi.fn(),
+          reset: vi.fn(),
+          getMonitoredBarriers: vi.fn().mockReturnValue([]),
+          getCalibration: vi.fn().mockReturnValue({
+            sensitivity: 0.7,
+            warningThresholds: { caution: 0.5, warning: 0.3, critical: 0.15 },
+            noiseFilter: 0.05,
+            historicalWeight: 0.3,
+            contextFactors: {},
+          }),
+          getStatus: vi.fn().mockReturnValue({
+            type: 'technical_debt',
+            lastReading: null,
+            historySize: 0,
+            calibration: {},
+          }),
+        };
+      });
 
       const patternSystem = new AbsorbingBarrierEarlyWarning();
 
