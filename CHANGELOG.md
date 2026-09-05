@@ -1,3 +1,9 @@
+## [v2.6.8] - 2026-09-05
+
+### Changes from PR #404
+
+- fix: name the contradictory step-numbering pairing, and make the block's remedy work
+
 ## [v2.6.7] - 2026-09-03
 
 ### Changes from PR #396
