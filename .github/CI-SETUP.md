@@ -92,7 +92,6 @@ Every secret the workflows actually reference, and nothing else — checked with
 `grep -ro 'secrets\.[A-Z_]*' .github/workflows/`:
 
 - `GITHUB_TOKEN`: provided by Actions; no configuration needed.
-- `CODECOV_TOKEN`: Codecov.io upload token.
 - `SNYK_TOKEN`: Snyk security scanning. Optional — the Snyk step is guarded by
   `if: env.SNYK_TOKEN != ''` and is skipped when unset.
 - `CLAUDE_CODE_OAUTH_TOKEN`: used by the Claude review workflows.
@@ -188,7 +187,11 @@ which did them, was deleted (see the note under Release above).
 ## 📈 Monitoring
 
 - **Build Status**: Check Actions tab for workflow runs
-- **Coverage Reports**: Uploaded to Codecov.io
+- **Coverage Reports**: the vitest text summary in the Test & Coverage job log, and the full report
+  as the `coverage-<node-version>` workflow artifact. There is no external coverage service: a
+  Codecov upload used to run here, but no token was ever configured, every upload failed, and the
+  step was set not to fail the job — so it reported nothing for as long as it existed and was
+  removed rather than fixed.
 - **Security Reports**: Available as workflow artifacts
 - **Documentation**: Auto-deployed to GitHub Pages
 

@@ -26,8 +26,8 @@ export default defineConfig({
       // report covers only files loaded during the run, so a never-imported
       // source file silently drops out of the denominator and the percentage
       // moves for reasons that have nothing to do with tests. Pin the
-      // denominator to the whole source tree, which is what the Codecov
-      // targets in codecov.yml were set against.
+      // denominator to the whole source tree so the number is comparable from
+      // run to run; nothing external gates it.
       include: ['src/**/*.ts'],
       reporter: ['text', 'json', 'html', 'lcov'],
       exclude: [
