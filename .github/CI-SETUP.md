@@ -146,7 +146,8 @@ All PRs must pass these checks:
 
 - ✅ All CI jobs passing
 - ✅ No high/critical security vulnerabilities
-- ✅ Test coverage maintained (70% minimum)
+- ✅ Coverage reported on every run (no minimum is enforced — the 70% that used to sit here was a
+  Codecov target that never evaluated anything; see Monitoring below)
 - ✅ No linting errors
 - ✅ TypeScript compilation successful
 - ✅ Semantic PR title
