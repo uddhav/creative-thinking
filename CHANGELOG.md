@@ -1,3 +1,9 @@
+## [v2.6.9] - 2026-09-05
+
+### Changes from PR #409
+
+- fix: keep this step's verdict in minimal responses, and say what minimal drops
+
 ## [v2.6.8] - 2026-09-05
 
 ### Changes from PR #404
