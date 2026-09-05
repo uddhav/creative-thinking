@@ -262,7 +262,7 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
             // Get technique handler
             const handler = techniqueRegistry.getHandler(input.technique);
             // Calculate technique-local step
-            const { techniqueLocalStep: calculatedTechniqueLocalStep, techniqueIndex, stepsBeforeThisTechnique, originalStep, wasNormalized, } = executionValidator.calculateTechniqueLocalStep(input, plan);
+            const { techniqueLocalStep: calculatedTechniqueLocalStep, techniqueIndex, stepsBeforeThisTechnique, originalStep, wasNormalized, numberingMismatch, } = executionValidator.calculateTechniqueLocalStep(input, plan);
             // Validate step and get step info
             const stepValidation = executionValidator.validateStepAndGetInfo(input, calculatedTechniqueLocalStep, handler);
             // Check if we need to handle invalid step - either validation failed or step was normalized
@@ -508,7 +508,7 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
             // Computed BEFORE the gatekeeper so a blocked termination still carries
             // them, and recorded onto the history entry so persistence and session
             // export can audit follow-vs-deviate after the fact.
-            const advisoryFindings = evaluateAdvisoryGates(input, techniqueLocalStep, plan, validationWarnings);
+            const advisoryFindings = evaluateAdvisoryGates(input, techniqueLocalStep, plan, validationWarnings, numberingMismatch);
             if (advisoryFindings.length > 0) {
                 historyEntry.advisoryFindings = advisoryFindings;
             }

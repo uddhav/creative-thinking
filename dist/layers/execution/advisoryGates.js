@@ -17,13 +17,38 @@ const FIELD_GATES = {
         ],
     },
 };
-export function evaluateAdvisoryGates(input, techniqueLocalStep, plan, validationWarnings) {
+export function evaluateAdvisoryGates(input, techniqueLocalStep, plan, validationWarnings, numberingMismatch) {
     const findings = [];
     const base = {
         technique: input.technique,
         step: techniqueLocalStep,
         severity: 'advisory',
     };
+    // Source 0: the numbering the completion counter used is not the numbering
+    // this step ran under. First in the list on purpose — every gate below is
+    // about the step's CONTENT, and this one says the response's own progress
+    // figures do not describe the step the caller just sent. Ordering, not
+    // truncation: the most findings ever observed on one step is 1, against a
+    // cap of 10.
+    //
+    // Both remedies are named because re-sending in the caller's own convention
+    // does not clear it: the same pairing produces the same verdict every time.
+    if (numberingMismatch) {
+        const { counted, counterStep, techniqueSteps, planTotal, stepsBefore } = numberingMismatch;
+        const localForm = `currentStep ${techniqueLocalStep} with totalSteps ${techniqueSteps}`;
+        const planForm = `currentStep ${techniqueLocalStep + stepsBefore} with totalSteps ${planTotal}`;
+        findings.push({
+            gate: 'numbering.mismatch',
+            message: `This ran as ${input.technique} step ${techniqueLocalStep}, but completion accounting ` +
+                `reads numbering from totalSteps alone and ` +
+                (counted
+                    ? `filed it as step ${counterStep} — a different step from the one that ran. `
+                    : `discarded it, so ${input.technique} still counts step ${techniqueLocalStep} as ` +
+                        `not run and re-sending it this way will not change that. `) +
+                `Send it as ${localForm}, or as ${planForm}.`,
+            ...base,
+        });
+    }
     // Source 1: validator warnings — computed for years, discarded on the valid
     // path until now.
     for (const message of validationWarnings ?? []) {

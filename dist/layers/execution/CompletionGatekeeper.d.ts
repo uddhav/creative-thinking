@@ -45,11 +45,31 @@ export declare class CompletionGatekeeper {
      */
     private buildBlockingResponse;
     /**
-     * Name the steps a caller still owes, in technique-local numbering.
+     * Name the steps a caller still owes, numbered across the whole plan.
      *
-     * A technique that has run at all reports its gaps in `skippedSteps`; one
-     * that never started reports nothing there and appears in `skippedTechniques`
-     * instead, so both lists are read.
+     * Plan-wide is the numbering that can always be acted on. A technique-local
+     * number cannot say WHICH run of a repeated technique it means:
+     * resolveTechniqueInstance (layers/execution.ts) stamps a run from a cursor
+     * that only advances, so once a second run has begun a technique-local step
+     * lands on it and a hole in the first run can never be filled — this same
+     * block then fires again, unchanged, for as long as the caller keeps
+     * following it. A plan-wide number resolves by global range instead, so it
+     * names one run and only that one.
+     *
+     * The total is load-bearing, not decoration. SessionCompletionTracker reads
+     * an entry's numbering off that entry's own `totalSteps`, so the total has
+     * to travel with the numbers or they are ambiguous at the point of use.
+     *
+     * Statuses arrive one per workflow occurrence, in order, each carrying that
+     * occurrence's own step count — so the offset is the running sum of the
+     * ones before it, and the final sum is the plan total.
+     *
+     * A technique that never started is NOT also read from `skippedTechniques`.
+     * Both gatekeeper paths build metadata with isTerminating=true, which makes
+     * findSkippedSteps enumerate every unrun step, so an unstarted technique is
+     * already in `techniqueStatuses` with a full list. Reading both lists named
+     * it twice in one sentence: "po steps 1, 2, 3, 4; six_hats steps 4; po
+     * steps 1-4" was the measured output.
      */
     private describeOutstandingWork;
     /**

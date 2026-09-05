@@ -21,7 +21,10 @@ import type { ExecuteThinkingStepInput, LateralTechnique } from '../../types/ind
 import type { PlanThinkingSessionOutput } from '../../types/planning.js';
 
 export interface AdvisoryFinding {
-  /** Which gate produced this: 'validation.warning' | 'fields.<technique>.step<N>' | 'stimulus.mismatch' */
+  /**
+   * Which gate produced this: 'numbering.mismatch' | 'validation.warning' |
+   * 'fields.<technique>.step<N>' | 'stimulus.mismatch'
+   */
   gate: string;
   technique: LateralTechnique;
   /** Technique-local step number the finding is about. */
@@ -29,6 +32,25 @@ export interface AdvisoryFinding {
   message: string;
   /** Round 1 emits 'advisory' only; 'blocking' is reserved for Round 2. */
   severity: 'advisory';
+}
+
+/**
+ * The completion counter and the numbering ladder resolved the same entry to
+ * different steps. `counted: false` means the counter discarded it;
+ * `counted: true` means it filed the entry under `counterStep`, a step other
+ * than the one that ran. Produced by ExecutionValidator, which is the only
+ * place that has the plan; consumed by evaluateAdvisoryGates as Source 0.
+ */
+export interface NumberingMismatch {
+  counted: boolean;
+  /** Step the counter filed it under; null when discarded. */
+  counterStep: number | null;
+  /** This technique block's own step count. */
+  techniqueSteps: number;
+  /** Plan-wide step total. */
+  planTotal: number;
+  /** Steps in the plan before this technique block. */
+  stepsBefore: number;
 }
 
 interface FieldGate {
@@ -63,7 +85,8 @@ export function evaluateAdvisoryGates(
   input: ExecuteThinkingStepInput,
   techniqueLocalStep: number,
   plan: PlanThinkingSessionOutput | undefined,
-  validationWarnings: string[] | undefined
+  validationWarnings: string[] | undefined,
+  numberingMismatch?: NumberingMismatch
 ): AdvisoryFinding[] {
   const findings: AdvisoryFinding[] = [];
   const base = {
@@ -71,6 +94,33 @@ export function evaluateAdvisoryGates(
     step: techniqueLocalStep,
     severity: 'advisory' as const,
   };
+
+  // Source 0: the numbering the completion counter used is not the numbering
+  // this step ran under. First in the list on purpose — every gate below is
+  // about the step's CONTENT, and this one says the response's own progress
+  // figures do not describe the step the caller just sent. Ordering, not
+  // truncation: the most findings ever observed on one step is 1, against a
+  // cap of 10.
+  //
+  // Both remedies are named because re-sending in the caller's own convention
+  // does not clear it: the same pairing produces the same verdict every time.
+  if (numberingMismatch) {
+    const { counted, counterStep, techniqueSteps, planTotal, stepsBefore } = numberingMismatch;
+    const localForm = `currentStep ${techniqueLocalStep} with totalSteps ${techniqueSteps}`;
+    const planForm = `currentStep ${techniqueLocalStep + stepsBefore} with totalSteps ${planTotal}`;
+    findings.push({
+      gate: 'numbering.mismatch',
+      message:
+        `This ran as ${input.technique} step ${techniqueLocalStep}, but completion accounting ` +
+        `reads numbering from totalSteps alone and ` +
+        (counted
+          ? `filed it as step ${counterStep} — a different step from the one that ran. `
+          : `discarded it, so ${input.technique} still counts step ${techniqueLocalStep} as ` +
+            `not run and re-sending it this way will not change that. `) +
+        `Send it as ${localForm}, or as ${planForm}.`,
+      ...base,
+    });
+  }
 
   // Source 1: validator warnings — computed for years, discarded on the valid
   // path until now.

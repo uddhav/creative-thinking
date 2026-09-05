@@ -14,6 +14,9 @@ import type { SessionManager } from '../../core/SessionManager.js';
 import type { TechniqueRegistry } from '../../techniques/TechniqueRegistry.js';
 import type { TechniqueHandler } from '../../techniques/types.js';
 import type { VisualFormatter } from '../../utils/VisualFormatter.js';
+// Type-only, erased at build: advisoryGates.ts imports nothing from here, so
+// there is no runtime cycle.
+import type { NumberingMismatch } from './advisoryGates.js';
 import { ErgodicityManager } from '../../ergodicity/index.js';
 import { wrapErgodicityManager } from '../../utils/PerformanceIntegration.js';
 import { ErrorContextBuilder } from '../../core/ErrorContextBuilder.js';
@@ -370,12 +373,15 @@ export class ExecutionValidator {
     stepsBeforeThisTechnique: number;
     originalStep: number;
     wasNormalized: boolean;
+    numberingMismatch?: NumberingMismatch;
   } {
     const originalStep = input.currentStep;
     let techniqueLocalStep = input.currentStep;
     let techniqueIndex = 0;
     let stepsBeforeThisTechnique = 0;
     let wasNormalized = false;
+    // Declared outside the plan block: the whole block is skipped without a plan.
+    let numberingMismatch: NumberingMismatch | undefined;
 
     if (input.planId && plan) {
       // Collect every block this technique occupies, with where each one starts.
@@ -481,6 +487,52 @@ export class ExecutionValidator {
           wasNormalized = true;
         }
       }
+
+      // The completion counter decides an entry's numbering by DIFFERENT rules
+      // than the ladder above, and reads only `totalSteps` to do it — never
+      // `numbering`, and never the `techniqueLocalStep` the executor stamps on
+      // the entry. When the two disagree the step still executes as the
+      // technique step the caller meant, and the response confirms that
+      // reading back, while the counter either discards the entry or files it
+      // under a different number. Nothing used to say so.
+      //
+      // This MIRRORS SessionCompletionTracker.countTechniqueCompletedSteps
+      // (its multi-technique branch) instead of predicting its verdict.
+      // Predicting is what got two earlier drafts wrong on part of their own
+      // domain: with po(4) ahead of six_hats(7), `numbering:'technique'` +
+      // totalSteps 11 is DISCARDED for currentStep 1-4 and COUNTED (under the
+      // wrong step) for 5-7; `numbering:'plan'` + totalSteps 7 is counted for
+      // 5-7 and discarded for 8-11. Any hard-coded verdict is false somewhere.
+      // Keep this in step with that function: if its arithmetic changes, this
+      // changes with it, which is the whole point of copying it.
+      //
+      // Guards: a single-technique plan takes the counter's other branch,
+      // which is technique-local unconditionally and cannot disagree; a
+      // 0-step block is a registry-rebuilt encoded plan where every step would
+      // fire; and the normalize branches above feed a ValidationError that
+      // returns before any finding could be delivered.
+      if (plan.workflow.length > 1 && currentTechniqueSteps > 0 && !wasNormalized) {
+        const entryIsLocal =
+          input.totalSteps === currentTechniqueSteps && input.totalSteps !== totalPlanSteps
+            ? true
+            : input.totalSteps === totalPlanSteps
+              ? false
+              : input.currentStep >= 1 && input.currentStep <= currentTechniqueSteps;
+        const counterStep = entryIsLocal
+          ? input.currentStep
+          : input.currentStep - stepsBeforeThisTechnique;
+        const counted = counterStep >= 1 && counterStep <= currentTechniqueSteps;
+
+        if (!counted || counterStep !== techniqueLocalStep) {
+          numberingMismatch = {
+            counted,
+            counterStep: counted ? counterStep : null,
+            techniqueSteps: currentTechniqueSteps,
+            planTotal: totalPlanSteps,
+            stepsBefore: stepsBeforeThisTechnique,
+          };
+        }
+      }
     }
 
     // Ensure techniqueLocalStep is never negative
@@ -495,6 +547,7 @@ export class ExecutionValidator {
       stepsBeforeThisTechnique,
       originalStep,
       wasNormalized,
+      numberingMismatch,
     };
   }
 
