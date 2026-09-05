@@ -211,8 +211,15 @@ export class CompletionGatekeeper {
                     // and the session looped. The config and this block stay, because
                     // a deployment may key off them; the sentence they carry is now
                     // the route that exists, named from what the tracker measured.
-                    message: `There is no skip flag. Call execute_thinking_step for ${outstandingWork} ` +
-                        `and this block clears on its own.`,
+                    message: outstandingWork.named
+                        ? `There is no skip flag. Call execute_thinking_step for ${outstandingWork.text} ` +
+                            `with totalSteps ${outstandingWork.planTotal} — these numbers count across the ` +
+                            `whole plan, and totalSteps is what tells the server to read them that way. ` +
+                            `Sent with a single technique's own step count instead, the same numbers name ` +
+                            `different steps and this block fires again unchanged. Sent as shown, it clears ` +
+                            `on its own.`
+                        : `There is no skip flag. Call execute_thinking_step for ${outstandingWork.text} ` +
+                            `and this block clears on its own.`,
                     consequences: metadata.missedPerspectives,
                 }
                 : undefined,
@@ -220,30 +227,54 @@ export class CompletionGatekeeper {
         return this.responseBuilder.buildSuccessResponse(content);
     }
     /**
-     * Name the steps a caller still owes, in technique-local numbering.
+     * Name the steps a caller still owes, numbered across the whole plan.
      *
-     * A technique that has run at all reports its gaps in `skippedSteps`; one
-     * that never started reports nothing there and appears in `skippedTechniques`
-     * instead, so both lists are read.
+     * Plan-wide is the numbering that can always be acted on. A technique-local
+     * number cannot say WHICH run of a repeated technique it means:
+     * resolveTechniqueInstance (layers/execution.ts) stamps a run from a cursor
+     * that only advances, so once a second run has begun a technique-local step
+     * lands on it and a hole in the first run can never be filled — this same
+     * block then fires again, unchanged, for as long as the caller keeps
+     * following it. A plan-wide number resolves by global range instead, so it
+     * names one run and only that one.
+     *
+     * The total is load-bearing, not decoration. SessionCompletionTracker reads
+     * an entry's numbering off that entry's own `totalSteps`, so the total has
+     * to travel with the numbers or they are ambiguous at the point of use.
+     *
+     * Statuses arrive one per workflow occurrence, in order, each carrying that
+     * occurrence's own step count — so the offset is the running sum of the
+     * ones before it, and the final sum is the plan total.
+     *
+     * A technique that never started is NOT also read from `skippedTechniques`.
+     * Both gatekeeper paths build metadata with isTerminating=true, which makes
+     * findSkippedSteps enumerate every unrun step, so an unstarted technique is
+     * already in `techniqueStatuses` with a full list. Reading both lists named
+     * it twice in one sentence: "po steps 1, 2, 3, 4; six_hats steps 4; po
+     * steps 1-4" was the measured output.
      */
     describeOutstandingWork(metadata) {
-        const perTechnique = [
-            ...metadata.techniqueStatuses
-                .filter(s => s.skippedSteps.length > 0)
-                .map(s => `${s.technique} steps ${s.skippedSteps.join(', ')}`),
-            ...metadata.skippedTechniques.map(technique => {
-                const status = metadata.techniqueStatuses.find(s => s.technique === technique);
-                return status ? `${technique} steps 1-${status.totalSteps}` : `${technique}`;
-            }),
-        ];
-        if (perTechnique.length > 0) {
-            return perTechnique.join('; ');
+        let stepsBefore = 0;
+        const fragments = [];
+        for (const status of metadata.techniqueStatuses) {
+            if (status.skippedSteps.length > 0) {
+                const planWide = status.skippedSteps.map(n => n + stepsBefore);
+                fragments.push(`${status.technique} ${planWide.length === 1 ? 'step' : 'steps'} ${planWide.join(', ')}`);
+            }
+            stepsBefore += status.totalSteps;
         }
-        // No plan, or a single-technique session the tracker measures without
-        // per-step numbering — say how many are outstanding rather than invent
-        // which ones.
+        if (fragments.length > 0) {
+            return { text: fragments.join('; '), named: true, planTotal: stepsBefore };
+        }
+        // No plan, or a session the tracker measures without per-step numbering —
+        // say how many are outstanding rather than invent which ones. No numbers
+        // named, so no numbering advice applies.
         const remaining = Math.max(0, metadata.totalPlannedSteps - metadata.completedSteps);
-        return `the ${remaining} step${remaining === 1 ? '' : 's'} still outstanding`;
+        return {
+            text: `the ${remaining} step${remaining === 1 ? '' : 's'} still outstanding`,
+            named: false,
+            planTotal: stepsBefore,
+        };
     }
     /**
      * Update configuration

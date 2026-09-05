@@ -20,7 +20,10 @@
 import type { ExecuteThinkingStepInput, LateralTechnique } from '../../types/index.js';
 import type { PlanThinkingSessionOutput } from '../../types/planning.js';
 export interface AdvisoryFinding {
-    /** Which gate produced this: 'validation.warning' | 'fields.<technique>.step<N>' | 'stimulus.mismatch' */
+    /**
+     * Which gate produced this: 'numbering.mismatch' | 'validation.warning' |
+     * 'fields.<technique>.step<N>' | 'stimulus.mismatch'
+     */
     gate: string;
     technique: LateralTechnique;
     /** Technique-local step number the finding is about. */
@@ -29,7 +32,25 @@ export interface AdvisoryFinding {
     /** Round 1 emits 'advisory' only; 'blocking' is reserved for Round 2. */
     severity: 'advisory';
 }
-export declare function evaluateAdvisoryGates(input: ExecuteThinkingStepInput, techniqueLocalStep: number, plan: PlanThinkingSessionOutput | undefined, validationWarnings: string[] | undefined): AdvisoryFinding[];
+/**
+ * The completion counter and the numbering ladder resolved the same entry to
+ * different steps. `counted: false` means the counter discarded it;
+ * `counted: true` means it filed the entry under `counterStep`, a step other
+ * than the one that ran. Produced by ExecutionValidator, which is the only
+ * place that has the plan; consumed by evaluateAdvisoryGates as Source 0.
+ */
+export interface NumberingMismatch {
+    counted: boolean;
+    /** Step the counter filed it under; null when discarded. */
+    counterStep: number | null;
+    /** This technique block's own step count. */
+    techniqueSteps: number;
+    /** Plan-wide step total. */
+    planTotal: number;
+    /** Steps in the plan before this technique block. */
+    stepsBefore: number;
+}
+export declare function evaluateAdvisoryGates(input: ExecuteThinkingStepInput, techniqueLocalStep: number, plan: PlanThinkingSessionOutput | undefined, validationWarnings: string[] | undefined, numberingMismatch?: NumberingMismatch): AdvisoryFinding[];
 /** Every assigned stimulus for a technique across the plan's workflow, in instance order. */
 export declare function assignedStimuliFor(plan: PlanThinkingSessionOutput, technique: LateralTechnique): string[];
 //# sourceMappingURL=advisoryGates.d.ts.map

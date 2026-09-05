@@ -8,6 +8,7 @@ import type { SessionManager } from '../../core/SessionManager.js';
 import type { TechniqueRegistry } from '../../techniques/TechniqueRegistry.js';
 import type { TechniqueHandler } from '../../techniques/types.js';
 import type { VisualFormatter } from '../../utils/VisualFormatter.js';
+import type { NumberingMismatch } from './advisoryGates.js';
 import { ErgodicityManager } from '../../ergodicity/index.js';
 export interface ValidationResult {
     isValid: boolean;
@@ -58,6 +59,7 @@ export declare class ExecutionValidator {
         stepsBeforeThisTechnique: number;
         originalStep: number;
         wasNormalized: boolean;
+        numberingMismatch?: NumberingMismatch;
     };
     /**
      * Name the fields a rejected step objected to.

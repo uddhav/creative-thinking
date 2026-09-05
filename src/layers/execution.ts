@@ -342,6 +342,7 @@ export async function executeThinkingStep(
         stepsBeforeThisTechnique,
         originalStep,
         wasNormalized,
+        numberingMismatch,
       } = executionValidator.calculateTechniqueLocalStep(input, plan);
 
       // Validate step and get step info
@@ -679,7 +680,8 @@ export async function executeThinkingStep(
         input,
         techniqueLocalStep,
         plan,
-        validationWarnings
+        validationWarnings,
+        numberingMismatch
       );
       if (advisoryFindings.length > 0) {
         historyEntry.advisoryFindings = advisoryFindings;
