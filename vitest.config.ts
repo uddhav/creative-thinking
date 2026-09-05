@@ -15,14 +15,11 @@ export default defineConfig({
     // tests are sensitive to worker-pool contention and intermittently
     // exceed testTimeout under load. Retry twice before reporting fail.
     retry: 2,
-    // Prevent worker timeout issues
+    // Prevent worker timeout issues. Vitest 4 removed `poolOptions`: its
+    // per-pool settings are top-level now. `isolate: true` carries over as-is;
+    // the old `singleThread: false` was the default and maps to nothing.
     pool: 'threads',
-    poolOptions: {
-      threads: {
-        singleThread: false,
-        isolate: true,
-      },
-    },
+    isolate: true,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'lcov'],
