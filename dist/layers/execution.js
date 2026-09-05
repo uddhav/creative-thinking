@@ -342,6 +342,17 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
                 // IMPORTANT: Use stderr for visual output - stdout is reserved for JSON-RPC
                 process.stderr.write(visualOutput);
             }
+            // pathImpact is a server verdict about a scamper ACTION, and the branch
+            // below computes it only when one is present. Without the action there is
+            // nothing to compute — and a caller-sent object would otherwise ride
+            // through minimal's keep list as if it were a verdict: echoed verbatim,
+            // and listed by fieldsRecorded as a field the server had read. Found by
+            // review; minimal-keeps-this-steps-verdict.test.ts pins it. Other
+            // techniques are unaffected: response extraction is per-technique and
+            // never reads pathImpact for them.
+            if (input.technique === 'scamper' && !input.scamperAction) {
+                delete input.pathImpact;
+            }
             // Handle SCAMPER path impact
             if (input.technique === 'scamper' && input.scamperAction) {
                 const scamperHandler = handler;

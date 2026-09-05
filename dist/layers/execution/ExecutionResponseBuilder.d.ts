@@ -14,24 +14,46 @@ import type { SessionManager } from '../../core/SessionManager.js';
 import type { ReflexivityWarning } from '../../core/ReflexivityTracker.js';
 /**
  * The response keys minimal verbosity keeps — the contract, pinned by
- * response-verbosity.test.ts. Everything here is the step acknowledgment,
- * steering, or a warning/verdict: the fields SOCKETES.md and the
- * lateral-thinking skill tell callers to read. Echoes of the caller's own
- * input (problem, output, technique field values, modificationHistory) and
- * cumulative re-sends are deliberately absent; `insights` is replaced by
- * `newInsights` (this step's additions only) and field values by
- * `fieldsRecorded` (their names — a receipt without the echo). Three nested
- * picks that a flat list cannot reach are handled in slimToMinimal:
- * completionMetadata.completionWarnings, executionMetadata.appliedReversibility,
- * and ruinAssessment minus its prompt. The terminal step's completion block
- * bypasses slimming by mechanism — handleSessionCompletion merges it into the
- * already-serialized response after this filter runs — as do the autoSave
- * status fields, added the same way.
+ * response-verbosity.test.ts and minimal-keeps-this-steps-verdict.test.ts.
+ *
+ * THE RULE, decided rather than accumulated: minimal keeps the step
+ * acknowledgment, the steering, and THIS STEP'S VERDICTS — what the server
+ * judged about the step just sent. It drops two other kinds of field:
+ *
+ *  - ECHOES of the caller's own input: problem, output, technique field
+ *    values. The caller wrote these; sending them back is weight. Field
+ *    values are replaced by `fieldsRecorded` (their names — a receipt
+ *    without the echo).
+ *  - CUMULATIVE RE-SENDS: fields that repeat, on every step, something the
+ *    server already delivered when it happened. `insights` is replaced by
+ *    `newInsights` (this step's additions only), and `modificationHistory`
+ *    is dropped outright — it is rebuilt by the server from history every
+ *    step (execution.ts resets `input.modificationHistory = []` before the
+ *    rebuild, and separately strips it from the history entry), so it is not
+ *    an echo, but it re-sends every prior scamper step's pathImpact and made
+ *    session growth quadratic. Each of those pathImpacts reached the caller
+ *    on the step that produced it.
+ *
+ * `pathImpact` is the case that forced the rule to be written down. It is
+ * this step's reversibility judgment — the handler computes it and REPLACES
+ * anything sent, and it carries a per-step `reversible` boolean nothing else
+ * in a minimal response substitutes for. It was absent from this list while
+ * the sunset notice, in three places, described the omission as dropping
+ * "echoes of your own input". Measured: a fully populated caller-sent
+ * pathImpact comes back with none of its values surviving. It is kept now.
+ *
+ * Three nested picks that a flat list cannot reach are handled in
+ * slimToMinimal: completionMetadata.completionWarnings,
+ * executionMetadata.appliedReversibility, and ruinAssessment minus its
+ * prompt. The terminal step's completion block bypasses slimming by
+ * mechanism — handleSessionCompletion merges it into the already-serialized
+ * response after this filter runs — as do the autoSave status fields and
+ * advisoryFindings, added the same way.
  *
  * Declared sunset: 'minimal' is the intended future DEFAULT ('full' exists
  * for compatibility); the default flip will ship as a breaking release.
  */
-export declare const MINIMAL_RESPONSE_KEEP_KEYS: readonly ["sessionId", "technique", "currentStep", "totalSteps", "nextStepNeeded", "historyLength", "techniqueProgress", "nextStepGuidance", "sequentialThinkingSuggestion", "ergodicityMetrics", "flexibilityScore", "flexibilityMessage", "alternativeSuggestions", "ergodicityCheck", "earlyWarningState", "escapeRecommendation", "reflexivityWarning", "reflectionRequired", "optionGeneration", "realityAssessment", "persona"];
+export declare const MINIMAL_RESPONSE_KEEP_KEYS: readonly ["sessionId", "technique", "currentStep", "totalSteps", "nextStepNeeded", "historyLength", "techniqueProgress", "nextStepGuidance", "sequentialThinkingSuggestion", "ergodicityMetrics", "flexibilityScore", "flexibilityMessage", "alternativeSuggestions", "ergodicityCheck", "earlyWarningState", "escapeRecommendation", "reflexivityWarning", "reflectionRequired", "optionGeneration", "realityAssessment", "pathImpact", "persona"];
 export declare class ExecutionResponseBuilder {
     private complexityAnalyzer;
     private escalationGenerator;
