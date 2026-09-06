@@ -8,7 +8,6 @@ permissions:
   contents: read
   pull-requests: write
   issues: write
-  checks: write
 
 jobs:
   # Job 1: PR Validation
@@ -180,39 +179,3 @@ jobs:
         with:
           fail-on-severity: high
           comment-summary-in-pr: always
-
-  # Job 4: Preview Deployment
-  preview:
-    name: Preview Documentation
-    runs-on: ubuntu-latest
-    if: github.event.pull_request.draft == false
-    steps:
-      - name: 🛎️ Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: 🏗️ Setup Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: '20.x'
-          cache: 'npm'
-
-      - name: 📦 Install dependencies
-        run: npm ci
-
-      - name: 📚 Build documentation
-        run: |
-          # Generate API docs
-          npx typedoc src/index.ts --out docs/api || true
-
-          # Create PR preview info
-          echo "# PR Preview for #${{ github.event.pull_request.number }}" > docs/index.html
-          echo "<h2>Changed Files</h2><ul>" >> docs/index.html
-          git diff --name-only origin/main..HEAD | sed 's/^/<li>/' | sed 's/$/<\/li>/' >> docs/index.html
-          echo "</ul>" >> docs/index.html
-
-      - name: 📁 Upload preview artifacts
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: pr-preview-${{ github.event.pull_request.number }}
-          path: docs/
-          retention-days: 7
