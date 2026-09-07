@@ -317,7 +317,13 @@ Build a structured workflow from chosen techniques. Returns a `planId` and persi
 
 **Output (success):** JSON with `planId`, `workflow` (flat array of step descriptors),
 `estimatedSteps`, `executionGraph` (nodes, dependencies, parallelizable groups, recommended
-strategy), `nextSteps` (a templated example for the first execute call), `qualityCoverage`.
+strategy), `nextSteps` (a templated example for the first execute call), `qualityCoverage`, and on
+multi-technique plans `sequenceAdvice`: one entry per adjacent pair, in your order, with a
+`relation` (`SEQUENCE_STRONGLY` / `SEQUENCE` / `NEUTRAL` / `AVOID_ADJACENT`) and `evidence`
+(`measured`, with a `citation` into `evals/evidence/`, or `none`). Advisory only: the order you gave
+is the order the plan runs. `evidence: "none"` means no adjacency relation has been measured for
+that pair, not that it was checked and found fine; an `AVOID_ADJACENT` pair also appears in
+`warnings`.
 
 The plan file on disk includes additional fields the executor requires (notably `techniques`) that
 the response strips for size. The CLI handles persistence transparently; do not edit plan files by

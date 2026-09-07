@@ -1,0 +1,85 @@
+[
+  {
+    "step": 1,
+    "output": "Network representation. State holders: the raw event store (append-only), the curated tables analysts query, and the semantic layer of metric definitions. Transformers: ingestion/ELT jobs that turn events into tables, and the query engine that turns tables into answers. Routers: the catalog (which table answers which question) and the scheduler (which job runs when). Gates: cost controls (a query or job runs only under a budget threshold) and data-quality checks (a table is published only when its tests pass). Activation thresholds: ingestion fires on batch size or wall-clock; analyst queries fire on demand with no threshold, which is the load nobody controls; the budget gate fires at 80% of monthly spend. Serial pathway: events -> ELT -> curated -> query -> answer. Parallel pathways: streaming views computed beside the batch tables, and ad-hoc notebooks reading raw events directly, bypassing curation. The architecture that best represents this space is a hub with two spokes: one durable store as the hub, batch and stream as spokes that both write to it, and the query engine reading only the hub. The three candidates differ in which node is the hub: Iceberg makes the store the hub, a warehouse makes the query engine the hub, Kafka makes the router the hub.",
+    "fields": {
+      "neuralMappings": [
+        "raw event store: holds state",
+        "curated tables: hold state",
+        "semantic layer: holds metric definitions",
+        "ELT jobs: transform",
+        "query engine: transforms tables into answers",
+        "catalog: routes questions to tables",
+        "scheduler: routes jobs",
+        "budget gate: gates at 80% spend",
+        "data-quality checks: gate publication"
+      ]
+    }
+  },
+  {
+    "step": 2,
+    "output": "Ten patterns from varied initialisations. P1 Iceberg hub, warehouse engine reads it (open table, rented compute). P2 Warehouse hub, everything loads into it, streaming becomes micro-batch. P3 Kafka hub, every table is a materialized view, batch is replay. P4 Iceberg hub with Kafka as the ingestion spoke only, no views. P5 Warehouse hub with Iceberg as cold archive (tiering). P6 Kafka hub with a warehouse as a sink for the analysts who need SQL. P7 Iceberg hub with two engines (one cheap batch, one interactive). P8 Warehouse-only, ignore streaming for a year. P9 Kafka-only, ignore ad-hoc SQL for a year. P10 Iceberg hub with the semantic layer as the only published surface. Interference: P1, P4, P7, P10 reinforce each other (all keep the durable store as the hub and vary what reads it); P3, P6, P9 reinforce each other around the router as hub; P2, P5, P8 reinforce around the engine as hub. Destructive interference: P3 against P8 (streaming-first and ignore-streaming cannot coexist); P5 against P10 (tiering into a proprietary engine defeats an open published surface). Emergent property: every pattern that survives cost pressure keeps the durable store open-format, because that is the one node whose replacement cost is highest and whose vendor lock is worst.",
+    "fields": {
+      "patternGenerations": [
+        "P1 Iceberg hub, warehouse engine reads it",
+        "P2 warehouse hub, streaming as micro-batch",
+        "P3 Kafka hub, tables as materialized views",
+        "P4 Iceberg hub, Kafka ingestion spoke only",
+        "P5 warehouse hub, Iceberg cold archive",
+        "P6 Kafka hub with warehouse sink",
+        "P7 Iceberg hub with two engines",
+        "P8 warehouse-only, ignore streaming",
+        "P9 Kafka-only, ignore ad-hoc SQL",
+        "P10 Iceberg hub, semantic layer as the only surface"
+      ],
+      "interferenceAnalysis": {
+        "constructive": [
+          "P1+P4+P7+P10: open store as hub",
+          "P3+P6+P9: router as hub",
+          "P2+P5+P8: engine as hub"
+        ],
+        "destructive": [
+          "P3 vs P8: streaming-first vs ignore-streaming",
+          "P5 vs P10: proprietary tiering vs open published surface"
+        ]
+      }
+    }
+  },
+  {
+    "step": 3,
+    "output": "Computational synthesis. Treat the ten patterns as a population and apply an evolutionary pass with fitness = analyst hours served per dollar, penalised by migration cost of the hub node. Crossover of P1 and P7 yields P11: Iceberg hub, one rented interactive engine now, a second cheap batch engine added only when the bill for the first crosses a threshold. Crossover of P4 and P10 yields P12: Iceberg hub, Kafka ingestion spoke, semantic layer as the only published surface, no user reads raw. Mutation of P3 under the budget gate collapses it: a Kafka hub needs a stream processor plus a serving store plus a SQL engine, three paid components against one budget, so its fitness falls below every Iceberg variant. Swarm pass: the patterns cluster on which node is replaceable; the cluster around an open-format store keeps its fitness under every cost weight tried, the warehouse cluster wins only when migration cost is set to zero, which it is not. Hybrid model kept for the next cycle: P12 with P11's engine-scaling rule.",
+    "fields": {
+      "computationalModels": [
+        "evolutionary pass, fitness = analyst hours per dollar minus hub migration cost",
+        "crossover P1xP7 -> P11 engine-scaling rule",
+        "crossover P4xP10 -> P12 semantic-surface lakehouse",
+        "mutation of P3 under the budget gate collapses it",
+        "swarm clustering on replaceability of the hub node"
+      ]
+    }
+  },
+  {
+    "step": 4,
+    "output": "Optimization cycles on P12+P11. Feedforward: with the semantic layer as the only surface, analyst queries route through metric definitions, so the interactive engine sees repeated shapes and caches; cost per hour served falls. Backpropagation from the failure cases: analysts who need raw events for exploration hit the published-surface gate and route around it; loosen the gate to allow notebooks on raw Iceberg tables with a per-user budget. Weight adjustment: the streaming spoke's weight drops, since only two of the eleven metric families need sub-hourly freshness; the Kafka spoke becomes an ingestion path, not a product. Architecture evolution: the second engine is never added in the first year under the modelled load. Convergence ratings. Coherence: high, every component has one job and the hub is the only shared state; based on the absence of any two nodes holding the same table. Novelty: low-to-medium, this is the lakehouse pattern most of the industry has converged on, the novelty is only in making the semantic layer the published surface; based on how many of the ten initial patterns already contained it. Utility: high, it serves both SQL analysts and notebook users under one budget and keeps the hub replaceable; based on the fitness function's dollar-per-hour figure holding under three cost weightings. Balance: exploitation is winning; two further exploration cycles on warehouse-hub variants did not beat it.",
+    "fields": {
+      "optimizationCycles": 3,
+      "convergenceMetrics": {
+        "coherence": 0.9,
+        "novelty": 0.4,
+        "utility": 0.85
+      }
+    }
+  },
+  {
+    "step": 5,
+    "output": "The search converged, not plateaued: three cycles produced the same winner, P12+P11 (Iceberg as hub, Kafka as ingestion only, semantic layer as the published surface with a budgeted raw-notebook exception, one interactive engine with a rule for adding a cheap second), and the last cycle changed only the notebook budget. It is probably a local optimum shaped by the fitness function: dollars per analyst hour with a migration penalty favours whichever node is cheapest to replace, so any architecture with an open-format hub wins under it. What would tell me otherwise: if the organisation's real bottleneck is freshness rather than analyst hours, the Kafka-hub cluster would overtake it, and that region was scored down rather than explored. Unexplored regions: a warehouse hub with an open-format export contract was never generated, so it was neither ruled out nor reached; and a single-engine design with no semantic layer at all was ruled out by the coherence rating, not by cost. Emergence path: P1 and P7 supplied the hub-plus-engine shape, P4 supplied the Kafka-as-spoke demotion, P10 supplied the semantic surface; P3, P6 and P9 contributed only by losing to the budget gate, which is what fixed the hub choice. The result for the problem: build the lakehouse on Iceberg, keep the warehouse and the streaming design as engines and spokes rather than hubs, and revisit if freshness becomes the bottleneck.",
+    "fields": {
+      "finalSynthesis": "Iceberg as hub, Kafka as ingestion only, semantic layer as published surface with a budgeted raw-notebook exception, one interactive engine with a rule for adding a cheap second; converged, likely a local optimum shaped by the fitness function; revisit if freshness becomes the bottleneck",
+      "convergenceMetrics": {
+        "coherence": 0.9,
+        "novelty": 0.4,
+        "utility": 0.85
+      }
+    }
+  }
+]

@@ -189,6 +189,9 @@ export class ResponseBuilder {
             complexityAssessment: output.complexityAssessment,
             executionMode: output.executionMode,
             strictness: output.strictness,
+            // Advisory adjacent-pair relations (#240); this allowlist drops what it
+            // does not name, so the field is listed here on purpose.
+            sequenceAdvice: output.sequenceAdvice,
             warnings: output.warnings,
             qualityCoverage: output.qualityCoverage,
             // Add execution graph for DAG-based parallel execution documentation
