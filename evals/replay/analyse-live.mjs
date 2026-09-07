@@ -119,6 +119,11 @@ const stats = {
   ignored: 0,
   endedSession: 0,
   byGate: {},
+  // Refused calls by error code, and strict step-order refusals by gate
+  // (order.skipped | numbering.mismatch | stimulus.mismatch). Both come from
+  // the result line's errorCode / errorGate, recorded at emission.
+  errorsByCode: {},
+  refusalsByGate: {},
 };
 
 const sessions = new Map();
@@ -136,6 +141,12 @@ stats.sessions = sessions.size;
 for (const [, pairs] of sessions) {
   for (let i = 0; i < pairs.length; i++) {
     const { result } = pairs[i];
+    if (result && result.isError === true && typeof result.errorCode === 'string') {
+      stats.errorsByCode[result.errorCode] = (stats.errorsByCode[result.errorCode] || 0) + 1;
+      if (typeof result.errorGate === 'string') {
+        stats.refusalsByGate[result.errorGate] = (stats.refusalsByGate[result.errorGate] || 0) + 1;
+      }
+    }
     const findings = result && result.advisoryFindings;
     if (!Array.isArray(findings) || findings.length === 0) continue;
 
@@ -196,7 +207,10 @@ if (stats.callsWithoutResult > 0) {
   );
 }
 process.stdout.write(`sessions             : ${stats.sessions}` + '\n');
-process.stdout.write(`findings emitted     : ${stats.findingsEmitted} across ${stats.stepsCarryingFindings} steps` + '\n');
+process.stdout.write(
+  `findings emitted     : ${stats.findingsEmitted} across ${stats.stepsCarryingFindings} steps` +
+    '\n'
+);
 process.stdout.write('\n');
 process.stdout.write('Of the steps that carried a finding:' + '\n');
 process.stdout.write(`  another step followed: ${stats.followedByAnotherStep}` + '\n');
@@ -212,6 +226,22 @@ process.stdout.write(
   }\n`
 );
 
+if (Object.keys(stats.errorsByCode).length > 0) {
+  // Refusals, which the finding delta above cannot see: a refused call
+  // recorded nothing, so there is no step for a next call to address.
+  process.stdout.write('\n');
+  process.stdout.write('Refused calls by error code:' + '\n');
+  for (const [code, n] of Object.entries(stats.errorsByCode)) {
+    process.stdout.write(`  ${code}: ${n}` + '\n');
+  }
+  if (Object.keys(stats.refusalsByGate).length > 0) {
+    process.stdout.write('Strict step-order refusals by gate:' + '\n');
+    for (const [gate, n] of Object.entries(stats.refusalsByGate)) {
+      process.stdout.write(`  ${gate}: ${n}` + '\n');
+    }
+  }
+}
+
 if (Object.keys(stats.byGate).length > 0) {
   process.stdout.write('\n');
   process.stdout.write('Per gate:' + '\n');
@@ -225,5 +255,7 @@ if (Object.keys(stats.byGate).length > 0) {
 if (stats.stepsCarryingFindings === 0) {
   process.stdout.write('\n');
   process.stdout.write('No findings in these logs, so there is no delta to report yet.' + '\n');
-  process.stdout.write('This is the expected reading until sessions run that actually trip a gate.' + '\n');
+  process.stdout.write(
+    'This is the expected reading until sessions run that actually trip a gate.' + '\n'
+  );
 }

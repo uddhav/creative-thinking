@@ -17,6 +17,7 @@ import { EscalationPromptGenerator } from '../ergodicity/escalationPrompts.js';
 // Import completion tracking components
 import { CompletionGatekeeper } from './execution/CompletionGatekeeper.js';
 import { evaluateAdvisoryGates } from './execution/advisoryGates.js';
+import { refuseIfStrict } from './execution/strictStepOrder.js';
 import { attachSteeringFields } from './execution/attachSteeringFields.js';
 /**
  * Cells of a nine_windows matrix the caller marked irreversible, as declared
@@ -326,6 +327,24 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
                 });
             }
             const { stepInfo, normalizedStep: techniqueLocalStep } = stepValidation;
+            // Opt-in strict step order (#298). Throws E211 and records nothing; the
+            // lock's finally releases. It has to sit HERE: assessRisks below writes
+            // session.riskDiscoveryData, and the ergodicity tracking further down
+            // writes path memory, so a refusal any later leaks state from a step the
+            // caller was told never happened. Advisory mode, the default, leaves the
+            // same two shapes to the redirect and the numbering.mismatch finding,
+            // both built after the push.
+            refuseIfStrict({
+                input,
+                session,
+                plan,
+                handler,
+                techniqueLocalStep,
+                techniqueIndex,
+                stepsBeforeThisTechnique,
+                numberingMismatch,
+                techniqueInstance: resolveTechniqueInstance(plan, session, input, techniqueLocalStep),
+            });
             // Check for ergodicity prompts
             ergodicityOrchestrator.checkErgodicityPrompts(input, techniqueLocalStep);
             // Perform comprehensive risk assessment

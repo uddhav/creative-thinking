@@ -98,6 +98,19 @@ export function recordResult(name: string, response: ToolResponse): void {
         });
       }
       if (parsed.blocked === true) summary.blocked = true;
+      // Refusals: the code and, for strict step order, the gate that fired.
+      // Layer-built errors nest under `error`; the WorkflowGuard refusal puts
+      // `code` at the top level. Neither carries caller content.
+      const error = parsed.error as { code?: unknown; context?: { gate?: unknown } } | undefined;
+      const code =
+        error && typeof error === 'object' && typeof error.code === 'string'
+          ? error.code
+          : typeof parsed.code === 'string'
+            ? parsed.code
+            : undefined;
+      if (code !== undefined) summary.errorCode = code;
+      const gate = error && typeof error === 'object' ? error.context?.gate : undefined;
+      if (typeof gate === 'string') summary.errorGate = gate;
     }
   } catch {
     /* an unparseable body still deserves its result line */

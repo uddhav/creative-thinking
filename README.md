@@ -1245,6 +1245,10 @@ The server supports environment variables for advanced features:
 - `DATABASE_URL=postgres://...` - PostgreSQL connection string (postgres adapter only)
 - `RESPONSE_VERBOSITY=minimal|full` - Default execute-response verbosity when a call omits
   `verbosity` (default: full; `minimal` is the declared future default)
+- `STEP_ORDER_ENFORCEMENT=advisory|strict` - What happens to an out-of-order step, a contradictory
+  numbering pairing, or a stimulus the plan did not assign (default: advisory, which records the
+  step and redirects or flags it; `strict` refuses it with `E211` and records nothing). A plan's
+  `strictness: 'enforcing'` turns strict on for that plan alone.
 
 ### MCP Sampling Configuration
 

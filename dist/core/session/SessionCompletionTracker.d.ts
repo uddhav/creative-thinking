@@ -93,7 +93,7 @@ export declare class SessionCompletionTracker {
      * completion metadata (the validator carries the third copy), so a fourth
      * hand-rolled copy cannot drift.
      */
-    techniqueLocalProgress(session: SessionData, plan: PlanThinkingSessionOutput, technique: string, techniqueIndex: number): {
+    techniqueLocalProgress(session: SessionData, plan: PlanThinkingSessionOutput, technique: string, techniqueIndex: number, run?: number): {
         completedStepNumbers: Set<number>;
         submissionsByStep: Map<number, number>;
         techniqueSteps: number;

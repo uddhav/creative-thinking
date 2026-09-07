@@ -61,10 +61,8 @@ export function planThinkingSession(input, sessionManager, techniqueRegistry) {
     // validator's comment names; different posture because this field is
     // deliberately open.
     const planWarnings = [];
-    if (strictness !== undefined && strictness !== 'advisory') {
-        planWarnings.push(strictness === 'enforcing'
-            ? "strictness 'enforcing' is reserved and not yet implemented — this plan runs as 'advisory' and its findings never block a step."
-            : `strictness "${strictness}" is not a recognized level ('advisory' now; 'enforcing' reserved) — the plan behaves as 'advisory'.`);
+    if (strictness !== undefined && strictness !== 'advisory' && strictness !== 'enforcing') {
+        planWarnings.push(`strictness "${strictness}" is not a recognized level ('advisory' or 'enforcing') — the plan behaves as 'advisory'.`);
     }
     // Build workflow for each technique
     const workflow = techniques.map((technique, techniqueIndex) => {
@@ -125,6 +123,9 @@ export function planThinkingSession(input, sessionManager, techniqueRegistry) {
                 workflow: debatePlan.workflow,
                 totalSteps: debatePlan.workflow.reduce((sum, w) => sum + w.steps.length, 0),
                 executionMode: 'sequential',
+                // Carried so a debate planned as 'enforcing' is strict on every
+                // persona session, not only on the parent plan nobody executes.
+                strictness,
                 createdAt: Date.now(),
             });
         }

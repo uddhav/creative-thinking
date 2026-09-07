@@ -201,6 +201,9 @@ Useful environment variables (full list in `README.md` and `src/config/`):
 - `PERSISTENCE_PATH=~/.creative-thinking` — filesystem session directory
 - `PERSONA_CATALOG_PATH=/path/to/personas.json` — merge external personas with the built-in catalog
 - `TELEMETRY_ENABLED=true` — opt-in anonymous analytics
+- `STEP_ORDER_ENFORCEMENT=strict` — refuse out-of-order steps, contradictory numbering and
+  unassigned stimuli with `E211`, recording nothing (default `advisory`: record and redirect). A
+  plan's `strictness: 'enforcing'` does the same per plan (#298).
 - `DISABLE_THOUGHT_LOGGING=true` — suppress visual thought-progress output on stderr. **Default-on
   for the CLI** so stdout stays a single parseable JSON value.
 
