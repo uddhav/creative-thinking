@@ -37,7 +37,6 @@ Automated checks specifically for pull requests.
 - CodeQL security analysis
 - Test coverage commenting
 - Dependency license review
-- Preview documentation generation
 
 ### 3. **Release** (`semantic-release.yml`, `pr-version-bump.yml`, `release-binaries.yml`)
 
@@ -74,17 +73,6 @@ Weekly security scans and on-demand security checks.
 - Container vulnerability scanning (Trivy)
 - Secret scanning (Trufflehog, Gitleaks)
 - Security report generation
-
-### 5. **Documentation** (`docs.yml`)
-
-Automated documentation generation and deployment.
-
-**Features:**
-
-- TypeDoc API documentation
-- Technique guides generation
-- GitHub Pages deployment
-- Documentation index creation
 
 ## 📋 Secrets
 
@@ -194,7 +182,6 @@ which did them, was deleted (see the note under Release above).
   step was set not to fail the job — so it reported nothing for as long as it existed and was
   removed rather than fixed.
 - **Security Reports**: Available as workflow artifacts
-- **Documentation**: Auto-deployed to GitHub Pages
 
 ## 🆘 Troubleshooting
 

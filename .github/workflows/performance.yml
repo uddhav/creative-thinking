@@ -2,7 +2,6 @@ name: Performance Benchmarks
 
 # This workflow runs performance benchmarks and tracks regressions
 # It stores baseline data in GitHub Actions cache and comments results on PRs
-# To set up gh-pages for historical data, run setup-gh-pages.yml manually
 
 on:
   pull_request:
