@@ -22,7 +22,7 @@ export type {
   AnalyticsData,
   AnalyticsSummary,
   AnalyticsMetric,
-  TechniqueEffectiveness,
+  TechniqueUsage,
   SessionAnalytics,
   TelemetryExport,
 } from './types.js';

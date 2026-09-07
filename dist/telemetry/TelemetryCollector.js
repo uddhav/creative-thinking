@@ -10,6 +10,7 @@ export class TelemetryCollector {
     privacyManager;
     storage;
     eventBuffer = [];
+    inFlight = Promise.resolve();
     flushTimer;
     sessionStartTimes = new Map();
     isShuttingDown = false;
@@ -162,15 +163,43 @@ export class TelemetryCollector {
         });
     }
     /**
+     * One discover_techniques call. There is no session yet, so the caller
+     * synthesizes an id; balanced privacy hashes it like any other.
+     */
+    async trackProblemDiscovered(discoveryId, meta) {
+        await this.trackEvent('problem_discovered', discoveryId, meta);
+    }
+    /**
+     * The early-warning system recommended an escape protocol on this step.
+     * The event type is the whole signal; the protocol name is not carried.
+     */
+    async trackEscapeRecommended(sessionId, technique) {
+        await this.trackEvent('escape_protocol_recommended', sessionId, {}, technique);
+    }
+    /**
      * Flush buffered events to storage
      */
     async flush() {
+        // Flushes are serialised, and a caller awaiting flush() waits for every
+        // flush already in flight. The exit flush behind a batch-size flush would
+        // otherwise either write the same rows again (batch taken after the
+        // await) or resolve on an empty buffer and let the process exit while the
+        // first append is still pending (batch taken before it). Both were seen.
+        const run = this.inFlight.then(() => this.flushBatch());
+        this.inFlight = run.catch(() => undefined);
+        return run;
+    }
+    async flushBatch() {
         if (this.eventBuffer.length === 0) {
             return;
         }
+        // The batch is taken before the first await; on a storage failure it is
+        // dropped, not retried, and storage logs the failure.
+        const batch = this.eventBuffer;
+        this.eventBuffer = [];
         // Convert events to privacy-safe format
         const safeEvents = [];
-        for (const event of this.eventBuffer) {
+        for (const event of batch) {
             const safeEvent = this.privacyManager.sanitizeEvent(event);
             if (safeEvent) {
                 safeEvents.push(safeEvent);
@@ -180,8 +209,6 @@ export class TelemetryCollector {
         if (safeEvents.length > 0) {
             await this.storage.storeEvents(safeEvents);
         }
-        // Clear buffer
-        this.eventBuffer = [];
         // Clean up privacy manager mappings periodically
         this.privacyManager.clearMappings();
     }
@@ -220,17 +247,25 @@ export class TelemetryCollector {
         if (this.config.level === 'full') {
             return true;
         }
+        // Discovery is the first lifecycle event, so it is basic: the complaint
+        // that motivated it was that a default install learned nothing about the
+        // problems it was asked (#241).
         const basicEvents = [
             'technique_start',
             'technique_complete',
             'session_start',
             'session_complete',
+            'problem_discovered',
         ];
+        // The pair event is what #240 names as its promotion instrument; until it
+        // sat at 'full' it stored nothing on any real install.
         const detailedEvents = [
             ...basicEvents,
             'insight_generated',
             'risk_identified',
             'flexibility_warning',
+            'escape_protocol_recommended',
+            'technique_pair_used',
         ];
         if (this.config.level === 'basic') {
             return basicEvents.includes(eventType);
@@ -254,6 +289,9 @@ export class TelemetryCollector {
             'totalSteps',
             'effectiveness',
             'duration',
+            'category',
+            'evidenceBreadth',
+            'tier',
         ];
         // Detailed level - more metadata
         const detailedFields = [
@@ -263,6 +301,7 @@ export class TelemetryCollector {
             'flexibilityScore',
             'outputCompleteness',
             'revisionCount',
+            'pairSequence',
         ];
         const allowedFields = this.config.level === 'basic' ? basicFields : detailedFields;
         for (const field of allowedFields) {

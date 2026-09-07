@@ -63,5 +63,13 @@ export declare class LateralThinkingServer {
      * Clean up resources
      */
     destroy(): void;
+    /**
+     * Flush buffered telemetry, then destroy. The MCP entry exits through
+     * process.exit, so the collector's beforeExit flush never runs there
+     * (#241); the entry awaits this before closing the transport, so a flush
+     * failure is still logged while stderr is open. A telemetry failure never
+     * blocks the shutdown.
+     */
+    shutdown(): Promise<void>;
 }
 //# sourceMappingURL=index.d.ts.map

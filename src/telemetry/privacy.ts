@@ -37,23 +37,27 @@ export class PrivacyManager {
    * Convert telemetry event to privacy-safe format
    */
   sanitizeEvent(event: TelemetryEvent): PrivacySafeEvent | null {
-    // Check privacy mode
-    if (this.config.privacyMode === 'strict') {
-      // In strict mode, only aggregate data is allowed
-      return null;
-    }
-
     // Check exclude patterns
     if (this.shouldExclude(event)) {
       return null;
     }
 
-    // Create privacy-safe event
+    // Strict keeps the event and drops the linkage: every row carries the
+    // same constant session id, so no two events can be joined into a
+    // session; the timestamp is hour-rounded and the metrics coarse. It used
+    // to return null here, which discarded all telemetry while the policy
+    // text below promised "only aggregate metrics", and left the strict
+    // branches of fuzzyTimestamp, roundMetric and roundDuration unreachable.
+    // Consequence stated: under strict the analyzer's per-session outputs
+    // collapse to one row and mean nothing; the aggregates are the product.
     const safeEvent: PrivacySafeEvent = {
       eventId: this.anonymizeId(event.eventId),
       eventType: event.eventType,
       timestamp: this.fuzzyTimestamp(event.timestamp),
-      anonymousSessionId: this.anonymizeSessionId(event.sessionId),
+      anonymousSessionId:
+        this.config.privacyMode === 'strict'
+          ? 'aggregate'
+          : this.anonymizeSessionId(event.sessionId),
       technique: event.technique,
       metrics: this.sanitizeMetrics(event.metadata),
     };
@@ -76,6 +80,22 @@ export class PrivacyManager {
     }
     if (metadata.riskCount !== undefined) {
       metrics.riskCount = metadata.riskCount;
+    }
+    // Discovery and pairing fields, every mode: a closed category name, a
+    // small integer, a three-level tier, two technique ids. None identifies a
+    // user or a problem, and without them the discovery and pair events
+    // stored nothing an analyzer could read (#241, #240).
+    if (metadata.category !== undefined) {
+      metrics.category = metadata.category;
+    }
+    if (metadata.evidenceBreadth !== undefined) {
+      metrics.evidenceBreadth = metadata.evidenceBreadth;
+    }
+    if (metadata.tier !== undefined) {
+      metrics.tier = metadata.tier;
+    }
+    if (metadata.pairSequence !== undefined) {
+      metrics.pairSequence = metadata.pairSequence;
     }
 
     // Include additional metrics based on privacy mode
@@ -204,12 +224,12 @@ export class PrivacyManager {
 # Telemetry Privacy Policy
 
 ## Data Collection
-- This tool collects anonymous usage data to improve technique effectiveness
+- This tool collects anonymous usage data on which techniques are used and how completely their steps are answered
 - All data is collected on an opt-in basis (disabled by default)
 - No personally identifiable information (PII) is collected
 
 ## What We Collect
-- Technique usage patterns and effectiveness scores
+- Technique usage patterns and output completeness (no outcome is observed)
 - Session durations and completion rates
 - Insight and risk identification counts
 - Anonymous session identifiers
@@ -250,14 +270,45 @@ export class PrivacyManager {
   static getConfigFromEnvironment(): TelemetryConfig {
     return {
       enabled: PrivacyManager.shouldEnableTelemetry(),
-      level: (process.env.TELEMETRY_LEVEL as TelemetryConfig['level']) || 'basic',
-      storage: (process.env.TELEMETRY_STORAGE as TelemetryConfig['storage']) || 'memory',
+      level: PrivacyManager.parseChoice(
+        'TELEMETRY_LEVEL',
+        ['basic', 'detailed', 'full'] as const,
+        'basic'
+      ),
+      storage: PrivacyManager.parseChoice(
+        'TELEMETRY_STORAGE',
+        ['memory', 'filesystem', 'external'] as const,
+        'memory'
+      ),
       storagePath: process.env.TELEMETRY_PATH || '.creative-thinking/telemetry',
       batchSize: parseInt(process.env.TELEMETRY_BATCH_SIZE || '100', 10),
       flushInterval: parseInt(process.env.TELEMETRY_FLUSH_INTERVAL || '60000', 10),
-      privacyMode:
-        (process.env.TELEMETRY_PRIVACY_MODE as TelemetryConfig['privacyMode']) || 'balanced',
+      privacyMode: PrivacyManager.parseChoice(
+        'TELEMETRY_PRIVACY_MODE',
+        ['strict', 'balanced', 'minimal'] as const,
+        'balanced'
+      ),
       excludePatterns: process.env.TELEMETRY_EXCLUDE?.split(',').map(p => p.trim()) || [],
     };
+  }
+
+  /**
+   * An env var that must be one of a closed set. These used to be bare
+   * casts, so TELEMETRY_STORAGE=bogus reached the storage switch, matched no
+   * case, and stored nothing without saying so. An unrecognized value now
+   * warns on stderr and takes the default.
+   */
+  private static parseChoice<T extends string>(
+    name: string,
+    allowed: readonly T[],
+    fallback: T
+  ): T {
+    const raw = process.env[name];
+    if (raw === undefined || raw === '') return fallback;
+    if ((allowed as readonly string[]).includes(raw)) return raw as T;
+    process.stderr.write(
+      `[Telemetry] ${name}="${raw}" is not one of ${allowed.join('|')}; using ${fallback}.\n`
+    );
+    return fallback;
   }
 }

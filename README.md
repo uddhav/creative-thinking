@@ -458,7 +458,7 @@ Best for: Complex decision-making, handling contradictory evidence, reducing con
 - Comprehensive risk and failure mode tracking across all techniques
 - Antifragile solution design that benefits from stress and change
 - Consideration of low-probability, high-impact events
-- Meta-learning metrics to track session effectiveness
+- Meta-learning metrics on technique usage and output completeness
 - Analytical verification integrated with creative generation
 
 ### Session Management
@@ -695,9 +695,10 @@ creative journey:
 - Noteworthy moments flagged
 - Future relevance assessments
 
-### 📊 Analytics and Effectiveness Tracking (NEW)
+### 📊 Analytics and Usage Tracking
 
-Optional telemetry system for tracking technique effectiveness:
+Optional telemetry system for tracking technique usage and output completeness (nothing observes an
+outcome, so it is usage, not effectiveness):
 
 **Privacy-First Design:**
 
@@ -1262,9 +1263,17 @@ The server supports environment variables for advanced features:
 ### Telemetry Configuration (Optional)
 
 - `TELEMETRY_ENABLED=true` - Enable anonymous usage analytics (opt-in)
-- `TELEMETRY_LEVEL=basic|detailed|full` - Control data collection granularity
-- `TELEMETRY_STORAGE=memory|filesystem` - Analytics storage backend
-- `TELEMETRY_PRIVACY_MODE=strict|balanced|minimal` - Privacy protection level
+- `TELEMETRY_LEVEL=basic|detailed|full` - Control data collection granularity (default `basic`:
+  lifecycle events plus one `problem_discovered` row per discovery call)
+- `TELEMETRY_STORAGE=memory|filesystem|external` - Analytics storage backend (default `memory`;
+  `external` is not implemented and stores nothing; an unrecognised value warns and uses `memory`)
+- `TELEMETRY_PATH=.creative-thinking/telemetry` - Directory for the filesystem backend, relative to
+  the working directory, not the home directory
+- `TELEMETRY_PRIVACY_MODE=strict|balanced|minimal` - Privacy protection level (`strict` keeps rows
+  with no session linkage and coarse metrics; per-session analytics are meaningless under it)
+- `TELEMETRY_BATCH_SIZE=100`, `TELEMETRY_FLUSH_INTERVAL=60000` - When buffered events are written.
+  Both binaries also flush on exit.
+- `TELEMETRY_EXCLUDE=pattern,pattern` - Event types matching a pattern are dropped
 
 See [Telemetry in Contributing Guide](./CONTRIBUTING.md#telemetry-system) for details.
 

@@ -37,7 +37,11 @@ describe('round 0+1 steering surfaces (via MCP client)', () => {
 
   beforeAll(async () => {
     client = new MCPClientTestHelper();
-    await client.connect();
+    // These cases pin the advisory default, so a developer shell exporting
+    // STEP_ORDER_ENFORCEMENT=strict must not leak into the spawned server.
+    const env = { ...process.env };
+    delete env.STEP_ORDER_ENFORCEMENT;
+    await client.connect({ env });
   });
 
   afterAll(async () => {

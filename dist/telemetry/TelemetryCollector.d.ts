@@ -9,6 +9,7 @@ export declare class TelemetryCollector {
     private privacyManager;
     private storage;
     private eventBuffer;
+    private inFlight;
     private flushTimer?;
     private sessionStartTimes;
     private isShuttingDown;
@@ -67,9 +68,24 @@ export declare class TelemetryCollector {
      */
     trackTechniqueRecommendation(sessionId: string, recommendedTechniques: LateralTechnique[], selectedTechnique: LateralTechnique): Promise<void>;
     /**
+     * One discover_techniques call. There is no session yet, so the caller
+     * synthesizes an id; balanced privacy hashes it like any other.
+     */
+    trackProblemDiscovered(discoveryId: string, meta: {
+        category: string;
+        evidenceBreadth: number;
+        tier: 'low' | 'medium' | 'high';
+    }): Promise<void>;
+    /**
+     * The early-warning system recommended an escape protocol on this step.
+     * The event type is the whole signal; the protocol name is not carried.
+     */
+    trackEscapeRecommended(sessionId: string, technique?: LateralTechnique): Promise<void>;
+    /**
      * Flush buffered events to storage
      */
     flush(): Promise<void>;
+    private flushBatch;
     /**
      * Get telemetry analytics
      */
