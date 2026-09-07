@@ -44,12 +44,38 @@ export declare class ExecutionGraphGenerator {
      */
     private static calculateSequentialTimeMultiplier;
     /**
-     * Rounds of nodes that may run concurrently.
+     * Depth of every node in the dependency graph, and the parent that put it
+     * there. One walk feeds both `parallelizableGroups` and `criticalPath`, so
+     * the two cannot disagree about how long the schedule is. They used to be
+     * computed against different graphs — the rounds honoured soft edges, the
+     * critical path walked hard edges only — and disagreed for 618 of the 1,024
+     * ordered technique pairs, always by exactly one, with the path never
+     * reaching the session-ending node (#367).
      *
-     * Grouped by depth in the dependency graph: a node's round is one past the
-     * deepest node it hard-depends on, so two nodes share a round exactly when
-     * neither can reach the other. Soft dependencies are advisory and do not
-     * block, so they do not affect depth.
+     * A node's depth is one past the deepest node it depends on, hard or soft.
+     * Soft dependencies count: they are non-blocking for EXECUTION — a caller
+     * need not wait — but they are still ordering constraints, and a round is an
+     * ordering. Skipping them put the terminal node in the wrong round. It
+     * carries `nextStepNeeded: false`, ends the session, and takes a soft
+     * dependency on every technique's final node so it lands last. With soft
+     * edges ignored its depth came only from its own predecessor, so a plan of
+     * six_hats (7 steps) then po (4) scheduled the session-ending node in round 3
+     * with three six_hats nodes in rounds 4-6 — telling a caller to end the
+     * session and then send more steps to it.
+     *
+     * `deepestParent` is the first dependency, in array order, that holds the
+     * maximum depth (strict `>`, so a later dependency of equal depth does not
+     * replace it). `getDependencies` puts a node's own predecessor first and the
+     * terminal node's soft edges are appended after it, so when the last
+     * technique ties for longest the critical path stays inside that technique.
+     *
+     * Memoised and iterative rather than recursive: a plan can carry hundreds of
+     * nodes and this runs on every planning call.
+     */
+    private static computeDepths;
+    /**
+     * Rounds of nodes that may run concurrently: nodes bucketed by depth, so two
+     * nodes share a round exactly when neither can reach the other.
      *
      * This replaced grouping by identical hard-dependency signature, which was
      * sufficient but not necessary and under-reported badly. Step 2 of technique
@@ -59,20 +85,22 @@ export declare class ExecutionGraphGenerator {
      * placed all twenty remaining nodes in groups of one — only the first round
      * was ever parallel, and the metadata contradicted itself (#308).
      *
-     * The invariant #327 established still holds, and now holds by construction
+     * The invariant #327 established still holds, and holds by construction
      * rather than by a post-hoc split: two steps of one technique are always
      * chained, so one is always deeper than the other and they cannot land in the
      * same round.
      */
-    private static findParallelizableGroups;
+    private static roundsFrom;
     /**
-     * Find the critical path through the graph
+     * The critical path: one node per round along the deepest dependency chain,
+     * read back from the same depth walk as the rounds. It starts at a root and
+     * ends at the deepest node — the session-ending node, which every
+     * technique's final node feeds by a soft edge — so it is always exactly as
+     * long as `parallelizableGroups`. Ties for deepest go to the earliest node in
+     * plan order; ties among a node's dependencies go to the first in array order
+     * (see `computeDepths`).
      */
-    private static findCriticalPath;
-    /**
-     * Depth-first search to find longest path
-     */
-    private static dfs;
+    private static deepestChain;
     /**
      * Generate instructions for the invoker
      */

@@ -270,4 +270,110 @@ describe('the execution graph advertises a schedule that works', () => {
       /sessionid/
     );
   });
+
+  it('derives criticalPath from the same schedule as the rounds', () => {
+    // `criticalPath` walked hard dependencies only, while
+    // `parallelizableGroups` honours the soft edges that order the
+    // session-ending node last. Same object, same quantity, two graphs: the two
+    // disagreed for 618 of the 1,024 ordered technique pairs, always by exactly
+    // one, and the path never reached the terminal node (#367). A caller
+    // computing the speedup from criticalPath got 1.6x where the metadata said
+    // 1.4x.
+    //
+    // Literal ids, NOT `criticalPath.length === parallelizableGroups.length`.
+    // Both fields now come from one depth walk, so a derived assertion holds
+    // for any internally consistent walk, including a wrong one. The ids also
+    // pin the tie-break: when the last technique ties for longest the path
+    // stays inside it (six_hats+scamper stays in scamper's node-8..15; a `>=`
+    // tie-break would flip it to six_hats plus node-15), otherwise it is the
+    // earliest-listed longest technique's chain plus the terminal node.
+    //
+    // Node ids are plan-wide and 1-based: six_hats 7, scamper 8, po 4, triz 4.
+    const range = (from: number, to: number): string[] =>
+      Array.from({ length: to - from + 1 }, (_, i) => `node-${from + i}`);
+    const cases: Array<[LateralTechnique[], string[]]> = [
+      [['six_hats'], range(1, 7)],
+      [
+        ['six_hats', 'po'],
+        [...range(1, 7), 'node-11'],
+      ],
+      [['six_hats', 'scamper'], range(8, 15)],
+      [
+        ['six_hats', 'scamper', 'po', 'triz'],
+        [...range(8, 15), 'node-23'],
+      ],
+      [['po', 'six_hats'], range(5, 11)],
+      [
+        ['po', 'six_hats', 'po'],
+        [...range(5, 11), 'node-15'],
+      ],
+    ];
+
+    const server = new LateralThinkingServer();
+    for (const [techniques, expected] of cases) {
+      const graph = planFor(server, techniques).executionGraph;
+      const md = graph?.metadata as unknown as { criticalPath: string[] };
+      expect(md.criticalPath, `${techniques.join('+')}: criticalPath`).toEqual(expected);
+    }
+  });
+
+  it('walks criticalPath along real edges, one node per round, ending the session', () => {
+    // Consistency rules, not the guard: a hard-only chain is still a chain and
+    // a 7-id path indexes 8 rounds without error, so these stay green under the
+    // old walker for some plans. The literal table above is what detects it.
+    const server = new LateralThinkingServer();
+    for (const techniques of [
+      ['six_hats'],
+      ['six_hats', 'po'],
+      ['six_hats', 'scamper'],
+      ['six_hats', 'scamper', 'po', 'triz'],
+      ['po', 'six_hats', 'po'],
+    ] as LateralTechnique[][]) {
+      const graph = planFor(server, techniques).executionGraph;
+      const nodes = graph?.nodes ?? [];
+      const groups = graph?.metadata.parallelizableGroups ?? [];
+      const path = (graph?.metadata as unknown as { criticalPath: string[] }).criticalPath;
+      const byId = new Map(nodes.map(n => [n.id, n]));
+      const label = techniques.join('+');
+
+      for (let i = 1; i < path.length; i++) {
+        const deps = byId.get(path[i])?.dependencies.map(d => d.nodeId) ?? [];
+        expect(deps, `${label}: ${path[i]} does not depend on ${path[i - 1]}`).toContain(
+          path[i - 1]
+        );
+      }
+      path.forEach((id, i) => {
+        expect(groups[i], `${label}: ${id} is not in round ${i + 1}`).toContain(id);
+      });
+      const terminal = nodes.find(
+        n =>
+          (n as unknown as { parameters: { nextStepNeeded?: boolean } }).parameters
+            .nextStepNeeded === false
+      );
+      expect(path[path.length - 1], `${label}: path does not end the session`).toBe(terminal?.id);
+    }
+  });
+
+  it('agrees with the round count for every ordered technique pair', () => {
+    // Consistency sweep over all 32x32 ordered pairs, including the 32
+    // self-pairs. Under the hard-only walker 618 of these disagreed. This is
+    // a consistency check on the invariant, not the guard: it stays green
+    // under a wrong tie-break, which only the literal table detects.
+    const server = new LateralThinkingServer();
+    const offenders: string[] = [];
+    for (const a of ALL_LATERAL_TECHNIQUES) {
+      for (const b of ALL_LATERAL_TECHNIQUES) {
+        const graph = planFor(server, [a, b]).executionGraph;
+        const groups = graph?.metadata.parallelizableGroups ?? [];
+        const path = (graph?.metadata as unknown as { criticalPath: string[] }).criticalPath;
+        if (path.length !== groups.length) {
+          offenders.push(`${a}+${b}: path ${path.length}, rounds ${groups.length}`);
+        }
+      }
+    }
+    expect(
+      offenders,
+      `pairs whose criticalPath and rounds disagree:\n${offenders.join('\n')}`
+    ).toEqual([]);
+  }, 180_000);
 });
