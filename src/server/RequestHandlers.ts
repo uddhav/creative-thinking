@@ -541,7 +541,7 @@ export class RequestHandlers {
         'sessionOperation' in args;
       const violation = isSessionOperation
         ? null
-        : workflowGuard.checkWorkflowViolation(name, args);
+        : await workflowGuard.checkWorkflowViolation(name, args);
       if (violation) {
         const violationError = workflowGuard.getViolationError(violation);
         const enhancedError = violationError as CreativeThinkingError;
@@ -573,7 +573,7 @@ export class RequestHandlers {
           break;
 
         case 'plan_thinking_session':
-          result = this.lateralServer.planThinkingSession(args);
+          result = await this.lateralServer.planThinkingSession(args);
           break;
 
         case 'execute_thinking_step':

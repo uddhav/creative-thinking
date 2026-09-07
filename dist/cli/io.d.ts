@@ -46,16 +46,7 @@ export declare function unwrapResponse(envelope: LateralThinkingResponse): {
     data: unknown;
     isError: boolean;
 };
-/**
- * Print a JSON document and exit with the right code.
- *
- * Successes go to stdout, errors to stderr — keeps stdout a single
- * parseable JSON value for skill consumers.
- *
- * Critical: we wait for the write callback before calling process.exit(),
- * otherwise large payloads get truncated when the pipe buffer hasn't
- * drained yet. Empirically this happens at ~8KB on macOS pipes.
- */
+export declare function onBeforeExit(work: () => Promise<unknown>): void;
 export declare function emit(data: unknown, isError: boolean): never;
 /**
  * Comma-separated flag value → string array (with trim + filter empties).

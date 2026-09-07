@@ -40,8 +40,8 @@ describe('Execution concurrency', () => {
   });
 
   /** A six_hats plan; step 2 (white hat) avoids the step-1 ergodicity check. */
-  function createPlan(problem: string): string {
-    const result = server.planThinkingSession({ problem, techniques: ['six_hats'] });
+  async function createPlan(problem: string): Promise<string> {
+    const result = await server.planThinkingSession({ problem, techniques: ['six_hats'] });
     expect(result.isError).toBeFalsy();
     return (JSON.parse(result.content[0].text) as { planId: string }).planId;
   }
@@ -61,7 +61,7 @@ describe('Execution concurrency', () => {
   }
 
   it('loses no history entry when concurrent steps contend for one session', async () => {
-    const planId = createPlan('Same-session concurrency');
+    const planId = await createPlan('Same-session concurrency');
 
     // Establish the session with one step, then contend on it.
     const seed = parse(await step(planId, 0));
@@ -100,7 +100,9 @@ describe('Execution concurrency', () => {
     // is also why performance.test.ts's "100 concurrent step executions" all
     // land on a single session.)
     const SESSIONS = 10;
-    const planIds = Array.from({ length: SESSIONS }, (_, i) => createPlan(`Isolation plan ${i}`));
+    const planIds = await Promise.all(
+      Array.from({ length: SESSIONS }, (_, i) => createPlan(`Isolation plan ${i}`))
+    );
 
     const seeds = await Promise.all(planIds.map((planId, i) => step(planId, i)));
     const sessionIds = seeds.map(r => parse(r).sessionId);
@@ -119,7 +121,7 @@ describe('Execution concurrency', () => {
     // One plan and no sessionId, so all 50 land on the same session (see the
     // note in the isolation test above) — this is volume against a contended
     // session, not across independent ones.
-    const planId = createPlan('Contended session throughput');
+    const planId = await createPlan('Contended session throughput');
 
     const CALLS = 50;
     const results = await Promise.all(Array.from({ length: CALLS }, (_, i) => step(planId, i)));

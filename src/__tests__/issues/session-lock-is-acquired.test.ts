@@ -56,8 +56,12 @@ describe('the session lock is really taken', () => {
 
     try {
       const plan = JSON.parse(
-        server.planThinkingSession({ problem: 'Lock pin probe', techniques: ['six_hats', 'po'] })
-          .content[0].text
+        (
+          await server.planThinkingSession({
+            problem: 'Lock pin probe',
+            techniques: ['six_hats', 'po'],
+          })
+        ).content[0].text
       ) as { planId: string };
 
       const step = (technique: string, n: number, total: number, i: number) =>

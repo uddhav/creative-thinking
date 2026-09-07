@@ -147,6 +147,41 @@ export class SessionPersistence {
         }
     }
     /**
+     * Persist a plan. A no-op without an adapter: "persisted iff an adapter came
+     * up" is the predicate sessions already use, and it replaces the old
+     * env-name gate in planStore.ts, which had to special-case postgres.
+     */
+    async savePlan(planId, plan) {
+        await this.initialize();
+        if (!this.persistenceAdapter)
+            return;
+        await this.persistenceAdapter.savePlan(planId, plan);
+    }
+    /** The stored plan, or null without an adapter or without a record. */
+    async loadPlan(planId) {
+        await this.initialize();
+        if (!this.persistenceAdapter)
+            return null;
+        return this.persistenceAdapter.loadPlan(planId);
+    }
+    /** Remove a plan; false without an adapter or without a record. */
+    async deletePlan(planId) {
+        await this.initialize();
+        if (!this.persistenceAdapter)
+            return false;
+        return this.persistenceAdapter.deletePlan(planId);
+    }
+    /**
+     * Delete sessions and plans whose last write predates `olderThan`. The one
+     * caller is the PERSISTENCE_TTL_DAYS sweep in SessionManager (#357).
+     */
+    async sweep(olderThan) {
+        await this.initialize();
+        if (!this.persistenceAdapter)
+            return 0;
+        return this.persistenceAdapter.cleanup(olderThan);
+    }
+    /**
      * Get the persistence adapter
      */
     getPersistenceAdapter() {

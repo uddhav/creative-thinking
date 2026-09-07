@@ -1020,7 +1020,9 @@ export const EXECUTE_THINKING_STEP_TOOL: Tool = {
       },
       deleteOptions: {
         type: 'object',
-        description: 'For sessionOperation: delete. Requires a persistence adapter.',
+        description:
+          'For sessionOperation: delete. Requires a persistence adapter, and confirm: true, ' +
+          'without which the call is refused and nothing is deleted.',
         properties: {
           sessionId: { type: 'string' },
           confirm: { type: 'boolean' },

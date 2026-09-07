@@ -135,7 +135,7 @@ describe('MCP Protocol Integration', () => {
   });
 
   describe('plan_thinking_session tool', () => {
-    it('should create a plan for valid techniques', () => {
+    it('should create a plan for valid techniques', async () => {
       const input: PlanThinkingSessionInput = {
         problem: 'Improve customer experience',
         techniques: ['design_thinking', 'scamper'],
@@ -143,7 +143,7 @@ describe('MCP Protocol Integration', () => {
         timeframe: 'thorough',
       };
 
-      const result = server.planThinkingSession(input);
+      const result = await server.planThinkingSession(input);
 
       expect(result.isError).toBeFalsy();
       const data = parseServerResponse<PlanThinkingSessionResponse>(result);
@@ -157,13 +157,13 @@ describe('MCP Protocol Integration', () => {
       expect(data.createdAt).toBeDefined();
     });
 
-    it('should reject unknown techniques', () => {
+    it('should reject unknown techniques', async () => {
       const input: PlanThinkingSessionInput = {
         problem: 'Test problem',
         techniques: ['invalid_technique' as LateralTechnique],
       };
 
-      const result = server.planThinkingSession(input);
+      const result = await server.planThinkingSession(input);
 
       // The server should reject invalid techniques
       expect(result.isError).toBeTruthy();
@@ -174,14 +174,14 @@ describe('MCP Protocol Integration', () => {
       expect(errorData.error.message).toContain('Valid techniques are:');
     });
 
-    it('should handle option generation request', () => {
+    it('should handle option generation request', async () => {
       const input: PlanThinkingSessionInput = {
         problem: 'Navigate strict regulations',
         techniques: ['triz'],
         includeOptions: true,
       };
 
-      const result = server.planThinkingSession(input);
+      const result = await server.planThinkingSession(input);
       const data = parseServerResponse<PlanThinkingSessionResponse>(result);
 
       // With includeOptions: true, there should be a workflow item
@@ -193,7 +193,7 @@ describe('MCP Protocol Integration', () => {
   describe('execute_thinking_step tool', () => {
     it('should execute valid step with plan', async () => {
       // First create a plan
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Test execution',
         techniques: ['po'],
       });
@@ -246,7 +246,7 @@ describe('MCP Protocol Integration', () => {
 
     it('should complete workflow and generate insights', async () => {
       // Create plan
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Quick decision test',
         techniques: ['random_entry'],
         timeframe: 'quick',
@@ -313,7 +313,7 @@ describe('MCP Protocol Integration', () => {
       const techniques = discovery.recommendations.slice(0, 2).map(r => r.technique);
 
       // 2. Planning
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Increase innovation in our product development',
         techniques,
         objectives: ['Generate breakthrough ideas', 'Challenge assumptions'],
@@ -377,7 +377,7 @@ describe('MCP Protocol Integration', () => {
   });
 
   describe('Error Handling', () => {
-    it('should provide clear error messages for invalid inputs', () => {
+    it('should provide clear error messages for invalid inputs', async () => {
       // Test discovery with invalid preferred outcome
       const discoveryResult = server.discoverTechniques({
         problem: 'Test problem',
@@ -389,7 +389,7 @@ describe('MCP Protocol Integration', () => {
       expect(discoveryResult.isError).toBeFalsy();
 
       // Test planning with empty techniques
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Test problem',
         techniques: [],
       });
@@ -422,7 +422,7 @@ describe('MCP Protocol Integration', () => {
   describe('Advanced Features', () => {
     it('should track ergodicity and path dependencies', async () => {
       // Plan with SCAMPER
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Redesign workspace',
         techniques: ['scamper'],
       });
@@ -452,7 +452,7 @@ describe('MCP Protocol Integration', () => {
 
     it('should support revision and branching', async () => {
       // Plan session
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Test revisions',
         techniques: ['six_hats'],
       });

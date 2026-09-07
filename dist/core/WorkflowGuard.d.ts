@@ -25,7 +25,7 @@ export declare class WorkflowGuard {
     /**
      * Check if the workflow is being followed correctly
      */
-    checkWorkflowViolation(toolName: string, args: unknown): WorkflowViolation | null;
+    checkWorkflowViolation(toolName: string, args: unknown): Promise<WorkflowViolation | null>;
     /**
      * Check violations for parallel execution calls
      */

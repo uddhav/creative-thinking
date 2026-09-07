@@ -98,9 +98,9 @@ describe('Performance Integration Tests', () => {
     // measurement covers the concurrent part only.
 
     /** A six_hats plan; step 2 (white hat) avoids the step-1 ergodicity check. */
-    const planFor = (problem: string): string =>
+    const planFor = async (problem: string): Promise<string> =>
       safeJsonParse(
-        server.planThinkingSession({ problem, techniques: ['six_hats'] }).content[0].text
+        (await server.planThinkingSession({ problem, techniques: ['six_hats'] })).content[0].text
       ).planId;
 
     const stepOn = (planId: string, i: number) =>
@@ -116,7 +116,9 @@ describe('Performance Integration Tests', () => {
       });
 
     it('should handle 50 concurrent step executions without leaking memory', async () => {
-      const planIds = Array.from({ length: 50 }, (_, i) => planFor(`Memory probe ${i}`));
+      const planIds = await Promise.all(
+        Array.from({ length: 50 }, (_, i) => planFor(`Memory probe ${i}`))
+      );
 
       // Force garbage collection if available (requires --expose-gc flag)
       if (global.gc) {
@@ -158,7 +160,9 @@ describe('Performance Integration Tests', () => {
     });
 
     it('should keep 100 concurrent step executions on distinct sessions', async () => {
-      const planIds = Array.from({ length: 100 }, (_, i) => planFor(`Isolation probe ${i}`));
+      const planIds = await Promise.all(
+        Array.from({ length: 100 }, (_, i) => planFor(`Isolation probe ${i}`))
+      );
 
       const startTime = Date.now();
       const results = await Promise.all(planIds.map((planId, i) => stepOn(planId, i)));
@@ -181,7 +185,7 @@ describe('Performance Integration Tests', () => {
 
     it('should handle 100 concurrent step executions', async () => {
       // First create a plan
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Performance test problem',
         techniques: ['six_hats'],
       });
@@ -280,16 +284,18 @@ describe('Performance Integration Tests', () => {
       expect(memoryIncrease).toBeLessThan(100);
     });
 
-    it('should give 100 planning requests distinct plan ids', () => {
+    it('should give 100 planning requests distinct plan ids', async () => {
       const startTime = Date.now();
       const techniques = ['six_hats', 'scamper', 'po', 'random_entry'];
 
-      const results = Array.from({ length: 100 }, (_, i) =>
-        server.planThinkingSession({
-          problem: `Planning volume problem ${i}`,
-          techniques: [techniques[i % techniques.length]] as any,
-          timeframe: ['quick', 'thorough', 'comprehensive'][i % 3] as any,
-        })
+      const results = await Promise.all(
+        Array.from({ length: 100 }, (_, i) =>
+          server.planThinkingSession({
+            problem: `Planning volume problem ${i}`,
+            techniques: [techniques[i % techniques.length]] as any,
+            timeframe: ['quick', 'thorough', 'comprehensive'][i % 3] as any,
+          })
+        )
       );
       const duration = Date.now() - startTime;
 
@@ -308,7 +314,7 @@ describe('Performance Integration Tests', () => {
       const problem = 'Large session test';
 
       // Create plan
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem,
         techniques: ['six_hats'],
       });
@@ -437,7 +443,7 @@ describe('Performance Integration Tests', () => {
       const problem = 'Deep revision test';
 
       // Create plan
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem,
         techniques: ['po'],
       });
@@ -500,7 +506,7 @@ describe('Performance Integration Tests', () => {
 
       // Create 50 sessions
       for (let i = 0; i < 50; i++) {
-        const planResult = server.planThinkingSession({
+        const planResult = await server.planThinkingSession({
           problem: `Memory test problem ${i}`,
           techniques: ['random_entry'],
         });
@@ -572,7 +578,7 @@ describe('Performance Integration Tests', () => {
       const startTime = Date.now();
 
       // Plan multi-technique session
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem,
         techniques,
         timeframe: 'comprehensive',

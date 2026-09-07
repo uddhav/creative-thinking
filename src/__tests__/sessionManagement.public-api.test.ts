@@ -36,7 +36,7 @@ describe('Session Management - Public API', () => {
       server = new LateralThinkingServer();
 
       // Create a session through the public API
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Test TTL expiration',
         techniques: ['six_hats'],
       });
@@ -115,7 +115,7 @@ describe('Session Management - Public API', () => {
       server = new LateralThinkingServer();
 
       // Create a session
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Test session keep-alive',
         techniques: ['po'],
       });
@@ -168,7 +168,7 @@ describe('Session Management - Public API', () => {
 
       // Create 2 sessions (at the limit)
       for (let i = 0; i < 2; i++) {
-        const planResult = server.planThinkingSession({
+        const planResult = await server.planThinkingSession({
           problem: `Problem ${i}`,
           techniques: ['random_entry'],
         });
@@ -190,7 +190,7 @@ describe('Session Management - Public API', () => {
       }
 
       // Create a 3rd session, which should trigger eviction of the oldest
-      const plan3Result = server.planThinkingSession({
+      const plan3Result = await server.planThinkingSession({
         problem: 'Problem 3',
         techniques: ['random_entry'],
       });
@@ -245,7 +245,7 @@ describe('Session Management - Public API', () => {
 
       // Create some sessions to generate memory usage
       for (let i = 0; i < 3; i++) {
-        const planResult = server.planThinkingSession({
+        const planResult = await server.planThinkingSession({
           problem: `Memory test problem ${i}`,
           techniques: ['scamper'],
         });
@@ -299,7 +299,7 @@ describe('Session Management - Public API', () => {
       server = new LateralThinkingServer();
 
       // Create first session
-      const plan1Result = server.planThinkingSession({
+      const plan1Result = await server.planThinkingSession({
         problem: 'First problem',
         techniques: ['six_hats'],
       });
@@ -319,7 +319,7 @@ describe('Session Management - Public API', () => {
       });
 
       // Create second session - should trigger eviction
-      const plan2Result = server.planThinkingSession({
+      const plan2Result = await server.planThinkingSession({
         problem: 'Second problem',
         techniques: ['six_hats'],
       });
@@ -351,7 +351,7 @@ describe('Session Management - Public API', () => {
   });
 
   describe('Configuration through environment variables', () => {
-    it('should respect environment variable configuration', () => {
+    it('should respect environment variable configuration', async () => {
       // This test verifies that environment variables are read
       // We can't directly check config values, but we can observe behavior
 
@@ -364,7 +364,7 @@ describe('Session Management - Public API', () => {
       server = new LateralThinkingServer();
 
       // Create a session to ensure server initializes properly
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Config test',
         techniques: ['po'],
       });

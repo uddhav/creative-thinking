@@ -60,7 +60,7 @@ describe('Session Persistence - Simple Integration', () => {
       const problem = 'Test auto-save problem';
 
       // Create a session with autoSave
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem,
         techniques: ['random_entry'],
       });
@@ -111,7 +111,7 @@ describe('Session Persistence - Simple Integration', () => {
       // Create multiple sessions. PO has four steps and each one is run, so the
       // session that gets saved is a finished one rather than a stub.
       for (let i = 0; i < 3; i++) {
-        const planResult = server.planThinkingSession({
+        const planResult = await server.planThinkingSession({
           problem: `Problem ${i}`,
           techniques: ['po'],
         });
@@ -173,7 +173,7 @@ describe('Session Persistence - Simple Integration', () => {
       const problem = 'Test session updates';
 
       // Create initial session
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem,
         techniques: ['scamper'],
       });
@@ -237,7 +237,7 @@ describe('Session Persistence - Simple Integration', () => {
       const problem = 'Test persistence across restarts';
 
       // Create and save a session
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem,
         techniques: ['six_hats'],
       });
@@ -301,7 +301,7 @@ describe('Session Persistence - Simple Integration', () => {
   describe('Error Handling', () => {
     it('should handle autoSave failures gracefully', async () => {
       const problem = 'Test save failure';
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem,
         techniques: ['random_entry'],
       });

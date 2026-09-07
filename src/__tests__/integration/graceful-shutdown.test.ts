@@ -23,7 +23,7 @@ describe('Graceful Shutdown', () => {
 
   it('should properly clean up sessions on destroy', async () => {
     // Create some sessions
-    const planResponse = server.planThinkingSession({
+    const planResponse = await server.planThinkingSession({
       problem: 'Test problem',
       techniques: ['six_hats'],
     });
@@ -77,9 +77,9 @@ describe('Graceful Shutdown', () => {
     release2();
   });
 
-  it('should handle multiple rapid destroy calls gracefully', () => {
+  it('should handle multiple rapid destroy calls gracefully', async () => {
     // Create a session
-    server.planThinkingSession({
+    await server.planThinkingSession({
       problem: 'Test problem',
       techniques: ['scamper'],
     });
@@ -95,7 +95,7 @@ describe('Graceful Shutdown', () => {
     expect(server.getSessionManager().getSessionCount()).toBe(0);
   });
 
-  it('should clean up SessionCleaner interval on destroy', () => {
+  it('should clean up SessionCleaner interval on destroy', async () => {
     // Create server and let it initialize
     const testServer = new LateralThinkingServer();
 
@@ -103,7 +103,7 @@ describe('Graceful Shutdown', () => {
     const sessionManager = testServer.getSessionManager();
 
     // Create a session to ensure cleanup interval is active
-    testServer.planThinkingSession({
+    await testServer.planThinkingSession({
       problem: 'Test cleanup',
       techniques: ['po'],
     });
@@ -116,7 +116,7 @@ describe('Graceful Shutdown', () => {
     expect(sessionManager.getSessionCount()).toBe(0);
   });
 
-  it('should log cleanup progress during destroy', () => {
+  it('should log cleanup progress during destroy', async () => {
     // Spy on console.error to verify logging
     const errorLogs: string[] = [];
     const originalError = console.error;
@@ -126,7 +126,7 @@ describe('Graceful Shutdown', () => {
 
     try {
       // Create some data
-      server.planThinkingSession({
+      await server.planThinkingSession({
         problem: 'Test logging',
         techniques: ['random_entry'],
       });

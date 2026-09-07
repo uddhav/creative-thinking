@@ -58,13 +58,13 @@ describe('PDA-SCAMPER Enhancement', () => {
   });
 
   // Helper function to create a plan
-  function createPlan(problem: string): string {
+  async function createPlan(problem: string): Promise<string> {
     const input: PlanThinkingSessionInput = {
       problem,
       techniques: ['scamper'] as LateralTechnique[],
     };
 
-    const result = server.planThinkingSession(input);
+    const result = await server.planThinkingSession(input);
     expect(result.isError).toBeFalsy();
     const planData = JSON.parse(result.content[0]?.text || '{}') as PlanResponse;
     return planData.planId;
@@ -100,15 +100,15 @@ describe('PDA-SCAMPER Enhancement', () => {
   }
 
   describe('Planning Phase', () => {
-    it('should include path indicators in SCAMPER workflow', () => {
-      createPlan('Improve a coffee mug design');
+    it('should include path indicators in SCAMPER workflow', async () => {
+      await createPlan('Improve a coffee mug design');
 
       const input: PlanThinkingSessionInput = {
         problem: 'Improve a coffee mug design',
         techniques: ['scamper'] as LateralTechnique[],
       };
 
-      const result = server.planThinkingSession(input);
+      const result = await server.planThinkingSession(input);
       const planData = JSON.parse(result.content[0]?.text || '{}') as PlanResponse;
 
       // Check that each step has path indicators
@@ -133,7 +133,7 @@ describe('PDA-SCAMPER Enhancement', () => {
 
   describe('Execution Phase - Path Impact Analysis', () => {
     it('should analyze path impact for each SCAMPER action', async () => {
-      const planId = createPlan('Improve a coffee mug design');
+      const planId = await createPlan('Improve a coffee mug design');
 
       // Step 1: Substitute (medium commitment)
       const step1 = await executeStep(
@@ -203,7 +203,7 @@ describe('PDA-SCAMPER Enhancement', () => {
     });
 
     it('should track cumulative flexibility degradation', async () => {
-      const planId = createPlan('Redesign office chair');
+      const planId = await createPlan('Redesign office chair');
       const flexibilityScores: number[] = [];
 
       // Execute multiple high-commitment actions
@@ -256,7 +256,7 @@ describe('PDA-SCAMPER Enhancement', () => {
     });
 
     it('should generate alternative suggestions when flexibility is low', async () => {
-      const planId = createPlan('Package redesign');
+      const planId = await createPlan('Package redesign');
 
       // Execute high-commitment actions to reduce flexibility
       const step1 = await executeStep(
@@ -302,7 +302,7 @@ describe('PDA-SCAMPER Enhancement', () => {
     });
 
     it('should track modification history with path impacts', async () => {
-      const planId = createPlan('Improve bicycle design');
+      const planId = await createPlan('Improve bicycle design');
 
       const step1 = await executeStep(
         planId,
@@ -367,7 +367,7 @@ describe('PDA-SCAMPER Enhancement', () => {
     });
 
     it('should show different recovery paths for different actions', async () => {
-      const planId = createPlan('Software UI redesign');
+      const planId = await createPlan('Software UI redesign');
 
       const step1 = await executeStep(
         planId,
@@ -403,7 +403,7 @@ describe('PDA-SCAMPER Enhancement', () => {
 
   describe('Option Generation Actions', () => {
     it('should identify option-generating vs option-closing actions', async () => {
-      const planId = createPlan('Product innovation');
+      const planId = await createPlan('Product innovation');
 
       // Option-generating action
       const step1 = await executeStep(
@@ -435,7 +435,7 @@ describe('PDA-SCAMPER Enhancement', () => {
 
   describe('Integration with Ergodicity Tracking', () => {
     it('should properly integrate with ergodicity manager', async () => {
-      const planId = createPlan('System architecture redesign');
+      const planId = await createPlan('System architecture redesign');
 
       // Execute a high-commitment action
       const step1 = await executeStep(

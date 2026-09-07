@@ -16,7 +16,7 @@ describe('Reflexivity Integration', () => {
   describe('TRIZ Reflexivity Tracking', () => {
     it('should track reflexivity for TRIZ action steps', async () => {
       // Plan a TRIZ session
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Reduce manufacturing costs without sacrificing quality',
         techniques: ['triz'],
       });
@@ -67,7 +67,7 @@ describe('Reflexivity Integration', () => {
   describe('Cultural Integration Reflexivity Tracking', () => {
     it('should track reflexivity for Cultural Integration action steps', async () => {
       // Plan a Cultural Integration session
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Bridge communication gap between engineering and marketing teams',
         techniques: ['cultural_integration'],
       });
@@ -151,7 +151,7 @@ describe('Reflexivity Integration', () => {
   describe('Non-Reflexivity Techniques', () => {
     it('should not add reflexivity data for unsupported techniques', async () => {
       // Plan a Six Hats session (not reflexivity-enabled)
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Improve team morale',
         techniques: ['six_hats'],
       });
@@ -177,7 +177,7 @@ describe('Reflexivity Integration', () => {
 
   describe('Reflexivity State Accumulation', () => {
     it('should accumulate reflexivity effects across multiple action steps', async () => {
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Optimize supply chain efficiency',
         techniques: ['triz'],
       });

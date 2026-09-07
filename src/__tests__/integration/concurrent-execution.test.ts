@@ -33,7 +33,7 @@ describe('Concurrent Request Handling', () => {
 
   it('should handle 10 concurrent requests for the same session without race conditions', async () => {
     // First create a plan
-    const planResponse = server.planThinkingSession({
+    const planResponse = await server.planThinkingSession({
       problem: 'Concurrent test problem',
       techniques: ['six_hats'],
     });
@@ -100,13 +100,15 @@ describe('Concurrent Request Handling', () => {
 
   it('should handle 100 concurrent requests across different sessions', async () => {
     // Create 10 different plans
-    const plans = Array.from({ length: 10 }, (_, i) => {
-      const response = server.planThinkingSession({
-        problem: `Problem ${i}`,
-        techniques: ['po'],
-      });
-      return parseResponse(response);
-    });
+    const plans = await Promise.all(
+      Array.from({ length: 10 }, async (_, i) => {
+        const response = await server.planThinkingSession({
+          problem: `Problem ${i}`,
+          techniques: ['po'],
+        });
+        return parseResponse(response);
+      })
+    );
 
     // First create a session for each plan
     const sessionMap = new Map<string, string>(); // planId -> sessionId
@@ -180,7 +182,7 @@ describe('Concurrent Request Handling', () => {
 
   it('should prevent race conditions when modifying session state', async () => {
     // Create a session
-    const planResponse = server.planThinkingSession({
+    const planResponse = await server.planThinkingSession({
       problem: 'Race condition test',
       techniques: ['scamper'],
     });
@@ -306,7 +308,7 @@ describe('Concurrent Request Handling', () => {
     const sessions: { planId: string; sessionId: string }[] = [];
 
     for (let i = 0; i < 5; i++) {
-      const planResponse = server.planThinkingSession({
+      const planResponse = await server.planThinkingSession({
         problem: `Isolation test ${i}`,
         techniques: ['random_entry'],
       });

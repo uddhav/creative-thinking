@@ -31,7 +31,7 @@ describe('Technique Validation Documentation', () => {
         problem: 'Test problem for validation',
         techniques: ['first_principles'],
       };
-      const planResult = server.planThinkingSession(planInput);
+      const planResult = await server.planThinkingSession(planInput);
       const planId = planResult.content[0].text.match(/"planId":\s*"([^"]+)"/)?.[1];
       expect(planId).toBeDefined();
       if (!planId) throw new Error('Plan ID not found');
@@ -64,7 +64,7 @@ describe('Technique Validation Documentation', () => {
         problem: 'Test problem for validation',
         techniques: ['first_principles'],
       };
-      const planResult = server.planThinkingSession(planInput);
+      const planResult = await server.planThinkingSession(planInput);
       const planId = planResult.content[0].text.match(/"planId":\s*"([^"]+)"/)?.[1];
       if (!planId) throw new Error('Plan ID not found');
 
@@ -109,7 +109,7 @@ describe('Technique Validation Documentation', () => {
         problem: 'Test problem',
         techniques: ['neuro_computational'],
       };
-      const planResult = server.planThinkingSession(planInput);
+      const planResult = await server.planThinkingSession(planInput);
       const planId = planResult.content[0].text.match(/"planId":\s*"([^"]+)"/)?.[1];
       if (!planId) throw new Error('Plan ID not found');
 
@@ -162,7 +162,7 @@ describe('Technique Validation Documentation', () => {
         problem: 'Test problem',
         techniques: ['biomimetic_path'],
       };
-      const planResult = server.planThinkingSession(planInput);
+      const planResult = await server.planThinkingSession(planInput);
       const planId = planResult.content[0].text.match(/"planId":\s*"([^"]+)"/)?.[1];
       if (!planId) throw new Error('Plan ID not found');
 
@@ -201,7 +201,7 @@ describe('Technique Validation Documentation', () => {
         problem: 'Test problem',
         techniques: ['meta_learning'],
       };
-      const planResult = server.planThinkingSession(planInput);
+      const planResult = await server.planThinkingSession(planInput);
       const planId = planResult.content[0].text.match(/"planId":\s*"([^"]+)"/)?.[1];
       if (!planId) throw new Error('Plan ID not found');
 
@@ -260,7 +260,7 @@ describe('Technique Validation Documentation', () => {
           problem: `Test ${technique}`,
           techniques: [technique],
         };
-        const planResult = server.planThinkingSession(planInput);
+        const planResult = await server.planThinkingSession(planInput);
         const planId = planResult.content[0].text.match(/"planId":\s*"([^"]+)"/)?.[1];
         expect(planId).toBeDefined();
         if (!planId) continue;
@@ -311,7 +311,7 @@ describe('Technique Validation Documentation', () => {
           problem: 'Test problem',
           techniques: [technique],
         };
-        const planResult = server.planThinkingSession(planInput);
+        const planResult = await server.planThinkingSession(planInput);
         const planId = planResult.content[0].text.match(/"planId":\s*"([^"]+)"/)?.[1];
         if (!planId) continue;
 
@@ -343,7 +343,7 @@ describe('Technique Validation Documentation', () => {
         problem: 'Test problem',
         techniques: ['first_principles'],
       };
-      const planResult = server.planThinkingSession(planInput);
+      const planResult = await server.planThinkingSession(planInput);
       const planId = planResult.content[0].text.match(/"planId":\s*"([^"]+)"/)?.[1];
       if (!planId) throw new Error('Plan ID not found');
 

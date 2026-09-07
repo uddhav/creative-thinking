@@ -16,7 +16,7 @@ describe('SCAMPER Reflexivity Integration', () => {
   describe('SCAMPER Full Reflexivity Tracking', () => {
     it('should track reflexivity for all 8 SCAMPER action steps', async () => {
       // Plan a SCAMPER session
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Redesign a coffee maker for small apartments',
         techniques: ['scamper'],
       });
@@ -105,7 +105,7 @@ describe('SCAMPER Reflexivity Integration', () => {
     });
 
     it('should track different reversibility levels for different SCAMPER actions', async () => {
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Improve a mobile app UI',
         techniques: ['scamper'],
       });

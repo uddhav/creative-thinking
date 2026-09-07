@@ -7,6 +7,7 @@ import path from 'path';
 import { randomUUID } from 'crypto';
 import os from 'os';
 import type { PersistenceAdapter } from './adapter.js';
+import type { PlanThinkingSessionOutput } from '../types/planning.js';
 import type {
   SessionState,
   SessionMetadata,
@@ -83,6 +84,7 @@ export class FilesystemAdapter implements PersistenceAdapter {
       await fs.mkdir(this.basePath, { recursive: true });
       await fs.mkdir(path.join(this.basePath, 'sessions'), { recursive: true });
       await fs.mkdir(path.join(this.basePath, 'metadata'), { recursive: true });
+      await fs.mkdir(path.join(this.basePath, 'plans'), { recursive: true });
       this.initialized = true;
     } catch (error) {
       // Use enhanced error for better recovery guidance
@@ -207,20 +209,36 @@ export class FilesystemAdapter implements PersistenceAdapter {
     const sessionPath = this.getSessionPath(sessionId);
     const metadataPath = this.getMetadataPath(sessionId);
 
+    // Both files, whatever happened to the other. A sweep cut off between the
+    // two unlinks used to leave a metadata file with no session behind it, and
+    // returning on the session's ENOENT meant no later sweep ever reclaimed it:
+    // hidden from `list` (the load fails and the entry is dropped), permanent.
+    let removed = false;
     try {
       await fs.unlink(sessionPath);
-      await fs.unlink(metadataPath).catch(() => {}); // Ignore metadata deletion errors
-      return true;
+      removed = true;
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-        return false;
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        throw new PersistenceError(
+          `Failed to delete session ${sessionId}: ${String(error)}`,
+          PersistenceErrorCode.IO_ERROR,
+          error
+        );
       }
-      throw new PersistenceError(
-        `Failed to delete session ${sessionId}: ${String(error)}`,
-        PersistenceErrorCode.IO_ERROR,
-        error
-      );
     }
+    try {
+      await fs.unlink(metadataPath);
+      removed = true;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        throw new PersistenceError(
+          `Failed to delete session metadata ${sessionId}: ${String(error)}`,
+          PersistenceErrorCode.IO_ERROR,
+          error
+        );
+      }
+    }
+    return removed;
   }
 
   async exists(sessionId: string): Promise<boolean> {
@@ -434,8 +452,89 @@ export class FilesystemAdapter implements PersistenceAdapter {
 
     const metadata = await this.list();
     const toDelete = metadata.filter(m => m.updatedAt < olderThan).map(m => m.id);
+    const sessions = await this.deleteBatch(toDelete);
 
-    return this.deleteBatch(toDelete);
+    // Plans: an mtime scan, not a metadata sidecar. A plan is written once, so
+    // its mtime is its creation time; every file already on disk from before
+    // plans went through the adapter is covered with no migration; and there
+    // is no second file to keep consistent. A `cp` or restore resets mtime and
+    // postpones deletion, which SOCKETES.md says.
+    const plansDir = path.join(this.basePath, 'plans');
+    let plans = 0;
+    let files: string[] = [];
+    try {
+      files = await fs.readdir(plansDir);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return sessions;
+      throw error;
+    }
+    for (const file of files) {
+      if (!file.endsWith('.json')) continue;
+      const full = path.join(plansDir, file);
+      try {
+        const stat = await fs.stat(full);
+        if (stat.mtime < olderThan) {
+          await fs.unlink(full);
+          plans++;
+        }
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      }
+    }
+    return sessions + plans;
+  }
+
+  async savePlan(planId: string, plan: PlanThinkingSessionOutput): Promise<void> {
+    this.ensureInitialized();
+    const planPath = this.getPlanPath(planId);
+    // Bare JSON, no {version, format, data} envelope: that is what the old
+    // synchronous store wrote, so files from before and after this change are
+    // one format and need no version sniffing. Same atomic write and 0600 mode
+    // as sessions: the plan carries the caller's problem statement.
+    const tempPath = path.join(os.tmpdir(), `plan-${randomUUID()}.tmp`);
+    try {
+      await fs.writeFile(tempPath, JSON.stringify(plan), { encoding: 'utf8', mode: 0o600 });
+      await fs.rename(tempPath, planPath);
+    } catch (error) {
+      await fs.unlink(tempPath).catch(() => {});
+      const enhancedError = ErrorFactory.fileIOError('savePlan', planPath, error as Error);
+      throw new PersistenceError(enhancedError.message, PersistenceErrorCode.IO_ERROR, {
+        ...enhancedError.toJSON(),
+        originalError: error,
+      });
+    }
+  }
+
+  async loadPlan(planId: string): Promise<PlanThinkingSessionOutput | null> {
+    this.ensureInitialized();
+    const planPath = this.getPlanPath(planId);
+    try {
+      const content = await fs.readFile(planPath, 'utf8');
+      return JSON.parse(content) as PlanThinkingSessionOutput;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+      const enhancedError = ErrorFactory.fileIOError('loadPlan', planPath, error as Error);
+      throw new PersistenceError(enhancedError.message, PersistenceErrorCode.IO_ERROR, {
+        ...enhancedError.toJSON(),
+        originalError: error,
+      });
+    }
+  }
+
+  async deletePlan(planId: string): Promise<boolean> {
+    this.ensureInitialized();
+    const planPath = this.getPlanPath(planId);
+    try {
+      await fs.unlink(planPath);
+      return true;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
+      throw new PersistenceError(
+        `Failed to delete plan ${planId}: ${String(error)}`,
+        PersistenceErrorCode.IO_ERROR,
+        error
+      );
+    }
   }
 
   // eslint-disable-next-line @typescript-eslint/require-await
@@ -484,6 +583,22 @@ export class FilesystemAdapter implements PersistenceAdapter {
       );
     }
 
+    return resolvedPath;
+  }
+
+  private getPlanPath(planId: string): string {
+    // The session id rule is a superset of the plan id charset, and the
+    // containment check below is defence in depth: the regex in
+    // core/session/planStore.ts is what decides which ids may name a file.
+    this.validateSessionId(planId);
+    const safePath = path.join(this.basePath, 'plans', `${planId}.json`);
+    const resolvedPath = path.resolve(safePath);
+    if (!resolvedPath.startsWith(this.basePath)) {
+      throw new PersistenceError(
+        'Invalid plan path: Path traversal detected',
+        PersistenceErrorCode.PERMISSION_DENIED
+      );
+    }
     return resolvedPath;
   }
 

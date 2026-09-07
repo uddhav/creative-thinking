@@ -6,6 +6,7 @@ import type { SessionData, LateralTechnique } from '../types/index.js';
 import type { PlanThinkingSessionOutput } from '../types/planning.js';
 import type { PersistenceAdapter } from '../persistence/adapter.js';
 import type { SessionState } from '../persistence/types.js';
+import { SessionCleaner } from './session/SessionCleaner.js';
 import { type SkipDetectionResult, type SkipPattern } from './session/SkipDetector.js';
 import { type SessionLock } from './session/SessionLock.js';
 import { ReflexivityTracker } from './ReflexivityTracker.js';
@@ -37,6 +38,25 @@ export declare class SessionManager {
     private lastRecommendations;
     private config;
     constructor(samplingManager?: SamplingManager);
+    /** The construction-time retention sweep; resolves to the count removed. */
+    readonly startupSweep: Promise<number>;
+    /**
+     * PERSISTENCE_TTL_DAYS, parsed once: a whole number of days, minimum 1.
+     * Unset, empty, 0, negative, fractional or NaN all mean never delete, which
+     * is the documented promise that plans and sessions survive month-long
+     * gaps. A set-but-invalid value is said once on stderr rather than silently
+     * meaning never.
+     */
+    private readonly persistenceTtlDays;
+    private static parseTtlDays;
+    /**
+     * Delete persisted sessions and plans older than PERSISTENCE_TTL_DAYS.
+     * Fire-and-forget from the constructor and the cleaner tick; never from the
+     * memory-pressure path. Returns the count so tests can observe it.
+     */
+    sweepPersistence(): Promise<number>;
+    /** The cleaner, for tests that drive the memory-pressure path directly. */
+    getSessionCleaner(): SessionCleaner;
     /**
      * Lazy initialization for parallel execution components
      */
@@ -76,7 +96,8 @@ export declare class SessionManager {
     savePlan(planId: string, plan: PlanThinkingSessionOutput): void;
     storePlan(planId: string, plan: PlanThinkingSessionOutput): void;
     /**
-     * Look a plan up, falling back to disk for one this process did not issue.
+     * Look a plan up, falling back to the persistence adapter for one this
+     * process did not issue.
      *
      * The fallback lives here rather than at the call sites because there are
      * three of them and they need different things: `WorkflowGuard` treats a
@@ -84,10 +105,21 @@ export declare class SessionManager {
      * workflow, `index.ts` needs the problem text. Hydrating in only one of them
      * fixes execution and still refuses the call at the guard (#316).
      *
-     * Costs one Map lookup when the plan is in memory, which is the normal case.
+     * Async since plans went through the adapter (#358): one Map lookup when
+     * the plan is in memory, which is the normal case, one adapter read on a
+     * miss. Runs outside the session lock; two concurrent misses both load the
+     * same immutable record, which is two reads and no corruption.
      */
-    getPlan(planId: string): PlanThinkingSessionOutput | undefined;
-    deletePlan(planId: string): boolean;
+    getPlan(planId: string): Promise<PlanThinkingSessionOutput | undefined>;
+    /**
+     * The in-memory plan only, no adapter fallback. For the writer that has
+     * just registered the plan and for tests of the cache itself. This is the
+     * accessor `persistPlan` must use: reading through the async `getPlan`
+     * there would hand `JSON.stringify` a Promise and write `{}` to every plan.
+     */
+    getInMemoryPlan(planId: string): PlanThinkingSessionOutput | undefined;
+    savePlanToPersistence(planId: string, plan: PlanThinkingSessionOutput): Promise<void>;
+    loadPlanFromPersistence(planId: string): Promise<PlanThinkingSessionOutput | null>;
     getCurrentSessionId(): string | null;
     setCurrentSessionId(sessionId: string | null): void;
     setCurrentSession(sessionId: string): void;
@@ -101,6 +133,14 @@ export declare class SessionManager {
     }): Promise<SessionState[]>;
     deletePersistedSession(sessionId: string): Promise<void>;
     getPersistenceAdapter(): PersistenceAdapter | null;
+    /**
+     * Whether an adapter is configured, read only after initialisation has
+     * settled. `getPersistenceAdapter` answers from whatever state init has
+     * reached, which for a session operation issued right after start was
+     * "none yet": a confirmed delete reported "nothing was deleted" while the
+     * file was in fact gone.
+     */
+    persistenceReady(): Promise<boolean>;
     getSessionSize(sessionId: string): number;
     getTotalMemoryUsage(): number;
     getConfig(): SessionConfig;

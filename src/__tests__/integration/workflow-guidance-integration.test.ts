@@ -33,7 +33,7 @@ describe('Workflow Guidance Integration', () => {
     // Step 2: Planning (following the guidance)
     console.error('\n=== Step 2: Planning (following guidance) ===');
     const planningParams = discoveryResponse.nextStepGuidance.suggestedParameters;
-    const planningResult = server.planThinkingSession({
+    const planningResult = await server.planThinkingSession({
       problem: planningParams.problem,
       techniques: planningParams.techniques.slice(0, 1), // Use first recommended technique
       objectives: planningParams.objectives,
@@ -81,7 +81,7 @@ describe('Workflow Guidance Integration', () => {
     console.error('Successfully guided through: Discovery → Planning → Execution');
   });
 
-  it('should handle alternative workflow with multiple techniques', () => {
+  it('should handle alternative workflow with multiple techniques', async () => {
     const server = new LateralThinkingServer();
 
     // Discovery with preference for systematic approach
@@ -99,7 +99,7 @@ describe('Workflow Guidance Integration', () => {
     // Plan with multiple techniques
     const techniques = discoveryResponse.nextStepGuidance.suggestedParameters.techniques;
     if (techniques.length > 1) {
-      const planningResult = server.planThinkingSession({
+      const planningResult = await server.planThinkingSession({
         problem: discoveryResponse.nextStepGuidance.suggestedParameters.problem,
         techniques: techniques, // Use all recommended techniques
         timeframe: 'comprehensive',

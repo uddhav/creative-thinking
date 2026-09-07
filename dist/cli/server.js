@@ -7,10 +7,17 @@
  * those belong to the long-running MCP stdio server in src/index.ts.
  */
 import { LateralThinkingServer } from '../index.js';
+import { onBeforeExit } from './io.js';
 let cached = null;
 export function getServer() {
-    if (!cached)
+    if (!cached) {
         cached = new LateralThinkingServer();
+        // The retention sweep starts in the SessionManager constructor. A one-shot
+        // process exits inside emit()'s write callback, which cut the sweep off
+        // in three of three `socketes discover` runs; emit now waits for it.
+        const sweep = cached.getSessionManager().startupSweep;
+        onBeforeExit(() => sweep);
+    }
     return cached;
 }
 /**

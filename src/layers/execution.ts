@@ -266,7 +266,7 @@ export async function executeThinkingStep(
 
   try {
     // Validate plan if provided
-    const planValidation = executionValidator.validatePlan(input);
+    const planValidation = await executionValidator.validatePlan(input);
     if (!planValidation.isValid && planValidation.error) {
       return planValidation.error;
     }

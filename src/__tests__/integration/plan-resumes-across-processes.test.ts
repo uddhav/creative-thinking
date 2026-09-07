@@ -183,7 +183,7 @@ describe('the planIds a debate hands out survive too', () => {
 });
 
 describe('the plan store stays inside its own directory', () => {
-  it('refuses a planId that would escape plans/', () => {
+  it('refuses a planId that would escape plans/', async () => {
     const base = mkdtempSync(path.join(tmpdir(), 'ct-plan-escape-'));
     const previousType = process.env.PERSISTENCE_TYPE;
     const previousPath = process.env.PERSISTENCE_PATH;
@@ -210,7 +210,7 @@ describe('the plan store stays inside its own directory', () => {
       );
 
       expect(
-        new SessionManager().getPlan(escapingId),
+        await new SessionManager().getPlan(escapingId),
         'a planId escaped the plans directory'
       ).toBeUndefined();
     } finally {

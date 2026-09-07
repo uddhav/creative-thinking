@@ -29,7 +29,7 @@ export class WorkflowGuard {
     /**
      * Check if the workflow is being followed correctly
      */
-    checkWorkflowViolation(toolName, args) {
+    async checkWorkflowViolation(toolName, args) {
         this.cleanupOldCalls();
         if (toolName === 'execute_thinking_step') {
             return this.checkExecutionViolations(args);
@@ -122,7 +122,7 @@ export class WorkflowGuard {
                 return ErrorFactory.workflowBypassAttempt(violation.message);
         }
     }
-    checkExecutionViolations(args) {
+    async checkExecutionViolations(args) {
         const execArgs = args;
         // Always check for invalid technique first
         // Use centralized cache for O(1) lookup
@@ -139,7 +139,7 @@ export class WorkflowGuard {
         }
         // Check if a valid planId is provided and exists in SessionManager
         if (execArgs.planId && this.sessionManager) {
-            const plan = this.sessionManager.getPlan(execArgs.planId);
+            const plan = await this.sessionManager.getPlan(execArgs.planId);
             if (plan) {
                 // Valid plan exists - this proves discovery and planning were done
                 // No workflow violation, proceed with execution

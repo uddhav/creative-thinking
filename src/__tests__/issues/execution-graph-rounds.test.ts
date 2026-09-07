@@ -40,19 +40,22 @@ interface PlanResponse {
   };
 }
 
-function planFor(server: LateralThinkingServer, techniques: LateralTechnique[]): PlanResponse {
-  const result = server.planThinkingSession({ problem: 'Graph shape probe', techniques });
+async function planFor(
+  server: LateralThinkingServer,
+  techniques: LateralTechnique[]
+): Promise<PlanResponse> {
+  const result = await server.planThinkingSession({ problem: 'Graph shape probe', techniques });
   expect(result.isError).toBeFalsy();
   return JSON.parse(result.content[0].text) as PlanResponse;
 }
 
 describe('the execution graph advertises a schedule that works', () => {
-  it('chains every technique internally, with no step depending on a non-predecessor', () => {
+  it('chains every technique internally, with no step depending on a non-predecessor', async () => {
     const server = new LateralThinkingServer();
     const offenders: string[] = [];
 
     for (const technique of ALL_LATERAL_TECHNIQUES) {
-      const graph = planFor(server, [technique]).executionGraph;
+      const graph = (await planFor(server, [technique])).executionGraph;
       expect(graph?.nodes.length, `${technique} produced no graph nodes`).toBeGreaterThan(0);
       const nodes = graph?.nodes ?? [];
       nodes.forEach((node, i) => {
@@ -82,10 +85,10 @@ describe('the execution graph advertises a schedule that works', () => {
     ).toEqual([]);
   });
 
-  it('puts independent techniques in the same round, not just on the first step', () => {
+  it('puts independent techniques in the same round, not just on the first step', async () => {
     const server = new LateralThinkingServer();
     const techniques: LateralTechnique[] = ['six_hats', 'scamper', 'po'];
-    const graph = planFor(server, techniques).executionGraph;
+    const graph = (await planFor(server, techniques)).executionGraph;
     const groups = graph?.metadata.parallelizableGroups ?? [];
     const nodes = graph?.nodes ?? [];
 
@@ -123,9 +126,10 @@ describe('the execution graph advertises a schedule that works', () => {
     );
   });
 
-  it('never puts two steps of one technique in the same round', () => {
+  it('never puts two steps of one technique in the same round', async () => {
     const server = new LateralThinkingServer();
-    const graph = planFor(server, ['six_hats', 'scamper', 'concept_extraction']).executionGraph;
+    const graph = (await planFor(server, ['six_hats', 'scamper', 'concept_extraction']))
+      .executionGraph;
     expect(graph?.metadata.parallelizableGroups.length, 'no rounds emitted').toBeGreaterThan(0);
     const byId = new Map((graph?.nodes ?? []).map(n => [n.id, n.technique]));
 
@@ -138,7 +142,7 @@ describe('the execution graph advertises a schedule that works', () => {
     }
   });
 
-  it('schedules the session-ending node after everything else', () => {
+  it('schedules the session-ending node after everything else', async () => {
     // The terminal node carries nextStepNeeded: false and ends the session. It
     // takes a SOFT dependency on every technique's final node so it lands last.
     //
@@ -156,7 +160,7 @@ describe('the execution graph advertises a schedule that works', () => {
       ['six_hats', 'po'],
       ['six_hats', 'scamper', 'po', 'triz'],
     ] as LateralTechnique[][]) {
-      const graph = planFor(server, techniques).executionGraph;
+      const graph = (await planFor(server, techniques)).executionGraph;
       const groups = graph?.metadata.parallelizableGroups ?? [];
       const nodes = graph?.nodes ?? [];
       const roundOf = (id: string) => groups.findIndex(g => g.includes(id));
@@ -176,7 +180,7 @@ describe('the execution graph advertises a schedule that works', () => {
     }
   });
 
-  it('states a speedup the schedule can actually deliver', () => {
+  it('states a speedup the schedule can actually deliver', async () => {
     // `sequentialTimeMultiplier` was bucketed off `maxParallelism` alone —
     // >=2 gave "3x", >=4 gave "5x" — with no reference to how many rounds the
     // schedule actually has. `parallelizationBenefits` renders it to the caller
@@ -207,7 +211,7 @@ describe('the execution graph advertises a schedule that works', () => {
 
     const server = new LateralThinkingServer();
     for (const [techniques, nodes, rounds, multiplier] of cases) {
-      const graph = planFor(server, techniques).executionGraph;
+      const graph = (await planFor(server, techniques)).executionGraph;
       const md = graph?.metadata as unknown as {
         totalNodes: number;
         sequentialTimeMultiplier: string;
@@ -224,7 +228,7 @@ describe('the execution graph advertises a schedule that works', () => {
     }
   });
 
-  it('quotes the same speedup in the prose as in the metadata', () => {
+  it('quotes the same speedup in the prose as in the metadata', async () => {
     // `parallelizationBenefits` renders the figure into a caller-facing
     // sentence, and the code comment records that these were once two
     // different numbers for one quantity in one response — metadata said
@@ -236,7 +240,7 @@ describe('the execution graph advertises a schedule that works', () => {
       ['six_hats', 'po'],
       ['six_hats', 'scamper', 'po', 'triz'],
     ] as LateralTechnique[][]) {
-      const graph = planFor(server, techniques).executionGraph;
+      const graph = (await planFor(server, techniques)).executionGraph;
       const md = graph?.metadata as unknown as { sequentialTimeMultiplier: string };
       const prose = String(
         (graph?.instructions as { parallelizationBenefits?: string } | undefined)
@@ -253,13 +257,13 @@ describe('the execution graph advertises a schedule that works', () => {
     }
   });
 
-  it('tells the caller each parallel branch needs its own session', () => {
+  it('tells the caller each parallel branch needs its own session', async () => {
     // Measured: two concurrent cross-process writes to ONE session lose a step,
     // 5 runs of 5. The same two writes under distinct sessionIds lose nothing.
     // The graph hands out a parallel schedule, so the condition that makes it
     // safe has to travel with it rather than living only in the project docs.
     const server = new LateralThinkingServer();
-    const plan = planFor(server, ['six_hats', 'scamper']);
+    const plan = await planFor(server, ['six_hats', 'scamper']);
     // `executionGraph.instructions.executionGuidance` is where this lands.
     // An earlier version read a `parallelizationGuidance` key first, which
     // does not exist anywhere in src/ — a dead branch that would have made
@@ -271,7 +275,7 @@ describe('the execution graph advertises a schedule that works', () => {
     );
   });
 
-  it('derives criticalPath from the same schedule as the rounds', () => {
+  it('derives criticalPath from the same schedule as the rounds', async () => {
     // `criticalPath` walked hard dependencies only, while
     // `parallelizableGroups` honours the soft edges that order the
     // session-ending node last. Same object, same quantity, two graphs: the two
@@ -311,13 +315,13 @@ describe('the execution graph advertises a schedule that works', () => {
 
     const server = new LateralThinkingServer();
     for (const [techniques, expected] of cases) {
-      const graph = planFor(server, techniques).executionGraph;
+      const graph = (await planFor(server, techniques)).executionGraph;
       const md = graph?.metadata as unknown as { criticalPath: string[] };
       expect(md.criticalPath, `${techniques.join('+')}: criticalPath`).toEqual(expected);
     }
   });
 
-  it('walks criticalPath along real edges, one node per round, ending the session', () => {
+  it('walks criticalPath along real edges, one node per round, ending the session', async () => {
     // Consistency rules, not the guard: a hard-only chain is still a chain and
     // a 7-id path indexes 8 rounds without error, so these stay green under the
     // old walker for some plans. The literal table above is what detects it.
@@ -329,7 +333,7 @@ describe('the execution graph advertises a schedule that works', () => {
       ['six_hats', 'scamper', 'po', 'triz'],
       ['po', 'six_hats', 'po'],
     ] as LateralTechnique[][]) {
-      const graph = planFor(server, techniques).executionGraph;
+      const graph = (await planFor(server, techniques)).executionGraph;
       const nodes = graph?.nodes ?? [];
       const groups = graph?.metadata.parallelizableGroups ?? [];
       const path = (graph?.metadata as unknown as { criticalPath: string[] }).criticalPath;
@@ -354,7 +358,7 @@ describe('the execution graph advertises a schedule that works', () => {
     }
   });
 
-  it('agrees with the round count for every ordered technique pair', () => {
+  it('agrees with the round count for every ordered technique pair', async () => {
     // Consistency sweep over all 32x32 ordered pairs, including the 32
     // self-pairs. Under the hard-only walker 618 of these disagreed. This is
     // a consistency check on the invariant, not the guard: it stays green
@@ -363,7 +367,7 @@ describe('the execution graph advertises a schedule that works', () => {
     const offenders: string[] = [];
     for (const a of ALL_LATERAL_TECHNIQUES) {
       for (const b of ALL_LATERAL_TECHNIQUES) {
-        const graph = planFor(server, [a, b]).executionGraph;
+        const graph = (await planFor(server, [a, b])).executionGraph;
         const groups = graph?.metadata.parallelizableGroups ?? [];
         const path = (graph?.metadata as unknown as { criticalPath: string[] }).criticalPath;
         if (path.length !== groups.length) {

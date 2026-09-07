@@ -16,6 +16,10 @@ import {
   CreativeThinkingError,
   ErrorCode,
 } from '../errors/types.js';
+import { ErrorFactory } from '../errors/enhanced-errors.js';
+import { ErrorHandler } from '../errors/ErrorHandler.js';
+
+const errorHandler = new ErrorHandler();
 
 export class SessionOperationsHandler {
   constructor(
@@ -111,12 +115,14 @@ export class SessionOperationsHandler {
    * `delete` reported "Session deleted successfully" for a session it had no
    * way to touch. Degrading is fine. Degrading silently is the fault.
    */
-  private persistenceAvailable(): boolean {
-    return this.sessionManager.getPersistenceAdapter() !== null;
+  private persistenceAvailable(): Promise<boolean> {
+    // Awaits initialisation: read synchronously, this said "no adapter" to a
+    // delete issued right after start, whose file was then deleted anyway.
+    return this.sessionManager.persistenceReady();
   }
 
   private async handleListOperation(input: SessionOperationData): Promise<LateralThinkingResponse> {
-    const available = this.persistenceAvailable();
+    const available = await this.persistenceAvailable();
 
     const sessionStates = await this.sessionManager.listPersistedSessions(input.listOptions);
 
@@ -167,7 +173,21 @@ export class SessionOperationsHandler {
       );
     }
 
-    const available = this.persistenceAvailable();
+    // SOCKETES.md always said --confirm was required; the flag was forwarded
+    // and never read, on either surface. A refusal that deletes nothing is an
+    // error, with the remedy in the envelope, so the CLI exits 1 and stderr
+    // carries it as its contract says.
+    if (input.deleteOptions.confirm !== true) {
+      // Through ErrorHandler, not the catch below: buildErrorResponse keeps
+      // the recovery array only for the older error class, and the remedy is
+      // the whole point of this refusal.
+      return errorHandler.handleError(
+        ErrorFactory.deleteNotConfirmed(input.deleteOptions.sessionId),
+        'session'
+      );
+    }
+
+    const available = await this.persistenceAvailable();
 
     await this.sessionManager.deletePersistedSession(input.deleteOptions.sessionId);
     return this.responseBuilder.buildSessionOperationResponse('delete', {

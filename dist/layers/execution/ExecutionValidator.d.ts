@@ -37,11 +37,11 @@ export declare class ExecutionValidator {
     /**
      * Validate plan exists and technique matches
      */
-    validatePlan(input: ExecuteThinkingStepInput): {
+    validatePlan(input: ExecuteThinkingStepInput): Promise<{
         isValid: boolean;
         error?: LateralThinkingResponse;
         plan?: PlanThinkingSessionOutput;
-    };
+    }>;
     /**
      * Get or create session
      */

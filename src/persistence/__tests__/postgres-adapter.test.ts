@@ -611,15 +611,128 @@ describe('PostgresAdapter', () => {
     it('should cleanup old sessions', async () => {
       const olderThan = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // 30 days ago
 
-      vi.mocked(mockPool.query).mockResolvedValue({
-        rows: [],
-        rowCount: 5,
-      } as unknown as QueryResult);
+      // cleanup now issues two DELETEs, sessions then plans (#357); the count
+      // is their sum.
+      vi.mocked(mockPool.query)
+        .mockResolvedValueOnce({ rows: [], rowCount: 5 } as unknown as QueryResult)
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 } as unknown as QueryResult);
 
       const deletedCount = await adapter.cleanup(olderThan);
 
       expect(deletedCount).toBe(5);
-      expect(mockPool.query).toHaveBeenCalled();
+      expect(mockPool.query).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('plans and retention (#357, #358)', () => {
+    // The pg module is mocked, so these pin the SQL the adapter issues: the
+    // only coverage a CI without postgres can have. Copy assertions from the
+    // code, never from prose; the sessions predicate keeps its
+    // `expires_at IS NULL OR` branch for rows not written by this adapter.
+    beforeEach(async () => {
+      await adapter.initialize({
+        adapter: 'postgres',
+        options: { connectionString: 'postgres://localhost/test' },
+      });
+      mockPool = (adapter as any).pool;
+      mockClient = await mockPool.connect();
+    });
+
+    it('creates the creative_plans table on initialize', () => {
+      const ddl = vi
+        .mocked(mockClient.query)
+        .mock.calls.map(call => String(call[0]))
+        .join('\n');
+      expect(ddl).toContain('CREATE TABLE IF NOT EXISTS creative_plans');
+      expect(ddl).toContain('idx_plans_updated');
+    });
+
+    it('upserts a plan into creative_plans by id', async () => {
+      vi.mocked(mockPool.query).mockResolvedValue({
+        rows: [],
+        rowCount: 1,
+      } as unknown as QueryResult);
+      const plan = {
+        planId: 'plan_pg_1',
+        problem: 'p',
+        techniques: ['six_hats' as const],
+        workflow: [],
+        totalSteps: 7,
+        executionMode: 'sequential' as const,
+        createdAt: Date.now(),
+      };
+      await adapter.savePlan('plan_pg_1', plan);
+      const [sql, params] = vi.mocked(mockPool.query).mock.calls.at(-1) as [string, unknown[]];
+      expect(sql).toContain('INSERT INTO creative_plans');
+      expect(sql).toContain('ON CONFLICT (id) DO UPDATE');
+      expect(params[0]).toBe('plan_pg_1');
+      expect(JSON.parse(params[1] as string)).toMatchObject({ planId: 'plan_pg_1' });
+    });
+
+    it('reads a plan back from creative_plans, null when absent', async () => {
+      vi.mocked(mockPool.query).mockResolvedValueOnce({
+        rows: [{ plan: { planId: 'plan_pg_2', techniques: [], workflow: [] } }],
+        rowCount: 1,
+      } as unknown as QueryResult);
+      const found = await adapter.loadPlan('plan_pg_2');
+      expect(found?.planId).toBe('plan_pg_2');
+      const [sql, params] = vi.mocked(mockPool.query).mock.calls.at(-1) as [string, unknown[]];
+      expect(sql).toContain('FROM creative_plans');
+      expect(params).toEqual(['plan_pg_2']);
+
+      vi.mocked(mockPool.query).mockResolvedValueOnce({
+        rows: [],
+        rowCount: 0,
+      } as unknown as QueryResult);
+      expect(await adapter.loadPlan('plan_missing')).toBeNull();
+    });
+
+    it('deletes a plan and reports whether a row went', async () => {
+      vi.mocked(mockPool.query).mockResolvedValueOnce({
+        rows: [],
+        rowCount: 1,
+      } as unknown as QueryResult);
+      expect(await adapter.deletePlan('plan_pg_3')).toBe(true);
+      vi.mocked(mockPool.query).mockResolvedValueOnce({
+        rows: [],
+        rowCount: 0,
+      } as unknown as QueryResult);
+      expect(await adapter.deletePlan('plan_pg_3')).toBe(false);
+    });
+
+    it('cleanup sweeps sessions with the expires_at clause and plans by updated_at', async () => {
+      vi.mocked(mockPool.query)
+        .mockResolvedValueOnce({ rows: [], rowCount: 3 } as unknown as QueryResult)
+        .mockResolvedValueOnce({ rows: [], rowCount: 2 } as unknown as QueryResult);
+      const olderThan = new Date(Date.now() - 7 * 86_400_000);
+      expect(await adapter.cleanup(olderThan)).toBe(5);
+      const calls = vi.mocked(mockPool.query).mock.calls.slice(-2) as Array<[string, unknown[]]>;
+      expect(calls[0][0]).toContain('DELETE FROM creative_sessions');
+      expect(calls[0][0]).toContain('(expires_at IS NULL OR expires_at < NOW())');
+      expect(calls[1][0]).toContain('DELETE FROM creative_plans');
+      expect(calls[1][0]).toContain('updated_at < $1');
+      expect(calls[0][1]).toEqual([olderThan]);
+      expect(calls[1][1]).toEqual([olderThan]);
+    });
+
+    it('save still binds a Date for expires_at, which only the sweep honours', async () => {
+      vi.mocked(mockPool.query).mockResolvedValue({
+        rows: [],
+        rowCount: 1,
+      } as unknown as QueryResult);
+      await adapter.save('s_expiry', {
+        id: 's_expiry',
+        problem: 'p',
+        technique: 'six_hats',
+        currentStep: 1,
+        totalSteps: 7,
+        startTime: Date.now(),
+        insights: [],
+        branches: {},
+        history: [],
+      } as unknown as Parameters<typeof adapter.save>[1]);
+      const [, params] = vi.mocked(mockPool.query).mock.calls.at(-1) as [string, unknown[]];
+      expect(params[13]).toBeInstanceOf(Date);
     });
   });
 

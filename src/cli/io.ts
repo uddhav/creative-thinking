@@ -152,10 +152,28 @@ export function unwrapResponse(envelope: LateralThinkingResponse): {
  * otherwise large payloads get truncated when the pipe buffer hasn't
  * drained yet. Empirically this happens at ~8KB on macOS pipes.
  */
+/**
+ * Work that must finish before the process exits, registered by whoever
+ * starts it. `emit` exits inside the stdout write callback, so anything left
+ * running at that point is cut off mid-way; the retention sweep was, in three
+ * of three `socketes discover` runs, leaving orphan metadata behind.
+ */
+const beforeExit: Array<() => Promise<unknown>> = [];
+
+export function onBeforeExit(work: () => Promise<unknown>): void {
+  beforeExit.push(work);
+}
+
 export function emit(data: unknown, isError: boolean): never {
   const stream = isError ? process.stderr : process.stdout;
   const code = isError ? 1 : 0;
-  stream.write(`${JSON.stringify(data, null, 2)}\n`, () => process.exit(code));
+  // A failure in the registered work must not change the exit code or the
+  // JSON; it is reported on stderr by whoever registered it.
+  Promise.allSettled(beforeExit.map(work => work()))
+    .catch(() => undefined)
+    .finally(() => {
+      stream.write(`${JSON.stringify(data, null, 2)}\n`, () => process.exit(code));
+    });
   // The write callback is what actually exits. Returning never keeps
   // callers honest about not doing further work after emit().
   return undefined as never;

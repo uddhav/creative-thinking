@@ -1242,6 +1242,8 @@ The server supports environment variables for advanced features:
 - `DISABLE_THOUGHT_LOGGING=true` - Disable visual output logging
 - `PERSISTENCE_TYPE=filesystem|postgres` - Choose storage backend (default: filesystem)
 - `PERSISTENCE_PATH=/path/to/sessions` - Custom session storage location (filesystem only)
+- `PERSISTENCE_TTL_DAYS=<whole days>` - Opt-in retention: delete persisted sessions and plans whose
+  last write is older, at startup and on the cleanup tick; unset means never delete
 - `DATABASE_URL=postgres://...` - PostgreSQL connection string (postgres adapter only)
 - `RESPONSE_VERBOSITY=minimal|full` - Default execute-response verbosity when a call omits
   `verbosity` (default: full; `minimal` is the declared future default)
@@ -1471,7 +1473,8 @@ export DATABASE_URL=postgres://user:pass@localhost/creative_thinking
 
 - JSONB storage for flexible schema
 - Full-text search with GIN indexes
-- Automatic session TTL (24-hour expiry)
+- Retention through `PERSISTENCE_TTL_DAYS` (the 24-hour `expires_at` is written and honoured only by
+  that sweep)
 - Transaction support for batch operations
 - Efficient metadata querying
 

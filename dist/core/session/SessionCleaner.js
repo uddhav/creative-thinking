@@ -4,18 +4,24 @@
  */
 export class SessionCleaner {
     sessions;
-    plans;
+    planManager;
     config;
     memoryManager;
     touchSession;
+    onTick;
     cleanupInterval = null;
-    PLAN_TTL = 4 * 60 * 60 * 1000; // 4 hours for plans
-    constructor(sessions, plans, config, memoryManager, touchSession) {
+    /**
+     * @param onTick runs on every timer tick after the in-memory cleanup, and
+     * ONLY on the timer: `cleanupOldSessions` is also called directly under
+     * memory pressure, and the disk retention sweep must not fire from there.
+     */
+    constructor(sessions, planManager, config, memoryManager, touchSession, onTick) {
         this.sessions = sessions;
-        this.plans = plans;
+        this.planManager = planManager;
         this.config = config;
         this.memoryManager = memoryManager;
         this.touchSession = touchSession;
+        this.onTick = onTick;
     }
     /**
      * Start the session cleanup interval
@@ -23,6 +29,7 @@ export class SessionCleaner {
     startCleanup() {
         this.cleanupInterval = setInterval(() => {
             this.cleanupOldSessions();
+            this.onTick?.();
         }, this.config.cleanupInterval);
     }
     /**
@@ -52,16 +59,11 @@ export class SessionCleaner {
             this.sessions.delete(sessionId);
             console.error(`[Session Cleanup] Removed expired session: ${sessionId}`);
         }
-        // Clean up old plans (more aggressive cleanup for plans)
-        const plansToDelete = [];
-        for (const [planId, plan] of this.plans.entries()) {
-            if (!plan.createdAt || now - plan.createdAt > this.PLAN_TTL) {
-                plansToDelete.push(planId);
-            }
-        }
-        for (const planId of plansToDelete) {
-            this.plans.delete(planId);
-            console.error(`[Session Cleanup] Removed expired plan: ${planId}`);
+        // Evict plans past the in-memory cache horizon (PLAN_CACHE_TTL_MS). Not
+        // retention: a plan evicted here comes back from the adapter on the next
+        // getPlan miss. Disk and database retention is PERSISTENCE_TTL_DAYS.
+        for (const planId of this.planManager.cleanupExpiredPlans()) {
+            console.error(`[Session Cleanup] Evicted cached plan: ${planId}`);
         }
         // Second pass: check memory pressure and evict if needed
         if (this.sessions.size >= this.config.maxSessions) {
@@ -124,7 +126,7 @@ export class SessionCleaner {
                 averageSize: `${avgSessionSizeKB}KB`,
             },
             plans: {
-                count: this.plans.size,
+                count: this.planManager.getPlanCount(),
             },
         };
         console.error('[Memory Metrics]', metrics);

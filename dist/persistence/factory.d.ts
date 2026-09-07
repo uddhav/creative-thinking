@@ -9,7 +9,7 @@
  * 1. **Active Session Storage** (This file)
  *    - Purpose: Crash recovery and multi-server state sharing
  *    - Backends: Filesystem (simple) and PostgreSQL (production)
- *    - Lifecycle: Short-lived (24-hour TTL)
+ *    - Lifecycle: kept until the opt-in PERSISTENCE_TTL_DAYS sweep removes it; never by default
  *    - Operations: CRUD, search, batch operations
  *
  * 2. **Historical Analytics** (Future - See Issue #241)

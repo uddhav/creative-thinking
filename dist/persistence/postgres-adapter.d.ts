@@ -6,10 +6,18 @@
  * - Crash recovery with persistent sessions
  * - Horizontal scaling across server instances
  *
- * Uses JSONB for flexible schema and efficient querying
- * Includes automatic TTL cleanup for expired sessions
+ * Uses JSONB for flexible schema and efficient querying.
+ *
+ * Retention is `PERSISTENCE_TTL_DAYS`, run from `SessionManager` through
+ * `cleanup`; nothing else deletes. `expires_at` (save + 24h) is still written
+ * and honoured by that sweep, and only by it: the column never deleted
+ * anything on its own, because `cleanup` had no caller until #357.
+ *
+ * Plans live in `creative_plans`, created here alongside the sessions table,
+ * so a plan issued on one instance is visible to every other (#358).
  */
 import type { PersistenceAdapter } from './adapter.js';
+import type { PlanThinkingSessionOutput } from '../types/planning.js';
 import type { SessionState, SessionMetadata, ListOptions, SearchQuery, ExportFormat, PersistenceConfig } from './types.js';
 /**
  * PostgreSQL adapter using JSONB for session storage
@@ -41,6 +49,9 @@ export declare class PostgresAdapter implements PersistenceAdapter {
         newestSession?: Date;
     }>;
     cleanup(olderThan: Date): Promise<number>;
+    savePlan(planId: string, plan: PlanThinkingSessionOutput): Promise<void>;
+    loadPlan(planId: string): Promise<PlanThinkingSessionOutput | null>;
+    deletePlan(planId: string): Promise<boolean>;
     close(): Promise<void>;
     /**
      * Helper: Extract metadata from session state

@@ -35,8 +35,8 @@ describe('out-of-order guidance reads the run it is guiding', () => {
     server = new LateralThinkingServer();
   });
 
-  function planFor(techniques: string[]): string {
-    const result = server.planThinkingSession({
+  async function planFor(techniques: string[]): Promise<string> {
+    const result = await server.planThinkingSession({
       problem: 'Per-instance guidance probe',
       techniques,
     });
@@ -70,7 +70,7 @@ describe('out-of-order guidance reads the run it is guiding', () => {
   }
 
   it('does not call the first step of a second run a duplicate', async () => {
-    const planId = planFor(['po', 'triz', 'po']);
+    const planId = await planFor(['po', 'triz', 'po']);
     const sessionId = 'session_guidance_dup';
     await upToSecondRun(planId, sessionId);
 
@@ -82,7 +82,7 @@ describe('out-of-order guidance reads the run it is guiding', () => {
   });
 
   it('names a hole in the second run instead of steering past it', async () => {
-    const planId = planFor(['po', 'triz', 'po']);
+    const planId = await planFor(['po', 'triz', 'po']);
     const sessionId = 'session_guidance_hole';
     await upToSecondRun(planId, sessionId);
 
@@ -102,7 +102,7 @@ describe('out-of-order guidance reads the run it is guiding', () => {
     // meant an incomplete run 1 never advanced, so run 2's entries were stamped
     // as run 1 — confidently wrong rather than absent, which defeats the
     // pool-on-doubt fallback.
-    const planId = planFor(['po', 'triz', 'po']);
+    const planId = await planFor(['po', 'triz', 'po']);
     const sessionId = 'session_incomplete_first_run';
 
     // Run 1 leaves a hole at step 3.
@@ -128,7 +128,7 @@ describe('out-of-order guidance reads the run it is guiding', () => {
     // The shape that defeated the rule before that one. A re-sent step 2 is not
     // a run boundary; only a step 1 is. `isRevision` cannot be relied on — it
     // is caller-supplied and defaults to false.
-    const planId = planFor(['po', 'triz', 'po']);
+    const planId = await planFor(['po', 'triz', 'po']);
     const sessionId = 'session_unflagged_resend';
 
     await step(planId, sessionId, 'po', 1);
@@ -154,10 +154,10 @@ describe('out-of-order guidance reads the run it is guiding', () => {
     // prefix has no stamped entry before it to inherit from, so it is run 0 —
     // the only run the pre-stamp world ever had.
     const sessionId = 'session_mixed_stamps';
-    const single = planFor(['po']);
+    const single = await planFor(['po']);
     for (let i = 1; i <= 4; i++) await step(single, sessionId, 'po', i);
 
-    const repeated = planFor(['po', 'triz', 'po']);
+    const repeated = await planFor(['po', 'triz', 'po']);
     for (let i = 1; i <= 4; i++) await step(repeated, sessionId, 'triz', i);
     const first = await step(repeated, sessionId, 'po', 1);
 
@@ -176,13 +176,13 @@ describe('out-of-order guidance reads the run it is guiding', () => {
     // absence rule exists to prevent. An unstamped entry inherits the nearest
     // stamped run before it instead.
     const sessionId = 'session_unstamped_mid_run';
-    const repeated = planFor(['po', 'triz', 'po']);
+    const repeated = await planFor(['po', 'triz', 'po']);
     for (let i = 1; i <= 4; i++) await step(repeated, sessionId, 'po', i);
     for (let i = 1; i <= 4; i++) await step(repeated, sessionId, 'triz', i);
     await step(repeated, sessionId, 'po', 1);
     await step(repeated, sessionId, 'po', 2);
 
-    const single = planFor(['po']);
+    const single = await planFor(['po']);
     await step(single, sessionId, 'po', 3); // unstamped: no repeats to disambiguate
 
     const fourth = await step(repeated, sessionId, 'po', 4);
@@ -198,7 +198,7 @@ describe('out-of-order guidance reads the run it is guiding', () => {
   it('still reports a real duplicate within one run', async () => {
     // The warning must not simply be switched off — that would be the other
     // failure, and this is the case it exists for.
-    const planId = planFor(['po', 'triz', 'po']);
+    const planId = await planFor(['po', 'triz', 'po']);
     const sessionId = 'session_guidance_real_dup';
     await upToSecondRun(planId, sessionId);
 
@@ -212,7 +212,7 @@ describe('out-of-order guidance reads the run it is guiding', () => {
   });
 
   it('leaves an unrepeated technique alone', async () => {
-    const planId = planFor(['po', 'triz']);
+    const planId = await planFor(['po', 'triz']);
     const sessionId = 'session_guidance_single';
 
     await step(planId, sessionId, 'po', 1);

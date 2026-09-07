@@ -84,13 +84,13 @@ describe('Temporal Work Design', () => {
   });
 
   // Helper function to create a plan
-  function createPlan(problem: string, techniques: string[]): string {
+  async function createPlan(problem: string, techniques: string[]): Promise<string> {
     const input: PlanThinkingSessionInput = {
       problem,
       techniques: techniques as LateralTechnique[],
     };
 
-    const result = server.planThinkingSession(input);
+    const result = await server.planThinkingSession(input);
     expect(result.isError).toBeFalsy();
     const planData = JSON.parse(result.content[0]?.text || '{}') as PlanResponse;
     return planData.planId;
@@ -168,13 +168,13 @@ describe('Temporal Work Design', () => {
   });
 
   describe('Planning Phase', () => {
-    it('should create a proper workflow for Temporal Work technique', () => {
+    it('should create a proper workflow for Temporal Work technique', async () => {
       const input: PlanThinkingSessionInput = {
         problem: 'Transform time pressure into creative catalyst',
         techniques: ['temporal_work'] as LateralTechnique[],
       };
 
-      const result = server.planThinkingSession(input);
+      const result = await server.planThinkingSession(input);
       expect(result.isError).toBeFalsy();
       const planData = JSON.parse(result.content[0]?.text || '{}') as PlanResponse;
 
@@ -197,7 +197,7 @@ describe('Temporal Work Design', () => {
 
   describe('Execution Phase', () => {
     it('should execute all five Temporal Work steps', async () => {
-      const planId = createPlan('Optimize creative project timeline', ['temporal_work']);
+      const planId = await createPlan('Optimize creative project timeline', ['temporal_work']);
 
       // Step 1: Map temporal landscape
       const step1 = await executeStep(planId, {
@@ -311,7 +311,7 @@ describe('Temporal Work Design', () => {
     });
 
     it('should handle complex temporal landscapes', async () => {
-      const planId = createPlan('Managing multiple project deadlines', ['temporal_work']);
+      const planId = await createPlan('Managing multiple project deadlines', ['temporal_work']);
 
       const step1 = await executeStep(planId, {
         technique: 'temporal_work',
@@ -334,7 +334,7 @@ describe('Temporal Work Design', () => {
     });
 
     it('should track path impact for temporal commitments', async () => {
-      const planId = createPlan('Restructure work schedule', ['temporal_work']);
+      const planId = await createPlan('Restructure work schedule', ['temporal_work']);
 
       const step3 = await executeStep(planId, {
         technique: 'temporal_work',
@@ -351,7 +351,7 @@ describe('Temporal Work Design', () => {
     });
 
     it('should generate memory-suggestive outputs for temporal sessions', async () => {
-      const planId = createPlan('Optimize team creative schedule', ['temporal_work']);
+      const planId = await createPlan('Optimize team creative schedule', ['temporal_work']);
 
       // Complete a full session
       await executeStep(planId, {
@@ -437,7 +437,7 @@ describe('Temporal Work Design', () => {
 
   describe('Integration with Other Techniques', () => {
     it('should work well in combination with Neural State', async () => {
-      const planId = createPlan('Optimize cognitive performance within time constraints', [
+      const planId = await createPlan('Optimize cognitive performance within time constraints', [
         'temporal_work',
         'neural_state',
       ]);
@@ -480,7 +480,7 @@ describe('Temporal Work Design', () => {
 
   describe('Error Handling', () => {
     it('should validate temporal landscape structure', async () => {
-      const planId = createPlan('Test temporal validation', ['temporal_work']);
+      const planId = await createPlan('Test temporal validation', ['temporal_work']);
 
       // Test with valid nested structure
       const result = await executeStep(planId, {
@@ -500,7 +500,7 @@ describe('Temporal Work Design', () => {
     });
 
     it('should handle missing temporal fields gracefully', async () => {
-      const planId = createPlan('Test missing fields', ['temporal_work']);
+      const planId = await createPlan('Test missing fields', ['temporal_work']);
 
       // Execute without specific temporal fields
       const result = await executeStep(planId, {
@@ -518,7 +518,7 @@ describe('Temporal Work Design', () => {
     });
 
     it('should provide contextual guidance based on previous steps', async () => {
-      const planId = createPlan('Test contextual guidance', ['temporal_work']);
+      const planId = await createPlan('Test contextual guidance', ['temporal_work']);
 
       // Step 1: Map landscape with specific dead zones
       const step1 = await executeStep(planId, {

@@ -42,7 +42,7 @@ describe('LLM Workflow Validation', () => {
   describe('Invalid Technique Handling', () => {
     it('should provide helpful error when using non-existent technique', async () => {
       // First create a valid plan to get a planId
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Test problem',
         techniques: ['six_hats'],
       });
@@ -131,14 +131,14 @@ describe('LLM Workflow Validation', () => {
   });
 
   describe('Planning Response Enhancement', () => {
-    it('should include workflow reminder and emphasis on using planId', () => {
+    it('should include workflow reminder and emphasis on using planId', async () => {
       const discoverResult = server.discoverTechniques({
         problem: 'Test problem',
       });
       const discoverResponse = JSON.parse(discoverResult.content[0].text);
       const recommendedTechnique = discoverResponse.recommendations[0].technique;
 
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Test problem',
         techniques: [recommendedTechnique],
       });
@@ -168,7 +168,7 @@ describe('LLM Workflow Validation', () => {
       expect(discoverResponse.nextStepGuidance.nextTool).toBe('plan_thinking_session');
 
       // Step 2: Planning
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'How to reduce stress',
         techniques: [discoverResponse.recommendations[0].technique],
       });

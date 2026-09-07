@@ -230,7 +230,8 @@ socketes execute \
 
 The plan is now under `$PERSISTENCE_PATH/plans/<planId>.json` and the session under
 `$PERSISTENCE_PATH/sessions/<sessionId>.json`. They survive shell restarts, machine reboots, and
-month-long gaps between steps.
+month-long gaps between steps, unless you set `PERSISTENCE_TTL_DAYS` (see below), which is the only
+thing that ever deletes either.
 
 ## Mental model
 
@@ -404,7 +405,7 @@ For all session ops, output shape is `{ operation, success, result }` on stdout 
 ```
 $PERSISTENCE_PATH/
 ├── plans/
-│   └── <planId>.json            # Full plan (CLI-side store, mirrors PlanManager)
+│   └── <planId>.json            # Full plan, bare JSON (mirrors PlanManager)
 ├── sessions/
 │   └── <sessionId>.json         # Wrapped session: {version, format, compressed, encrypted, data}
 └── metadata/                    # Filesystem adapter housekeeping
@@ -414,11 +415,19 @@ $PERSISTENCE_PATH/
 ### Plan files (`plans/<planId>.json`)
 
 Plain JSON, one file per plan. Contains the canonical `PlanThinkingSessionOutput` — including
-`techniques`, which the executor needs but which the user-facing response strips. The CLI's plan
-store writes this file on every successful `socketes plan` and reads it on every `socketes execute`
-that doesn't already have the plan in memory.
+`techniques`, which the executor needs but which the user-facing response strips. The persistence
+adapter writes this file on every successful `socketes plan` (the command returns only once the
+write has landed) and reads it on every `socketes execute` that doesn't already have the plan in
+memory. Under `PERSISTENCE_TYPE=postgres` plans go to a `creative_plans` table instead, so every
+instance sees them.
 
-**No automatic cleanup.** Old plans accumulate forever. Delete by hand if needed:
+**Retention is opt-in.** By default nothing is ever deleted, plans or sessions. Set
+`PERSISTENCE_TTL_DAYS` to a whole number of days (minimum 1) and every `socketes` invocation, and
+every cleaner tick of the MCP server, deletes plans and sessions whose last write is older than
+that. A plan's age is its file's mtime, so a `cp` or a restore resets it. The sweep costs one
+directory listing of `metadata/` and `plans/` plus a `stat` per plan on every invocation; large
+directories will notice. A record older than the TTL may be deleted at any moment after that age, so
+`socketes execute` against a plan past it gets `E202`. To delete by hand instead:
 
 ```bash
 # Delete plans older than 30 days
@@ -619,17 +628,18 @@ parallel-safe.
 
 ## Configuration via environment variables
 
-| Variable                  | Default in CLI mode    | Effect                                                                                                                                                                                                                                                                          |
-| ------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PERSISTENCE_TYPE`        | `filesystem`           | Backend for session storage. CLI sets this if unset; explicit values (`memory`, `postgres`) win. With `memory`, sessions are in-process only — cross-process state breaks.                                                                                                      |
-| `PERSISTENCE_PATH`        | `~/.creative-thinking` | Directory for `plans/`, `sessions/`, `metadata/`.                                                                                                                                                                                                                               |
-| `DISABLE_THOUGHT_LOGGING` | `true`                 | Suppresses the visual progress output that would otherwise hit stderr. CLI sets this if unset so stderr stays manageable.                                                                                                                                                       |
-| `PERSONA_CATALOG_PATH`    | unset                  | Path to a JSON file with additional personas. Merges with built-ins; same id overrides built-in.                                                                                                                                                                                |
-| `STEP_ORDER_ENFORCEMENT`  | unset (`advisory`)     | `strict` refuses an out-of-order step, a contradictory numbering pairing, or an unassigned stimulus/provocation with `E211`, recording nothing; the default records the step and redirects or flags it. `--strictness enforcing` on `socketes plan` does the same for one plan. |
-| `TELEMETRY_ENABLED`       | unset (off)            | Set to `true` for opt-in anonymous analytics. Off by default.                                                                                                                                                                                                                   |
-| `TELEMETRY_LEVEL`         | `basic`                | `basic`, `detailed`, or `full`.                                                                                                                                                                                                                                                 |
-| `NEURAL_OPTIMIZATION`     | unset                  | Enables an experimental neural-state feature in techniques that support it.                                                                                                                                                                                                     |
-| `CULTURAL_FRAMEWORKS`     | unset                  | Enables cross-cultural framework injection.                                                                                                                                                                                                                                     |
+| Variable                  | Default in CLI mode    | Effect                                                                                                                                                                                                                                                                                               |
+| ------------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PERSISTENCE_TYPE`        | `filesystem`           | Backend for session storage. CLI sets this if unset; explicit values (`memory`, `postgres`) win. With `memory`, sessions are in-process only — cross-process state breaks.                                                                                                                           |
+| `PERSISTENCE_PATH`        | `~/.creative-thinking` | Directory for `plans/`, `sessions/`, `metadata/`. A relative path resolves against your home directory, not the working directory; plans used to resolve it against the working directory, so a relative value that worked before plans went through the adapter now points at a different `plans/`. |
+| `PERSISTENCE_TTL_DAYS`    | unset (never delete)   | Whole number of days, minimum 1. When set, plans and sessions whose last write is older are deleted at startup and on the cleaner tick, on both backends. Anything else (0, fractions, text) warns once and means never.                                                                             |
+| `DISABLE_THOUGHT_LOGGING` | `true`                 | Suppresses the visual progress output that would otherwise hit stderr. CLI sets this if unset so stderr stays manageable.                                                                                                                                                                            |
+| `PERSONA_CATALOG_PATH`    | unset                  | Path to a JSON file with additional personas. Merges with built-ins; same id overrides built-in.                                                                                                                                                                                                     |
+| `STEP_ORDER_ENFORCEMENT`  | unset (`advisory`)     | `strict` refuses an out-of-order step, a contradictory numbering pairing, or an unassigned stimulus/provocation with `E211`, recording nothing; the default records the step and redirects or flags it. `--strictness enforcing` on `socketes plan` does the same for one plan.                      |
+| `TELEMETRY_ENABLED`       | unset (off)            | Set to `true` for opt-in anonymous analytics. Off by default.                                                                                                                                                                                                                                        |
+| `TELEMETRY_LEVEL`         | `basic`                | `basic`, `detailed`, or `full`.                                                                                                                                                                                                                                                                      |
+| `NEURAL_OPTIMIZATION`     | unset                  | Enables an experimental neural-state feature in techniques that support it.                                                                                                                                                                                                                          |
+| `CULTURAL_FRAMEWORKS`     | unset                  | Enables cross-cultural framework injection.                                                                                                                                                                                                                                                          |
 
 **MCP server defaults differ.** When you run `creative-thinking` (the MCP server bin), none of the
 CLI overrides apply — `PERSISTENCE_TYPE` is unset by default (sessions in-memory only),
@@ -731,9 +741,10 @@ In rough order of how often they bite people:
    without an explicit `--session` collides on the same derived id. For multi-technique parallel
    plans, pass `--session <distinct-id>` per technique.
 
-6. **Plans are never auto-deleted from disk.** The CLI writes `plans/<planId>.json` and never
-   garbage-collects. Sessions are managed by the filesystem persistence adapter (TTL policies live
-   there). For plans, periodic `find` cleanup is on you.
+6. **Nothing is auto-deleted unless you ask.** Plans and sessions share one retention rule,
+   `PERSISTENCE_TTL_DAYS`, in the persistence adapter; unset, both accumulate forever on either
+   backend. There is no separate session TTL on disk. The 4-hour figure in the server's memory
+   management is a cache horizon: an evicted plan comes straight back from the adapter.
 
 7. **`PERSISTENCE_TYPE=memory` defeats the CLI.** If you (or some shell config) set this, every
    invocation starts with no plans and no sessions — the disk store is bypassed. Either unset it or

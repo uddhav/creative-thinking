@@ -41,7 +41,7 @@ describe('LLM Bypass Prevention', () => {
       workflowGuard.recordCall('execute_thinking_step', args);
 
       // Check for violations
-      const violation = workflowGuard.checkWorkflowViolation('execute_thinking_step', args);
+      const violation = await workflowGuard.checkWorkflowViolation('execute_thinking_step', args);
 
       expect(violation).toBeDefined();
       expect(violation?.type).toBe('skipped_discovery');
@@ -73,7 +73,7 @@ describe('LLM Bypass Prevention', () => {
         problem: 'How to reduce stress',
       });
 
-      const planResult = lateralServer.planThinkingSession({
+      const planResult = await lateralServer.planThinkingSession({
         problem: 'How to reduce stress',
         techniques: ['six_hats'],
       });
@@ -110,7 +110,7 @@ describe('LLM Bypass Prevention', () => {
       );
     });
 
-    it('should provide helpful guidance when skipping planning', () => {
+    it('should provide helpful guidance when skipping planning', async () => {
       // Only do discovery, skip planning
       workflowGuard.recordCall('discover_techniques', { problem: 'How to innovate' });
 
@@ -131,7 +131,10 @@ describe('LLM Bypass Prevention', () => {
 
       // Check workflow guard
       workflowGuard.recordCall('execute_thinking_step', executeArgs);
-      const violation = workflowGuard.checkWorkflowViolation('execute_thinking_step', executeArgs);
+      const violation = await workflowGuard.checkWorkflowViolation(
+        'execute_thinking_step',
+        executeArgs
+      );
 
       expect(violation).toBeDefined();
       expect(violation?.type).toBe('skipped_planning');
@@ -236,7 +239,7 @@ describe('LLM Bypass Prevention', () => {
         techniques: ['six_hats'],
       });
 
-      const planResult = lateralServer.planThinkingSession({
+      const planResult = await lateralServer.planThinkingSession({
         problem: 'Test problem',
         techniques: ['six_hats'],
       });
@@ -255,7 +258,10 @@ describe('LLM Bypass Prevention', () => {
       };
 
       // Check workflow guard first
-      const violation = workflowGuard.checkWorkflowViolation('execute_thinking_step', executeArgs);
+      const violation = await workflowGuard.checkWorkflowViolation(
+        'execute_thinking_step',
+        executeArgs
+      );
       if (violation) {
         const violationError = workflowGuard.getViolationError(violation);
         expect(violationError).toBeInstanceOf(Error);

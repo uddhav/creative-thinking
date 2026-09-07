@@ -60,9 +60,9 @@ describe('Three Tool Constraint', () => {
     expect(result.content[0].text).toContain('recommend');
   });
 
-  it('should process planning operations correctly', () => {
+  it('should process planning operations correctly', async () => {
     // Test planning functionality
-    const result = server.planThinkingSession({
+    const result = await server.planThinkingSession({
       problem: 'Test problem',
       techniques: ['six_hats', 'po'],
     });
@@ -74,7 +74,7 @@ describe('Three Tool Constraint', () => {
 
   it('should process execution operations correctly', async () => {
     // First create a plan
-    const planResult = server.planThinkingSession({
+    const planResult = await server.planThinkingSession({
       problem: 'Test problem',
       techniques: ['six_hats'],
     });
@@ -128,7 +128,7 @@ describe('Three Tool Constraint', () => {
     expect(discoveryResult.content[0].text).toMatch(/flexibility|option/i);
 
     // 2. Planning should include escape protocols when needed
-    const planResult = server.planThinkingSession({
+    const planResult = await server.planThinkingSession({
       problem: 'Test problem',
       techniques: ['six_hats'],
       sessionId: 'test-session',
@@ -142,7 +142,7 @@ describe('Three Tool Constraint', () => {
 
     // 3. Execution should track ergodicity
     // First need a plan for execution
-    const execPlanResult = server.planThinkingSession({
+    const execPlanResult = await server.planThinkingSession({
       problem: 'Test problem',
       techniques: ['po'],
     });
@@ -166,7 +166,7 @@ describe('Three Tool Constraint', () => {
     expect(execResultData.technique).toBe('po');
   });
 
-  it('should enforce separation of concerns between tools', () => {
+  it('should enforce separation of concerns between tools', async () => {
     // Discovery should not execute steps
     const discoveryResult = server.discoverTechniques({
       problem: 'Test problem',
@@ -176,7 +176,7 @@ describe('Three Tool Constraint', () => {
     expect(discoveryResult.content[0].text).not.toContain('Next step');
 
     // Planning should not execute steps
-    const planResult = server.planThinkingSession({
+    const planResult = await server.planThinkingSession({
       problem: 'Test problem',
       techniques: ['scamper'],
     });
@@ -196,7 +196,7 @@ describe('Three Tool Constraint', () => {
     expect(discoveryResult.content[0].text).toContain('recommend');
 
     // 2. Plan the session
-    const planResult = server.planThinkingSession({
+    const planResult = await server.planThinkingSession({
       problem: 'How to improve team communication?',
       techniques: ['six_hats', 'po'],
       objectives: ['Find creative solutions', 'Consider all perspectives'],
