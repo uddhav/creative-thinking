@@ -1,3 +1,9 @@
+## [v2.7.0] - 2026-09-07
+
+### Changes from PR #419
+
+- feat: STEP_ORDER_ENFORCEMENT=strict refuses out-of-order steps
+
 ## [v2.6.10] - 2026-09-07
 
 ### Changes from PR #418
