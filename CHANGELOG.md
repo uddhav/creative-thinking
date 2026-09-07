@@ -1,3 +1,9 @@
+## [v2.8.0] - 2026-09-07
+
+### Changes from PR #421
+
+- feat(persistence): route plans through the adapter and add opt-in retention
+
 ## [v2.7.0] - 2026-09-07
 
 ### Changes from PR #419
