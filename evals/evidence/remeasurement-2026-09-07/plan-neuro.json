@@ -1,0 +1,284 @@
+{
+  "planId": "plan_80db16bd-4d45-400c-bd5f-c7934668e161",
+  "problem": "Choose a data architecture for our analytics platform when we have budget for only one: a lakehouse on Apache Iceberg, a managed warehouse, or a streaming-first design on Kafka with materialized views",
+  "workflow": [
+    {
+      "technique": "neuro_computational",
+      "totalSteps": 5,
+      "stepNumber": 1,
+      "description": "Map \"the problem stated in this plan\" to a network representation. Identify the components by what they do: which hold state, which transform it, which route it, and which gate it. Map the connections between them, and define what activates each one and at what threshold. Consider both serial and parallel pathways. What architecture best represents this problem space?",
+      "expectedOutputs": [
+        "Network representation mapped: components that hold, transform, route and gate state"
+      ]
+    },
+    {
+      "technique": "neuro_computational",
+      "totalSteps": 5,
+      "stepNumber": 2,
+      "description": "Generate diverse solution patterns for: \"the problem stated in this plan\". Activate multiple neural pathways simultaneously. Create variations through: random initialization, different connection weights, varied activation functions, alternative architectures. Generate at least 5-10 distinct patterns, and allow emergent properties to arise from their interactions. Then analyze how they interact: which reinforce each other (constructive interference), which cancel out (destructive interference), and which combinations produce the most creative emergence?",
+      "expectedOutputs": [
+        "Diverse solution patterns generated, with constructive/destructive interference analyzed"
+      ]
+    },
+    {
+      "technique": "neuro_computational",
+      "totalSteps": 5,
+      "stepNumber": 3,
+      "description": "Synthesize patterns computationally for: \"the problem stated in this plan\". Apply computational models: neural networks, genetic algorithms, evolutionary computation, swarm intelligence. Combine biological inspiration with computational efficiency. Create hybrid models that leverage both approaches. Generate novel combinations through computational synthesis.",
+      "expectedOutputs": ["Computational models synthesized from neural patterns"]
+    },
+    {
+      "technique": "neuro_computational",
+      "totalSteps": 5,
+      "stepNumber": 4,
+      "description": "Run optimization cycles for: \"the problem stated in this plan\". Iterate through: feedforward passes, backpropagation, weight adjustment, architecture evolution. Rate convergence on each of coherence (internal consistency), novelty (creative distance from existing solutions) and utility (practical value), and say what the rating is based on. Refine for optimal balance between exploration and exploitation.",
+      "expectedOutputs": ["Optimization cycles completed with convergence ratings"]
+    },
+    {
+      "technique": "neuro_computational",
+      "totalSteps": 5,
+      "stepNumber": 5,
+      "description": "Report what the search actually found for: \"the problem stated in this plan\". Did it converge, or did it plateau — is this the best solution or the last one it could still improve on? Is it a local optimum, and what would tell you either way? Which regions went unexplored, and were they ruled out or merely never reached? Trace the emergence path: which pattern produced the result, and which contributed nothing. Then hold the result against this technique's own bar: cognitive plausibility, computational efficiency, creative novelty, practical applicability.",
+      "expectedOutputs": [
+        "Search reported: converged or plateaued, local optimum assessed, unexplored regions named"
+      ]
+    }
+  ],
+  "estimatedSteps": 5,
+  "successCriteria": [
+    "Generated at least 3 viable solutions",
+    "Identified and addressed key risks",
+    "Achieved clarity on problem definition",
+    "Thorough analysis from all angles"
+  ],
+  "createdAt": "2026-09-07T05:07:31.796Z",
+  "planningInsights": {
+    "techniqueRationale": "Selected for hybrid neural-computational creativity generation",
+    "sequenceLogic": "Single technique approach for focused exploration",
+    "historicalNote": "This 1-technique workflow creates comprehensive exploration"
+  },
+  "complexityAssessment": {
+    "level": "low"
+  },
+  "executionMode": "sequential",
+  "qualityCoverage": {
+    "qualities": {
+      "intelligence": {
+        "score": 0.9,
+        "covered": true,
+        "topContributor": "neuro_computational"
+      },
+      "courage": {
+        "score": 0.4,
+        "covered": false,
+        "topContributor": "neuro_computational"
+      },
+      "tenacity": {
+        "score": 0.7,
+        "covered": true,
+        "topContributor": "neuro_computational"
+      },
+      "curiosity": {
+        "score": 0.5,
+        "covered": false,
+        "topContributor": "neuro_computational"
+      },
+      "justice": {
+        "score": 0.2,
+        "covered": false,
+        "topContributor": "neuro_computational"
+      }
+    },
+    "allCovered": false,
+    "gaps": ["courage", "curiosity", "justice"],
+    "gapSuggestions": [
+      {
+        "quality": "courage",
+        "suggestedTechniques": [
+          "steelman_red_team",
+          "po",
+          "first_principles",
+          "keeper_test",
+          "quantum_superposition",
+          "paradoxical_problem",
+          "competing_hypotheses",
+          "cognitive_bias_audit",
+          "disney_method",
+          "reverse_benchmarking"
+        ]
+      },
+      {
+        "quality": "curiosity",
+        "suggestedTechniques": [
+          "random_entry",
+          "quantum_superposition",
+          "latticework",
+          "po",
+          "biomimetic_path",
+          "anecdotal_signal",
+          "scamper",
+          "concept_extraction",
+          "yes_and",
+          "disney_method",
+          "paradoxical_problem",
+          "meta_learning",
+          "context_reframing",
+          "steelman_red_team"
+        ]
+      },
+      {
+        "quality": "justice",
+        "suggestedTechniques": [
+          "cultural_integration",
+          "steelman_red_team",
+          "six_hats",
+          "collective_intel",
+          "yes_and",
+          "design_thinking",
+          "criteria_based_analysis",
+          "cognitive_bias_audit"
+        ]
+      }
+    ]
+  },
+  "executionGraph": {
+    "nodes": [
+      {
+        "technique": "neuro_computational",
+        "id": "node-1",
+        "stepNumber": 1,
+        "parameters": {
+          "technique": "neuro_computational",
+          "currentStep": 1,
+          "totalSteps": 5,
+          "nextStepNeeded": true,
+          "planId": "plan_80db16bd-4d45-400c-bd5f-c7934668e161",
+          "output": ""
+        },
+        "dependencies": [],
+        "canSkipIfFailed": false
+      },
+      {
+        "technique": "neuro_computational",
+        "id": "node-2",
+        "stepNumber": 2,
+        "parameters": {
+          "technique": "neuro_computational",
+          "currentStep": 2,
+          "totalSteps": 5,
+          "nextStepNeeded": true,
+          "planId": "plan_80db16bd-4d45-400c-bd5f-c7934668e161",
+          "output": ""
+        },
+        "dependencies": [
+          {
+            "nodeId": "node-1",
+            "type": "hard"
+          }
+        ],
+        "canSkipIfFailed": false
+      },
+      {
+        "technique": "neuro_computational",
+        "id": "node-3",
+        "stepNumber": 3,
+        "parameters": {
+          "technique": "neuro_computational",
+          "currentStep": 3,
+          "totalSteps": 5,
+          "nextStepNeeded": true,
+          "planId": "plan_80db16bd-4d45-400c-bd5f-c7934668e161",
+          "output": ""
+        },
+        "dependencies": [
+          {
+            "nodeId": "node-2",
+            "type": "hard"
+          }
+        ],
+        "canSkipIfFailed": false
+      },
+      {
+        "technique": "neuro_computational",
+        "id": "node-4",
+        "stepNumber": 4,
+        "parameters": {
+          "technique": "neuro_computational",
+          "currentStep": 4,
+          "totalSteps": 5,
+          "nextStepNeeded": true,
+          "planId": "plan_80db16bd-4d45-400c-bd5f-c7934668e161",
+          "output": ""
+        },
+        "dependencies": [
+          {
+            "nodeId": "node-3",
+            "type": "hard"
+          }
+        ],
+        "canSkipIfFailed": false
+      },
+      {
+        "technique": "neuro_computational",
+        "id": "node-5",
+        "stepNumber": 5,
+        "parameters": {
+          "technique": "neuro_computational",
+          "currentStep": 5,
+          "totalSteps": 5,
+          "nextStepNeeded": false,
+          "planId": "plan_80db16bd-4d45-400c-bd5f-c7934668e161",
+          "output": ""
+        },
+        "dependencies": [
+          {
+            "nodeId": "node-4",
+            "type": "hard"
+          }
+        ],
+        "canSkipIfFailed": false
+      }
+    ],
+    "metadata": {
+      "totalNodes": 5,
+      "maxParallelism": 1,
+      "criticalPath": ["node-1", "node-2", "node-3", "node-4", "node-5"],
+      "parallelizableGroups": [["node-1"], ["node-2"], ["node-3"], ["node-4"], ["node-5"]],
+      "sequentialTimeMultiplier": "1x"
+    },
+    "instructions": {
+      "recommendedStrategy": "sequential",
+      "syncPoints": ["node-5"],
+      "sequentialTimeMultiplier": "1x",
+      "parallelizationBenefits": "Sequential execution ensures each step builds on previous insights for maximum coherence.",
+      "executionGuidance": "Execute nodes sequentially in the order provided. Each node depends on the previous one completing. The final node carries nextStepNeeded: false and ends the session - execute it only after every other node has completed.",
+      "errorHandling": "continue-on-non-critical-failure"
+    }
+  },
+  "nextSteps": {
+    "instructions": "To execute this plan, use the execute_thinking_step tool with the planId and follow the workflow steps.",
+    "firstCall": {
+      "tool": "execute_thinking_step",
+      "parameters": {
+        "technique": "neuro_computational",
+        "currentStep": 1,
+        "totalSteps": 5,
+        "nextStepNeeded": true,
+        "planId": "plan_80db16bd-4d45-400c-bd5f-c7934668e161",
+        "problem": "Choose a data architecture for our analytics platform when we have budget for only one: a lakehouse on Apache Iceberg, a managed warehouse, or a streaming-first design on Kafka with materialized views",
+        "output": "[Your thinking output for step 1]"
+      }
+    },
+    "guidance": "Continue calling execute_thinking_step for each step, incrementing currentStep; send nextStepNeeded: false only on the final step of the final technique. Number steps within each technique (as firstCall does — currentStep 1 against the first technique’s own step count); plan-wide cumulative numbering is equally accepted, and totalSteps tells the server which convention currentStep is using.",
+    "important": "Always use the planId returned from this response. Do not skip this step or create your own planId."
+  },
+  "workflowReminder": {
+    "currentStep": 2,
+    "totalSteps": 3,
+    "steps": [
+      "1. discover_techniques (completed) - Found suitable techniques",
+      "2. plan_thinking_session (current) - Created structured plan",
+      "3. execute_thinking_step (next) - Execute the plan step by step"
+    ]
+  }
+}

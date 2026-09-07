@@ -327,6 +327,34 @@ export interface PlanThinkingSessionInput {
      */
     strictness?: string;
 }
+/**
+ * What is known about running two techniques back to back (#240). Ordinal,
+ * never numeric; populated only from measured evidence cited into
+ * evals/evidence/. NEUTRAL is the absence of a row.
+ */
+export type SequenceRelation = 'SEQUENCE_STRONGLY' | 'SEQUENCE' | 'NEUTRAL' | 'AVOID_ADJACENT';
+/**
+ * One entry per adjacent pair of a multi-technique plan, in the caller's
+ * order. Advisory: the planner never reorders. `evidence: 'none'` means no
+ * adjacency relation has been measured for the pair, not that it was checked
+ * and found fine. The evidence file also holds distinguishability runs
+ * ("are these two techniques the same tool?") for several pairs; those say
+ * nothing about order and seed no row.
+ */
+export interface SequenceAdvice {
+    pair: [LateralTechnique, LateralTechnique];
+    /**
+     * Index of the first technique of the pair in the `techniques` the caller
+     * passed. The plan response does not echo that array; its order is the
+     * order of distinct techniques in `workflow`.
+     */
+    position: number;
+    relation: SequenceRelation;
+    evidence: 'measured' | 'none';
+    /** Path and anchor into evals/evidence/, present iff measured. */
+    citation?: string;
+    note?: string;
+}
 export interface PlanThinkingSessionOutput {
     planId: string;
     problem: string;
@@ -337,6 +365,8 @@ export interface PlanThinkingSessionOutput {
     constraints?: string[];
     /** Echo of the caller's declared gate strictness: 'advisory' (default) or 'enforcing'. */
     strictness?: string;
+    /** Adjacent-pair sequence advice; absent on single-technique plans and debate sub-plans. */
+    sequenceAdvice?: SequenceAdvice[];
     /** Plan-level advisories (e.g. an unrecognized strictness value); absent when clean. */
     warnings?: string[];
     executionGraph?: ExecutionGraph;

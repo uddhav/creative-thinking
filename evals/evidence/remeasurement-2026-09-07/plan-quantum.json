@@ -1,0 +1,243 @@
+{
+  "planId": "plan_96732d0f-d54d-4ee0-b285-8f63c47043d4",
+  "problem": "Choose a data architecture for our analytics platform when we have budget for only one: a lakehouse on Apache Iceberg, a managed warehouse, or a streaming-first design on Kafka with materialized views",
+  "workflow": [
+    {
+      "technique": "quantum_superposition",
+      "totalSteps": 4,
+      "stepNumber": 1,
+      "description": "Generate 3-5 mutually exclusive solution states for: \"the problem stated in this plan\". Each state should optimize for different criteria (efficiency, flexibility, robustness, cost, innovation). Maintain all states without choosing.",
+      "expectedOutputs": ["Multiple contradictory solution states generated"]
+    },
+    {
+      "technique": "quantum_superposition",
+      "totalSteps": 4,
+      "stepNumber": 2,
+      "description": "Map how your solution states for \"the problem stated in this plan\" relate. Which aspects are inseparably linked, so that developing one state moves another — and is that coupling symmetric, or does one direction leave the others cheaper and the reverse leave them dearer? As constraints and opportunities emerge, which states are gaining ground, and which are weakening but still hold something worth keeping? Where do they reinforce each other, and where do they cancel out? What hybrids do those reinforcements make possible?",
+      "expectedOutputs": [
+        "State interactions mapped: reinforcement, cancellation, dependencies, trajectory"
+      ]
+    },
+    {
+      "technique": "quantum_superposition",
+      "totalSteps": 4,
+      "stepNumber": 3,
+      "description": "Define the measurement context that will force collapse for \"the problem stated in this plan\": What are the actual constraints? What criteria matter most now? What future flexibility is needed?",
+      "expectedOutputs": ["Measurement context defined"]
+    },
+    {
+      "technique": "quantum_superposition",
+      "totalSteps": 4,
+      "stepNumber": 4,
+      "description": "Commit. Name the one state you are standing behind for \"the problem stated in this plan\", and say plainly which states you are standing down — a state nobody is told is abandoned goes on quietly consuming attention. Before you close them: what was each abandoned state carrying that the chosen path should inherit? And what does this collapse cost — what did holding them open buy you that you no longer have?",
+      "expectedOutputs": [
+        "One state committed to, the rest explicitly stood down, salvage named and the collapse priced"
+      ]
+    }
+  ],
+  "estimatedSteps": 4,
+  "successCriteria": [
+    "Generated at least 3 viable solutions",
+    "Identified and addressed key risks",
+    "Achieved clarity on problem definition",
+    "Thorough analysis from all angles"
+  ],
+  "createdAt": "2026-09-07T05:07:32.102Z",
+  "planningInsights": {
+    "techniqueRationale": "Selected for creative exploration",
+    "sequenceLogic": "Single technique approach for focused exploration",
+    "historicalNote": "This 1-technique workflow creates comprehensive exploration"
+  },
+  "complexityAssessment": {
+    "level": "low"
+  },
+  "executionMode": "sequential",
+  "qualityCoverage": {
+    "qualities": {
+      "intelligence": {
+        "score": 0.7,
+        "covered": true,
+        "topContributor": "quantum_superposition"
+      },
+      "courage": {
+        "score": 0.8,
+        "covered": true,
+        "topContributor": "quantum_superposition"
+      },
+      "tenacity": {
+        "score": 0.5,
+        "covered": false,
+        "topContributor": "quantum_superposition"
+      },
+      "curiosity": {
+        "score": 0.9,
+        "covered": true,
+        "topContributor": "quantum_superposition"
+      },
+      "justice": {
+        "score": 0.3,
+        "covered": false,
+        "topContributor": "quantum_superposition"
+      }
+    },
+    "allCovered": false,
+    "gaps": ["tenacity", "justice"],
+    "gapSuggestions": [
+      {
+        "quality": "tenacity",
+        "suggestedTechniques": [
+          "cognitive_bias_audit",
+          "scamper",
+          "design_thinking",
+          "triz",
+          "meta_learning",
+          "criteria_based_analysis",
+          "latticework",
+          "six_hats",
+          "temporal_work",
+          "nine_windows",
+          "temporal_creativity",
+          "paradoxical_problem",
+          "biomimetic_path",
+          "neuro_computational",
+          "linguistic_forensics",
+          "competing_hypotheses",
+          "steelman_red_team"
+        ]
+      },
+      {
+        "quality": "justice",
+        "suggestedTechniques": [
+          "cultural_integration",
+          "steelman_red_team",
+          "six_hats",
+          "collective_intel",
+          "yes_and",
+          "design_thinking",
+          "criteria_based_analysis",
+          "cognitive_bias_audit"
+        ]
+      }
+    ]
+  },
+  "executionGraph": {
+    "nodes": [
+      {
+        "technique": "quantum_superposition",
+        "id": "node-1",
+        "stepNumber": 1,
+        "parameters": {
+          "technique": "quantum_superposition",
+          "currentStep": 1,
+          "totalSteps": 4,
+          "nextStepNeeded": true,
+          "planId": "plan_96732d0f-d54d-4ee0-b285-8f63c47043d4",
+          "output": ""
+        },
+        "dependencies": [],
+        "canSkipIfFailed": false
+      },
+      {
+        "technique": "quantum_superposition",
+        "id": "node-2",
+        "stepNumber": 2,
+        "parameters": {
+          "technique": "quantum_superposition",
+          "currentStep": 2,
+          "totalSteps": 4,
+          "nextStepNeeded": true,
+          "planId": "plan_96732d0f-d54d-4ee0-b285-8f63c47043d4",
+          "output": ""
+        },
+        "dependencies": [
+          {
+            "nodeId": "node-1",
+            "type": "hard"
+          }
+        ],
+        "canSkipIfFailed": false
+      },
+      {
+        "technique": "quantum_superposition",
+        "id": "node-3",
+        "stepNumber": 3,
+        "parameters": {
+          "technique": "quantum_superposition",
+          "currentStep": 3,
+          "totalSteps": 4,
+          "nextStepNeeded": true,
+          "planId": "plan_96732d0f-d54d-4ee0-b285-8f63c47043d4",
+          "output": ""
+        },
+        "dependencies": [
+          {
+            "nodeId": "node-2",
+            "type": "hard"
+          }
+        ],
+        "canSkipIfFailed": false
+      },
+      {
+        "technique": "quantum_superposition",
+        "id": "node-4",
+        "stepNumber": 4,
+        "parameters": {
+          "technique": "quantum_superposition",
+          "currentStep": 4,
+          "totalSteps": 4,
+          "nextStepNeeded": false,
+          "planId": "plan_96732d0f-d54d-4ee0-b285-8f63c47043d4",
+          "output": ""
+        },
+        "dependencies": [
+          {
+            "nodeId": "node-3",
+            "type": "hard"
+          }
+        ],
+        "canSkipIfFailed": false
+      }
+    ],
+    "metadata": {
+      "totalNodes": 4,
+      "maxParallelism": 1,
+      "criticalPath": ["node-1", "node-2", "node-3", "node-4"],
+      "parallelizableGroups": [["node-1"], ["node-2"], ["node-3"], ["node-4"]],
+      "sequentialTimeMultiplier": "1x"
+    },
+    "instructions": {
+      "recommendedStrategy": "sequential",
+      "syncPoints": ["node-4"],
+      "sequentialTimeMultiplier": "1x",
+      "parallelizationBenefits": "Sequential execution ensures each step builds on previous insights for maximum coherence.",
+      "executionGuidance": "Execute nodes sequentially in the order provided. Each node depends on the previous one completing. The final node carries nextStepNeeded: false and ends the session - execute it only after every other node has completed.",
+      "errorHandling": "continue-on-non-critical-failure"
+    }
+  },
+  "nextSteps": {
+    "instructions": "To execute this plan, use the execute_thinking_step tool with the planId and follow the workflow steps.",
+    "firstCall": {
+      "tool": "execute_thinking_step",
+      "parameters": {
+        "technique": "quantum_superposition",
+        "currentStep": 1,
+        "totalSteps": 4,
+        "nextStepNeeded": true,
+        "planId": "plan_96732d0f-d54d-4ee0-b285-8f63c47043d4",
+        "problem": "Choose a data architecture for our analytics platform when we have budget for only one: a lakehouse on Apache Iceberg, a managed warehouse, or a streaming-first design on Kafka with materialized views",
+        "output": "[Your thinking output for step 1]"
+      }
+    },
+    "guidance": "Continue calling execute_thinking_step for each step, incrementing currentStep; send nextStepNeeded: false only on the final step of the final technique. Number steps within each technique (as firstCall does — currentStep 1 against the first technique’s own step count); plan-wide cumulative numbering is equally accepted, and totalSteps tells the server which convention currentStep is using.",
+    "important": "Always use the planId returned from this response. Do not skip this step or create your own planId."
+  },
+  "workflowReminder": {
+    "currentStep": 2,
+    "totalSteps": 3,
+    "steps": [
+      "1. discover_techniques (completed) - Found suitable techniques",
+      "2. plan_thinking_session (current) - Created structured plan",
+      "3. execute_thinking_step (next) - Execute the plan step by step"
+    ]
+  }
+}

@@ -790,6 +790,12 @@ Creates a structured workflow for applying one or more creative thinking techniq
 }
 ```
 
+**Sequence advice.** A plan with more than one technique carries `sequenceAdvice`, one entry per
+adjacent pair in the order you gave, each with an ordinal `relation` and an `evidence` field. Rows
+come only from measured comparisons cited into `evals/evidence/technique-contrasts.md`; a pair whose
+adjacency nobody has measured reports `NEUTRAL` with `evidence: "none"`. The planner never reorders:
+an `AVOID_ADJACENT` pair is kept where you put it and named in `warnings`.
+
 ### 🎯 execute_thinking_step
 
 Executes a single step in your creative thinking process.

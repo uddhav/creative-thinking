@@ -558,6 +558,11 @@ Process.
   Related: `vitest.config.ts` sets `retry: 2` globally. A real regression still fails all three
   attempts, but a guard that fails intermittently is masked rather than reported.
 
+- **Sequence advice is advisory and evidence-bound.** `plan_thinking_session` reports a
+  `sequenceAdvice` entry per adjacent technique pair and never reorders. Rows live in
+  `src/layers/planning/techniqueSequenceTable.ts`; every row cites a heading in
+  `evals/evidence/technique-contrasts.md` and the scale guard checks the anchor resolves. NEUTRAL
+  means no evidence, never "compatible", and no row may carry a number (#240).
 - **Never log to stdout** — it breaks MCP protocol
 - **Never add a 4th tool** — all functionality fits within the three-tool workflow
 - Do what has been asked; nothing more, nothing less

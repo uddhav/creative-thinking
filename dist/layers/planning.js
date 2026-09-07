@@ -3,6 +3,7 @@
  * Creates structured workflows for thinking sessions
  */
 import { randomUUID } from 'crypto';
+import { lookupSequenceRow } from './planning/techniqueSequenceTable.js';
 import { ExecutionGraphGenerator } from './planning/ExecutionGraphGenerator.js';
 import { TelemetryCollector } from '../telemetry/TelemetryCollector.js';
 import { PersonaResolver } from '../personas/PersonaResolver.js';
@@ -63,6 +64,18 @@ export function planThinkingSession(input, sessionManager, techniqueRegistry) {
     const planWarnings = [];
     if (strictness !== undefined && strictness !== 'advisory' && strictness !== 'enforcing') {
         planWarnings.push(`strictness "${strictness}" is not a recognized level ('advisory' or 'enforcing') — the plan behaves as 'advisory'.`);
+    }
+    // Sequence advice for each adjacent pair, in the caller's order (#240).
+    // Read-only over `techniques`: this array is the caller's own and is the
+    // same reference `plan.techniques` will hold, so nothing here may sort or
+    // reorder it (the historical-note lookup below once did, in place, and the
+    // workflow and the techniques field disagreed about the order).
+    const sequenceAdvice = techniques.length > 1 ? buildSequenceAdvice(techniques) : undefined;
+    for (const advice of sequenceAdvice ?? []) {
+        if (advice.relation === 'AVOID_ADJACENT') {
+            planWarnings.push(`${advice.pair[0]} then ${advice.pair[1]}: ${advice.note ?? 'measured as redundant when adjacent'} ` +
+                `(${advice.citation}). Order kept; consider separating them or dropping one.`);
+        }
     }
     // Build workflow for each technique
     const workflow = techniques.map((technique, techniqueIndex) => {
@@ -148,6 +161,7 @@ export function planThinkingSession(input, sessionManager, techniqueRegistry) {
         complexityAssessment,
         executionMode,
         strictness,
+        sequenceAdvice,
         warnings: planWarnings.length > 0 ? planWarnings : undefined,
         executionGraph,
         personaContext: resolvedPersona || resolvedPersonas.length > 0
@@ -817,6 +831,40 @@ function generateSequenceLogic(techniques, integrationStrategy) {
     return `Techniques ordered to build on each other's insights${strategyText}`;
 }
 /**
+ * One entry per adjacent pair, in the caller's order. Every pair gets an
+ * entry: an empty array would read as "checked and clean", and NEUTRAL by
+ * absence is not that. The same technique twice is NEUTRAL too, with a note,
+ * because nothing measures a technique against itself.
+ */
+function buildSequenceAdvice(techniques) {
+    const advice = [];
+    for (let i = 0; i + 1 < techniques.length; i++) {
+        const pair = [techniques[i], techniques[i + 1]];
+        if (pair[0] === pair[1]) {
+            advice.push({
+                pair,
+                position: i,
+                relation: 'NEUTRAL',
+                evidence: 'none',
+                note: 'Same technique repeated; nothing measures a technique against itself.',
+            });
+            continue;
+        }
+        const row = lookupSequenceRow(pair[0], pair[1]);
+        advice.push(row
+            ? {
+                pair,
+                position: i,
+                relation: row.relation,
+                evidence: 'measured',
+                citation: row.citation,
+                note: row.note,
+            }
+            : { pair, position: i, relation: 'NEUTRAL', evidence: 'none' });
+    }
+    return advice;
+}
+/**
  * Generate historical note about similar workflows
  */
 function generateHistoricalNote(techniques, objectives) {
@@ -825,10 +873,14 @@ function generateHistoricalNote(techniques, objectives) {
         // the lookup builds them. Two of these were written in unsorted order —
         // 'six_hats,scamper' and 'triz,scamper' — so they could never match and
         // their notes had never once been emitted.
-        'scamper,six_hats': 'This combination has proven effective for product improvements by balancing systematic analysis with creative modifications',
-        'design_thinking,po': 'Pairing empathy with provocation often reveals hidden user needs',
-        'scamper,triz': 'Technical contradiction resolution followed by systematic modification creates robust innovations',
-        'random_entry,yes_and': 'Random stimuli enhanced through collaborative building generates unexpected breakthroughs',
+        //
+        // Descriptions of what each pairing does, not outcome claims: nothing
+        // measured these, and `sequenceAdvice` on the same response cites what
+        // was measured. "Has proven effective" was rewritten out (#240).
+        'scamper,six_hats': 'This combination approaches product improvements by balancing systematic analysis with creative modifications',
+        'design_thinking,po': 'Pairing empathy with provocation looks for hidden user needs',
+        'scamper,triz': 'Technical contradiction resolution followed by systematic modification aims at robust innovations',
+        'random_entry,yes_and': 'Random stimuli enhanced through collaborative building aims at unexpected connections',
     };
     // Copy before sorting. `Array.prototype.sort` is in place, and this array is
     // the caller's own — so building a lookup key here silently reordered it, and

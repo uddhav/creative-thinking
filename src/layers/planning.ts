@@ -4,6 +4,8 @@
  */
 
 import { randomUUID } from 'crypto';
+import { lookupSequenceRow } from './planning/techniqueSequenceTable.js';
+import type { SequenceAdvice } from '../types/planning.js';
 import type {
   PlanThinkingSessionInput,
   PlanThinkingSessionOutput,
@@ -121,6 +123,21 @@ export function planThinkingSession(
     );
   }
 
+  // Sequence advice for each adjacent pair, in the caller's order (#240).
+  // Read-only over `techniques`: this array is the caller's own and is the
+  // same reference `plan.techniques` will hold, so nothing here may sort or
+  // reorder it (the historical-note lookup below once did, in place, and the
+  // workflow and the techniques field disagreed about the order).
+  const sequenceAdvice = techniques.length > 1 ? buildSequenceAdvice(techniques) : undefined;
+  for (const advice of sequenceAdvice ?? []) {
+    if (advice.relation === 'AVOID_ADJACENT') {
+      planWarnings.push(
+        `${advice.pair[0]} then ${advice.pair[1]}: ${advice.note ?? 'measured as redundant when adjacent'} ` +
+          `(${advice.citation}). Order kept; consider separating them or dropping one.`
+      );
+    }
+  }
+
   // Build workflow for each technique
   const workflow = techniques.map((technique, techniqueIndex) => {
     const handler = techniqueRegistry.getHandler(technique);
@@ -226,6 +243,7 @@ export function planThinkingSession(
     complexityAssessment,
     executionMode,
     strictness,
+    sequenceAdvice,
     warnings: planWarnings.length > 0 ? planWarnings : undefined,
     executionGraph,
     personaContext:
@@ -977,6 +995,43 @@ function generateSequenceLogic(
 }
 
 /**
+ * One entry per adjacent pair, in the caller's order. Every pair gets an
+ * entry: an empty array would read as "checked and clean", and NEUTRAL by
+ * absence is not that. The same technique twice is NEUTRAL too, with a note,
+ * because nothing measures a technique against itself.
+ */
+function buildSequenceAdvice(techniques: LateralTechnique[]): SequenceAdvice[] {
+  const advice: SequenceAdvice[] = [];
+  for (let i = 0; i + 1 < techniques.length; i++) {
+    const pair: [LateralTechnique, LateralTechnique] = [techniques[i], techniques[i + 1]];
+    if (pair[0] === pair[1]) {
+      advice.push({
+        pair,
+        position: i,
+        relation: 'NEUTRAL',
+        evidence: 'none',
+        note: 'Same technique repeated; nothing measures a technique against itself.',
+      });
+      continue;
+    }
+    const row = lookupSequenceRow(pair[0], pair[1]);
+    advice.push(
+      row
+        ? {
+            pair,
+            position: i,
+            relation: row.relation,
+            evidence: 'measured',
+            citation: row.citation,
+            note: row.note,
+          }
+        : { pair, position: i, relation: 'NEUTRAL', evidence: 'none' }
+    );
+  }
+  return advice;
+}
+
+/**
  * Generate historical note about similar workflows
  */
 function generateHistoricalNote(techniques: string[], objectives?: string[]): string {
@@ -985,13 +1040,17 @@ function generateHistoricalNote(techniques: string[], objectives?: string[]): st
     // the lookup builds them. Two of these were written in unsorted order —
     // 'six_hats,scamper' and 'triz,scamper' — so they could never match and
     // their notes had never once been emitted.
+    //
+    // Descriptions of what each pairing does, not outcome claims: nothing
+    // measured these, and `sequenceAdvice` on the same response cites what
+    // was measured. "Has proven effective" was rewritten out (#240).
     'scamper,six_hats':
-      'This combination has proven effective for product improvements by balancing systematic analysis with creative modifications',
-    'design_thinking,po': 'Pairing empathy with provocation often reveals hidden user needs',
+      'This combination approaches product improvements by balancing systematic analysis with creative modifications',
+    'design_thinking,po': 'Pairing empathy with provocation looks for hidden user needs',
     'scamper,triz':
-      'Technical contradiction resolution followed by systematic modification creates robust innovations',
+      'Technical contradiction resolution followed by systematic modification aims at robust innovations',
     'random_entry,yes_and':
-      'Random stimuli enhanced through collaborative building generates unexpected breakthroughs',
+      'Random stimuli enhanced through collaborative building aims at unexpected connections',
   };
 
   // Copy before sorting. `Array.prototype.sort` is in place, and this array is
