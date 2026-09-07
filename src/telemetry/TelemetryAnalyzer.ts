@@ -9,7 +9,7 @@ import type {
   AnalyticsResult,
   AnalyticsData,
   AnalyticsSummary,
-  TechniqueEffectiveness,
+  TechniqueUsage,
   SessionAnalytics,
   AnalyticsMetric,
   TelemetryConfig,
@@ -41,11 +41,13 @@ export class TelemetryAnalyzer {
   }
 
   /**
-   * Get technique effectiveness analysis
+   * Technique usage: starts, completions and the averages of what the
+   * collector recorded. Renamed from the effectiveness method: the number it averages
+   * is output completeness, and nothing observes an outcome (#241).
    */
-  async getTechniqueEffectiveness(technique?: LateralTechnique): Promise<TechniqueEffectiveness[]> {
+  async getTechniqueUsage(technique?: LateralTechnique): Promise<TechniqueUsage[]> {
     const events = await this.storage.getStoredEvents();
-    const techniqueMap = new Map<LateralTechnique, TechniqueEffectiveness>();
+    const techniqueMap = new Map<LateralTechnique, TechniqueUsage>();
 
     // Group events by technique
     for (const event of events) {
@@ -73,7 +75,7 @@ export class TelemetryAnalyzer {
     }
 
     // Calculate final metrics
-    const results: TechniqueEffectiveness[] = [];
+    const results: TechniqueUsage[] = [];
     for (const [, stats] of techniqueMap) {
       this.finalizeTechniqueStats(stats, events);
       results.push(stats);
@@ -90,8 +92,11 @@ export class TelemetryAnalyzer {
     const events = await this.storage.getStoredEvents();
     const sessionMap = new Map<string, SessionAnalytics>();
 
-    // Group events by session
+    // Group events by session. A problem_discovered row has no session: its
+    // id is minted per discover_techniques call, so counting it would add one
+    // abandoned session per discovery.
     for (const event of events) {
+      if (event.eventType === 'problem_discovered') continue;
       const sid = event.anonymousSessionId;
       if (sessionId && sid !== sessionId) continue;
 
@@ -305,7 +310,9 @@ export class TelemetryAnalyzer {
    * Generate analytics summary
    */
   private generateSummary(events: PrivacySafeEvent[]): AnalyticsSummary {
-    const sessions = new Set(events.map(e => e.anonymousSessionId));
+    const sessions = new Set(
+      events.filter(e => e.eventType !== 'problem_discovered').map(e => e.anonymousSessionId)
+    );
     const techniques = new Map<LateralTechnique, { count: number; effectiveness: number }>();
 
     // Count techniques and effectiveness
@@ -367,7 +374,7 @@ export class TelemetryAnalyzer {
   /**
    * Update technique statistics
    */
-  private updateTechniqueStats(stats: TechniqueEffectiveness, event: PrivacySafeEvent): void {
+  private updateTechniqueStats(stats: TechniqueUsage, event: PrivacySafeEvent): void {
     if (event.eventType === 'technique_start') {
       stats.sessionsUsed++;
     }
@@ -392,10 +399,7 @@ export class TelemetryAnalyzer {
   /**
    * Finalize technique statistics
    */
-  private finalizeTechniqueStats(
-    stats: TechniqueEffectiveness,
-    allEvents: PrivacySafeEvent[]
-  ): void {
+  private finalizeTechniqueStats(stats: TechniqueUsage, allEvents: PrivacySafeEvent[]): void {
     const techniqueEvents = allEvents.filter(e => e.technique === stats.technique);
     const starts = techniqueEvents.filter(e => e.eventType === 'technique_start').length;
     const completes = techniqueEvents.filter(e => e.eventType === 'technique_complete').length;
@@ -431,7 +435,7 @@ export class TelemetryAnalyzer {
   private findCommonCombinations(
     technique: LateralTechnique,
     events: PrivacySafeEvent[]
-  ): TechniqueEffectiveness['commonCombinations'] {
+  ): TechniqueUsage['commonCombinations'] {
     const combinations = new Map<string, { count: number; effectiveness: number }>();
 
     // Group by session and find technique sequences

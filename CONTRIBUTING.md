@@ -657,11 +657,15 @@ TELEMETRY_PRIVACY_MODE=balanced  # strict, balanced, minimal
 
 #### Data Collected
 
+- One `problem_discovered` row per discovery call: the problem's category, evidence breadth and
+  recommendation tier (never the problem text)
 - Technique start/complete events
 - Session metrics
-- Effectiveness scores
+- Output-completeness scores (the `effectiveness` metric is coverage of the outputs a step asked
+  for, not an observed outcome)
 - Insight generation counts
 - Risk identification rates
+- Escape-protocol recommendations, and adjacent technique pairs (at `detailed` and above)
 - No personal information or content
 
 ### Performance Optimization Patterns

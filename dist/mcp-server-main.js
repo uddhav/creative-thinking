@@ -96,7 +96,7 @@ async function gracefulShutdown(signal) {
                 // setBlocking unavailable
             }
         }
-        lateralServer.destroy();
+        await lateralServer.shutdown();
         console.error('[Server] Cleaned up server resources');
         if (transport) {
             await transport.close();

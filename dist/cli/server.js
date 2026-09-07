@@ -8,6 +8,7 @@
  */
 import { LateralThinkingServer } from '../index.js';
 import { onBeforeExit } from './io.js';
+import { TelemetryCollector } from '../telemetry/TelemetryCollector.js';
 let cached = null;
 export function getServer() {
     if (!cached) {
@@ -17,6 +18,14 @@ export function getServer() {
         // in three of three `socketes discover` runs; emit now waits for it.
         const sweep = cached.getSessionManager().startupSweep;
         onBeforeExit(() => sweep);
+        // The collector's own flush is registered on `beforeExit`, which a process
+        // that leaves through process.exit never reaches; under the default batch
+        // size every `socketes` invocation wrote nothing, ever (#241). Registered
+        // here so emit() waits for it; a telemetry failure changes neither the
+        // exit code nor the JSON.
+        onBeforeExit(() => TelemetryCollector.getInstance()
+            .flush()
+            .catch(err => console.error('[Telemetry] flush at exit failed:', err)));
     }
     return cached;
 }

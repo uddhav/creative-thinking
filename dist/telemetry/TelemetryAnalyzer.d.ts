@@ -2,7 +2,7 @@
  * Telemetry Analyzer
  * Analyzes telemetry data to provide insights on technique effectiveness
  */
-import type { AnalyticsQuery, AnalyticsResult, TechniqueEffectiveness, SessionAnalytics, TelemetryConfig } from './types.js';
+import type { AnalyticsQuery, AnalyticsResult, TechniqueUsage, SessionAnalytics, TelemetryConfig } from './types.js';
 import type { LateralTechnique } from '../types/index.js';
 export declare class TelemetryAnalyzer {
     private storage;
@@ -12,9 +12,11 @@ export declare class TelemetryAnalyzer {
      */
     getAnalytics(query: AnalyticsQuery): Promise<AnalyticsResult>;
     /**
-     * Get technique effectiveness analysis
+     * Technique usage: starts, completions and the averages of what the
+     * collector recorded. Renamed from the effectiveness method: the number it averages
+     * is output completeness, and nothing observes an outcome (#241).
      */
-    getTechniqueEffectiveness(technique?: LateralTechnique): Promise<TechniqueEffectiveness[]>;
+    getTechniqueUsage(technique?: LateralTechnique): Promise<TechniqueUsage[]>;
     /**
      * Get session analytics
      */

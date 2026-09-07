@@ -8,6 +8,7 @@
  */
 // Core modules
 import { SessionManager } from './core/SessionManager.js';
+import { TelemetryCollector } from './telemetry/TelemetryCollector.js';
 import { persistPlan } from './core/session/planStore.js';
 import { ResponseBuilder } from './core/ResponseBuilder.js';
 import { MetricsCollector } from './core/MetricsCollector.js';
@@ -274,6 +275,22 @@ export class LateralThinkingServer {
      */
     destroy() {
         this.sessionManager.destroy();
+    }
+    /**
+     * Flush buffered telemetry, then destroy. The MCP entry exits through
+     * process.exit, so the collector's beforeExit flush never runs there
+     * (#241); the entry awaits this before closing the transport, so a flush
+     * failure is still logged while stderr is open. A telemetry failure never
+     * blocks the shutdown.
+     */
+    async shutdown() {
+        try {
+            await TelemetryCollector.getInstance().flush();
+        }
+        catch (err) {
+            console.error('[Telemetry] flush on shutdown failed:', err);
+        }
+        this.destroy();
     }
 }
 //# sourceMappingURL=index.js.map

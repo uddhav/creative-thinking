@@ -267,6 +267,14 @@ export class ExecutionResponseBuilder {
         .catch(console.error);
     }
 
+    // The early-warning system recommended an escape on this step (#241). The
+    // orchestrator assigns or clears the field on every step, so repeats mean
+    // the condition persisted. Before the minimal fork below, so it fires for
+    // both verbosities.
+    if (session.escapeRecommendation) {
+      this.telemetry.trackEscapeRecommended(sessionId, input.technique).catch(console.error);
+    }
+
     // Enhance with analysis and options
     this.enhanceWithAnalysisAndOptions(
       responseData,

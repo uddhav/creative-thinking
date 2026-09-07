@@ -61,5 +61,12 @@ export declare class PrivacyManager {
      * Get telemetry configuration from environment
      */
     static getConfigFromEnvironment(): TelemetryConfig;
+    /**
+     * An env var that must be one of a closed set. These used to be bare
+     * casts, so TELEMETRY_STORAGE=bogus reached the storage switch, matched no
+     * case, and stored nothing without saying so. An unrecognized value now
+     * warns on stderr and takes the default.
+     */
+    private static parseChoice;
 }
 //# sourceMappingURL=privacy.d.ts.map

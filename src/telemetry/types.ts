@@ -16,12 +16,19 @@ export type TelemetryEventType =
   | 'risk_identified'
   | 'option_generated'
   | 'flexibility_warning'
-  | 'escape_protocol_triggered'
+  // Emitted when the early-warning system RECOMMENDS an escape protocol.
+  // Nothing in production executes one, so a "triggered" event would never
+  // fire; this is the honest name for what happens (#241).
+  | 'escape_protocol_recommended'
   | 'session_start'
   | 'session_complete'
   | 'workflow_transition'
   | 'technique_pair_used' // Track which techniques follow each other
-  | 'technique_recommended'; // Track which techniques were recommended vs selected
+  | 'technique_recommended' // Track which techniques were recommended vs selected
+  // One per discover_techniques call: the problem's category, how many
+  // categories cleared the evidence bar, and the recommendation tier that
+  // sized the set. No session exists yet; the id is synthesized per call.
+  | 'problem_discovered';
 
 /**
  * Telemetry data collection levels
@@ -93,6 +100,12 @@ export interface TelemetryMetadata {
   pairSequence?: [LateralTechnique, LateralTechnique]; // Technique pair used together
   pairCompletionRate?: number; // Did the pairing lead to completion?
   pairEffectiveness?: number; // Combined effectiveness score
+
+  // Discovery (problem_discovered). Non-identifying: a closed category name,
+  // a small integer, a three-level tier.
+  category?: string;
+  evidenceBreadth?: number;
+  tier?: 'low' | 'medium' | 'high';
 }
 
 /**
@@ -173,9 +186,14 @@ export interface TelemetryConfig {
 }
 
 /**
- * Technique effectiveness metrics
+ * Technique usage metrics. The `averageEffectiveness` member averages the
+ * completion-time `effectiveness` metric, whose sole producer is the
+ * technique's output completeness (coverage of the outputs the step asked
+ * for); nothing observes an outcome, which is why this is usage, not
+ * effectiveness. The wire field keeps its old name: renaming it would change
+ * the on-disk row.
  */
-export interface TechniqueEffectiveness {
+export interface TechniqueUsage {
   technique: LateralTechnique;
   sessionsUsed: number;
   completionRate: number;
@@ -218,12 +236,19 @@ export interface PrivacySafeEvent {
   timestamp: number;
   anonymousSessionId: string; // Hashed/anonymized
   technique?: LateralTechnique;
+  // This IS the on-disk row (TelemetryStorage writes one per line) and it has
+  // no version field. Additions are optional and old readers ignore them.
   metrics: {
     effectiveness?: number;
     insightCount?: number;
     riskCount?: number;
     duration?: number;
     flexibilityScore?: number;
+    // Kept in every privacy mode: none identifies a user or a problem.
+    category?: string;
+    evidenceBreadth?: number;
+    tier?: 'low' | 'medium' | 'high';
+    pairSequence?: [LateralTechnique, LateralTechnique];
   };
 }
 

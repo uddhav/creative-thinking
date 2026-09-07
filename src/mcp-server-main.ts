@@ -120,7 +120,7 @@ async function gracefulShutdown(signal: string): Promise<void> {
       }
     }
 
-    lateralServer.destroy();
+    await lateralServer.shutdown();
     console.error('[Server] Cleaned up server resources');
 
     if (transport) {

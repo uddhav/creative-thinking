@@ -14,6 +14,8 @@ import { MemoryContextGenerator } from './discovery/MemoryContextGenerator.js';
 import { PersonaResolver } from '../personas/PersonaResolver.js';
 import { HumanisticQualityCoverage } from './discovery/HumanisticQualityCoverage.js';
 import { CRUX_BIAS } from './discovery/cruxBias.js';
+import { randomUUID } from 'crypto';
+import { TelemetryCollector } from '../telemetry/TelemetryCollector.js';
 
 // Create singleton instances for proper caching across requests
 // This ensures the techniqueInfoCache and catalog cache are reused, improving performance
@@ -205,6 +207,19 @@ export function discoverTechniques(
     const recommendedTechniques = recommendations.map(r => r.technique);
     sessionManager.setLastRecommendations(problem, recommendedTechniques);
   }
+
+  // Telemetry (#241): what a default install learns about the problems it is
+  // asked. Fire-and-forget: trackEvent buffers synchronously before its first
+  // await, so this cannot reorder anything above or below, and the discovery
+  // id never reaches the response, so the output stays byte-identical and
+  // deterministic. No session exists yet; the id is minted here.
+  TelemetryCollector.getInstance()
+    .trackProblemDiscovered(`discovery_${randomUUID()}`, {
+      category: problemCategory,
+      evidenceBreadth,
+      tier: recommendationTier,
+    })
+    .catch(err => console.error('[Discovery] Failed to track discovery:', err));
 
   // Build persona context for output
   const personaContext =

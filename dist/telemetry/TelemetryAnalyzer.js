@@ -23,9 +23,11 @@ export class TelemetryAnalyzer {
         };
     }
     /**
-     * Get technique effectiveness analysis
+     * Technique usage: starts, completions and the averages of what the
+     * collector recorded. Renamed from the effectiveness method: the number it averages
+     * is output completeness, and nothing observes an outcome (#241).
      */
-    async getTechniqueEffectiveness(technique) {
+    async getTechniqueUsage(technique) {
         const events = await this.storage.getStoredEvents();
         const techniqueMap = new Map();
         // Group events by technique
@@ -67,8 +69,12 @@ export class TelemetryAnalyzer {
     async getSessionAnalytics(sessionId) {
         const events = await this.storage.getStoredEvents();
         const sessionMap = new Map();
-        // Group events by session
+        // Group events by session. A problem_discovered row has no session: its
+        // id is minted per discover_techniques call, so counting it would add one
+        // abandoned session per discovery.
         for (const event of events) {
+            if (event.eventType === 'problem_discovered')
+                continue;
             const sid = event.anonymousSessionId;
             if (sessionId && sid !== sessionId)
                 continue;
@@ -247,7 +253,7 @@ export class TelemetryAnalyzer {
      * Generate analytics summary
      */
     generateSummary(events) {
-        const sessions = new Set(events.map(e => e.anonymousSessionId));
+        const sessions = new Set(events.filter(e => e.eventType !== 'problem_discovered').map(e => e.anonymousSessionId));
         const techniques = new Map();
         // Count techniques and effectiveness
         for (const event of events) {

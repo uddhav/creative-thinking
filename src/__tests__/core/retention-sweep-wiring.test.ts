@@ -129,6 +129,30 @@ describe('SessionManager wiring', () => {
     sweep.mockRestore();
   });
 
+  it('a TTL that is not a plain integer string means never, with a warning', async () => {
+    // Number() accepted '1e2' as 100 days and ' 2 ' as 2 days; neither is a
+    // value anyone wrote on purpose. Break: parse with Number() alone.
+    const stderr: string[] = [];
+    const original = console.error;
+    console.error = (...args: unknown[]) => {
+      stderr.push(args.map(String).join(' '));
+    };
+    try {
+      for (const raw of ['1e2', ' 2 ', '2.0', '0x10']) {
+        process.env.PERSISTENCE_TTL_DAYS = raw;
+        const sweep = vi.spyOn(SessionPersistence.prototype, 'sweep');
+        const sm = new SessionManager();
+        await Promise.resolve();
+        expect(sweep, `${JSON.stringify(raw)} must not sweep`).not.toHaveBeenCalled();
+        sm.destroy();
+        sweep.mockRestore();
+      }
+      expect(stderr.join('\n')).toMatch(/PERSISTENCE_TTL_DAYS/);
+    } finally {
+      console.error = original;
+    }
+  });
+
   it('with the TTL unset the sweep is a no-op that touches no adapter', async () => {
     delete process.env.PERSISTENCE_TTL_DAYS;
     const sweep = vi.spyOn(SessionPersistence.prototype, 'sweep');

@@ -140,7 +140,9 @@ export class SessionManager {
   private static parseTtlDays(): number | null {
     const raw = process.env.PERSISTENCE_TTL_DAYS;
     if (raw === undefined || raw === '') return null;
-    const days = Number(raw);
+    // A plain integer string only. Number() also accepts '1e2' and ' 2 ',
+    // which then meant 100 and 2 days without anyone having written them.
+    const days = /^[0-9]+$/.test(raw) ? Number(raw) : NaN;
     if (Number.isInteger(days) && days >= 1) return days;
     console.error(
       `[SessionManager] PERSISTENCE_TTL_DAYS="${raw}" is not a whole number of days (minimum 1); nothing will be deleted.`
