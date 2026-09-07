@@ -83,13 +83,13 @@ describe('Cross-Cultural Integration', () => {
   });
 
   // Helper function to create a plan
-  function createPlan(problem: string, techniques: string[]): string {
+  async function createPlan(problem: string, techniques: string[]): Promise<string> {
     const input: PlanThinkingSessionInput = {
       problem,
       techniques: techniques as LateralTechnique[],
     };
 
-    const result = server.planThinkingSession(input);
+    const result = await server.planThinkingSession(input);
     expect(result.isError).toBeFalsy();
     const planData = JSON.parse(result.content[0]?.text || '{}') as PlanResponse;
     return planData.planId;
@@ -165,13 +165,13 @@ describe('Cross-Cultural Integration', () => {
   });
 
   describe('Planning Phase', () => {
-    it('should create a proper workflow for Cross-Cultural technique', () => {
+    it('should create a proper workflow for Cross-Cultural technique', async () => {
       const input: PlanThinkingSessionInput = {
         problem: 'Design a global educational platform',
         techniques: ['cultural_integration'] as LateralTechnique[],
       };
 
-      const result = server.planThinkingSession(input);
+      const result = await server.planThinkingSession(input);
       expect(result.isError).toBeFalsy();
       const planData = JSON.parse(result.content[0]?.text || '{}') as PlanResponse;
 
@@ -190,7 +190,7 @@ describe('Cross-Cultural Integration', () => {
 
   describe('Execution Phase', () => {
     it('should execute all five Cross-Cultural steps', async () => {
-      const planId = createPlan('Create culturally adaptive user interface', [
+      const planId = await createPlan('Create culturally adaptive user interface', [
         'cultural_integration',
       ]);
 
@@ -295,7 +295,7 @@ describe('Cross-Cultural Integration', () => {
     });
 
     it('should handle complex cultural framework mapping', async () => {
-      const planId = createPlan('Bridge Eastern and Western approaches to problem-solving', [
+      const planId = await createPlan('Bridge Eastern and Western approaches to problem-solving', [
         'cultural_integration',
       ]);
 
@@ -319,7 +319,7 @@ describe('Cross-Cultural Integration', () => {
     });
 
     it('should identify critical steps for cultural sensitivity', async () => {
-      const planId = createPlan('Develop culturally sensitive AI', ['cultural_integration']);
+      const planId = await createPlan('Develop culturally sensitive AI', ['cultural_integration']);
 
       // Step 2 (bridge identification) should be marked as critical
       const step2 = await executeStep(planId, {
@@ -354,7 +354,7 @@ describe('Cross-Cultural Integration', () => {
     });
 
     it('should generate memory-suggestive outputs for cultural sessions', async () => {
-      const planId = createPlan('Design inclusive global communication platform', [
+      const planId = await createPlan('Design inclusive global communication platform', [
         'cultural_integration',
       ]);
 
@@ -421,7 +421,7 @@ describe('Cross-Cultural Integration', () => {
 
   describe('Integration with Other Techniques', () => {
     it('should work well in combination with Design Thinking', async () => {
-      const planId = createPlan('Design culturally inclusive healthcare solution', [
+      const planId = await createPlan('Design culturally inclusive healthcare solution', [
         'cultural_integration',
         'design_thinking',
       ]);
@@ -469,7 +469,7 @@ describe('Cross-Cultural Integration', () => {
 
   describe('Error Handling', () => {
     it('should handle missing cultural framework data gracefully', async () => {
-      const planId = createPlan('Test cultural integration', ['cultural_integration']);
+      const planId = await createPlan('Test cultural integration', ['cultural_integration']);
 
       // Execute without specific cultural fields
       const result = await executeStep(planId, {
@@ -487,7 +487,9 @@ describe('Cross-Cultural Integration', () => {
     });
 
     it('should validate parallel paths are contextually appropriate', async () => {
-      const planId = createPlan('Create culturally adaptive solution', ['cultural_integration']);
+      const planId = await createPlan('Create culturally adaptive solution', [
+        'cultural_integration',
+      ]);
 
       // Skip to step 4 with parallel paths
       const result = await executeStep(planId, {

@@ -53,11 +53,11 @@ export class ExecutionValidator {
   /**
    * Validate plan exists and technique matches
    */
-  validatePlan(input: ExecuteThinkingStepInput): {
+  async validatePlan(input: ExecuteThinkingStepInput): Promise<{
     isValid: boolean;
     error?: LateralThinkingResponse;
     plan?: PlanThinkingSessionOutput;
-  } {
+  }> {
     if (!input.planId) {
       return { isValid: true }; // Plan is optional
     }
@@ -165,7 +165,7 @@ export class ExecutionValidator {
 
     // Regular planId. `getPlan` falls back to disk for a plan this process did
     // not issue, so a restart does not lose what was being executed (#316).
-    const plan = this.sessionManager.getPlan(input.planId);
+    const plan = await this.sessionManager.getPlan(input.planId);
     if (!plan) {
       const enhancedError = ErrorFactory.planNotFound(input.planId);
       return {

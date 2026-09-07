@@ -15,7 +15,7 @@ describe('Risk Discovery Integration', () => {
   describe('High-risk action detection and blocking', () => {
     it('should detect and validate financial risk', async () => {
       // Create a plan
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Investment strategy',
         techniques: ['six_hats'],
       });
@@ -43,7 +43,7 @@ describe('Risk Discovery Integration', () => {
 
     it('should block extreme risk recommendations', async () => {
       // Create a plan
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Personal financial emergency - quick money needed',
         techniques: ['po'],
       });
@@ -89,7 +89,7 @@ describe('Risk Discovery Integration', () => {
 
   describe('Cross-domain risk detection', () => {
     it('should detect health domain risks', async () => {
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Chronic pain management',
         techniques: ['design_thinking'],
       });
@@ -113,7 +113,7 @@ describe('Risk Discovery Integration', () => {
     });
 
     it('should detect career domain risks', async () => {
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Career advancement strategy',
         techniques: ['scamper'],
       });
@@ -145,7 +145,7 @@ describe('Risk Discovery Integration', () => {
 
   describe('Discovery data persistence', () => {
     it('should maintain discovery data across steps', async () => {
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Major life decision',
         techniques: ['disney_method'],
       });
@@ -206,7 +206,7 @@ describe('Risk Discovery Integration', () => {
 
   describe('Forced calculation requirements', () => {
     it('should require calculations for high-stakes decisions', async () => {
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Business investment opportunity',
         techniques: ['triz'],
       });
@@ -232,7 +232,7 @@ describe('Risk Discovery Integration', () => {
 
   describe('Educational feedback on violations', () => {
     it('should provide educational feedback when constraints are violated', async () => {
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Retirement planning',
         techniques: ['nine_windows'],
       });
@@ -263,7 +263,7 @@ describe('Risk Discovery Integration', () => {
 
   describe('Ergodicity and discovery interaction', () => {
     it('should integrate with existing ergodicity checks', async () => {
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Startup equity decision',
         techniques: ['concept_extraction'],
       });
@@ -291,7 +291,7 @@ describe('Risk Discovery Integration', () => {
 
   describe('Risk level gradation', () => {
     it('should handle different risk levels appropriately', async () => {
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Portfolio optimization',
         techniques: ['six_hats'],
       });

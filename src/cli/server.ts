@@ -8,11 +8,19 @@
  */
 
 import { LateralThinkingServer } from '../index.js';
+import { onBeforeExit } from './io.js';
 
 let cached: LateralThinkingServer | null = null;
 
 export function getServer(): LateralThinkingServer {
-  if (!cached) cached = new LateralThinkingServer();
+  if (!cached) {
+    cached = new LateralThinkingServer();
+    // The retention sweep starts in the SessionManager constructor. A one-shot
+    // process exits inside emit()'s write callback, which cut the sweep off
+    // in three of three `socketes discover` runs; emit now waits for it.
+    const sweep = cached.getSessionManager().startupSweep;
+    onBeforeExit(() => sweep);
+  }
   return cached;
 }
 

@@ -10,7 +10,7 @@ import { ExecutionValidator } from '../../core/ValidationStrategies.js';
 import type { LateralTechnique } from '../../types/index.js';
 
 describe('WorkflowGuard Techniques Synchronization', () => {
-  it('should have all techniques from TechniqueRegistry in validTechniques', () => {
+  it('should have all techniques from TechniqueRegistry in validTechniques', async () => {
     const workflowGuard = new WorkflowGuard();
     const techniqueRegistry = TechniqueRegistry.getInstance();
 
@@ -41,7 +41,7 @@ describe('WorkflowGuard Techniques Synchronization', () => {
       });
 
       // Check if this technique triggers an invalid_technique violation
-      const violation = workflowGuard.checkWorkflowViolation('execute_thinking_step', args);
+      const violation = await workflowGuard.checkWorkflowViolation('execute_thinking_step', args);
 
       // If there's no violation or it's not about invalid technique, the technique is valid
       if (!violation || violation.type !== 'invalid_technique') {
@@ -116,7 +116,7 @@ describe('WorkflowGuard Techniques Synchronization', () => {
     expect([...registeredTechniques].sort()).toEqual(lateralTechniqueValues.sort());
   });
 
-  it('should reject truly invalid techniques', () => {
+  it('should reject truly invalid techniques', async () => {
     const workflowGuard = new WorkflowGuard();
 
     // Test with a completely made-up technique name
@@ -137,7 +137,7 @@ describe('WorkflowGuard Techniques Synchronization', () => {
       techniques: ['six_hats'],
     });
 
-    const violation = workflowGuard.checkWorkflowViolation('execute_thinking_step', args);
+    const violation = await workflowGuard.checkWorkflowViolation('execute_thinking_step', args);
 
     expect(violation).toBeDefined();
     expect(violation?.type).toBe('invalid_technique');

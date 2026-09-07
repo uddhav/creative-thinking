@@ -89,13 +89,13 @@ describe('Neural State Optimization', () => {
   });
 
   // Helper function to create a plan
-  function createPlan(problem: string, techniques: string[]): string {
+  async function createPlan(problem: string, techniques: string[]): Promise<string> {
     const input: PlanThinkingSessionInput = {
       problem,
       techniques: techniques as LateralTechnique[],
     };
 
-    const result = server.planThinkingSession(input);
+    const result = await server.planThinkingSession(input);
     expect(result.isError).toBeFalsy();
     const planData = JSON.parse(result.content[0]?.text || '{}') as PlanResponse;
     return planData.planId;
@@ -174,13 +174,13 @@ describe('Neural State Optimization', () => {
   });
 
   describe('Planning Phase', () => {
-    it('should create a proper workflow for Neural State technique', () => {
+    it('should create a proper workflow for Neural State technique', async () => {
       const input: PlanThinkingSessionInput = {
         problem: 'Optimize cognitive flexibility for complex problem solving',
         techniques: ['neural_state'] as LateralTechnique[],
       };
 
-      const result = server.planThinkingSession(input);
+      const result = await server.planThinkingSession(input);
       expect(result.isError).toBeFalsy();
       const planData = JSON.parse(result.content[0]?.text || '{}') as PlanResponse;
 
@@ -205,7 +205,9 @@ describe('Neural State Optimization', () => {
 
   describe('Execution Phase', () => {
     it('should execute all three Neural State steps', async () => {
-      const planId = createPlan('Overcome cognitive rigidity in problem-solving', ['neural_state']);
+      const planId = await createPlan('Overcome cognitive rigidity in problem-solving', [
+        'neural_state',
+      ]);
 
       // Step 1: Assess current state — now also names the suppressed network and its depth
       const step1 = await executeStep(planId, {
@@ -278,7 +280,9 @@ describe('Neural State Optimization', () => {
       // for enhanced cognitive flexibility' string was appended on the last step.
       // That banner reported an insight the session never produced, so it was
       // removed; every insight must now trace back to data the caller supplied.
-      const planId = createPlan('Overcome cognitive rigidity in problem-solving', ['neural_state']);
+      const planId = await createPlan('Overcome cognitive rigidity in problem-solving', [
+        'neural_state',
+      ]);
 
       const step1 = await executeStep(planId, {
         technique: 'neural_state',
@@ -332,7 +336,9 @@ describe('Neural State Optimization', () => {
     });
 
     it('should handle DMN dominance scenario', async () => {
-      const planId = createPlan('Focus issues due to excessive mind wandering', ['neural_state']);
+      const planId = await createPlan('Focus issues due to excessive mind wandering', [
+        'neural_state',
+      ]);
 
       const step1 = await executeStep(planId, {
         technique: 'neural_state',
@@ -348,7 +354,7 @@ describe('Neural State Optimization', () => {
     });
 
     it('should track path impact for neural state changes', async () => {
-      const planId = createPlan('Optimize mental performance', ['neural_state']);
+      const planId = await createPlan('Optimize mental performance', ['neural_state']);
 
       const switchingStep = await executeStep(planId, {
         technique: 'neural_state',
@@ -365,7 +371,7 @@ describe('Neural State Optimization', () => {
     });
 
     it('should generate memory-suggestive outputs for neural state sessions', async () => {
-      const planId = createPlan('Enhance cognitive flexibility', ['neural_state']);
+      const planId = await createPlan('Enhance cognitive flexibility', ['neural_state']);
 
       // Complete a full session
       const step1 = await executeStep(planId, {
@@ -408,7 +414,7 @@ describe('Neural State Optimization', () => {
 
   describe('Integration with Other Techniques', () => {
     it('should work well in combination with Six Hats', async () => {
-      const planId = createPlan(
+      const planId = await createPlan(
         'Complex strategic decision requiring both analysis and creativity',
         ['neural_state', 'six_hats']
       );
@@ -447,7 +453,7 @@ describe('Neural State Optimization', () => {
 
   describe('Error Handling', () => {
     it('should validate neural state specific fields', async () => {
-      const planId = createPlan('Test neural state validation', ['neural_state']);
+      const planId = await createPlan('Test neural state validation', ['neural_state']);
 
       // Test invalid suppressionDepth
       const result = await server.executeThinkingStep({
@@ -467,7 +473,7 @@ describe('Neural State Optimization', () => {
     });
 
     it('should handle missing neural state fields gracefully', async () => {
-      const planId = createPlan('Test missing fields', ['neural_state']);
+      const planId = await createPlan('Test missing fields', ['neural_state']);
 
       // Execute without specific neural state fields
       const result = await executeStep(planId, {

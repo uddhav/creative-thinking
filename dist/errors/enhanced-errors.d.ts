@@ -247,6 +247,11 @@ export declare class ErrorFactory {
      */
     static invalidStep(requestedStep: number, maxSteps: number): StateError;
     /**
+     * `session delete` without `confirm: true`. Nothing was deleted; the flag
+     * was documented as required long before it was read.
+     */
+    static deleteNotConfirmed(sessionId: string): ValidationError;
+    /**
      * Create a file access error
      */
     static fileAccessError(filePath: string, reason: string): SystemError;

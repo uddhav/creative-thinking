@@ -90,25 +90,28 @@ final synthesis.
 
 State on disk under `PERSISTENCE_PATH` (default `~/.creative-thinking`):
 
-- `plans/<planId>.json` — full plan with `techniques` field that the executor needs. The plan store
-  mirrors the in-memory `PlanManager` because `ResponseBuilder` strips fields the executor relies
-  on; see `src/core/session/planStore.ts`. **Both binaries write and read this.** It began as a CLI
+- `plans/<planId>.json` — full plan with `techniques` field that the executor needs. Plans go
+  through the **persistence adapter**, the same one sessions use: the filesystem adapter writes bare
+  JSON here (the layout the earlier synchronous side store wrote, so directories from before the
+  change load unchanged) and the postgres adapter writes a `creative_plans` table, so a plan issued
+  on one instance is visible to every other (#358). The store mirrors the in-memory `PlanManager`
+  because `ResponseBuilder` strips fields the executor relies on; see
+  `src/core/session/planStore.ts`. **Both binaries write and read this.** It began as a CLI
   affordance, which meant the same planId resolved under `socketes` and returned `PLAN_NOT_FOUND`
   under the MCP server after a restart; it was promoted to shared so the two cannot drift again.
-  `SessionManager.getPlan` does the disk fallback, so every caller gets it — `WorkflowGuard` reads a
-  found plan as proof discovery ran, and hydrating only in `ExecutionValidator` fixed execution
-  while the guard still refused the call. Writes are gated on `PERSISTENCE_TYPE` being exactly
-  `filesystem` or `postgres` — naming the two adapters rather than excluding `memory`, because
-  `getDefaultConfig` throws for anything else and a "not memory" test would write plans for a server
-  whose sessions failed to initialise. A default MCP server (in-memory) writes nothing, and under
-  `PERSISTENCE_TYPE=memory` the CLI persists nothing either — it was already broken across
-  invocations there, since sessions never persisted under that setting. An id that names a file must
-  match `^(plan|debate)_[A-Za-z0-9_-]{1,200}$`: `planId` is caller-supplied and validated only as a
-  string, so `../outside` otherwise read a file outside `plans/`. Encoded planIds are excluded
-  deliberately — they are standard base64, whose alphabet includes `/`, and they carry their own
-  plan anyway. **Plans always go to the local filesystem, including under
-  `PERSISTENCE_TYPE=postgres`** — fine on one machine, but a multi-instance server still loses them
-  (#358), and nothing ever deletes a plan file (#357).
+  `SessionManager.getPlan` (async) does the adapter fallback, so every caller gets it —
+  `WorkflowGuard` reads a found plan as proof discovery ran, and hydrating only in
+  `ExecutionValidator` fixed execution while the guard still refused the call. Plans are persisted
+  iff an adapter initialised, the predicate sessions already used; a default MCP server (in-memory)
+  writes nothing, and under `PERSISTENCE_TYPE=memory` the CLI persists nothing either. An id that
+  names a record must match `^(plan|debate)_[A-Za-z0-9_-]{1,200}$`: `planId` is caller-supplied and
+  validated only as a string, so `../outside` otherwise read a file outside `plans/`. Encoded
+  planIds are excluded deliberately — they are standard base64, whose alphabet includes `/`, and
+  they carry their own plan anyway. **Retention is `PERSISTENCE_TTL_DAYS`, and nothing else
+  deletes** (#357): unset means never, for plans and sessions alike; set to a whole number of days
+  and `adapter.cleanup` runs at startup and on the cleaner tick. The 4-hour in-memory eviction
+  (`PLAN_CACHE_TTL_MS`) is a cache horizon, not retention — an evicted plan is reloaded from the
+  adapter on the next miss.
 - `sessions/<sessionId>.json` — session history (auto-saved every `execute` step via
   `autoSave: true` defaulted in `src/cli/commands/execute.ts`)
 - `metadata/` — filesystem adapter housekeeping
@@ -125,10 +128,11 @@ flag form for the common 5–6 params and the stdin form for technique-specific 
 
 **Cross-process state hydration.** Because each invocation is a fresh process:
 
-- `socketes plan` writes the plan to `plans/`
-- `socketes execute --plan X --session Y` first checks if `X` and `Y` are in the in-process
-  `PlanManager` / `SessionManager`. If not, it loads them from disk via `hydratePlan` /
-  `loadSessionFromPersistence`. See `src/cli/commands/execute.ts`.
+- `socketes plan` writes the plan through the adapter (to `plans/` on the filesystem backend) and
+  resolves only once the write has landed.
+- `socketes execute --plan X --session Y` checks if `X` and `Y` are in the in-process `PlanManager`
+  / `SessionManager`. If not, `SessionManager.getPlan` loads the plan through the adapter and the
+  session comes back via `loadSessionFromPersistence`. See `src/cli/commands/execute.ts`.
 
 **Parallel execution.** The plan response includes `executionGraph.metadata.parallelizableGroups`
 that the LLM/skill can use to fan out concurrent invocations. Concurrent executions against
@@ -198,7 +202,11 @@ Useful environment variables (full list in `README.md` and `src/config/`):
 
 - `PERSISTENCE_TYPE=filesystem|postgres` — session backend. **Default for the CLI is `filesystem`**;
   default for the MCP server is in-memory unless explicitly set.
-- `PERSISTENCE_PATH=~/.creative-thinking` — filesystem session directory
+- `PERSISTENCE_PATH=~/.creative-thinking` — filesystem session directory. A relative value resolves
+  against the home directory for sessions and, since plans went through the adapter, for plans too
+  (they used to resolve against the working directory).
+- `PERSISTENCE_TTL_DAYS=<whole days>` — opt-in retention sweep for persisted sessions AND plans, at
+  startup and on the cleaner tick; unset means never delete (#357)
 - `PERSONA_CATALOG_PATH=/path/to/personas.json` — merge external personas with the built-in catalog
 - `TELEMETRY_ENABLED=true` — opt-in anonymous analytics
 - `STEP_ORDER_ENFORCEMENT=strict` — refuse out-of-order steps, contradictory numbering and

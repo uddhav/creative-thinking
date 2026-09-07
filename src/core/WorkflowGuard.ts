@@ -54,7 +54,7 @@ export class WorkflowGuard {
   /**
    * Check if the workflow is being followed correctly
    */
-  checkWorkflowViolation(toolName: string, args: unknown): WorkflowViolation | null {
+  async checkWorkflowViolation(toolName: string, args: unknown): Promise<WorkflowViolation | null> {
     this.cleanupOldCalls();
 
     if (toolName === 'execute_thinking_step') {
@@ -175,7 +175,7 @@ export class WorkflowGuard {
     }
   }
 
-  private checkExecutionViolations(args: unknown): WorkflowViolation | null {
+  private async checkExecutionViolations(args: unknown): Promise<WorkflowViolation | null> {
     const execArgs = args as { planId?: string; technique?: string };
 
     // Always check for invalid technique first
@@ -194,7 +194,7 @@ export class WorkflowGuard {
 
     // Check if a valid planId is provided and exists in SessionManager
     if (execArgs.planId && this.sessionManager) {
-      const plan = this.sessionManager.getPlan(execArgs.planId);
+      const plan = await this.sessionManager.getPlan(execArgs.planId);
       if (plan) {
         // Valid plan exists - this proves discovery and planning were done
         // No workflow violation, proceed with execution

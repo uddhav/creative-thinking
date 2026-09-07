@@ -5,9 +5,18 @@
 
 import type { PlanThinkingSessionOutput } from '../../types/planning.js';
 
+/**
+ * How long a plan stays in process memory after it was created. This is a
+ * cache horizon, not retention: a plan evicted here is reloaded from the
+ * persistence adapter on the next `SessionManager.getPlan`, so it is a
+ * lifetime only when no adapter is configured (the default MCP server). Disk
+ * and database retention is `PERSISTENCE_TTL_DAYS` (#357). Defined once;
+ * `SessionCleaner` used to carry its own copy of this number.
+ */
+export const PLAN_CACHE_TTL_MS = 4 * 60 * 60 * 1000;
+
 export class PlanManager {
   private plans: Map<string, PlanThinkingSessionOutput> = new Map();
-  private readonly PLAN_TTL = 4 * 60 * 60 * 1000; // 4 hours for plans
 
   /**
    * Save a plan
@@ -21,13 +30,6 @@ export class PlanManager {
    */
   getPlan(planId: string): PlanThinkingSessionOutput | undefined {
     return this.plans.get(planId);
-  }
-
-  /**
-   * Delete a plan
-   */
-  deletePlan(planId: string): boolean {
-    return this.plans.delete(planId);
   }
 
   /**
@@ -45,14 +47,15 @@ export class PlanManager {
   }
 
   /**
-   * Clean up expired plans
+   * Evict plans past the cache horizon from memory. Called from the cleaner
+   * tick; a plan with no createdAt is treated as expired, as it always was.
    */
   cleanupExpiredPlans(): string[] {
     const now = Date.now();
     const plansToDelete: string[] = [];
 
     for (const [planId, plan] of this.plans.entries()) {
-      if (!plan.createdAt || now - plan.createdAt > this.PLAN_TTL) {
+      if (!plan.createdAt || now - plan.createdAt > PLAN_CACHE_TTL_MS) {
         plansToDelete.push(planId);
       }
     }
@@ -69,52 +72,5 @@ export class PlanManager {
    */
   clearAllPlans(): void {
     this.plans.clear();
-  }
-
-  /**
-   * Check if a plan exists
-   */
-  hasPlan(planId: string): boolean {
-    return this.plans.has(planId);
-  }
-
-  /**
-   * Get plan age in milliseconds
-   */
-  getPlanAge(planId: string): number | null {
-    const plan = this.plans.get(planId);
-    if (!plan || !plan.createdAt) return null;
-    return Date.now() - plan.createdAt;
-  }
-
-  /**
-   * Get plans sorted by creation time (newest first)
-   */
-  getPlansByCreationTime(): Array<{ planId: string; plan: PlanThinkingSessionOutput }> {
-    const plansArray = Array.from(this.plans.entries()).map(([planId, plan]) => ({
-      planId,
-      plan,
-    }));
-
-    return plansArray.sort((a, b) => {
-      const aTime = a.plan.createdAt || 0;
-      const bTime = b.plan.createdAt || 0;
-      return bTime - aTime;
-    });
-  }
-
-  /**
-   * Get plan memory usage
-   */
-  getPlanMemoryUsage(): number {
-    let total = 0;
-    for (const plan of this.plans.values()) {
-      try {
-        total += JSON.stringify(plan).length * 2; // UTF-16 characters
-      } catch {
-        // Skip plans that can't be stringified
-      }
-    }
-    return total;
   }
 }

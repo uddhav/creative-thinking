@@ -12,13 +12,13 @@ describe('Ergodicity and Path Dependency Tracking', () => {
   });
 
   describe('Purple Hat in Six Thinking Hats', () => {
-    it('should include Purple Hat as the 7th hat', () => {
+    it('should include Purple Hat as the 7th hat', async () => {
       const input = {
         problem: 'Test path dependencies',
         techniques: ['six_hats'] as const,
       };
 
-      const planResult = server.planThinkingSession(input);
+      const planResult = await server.planThinkingSession(input);
       expect(planResult.isError).toBeFalsy();
 
       const planText = planResult.content[0]?.text || '';
@@ -34,7 +34,7 @@ describe('Ergodicity and Path Dependency Tracking', () => {
 
     it('should track path dependencies with Purple Hat', async () => {
       // Create plan
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'How to improve team collaboration',
         techniques: ['six_hats'] as const,
       });
@@ -211,7 +211,7 @@ describe('Ergodicity and Path Dependency Tracking', () => {
   describe('Integration with Session Management', () => {
     it('should include ergodicity status in visual output', async () => {
       // Create plan
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Complex decision with many constraints',
         techniques: ['scamper'] as const,
       });

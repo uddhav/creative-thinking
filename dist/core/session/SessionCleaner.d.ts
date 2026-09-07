@@ -5,16 +5,21 @@
 import type { SessionData } from '../../types/index.js';
 import type { SessionConfig } from '../SessionManager.js';
 import type { MemoryManager } from '../MemoryManager.js';
-import type { PlanThinkingSessionOutput } from '../../types/planning.js';
+import type { PlanManager } from './PlanManager.js';
 export declare class SessionCleaner {
     private sessions;
-    private plans;
+    private planManager;
     private config;
     private memoryManager;
     private touchSession;
+    private onTick?;
     private cleanupInterval;
-    private readonly PLAN_TTL;
-    constructor(sessions: Map<string, SessionData>, plans: Map<string, PlanThinkingSessionOutput>, config: SessionConfig, memoryManager: MemoryManager, touchSession: (sessionId: string) => void);
+    /**
+     * @param onTick runs on every timer tick after the in-memory cleanup, and
+     * ONLY on the timer: `cleanupOldSessions` is also called directly under
+     * memory pressure, and the disk retention sweep must not fire from there.
+     */
+    constructor(sessions: Map<string, SessionData>, planManager: PlanManager, config: SessionConfig, memoryManager: MemoryManager, touchSession: (sessionId: string) => void, onTick?: (() => void) | undefined);
     /**
      * Start the session cleanup interval
      */

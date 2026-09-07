@@ -64,7 +64,7 @@ describe('Array Bounds Checking Integration Tests', () => {
     techniquesWithArrays.forEach(({ technique, maxSteps, handlerSteps }) => {
       describe(`${technique} technique`, () => {
         it('should reject negative step numbers with an error', async () => {
-          const planResult = server.planThinkingSession({
+          const planResult = await server.planThinkingSession({
             problem: 'Test problem',
             techniques: [technique],
           });
@@ -96,7 +96,7 @@ describe('Array Bounds Checking Integration Tests', () => {
         });
 
         it('should reject step numbers beyond array bounds with an error', async () => {
-          const planResult = server.planThinkingSession({
+          const planResult = await server.planThinkingSession({
             problem: 'Test problem',
             techniques: [technique],
           });
@@ -127,7 +127,7 @@ describe('Array Bounds Checking Integration Tests', () => {
         });
 
         it('should reject step number zero with an error', async () => {
-          const planResult = server.planThinkingSession({
+          const planResult = await server.planThinkingSession({
             problem: 'Test problem',
             techniques: [technique],
           });
@@ -174,7 +174,7 @@ describe('Array Bounds Checking Integration Tests', () => {
     techniquesWithArrays.forEach(({ technique, maxSteps, handlerSteps }) => {
       describe(`${technique} technique formatting`, () => {
         it('should return an error for invalid step numbers', async () => {
-          const planResult = server.planThinkingSession({
+          const planResult = await server.planThinkingSession({
             problem: 'Test problem',
             techniques: [technique],
           });
@@ -204,7 +204,7 @@ describe('Array Bounds Checking Integration Tests', () => {
         });
 
         it('should return an error for steps beyond bounds', async () => {
-          const planResult = server.planThinkingSession({
+          const planResult = await server.planThinkingSession({
             problem: 'Test problem',
             techniques: [technique],
           });
@@ -240,7 +240,7 @@ describe('Array Bounds Checking Integration Tests', () => {
 
   describe('Special case: temporal_work contextual guidance', () => {
     it('should handle missing session gracefully', async () => {
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Test temporal problem',
         techniques: ['temporal_work'],
       });
@@ -283,7 +283,7 @@ describe('Array Bounds Checking Integration Tests', () => {
 
   describe('Hat color and SCAMPER action bounds', () => {
     it('should handle invalid hat color gracefully', async () => {
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Test problem',
         techniques: ['six_hats'],
       });
@@ -312,7 +312,7 @@ describe('Array Bounds Checking Integration Tests', () => {
     });
 
     it('should handle invalid SCAMPER action gracefully', async () => {
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Test problem',
         techniques: ['scamper'],
       });

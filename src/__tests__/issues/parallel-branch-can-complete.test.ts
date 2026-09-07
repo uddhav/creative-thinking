@@ -44,8 +44,11 @@ describe('a parallel branch can reach its own end', () => {
     server = new LateralThinkingServer();
   });
 
-  function planFor(techniques: string[]): string {
-    const result = server.planThinkingSession({ problem: 'Branch completion probe', techniques });
+  async function planFor(techniques: string[]): Promise<string> {
+    const result = await server.planThinkingSession({
+      problem: 'Branch completion probe',
+      techniques,
+    });
     expect(result.isError).toBeFalsy();
     return (JSON.parse(result.content[0].text) as { planId: string }).planId;
   }
@@ -77,7 +80,7 @@ describe('a parallel branch can reach its own end', () => {
   }
 
   it('completes a branch that ran every step of its own technique', async () => {
-    const planId = planFor(['po', 'triz']);
+    const planId = await planFor(['po', 'triz']);
     const last = await runBranch(planId, 'po', 4);
 
     expect(last.blocked, `branch refused: ${last.reason ?? ''}`).not.toBe(true);
@@ -88,7 +91,7 @@ describe('a parallel branch can reach its own end', () => {
   it('still refuses a branch that skipped a step of its own technique', async () => {
     // The protection that matters is unchanged. Scoping to started techniques
     // must not become "anything the caller sends is complete".
-    const planId = planFor(['po', 'triz']);
+    const planId = await planFor(['po', 'triz']);
     const last = await runBranch(planId, 'po', 4, { skip: 3 });
 
     expect(last.blocked, 'a branch with an internal gap was allowed to end').toBe(true);
@@ -104,7 +107,7 @@ describe('a parallel branch can reach its own end', () => {
     // Pinned so that tightening it back is a decision someone makes on purpose,
     // with this comment in front of them, rather than a regression nothing
     // notices — the suite had no test either way.
-    const planId = planFor(['po', 'triz', 'six_hats', 'scamper', 'random_entry']);
+    const planId = await planFor(['po', 'triz', 'six_hats', 'scamper', 'random_entry']);
     const last = await runBranch(planId, 'po', 4);
 
     expect(last.blocked, `refused: ${last.reason ?? ''}`).not.toBe(true);
@@ -119,7 +122,7 @@ describe('a parallel branch can reach its own end', () => {
   it('still names the techniques the branch never ran', async () => {
     // Scoping changes what BLOCKS, not what is reported. A caller ending a
     // branch should still be able to see that the plan holds more.
-    const planId = planFor(['po', 'triz']);
+    const planId = await planFor(['po', 'triz']);
     const last = await runBranch(planId, 'po', 4);
 
     const skipped = last.completionMetadata?.skippedTechniques ?? [];

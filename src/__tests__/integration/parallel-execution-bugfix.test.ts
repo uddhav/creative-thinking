@@ -17,7 +17,7 @@ describe('Parallel Execution Bug Fixes', () => {
   describe('Session Derivation from PlanId', () => {
     it('should derive shared sessionId from planId when no sessionId provided', async () => {
       // Create a plan
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Test session derivation',
         techniques: ['six_hats', 'scamper'],
       });
@@ -57,7 +57,7 @@ describe('Parallel Execution Bug Fixes', () => {
 
   describe('Step Number Calculation', () => {
     it('should handle global step numbers correctly', async () => {
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Test global steps',
         techniques: ['six_hats', 'scamper'], // 6 + 8 = 14 total steps
       });
@@ -81,7 +81,7 @@ describe('Parallel Execution Bug Fixes', () => {
     });
 
     it('should handle technique-local step numbers correctly', async () => {
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Test local steps',
         techniques: ['po', 'triz'],
       });
@@ -104,7 +104,7 @@ describe('Parallel Execution Bug Fixes', () => {
     });
 
     it('should never calculate negative step numbers', async () => {
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Test negative step prevention',
         techniques: ['random_entry'],
       });
@@ -135,7 +135,7 @@ describe('Parallel Execution Bug Fixes', () => {
     });
 
     it('should handle out-of-bounds steps gracefully', async () => {
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Test out of bounds',
         techniques: ['yes_and'], // 4 steps
       });
@@ -166,7 +166,7 @@ describe('Parallel Execution Bug Fixes', () => {
 
   describe('Parallel Execution with Shared State', () => {
     it('should maintain shared session state across parallel executions', async () => {
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Test shared state',
         techniques: ['six_hats', 'disney_method'],
       });
@@ -236,7 +236,7 @@ describe('Parallel Execution Bug Fixes', () => {
     });
 
     it('should handle technique-specific locks for parallel execution', async () => {
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Test technique locks',
         techniques: ['po', 'concept_extraction'],
       });
@@ -277,7 +277,7 @@ describe('Parallel Execution Bug Fixes', () => {
 
   describe('Error Messages', () => {
     it('should provide clear error message for technique mismatch', async () => {
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Test error messages',
         techniques: ['six_hats'],
       });
@@ -302,7 +302,7 @@ describe('Parallel Execution Bug Fixes', () => {
     });
 
     it('should provide clear error message for invalid step numbers', async () => {
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Test step error messages',
         techniques: ['triz'], // 4 steps
       });

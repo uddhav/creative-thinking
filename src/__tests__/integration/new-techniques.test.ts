@@ -84,13 +84,13 @@ describe('Disney Method and Nine Windows Integration', () => {
       expect(hasImplementationRecommendation).toBeTruthy();
     });
 
-    it('should create a plan with Disney Method', () => {
+    it('should create a plan with Disney Method', async () => {
       const input: PlanThinkingSessionInput = {
         problem: 'Develop a new customer loyalty program',
         techniques: ['disney_method'],
       };
 
-      const response = server.planThinkingSession(input);
+      const response = await server.planThinkingSession(input);
       const output = parseResponse<PlanResponse>(response);
 
       expect(output.workflow).toHaveLength(3);
@@ -107,7 +107,7 @@ describe('Disney Method and Nine Windows Integration', () => {
         problem: 'Create an innovative employee wellness program',
         techniques: ['disney_method'],
       };
-      const planResponse = server.planThinkingSession(planInput);
+      const planResponse = await server.planThinkingSession(planInput);
       const plan = parseResponse<PlanResponse>(planResponse);
       const problem = planInput.problem; // Extract to avoid ESLint issues
 
@@ -223,14 +223,14 @@ describe('Disney Method and Nine Windows Integration', () => {
       expect(hasSystemicRecommendation).toBeTruthy();
     });
 
-    it('should create a plan with Nine Windows', () => {
+    it('should create a plan with Nine Windows', async () => {
       const input: PlanThinkingSessionInput = {
         problem: 'Analyze the transformation of retail shopping',
         techniques: ['nine_windows'],
         timeframe: 'comprehensive',
       };
 
-      const response = server.planThinkingSession(input);
+      const response = await server.planThinkingSession(input);
       const output = parseResponse<PlanResponse>(response);
 
       expect(output.workflow).toHaveLength(9);
@@ -252,7 +252,7 @@ describe('Disney Method and Nine Windows Integration', () => {
         problem: 'Evolution of electric vehicles',
         techniques: ['nine_windows'],
       };
-      const planResponse = server.planThinkingSession(planInput);
+      const planResponse = await server.planThinkingSession(planInput);
       const plan = parseResponse<PlanResponse>(planResponse);
       const problem = planInput.problem; // Extract to avoid ESLint issues
 
@@ -363,7 +363,7 @@ describe('Disney Method and Nine Windows Integration', () => {
         objectives: ['Generate innovative vision', 'Understand systemic implications'],
       };
 
-      const planResponse = server.planThinkingSession(planInput);
+      const planResponse = await server.planThinkingSession(planInput);
       const plan = parseResponse<PlanResponse>(planResponse);
       const problem = planInput.problem; // Extract to avoid ESLint issues
 

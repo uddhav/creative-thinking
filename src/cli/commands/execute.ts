@@ -2,7 +2,6 @@ import type { Argv, ArgumentsCamelCase } from 'yargs';
 import { getServer } from '../server.js';
 import { emit, mergeInput, parseNumber, readStdinJSON, unwrapResponse } from '../io.js';
 import { recordCall, recordResult } from '../../server/callLog.js';
-import { hydratePlan } from '../planStore.js';
 
 interface ExecuteArgs {
   plan?: string;
@@ -95,9 +94,7 @@ async function handle(argv: ArgumentsCamelCase<ExecuteArgs>): Promise<void> {
   );
 
   const server = getServer();
-  const planId = (input as { planId?: string }).planId;
   const sessionId = (input as { sessionId?: string }).sessionId;
-  if (planId) hydratePlan(server, planId);
   if (sessionId) await hydrateSession(server, sessionId);
 
   recordCall('execute_thinking_step', input);

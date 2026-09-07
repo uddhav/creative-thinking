@@ -41,8 +41,11 @@ describe('repeated instances of one technique are tracked separately', () => {
     server = new LateralThinkingServer();
   });
 
-  function planFor(techniques: string[]): string {
-    const result = server.planThinkingSession({ problem: 'Repeat instance probe', techniques });
+  async function planFor(techniques: string[]): Promise<string> {
+    const result = await server.planThinkingSession({
+      problem: 'Repeat instance probe',
+      techniques,
+    });
     expect(result.isError).toBeFalsy();
     return (JSON.parse(result.content[0].text) as { planId: string }).planId;
   }
@@ -69,7 +72,7 @@ describe('repeated instances of one technique are tracked separately', () => {
   }
 
   it('catches a gap in the SECOND instance that the first would mask', async () => {
-    const planId = planFor(['po', 'triz', 'po']);
+    const planId = await planFor(['po', 'triz', 'po']);
     const sessionId = 'session_repeat_gap';
 
     for (let i = 1; i <= 4; i++) await step(planId, sessionId, 'po', i, 4);
@@ -94,7 +97,7 @@ describe('repeated instances of one technique are tracked separately', () => {
     // "score only techniques the session started" rule from #364 then excludes
     // it from the gate entirely. Two separate changes combining to let a real
     // gap through.
-    const planId = planFor(['po', 'triz', 'po']);
+    const planId = await planFor(['po', 'triz', 'po']);
     const sessionId = 'session_planwide_gap';
     const total = 12;
 
@@ -112,7 +115,7 @@ describe('repeated instances of one technique are tracked separately', () => {
   it('still completes when both instances ran every step', async () => {
     // The separation must not make a genuinely complete plan look incomplete —
     // that is the failure in the other direction.
-    const planId = planFor(['po', 'triz', 'po']);
+    const planId = await planFor(['po', 'triz', 'po']);
     const sessionId = 'session_repeat_full';
 
     for (let i = 1; i <= 4; i++) await step(planId, sessionId, 'po', i, 4);
@@ -136,7 +139,7 @@ describe('repeated instances of one technique are tracked separately', () => {
     // so the shape that breaks is the one where the caller simply does not set
     // it. The executor stamps the instance instead, with the plan and the
     // history both in hand.
-    const planId = planFor(['po', 'triz', 'po']);
+    const planId = await planFor(['po', 'triz', 'po']);
     const sessionId = 'session_resend';
 
     await step(planId, sessionId, 'po', 1, 4);
@@ -163,10 +166,10 @@ describe('repeated instances of one technique are tracked separately', () => {
     // An unstamped entry is run 0, because the pre-stamp world only ever had
     // one run. That is what lets the two halves of this session be told apart.
     const sessionId = 'session_mixed_stamp_gap';
-    const single = planFor(['po']);
+    const single = await planFor(['po']);
     for (let i = 1; i <= 4; i++) await step(single, sessionId, 'po', i, 4);
 
-    const repeated = planFor(['po', 'triz', 'po']);
+    const repeated = await planFor(['po', 'triz', 'po']);
     for (let i = 1; i <= 4; i++) await step(repeated, sessionId, 'triz', i, 4);
     // Run 2 leaves a hole at step 3.
     await step(repeated, sessionId, 'po', 1, 4);
@@ -185,7 +188,7 @@ describe('repeated instances of one technique are tracked separately', () => {
   });
 
   it('leaves single-instance plans alone', async () => {
-    const planId = planFor(['po', 'triz']);
+    const planId = await planFor(['po', 'triz']);
     const sessionId = 'session_no_repeat';
 
     for (let i = 1; i <= 4; i++) await step(planId, sessionId, 'po', i, 4);

@@ -3,9 +3,17 @@
  * Extracted from SessionManager to improve maintainability
  */
 import type { PlanThinkingSessionOutput } from '../../types/planning.js';
+/**
+ * How long a plan stays in process memory after it was created. This is a
+ * cache horizon, not retention: a plan evicted here is reloaded from the
+ * persistence adapter on the next `SessionManager.getPlan`, so it is a
+ * lifetime only when no adapter is configured (the default MCP server). Disk
+ * and database retention is `PERSISTENCE_TTL_DAYS` (#357). Defined once;
+ * `SessionCleaner` used to carry its own copy of this number.
+ */
+export declare const PLAN_CACHE_TTL_MS: number;
 export declare class PlanManager {
     private plans;
-    private readonly PLAN_TTL;
     /**
      * Save a plan
      */
@@ -15,10 +23,6 @@ export declare class PlanManager {
      */
     getPlan(planId: string): PlanThinkingSessionOutput | undefined;
     /**
-     * Delete a plan
-     */
-    deletePlan(planId: string): boolean;
-    /**
      * Get all plans
      */
     getAllPlans(): Map<string, PlanThinkingSessionOutput>;
@@ -27,31 +31,13 @@ export declare class PlanManager {
      */
     getPlanCount(): number;
     /**
-     * Clean up expired plans
+     * Evict plans past the cache horizon from memory. Called from the cleaner
+     * tick; a plan with no createdAt is treated as expired, as it always was.
      */
     cleanupExpiredPlans(): string[];
     /**
      * Clear all plans
      */
     clearAllPlans(): void;
-    /**
-     * Check if a plan exists
-     */
-    hasPlan(planId: string): boolean;
-    /**
-     * Get plan age in milliseconds
-     */
-    getPlanAge(planId: string): number | null;
-    /**
-     * Get plans sorted by creation time (newest first)
-     */
-    getPlansByCreationTime(): Array<{
-        planId: string;
-        plan: PlanThinkingSessionOutput;
-    }>;
-    /**
-     * Get plan memory usage
-     */
-    getPlanMemoryUsage(): number;
 }
 //# sourceMappingURL=PlanManager.d.ts.map

@@ -536,13 +536,15 @@ describe('FilesystemAdapter', () => {
     });
 
     it('should handle partial batch deletion failures', async () => {
-      vi.mocked(fs.unlink)
-        .mockResolvedValueOnce(undefined) // session1 session file
-        .mockResolvedValueOnce(undefined) // session1 metadata file
-        .mockRejectedValueOnce({ code: 'ENOENT' }) // session2 session file
-        .mockRejectedValueOnce({ code: 'ENOENT' }) // session2 metadata file
-        .mockResolvedValueOnce(undefined) // session3 session file
-        .mockResolvedValueOnce(undefined); // session3 metadata file
+      // Keyed by path, not by call order: deleteBatch runs its deletes
+      // concurrently, and delete now unlinks both files whatever happened to
+      // the other, so a per-call sequence no longer describes one session.
+      // session2 has neither file; session1 and session3 have both.
+      vi.mocked(fs.unlink).mockImplementation((target: Parameters<typeof fs.unlink>[0]) =>
+        String(target).includes('session2')
+          ? Promise.reject(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }))
+          : Promise.resolve(undefined)
+      );
 
       await adapter.initialize({ adapter: 'filesystem', options: { path: tempDir } });
       const deletedCount = await adapter.deleteBatch(['session1', 'session2', 'session3']);

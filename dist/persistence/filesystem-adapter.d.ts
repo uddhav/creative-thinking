@@ -2,6 +2,7 @@
  * Filesystem implementation of PersistenceAdapter
  */
 import type { PersistenceAdapter } from './adapter.js';
+import type { PlanThinkingSessionOutput } from '../types/planning.js';
 import type { SessionState, SessionMetadata, ListOptions, SearchQuery, ExportFormat, PersistenceConfig } from './types.js';
 /**
  * Filesystem-based persistence adapter
@@ -29,10 +30,14 @@ export declare class FilesystemAdapter implements PersistenceAdapter {
         newestSession?: Date;
     }>;
     cleanup(olderThan: Date): Promise<number>;
+    savePlan(planId: string, plan: PlanThinkingSessionOutput): Promise<void>;
+    loadPlan(planId: string): Promise<PlanThinkingSessionOutput | null>;
+    deletePlan(planId: string): Promise<boolean>;
     close(): Promise<void>;
     private ensureInitialized;
     private validateSessionId;
     private getSessionPath;
+    private getPlanPath;
     private getMetadataPath;
     private extractMetadata;
     private applyFilters;

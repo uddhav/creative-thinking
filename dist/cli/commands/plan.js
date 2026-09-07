@@ -1,7 +1,6 @@
 import { getServer } from '../server.js';
 import { emit, mergeInput, parseList, parseNumber, readStdinJSON, unwrapResponse } from '../io.js';
 import { recordCall, recordResult } from '../../server/callLog.js';
-import { persistPlan } from '../planStore.js';
 export function registerPlan(yargs) {
     return yargs.command('plan', 'Build a structured workflow from a problem and chosen techniques', y => y
         .option('problem', { type: 'string', describe: 'Problem statement (required)' })
@@ -60,20 +59,12 @@ async function handle(argv) {
     }, stdin);
     const server = getServer();
     recordCall('plan_thinking_session', input);
-    const envelope = server.planThinkingSession(input);
+    // planThinkingSession persists the plan and every debate sub-plan through
+    // the adapter and resolves only once the writes have landed; the CLI's own
+    // duplicate write is gone with it.
+    const envelope = await server.planThinkingSession(input);
     recordResult('plan_thinking_session', envelope);
     const { data, isError } = unwrapResponse(envelope);
-    if (!isError) {
-        const planned = data;
-        persistPlan(server, planned.planId);
-        // Debate mode advertises persona and synthesis planIds the caller is meant
-        // to execute. Every planId this response hands out must survive to the
-        // next process, or the CLI — the surface skills actually drive — answers
-        // its own instructions with plan-not-found.
-        for (const parallel of planned.parallelPlans ?? []) {
-            persistPlan(server, parallel.planId);
-        }
-    }
     emit(data, isError);
 }
 //# sourceMappingURL=plan.js.map

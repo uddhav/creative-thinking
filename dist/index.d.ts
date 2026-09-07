@@ -49,7 +49,7 @@ export declare class LateralThinkingServer {
     /**
      * Plan thinking session handler
      */
-    planThinkingSession(input: unknown): import("./types/index.js").LateralThinkingResponse;
+    planThinkingSession(input: unknown): Promise<import("./types/index.js").LateralThinkingResponse>;
     /**
      * Execute thinking step handler
      */

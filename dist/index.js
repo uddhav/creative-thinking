@@ -148,7 +148,7 @@ export class LateralThinkingServer {
                     // help here. Consulting only the manager would refuse an encoded
                     // resume with "no plan to resolve from" while the problem sat
                     // encoded in the id it was handed.
-                    const planned = this.sessionManager.getPlan(raw.planId)?.problem ??
+                    const planned = (await this.sessionManager.getPlan(raw.planId))?.problem ??
                         SessionEncoder.decode(raw.planId)?.problem;
                     if (planned) {
                         raw.problem = planned;
@@ -223,7 +223,7 @@ export class LateralThinkingServer {
     /**
      * Plan thinking session handler
      */
-    planThinkingSession(input) {
+    async planThinkingSession(input) {
         try {
             const validator = ValidationStrategyFactory.createValidator('plan');
             const validation = validator.validate(input);
@@ -232,18 +232,18 @@ export class LateralThinkingServer {
             }
             const data = input;
             const output = planThinkingSession(data, this.sessionManager, this.techniqueRegistry);
-            // Mirror the plan to disk so a later process can execute it. Both
-            // binaries go through here, which is the point: this used to live only
-            // in the CLI, so the same planId worked under `socketes` and returned
-            // PLAN_NOT_FOUND under the MCP server (#316). No-ops unless persistence
-            // is configured.
-            persistPlan(this.sessionManager, output.planId);
+            // Persist the plan through the adapter so a later process, or another
+            // instance behind postgres, can execute it (#316, #358). Awaited, not
+            // fire-and-forget: the CLI exits inside its stdout write callback, and
+            // an un-awaited write would hand out a planId before the record exists,
+            // which is #358 restated. No-ops without an adapter.
+            await persistPlan(this.sessionManager, output.planId);
             // Debate mode advertises per-persona and synthesis planIds the caller is
             // told to execute. Every planId a response hands out has to survive to
             // the next process, or the server answers its own instructions with
-            // plan-not-found.
+            // plan-not-found. Sequential on purpose; it keeps a postgres pool calm.
             for (const parallel of output.parallelPlans ?? []) {
-                persistPlan(this.sessionManager, parallel.planId);
+                await persistPlan(this.sessionManager, parallel.planId);
             }
             return this.responseBuilder.buildPlanningResponse(output);
         }

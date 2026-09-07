@@ -140,7 +140,7 @@ describe('Sequential Thinking Integration', () => {
   describe('Complexity Tracking in Execution Layer', () => {
     it('should track complexity during execution', async () => {
       // First create a plan
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Complex problem with multiple dependencies',
         techniques: ['po'],
       });
@@ -191,7 +191,7 @@ describe('Sequential Thinking Integration', () => {
 
     it('should detect complexity from branching', async () => {
       // Create plan
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Problem requiring exploration of alternatives',
         techniques: ['design_thinking'],
       });
@@ -239,7 +239,7 @@ describe('Sequential Thinking Integration', () => {
 
     it('should provide technique-specific hooks during execution', async () => {
       // Test with collective intelligence technique
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Complex group decision with multiple perspectives',
         techniques: ['collective_intel'],
       });
@@ -271,7 +271,7 @@ describe('Sequential Thinking Integration', () => {
     });
 
     it('should track complexity from extended reasoning chains', async () => {
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'Long-term strategic planning',
         techniques: ['six_hats'],
       });
@@ -325,7 +325,7 @@ describe('Sequential Thinking Integration', () => {
 
       // Plan based on recommendations
       const recommendedTechnique = discoveryResponse.recommendations[0].technique;
-      const planResult = server.planThinkingSession({
+      const planResult = await server.planThinkingSession({
         problem: 'System integration with multiple conflicting requirements',
         techniques: [recommendedTechnique],
       });

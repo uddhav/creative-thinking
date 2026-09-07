@@ -6,8 +6,15 @@
  * - Crash recovery with persistent sessions
  * - Horizontal scaling across server instances
  *
- * Uses JSONB for flexible schema and efficient querying
- * Includes automatic TTL cleanup for expired sessions
+ * Uses JSONB for flexible schema and efficient querying.
+ *
+ * Retention is `PERSISTENCE_TTL_DAYS`, run from `SessionManager` through
+ * `cleanup`; nothing else deletes. `expires_at` (save + 24h) is still written
+ * and honoured by that sweep, and only by it: the column never deleted
+ * anything on its own, because `cleanup` had no caller until #357.
+ *
+ * Plans live in `creative_plans`, created here alongside the sessions table,
+ * so a plan issued on one instance is visible to every other (#358).
  */
 import pkg from 'pg';
 const { Pool } = pkg;
@@ -112,6 +119,19 @@ export class PostgresAdapter {
       CREATE INDEX IF NOT EXISTS idx_sessions_expires
       ON creative_sessions(expires_at)
       WHERE expires_at IS NOT NULL
+    `);
+        // Plans: full plan as JSONB, keyed by the id the planner issued. No TTL
+        // column; the retention sweep reads updated_at.
+        await client.query(`
+      CREATE TABLE IF NOT EXISTS creative_plans (
+        id VARCHAR(255) PRIMARY KEY,
+        plan JSONB NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+      )
+    `);
+        await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_plans_updated ON creative_plans(updated_at)
     `);
         // Auto-update updated_at trigger
         await client.query(`
@@ -420,17 +440,63 @@ export class PostgresAdapter {
     }
     async cleanup(olderThan) {
         const pool = this.ensureInitialized();
-        const query = `
+        // Sessions keep the expires_at clause; with a whole-day TTL every row the
+        // cutoff selects has already expired, so it never narrows the sweep.
+        const sessionsQuery = `
       DELETE FROM creative_sessions
       WHERE updated_at < $1
       AND (expires_at IS NULL OR expires_at < NOW())
     `;
+        const plansQuery = `
+      DELETE FROM creative_plans
+      WHERE updated_at < $1
+    `;
         try {
-            const result = await pool.query(query, [olderThan]);
-            return result.rowCount ?? 0;
+            const sessions = await pool.query(sessionsQuery, [olderThan]);
+            const plans = await pool.query(plansQuery, [olderThan]);
+            return (sessions.rowCount ?? 0) + (plans.rowCount ?? 0);
         }
         catch (error) {
             throw new PersistenceError('Failed to cleanup old sessions', PersistenceErrorCode.IO_ERROR, error);
+        }
+    }
+    async savePlan(planId, plan) {
+        const pool = this.ensureInitialized();
+        const query = `
+      INSERT INTO creative_plans (id, plan)
+      VALUES ($1, $2::jsonb)
+      ON CONFLICT (id) DO UPDATE SET plan = EXCLUDED.plan, updated_at = NOW()
+    `;
+        try {
+            await pool.query(query, [planId, JSON.stringify(plan)]);
+        }
+        catch (error) {
+            throw new PersistenceError(`Failed to save plan ${planId}`, PersistenceErrorCode.IO_ERROR, error);
+        }
+    }
+    async loadPlan(planId) {
+        const pool = this.ensureInitialized();
+        const query = `SELECT plan FROM creative_plans WHERE id = $1`;
+        try {
+            const result = await pool.query(query, [planId]);
+            if (result.rows.length === 0)
+                return null;
+            // JSONB arrives parsed, as `load` relies on for sessions.
+            const row = result.rows[0];
+            return row.plan;
+        }
+        catch (error) {
+            throw new PersistenceError(`Failed to load plan ${planId}`, PersistenceErrorCode.IO_ERROR, error);
+        }
+    }
+    async deletePlan(planId) {
+        const pool = this.ensureInitialized();
+        try {
+            const result = await pool.query(`DELETE FROM creative_plans WHERE id = $1`, [planId]);
+            return (result.rowCount ?? 0) > 0;
+        }
+        catch (error) {
+            throw new PersistenceError(`Failed to delete plan ${planId}`, PersistenceErrorCode.IO_ERROR, error);
         }
     }
     async close() {

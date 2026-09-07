@@ -32,7 +32,7 @@ describe('Parallel Execution Robustness', () => {
 
   it('should handle mixed success and failure in parallel execution', async () => {
     // Create a plan
-    const planResponse = server.planThinkingSession({
+    const planResponse = await server.planThinkingSession({
       problem: 'Test robustness',
       techniques: ['six_hats'],
     });
@@ -152,7 +152,7 @@ describe('Parallel Execution Robustness', () => {
 
   it('should continue processing even when some calls fail', async () => {
     // Create a plan with multiple techniques
-    const planResponse = server.planThinkingSession({
+    const planResponse = await server.planThinkingSession({
       problem: 'Test failure resilience',
       techniques: ['po', 'random_entry'],
     });
@@ -218,7 +218,7 @@ describe('Parallel Execution Robustness', () => {
   });
 
   it('should provide detailed error information for failed calls', async () => {
-    const planResponse = server.planThinkingSession({
+    const planResponse = await server.planThinkingSession({
       problem: 'Test error reporting',
       techniques: ['scamper'],
     });
@@ -263,7 +263,7 @@ describe('Parallel Execution Robustness', () => {
   });
 
   it('should maintain performance even with failures', async () => {
-    const planResponse = server.planThinkingSession({
+    const planResponse = await server.planThinkingSession({
       problem: 'Performance with failures',
       techniques: ['nine_windows'],
     });

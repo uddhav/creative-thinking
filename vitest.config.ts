@@ -6,6 +6,11 @@ export default defineConfig({
     environment: 'node',
     env: {
       DISABLE_THOUGHT_LOGGING: 'true',
+      // The retention sweep runs in SessionManager's constructor, which every
+      // unit test calls. Empty means never, so a developer shell exporting
+      // PERSISTENCE_TYPE and PERSISTENCE_TTL_DAYS cannot have the suite sweep
+      // their real ~/.creative-thinking.
+      PERSISTENCE_TTL_DAYS: '',
     },
     // Increase test timeout for NLP-heavy tests
     testTimeout: 10000,

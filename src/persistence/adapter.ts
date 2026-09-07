@@ -10,6 +10,9 @@ import type {
   ExportFormat,
   PersistenceConfig,
 } from './types.js';
+// Type-only: `types/planning.ts` imports only `./index.js`, and this file is
+// imported by `core/`, so no runtime cycle is introduced.
+import type { PlanThinkingSessionOutput } from '../types/planning.js';
 
 /**
  * Abstract interface for session persistence
@@ -106,11 +109,32 @@ export interface PersistenceAdapter {
   }>;
 
   /**
-   * Clean up old sessions
-   * @param olderThan - Delete sessions older than this date
-   * @returns Number of sessions deleted
+   * Delete sessions AND plans whose last write predates `olderThan`.
+   *
+   * Nothing calls this on its own; `PERSISTENCE_TTL_DAYS` is the only
+   * retention switch and it runs this from `SessionManager` (#357).
+   * @returns Total records removed
    */
   cleanup(olderThan: Date): Promise<number>;
+
+  /**
+   * Persist a plan under its id. Idempotent; a re-save replaces. Plans used to
+   * live in a synchronous side store on the local disk under every backend,
+   * which is why a multi-instance postgres deployment lost them (#358).
+   */
+  savePlan(planId: string, plan: PlanThinkingSessionOutput): Promise<void>;
+
+  /**
+   * The stored plan, or null when none. Shape is NOT validated here; the
+   * caller (`hydratePlan`) checks what the executor dereferences.
+   */
+  loadPlan(planId: string): Promise<PlanThinkingSessionOutput | null>;
+
+  /**
+   * Remove a plan.
+   * @returns True if a plan was removed
+   */
+  deletePlan(planId: string): Promise<boolean>;
 
   /**
    * Close the adapter and clean up resources

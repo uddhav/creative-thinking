@@ -449,6 +449,16 @@ export class ErrorFactory {
         ], { requestedStep, maxSteps });
     }
     /**
+     * `session delete` without `confirm: true`. Nothing was deleted; the flag
+     * was documented as required long before it was read.
+     */
+    static deleteNotConfirmed(sessionId) {
+        return new ValidationError(ErrorCodes.INVALID_INPUT, `Refused to delete session ${sessionId}: pass confirm: true (CLI: --confirm). Nothing was deleted.`, [
+            'Re-send the delete with deleteOptions.confirm set to true (socketes session delete --confirm)',
+            'Export the session first if you may want it back: sessionOperation export',
+        ], { sessionId });
+    }
+    /**
      * Create a file access error
      */
     static fileAccessError(filePath, reason) {

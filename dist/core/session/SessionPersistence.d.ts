@@ -6,6 +6,7 @@ import type { SessionData } from '../../types/index.js';
 import type { PersistenceAdapter } from '../../persistence/adapter.js';
 import type { SessionState } from '../../persistence/types.js';
 import type { PersistedReflexivity } from '../ReflexivityTracker.js';
+import type { PlanThinkingSessionOutput } from '../../types/planning.js';
 export declare class SessionPersistence {
     private persistenceAdapter;
     private initializationPromise;
@@ -52,6 +53,21 @@ export declare class SessionPersistence {
      * Delete a persisted session
      */
     deletePersistedSession(sessionId: string): Promise<void>;
+    /**
+     * Persist a plan. A no-op without an adapter: "persisted iff an adapter came
+     * up" is the predicate sessions already use, and it replaces the old
+     * env-name gate in planStore.ts, which had to special-case postgres.
+     */
+    savePlan(planId: string, plan: PlanThinkingSessionOutput): Promise<void>;
+    /** The stored plan, or null without an adapter or without a record. */
+    loadPlan(planId: string): Promise<PlanThinkingSessionOutput | null>;
+    /** Remove a plan; false without an adapter or without a record. */
+    deletePlan(planId: string): Promise<boolean>;
+    /**
+     * Delete sessions and plans whose last write predates `olderThan`. The one
+     * caller is the PERSISTENCE_TTL_DAYS sweep in SessionManager (#357).
+     */
+    sweep(olderThan: Date): Promise<number>;
     /**
      * Get the persistence adapter
      */

@@ -64,7 +64,7 @@ describe('AutoSave Behavior Integration Tests', () => {
       const sessionId = 'session_test123';
 
       // Create a plan first
-      const plan = lateralServer.planThinkingSession({
+      const plan = await lateralServer.planThinkingSession({
         problem: 'Test problem',
         techniques: ['six_hats'],
       });
@@ -102,7 +102,7 @@ describe('AutoSave Behavior Integration Tests', () => {
     });
 
     it('should handle multiple autoSave attempts consistently', async () => {
-      const plan = lateralServer.planThinkingSession({
+      const plan = await lateralServer.planThinkingSession({
         problem: 'Test problem',
         techniques: ['scamper'],
       });
@@ -153,7 +153,7 @@ describe('AutoSave Behavior Integration Tests', () => {
       // Need to create a new server instance with the env vars set
       const testServer = new LateralThinkingServer();
 
-      const plan = testServer.planThinkingSession({
+      const plan = await testServer.planThinkingSession({
         problem: 'Test problem',
         techniques: ['po'],
       });
@@ -197,7 +197,7 @@ describe('AutoSave Behavior Integration Tests', () => {
 
   describe('Session continuity without persistence', () => {
     it('should maintain session state in memory even without persistence', async () => {
-      const plan = lateralServer.planThinkingSession({
+      const plan = await lateralServer.planThinkingSession({
         problem: 'Test problem',
         techniques: ['yes_and'],
       });

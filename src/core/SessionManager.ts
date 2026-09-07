@@ -97,17 +97,18 @@ export class SessionManager {
 
     // Parallel components will be initialized on first use (lazy initialization)
 
+    this.sessionPersistence = new SessionPersistence();
     this.sessionCleaner = new SessionCleaner(
       this.sessions,
-      this.planManager.getAllPlans(),
+      this.planManager,
       this.config,
       this.memoryManager,
       (sessionId: string) => {
         // Non-blocking touch for cleanup - don't wait for lock
         this.touchSession(sessionId).catch(console.error);
-      }
+      },
+      () => void this.sweepPersistence()
     );
-    this.sessionPersistence = new SessionPersistence();
     this.sessionMetrics = new SessionMetrics(
       this.sessions,
       this.planManager.getAllPlans(),
@@ -116,6 +117,62 @@ export class SessionManager {
 
     this.sessionCleaner.startCleanup();
     void this.sessionPersistence.initialize();
+    // Retention runs once per process start and then on the cleaner tick. The
+    // promise is kept so a short-lived process can wait for it: the CLI exits
+    // inside its stdout write callback, and a sweep left to run on its own was
+    // cut off in three of three `socketes discover` runs, sometimes after the
+    // session file went and before its metadata did.
+    this.startupSweep = this.sweepPersistence();
+  }
+
+  /** The construction-time retention sweep; resolves to the count removed. */
+  public readonly startupSweep: Promise<number>;
+
+  /**
+   * PERSISTENCE_TTL_DAYS, parsed once: a whole number of days, minimum 1.
+   * Unset, empty, 0, negative, fractional or NaN all mean never delete, which
+   * is the documented promise that plans and sessions survive month-long
+   * gaps. A set-but-invalid value is said once on stderr rather than silently
+   * meaning never.
+   */
+  private readonly persistenceTtlDays: number | null = SessionManager.parseTtlDays();
+
+  private static parseTtlDays(): number | null {
+    const raw = process.env.PERSISTENCE_TTL_DAYS;
+    if (raw === undefined || raw === '') return null;
+    const days = Number(raw);
+    if (Number.isInteger(days) && days >= 1) return days;
+    console.error(
+      `[SessionManager] PERSISTENCE_TTL_DAYS="${raw}" is not a whole number of days (minimum 1); nothing will be deleted.`
+    );
+    return null;
+  }
+
+  /**
+   * Delete persisted sessions and plans older than PERSISTENCE_TTL_DAYS.
+   * Fire-and-forget from the constructor and the cleaner tick; never from the
+   * memory-pressure path. Returns the count so tests can observe it.
+   */
+  public async sweepPersistence(): Promise<number> {
+    if (this.persistenceTtlDays === null) return 0;
+    const olderThan = new Date(Date.now() - this.persistenceTtlDays * 86_400_000);
+    try {
+      const removed = await this.sessionPersistence.sweep(olderThan);
+      if (removed > 0) {
+        console.error(
+          `[SessionManager] Retention sweep removed ${removed} record(s) older than ${this.persistenceTtlDays} day(s)`
+        );
+      }
+      return removed;
+    } catch (error) {
+      console.error('[SessionManager] Retention sweep failed:', error);
+      return 0;
+    }
+  }
+
+  /** The cleaner, for tests that drive the memory-pressure path directly. */
+  public getSessionCleaner(): SessionCleaner {
+    return this.sessionCleaner;
   }
 
   /**
@@ -288,7 +345,8 @@ export class SessionManager {
   }
 
   /**
-   * Look a plan up, falling back to disk for one this process did not issue.
+   * Look a plan up, falling back to the persistence adapter for one this
+   * process did not issue.
    *
    * The fallback lives here rather than at the call sites because there are
    * three of them and they need different things: `WorkflowGuard` treats a
@@ -296,18 +354,38 @@ export class SessionManager {
    * workflow, `index.ts` needs the problem text. Hydrating in only one of them
    * fixes execution and still refuses the call at the guard (#316).
    *
-   * Costs one Map lookup when the plan is in memory, which is the normal case.
+   * Async since plans went through the adapter (#358): one Map lookup when
+   * the plan is in memory, which is the normal case, one adapter read on a
+   * miss. Runs outside the session lock; two concurrent misses both load the
+   * same immutable record, which is two reads and no corruption.
    */
-  public getPlan(planId: string): PlanThinkingSessionOutput | undefined {
+  public async getPlan(planId: string): Promise<PlanThinkingSessionOutput | undefined> {
     const inMemory = this.planManager.getPlan(planId);
     if (inMemory) return inMemory;
 
-    hydratePlan(this, planId);
+    await hydratePlan(this, planId);
     return this.planManager.getPlan(planId);
   }
 
-  public deletePlan(planId: string): boolean {
-    return this.planManager.deletePlan(planId);
+  /**
+   * The in-memory plan only, no adapter fallback. For the writer that has
+   * just registered the plan and for tests of the cache itself. This is the
+   * accessor `persistPlan` must use: reading through the async `getPlan`
+   * there would hand `JSON.stringify` a Promise and write `{}` to every plan.
+   */
+  public getInMemoryPlan(planId: string): PlanThinkingSessionOutput | undefined {
+    return this.planManager.getPlan(planId);
+  }
+
+  public async savePlanToPersistence(
+    planId: string,
+    plan: PlanThinkingSessionOutput
+  ): Promise<void> {
+    await this.sessionPersistence.savePlan(planId, plan);
+  }
+
+  public async loadPlanFromPersistence(planId: string): Promise<PlanThinkingSessionOutput | null> {
+    return this.sessionPersistence.loadPlan(planId);
   }
 
   // Current session management
@@ -380,6 +458,18 @@ export class SessionManager {
 
   public getPersistenceAdapter(): PersistenceAdapter | null {
     return this.sessionPersistence.getPersistenceAdapter();
+  }
+
+  /**
+   * Whether an adapter is configured, read only after initialisation has
+   * settled. `getPersistenceAdapter` answers from whatever state init has
+   * reached, which for a session operation issued right after start was
+   * "none yet": a confirmed delete reported "nothing was deleted" while the
+   * file was in fact gone.
+   */
+  public async persistenceReady(): Promise<boolean> {
+    await this.sessionPersistence.initialize();
+    return this.sessionPersistence.getPersistenceAdapter() !== null;
   }
 
   // Metrics operations - delegate to SessionMetrics

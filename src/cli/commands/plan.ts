@@ -2,7 +2,6 @@ import type { Argv, ArgumentsCamelCase } from 'yargs';
 import { getServer } from '../server.js';
 import { emit, mergeInput, parseList, parseNumber, readStdinJSON, unwrapResponse } from '../io.js';
 import { recordCall, recordResult } from '../../server/callLog.js';
-import { persistPlan } from '../planStore.js';
 
 interface PlanArgs {
   problem?: string;
@@ -94,19 +93,11 @@ async function handle(argv: ArgumentsCamelCase<PlanArgs>): Promise<void> {
 
   const server = getServer();
   recordCall('plan_thinking_session', input);
-  const envelope = server.planThinkingSession(input);
+  // planThinkingSession persists the plan and every debate sub-plan through
+  // the adapter and resolves only once the writes have landed; the CLI's own
+  // duplicate write is gone with it.
+  const envelope = await server.planThinkingSession(input);
   recordResult('plan_thinking_session', envelope);
   const { data, isError } = unwrapResponse(envelope);
-  if (!isError) {
-    const planned = data as { planId?: string; parallelPlans?: Array<{ planId?: string }> };
-    persistPlan(server, planned.planId);
-    // Debate mode advertises persona and synthesis planIds the caller is meant
-    // to execute. Every planId this response hands out must survive to the
-    // next process, or the CLI — the surface skills actually drive — answers
-    // its own instructions with plan-not-found.
-    for (const parallel of planned.parallelPlans ?? []) {
-      persistPlan(server, parallel.planId);
-    }
-  }
   emit(data, isError);
 }
