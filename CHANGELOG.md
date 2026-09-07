@@ -1,3 +1,9 @@
+## [v2.10.0] - 2026-09-07
+
+### Changes from PR #426
+
+- feat(planning): advise on adjacent technique pairs from measured evidence
+
 ## [v2.9.0] - 2026-09-07
 
 ### Changes from PR #424
