@@ -1,3 +1,9 @@
+## [v2.9.0] - 2026-09-07
+
+### Changes from PR #424
+
+- feat(telemetry): discovery and escape events, honest usage naming, exit flush
+
 ## [v2.8.0] - 2026-09-07
 
 ### Changes from PR #421
