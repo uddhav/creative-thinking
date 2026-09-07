@@ -1,3 +1,9 @@
+## [v2.6.10] - 2026-09-07
+
+### Changes from PR #418
+
+- fix: derive criticalPath from the same depth walk as the rounds
+
 ## [v2.6.9] - 2026-09-05
 
 ### Changes from PR #409
