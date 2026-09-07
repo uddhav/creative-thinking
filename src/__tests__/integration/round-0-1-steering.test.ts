@@ -281,7 +281,11 @@ describe('round 0+1 steering surfaces (via MCP client)', () => {
     }
   });
 
-  it("strictness 'enforcing' is echoed but warned about, since it is not implemented", async () => {
+  it("strictness 'enforcing' is echoed without a warning, now that it is implemented", async () => {
+    // Until #298 landed, 'enforcing' was reserved and this asserted the
+    // warning that said so. It now selects strict step order (E211 refusals),
+    // guarded in strict-step-order-refuses.test.ts; a warning here would tell
+    // the caller their declared level is being ignored when it is not.
     const result = await client.callTool('plan_thinking_session', {
       problem: 'Should we adopt trunk-based development',
       techniques: ['six_hats'],
@@ -292,9 +296,7 @@ describe('round 0+1 steering surfaces (via MCP client)', () => {
       warnings?: string[];
     };
     expect(parsed.strictness).toBe('enforcing');
-    // Echoing a reserved level with no warning is the silent-degrade the crux
-    // validator's own comment says the design prevents.
-    expect((parsed.warnings ?? []).join(' ')).toMatch(/enforcing/i);
+    expect((parsed.warnings ?? []).join(' ')).not.toMatch(/enforcing/i);
   });
 
   it('no crux reports cruxDeclared false; an invalid crux is refused, not silently degraded', async () => {

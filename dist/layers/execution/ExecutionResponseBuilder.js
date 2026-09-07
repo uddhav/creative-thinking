@@ -9,7 +9,7 @@ import { MemoryAnalyzer } from '../../core/MemoryAnalyzer.js';
  * this, random_entry's Rory Mode guidance was unreachable: the branch took a
  * third argument no call site supplied.
  */
-function guidanceContext(input) {
+export function guidanceContext(input) {
     return { roryMode: input.roryMode };
 }
 import { RealityIntegration } from '../../reality/integration.js';

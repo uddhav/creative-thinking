@@ -81,6 +81,31 @@ const FIELD_GATES: Partial<Record<LateralTechnique, Record<number, FieldGate[]>>
   },
 };
 
+/**
+ * One wording for the numbering verdict on both channels: the advisory finding
+ * here and the strict refusal in strictStepOrder.ts. Both remedies are named
+ * because re-sending in the caller's own convention does not clear it: the
+ * same pairing produces the same verdict every time.
+ */
+export function describeNumberingMismatch(
+  technique: LateralTechnique,
+  techniqueLocalStep: number,
+  mismatch: NumberingMismatch
+): string {
+  const { counted, counterStep, techniqueSteps, planTotal, stepsBefore } = mismatch;
+  const localForm = `currentStep ${techniqueLocalStep} with totalSteps ${techniqueSteps}`;
+  const planForm = `currentStep ${techniqueLocalStep + stepsBefore} with totalSteps ${planTotal}`;
+  return (
+    `This ran as ${technique} step ${techniqueLocalStep}, but completion accounting ` +
+    `reads numbering from totalSteps alone and ` +
+    (counted
+      ? `filed it as step ${counterStep} — a different step from the one that ran. `
+      : `discarded it, so ${technique} still counts step ${techniqueLocalStep} as ` +
+        `not run and re-sending it this way will not change that. `) +
+    `Send it as ${localForm}, or as ${planForm}.`
+  );
+}
+
 export function evaluateAdvisoryGates(
   input: ExecuteThinkingStepInput,
   techniqueLocalStep: number,
@@ -105,19 +130,9 @@ export function evaluateAdvisoryGates(
   // Both remedies are named because re-sending in the caller's own convention
   // does not clear it: the same pairing produces the same verdict every time.
   if (numberingMismatch) {
-    const { counted, counterStep, techniqueSteps, planTotal, stepsBefore } = numberingMismatch;
-    const localForm = `currentStep ${techniqueLocalStep} with totalSteps ${techniqueSteps}`;
-    const planForm = `currentStep ${techniqueLocalStep + stepsBefore} with totalSteps ${planTotal}`;
     findings.push({
       gate: 'numbering.mismatch',
-      message:
-        `This ran as ${input.technique} step ${techniqueLocalStep}, but completion accounting ` +
-        `reads numbering from totalSteps alone and ` +
-        (counted
-          ? `filed it as step ${counterStep} — a different step from the one that ran. `
-          : `discarded it, so ${input.technique} still counts step ${techniqueLocalStep} as ` +
-            `not run and re-sending it this way will not change that. `) +
-        `Send it as ${localForm}, or as ${planForm}.`,
+      message: describeNumberingMismatch(input.technique, techniqueLocalStep, numberingMismatch),
       ...base,
     });
   }

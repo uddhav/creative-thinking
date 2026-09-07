@@ -450,7 +450,8 @@ export class SessionCompletionTracker {
     session: SessionData,
     plan: PlanThinkingSessionOutput,
     technique: string,
-    techniqueIndex: number
+    techniqueIndex: number,
+    run?: number
   ): {
     completedStepNumbers: Set<number>;
     submissionsByStep: Map<number, number>;
@@ -485,10 +486,15 @@ export class SessionCompletionTracker {
     // session with one unstamped entry back to pooling for good: a session
     // started under a single-technique plan and resumed under a repeating one
     // was called a duplicate on run 2's first step, permanently.
+    //
+    // `run` is for the one caller that runs BEFORE the push (strict step
+    // order): there the last entry is the previous step, not the current one,
+    // so reading the run off it judges a run-2 step against run 1's coverage.
+    // That caller passes the run the executor is about to stamp instead.
     const pooled = session.history.filter(h => h.technique === technique);
     const repeats = plan.workflow.filter(w => w.technique === technique).length > 1;
     const runs = runsOf(pooled);
-    const currentRun = runs[runs.length - 1] ?? 0;
+    const currentRun = run ?? runs[runs.length - 1] ?? 0;
     const techniqueHistory = repeats ? pooled.filter((_, i) => runs[i] === currentRun) : pooled;
 
     const { completedStepNumbers, submissionsByStep } = this.countTechniqueCompletedSteps(

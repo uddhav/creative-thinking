@@ -24,7 +24,7 @@ import { MemoryAnalyzer } from '../../core/MemoryAnalyzer.js';
  * this, random_entry's Rory Mode guidance was unreachable: the branch took a
  * third argument no call site supplied.
  */
-function guidanceContext(input: ExecuteThinkingStepInput): StepGuidanceContext {
+export function guidanceContext(input: ExecuteThinkingStepInput): StepGuidanceContext {
   return { roryMode: input.roryMode };
 }
 import type { MemoryOutputs } from '../../core/MemoryAnalyzer.js';

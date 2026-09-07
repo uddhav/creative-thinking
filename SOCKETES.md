@@ -619,16 +619,17 @@ parallel-safe.
 
 ## Configuration via environment variables
 
-| Variable                  | Default in CLI mode    | Effect                                                                                                                                                                     |
-| ------------------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PERSISTENCE_TYPE`        | `filesystem`           | Backend for session storage. CLI sets this if unset; explicit values (`memory`, `postgres`) win. With `memory`, sessions are in-process only — cross-process state breaks. |
-| `PERSISTENCE_PATH`        | `~/.creative-thinking` | Directory for `plans/`, `sessions/`, `metadata/`.                                                                                                                          |
-| `DISABLE_THOUGHT_LOGGING` | `true`                 | Suppresses the visual progress output that would otherwise hit stderr. CLI sets this if unset so stderr stays manageable.                                                  |
-| `PERSONA_CATALOG_PATH`    | unset                  | Path to a JSON file with additional personas. Merges with built-ins; same id overrides built-in.                                                                           |
-| `TELEMETRY_ENABLED`       | unset (off)            | Set to `true` for opt-in anonymous analytics. Off by default.                                                                                                              |
-| `TELEMETRY_LEVEL`         | `basic`                | `basic`, `detailed`, or `full`.                                                                                                                                            |
-| `NEURAL_OPTIMIZATION`     | unset                  | Enables an experimental neural-state feature in techniques that support it.                                                                                                |
-| `CULTURAL_FRAMEWORKS`     | unset                  | Enables cross-cultural framework injection.                                                                                                                                |
+| Variable                  | Default in CLI mode    | Effect                                                                                                                                                                                                                                                                          |
+| ------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PERSISTENCE_TYPE`        | `filesystem`           | Backend for session storage. CLI sets this if unset; explicit values (`memory`, `postgres`) win. With `memory`, sessions are in-process only — cross-process state breaks.                                                                                                      |
+| `PERSISTENCE_PATH`        | `~/.creative-thinking` | Directory for `plans/`, `sessions/`, `metadata/`.                                                                                                                                                                                                                               |
+| `DISABLE_THOUGHT_LOGGING` | `true`                 | Suppresses the visual progress output that would otherwise hit stderr. CLI sets this if unset so stderr stays manageable.                                                                                                                                                       |
+| `PERSONA_CATALOG_PATH`    | unset                  | Path to a JSON file with additional personas. Merges with built-ins; same id overrides built-in.                                                                                                                                                                                |
+| `STEP_ORDER_ENFORCEMENT`  | unset (`advisory`)     | `strict` refuses an out-of-order step, a contradictory numbering pairing, or an unassigned stimulus/provocation with `E211`, recording nothing; the default records the step and redirects or flags it. `--strictness enforcing` on `socketes plan` does the same for one plan. |
+| `TELEMETRY_ENABLED`       | unset (off)            | Set to `true` for opt-in anonymous analytics. Off by default.                                                                                                                                                                                                                   |
+| `TELEMETRY_LEVEL`         | `basic`                | `basic`, `detailed`, or `full`.                                                                                                                                                                                                                                                 |
+| `NEURAL_OPTIMIZATION`     | unset                  | Enables an experimental neural-state feature in techniques that support it.                                                                                                                                                                                                     |
+| `CULTURAL_FRAMEWORKS`     | unset                  | Enables cross-cultural framework injection.                                                                                                                                                                                                                                     |
 
 **MCP server defaults differ.** When you run `creative-thinking` (the MCP server bin), none of the
 CLI overrides apply — `PERSISTENCE_TYPE` is unset by default (sessions in-memory only),
@@ -825,6 +826,19 @@ If you see partial JSON in stdout when consuming via subprocess capture, that su
 exited before the stdout pipe drained. The CLI uses a write-callback pattern in `emit()` to avoid
 this, but if you're invoking via a wrapper that itself truncates streams, check that wrapper. Pure
 shell `>file.json` is reliable.
+
+### `E211`: strict step order refused the call
+
+Only under `STEP_ORDER_ENFORCEMENT=strict` or a plan created with `--strictness enforcing`. The step
+you sent skipped an earlier step of the same technique, its `currentStep` and `totalSteps` used
+different numbering conventions, or it carried a `randomStimulus` / `provocation` the plan did not
+assign. Nothing from the refused call was recorded, so there is nothing to undo. For a skipped step
+the `recovery` array names the missing step in both accepted forms (within-technique and plan-wide)
+and carries that step's own prompt; for the other two shapes it names the corrected numbering or the
+assigned value. Under the default, advisory mode, all three shapes are accepted and the response
+redirects or flags instead. Also refused under strict: a revision (`isRevision`) whose predecessor
+is missing, and a terminating step (`--no-next-step-needed`) with a hole. Encoded planIds carry no
+`strictness`, so for them only the environment variable applies.
 
 ### Error code ranges
 

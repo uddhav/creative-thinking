@@ -140,9 +140,12 @@ export const PLAN_THINKING_SESSION_TOOL: Tool = {
       strictness: {
         type: 'string',
         description:
-          "Gate strictness for this plan's steps. 'advisory' (the default and the only " +
-          'implemented level) attaches non-blocking advisoryFindings to step responses. ' +
-          "'enforcing' is reserved for a future release and currently behaves as 'advisory'.",
+          "Gate strictness for this plan's steps. 'advisory' (the default) attaches " +
+          'non-blocking advisoryFindings to step responses and redirects after an ' +
+          "out-of-order step. 'enforcing' refuses an out-of-order step, a contradictory " +
+          'numbering pairing, or an unassigned stimulus/provocation with E211 and records ' +
+          'nothing; so does the process-level STEP_ORDER_ENFORCEMENT=strict, which a plan ' +
+          'cannot opt out of. Field-presence gates stay advisory under both.',
       },
       executionMode: {
         type: 'string',
@@ -217,7 +220,8 @@ export const EXECUTE_THINKING_STEP_TOOL: Tool = {
           'step 1 with totalSteps 7. Plan-wide numbering (that same hat as step 5 with ' +
           'totalSteps 11) is equally accepted — totalSteps is what tells the two apart, so ' +
           'it must match the convention currentStep is using. Steps must be sequential ' +
-          'without gaps.',
+          'without gaps; under STEP_ORDER_ENFORCEMENT=strict or a plan with strictness ' +
+          "'enforcing' a gap is refused (E211) and nothing is recorded.",
       },
       totalSteps: {
         type: 'number',

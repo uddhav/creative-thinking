@@ -17,7 +17,7 @@ export function registerPlan(yargs) {
     })
         .option('strictness', {
         type: 'string',
-        describe: "Gate strictness ('advisory' is the only implemented level; 'enforcing' reserved). Echoed on the plan.",
+        describe: "Gate strictness: 'advisory' (default) redirects after an out-of-order step; 'enforcing' refuses it with E211. Echoed on the plan.",
     })
         .option('include-options', { type: 'boolean' })
         .option('session-id', { type: 'string' })

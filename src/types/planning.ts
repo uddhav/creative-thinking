@@ -337,10 +337,13 @@ export interface PlanThinkingSessionInput {
   personas?: string[]; // Multiple personas for debate mode
   debateFormat?: 'structured' | 'adversarial' | 'collaborative';
   /**
-   * Gate strictness for the plan's steps. Round 1 implements 'advisory' only
-   * (findings never block); the value is accepted and echoed so callers can
-   * declare intent today. 'enforcing' is reserved — documented, not built —
-   * pending M0 evidence (open-world contract: unknown values are accepted).
+   * Gate strictness for the plan's steps. 'advisory' (default): findings never
+   * block and an out-of-order step is accepted and redirected. 'enforcing':
+   * an out-of-order step or a contradictory numbering pairing is refused with
+   * E211 and nothing is recorded, as is a stimulus or provocation the plan
+   * did not assign (#298); the process-level STEP_ORDER_ENFORCEMENT=strict
+   * does the same for every plan. Field-presence gates stay advisory. Open-world
+   * contract: unknown values are accepted, echoed and warned about.
    */
   strictness?: string;
 }
@@ -353,7 +356,7 @@ export interface PlanThinkingSessionOutput {
   totalSteps: number;
   objectives?: string[];
   constraints?: string[];
-  /** Echo of the caller's declared gate strictness; 'advisory' is the only implemented level. */
+  /** Echo of the caller's declared gate strictness: 'advisory' (default) or 'enforcing'. */
   strictness?: string;
   /** Plan-level advisories (e.g. an unrecognized strictness value); absent when clean. */
   warnings?: string[];

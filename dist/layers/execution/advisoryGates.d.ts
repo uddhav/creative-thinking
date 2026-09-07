@@ -50,6 +50,13 @@ export interface NumberingMismatch {
     /** Steps in the plan before this technique block. */
     stepsBefore: number;
 }
+/**
+ * One wording for the numbering verdict on both channels: the advisory finding
+ * here and the strict refusal in strictStepOrder.ts. Both remedies are named
+ * because re-sending in the caller's own convention does not clear it: the
+ * same pairing produces the same verdict every time.
+ */
+export declare function describeNumberingMismatch(technique: LateralTechnique, techniqueLocalStep: number, mismatch: NumberingMismatch): string;
 export declare function evaluateAdvisoryGates(input: ExecuteThinkingStepInput, techniqueLocalStep: number, plan: PlanThinkingSessionOutput | undefined, validationWarnings: string[] | undefined, numberingMismatch?: NumberingMismatch): AdvisoryFinding[];
 /** Every assigned stimulus for a technique across the plan's workflow, in instance order. */
 export declare function assignedStimuliFor(plan: PlanThinkingSessionOutput, technique: LateralTechnique): string[];

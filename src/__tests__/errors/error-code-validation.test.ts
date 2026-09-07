@@ -155,6 +155,7 @@ describe('Error Code Validation', () => {
         E208: 'Planning phase was skipped',
         E209: 'Using non-recommended technique',
         E210: 'Attempting to bypass workflow',
+        E211: 'Step refused under strict step order: out of order, contradictory numbering, or unassigned stimulus',
 
         // State Errors (E300-E399)
         E301: 'Session not found',

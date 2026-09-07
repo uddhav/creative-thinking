@@ -160,6 +160,7 @@ export const ErrorCodes = {
     PLANNING_SKIPPED: 'E208',
     UNAUTHORIZED_TECHNIQUE: 'E209',
     WORKFLOW_BYPASS_ATTEMPT: 'E210',
+    STEP_OUT_OF_ORDER: 'E211',
     // State errors (E300-E399)
     SESSION_NOT_FOUND: 'E301',
     SESSION_EXPIRED: 'E302',
@@ -379,6 +380,53 @@ export class ErrorFactory {
             'Bypassing steps leads to suboptimal results',
             'Start with discover_techniques',
         ], { attemptType, severity: 'critical' });
+    }
+    /**
+     * Strict step order (#298): an earlier step of this technique, in this run,
+     * was never recorded. Nothing from the refused call is recorded; the
+     * recovery names the missing step in both accepted numbering conventions
+     * and carries that step's own prompt, as the advisory redirect does.
+     */
+    static stepOutOfOrder(technique, refusedStep, missingStep, localForm, planForm, guidance) {
+        return new WorkflowError(ErrorCodes.STEP_OUT_OF_ORDER, `Step ${refusedStep} of ${technique} refused: step ${missingStep} has not been recorded ` +
+            `and step order is strict. Nothing from this call was recorded.`, [
+            `Send step ${missingStep} first, as ${localForm} (numbering within the technique) ` +
+                `or as ${planForm} (numbering across the plan), then re-send this step.`,
+            `Step ${missingStep} guidance: ${guidance}`,
+            "Strict order comes from STEP_ORDER_ENFORCEMENT=strict or the plan's strictness: enforcing; " +
+                'the default, advisory, accepts the step and redirects instead.',
+        ], { gate: 'order.skipped', technique, refusedStep, missingStep });
+    }
+    /**
+     * Strict step order (#298): the step would execute under one numbering
+     * convention and be counted under another. Refused rather than recorded,
+     * because a hole refusal alone would then reject the next step for a step
+     * the caller did send (#404).
+     */
+    static numberingRefused(technique, step, description, localForm, planForm) {
+        return new WorkflowError(ErrorCodes.STEP_OUT_OF_ORDER, `Step ${step} of ${technique} refused: nothing was recorded. ${description}`, [
+            `Re-send as ${localForm} (numbering within the technique), or as ${planForm} ` +
+                '(numbering across the plan). totalSteps is what tells the two apart, so it must ' +
+                'match the convention currentStep is using.',
+            "Strict order comes from STEP_ORDER_ENFORCEMENT=strict or the plan's strictness: enforcing; " +
+                'the default, advisory, records the step and attaches a numbering.mismatch finding instead.',
+        ], { gate: 'numbering.mismatch', technique, refusedStep: step });
+    }
+    /**
+     * Strict step order (#298): the step carries a random_entry stimulus or po
+     * provocation the plan never assigned. Advisory mode records it and flags
+     * `stimulus.mismatch` afterwards; a controlled retest showed a deliberately
+     * wrong stimulus accepted, persisted to history and flagged only then.
+     */
+    static stimulusRefused(technique, step, field, sent, assigned) {
+        const listed = assigned.map(v => `"${v}"`).join(' / ');
+        return new WorkflowError(ErrorCodes.STEP_OUT_OF_ORDER, `Step ${step} of ${technique} refused: nothing was recorded. It carries ${field} "${sent}", ` +
+            `but the plan assigned ${listed}; assignments are not re-rollable within a plan.`, [
+            `Re-send this step with ${field} set to the assigned value (${listed}), or omit the field ` +
+                'and work with the assigned value in the output.',
+            "Strict order comes from STEP_ORDER_ENFORCEMENT=strict or the plan's strictness: enforcing; " +
+                'the default, advisory, records the step and attaches a stimulus.mismatch finding instead.',
+        ], { gate: 'stimulus.mismatch', technique, refusedStep: step, sent, assigned });
     }
     /**
      * Create a session expired error

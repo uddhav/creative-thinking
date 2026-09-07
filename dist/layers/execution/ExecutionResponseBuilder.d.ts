@@ -7,7 +7,13 @@ import type { PlanThinkingSessionOutput } from '../../types/planning.js';
 import type { OptionGenerationResult } from '../../ergodicity/optionGeneration/types.js';
 import type { TechniqueRegistry } from '../../techniques/TechniqueRegistry.js';
 import type { ErgodicityResult } from './ErgodicityResultAdapter.js';
-import type { TechniqueHandler } from '../../techniques/types.js';
+/**
+ * Carry forward the flags that change what the next step should say. Without
+ * this, random_entry's Rory Mode guidance was unreachable: the branch took a
+ * third argument no call site supplied.
+ */
+export declare function guidanceContext(input: ExecuteThinkingStepInput): StepGuidanceContext;
+import type { StepGuidanceContext, TechniqueHandler } from '../../techniques/types.js';
 import type { EscalationPromptGenerator } from '../../ergodicity/escalationPrompts.js';
 import type { HybridComplexityAnalyzer } from '../../complexity/analyzer.js';
 import type { SessionManager } from '../../core/SessionManager.js';
