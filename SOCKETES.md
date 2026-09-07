@@ -522,11 +522,20 @@ branch on exit code, not on whether stdout has content.
         ["node-7", "node-14"],
         ["node-15"],
       ],
-      // Eight nodes; abbreviated here. Note it disagrees with the round
-      // count above — criticalPath walks hard dependencies only, while
-      // parallelizableGroups also honours the soft edges that order the
-      // session-ending node last.
-      "criticalPath": ["node-8", "node-9", "..."],
+      // One id per round along the deepest chain, so always as long as
+      // parallelizableGroups; the last id is the session-ending node. When the
+      // last technique ties for longest, as scamper does here, the path stays
+      // inside it.
+      "criticalPath": [
+        "node-8",
+        "node-9",
+        "node-10",
+        "node-11",
+        "node-12",
+        "node-13",
+        "node-14",
+        "node-15",
+      ],
       "sequentialTimeMultiplier": "1.9x",
     },
     "instructions": {

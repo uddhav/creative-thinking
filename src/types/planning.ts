@@ -37,7 +37,11 @@ export interface ExecutionGraph {
   metadata: {
     totalNodes: number;
     maxParallelism: number; // Max nodes that can run in parallel
-    criticalPath: string[]; // Node IDs forming the longest path
+    // One node per round along the deepest dependency chain, soft edges
+    // included, read from the same walk as parallelizableGroups. Always exactly
+    // parallelizableGroups.length long; the last id is the session-ending node.
+    // It used to walk hard edges only and came up one short (#367).
+    criticalPath: string[];
     parallelizableGroups: string[][]; // Groups of nodes that can run in parallel
     // Node count over round count: how much longer running end to end takes
     // than following parallelizableGroups. e.g. "1.9x". One decimal, because

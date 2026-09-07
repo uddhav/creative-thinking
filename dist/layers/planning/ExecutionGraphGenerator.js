@@ -26,7 +26,9 @@ export class ExecutionGraphGenerator {
             lastNode.parameters.nextStepNeeded = false;
             // The terminal node ends the session, so every other technique must
             // finish first even under parallel execution. Soft dependencies order
-            // it last without blocking — parallelizableGroups reads hard deps only.
+            // it last without blocking: both parallelizableGroups and criticalPath
+            // treat them as ordering, so it lands in the last round and closes the
+            // critical path.
             const existing = new Set(lastNode.dependencies.map(d => d.nodeId));
             let offset = 0;
             for (const workflow of workflows) {
@@ -227,10 +229,11 @@ export class ExecutionGraphGenerator {
      * Calculate metadata for the execution graph
      */
     static calculateMetadata(nodes) {
-        // Find parallelizable groups
-        const parallelizableGroups = this.findParallelizableGroups(nodes);
-        // Calculate critical path
-        const criticalPath = this.findCriticalPath(nodes);
+        // One depth walk feeds both the rounds and the critical path, so the two
+        // cannot disagree about the schedule length (#367).
+        const { depth, deepestParent } = this.computeDepths(nodes);
+        const parallelizableGroups = this.roundsFrom(nodes, depth);
+        const criticalPath = this.deepestChain(nodes, depth, deepestParent);
         // Calculate max parallelism
         const maxParallelism = Math.max(...parallelizableGroups.map(group => group.length), 1);
         // Calculate sequential time multiplier
@@ -272,33 +275,40 @@ export class ExecutionGraphGenerator {
         return `${speedup.toFixed(1)}x`;
     }
     /**
-     * Rounds of nodes that may run concurrently.
+     * Depth of every node in the dependency graph, and the parent that put it
+     * there. One walk feeds both `parallelizableGroups` and `criticalPath`, so
+     * the two cannot disagree about how long the schedule is. They used to be
+     * computed against different graphs — the rounds honoured soft edges, the
+     * critical path walked hard edges only — and disagreed for 618 of the 1,024
+     * ordered technique pairs, always by exactly one, with the path never
+     * reaching the session-ending node (#367).
      *
-     * Grouped by depth in the dependency graph: a node's round is one past the
-     * deepest node it hard-depends on, so two nodes share a round exactly when
-     * neither can reach the other. Soft dependencies are advisory and do not
-     * block, so they do not affect depth.
+     * A node's depth is one past the deepest node it depends on, hard or soft.
+     * Soft dependencies count: they are non-blocking for EXECUTION — a caller
+     * need not wait — but they are still ordering constraints, and a round is an
+     * ordering. Skipping them put the terminal node in the wrong round. It
+     * carries `nextStepNeeded: false`, ends the session, and takes a soft
+     * dependency on every technique's final node so it lands last. With soft
+     * edges ignored its depth came only from its own predecessor, so a plan of
+     * six_hats (7 steps) then po (4) scheduled the session-ending node in round 3
+     * with three six_hats nodes in rounds 4-6 — telling a caller to end the
+     * session and then send more steps to it.
      *
-     * This replaced grouping by identical hard-dependency signature, which was
-     * sufficient but not necessary and under-reported badly. Step 2 of technique
-     * A depends on A's step 1 and step 2 of B on B's step 1, so their signatures
-     * differed and they never shared a round even though the techniques are
-     * independent. A four-technique plan reported `maxParallelism: 4` and then
-     * placed all twenty remaining nodes in groups of one — only the first round
-     * was ever parallel, and the metadata contradicted itself (#308).
+     * `deepestParent` is the first dependency, in array order, that holds the
+     * maximum depth (strict `>`, so a later dependency of equal depth does not
+     * replace it). `getDependencies` puts a node's own predecessor first and the
+     * terminal node's soft edges are appended after it, so when the last
+     * technique ties for longest the critical path stays inside that technique.
      *
-     * The invariant #327 established still holds, and now holds by construction
-     * rather than by a post-hoc split: two steps of one technique are always
-     * chained, so one is always deeper than the other and they cannot land in the
-     * same round.
+     * Memoised and iterative rather than recursive: a plan can carry hundreds of
+     * nodes and this runs on every planning call.
      */
-    static findParallelizableGroups(nodes) {
+    static computeDepths(nodes) {
         const byId = new Map(nodes.map(node => [node.id, node]));
         const depth = new Map();
-        // Memoised longest-path depth, iterative rather than recursive: a plan can
-        // carry hundreds of nodes and this runs on every planning call.
+        const deepestParent = new Map();
         const onStack = new Set();
-        const depthOf = (start) => {
+        const settle = (start) => {
             const stack = [start];
             onStack.add(start.id);
             while (stack.length > 0) {
@@ -309,53 +319,65 @@ export class ExecutionGraphGenerator {
                     continue;
                 }
                 let deepest = -1;
+                let parent;
                 let waiting = false;
                 for (const dep of node.dependencies) {
-                    // Soft dependencies count here, unlike in the old signature grouping.
-                    // They are non-blocking for EXECUTION — a caller need not wait — but
-                    // they are still ordering constraints, and a round is an ordering.
-                    //
-                    // Skipping them put the terminal node in the wrong round. It carries
-                    // `nextStepNeeded: false`, ends the session, and takes a soft
-                    // dependency on every technique's final node so it lands last. With
-                    // soft edges ignored its depth came only from its own predecessor, so
-                    // a plan of six_hats (7 steps) then po (4) scheduled the
-                    // session-ending node in round 3 with three six_hats nodes in rounds
-                    // 4-6 — telling a caller to end the session and then send more steps
-                    // to it.
-                    const parent = byId.get(dep.nodeId);
+                    const dependency = byId.get(dep.nodeId);
                     // A dependency on a node outside this graph cannot be scheduled
                     // against, so it does not constrain the round.
-                    if (!parent)
+                    if (!dependency)
                         continue;
                     // A dependency already being resolved further down the stack means a
                     // cycle. `getDependencies` only ever points at a lower index so this
                     // is unreachable today, but without the check the stack would grow
                     // without bound and hang the planning call — a worse failure than any
                     // wrong round, and one no caller could recover from.
-                    if (onStack.has(parent.id))
+                    if (onStack.has(dependency.id))
                         continue;
-                    const known = depth.get(parent.id);
+                    const known = depth.get(dependency.id);
                     if (known === undefined) {
-                        stack.push(parent);
-                        onStack.add(parent.id);
+                        stack.push(dependency);
+                        onStack.add(dependency.id);
                         waiting = true;
                     }
                     else if (known > deepest) {
                         deepest = known;
+                        parent = dependency.id;
                     }
                 }
                 if (waiting)
                     continue;
                 depth.set(node.id, deepest + 1);
+                deepestParent.set(node.id, parent);
                 stack.pop();
                 onStack.delete(node.id);
             }
-            return depth.get(start.id) ?? 0;
         };
+        for (const node of nodes)
+            settle(node);
+        return { depth, deepestParent };
+    }
+    /**
+     * Rounds of nodes that may run concurrently: nodes bucketed by depth, so two
+     * nodes share a round exactly when neither can reach the other.
+     *
+     * This replaced grouping by identical hard-dependency signature, which was
+     * sufficient but not necessary and under-reported badly. Step 2 of technique
+     * A depends on A's step 1 and step 2 of B on B's step 1, so their signatures
+     * differed and they never shared a round even though the techniques are
+     * independent. A four-technique plan reported `maxParallelism: 4` and then
+     * placed all twenty remaining nodes in groups of one — only the first round
+     * was ever parallel, and the metadata contradicted itself (#308).
+     *
+     * The invariant #327 established still holds, and holds by construction
+     * rather than by a post-hoc split: two steps of one technique are always
+     * chained, so one is always deeper than the other and they cannot land in the
+     * same round.
+     */
+    static roundsFrom(nodes, depth) {
         const rounds = new Map();
         for (const node of nodes) {
-            const level = depthOf(node);
+            const level = depth.get(node.id) ?? 0;
             const round = rounds.get(level);
             if (round) {
                 round.push(node.id);
@@ -367,62 +389,30 @@ export class ExecutionGraphGenerator {
         return [...rounds.entries()].sort((a, b) => a[0] - b[0]).map(([, ids]) => ids);
     }
     /**
-     * Find the critical path through the graph
+     * The critical path: one node per round along the deepest dependency chain,
+     * read back from the same depth walk as the rounds. It starts at a root and
+     * ends at the deepest node — the session-ending node, which every
+     * technique's final node feeds by a soft edge — so it is always exactly as
+     * long as `parallelizableGroups`. Ties for deepest go to the earliest node in
+     * plan order; ties among a node's dependencies go to the first in array order
+     * (see `computeDepths`).
      */
-    static findCriticalPath(nodes) {
+    static deepestChain(nodes, depth, deepestParent) {
         if (nodes.length === 0)
             return [];
-        // Build adjacency list (considering only hard dependencies for critical path)
-        const graph = new Map();
-        const startNodes = [];
+        let top = nodes[0];
         for (const node of nodes) {
-            if (!graph.has(node.id)) {
-                graph.set(node.id, []);
-            }
-            // Check for hard dependencies in a single pass
-            let hasHardDeps = false;
-            for (const dep of node.dependencies) {
-                if (dep.type === 'hard') {
-                    hasHardDeps = true;
-                    if (!graph.has(dep.nodeId)) {
-                        graph.set(dep.nodeId, []);
-                    }
-                    graph.get(dep.nodeId)?.push(node.id);
-                }
-            }
-            // Track start nodes while iterating
-            if (!hasHardDeps) {
-                startNodes.push(node);
-            }
+            if ((depth.get(node.id) ?? 0) > (depth.get(top.id) ?? 0))
+                top = node;
         }
-        if (startNodes.length === 0)
-            return [];
-        // Find longest path from each start node
-        let longestPath = [];
-        for (const start of startNodes) {
-            const path = this.dfs(start.id, graph, new Set());
-            if (path.length > longestPath.length) {
-                longestPath = path;
-            }
+        // Every parent is exactly one level shallower, so the walk terminates.
+        const path = [];
+        let current = top.id;
+        while (current !== undefined) {
+            path.unshift(current);
+            current = deepestParent.get(current);
         }
-        return longestPath;
-    }
-    /**
-     * Depth-first search to find longest path
-     */
-    static dfs(nodeId, graph, visited) {
-        if (visited.has(nodeId))
-            return [];
-        visited.add(nodeId);
-        const neighbors = graph.get(nodeId) || [];
-        let longestSubpath = [];
-        for (const neighbor of neighbors) {
-            const subpath = this.dfs(neighbor, graph, new Set(visited));
-            if (subpath.length > longestSubpath.length) {
-                longestSubpath = subpath;
-            }
-        }
-        return [nodeId, ...longestSubpath];
+        return path;
     }
     /**
      * Generate instructions for the invoker
