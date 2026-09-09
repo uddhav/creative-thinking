@@ -1,3 +1,9 @@
+## [v2.10.4] - 2026-09-09
+
+### Changes from PR #447
+
+- fix: export and persist the session state once, without the per-process manager
+
 ## [v2.10.3] - 2026-09-09
 
 ### Changes from PR #442
