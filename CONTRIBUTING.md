@@ -882,26 +882,22 @@ through a pull request. `@semantic-release/git` used to commit the version bump 
 and was rejected every time (`GH013`), which is why nothing released between May and August 2026. It
 has been removed from `.releaserc.json`.
 
-On merge of any PR to `main`, `.github/workflows/pr-version-bump.yml` runs and:
+On every push to `main`, `.github/workflows/semantic-release.yml` runs and:
 
-1. Determines the bump (patch / minor / major) from the PR title, body and commits.
-2. Bumps `package.json` / `package-lock.json` and prepends a `CHANGELOG.md` entry.
-3. Opens a `chore(release):` pull request with the result — satisfying the ruleset rather than
-   fighting it. Its own `if:` guard skips `chore(release)` titles, so merging that PR cannot loop.
+1. Builds and tests, then runs a semantic-release **dry run** to learn the version the commits since
+   the last tag warrant (patch / minor / major per Conventional Commits).
+2. If `package.json` already holds that version, this push is the merge of the bump PR: the real
+   semantic-release run creates the tag (e.g. `v2.10.1`) and the GitHub Release with auto-generated
+   notes, and dispatches `release-binaries.yml`. The tagged tree holds its own version.
+3. Otherwise, if a releasable commit landed and no open bump PR proposes the version, it dispatches
+   `.github/workflows/pr-version-bump.yml`, which bumps `package.json` / `package-lock.json`,
+   prepends a `CHANGELOG.md` entry, and opens a `chore(release):` pull request — satisfying the
+   ruleset rather than fighting it. Merging that PR is what cuts the tag.
+4. When no commit since the last release warrants a bump, nothing happens.
 
-On push to `main`, `.github/workflows/semantic-release.yml` runs and:
-
-1. Analyzes commits since the last release tag.
-2. Determines the version bump (patch / minor / major) per Conventional Commits.
-3. Creates the tag (e.g. `v0.7.0`) and the GitHub Release with auto-generated notes via
-   `@semantic-release/github`. It no longer writes to `main` — tags are not covered by the
-   pull-request rule.
-4. Dispatches `release-binaries.yml` against the new tag (see below). When no commit since the last
-   release warrants a bump, semantic-release no-ops and no tag is pushed.
-
-Both derive the bump from Conventional Commits and should agree, but they compute it independently
-and nothing enforces a match. If `package.json` and the newest tag ever disagree, the tag is the
-released artifact and `package.json` is what needs correcting.
+There is one version computation, semantic-release's own; the bump PR proposes it and the tag
+records it. If `package.json` ever runs _ahead_ of what the analyzer computes (a hand edit), the
+release run fails loudly rather than proposing a bump the backwards guard would refuse forever.
 
 If no `feat:` / `fix:` / `feat!:` commit landed since the last release, the workflow runs but
 produces no release.

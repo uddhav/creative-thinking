@@ -1,9 +1,42 @@
 name: Semantic Release
 
+# The release tag is cut on the merge of the bump PR, so the tagged tree
+# holds its own version.
+#
+# It used to be cut on the feature merge, with the bump PR dispatched
+# afterwards to record the tag in package.json. That order left every tag's
+# tree one release behind (v2.10.0 held 2.9.0, v2.9.0 held 2.8.0), so
+# serverInfo.version, the CLI's --version and any install pinned to a tag
+# under-reported by one. Now every push to main runs a semantic-release dry
+# run to learn the next version and asks scripts/release/release-decision.mjs
+# what the push means:
+#
+# - package.json already equals the computed version: HEAD is the bump merge.
+#   The real semantic-release run tags it and the binaries are built.
+# - a releasable commit landed and no open bump PR proposes the version: the
+#   bump PR is dispatched with the version and this sha.
+# - package.json is AHEAD of the computed version (a hand edit): this run
+#   fails loudly. A bump would be refused by the bump job's backwards guard on
+#   every push, forever, with this run green.
+# - otherwise nothing.
+#
+# The tag is only ever the value semantic-release computed itself; no version
+# arithmetic happens in these workflows. A stale bump PR merged by hand cannot
+# cut a wrong tag: its version no longer equals the computed one, so the push
+# proposes a fresh bump instead.
+
 on:
   push:
     branches:
       - main
+
+# Two overlapping main runs could both decide `release`; the loser would fail
+# on the tag and the github plugin would open an issue. One at a time, and
+# never cancelled: a cancelled bump-merge run would lose the tag until the
+# next push.
+concurrency:
+  group: release-main
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -11,7 +44,7 @@ permissions:
   issues: write
   pull-requests: write
   id-token: write
-  actions: write # needed to dispatch the release-binaries workflow after publishing
+  actions: write # needed to dispatch release-binaries.yml and pr-version-bump.yml
 
 jobs:
   release:
@@ -42,25 +75,65 @@ jobs:
       - name: 🧪 Run tests
         run: npm run test:run
 
-      - name: 🚀 Release
-        id: release
+      # The dry run needs GITHUB_TOKEN: semantic-release verifies push access
+      # with `git push --dry-run` before any plugin runs. Its logger writes to
+      # stdout; the script redirects that to stderr so stdout is one JSON line.
+      - name: 🔍 Next release (dry run)
+        id: next
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # The repo's pre-commit hook refuses commits on the main branch
-          # (a guard for human contributors). semantic-release commits the
-          # CHANGELOG + version bump on main; HUSKY=0 disables hooks for
-          # this CI step only without touching the hook file.
+          HUSKY: '0'
+        run: |
+          NEXT_JSON=$(node scripts/release/next-release.mjs)
+          echo "Dry run: $NEXT_JSON"
+          echo "next_json=$NEXT_JSON" >> "$GITHUB_OUTPUT"
+
+      - name: 🧭 Decide
+        id: decide
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEXT_JSON: ${{ steps.next.outputs.next_json }}
+        run: |
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          # Labelled bump PRs on their branch prefix, as the bump job's own
+          # close step finds them; `--search` is a lagging full-text index.
+          # `mergeable` is read so a CONFLICTING bump PR (a lockfile merge
+          # landed under it) counts as absent and the run re-dispatches.
+          OPEN_PRS_JSON=$(gh pr list --state open --label release --json headRefName,title,mergeable)
+          export CURRENT_VERSION OPEN_PRS_JSON
+          node scripts/release/decide-release.mjs >> "$GITHUB_OUTPUT"
+          cat "$GITHUB_OUTPUT"
+
+      - name: ⛔ package.json ahead of the analyzer
+        if: steps.decide.outputs.action == 'error'
+        env:
+          REASON: ${{ steps.decide.outputs.reason }}
+        run: |
+          echo "::error::$REASON"
+          exit 1
+
+      - name: 🚀 Release
+        id: release
+        if: steps.decide.outputs.action == 'release'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # npm ci installs husky; HUSKY=0 keeps the repo's hooks out of this
+          # CI step. The release itself commits nothing (no git plugin in
+          # .releaserc.json): the npm and changelog plugins only touch the
+          # working tree, and `npm version` runs with --allow-same-version
+          # against a package.json that already holds the version.
           HUSKY: '0'
         run: |
           npx semantic-release
-          # Capture the tag semantic-release just created (if any). git
-          # describe --exact-match exits non-zero when HEAD has no tag, in
-          # which case there was nothing to release this run.
+          # Capture the tag semantic-release just created. git describe
+          # --exact-match exits non-zero when HEAD has no tag, which after a
+          # `release` decision means the run was not up to date with main
+          # (another merge landed meanwhile); the next push decides again.
           if TAG=$(git describe --tags --exact-match HEAD 2>/dev/null); then
             echo "tag=$TAG" >> "$GITHUB_OUTPUT"
             echo "Released $TAG"
           else
-            echo "No release this run"
+            echo "No tag on HEAD after the release step; the next push to main decides again"
           fi
 
       - name: 📦 Trigger binary build
@@ -71,36 +144,22 @@ jobs:
         if: steps.release.outputs.tag != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.release.outputs.tag }}
         run: |
-          gh workflow run release-binaries.yml \
-            --ref "${{ steps.release.outputs.tag }}" \
-            -f tag="${{ steps.release.outputs.tag }}"
+          gh workflow run release-binaries.yml --ref "$TAG" -f tag="$TAG"
 
-      - name: 🔖 Trigger version bump PR
-        # The bump PR is a CONSEQUENCE of the tag, not a race against it.
-        #
-        # pr-version-bump.yml used to fire on the same merge as this workflow
-        # and read `git describe` before semantic-release had written the new
-        # tag, so it proposed the previous release's version. Four consecutive
-        # bump PRs were wrong; the fourth proposed 2.4.2 while package.json
-        # already held 2.4.3, which would have written the version backwards.
-        # Its own comment called that "eventually correct", but the catch-up
-        # only lands if the next merge does not also tag, and in a run of
-        # merges it never does.
-        #
-        # Dispatching from here removes the race by construction: the tag
-        # exists before the bump job starts, because this step cannot run until
-        # the release step above has finished creating it.
-        #
-        # `!cancelled()` rather than a bare condition: this step follows the
-        # binary-build dispatch, and a default `if:` would skip it whenever
-        # that step failed. Two unrelated concerns would then share a fate — a
-        # transient failure dispatching a binary build would also silently cost
-        # the version bump. They both depend on the tag and on nothing else.
-        if: ${{ !cancelled() && steps.release.outputs.tag != '' }}
+      # The bump PR is proposed from the dry run, BEFORE any tag exists, and
+      # carries the sha it describes. Merging it is what cuts the tag (the
+      # `release` branch above, on the next push). If this dispatch fails, no
+      # bump PR appears and the next push to main proposes it again; nothing
+      # is tagged in the meantime, which is the benign failure.
+      - name: 🔖 Propose the version bump
+        if: steps.decide.outputs.action == 'bump'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.decide.outputs.version }}
         run: |
           gh workflow run pr-version-bump.yml \
             --ref main \
-            -f tag="${{ steps.release.outputs.tag }}"
+            -f tag="v$VERSION" \
+            -f sha="$GITHUB_SHA"

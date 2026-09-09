@@ -423,12 +423,41 @@ Constraints.
 Three workflows, because a repository ruleset on `main` requires every change to arrive through a
 pull request. `@semantic-release/git` used to push the version commit directly and was rejected
 every time (`GH013: changes must be made through a pull request`), which is why nothing released
-between May and August 2026. Version bumps now go through a PR; semantic-release only tags.
+between May and August 2026. Version bumps go through a PR, and since 2026-09 the tag is cut on that
+PR's merge; semantic-release only tags.
 
-1. **`.github/workflows/pr-version-bump.yml`** — `workflow_dispatch` only, dispatched by
-   `semantic-release.yml` with the tag it just created. Copies that tag into `package.json` +
-   `package-lock.json`, writes a `CHANGELOG.md` entry, and opens a `chore(release):` PR. It does no
-   version arithmetic at all: semantic-release decides, this records.
+1. **`.github/workflows/semantic-release.yml`** — runs on every push to `main`. Builds, tests, then
+   runs a semantic-release **dry run** (`scripts/release/next-release.mjs`) to learn the version the
+   commits since the last tag warrant, and asks `scripts/release/release-decision.mjs` (pure,
+   unit-tested in `src/__tests__/ci/`) what the push means:
+   - `package.json` already equals the computed version → HEAD is the merge of the bump PR. The real
+     `npx semantic-release` run tags it and creates the GitHub Release with auto-generated notes,
+     then dispatches `release-binaries.yml` against the tag. **The tagged tree holds its own
+     version.**
+   - a releasable commit landed and no open, mergeable bump PR proposes the version → dispatches
+     `pr-version-bump.yml` with `tag=vX.Y.Z` and the push's `sha`. Nothing is tagged.
+   - `package.json` is _ahead_ of the computed version (a hand edit) → the run fails with `::error`.
+     Without that branch a bump would be dispatched and refused by the bump job's backwards guard on
+     every push, forever, with the release run green.
+   - otherwise nothing.
+
+   It never writes to `main` (tags are not covered by the pull-request rule). The tag is only ever
+   the value semantic-release computed itself; neither workflow does version arithmetic. A stale
+   bump PR merged by hand cannot cut a wrong tag: its version no longer equals the computed one, so
+   the push proposes a fresh bump and the stale version is skipped, never tagged. A `CONFLICTING`
+   bump PR (a lockfile merge landed under it) counts as absent, so the run re-dispatches rather than
+   stalling. The workflow runs one at a time (`concurrency: release-main`).
+
+   **Until 2026-09 the order was the reverse** — tag first, bump PR after — and every tag's tree
+   carried the previous version (`v2.10.0` held 2.9.0, `v2.9.0` held 2.8.0), so
+   `serverInfo.version`, `socketes --version` and any install pinned to a tag under-reported by one
+   release.
+
+2. **`.github/workflows/pr-version-bump.yml`** — `workflow_dispatch` only, dispatched by
+   `semantic-release.yml` from the dry run, before any tag exists. Copies the dispatched tag into
+   `package.json` + `package-lock.json`, writes a `CHANGELOG.md` entry, and opens a
+   `chore(release):` PR. Merging that PR is what cuts the tag (see 1). It does no version arithmetic
+   at all: semantic-release decides, this proposes.
 
    **It used to run on `pull_request: closed`, and that was a race it lost every time.** Both
    workflows fired on the same merge, and this one read `git describe --tags` before
@@ -439,29 +468,17 @@ between May and August 2026. Version bumps now go through a PR; semantic-release
    gap", but the next merge tags too, so the gap moves instead of closing. Every instance was caught
    only because someone was looking. See #325.
 
-   Because a dispatch carries no PR context, the released PR is recovered from the commit the tag
-   points at (`repos/…/commits/{sha}/pulls`) purely to describe the release; a lookup that finds
-   nothing produces a plainer changelog entry rather than a wrong version. There is also a guard
-   that refuses to move `package.json` backwards.
+   Because a dispatch carries no PR context, the released PR is recovered from the `sha` input (the
+   push the dry run decided on; validated as a 40-hex commit present in the clone) or, when a hand
+   dispatch passes none, from the commit the tag points at (`repos/…/commits/{sha}/pulls`), purely
+   to describe the release; a lookup that finds nothing produces a plainer changelog entry rather
+   than a wrong version. There is also a guard that refuses to move `package.json` backwards, and a
+   step that closes any older open bump PR so exactly one is ever open.
 
-   Everything user-controlled (PR title, body) reaches the shell via `env:`, never by interpolating
-   `${{ … }}` into a `run:` block. Interpolation puts the text into the script _before_ bash parses
-   it, so backticks in a PR description execute — that is what made this workflow fail every run
-   until August 2026. Keep new steps to the same rule.
-
-2. **`.github/workflows/semantic-release.yml`** — runs on every push to `main`. Calls
-   `npx semantic-release`, which analyzes commits since the last tag, determines the version bump
-   from Conventional Commits (`fix:` → patch, `feat:` → minor, `feat!:` / `BREAKING CHANGE:` →
-   major), and creates the tag plus the GitHub Release with auto-generated notes. It does **not**
-   write to `main` — tags are not covered by the pull-request rule. After `semantic-release`
-   returns, a follow-up step runs `git describe --tags --exact-match HEAD` to detect whether a new
-   tag was created this run; if so, it dispatches **both** `release-binaries.yml` and
-   `pr-version-bump.yml` against that tag.
-
-   Dispatching the bump from here is what removes the race: the tag provably exists before the bump
-   job starts, because the dispatch step cannot run until the release step that creates it has
-   finished. If a dispatch fails, no bump PR appears and `package.json` simply does not advance —
-   which is the benign failure, unlike proposing a version that is wrong.
+   Everything user-controlled (PR title, body, the `sha` input) reaches the shell via `env:`, never
+   by interpolating `${{ … }}` into a `run:` block. Interpolation puts the text into the script
+   _before_ bash parses it, so backticks in a PR description execute — that is what made this
+   workflow fail every run until August 2026. Keep new steps to the same rule.
 
 3. **`.github/workflows/release-binaries.yml`** — builds standalone single-file binaries via
    `bun build --compile`. Triggered by:
@@ -483,8 +500,20 @@ Without the dispatch step, semantic-release-driven releases would never trigger 
 `macos-latest` has been observed to hang while downloading the Linux runtime (~30 minutes with no
 progress). Native runners build their own targets reliably.
 
-**Failure recovery.** If a Release was created but binaries are missing (dispatch failed, build
-failed), re-run the binary workflow manually:
+**Failure recovery.** If a push to `main` proposed nothing (the bump dispatch failed), the next push
+to `main` proposes it again; or dispatch by hand with the version the dry run printed:
+
+```bash
+gh workflow run pr-version-bump.yml --ref main -f tag=v2.10.1 -f sha=<merge sha>
+```
+
+If a bump PR is open, mergeable and red (a flaky check), every push reads "already proposed" and
+nothing tags; close the PR and the next push to `main` proposes it again. A `fix:` PR that hand-sets
+`package.json` to exactly the next version makes its own merge the release: correct tag, correct
+tree, but no CHANGELOG entry and no bump PR, so leave the version to the bump job.
+
+If a Release was created but binaries are missing (dispatch failed, build failed), re-run the binary
+workflow manually:
 
 ```bash
 gh workflow run release-binaries.yml --ref v0.7.0 -f tag=v0.7.0
@@ -493,9 +522,10 @@ gh workflow run release-binaries.yml --ref v0.7.0 -f tag=v0.7.0
 The `--clobber` upload step handles re-publishing without needing to delete the existing Release.
 **Never roll back a published Release** — fix forward with the next semantic-release-worthy commit.
 
-**Cutting an ad-hoc release** (bypassing semantic-release): bump the version in `package.json`,
-update `CHANGELOG.md`, then `git tag vX.Y.Z && git push origin vX.Y.Z`. `release-binaries.yml` fires
-from the tag push, creates a new Release with stub notes, and uploads binaries.
+**Cutting an ad-hoc release** (bypassing semantic-release): bump the version in `package.json` (the
+tag's tree must hold the version it names, as every automated tag now does), update `CHANGELOG.md`,
+then `git tag vX.Y.Z && git push origin vX.Y.Z`. `release-binaries.yml` fires from the tag push,
+creates a new Release with stub notes, and uploads binaries.
 
 For end-user release semantics (Conventional Commit cheat sheet), see `CONTRIBUTING.md` → Release
 Process.
