@@ -119,16 +119,19 @@ describe('ErgodicityResultAdapter constraintLevel', () => {
     );
   });
 
-  it('does not report a full option space when it measured nothing', () => {
-    // `optionVelocity || 1.0` reported maximum optionality exactly when the
-    // measure read zero — and it reads zero for thirty-one of the thirty-two
-    // techniques, since only SCAMPER reports options at all. Reverting to the
-    // `||` form passed the whole suite before this assertion existed.
+  it('reports no option space at all when it measured nothing', () => {
+    // `optionVelocity || 1.0` once reported maximum optionality exactly when
+    // the measure read zero, and then `?? 0` published a hard zero — on
+    // thirty-one of the thirty-two techniques, since only SCAMPER records
+    // options. A zero reads as "no room left"; absence reads as "not
+    // measured", which is the truth (#414). Break: `?? 0` in the velocity.
     const manager = new PathMemoryManager();
     think(manager, 1);
     const pathMemory = manager.getPathMemory();
 
-    expect(adapter.adapt(managerResult(pathMemory), 1, pathMemory).metrics.optionSpaceSize).toBe(0);
+    expect(
+      adapter.adapt(managerResult(pathMemory), 1, pathMemory).metrics.optionSpaceSize
+    ).toBeUndefined();
   });
 
   it('reports an absent risk level as absent, not as the middle of the scale', () => {

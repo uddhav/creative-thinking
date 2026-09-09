@@ -501,6 +501,15 @@ The server now tracks path dependencies and non-ergodic effects in creative thin
   rationale is empty. So read `currentFlexibility` as path shape plus what you formally declared —
   never as a reading on what your decisions actually were.
 
+  `ergodicityMetrics.optionSpaceSize` is a signed option velocity over the last five recorded steps:
+  options opened minus options closed, divided by the window length, then scaled by
+  `max(0.5, 1 − 0.01 × steps so far)`. It is **present only while one of those five steps recorded
+  an option**, which only SCAMPER with an action does (`substitute`, `combine`, `put_to_other_use`,
+  `reverse`, `parameterize`, `eliminate`; `adapt` and `modify` record nothing): so it is absent on a
+  session that never ran one, present (0 included: `substitute` opens two and closes two) on the
+  SCAMPER step and the four steps after it, and absent again once that step leaves the window.
+  Absent means "not measured"; a zero would read as "no room left".
+
 - **Absorbing Barrier Detection** - Warns about approaching irreversible states like:
   - Cognitive lock-in (stuck in one way of thinking)
   - Analysis paralysis (overthinking preventing action)

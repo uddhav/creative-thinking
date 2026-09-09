@@ -107,7 +107,17 @@ export interface FlexibilityMetrics {
   reversibilityIndex: number; // % of decisions that can be undone
   pathDivergence: number; // How far from initial state, 0-1 (saturating; <0.3 near start, 0.3-0.6 evolved, >0.6 far)
   barrierProximity: BarrierProximity[];
-  optionVelocity: number; // Rate of option creation vs. destruction
+  /**
+   * Option creation vs. destruction over the last five recorded steps:
+   * (opened minus closed) divided by the window length, signed. Undefined
+   * while no step in that window records an opened or closed option; only
+   * SCAMPER with an action does, so it is absent on a session that never ran
+   * one, present (0 included) for the SCAMPER step and the four steps after
+   * it, and absent again once that step leaves the window (#414). The
+   * "omitted when unmeasured" promise of #327 was unreachable while this was
+   * a plain number.
+   */
+  optionVelocity?: number;
   commitmentDepth: number; // Average commitment level of decisions
 }
 

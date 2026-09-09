@@ -667,7 +667,7 @@ export class PathMemoryManager {
                 warnings.push(`🚨 Approaching ${proximity.barrier.name} barrier (${Math.round(proximity.distance * 100)}% distance remaining)`);
             }
         }
-        if (this.pathMemory.currentFlexibility.optionVelocity < -1) {
+        if ((this.pathMemory.currentFlexibility.optionVelocity ?? 0) < -1) {
             warnings.push('📉 Options closing faster than opening. Seek new perspectives.');
         }
         return warnings;

@@ -125,7 +125,8 @@ describe('Path Tracking', () => {
       const flexibility = ergodicityManager.getCurrentFlexibility();
       expect(flexibility.flexibilityScore).toBe(1.0);
       expect(flexibility.reversibilityIndex).toBe(1.0);
-      expect(flexibility.optionVelocity).toBe(0);
+      // Unmeasured until an entry records an option (#414); 0 would read as measured.
+      expect(flexibility.optionVelocity).toBeUndefined();
       expect(flexibility.commitmentDepth).toBe(0);
     });
 

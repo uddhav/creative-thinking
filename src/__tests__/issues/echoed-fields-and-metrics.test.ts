@@ -197,16 +197,15 @@ describe('the response carries what the ergodicity adapter measured', () => {
     expect(metrics?.currentFlexibility).toBeGreaterThan(0);
     expect(metrics?.currentFlexibility).toBeLessThanOrEqual(1);
 
-    // `optionSpaceSize` is zero HERE — a six_hats step, and only SCAMPER steps
-    // carrying a scamperAction ever report options opened or closed, so for the
-    // other thirty-one techniques the velocity input is two empty arrays and
-    // this is exactly 0. It is NOT structurally zero everywhere: an 8-step
-    // scamper chain with actions reads 0.38-0.55 from step 5 on. (An earlier
-    // comment here claimed it was zero for scamper too — measured with a probe
-    // that had forgotten to send scamperAction, which is a measurement of the
-    // probe.) Pinning the zero on this fixture means a non-zero would be
-    // noticed, which `typeof === 'number'` would not achieve.
-    expect(metrics?.optionSpaceSize).toBe(0);
+    // `optionSpaceSize` is ABSENT here — a six_hats step, and only SCAMPER
+    // steps carrying a scamperAction ever record options opened or closed, so
+    // for the other thirty-one techniques nothing was measured and the field
+    // is omitted rather than published as 0 (#414; the v2.4.5 note promised
+    // this and the branch was unreachable). A SCAMPER chain with actions
+    // reports a signed number: `substitute` measures 0 (two opened, two
+    // closed), `eliminate` a negative. Pinning absence on this fixture means
+    // a published zero would be noticed.
+    expect(metrics?.optionSpaceSize).toBeUndefined();
     // A line here read `expect(x).toBe(data.flexibilityScore ?? x)`, and
     // `flexibilityScore` is withheld above 0.7 — the next test asserts it is
     // undefined on step 1 — so the expected value collapsed to the actual one.
