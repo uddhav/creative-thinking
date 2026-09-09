@@ -8,6 +8,7 @@
 import type { RiskEngagementMetrics, DismissalPattern } from './riskDismissalTracker.js';
 import type { SessionData } from '../types/index.js';
 import { adaptiveRiskAssessment } from './AdaptiveRiskAssessment.js';
+import { ruinVerdictIsHighRisk, type RuinRiskAssessment } from './prompts.js';
 import { matchesWord, matchesAnyWord } from './wordMatch.js';
 
 /**
@@ -231,7 +232,10 @@ This is not procedural. Your pattern indicates dangerous overconfidence in the f
         if ('isIrreversible' in assessment && assessment.isIrreversible) {
           risks.push('Irreversible action identified');
         }
-        if ('survivabilityThreatened' in assessment && assessment.survivabilityThreatened) {
+        if (
+          'survivabilityThreatened' in assessment &&
+          ruinVerdictIsHighRisk(assessment as unknown as RuinRiskAssessment)
+        ) {
           risks.push('Survival threat acknowledged');
         }
       }

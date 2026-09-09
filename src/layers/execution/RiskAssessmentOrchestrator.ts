@@ -288,9 +288,14 @@ export class RiskAssessmentOrchestrator {
       };
     }
 
-    // Phase 1: Context assessment (fresh each time)
-    const contextResponse = `This problem involves ${input.problem}. The user is considering: ${input.output}`;
-    const domainAssessment = this.riskDiscovery.processDomainAssessment(contextResponse);
+    // Phase 1: Context assessment, from the problem statement. It used to run
+    // over "This problem involves <problem>. The user is considering: <output>",
+    // and the extractor's greedy `about|dealing with` patterns then took a
+    // 50-character mid-word slice of whatever step prose said "about" first,
+    // and stored it as the session's domain; the prefix itself landed in
+    // `topics` as "This problem" and "The user" (#413). A domain is a property
+    // of the problem, so the problem is what it reads.
+    const domainAssessment = this.riskDiscovery.processDomainAssessment(input.problem);
 
     // Store in session for this specific context
     session.riskDiscoveryData.domainAssessment = domainAssessment;

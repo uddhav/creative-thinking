@@ -280,8 +280,8 @@ describe('RuinRiskDiscovery', () => {
       const response = 'This is about personal hobbies and interests';
       const assessment = discovery.processDomainAssessment(response);
 
-      // Now extracts the actual domain description including context words
-      expect(assessment.primaryDomain).toBe('about personal hobbies and interests');
+      // The description, minus the leading preposition (#413)
+      expect(assessment.primaryDomain).toBe('personal hobbies and interests');
     });
   });
 

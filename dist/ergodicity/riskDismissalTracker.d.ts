@@ -5,7 +5,7 @@
  * behavioral escalations. Domain-agnostic - responds to engagement
  * quality, not content categories.
  */
-import type { RuinRiskAssessment } from './prompts.js';
+import { type RuinRiskAssessment } from './prompts.js';
 import type { SessionData } from '../types/index.js';
 export interface RiskEngagementMetrics {
     dismissalCount: number;

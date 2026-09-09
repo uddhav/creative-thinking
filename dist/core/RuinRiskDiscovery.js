@@ -10,19 +10,9 @@
  */
 import nlp from 'compromise';
 import { CACHE_LIMITS } from '../ergodicity/constants.js';
+import { matchesWord } from '../ergodicity/wordMatch.js';
 // Type assertion for the nlp library
 const nlpTyped = nlp;
-/**
- * Risk severity levels based on generic characteristics
- */
-export var RiskSeverity;
-(function (RiskSeverity) {
-    RiskSeverity["LOW"] = "low";
-    RiskSeverity["MEDIUM"] = "medium";
-    RiskSeverity["HIGH"] = "high";
-    RiskSeverity["CRITICAL"] = "critical";
-    RiskSeverity["CATASTROPHIC"] = "catastrophic";
-})(RiskSeverity || (RiskSeverity = {}));
 /**
  * Main discovery framework that guides LLMs through risk identification
  */
@@ -108,11 +98,10 @@ export class RuinRiskDiscovery {
             // All test inputs can use the same cached result
             cacheKey = 'test_input_pattern';
         }
-        else if (response.length <= 50) {
-            cacheKey = response;
-        }
         else {
-            cacheKey = response.slice(0, 200);
+            // The whole string: a 200-character prefix made two problems that share
+            // one collide, and the assessment is cheap enough not to need it.
+            cacheKey = response;
         }
         const cached = this.domainAssessmentCache.get(cacheKey);
         if (cached) {
@@ -271,7 +260,9 @@ export class RuinRiskDiscovery {
         const importantNouns = nouns.filter(n => n.length > 3 &&
             !['thing', 'things', 'something', 'anything', 'everything'].includes(n.toLowerCase()));
         topics.push(...importantNouns.slice(0, 10)); // Top 10 important nouns
-        return [...new Set(topics)];
+        // compromise keeps the surrounding punctuation ("13 nights)", "Japan.").
+        const trimmed = topics.map(t => t.replace(/^[^\w]+|[^\w]+$/g, '')).filter(Boolean);
+        return [...new Set(trimmed)];
     }
     /**
      * Extract action verbs from NLP document
@@ -521,6 +512,10 @@ export class RuinRiskDiscovery {
         // This includes: . * + ? ^ $ { } ( ) | [ ] \
         return cleaned.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
+    /** A leading article or preposition is not part of a domain. */
+    static stripLeadIn(text) {
+        return text.replace(/^(?:a|an|the|about|with|of)\s+/i, '');
+    }
     /**
      * Extract context descriptor from LLM's response - completely open-ended
      */
@@ -528,19 +523,24 @@ export class RuinRiskDiscovery {
         // Don't try to extract a "domain" - instead extract a context descriptor
         // This is whatever the LLM describes the situation as
         // Look for how the LLM describes the situation
+        // Every capture is lazy and stops at a boundary: punctuation, a clause
+        // word, or the end. The last three used to be greedy with no terminator,
+        // which is a 50-character cut wherever it falls, mid-word included (#413).
+        const boundary = '(?=[.,;:!?\\n]|\\s+(?:decisions?|that|which|involving)\\b|$)';
         const contextPatterns = [
             /(?:domain|area|field):\s*([^.!?\n]+)/i, // Explicit domain declaration
-            /this (?:is|involves?) (?:a |an |the )?([\w\s]{2,50}?)(?:\s+decision|\s+that|\s+involving|$)/i,
-            /dealing with ([\w\s]{2,50})/i,
-            /about ([\w\s]{2,50})/i,
-            /considering ([\w\s]{2,50})/i,
+            new RegExp(`this (?:is|involves?) (?:a |an |the )?([\\w\\s]{2,50}?)${boundary}`, 'i'),
+            new RegExp(`dealing with ([\\w\\s]{2,50}?)${boundary}`, 'i'),
+            new RegExp(`about ([\\w\\s]{2,50}?)${boundary}`, 'i'),
+            new RegExp(`considering ([\\w\\s]{2,50}?)${boundary}`, 'i'),
         ];
         try {
             for (const pattern of contextPatterns) {
                 const match = response.match(pattern);
                 if (match && match[1]) {
-                    // Keep the full description without trying to categorize
-                    const context = match[1].trim();
+                    // Keep the description, minus a leading article or preposition
+                    // ("about personal hobbies" is a domain of personal hobbies).
+                    const context = RuinRiskDiscovery.stripLeadIn(match[1].trim());
                     if (context && context.length < 100) {
                         return context; // Return exactly what the LLM said, no categorization
                     }
@@ -558,13 +558,15 @@ export class RuinRiskDiscovery {
             const doc = nlpDoc && firstSentence === response ? nlpDoc : nlpTyped(firstSentence);
             const topics = doc.topics ? doc.topics().out('array') : [];
             if (topics.length > 0) {
-                return topics[0].toLowerCase();
+                return RuinRiskDiscovery.stripLeadIn(topics[0].toLowerCase());
             }
             // Ultimate fallback - extract the main noun phrase
             const nouns = doc.nouns ? doc.nouns().out('array') : [];
             const significantNoun = nouns.find(n => n.length > 4 &&
                 !['this', 'that', 'problem', 'issue', 'matter', 'question', 'decision'].includes(n.toLowerCase()));
-            return significantNoun ? significantNoun.toLowerCase() : 'unspecified';
+            return significantNoun
+                ? RuinRiskDiscovery.stripLeadIn(significantNoun.toLowerCase())
+                : 'unspecified';
         }
         catch (error) {
             console.error('Failed to extract domain from response:', error);
@@ -577,17 +579,20 @@ export class RuinRiskDiscovery {
     detectUndoableActions(response, nlpAnalysis) {
         const lower = response.toLowerCase();
         // Check for explicit irreversibility mentions
+        // Whole words, and no bare `final`: with the problem as the input,
+        // "finalize the vendor selection" is not an irreversible action (#413).
         const irreversiblePatterns = [
             'cannot be undone',
             'cannot be reversed',
             'irreversible',
+            'irreversibility',
             'permanent',
+            'permanently',
             'no going back',
-            'final',
             'one-way',
             'point of no return',
         ];
-        const hasIrreversible = irreversiblePatterns.some(pattern => lower.includes(pattern));
+        const hasIrreversible = irreversiblePatterns.some(pattern => matchesWord(lower, pattern));
         // Check constraints for irreversibility
         const irreversibleConstraints = nlpAnalysis.constraints.some(c => c.toLowerCase().includes('cannot') &&
             (c.toLowerCase().includes('undo') || c.toLowerCase().includes('reverse')));
@@ -597,39 +602,27 @@ export class RuinRiskDiscovery {
      * Assess time pressure from temporal expressions and urgency language
      */
     assessTimePressure(response, temporalExpressions) {
-        const lower = response.toLowerCase();
-        const allTemporal = temporalExpressions.join(' ').toLowerCase();
+        // Deadline language only, as whole words. The temporal expressions the
+        // NLP pass found used to be scanned too, so any duration or bare temporal
+        // noun ("13 days", "long stretches of the day", "a two-week trip", "next
+        // month") read as a deadline of the matching tier (#413). A duration is
+        // not a deadline; the phrases below are.
+        void temporalExpressions;
+        const has = (phrase) => matchesWord(response, phrase);
         // Critical pressure indicators
-        if (lower.includes('immediately') ||
-            lower.includes('right now') ||
-            lower.includes('urgent') ||
-            lower.includes('emergency') ||
-            (allTemporal.includes('hour') &&
-                !lower.includes('48 hours') &&
-                !lower.includes('24 hours')) ||
-            allTemporal.includes('minute')) {
+        if (has('immediately') || has('right now') || has('urgent') || has('emergency')) {
             return 'critical';
         }
         // High pressure
-        if (lower.includes('today') ||
-            lower.includes('tomorrow') ||
-            lower.includes('24 hours') ||
-            lower.includes('48 hours') ||
-            lower.includes('deadline') ||
-            allTemporal.includes('day')) {
+        if (has('today') || has('tomorrow') || has('24 hours') || has('48 hours') || has('deadline')) {
             return 'high';
         }
         // Medium pressure
-        if (lower.includes('this week') ||
-            lower.includes('next week') ||
-            lower.includes('soon') ||
-            allTemporal.includes('week')) {
+        if (has('this week') || has('next week') || has('soon')) {
             return 'medium';
         }
         // Low pressure
-        if (lower.includes('this month') ||
-            lower.includes('eventually') ||
-            allTemporal.includes('month')) {
+        if (has('this month') || has('eventually')) {
             return 'low';
         }
         return 'none';
@@ -696,20 +689,21 @@ export class RuinRiskDiscovery {
      * Assess uncertainty level from language patterns
      */
     assessUncertainty(response) {
-        const lower = response.toLowerCase();
+        // Whole words: "certain" inside "uncertain" and "clear" inside "unclear"
+        // used to count for the low side, so "uncertain … uncertain" read as
+        // certain (#413). `will` is a modal, not a certainty marker, and is gone.
         const uncertaintyIndicators = {
             high: ['unknown', 'unpredictable', 'uncertain', 'unclear', 'ambiguous', 'might', 'could'],
-            medium: ['probably', 'likely', 'possibly', 'may', 'perhaps'],
-            low: ['certain', 'definite', 'clear', 'obvious', 'guaranteed', 'will'],
+            low: ['certain', 'definite', 'clear', 'obvious', 'guaranteed'],
         };
         let highCount = 0;
         let lowCount = 0;
         uncertaintyIndicators.high.forEach(indicator => {
-            if (lower.includes(indicator))
+            if (matchesWord(response, indicator))
                 highCount++;
         });
         uncertaintyIndicators.low.forEach(indicator => {
-            if (lower.includes(indicator))
+            if (matchesWord(response, indicator))
                 lowCount++;
         });
         if (highCount > lowCount)
@@ -1039,41 +1033,6 @@ Consider revising your recommendation to respect these discovered limits.`;
     getSessionDiscovery(sessionData) {
         // Return discovery from current session, not from domain cache
         return sessionData?.riskDiscoveryData?.risks;
-    }
-    /**
-     * Assess risk severity based on generic characteristics
-     */
-    assessRiskSeverity(characteristics) {
-        let severityScore = 0;
-        // Each characteristic contributes to overall risk
-        if (characteristics.hasIrreversibleActions)
-            severityScore += 3;
-        if (characteristics.hasAbsorbingBarriers)
-            severityScore += 3;
-        if (!characteristics.allowsRecovery)
-            severityScore += 2;
-        if (characteristics.timeHorizon === 'immediate')
-            severityScore += 2;
-        if (characteristics.hasNetworkEffects)
-            severityScore += 1;
-        if (characteristics.hasTimeDecay)
-            severityScore += 1;
-        if (characteristics.requiresExpertise)
-            severityScore += 1;
-        if (characteristics.hasRegulation)
-            severityScore += 2;
-        if (characteristics.hasSocialConsequences)
-            severityScore += 1;
-        // Map score to severity level
-        if (severityScore >= 12)
-            return RiskSeverity.CATASTROPHIC;
-        if (severityScore >= 9)
-            return RiskSeverity.CRITICAL;
-        if (severityScore >= 6)
-            return RiskSeverity.HIGH;
-        if (severityScore >= 3)
-            return RiskSeverity.MEDIUM;
-        return RiskSeverity.LOW;
     }
     /**
      * Generate adaptive questions based on discovered characteristics

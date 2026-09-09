@@ -148,7 +148,8 @@ describe('Risk Dismissal Tracking', () => {
         tracker.trackAssessment(
           {
             confidence: 0.1,
-            survivabilityThreatened: true, // High risk
+            survivabilityThreatened: true,
+            isIrreversible: true, // survival language alone is a note; a risk needs a second signal (#412)
           } as RuinRiskAssessment,
           sessionData,
           `Action ${i}`

@@ -4,6 +4,7 @@
  */
 
 import type { LateralTechnique } from '../types/index.js';
+import { matchesAnyWord } from './wordMatch.js';
 
 export interface ErgodicityPrompt {
   trigger: 'always' | 'high-risk' | 'irreversible';
@@ -255,37 +256,116 @@ export function getErgodicityGuidance(technique: LateralTechnique): string {
 /**
  * Assess ruin risk from user input
  */
+/** Irreversibility, as whole words; `matchesWord` adds only -s/-es, so inflections are listed. */
+const IRREVERSIBLE_KEYWORDS: readonly string[] = [
+  'irreversible',
+  'irreversibly',
+  'irreversibility',
+  'permanent',
+  'permanently',
+  'permanence',
+  'cannot undo',
+  'cannot be undone',
+  "can't undo",
+  "can't be undone",
+  "can't recover",
+  'no going back',
+  'one-way',
+  'one way door',
+];
+
+/** Survival threats, as whole words. Bare `final` is gone: "the final hat" matched it. */
+const SURVIVAL_KEYWORDS: readonly string[] = [
+  'bankrupt',
+  'bankruptcy',
+  'bankruptcies',
+  'bankrupted',
+  'bankrupting',
+  'die',
+  'died',
+  'dying',
+  'fatal',
+  'fatally',
+  'fatality',
+  'fatalities',
+  'survival',
+  'survive',
+  'ruin',
+  'ruined',
+  'ruining',
+  'ruinous',
+  'lose everything',
+  'game over',
+  'existential',
+  'existentially',
+];
+
+/**
+ * The server's own sentences, which a step may quote back: the ruin prompt's
+ * questions and the HIGH RISK advice. Removed before scanning so an echo
+ * cannot be its own evidence.
+ */
+const SERVER_PHRASES: readonly string[] = [
+  'can this decision be undone',
+  'does failure threaten survival',
+  'survival impact',
+  'survival constraints',
+  'survivability threatened',
+  'ruin risk assessment',
+];
+
+/**
+ * The second signal HIGH RISK needs beside survival language: the set
+ * riskDismissalTracker already calls "actual risks". `limited` impact
+ * (family, team) and `low`/`medium` time pressure do not count, or "ruin us
+ * for the family" on a family trip is HIGH RISK.
+ */
+function hasSecondRuinSignal(features: {
+  isIrreversible: boolean;
+  timePressure: 'none' | 'low' | 'medium' | 'high' | 'critical';
+  impactRadius: 'self' | 'limited' | 'broad' | 'systemic';
+}): boolean {
+  return (
+    features.isIrreversible ||
+    features.timePressure === 'high' ||
+    features.timePressure === 'critical' ||
+    features.impactRadius === 'broad' ||
+    features.impactRadius === 'systemic'
+  );
+}
+
+/** True when the assessment carries survival language and a second signal. */
+export function ruinVerdictIsHighRisk(assessment: RuinRiskAssessment): boolean {
+  return (
+    assessment.survivabilityThreatened &&
+    hasSecondRuinSignal({
+      isIrreversible: assessment.isIrreversible,
+      timePressure: assessment.riskFeatures?.timePressure ?? 'none',
+      impactRadius: assessment.riskFeatures?.impactRadius ?? 'self',
+    })
+  );
+}
+
 export function assessRuinRisk(
   problem: string,
   technique: LateralTechnique,
   userResponse: string
 ): RuinRiskAssessment {
-  const lowerResponse = userResponse.toLowerCase();
+  // The server's own prompt and advice contain "survival", "undone" and
+  // "survival constraints"; a step that quotes them back must not trip the
+  // scan it is answering. Stripped before either scan runs (#412).
+  const scanned = SERVER_PHRASES.reduce(
+    (text, phrase) => text.replace(new RegExp(phrase, 'gi'), ' '),
+    userResponse
+  );
+  const lowerResponse = scanned.toLowerCase();
 
-  // Check for explicit irreversibility mentions
-  const irreversibleKeywords = [
-    'irreversible',
-    'permanent',
-    'cannot undo',
-    "can't recover",
-    'no going back',
-    'one-way',
-    'final',
-  ];
-  const isIrreversible = irreversibleKeywords.some(keyword => lowerResponse.includes(keyword));
-
-  // Check for survival threats
-  const survivalKeywords = [
-    'bankrupt',
-    'die',
-    'fatal',
-    'survival',
-    'ruin',
-    'lose everything',
-    'game over',
-    'existential',
-  ];
-  const survivabilityThreatened = survivalKeywords.some(keyword => lowerResponse.includes(keyword));
+  // Whole words, with the inflections the substring scan covered by accident
+  // listed. `.includes` matched "die" inside studied and dietary, "final"
+  // inside "the final hat", and set the flag on the retest's family trip
+  // four times (#412).
+  const isIrreversible = matchesAnyWord(scanned, IRREVERSIBLE_KEYWORDS);
+  const survivabilityThreatened = matchesAnyWord(scanned, SURVIVAL_KEYWORDS);
 
   // Determine ensemble vs time average
   let ensembleVsTimeAverage: 'ensemble' | 'time' | 'both' = 'time';
@@ -303,35 +383,42 @@ export function assessRuinRisk(
   const domain = 'general'; // Always use general, let specific risks emerge from analysis
 
   // Extract risk features for more nuanced assessment
-  const hasUndoableActions = irreversibleKeywords.some(keyword => lowerResponse.includes(keyword));
+  const hasUndoableActions = isIrreversible;
+
+  // The features are the second signal HIGH RISK needs, so they match whole
+  // words too: "organizational chart" is not a broad impact.
+  const has = (word: string) => matchesAnyWord(scanned, [word]);
 
   let timePressure: 'none' | 'low' | 'medium' | 'high' | 'critical' = 'none';
-  if (lowerResponse.includes('urgent') || lowerResponse.includes('deadline')) timePressure = 'high';
-  else if (lowerResponse.includes('soon') || lowerResponse.includes('quickly'))
-    timePressure = 'medium';
-  else if (lowerResponse.includes('eventually') || lowerResponse.includes('long term'))
-    timePressure = 'low';
+  if (has('urgent') || has('deadline')) timePressure = 'high';
+  else if (has('soon') || has('quickly')) timePressure = 'medium';
+  else if (has('eventually') || has('long term')) timePressure = 'low';
 
-  const expertiseGap =
-    lowerResponse.includes('expert') || lowerResponse.includes('professional') ? 0.7 : 0.3;
+  const expertiseGap = has('expert') || has('professional') ? 0.7 : 0.3;
 
   let impactRadius: 'self' | 'limited' | 'broad' | 'systemic' = 'self';
-  if (lowerResponse.includes('systemic') || lowerResponse.includes('society'))
-    impactRadius = 'systemic';
-  else if (lowerResponse.includes('community') || lowerResponse.includes('organization'))
-    impactRadius = 'broad';
-  else if (lowerResponse.includes('family') || lowerResponse.includes('team'))
-    impactRadius = 'limited';
+  if (has('systemic') || has('society')) impactRadius = 'systemic';
+  else if (has('community') || has('organization')) impactRadius = 'broad';
+  else if (has('family') || has('team')) impactRadius = 'limited';
 
   const uncertaintyLevel =
     lowerResponse.includes('uncertain') || lowerResponse.includes('unknown') ? 'high' : 'medium';
 
-  // Generate recommendation based on risk features
+  // Generate recommendation based on risk features. HIGH RISK needs a second
+  // signal beside survival language: one word alone used to attach the
+  // barbell advice, at a confidence of 0.3 (#412).
+  const secondSignal = hasSecondRuinSignal({ isIrreversible, timePressure, impactRadius });
   let recommendation = 'Proceed with standard creative thinking process.';
-  if (survivabilityThreatened) {
+  if (survivabilityThreatened && secondSignal) {
     recommendation =
       '⚠️ HIGH RISK: Add strict survival constraints. Consider barbell strategy (90% safe, 10% speculative).';
     // Also add ensemble-specific advice if relevant
+    if (ensembleVsTimeAverage === 'ensemble' || ensembleVsTimeAverage === 'both') {
+      recommendation += ' Consider what happens to many attempts, not just your single path.';
+    }
+  } else if (survivabilityThreatened) {
+    recommendation =
+      '⚠️ Survival language present, no second signal (irreversibility, time pressure, or impact beyond the immediate circle): a note, not a verdict. Say what would actually be lost.';
     if (ensembleVsTimeAverage === 'ensemble' || ensembleVsTimeAverage === 'both') {
       recommendation += ' Consider what happens to many attempts, not just your single path.';
     }
@@ -410,8 +497,10 @@ export function generateSurvivalConstraints(assessment: RuinRiskAssessment): str
     }
   }
 
-  // Add specific constraints for high-risk situations
-  if (assessment.survivabilityThreatened) {
+  // Add specific constraints for high-risk situations: the same two-signal
+  // predicate as the HIGH RISK recommendation, or one word would still ship
+  // the barbell constraints (#412).
+  if (ruinVerdictIsHighRisk(assessment)) {
     constraints.push('Ensure survival before optimization');
     constraints.push('Apply barbell strategy (90% safe, 10% speculative)');
   }

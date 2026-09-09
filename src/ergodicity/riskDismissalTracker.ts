@@ -6,7 +6,7 @@
  * quality, not content categories.
  */
 
-import type { RuinRiskAssessment } from './prompts.js';
+import { ruinVerdictIsHighRisk, type RuinRiskAssessment } from './prompts.js';
 import type { SessionData } from '../types/index.js';
 import { matchesAnyWord } from './wordMatch.js';
 
@@ -55,9 +55,11 @@ export class RiskDismissalTracker {
 
     // Extract risk indicators first to determine if this is actually a risky situation
     const newIndicators = this.extractRiskIndicators(assessment, proposedAction);
+    // Survival language alone is a note, not a risk: the verdict needs the
+    // second signal here as it does for the recommendation (#412).
     const hasActualRisks =
       assessment.isIrreversible ||
-      assessment.survivabilityThreatened ||
+      ruinVerdictIsHighRisk(assessment) ||
       newIndicators.length > 0 ||
       (assessment.riskFeatures &&
         (assessment.riskFeatures.timePressure === 'high' ||
@@ -313,7 +315,7 @@ export class RiskDismissalTracker {
       indicators.push('irreversibility');
     }
 
-    if (assessment.survivabilityThreatened) {
+    if (ruinVerdictIsHighRisk(assessment)) {
       indicators.push('survival threat');
     }
 

@@ -5,6 +5,7 @@
  * not domain categories. References the LLM's own discoveries.
  */
 import { adaptiveRiskAssessment } from './AdaptiveRiskAssessment.js';
+import { ruinVerdictIsHighRisk } from './prompts.js';
 import { matchesWord, matchesAnyWord } from './wordMatch.js';
 /**
  * Language that reads as staking everything, used to pick the action an
@@ -164,7 +165,8 @@ This is not procedural. Your pattern indicates dangerous overconfidence in the f
                 if ('isIrreversible' in assessment && assessment.isIrreversible) {
                     risks.push('Irreversible action identified');
                 }
-                if ('survivabilityThreatened' in assessment && assessment.survivabilityThreatened) {
+                if ('survivabilityThreatened' in assessment &&
+                    ruinVerdictIsHighRisk(assessment)) {
                     risks.push('Survival threat acknowledged');
                 }
             }
