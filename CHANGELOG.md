@@ -1,3 +1,9 @@
+## [v2.10.2] - 2026-09-09
+
+### Changes from PR #440
+
+- fix: derive the risk domain from the problem, and make the ruin verdict need two signals
+
 ## [v2.10.1] - 2026-09-09
 
 ### Changes from PR #438
