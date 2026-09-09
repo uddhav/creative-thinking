@@ -1,6 +1,12 @@
 name: PR Version Bump
 
-# Runs AFTER a release tag exists, dispatched by semantic-release.yml.
+# Proposes the version the next release will carry, dispatched by
+# semantic-release.yml from a dry run BEFORE any tag exists. Merging the PR
+# it opens is what cuts the tag: the next push to main sees package.json equal
+# to the computed version and semantic-release tags that merge, so the tagged
+# tree holds its own version. (Until 2026-09 the tag came first and this job
+# recorded it one merge later, which left every tag's tree one release
+# behind.)
 #
 # It used to run on `pull_request: closed` — the same merge that starts
 # semantic-release — and read `git describe --tags` before the new tag was
@@ -19,12 +25,17 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag to align package.json with (e.g. v2.4.5)'
+        description: 'Release tag package.json will carry (e.g. v2.4.5); the tag is cut when this PR merges'
         required: true
         type: string
+      sha:
+        description: 'Commit on main the release describes (optional; the tagged commit when dispatched after a tag)'
+        required: false
+        type: string
+        default: ''
 
-# One bump job at a time, and never cancelled: each run records a tag that has
-# already been published, so a cancelled run loses that record permanently.
+# One bump job at a time, and never cancelled: a cancelled run leaves the
+# release unproposed until the next push to main proposes it again.
 concurrency:
   group: version-bump
   cancel-in-progress: false
@@ -64,12 +75,14 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      # Which PR produced the tagged commit.
+      # Which PR produced the commit this release describes.
       #
       # The old trigger handed this over in `github.event.pull_request`; a
-      # dispatch does not, so it is recovered from the commit the tag points
-      # at. Used only to describe the release in the CHANGELOG and commit
-      # message — the version itself comes from the tag, so a lookup that finds
+      # dispatch does not. semantic-release.yml passes the sha of the push it
+      # decided on (the tag does not exist yet); a hand dispatch after a tag
+      # exists may pass none, and then the commit the tag points at is used.
+      # Used only to describe the release in the CHANGELOG and commit message;
+      # the version itself comes from the tag input, so a lookup that finds
       # nothing degrades to a less specific entry rather than a wrong version.
       #
       # PR titles are untrusted text and reach the shell through `env:` in the
@@ -81,9 +94,20 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ inputs.tag }}
+          INPUT_SHA: ${{ inputs.sha }}
         run: |
-          SHA=$(git rev-list -n 1 "$TAG")
-          echo "Tag $TAG points at $SHA"
+          if [ -n "$INPUT_SHA" ]; then
+            # Dispatch input: arbitrary text until proven a commit on this clone.
+            if ! printf '%s' "$INPUT_SHA" | grep -qE '^[0-9a-f]{40}$' || ! git cat-file -e "$INPUT_SHA^{commit}"; then
+              echo "::error::sha '$INPUT_SHA' is not a commit in this repository"
+              exit 1
+            fi
+            SHA="$INPUT_SHA"
+            echo "Release $TAG describes $SHA"
+          else
+            SHA=$(git rev-list -n 1 "$TAG")
+            echo "Tag $TAG points at $SHA"
+          fi
 
           PR_JSON=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${SHA}/pulls" \
             --jq '.[0] | {number, title}' 2>/dev/null || echo '')
@@ -113,8 +137,9 @@ jobs:
           echo "branch_name=$BRANCH_NAME" >> $GITHUB_ENV
 
       # package.json copies the dispatched tag. No arithmetic, no second
-      # opinion, and nothing read from `git describe` — semantic-release has
-      # already decided the version and this job records it.
+      # opinion, and nothing read from `git describe` — semantic-release's dry
+      # run has already decided the version and this job proposes it; the real
+      # run tags the merge of this PR.
       #
       # The `git describe` this replaced was the whole defect: it ran while
       # semantic-release was still creating the tag, so it read the PREVIOUS
@@ -209,7 +234,7 @@ jobs:
           PR_TITLE: ${{ steps.analyze.outputs.pr_title }}
         run: |
           git add package.json package-lock.json CHANGELOG.md
-          printf 'chore(release): bump version to %s\n\nRecords the version semantic-release published as %s.\nReleased by PR #%s\n- %s\n' \
+          printf 'chore(release): bump version to %s\n\nCarries the version semantic-release will tag as %s when this merges.\nReleased by PR #%s\n- %s\n' \
             "$NEW_VERSION" "$TAG" "${PR_NUMBER:-unknown}" "${PR_TITLE:-title unavailable}" > /tmp/bump-commit-msg
           git commit -F /tmp/bump-commit-msg
 
@@ -232,10 +257,10 @@ jobs:
           # the command line this step is trying to keep them out of.
           {
             printf '## Automated Version Bump\n\n'
-            printf 'Records the version semantic-release published as **%s**.\n\n' "$TAG"
-            printf 'The tag is the decision; this PR only writes it down. It is dispatched\n'
-            printf 'by semantic-release AFTER tagging, so it cannot propose a version that\n'
-            printf 'does not exist yet.\n\n'
+            printf 'Carries the version semantic-release will tag as **%s** when this merges.\n\n' "$TAG"
+            printf 'The version is what a semantic-release dry run computed from the commits\n'
+            printf 'since the last tag; this PR writes it into package.json first, and the tag\n'
+            printf 'is cut on this merge, so the tagged tree holds its own version.\n\n'
             printf '### Version Change\n'
             printf -- '- **New Version**: %s\n' "$NEW_VERSION"
             printf -- '- **Release Tag**: %s\n\n' "$TAG"
@@ -301,6 +326,6 @@ jobs:
                 # stale PRs are closed, which is the intent in that case.
                 if [ "$CURRENT_HEAD" != "${branch_name:-}" ]; then
                   gh pr close "$num" --delete-branch \
-                    --comment "Superseded by the release of $TAG. This PR names a version that is no longer the newest tag; merging it could move the version backwards." || true
+                    --comment "Superseded by the proposal of $TAG. This PR names a version that is no longer the one the next release will carry; merging it could move the version backwards." || true
                 fi
               done
