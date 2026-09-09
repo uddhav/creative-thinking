@@ -102,7 +102,7 @@ describe('Session Persistence - Simple Integration', () => {
       expect(sessionData.technique).toBe('random_entry');
       expect(sessionData.problem).toBe(problem);
       expect(sessionData.history).toHaveLength(1);
-      expect(sessionData.history[0].input.randomStimulus).toBe('Butterfly');
+      expect(sessionData.history[0].randomStimulus).toBe('Butterfly');
     });
 
     it('should create separate files for different sessions', async () => {
@@ -230,7 +230,7 @@ describe('Session Persistence - Simple Integration', () => {
       const savedContent2 = fs.readFileSync(`${sessionsPath}/${sessionFile}`, 'utf-8');
       const savedData2 = safeJsonParse(savedContent2);
       expect(savedData2.data.history).toHaveLength(2);
-      expect(savedData2.data.history[1].input.scamperAction).toBe('combine');
+      expect(savedData2.data.history[1].scamperAction).toBe('combine');
     });
 
     it('should preserve session state across server restarts', async () => {
@@ -292,9 +292,9 @@ describe('Session Persistence - Simple Integration', () => {
       expect(sessionData.technique).toBe('six_hats');
       expect(sessionData.problem).toBe(problem);
       expect(sessionData.history).toHaveLength(2);
-      expect(sessionData.history[0].input.hatColor).toBe('blue');
-      expect(sessionData.history[1].input.hatColor).toBe('white');
-      expect(sessionData.history[1].input.risks).toContain('Data uncertainty');
+      expect(sessionData.history[0].hatColor).toBe('blue');
+      expect(sessionData.history[1].hatColor).toBe('white');
+      expect(sessionData.history[1].risks).toContain('Data uncertainty');
     });
   });
 

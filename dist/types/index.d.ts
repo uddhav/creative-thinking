@@ -77,6 +77,12 @@ export interface SessionData {
     tags?: string[];
     name?: string;
     pathMemory?: PathMemory;
+    /**
+     * Per-process. Never persisted (the session file carries `pathMemory`, from
+     * which load rebuilds the manager) and never exported. Its subsystems'
+     * learning slots have no production writer: the escape protocols have no
+     * caller and the option engine used per step is a fresh one (#416).
+     */
     ergodicityManager?: ErgodicityManager;
     earlyWarningState?: EarlyWarningState;
     escapeRecommendation?: EscapeProtocol;
@@ -509,8 +515,11 @@ export interface ThinkingOperationData {
     };
     ruinAssessment?: {
         required: boolean;
-        prompt: string;
+        /** Present on the live response; stripped from the history entry (#415). */
+        prompt?: string;
         survivalConstraints: string[];
+        assessment?: unknown;
+        escalation?: unknown;
     };
     paradox?: string;
     contradictions?: string[];

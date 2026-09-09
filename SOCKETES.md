@@ -379,13 +379,17 @@ filter, the way the completion block does.
 The rule is: **this step's verdicts stay; echoes and cumulative re-sends drop.** Two kinds of field
 go. Echoes of your own input — `problem`, `output`, technique field values — are replaced by
 receipts: `fieldsRecorded` carries the names of the technique fields the server read, and the
-session `export` returns everything whole. Cumulative re-sends — fields that repeat on every step
-what an earlier step already delivered — are cut to this step's share: `newInsights` carries only
-this step's additions (full mode's `insights` stays the cumulative list), and `modificationHistory`
-is dropped outright. That last one is not an echo: the server rebuilds it from history every step
-and discards anything you send. It is dropped because it re-sends every prior scamper step's
-`pathImpact`, each of which you received on the step that produced it. The final step's completion
-summary is always full.
+session `export` returns the live session whole, minus the per-process ergodicity manager, which is
+never persisted or exported (load rebuilds it from `pathMemory`; its subsystems' learning slots have
+no production writer, #416), and minus the server's own prompt text on history entries
+(`ergodicityCheck`, `ruinAssessment.prompt`), which is written for the live response only (#415);
+the export is not the session file either (see Session files below). Cumulative re-sends — fields
+that repeat on every step what an earlier step already delivered — are cut to this step's share:
+`newInsights` carries only this step's additions (full mode's `insights` stays the cumulative list),
+and `modificationHistory` is dropped outright. That last one is not an echo: the server rebuilds it
+from history every step and discards anything you send. It is dropped because it re-sends every
+prior scamper step's `pathImpact`, each of which you received on the step that produced it. The
+final step's completion summary is always full.
 
 > Deprecation notice: `minimal` is the intended future default. The flip will ship as a breaking
 > (major) release; until then nothing changes for callers that never pass the flag.
@@ -449,7 +453,12 @@ find ~/.creative-thinking/plans -name '*.json' -mtime +30 -delete
 
 ### Session files (`sessions/<sessionId>.json`)
 
-Wrapped envelope:
+Wrapped envelope. Each history entry is written once, flat, with `technique` at the top level; files
+whose entries carry `{ "input": …, "output": … }` wrappers (byte-identical, written before this
+shape) still load. The file is not the `export`: it adds `id`, `reflexivity` and a per-entry `step`,
+and lacks the live-only fields (`planId`, `riskDiscoveryData`, `earlyWarningState`,
+`riskEngagementMetrics`), so a session exported after a reload is smaller than the same session
+exported live.
 
 ```json
 {

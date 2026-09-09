@@ -4,6 +4,7 @@
  */
 
 import type { SessionManager } from '../core/SessionManager.js';
+import { historyInput } from '../persistence/types.js';
 import type { ResponseBuilder } from '../core/ResponseBuilder.js';
 import type {
   SessionOperationData,
@@ -141,7 +142,7 @@ export class SessionOperationsHandler {
         tags: sessionState.tags,
         name: sessionState.name,
         history: sessionState.history.map(entry => ({
-          ...entry.input,
+          ...historyInput(entry),
           timestamp: entry.timestamp,
         })) as (ThinkingOperationData & { timestamp: string })[],
       },

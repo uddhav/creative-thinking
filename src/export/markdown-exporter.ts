@@ -3,6 +3,7 @@
  */
 
 import type { SessionState, LateralThinkingInput } from '../persistence/types.js';
+import { historyInput } from '../persistence/types.js';
 import type { ExportOptions, ExportResult } from './types.js';
 import { DEFAULT_MARKDOWN_TEMPLATE } from './types.js';
 import { BaseExporter } from './base-exporter.js';
@@ -102,7 +103,7 @@ export class MarkdownExporter extends BaseExporter {
 
     session.history.forEach((entry, index) => {
       const section = this.formatHistoryEntry(
-        entry.input,
+        historyInput(entry),
         entry.timestamp,
         index + 1,
         session.technique
