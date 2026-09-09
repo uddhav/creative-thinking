@@ -111,8 +111,13 @@ export class MetricsCalculator {
     calculateOptionVelocity(pathMemory) {
         const recentWindow = 5;
         const recentEvents = pathMemory.pathHistory.slice(-recentWindow);
-        if (recentEvents.length === 0)
-            return 0;
+        // Unmeasured until some entry in the window records an option opened or
+        // closed. Two empty arrays used to divide to a hard 0, which the adapter
+        // then published as an option space of zero on thirty-one of thirty-two
+        // techniques (#414); only SCAMPER records options.
+        const measured = recentEvents.some(event => event.optionsOpened.length > 0 || event.optionsClosed.length > 0);
+        if (!measured)
+            return undefined;
         const optionsOpened = recentEvents.reduce((sum, event) => sum + event.optionsOpened.length, 0);
         const optionsClosed = recentEvents.reduce((sum, event) => sum + event.optionsClosed.length, 0);
         return (optionsOpened - optionsClosed) / recentEvents.length;
@@ -254,7 +259,9 @@ export class MetricsCalculator {
             `├─ Flexibility Score: ${this.formatPercentage(metrics.flexibilityScore)} ${this.getFlexibilityEmoji(metrics.flexibilityScore)}`,
             `├─ Reversibility: ${this.formatPercentage(metrics.reversibilityIndex)}`,
             `├─ Path Divergence: ${metrics.pathDivergence.toFixed(2)}`,
-            `├─ Option Velocity: ${metrics.optionVelocity > 0 ? '+' : ''}${metrics.optionVelocity.toFixed(1)}/step`,
+            `├─ Option Velocity: ${metrics.optionVelocity === undefined
+                ? 'unmeasured'
+                : `${metrics.optionVelocity > 0 ? '+' : ''}${metrics.optionVelocity.toFixed(1)}/step`}`,
             `└─ Commitment Depth (last ${COMMITMENT_WINDOW}): ${this.formatPercentage(metrics.commitmentDepth)}`,
         ];
         if (metrics.barrierProximity.length > 0) {

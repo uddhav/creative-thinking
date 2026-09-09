@@ -366,14 +366,15 @@ ergodicity flags, escape recommendations).
 default): keeps the step acknowledgment (`sessionId`, `technique`, `currentStep`, `totalSteps`,
 `nextStepNeeded`, `historyLength`, `techniqueProgress`, `persona` when one is active), the steering
 (`nextStepGuidance`, `sequentialThinkingSuggestion`, `completionMetadata.completionWarnings` when
-any exist), and every warning/verdict field (`ergodicityMetrics`,
-`flexibilityScore`/`flexibilityMessage`, `earlyWarningState`, `escapeRecommendation`,
-`reflexivityWarning`, `reflectionRequired`, `optionGeneration`, `ergodicityCheck`,
-`alternativeSuggestions`, `realityAssessment`, the `ruinAssessment` verdict, the
-`appliedReversibility` clamp audit, and on scamper steps `pathImpact` — the server's reversibility
-judgment about this step, with its per-step `reversible` flag). `advisoryFindings` and the autoSave
-status fields ride every verbosity mode — they attach after the filter, the way the completion block
-does.
+any exist), and every warning/verdict field (`ergodicityMetrics`, whose `optionSpaceSize` is a
+signed option velocity over the last five recorded steps, present only while one of them is a
+SCAMPER action that recorded an option, absent otherwise, `flexibilityScore`/`flexibilityMessage`,
+`earlyWarningState`, `escapeRecommendation`, `reflexivityWarning`, `reflectionRequired`,
+`optionGeneration`, `ergodicityCheck`, `alternativeSuggestions`, `realityAssessment`, the
+`ruinAssessment` verdict, the `appliedReversibility` clamp audit, and on scamper steps `pathImpact`
+— the server's reversibility judgment about this step, with its per-step `reversible` flag).
+`advisoryFindings` and the autoSave status fields ride every verbosity mode — they attach after the
+filter, the way the completion block does.
 
 The rule is: **this step's verdicts stay; echoes and cumulative re-sends drop.** Two kinds of field
 go. Echoes of your own input — `problem`, `output`, technique field values — are replaced by

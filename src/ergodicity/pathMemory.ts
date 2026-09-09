@@ -789,7 +789,7 @@ export class PathMemoryManager {
       }
     }
 
-    if (this.pathMemory.currentFlexibility.optionVelocity < -1) {
+    if ((this.pathMemory.currentFlexibility.optionVelocity ?? 0) < -1) {
       warnings.push('📉 Options closing faster than opening. Seek new perspectives.');
     }
 
