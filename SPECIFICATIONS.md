@@ -6091,7 +6091,7 @@ All outputs include:
   "mcpServers": {
     "creative-thinking": {
       "command": "npx",
-      "args": ["-y", "github:uddhav/creative-thinking"]
+      "args": ["-y", "github:uddhav/creative-thinking#semver:^2"]
     }
   }
 }
@@ -6799,7 +6799,7 @@ creative-thinking/
 
 ```bash
 # Direct execution via npx
-npx -y github:uddhav/creative-thinking
+npx -y github:uddhav/creative-thinking#semver:^2
 
 # Clone and build
 git clone https://github.com/uddhav/creative-thinking
