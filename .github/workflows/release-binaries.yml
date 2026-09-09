@@ -55,8 +55,18 @@ jobs:
       - name: Build TypeScript
         run: npm run build
 
+      # The binary cannot read package.json (its import.meta.url is the bundle
+      # entry), so the version is inlined at build time: the build:bin scripts
+      # pass --env='CREATIVE_THINKING_*' to bun, and this step sets it from the
+      # tag. Both triggers resolve it: a tag push has github.ref_name, a
+      # dispatch has inputs.tag.
       - name: Build standalone binaries for this platform
-        run: npm run ${{ matrix.script }}
+        env:
+          RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          export CREATIVE_THINKING_VERSION="${RELEASE_TAG#v}"
+          echo "Building with CREATIVE_THINKING_VERSION=$CREATIVE_THINKING_VERSION"
+          npm run ${{ matrix.script }}
 
       - name: List artifacts
         working-directory: dist/bin

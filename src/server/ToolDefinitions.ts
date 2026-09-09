@@ -201,7 +201,8 @@ export const EXECUTE_THINKING_STEP_TOOL: Tool = {
       },
       problem: {
         type: 'string',
-        description: 'REQUIRED: The problem being solved. Must match previous calls.',
+        description:
+          'Taken from the plan named by planId when omitted; if sent, must match previous calls.',
       },
       numbering: {
         type: 'string',

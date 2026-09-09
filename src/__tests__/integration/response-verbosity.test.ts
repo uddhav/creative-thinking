@@ -37,6 +37,7 @@ const MINIMAL_EXTRAS = new Set([
   'sessionComplete',
   'completed',
   'techniqueUsed',
+  'techniquesUsed',
   'insights',
   'message',
   'metrics',

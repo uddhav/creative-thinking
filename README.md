@@ -1249,6 +1249,10 @@ The server supports environment variables for advanced features:
 - `DISABLE_THOUGHT_LOGGING=true` - Disable visual output logging
 - `PERSISTENCE_TYPE=filesystem|postgres` - Choose storage backend (default: filesystem)
 - `PERSISTENCE_PATH=/path/to/sessions` - Custom session storage location (filesystem only)
+- `CREATIVE_THINKING_VERSION=<semver>` - Build-time only: the `build:bin*` scripts inline it into
+  the compiled binary (the release workflow sets it from the tag), because a binary cannot read
+  `package.json`. Under node it is normally unset; when set it overrides the `package.json` read for
+  `serverInfo.version`, `serverVersion` and `socketes --version`.
 - `PERSISTENCE_TTL_DAYS=<whole days>` - Opt-in retention: delete persisted sessions and plans whose
   last write is older, at startup and on the cleanup tick; unset means never delete
 - `DATABASE_URL=postgres://...` - PostgreSQL connection string (postgres adapter only)
