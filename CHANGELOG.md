@@ -1,3 +1,9 @@
+## [v2.10.5] - 2026-09-09
+
+### Changes from PR #448
+
+- fix: pin every documented install to the major, and rewrite the pin on a major release
+
 ## [v2.10.4] - 2026-09-09
 
 ### Changes from PR #447
