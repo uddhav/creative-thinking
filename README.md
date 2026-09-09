@@ -75,25 +75,30 @@ into the repo so `npx` can run the build directly.
 ### Global install — both bins land on PATH
 
 ```bash
-npm install -g github:uddhav/creative-thinking
+npm install -g github:uddhav/creative-thinking#semver:^2
 socketes --help            # the CLI
 creative-thinking          # starts the MCP server on stdio
 ```
+
+The `#semver:^2` suffix installs the newest release inside major 2; a new major changes the suffix
+here on its release, so a re-resolved install (`npx -y`, a re-run `npm install`) never crosses a
+breaking change on its own. In a shell with zsh's `extendedglob` set, quote the spec: `#` and `^`
+are glob operators there.
 
 ### Run from GitHub via NPX (no install)
 
 ```bash
 # MCP server (default bin)
-npx -y github:uddhav/creative-thinking
+npx -y github:uddhav/creative-thinking#semver:^2
 
 # CLI — pick the binary by name
-npx -y -p github:uddhav/creative-thinking socketes discover --problem "..."
+npx -y -p github:uddhav/creative-thinking#semver:^2 socketes discover --problem "..."
 ```
 
 ### Register with an MCP client (Claude Code shown)
 
 ```bash
-claude mcp add --transport stdio creative-thinking -- npx -y github:uddhav/creative-thinking
+claude mcp add --transport stdio creative-thinking -- npx -y github:uddhav/creative-thinking#semver:^2
 ```
 
 ### Local development
@@ -1364,7 +1369,7 @@ over stdin/stdout, designed for an MCP client to drive. Two ways to wire it up:
   "mcpServers": {
     "creative-thinking": {
       "command": "npx",
-      "args": ["-y", "github:uddhav/creative-thinking"]
+      "args": ["-y", "github:uddhav/creative-thinking#semver:^2"]
     }
   }
 }

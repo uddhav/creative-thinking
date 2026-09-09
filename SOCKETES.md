@@ -85,17 +85,17 @@ global `npm install`, C. local clone, D. standalone single-file binary.
 The fastest way to try the CLI. `npx` clones the repo's checked-in build and runs it.
 
 ```bash
-npx -y -p github:uddhav/creative-thinking socketes --help
+npx -y -p github:uddhav/creative-thinking#semver:^2 socketes --help
 ```
 
 The `-p` (`--package`) flag is **required** because the package's default bin is `creative-thinking`
-(the MCP server), not `socketes`. Plain `npx -y github:uddhav/creative-thinking` starts the MCP
-server on stdio and waits for JSON-RPC — not what you want for the CLI.
+(the MCP server), not `socketes`. Plain `npx -y github:uddhav/creative-thinking#semver:^2` starts
+the MCP server on stdio and waits for JSON-RPC — not what you want for the CLI.
 
 ### B. Global install — both bins on `PATH`
 
 ```bash
-npm install -g github:uddhav/creative-thinking
+npm install -g github:uddhav/creative-thinking#semver:^2
 socketes --help
 creative-thinking          # if you also want the MCP server bin
 ```
@@ -105,10 +105,11 @@ After this, `socketes` and `creative-thinking` are available like any other shel
 To upgrade later:
 
 ```bash
-npm install -g github:uddhav/creative-thinking@latest
+npm install -g github:uddhav/creative-thinking#semver:^2
 ```
 
-`@latest` re-pulls the default branch.
+Re-running the install re-resolves to the newest release inside major 2 (`@latest` would name the
+default branch, which is not a release); to move to a new major, change the suffix.
 
 ### C. Local clone for development
 
@@ -738,9 +739,10 @@ In rough order of how often they bite people:
    `socketes ... 2>&1 | jq` will fail to parse. Use `>` for stdout and let stderr flow to the
    terminal, or redirect stderr separately (`2>err.log`).
 
-3. **`npx -y github:uddhav/creative-thinking` runs the MCP server, not the CLI.** The package's
-   default bin is `creative-thinking` (the MCP server). To run the CLI via npx, you must specify the
-   bin explicitly: `npx -y -p github:uddhav/creative-thinking socketes <command>`.
+3. **`npx -y github:uddhav/creative-thinking#semver:^2` runs the MCP server, not the CLI.** The
+   package's default bin is `creative-thinking` (the MCP server). To run the CLI via npx, you must
+   specify the bin explicitly:
+   `npx -y -p github:uddhav/creative-thinking#semver:^2 socketes <command>`.
 
 4. **Parallel execution against the same sessionId silently corrupts state.** `SessionLock` is
    in-process only, and even there it is keyed `sessionId:technique`, so it serialises nothing
@@ -885,17 +887,17 @@ server is the better fit:
 
 ```bash
 # Run from GitHub via npx (default bin = MCP server)
-npx -y github:uddhav/creative-thinking
+npx -y github:uddhav/creative-thinking#semver:^2
 
 # Or globally
-npm install -g github:uddhav/creative-thinking
+npm install -g github:uddhav/creative-thinking#semver:^2
 creative-thinking
 ```
 
 Register with Claude Code:
 
 ```bash
-claude mcp add --transport stdio creative-thinking -- npx -y github:uddhav/creative-thinking
+claude mcp add --transport stdio creative-thinking -- npx -y github:uddhav/creative-thinking#semver:^2
 ```
 
 Same three tools, same handlers, same techniques. The shape difference is purely transport (JSON-RPC
@@ -908,7 +910,7 @@ To enable filesystem persistence in the MCP server, set the env vars in your MCP
   "mcpServers": {
     "creative-thinking": {
       "command": "npx",
-      "args": ["-y", "github:uddhav/creative-thinking"],
+      "args": ["-y", "github:uddhav/creative-thinking#semver:^2"],
       "env": {
         "PERSISTENCE_TYPE": "filesystem",
         "PERSISTENCE_PATH": "/Users/you/.creative-thinking",

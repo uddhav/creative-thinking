@@ -149,7 +149,7 @@ After `npm run build`, the stdio MCP server is at `dist/mcp-server-main.js`:
 ```bash
 node dist/mcp-server-main.js                            # direct
 npm start                                     # same, via package script
-npx -y github:uddhav/creative-thinking        # from GitHub (uses checked-in dist/)
+npx -y github:uddhav/creative-thinking#semver:^2        # from GitHub (uses checked-in dist/)
 ```
 
 Smoke-test the stdio handshake without an MCP client:
@@ -532,7 +532,7 @@ Process.
 
 ## Important Constraints
 
-- **dist/ is checked in** — required for `npx github:uddhav/creative-thinking` distribution
+- **dist/ is checked in** — required for the `npx` install from GitHub (no npm publish)
 - **Steps within one technique are ordered; independent techniques may run in parallel** — the
   plan's `executionGraph.metadata.parallelizableGroups` says which. (An older line here said
   "sequential execution only", which the server itself contradicts: it accepts and echoes

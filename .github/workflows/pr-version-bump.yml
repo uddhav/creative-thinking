@@ -178,6 +178,26 @@ jobs:
           echo "Aligned $CURRENT_VERSION -> $TAG_VERSION (tag $TAG)"
           echo "new_version=$TAG_VERSION" >> $GITHUB_OUTPUT
 
+          # The documented installs pin the major (`#semver:^N`), so a new
+          # major changes the suffix here and a re-resolved install (`npx -y`,
+          # a re-run `npm install`) never crosses a breaking change on its
+          # own. Fixed-pattern sed over the regex-validated version. The count
+          # matches each spec with or without its suffix and drops the pinned
+          # ones (`[^#]` after the spec would miss a spec that ends the line,
+          # the common shape); `|| true` because `grep -vc` exits 1 when it
+          # selects nothing and the step runs under `-e`. A spec without
+          # `#semver:` after the rewrite is a doc regression and fails the job.
+          NEW_MAJOR="${TAG_VERSION%%.*}"
+          for doc in README.md SOCKETES.md CLAUDE.md SPECIFICATIONS.md; do
+            sed -E "s#(github:uddhav/creative-thinking)\#semver:\^[0-9]+#\1\#semver:^${NEW_MAJOR}#g" "$doc" > "$doc.tmp" && mv "$doc.tmp" "$doc"
+            UNPINNED=$(grep -oE 'github:uddhav/creative-thinking(#semver:)?' "$doc" | grep -vc '#semver:' || true)
+            if [ "$UNPINNED" != "0" ]; then
+              echo "::error::$doc has $UNPINNED install spec(s) without #semver: after the rewrite"
+              exit 1
+            fi
+          done
+          echo "Install pins read #semver:^${NEW_MAJOR}"
+
       - name: Generate changelog entry
         if: steps.bump.outputs.skip != 'true'
         env:
@@ -233,7 +253,7 @@ jobs:
           PR_NUMBER: ${{ steps.analyze.outputs.pr_number }}
           PR_TITLE: ${{ steps.analyze.outputs.pr_title }}
         run: |
-          git add package.json package-lock.json CHANGELOG.md
+          git add package.json package-lock.json CHANGELOG.md README.md SOCKETES.md CLAUDE.md SPECIFICATIONS.md
           printf 'chore(release): bump version to %s\n\nCarries the version semantic-release will tag as %s when this merges.\nReleased by PR #%s\n- %s\n' \
             "$NEW_VERSION" "$TAG" "${PR_NUMBER:-unknown}" "${PR_TITLE:-title unavailable}" > /tmp/bump-commit-msg
           git commit -F /tmp/bump-commit-msg
@@ -270,7 +290,8 @@ jobs:
             printf "### What's included\n"
             printf -- '- Updated `package.json` with new version\n'
             printf -- '- Updated `package-lock.json`\n'
-            printf -- '- Updated `CHANGELOG.md` with PR details\n\n'
+            printf -- '- Updated `CHANGELOG.md` with PR details\n'
+            printf -- '- Install pins in README, SOCKETES, CLAUDE.md and SPECIFICATIONS read `#semver:^%s` (unchanged unless the major moved)\n\n' "${NEW_VERSION%%.*}"
             printf '### Next Steps\n'
             printf '1. Review the version bump\n'
             printf '2. Merge this PR to trigger the release workflow\n'
