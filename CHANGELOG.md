@@ -1,3 +1,9 @@
+## [v2.10.1] - 2026-09-09
+
+### Changes from PR #438
+
+- fix: the five stragglers from the retest, and a version every response can state
+
 ## [v2.10.0] - 2026-09-07
 
 ### Changes from PR #426
