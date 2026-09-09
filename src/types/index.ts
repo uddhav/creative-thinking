@@ -178,6 +178,11 @@ export interface SessionData {
   riskDiscoveryData?: {
     domainAssessment?: DomainAssessment;
     risks?: RiskDiscovery;
+    /**
+     * Reserved: initialised to [] by the risk orchestrator and never written
+     * anywhere; the constraint-violation feedback reads it as always empty.
+     * Deleting it is an exported-type change, tracked separately.
+     */
     ruinScenarios?: RuinScenario[];
     constraints?: string[];
     validations?: ValidationResult[];

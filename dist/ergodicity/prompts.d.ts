@@ -48,9 +48,8 @@ export declare function generateRuinAssessmentPrompt(problem: string, technique:
  * Get technique-specific ergodicity guidance
  */
 export declare function getErgodicityGuidance(technique: LateralTechnique): string;
-/**
- * Assess ruin risk from user input
- */
+/** True when the assessment carries survival language and a second signal. */
+export declare function ruinVerdictIsHighRisk(assessment: RuinRiskAssessment): boolean;
 export declare function assessRuinRisk(problem: string, technique: LateralTechnique, userResponse: string): RuinRiskAssessment;
 /**
  * Generate survival constraints based on risk features

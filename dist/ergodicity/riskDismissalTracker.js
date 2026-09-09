@@ -5,6 +5,7 @@
  * behavioral escalations. Domain-agnostic - responds to engagement
  * quality, not content categories.
  */
+import { ruinVerdictIsHighRisk } from './prompts.js';
 import { matchesAnyWord } from './wordMatch.js';
 export class RiskDismissalTracker {
     LOW_CONFIDENCE_THRESHOLD = 0.3;
@@ -28,8 +29,10 @@ export class RiskDismissalTracker {
         metrics.totalAssessments++;
         // Extract risk indicators first to determine if this is actually a risky situation
         const newIndicators = this.extractRiskIndicators(assessment, proposedAction);
+        // Survival language alone is a note, not a risk: the verdict needs the
+        // second signal here as it does for the recommendation (#412).
         const hasActualRisks = assessment.isIrreversible ||
-            assessment.survivabilityThreatened ||
+            ruinVerdictIsHighRisk(assessment) ||
             newIndicators.length > 0 ||
             (assessment.riskFeatures &&
                 (assessment.riskFeatures.timePressure === 'high' ||
@@ -250,7 +253,7 @@ export class RiskDismissalTracker {
         if (assessment.isIrreversible) {
             indicators.push('irreversibility');
         }
-        if (assessment.survivabilityThreatened) {
+        if (ruinVerdictIsHighRisk(assessment)) {
             indicators.push('survival threat');
         }
         if (assessment.riskFeatures) {

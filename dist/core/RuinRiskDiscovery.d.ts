@@ -10,16 +10,6 @@
  */
 import type { SessionData } from '../types/index.js';
 /**
- * Risk severity levels based on generic characteristics
- */
-export declare enum RiskSeverity {
-    LOW = "low",
-    MEDIUM = "medium",
-    HIGH = "high",
-    CRITICAL = "critical",
-    CATASTROPHIC = "catastrophic"
-}
-/**
  * Generic domain characteristics discovered through questioning
  */
 export interface DomainCharacteristics {
@@ -177,6 +167,8 @@ export declare class RuinRiskDiscovery {
      * Sanitize input for safe regex matching with comprehensive Unicode handling
      */
     private sanitizeForRegex;
+    /** A leading article or preposition is not part of a domain. */
+    private static stripLeadIn;
     /**
      * Extract context descriptor from LLM's response - completely open-ended
      */
@@ -222,10 +214,6 @@ export declare class RuinRiskDiscovery {
      * Get session-specific discovered risks (not cached by domain)
      */
     getSessionDiscovery(sessionData: SessionData): RiskDiscovery | undefined;
-    /**
-     * Assess risk severity based on generic characteristics
-     */
-    assessRiskSeverity(characteristics: DomainCharacteristics): RiskSeverity;
     /**
      * Generate adaptive questions based on discovered characteristics
      */
