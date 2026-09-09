@@ -21,10 +21,13 @@ function drawAssignedStimulus(planId, technique, techniqueIndex) {
 }
 /**
  * Apply an assignment to a technique's generated steps: structured fields on
- * step 1 plus a description prefix that explicitly overrides the handler's
- * own choose-your-own step-1 text (which is not assignment-aware). Shared by
- * the main planning workflow and debate persona plans — the two plan-building
- * paths must not drift.
+ * step 1 plus a step-1 description that REPLACES the handler's own
+ * choose-your-own text. It used to be prefixed as a notice ("ignore any
+ * instruction below") on top of the handler's "Select from a book, dictionary,
+ * or random generator", so the step contradicted itself (#417). The text is
+ * self-sufficient: one apply site builds the step with an empty description.
+ * Shared by the main planning workflow and debate persona plans — the two
+ * plan-building paths must not drift.
  */
 export function applyAssignedStimulus(technique, techniqueIndex, planId, steps) {
     if (steps.length === 0)
@@ -35,10 +38,19 @@ export function applyAssignedStimulus(technique, techniqueIndex, planId, steps) 
     const label = technique === 'po' ? 'Assigned provocation' : 'Assigned stimulus';
     steps[0].stimulus = stimulus;
     steps[0].stimulusSource = 'assigned';
+    const next = technique === 'po'
+        ? 'Step 2 extracts movement from it: what the provocation could lead to, without judging it.'
+        : 'Step 2 draws connections from it to the problem; step 3 turns those into ideas.';
+    // A persona plan injects its header block ("**[Thinking as …]**", principle,
+    // challenge) above the handler text; the replacement keeps that block and
+    // replaces only the guidance below it.
+    const personaHeader = steps[0].description.startsWith('**[Thinking as')
+        ? `${steps[0].description.split('\n\n')[0]}\n\n`
+        : '';
     steps[0].description =
-        `🎲 ${label}: "${stimulus}" — the selection this step asks for is already made; ` +
-            `do not choose your own, and ignore any instruction below to do so. ` +
-            `It is not re-rollable within this plan. Record it and move to working with it.\n\n` +
-            steps[0].description;
+        personaHeader +
+            `🎲 ${label}: "${stimulus}" — the selection this step asks for is already made and is not ` +
+            `re-rollable within this plan; do not choose your own. Record it as this step's output, note ` +
+            `your first unfiltered associations with it, and do not connect it to the problem yet. ${next}`;
 }
 //# sourceMappingURL=assignment.js.map

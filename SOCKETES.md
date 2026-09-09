@@ -178,7 +178,7 @@ small footprint, use the npm install path (B) instead — it shares your already
 ## Verify the install
 
 ```bash
-socketes --version       # prints the version from package.json (e.g. 0.6.1)
+socketes --version       # package.json under node; in a binary, CREATIVE_THINKING_VERSION as built
 socketes --help          # lists subcommands
 socketes discover --problem "test"
 ```
@@ -288,8 +288,12 @@ the response is just structured advice.
 | `--debate-topic <s>`        | string                                                                  | Debate topic, defaults to `--problem`.                          |
 
 **Output (success, exit 0):** JSON with `recommendations` (array of techniques with `reasoning` +
-`effectiveness`), `reasoning`, `nextStepGuidance` (machine-readable hint for the next call),
-`complexityAssessment`, optional `personaContext`, optional `qualityCoverage`.
+`effectiveness`), `reasoning` (names every recommended technique), `suggestedWorkflow` (phases;
+techniques outside the Understanding, Generation and Integration lists land in a `Specialized` phase
+in recommendation order), `nextStepGuidance` (machine-readable hint for the next call),
+`complexityAssessment`, `serverVersion` (the package version, so a report can state what it tested;
+also on the plan response and on `socketes --version`), optional `personaContext`, optional
+`qualityCoverage`.
 
 **Output (error, exit 1):** JSON on stderr with `error.code` (e.g. `E102`), `error.message`,
 `error.recovery` (suggestions).
@@ -315,8 +319,10 @@ Build a structured workflow from chosen techniques. Returns a `planId` and persi
 | `--personas <list>`          | comma-separated ids                          | Multiple personas → DebateOrchestrator builds parallel plans. |
 | `--debate-format <s>`        | `structured`, `adversarial`, `collaborative` | Debate flavor.                                                |
 
-**Output (success):** JSON with `planId`, `workflow` (flat array of step descriptors),
-`estimatedSteps`, `executionGraph` (nodes, dependencies, parallelizable groups, recommended
+**Output (success):** JSON with `planId`, `serverVersion`, `workflow` (flat array of step
+descriptors; for `random_entry` and `po` the step-1 descriptor carries the assigned `stimulus` and a
+description that tells you to record it and work with it, replacing the handler's choose-your-own
+text), `estimatedSteps`, `executionGraph` (nodes, dependencies, parallelizable groups, recommended
 strategy), `nextSteps` (a templated example for the first execute call), `qualityCoverage`, and on
 multi-technique plans `sequenceAdvice`: one entry per adjacent pair, in your order, with a
 `relation` (`SEQUENCE_STRONGLY` / `SEQUENCE` / `NEUTRAL` / `AVOID_ADJACENT`) and `evidence`

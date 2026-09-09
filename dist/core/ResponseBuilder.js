@@ -2,6 +2,7 @@
  * Response Builder
  * Constructs formatted responses for MCP tools
  */
+import { getVersion } from '../version.js';
 import { ALL_LATERAL_TECHNIQUES } from '../types/index.js';
 import { CreativeThinkingError, ValidationError, ErrorCode } from '../errors/types.js';
 import { JsonOptimizer } from '../utils/JsonOptimizer.js';
@@ -139,6 +140,9 @@ export class ResponseBuilder {
             complexityAssessment: output.complexityAssessment,
             problemAnalysis: output.problemAnalysis,
             qualityCoverage: output.qualityCoverage,
+            // So a report can state what it tested (#417). Exact at a tag since the
+            // release tag is cut on the bump commit.
+            serverVersion: getVersion(),
         };
         return this.buildSuccessResponse(transformedOutput);
     }
@@ -170,6 +174,7 @@ export class ResponseBuilder {
         });
         const transformedOutput = {
             planId: output.planId,
+            serverVersion: getVersion(),
             // The one authoritative copy. Step descriptions used to interpolate the
             // problem and every graph node used to carry it in `parameters`, so a
             // five-technique plan shipped 51 copies — 50.6% of the payload on a
@@ -306,16 +311,27 @@ export class ResponseBuilder {
      * only cross-session mutable state in this class with it.
      */
     addCompletionData(response, session) {
+        // session.technique is the technique of the FIRST execute call and never
+        // moves, so on a multi-technique plan the completion block named the plan's
+        // first technique as the one that finished it (#417). The completing step
+        // is the last history entry; the fallback covers a session with no history.
+        const techniqueUsed = session.history.at(-1)?.technique ?? session.technique;
+        const techniquesUsed = [];
+        for (const entry of session.history) {
+            if (!techniquesUsed.includes(entry.technique))
+                techniquesUsed.push(entry.technique);
+        }
         const completionData = {
             sessionComplete: true,
             completed: true, // Add for backward compatibility
             // Don't override totalSteps - keep the original from the response
-            techniqueUsed: session.technique,
+            techniqueUsed,
+            techniquesUsed,
             insights: session.insights,
             message: 'Lateral thinking session completed',
             metrics: session.metrics,
             summary: {
-                technique: session.technique,
+                technique: techniqueUsed,
                 problem: session.problem,
                 stepsCompleted: session.history.length,
                 insightsGenerated: session.insights.length,
@@ -430,10 +446,13 @@ export class ResponseBuilder {
         if (output.recommendations.length === 0) {
             return 'No specific techniques recommended for this problem.';
         }
-        const topTechniques = output.recommendations
-            .slice(0, 3)
-            .map(r => r.technique)
-            .join(', ');
+        // Every recommendation, in recommendation order (fillCoverageGaps appends
+        // coverage picks after the sort, so this is not score order). This sliced
+        // to three, which named
+        // the three LOWEST-scoring of five on the retest's problem (#417): the
+        // same positional bug buildNextStepGuidance had, fixed there in #318 and
+        // missed here, so the one sentence a reader sees told the old story.
+        const topTechniques = output.recommendations.map(r => r.technique).join(', ');
         return (`Based on your problem involving "${output.problem.substring(0, 100)}..."` +
             `, I recommend these techniques: ${topTechniques}. ` +
             `The problem appears to be ${output.problemCategory} in nature.`);

@@ -183,8 +183,8 @@ describe('Discovery Workflow Guidance', () => {
       expect(recommendedTechniques).toContain(tech);
     });
 
-    // Should include top recommendations (up to 3)
-    expect(suggestedTechniques.length).toBeLessThanOrEqual(3);
-    expect(suggestedTechniques.length).toBeLessThanOrEqual(recommendedTechniques.length);
+    // Every recommendation is suggested (the old cap of three selected by
+    // position; see discovery-guidance-agrees-with-itself.test.ts).
+    expect(suggestedTechniques.length).toBe(recommendedTechniques.length);
   });
 });

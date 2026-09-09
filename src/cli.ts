@@ -13,6 +13,7 @@
  */
 
 import { applyCliDefaults } from './cli/server.js';
+import { getVersion } from './version.js';
 
 // Set default env vars BEFORE any module observes them
 // (SessionPersistence snapshots PERSISTENCE_TYPE on first init).
@@ -39,7 +40,9 @@ async function main(): Promise<void> {
     .recommendCommands()
     .help()
     .alias('h', 'help')
-    .version();
+    // yargs' default reads package.json by walking up from process.cwd()
+    // inside a compiled binary, so the version is passed explicitly (#417).
+    .version(getVersion());
 
   parser = registerDiscover(parser);
   parser = registerPlan(parser);

@@ -99,6 +99,21 @@ export class WorkflowBuilder {
       });
     }
 
+    // Phase 4: everything the three lists above do not name. Twenty-two of the
+    // thirty-two techniques are in none of them, so a recommendation such as
+    // temporal_creativity or steelman_red_team used to vanish from the
+    // workflow while the same response recommended it (#417). Order within
+    // the phase is the recommendation order.
+    const bucketed = new Set(phases.flatMap(p => p.techniques));
+    const specialized = techniques.filter(t => !bucketed.has(t));
+    if (specialized.length > 0) {
+      phases.push({
+        name: 'Specialized',
+        techniques: specialized,
+        focus: `Apply the techniques recommended for this ${problemCategory} problem`,
+      });
+    }
+
     return { phases };
   }
 }
