@@ -1,3 +1,9 @@
+## [v2.10.3] - 2026-09-09
+
+### Changes from PR #442
+
+- fix: omit optionSpaceSize while no recent step recorded an option, as #327 promised
+
 ## [v2.10.2] - 2026-09-09
 
 ### Changes from PR #440
