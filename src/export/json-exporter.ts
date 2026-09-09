@@ -3,6 +3,7 @@
  */
 
 import type { SessionState, LateralThinkingInput } from '../persistence/types.js';
+import { historyInput } from '../persistence/types.js';
 import type { ExportOptions, ExportResult } from './types.js';
 import { BaseExporter } from './base-exporter.js';
 
@@ -62,7 +63,7 @@ export class JSONExporter extends BaseExporter {
     // Add history with enhanced structure
     if (options.includeHistory !== false) {
       data.history = session.history.map((entry, index) =>
-        this.enhanceHistoryEntry(entry.input, entry.timestamp, index + 1)
+        this.enhanceHistoryEntry(historyInput(entry), entry.timestamp, index + 1)
       );
     }
 
@@ -206,7 +207,7 @@ export class JSONExporter extends BaseExporter {
     };
 
     // Calculate output statistics
-    const outputs = session.history.map(h => h.input.output);
+    const outputs = session.history.map(h => historyInput(h).output);
     stats.totalOutputLength = outputs.reduce((sum, output) => sum + output.length, 0);
     stats.averageOutputLength = Math.round(stats.totalOutputLength / outputs.length);
 
@@ -222,7 +223,7 @@ export class JSONExporter extends BaseExporter {
         'applications',
         'antifragileProperties',
       ].forEach(field => {
-        const items = (h.input as unknown as Record<string, unknown>)[field];
+        const items = (historyInput(h) as unknown as Record<string, unknown>)[field];
         if (items && Array.isArray(items)) {
           items.forEach(item => {
             if (typeof item === 'string') {
@@ -236,7 +237,7 @@ export class JSONExporter extends BaseExporter {
 
     // Count revisions and branches
     stats.revisionCount = session.history.filter(h => {
-      return 'isRevision' in h.input && h.input.isRevision === true;
+      return 'isRevision' in historyInput(h) && historyInput(h).isRevision === true;
     }).length;
     stats.branchingPoints = Object.keys(session.branches).length;
 

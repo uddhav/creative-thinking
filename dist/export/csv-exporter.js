@@ -1,6 +1,7 @@
 /**
  * CSV exporter for data analysis and spreadsheet import
  */
+import { historyInput } from '../persistence/types.js';
 import { CSV_HEADERS } from './types.js';
 import { BaseExporter } from './base-exporter.js';
 export class CSVExporter extends BaseExporter {
@@ -39,7 +40,7 @@ export class CSVExporter extends BaseExporter {
         rows.push(headers);
         // Process each history entry
         session.history.forEach((entry, index) => {
-            const row = this.createDetailedRow(entry.input, index + 1, session);
+            const row = this.createDetailedRow(historyInput(entry), index + 1, session);
             rows.push(row);
         });
         // Convert to CSV format
@@ -49,7 +50,7 @@ export class CSVExporter extends BaseExporter {
         const baseHeaders = ['Step', 'Timestamp', 'Technique'];
         const dynamicHeaders = [];
         // Check what fields are present in the history
-        const sampleEntry = session.history[0]?.input;
+        const sampleEntry = session.history[0] ? historyInput(session.history[0]) : undefined;
         if (!sampleEntry)
             return baseHeaders.concat(['Output']);
         // Technique-specific headers
@@ -74,12 +75,12 @@ export class CSVExporter extends BaseExporter {
         // Main output
         dynamicHeaders.push('Output');
         // Check for arrays in any entry
-        const hasRisks = session.history.some(h => h.input.risks && h.input.risks.length > 0);
-        const hasMitigations = session.history.some(h => h.input.mitigations && h.input.mitigations.length > 0);
-        const hasConnections = session.history.some(h => h.input.connections && h.input.connections.length > 0);
-        const hasPrinciples = session.history.some(h => h.input.principles && h.input.principles.length > 0);
-        const hasConcepts = session.history.some(h => h.input.extractedConcepts && h.input.extractedConcepts.length > 0);
-        const hasApplications = session.history.some(h => h.input.applications && h.input.applications.length > 0);
+        const hasRisks = session.history.some(h => (historyInput(h).risks?.length ?? 0) > 0);
+        const hasMitigations = session.history.some(h => (historyInput(h).mitigations?.length ?? 0) > 0);
+        const hasConnections = session.history.some(h => (historyInput(h).connections?.length ?? 0) > 0);
+        const hasPrinciples = session.history.some(h => (historyInput(h).principles?.length ?? 0) > 0);
+        const hasConcepts = session.history.some(h => (historyInput(h).extractedConcepts?.length ?? 0) > 0);
+        const hasApplications = session.history.some(h => (historyInput(h).applications?.length ?? 0) > 0);
         if (hasRisks)
             dynamicHeaders.push('Risks');
         if (hasMitigations)
@@ -93,8 +94,8 @@ export class CSVExporter extends BaseExporter {
         if (hasApplications)
             dynamicHeaders.push('Applications');
         // Revision/branch info
-        const hasRevisions = session.history.some(h => h.input.isRevision);
-        const hasBranches = session.history.some(h => h.input.branchFromStep);
+        const hasRevisions = session.history.some(h => historyInput(h).isRevision);
+        const hasBranches = session.history.some(h => historyInput(h).branchFromStep);
         if (hasRevisions)
             dynamicHeaders.push('Is Revision', 'Revises Step');
         if (hasBranches)

@@ -1,6 +1,7 @@
 /**
  * Enhanced JSON exporter with flexible output options
  */
+import { historyInput } from '../persistence/types.js';
 import { BaseExporter } from './base-exporter.js';
 export class JSONExporter extends BaseExporter {
     constructor() {
@@ -52,7 +53,7 @@ export class JSONExporter extends BaseExporter {
         }
         // Add history with enhanced structure
         if (options.includeHistory !== false) {
-            data.history = session.history.map((entry, index) => this.enhanceHistoryEntry(entry.input, entry.timestamp, index + 1));
+            data.history = session.history.map((entry, index) => this.enhanceHistoryEntry(historyInput(entry), entry.timestamp, index + 1));
         }
         // Add insights
         if (options.includeInsights !== false && session.insights.length > 0) {
@@ -185,7 +186,7 @@ export class JSONExporter extends BaseExporter {
             branchingPoints: 0,
         };
         // Calculate output statistics
-        const outputs = session.history.map(h => h.input.output);
+        const outputs = session.history.map(h => historyInput(h).output);
         stats.totalOutputLength = outputs.reduce((sum, output) => sum + output.length, 0);
         stats.averageOutputLength = Math.round(stats.totalOutputLength / outputs.length);
         // Count unique concepts across all arrays
@@ -200,7 +201,7 @@ export class JSONExporter extends BaseExporter {
                 'applications',
                 'antifragileProperties',
             ].forEach(field => {
-                const items = h.input[field];
+                const items = historyInput(h)[field];
                 if (items && Array.isArray(items)) {
                     items.forEach(item => {
                         if (typeof item === 'string') {
@@ -213,7 +214,7 @@ export class JSONExporter extends BaseExporter {
         stats.uniqueConceptsCount = allConcepts.size;
         // Count revisions and branches
         stats.revisionCount = session.history.filter(h => {
-            return 'isRevision' in h.input && h.input.isRevision === true;
+            return 'isRevision' in historyInput(h) && historyInput(h).isRevision === true;
         }).length;
         stats.branchingPoints = Object.keys(session.branches).length;
         return stats;

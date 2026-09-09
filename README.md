@@ -465,7 +465,9 @@ Best for: Complex decision-making, handling contradictory evidence, reducing con
 
 - Full session persistence with save, load, list, delete, and export capabilities
 - Automatic progress saving and session tagging for organization
-- Multiple export formats (JSON, Markdown, CSV) for different use cases
+- Multiple export formats (JSON, Markdown, CSV) for different use cases; the JSON export is the live
+  session minus the per-process ergodicity manager (not the session file's shape, which adds fields
+  of its own and lacks the live-only ones)
 - Support for revisions and branching during creative exploration
 - Progress tracking with visual indicators and formatted output
 - Insights extraction and summary generation upon completion

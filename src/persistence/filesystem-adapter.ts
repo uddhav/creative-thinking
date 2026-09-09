@@ -3,6 +3,7 @@
  */
 
 import { promises as fs } from 'fs';
+import { historyInput } from './types.js';
 import path from 'path';
 import { randomUUID } from 'crypto';
 import os from 'os';
@@ -326,7 +327,7 @@ export class FilesystemAdapter implements PersistenceAdapter {
         const searchText = query.text.toLowerCase();
         const searchableContent = [
           session.problem,
-          ...session.history.map(h => JSON.stringify(h.output)),
+          ...session.history.map(h => JSON.stringify(historyInput(h))),
           ...session.insights,
         ]
           .join(' ')

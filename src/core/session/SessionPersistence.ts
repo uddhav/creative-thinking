@@ -6,6 +6,7 @@
 import type { SessionData, ThinkingOperationData } from '../../types/index.js';
 import type { PersistenceAdapter } from '../../persistence/adapter.js';
 import type { SessionState, PersistenceConfig } from '../../persistence/types.js';
+import { historyInput, type LateralThinkingInput } from '../../persistence/types.js';
 import type { PersistedReflexivity } from '../ReflexivityTracker.js';
 import type { PlanThinkingSessionOutput } from '../../types/planning.js';
 import { createAdapter, getDefaultConfig } from '../../persistence/factory.js';
@@ -263,12 +264,13 @@ export class SessionPersistence {
       tags: session.tags,
       name: session.name,
       pathMemory: session.pathMemory,
-      // Convert history to the expected format
+      // Each entry once, flat. It used to be written twice, as `input` and
+      // `output`, byte-identical, doubling the largest section of every
+      // session file (#415); the reader accepts both shapes.
       history: session.history.map((entry, index) => ({
+        ...(entry as unknown as LateralThinkingInput),
         step: index + 1,
         timestamp: entry.timestamp || new Date().toISOString(),
-        input: entry,
-        output: entry,
       })),
     };
   }
@@ -291,7 +293,7 @@ export class SessionPersistence {
       pathMemory: sessionState.pathMemory,
       // Convert history back to ThinkingOperationData format
       history: sessionState.history.map(entry => ({
-        ...entry.input,
+        ...historyInput(entry),
         timestamp: entry.timestamp,
       })) as (ThinkingOperationData & { timestamp: string })[],
     };

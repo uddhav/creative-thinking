@@ -2,6 +2,7 @@
  * SessionPersistence - Handles session persistence operations
  * Extracted from SessionManager to improve maintainability
  */
+import { historyInput } from '../../persistence/types.js';
 import { createAdapter, getDefaultConfig } from '../../persistence/factory.js';
 import { PersistenceError, ErrorCode } from '../../errors/types.js';
 export class SessionPersistence {
@@ -206,12 +207,13 @@ export class SessionPersistence {
             tags: session.tags,
             name: session.name,
             pathMemory: session.pathMemory,
-            // Convert history to the expected format
+            // Each entry once, flat. It used to be written twice, as `input` and
+            // `output`, byte-identical, doubling the largest section of every
+            // session file (#415); the reader accepts both shapes.
             history: session.history.map((entry, index) => ({
+                ...entry,
                 step: index + 1,
                 timestamp: entry.timestamp || new Date().toISOString(),
-                input: entry,
-                output: entry,
             })),
         };
     }
@@ -233,7 +235,7 @@ export class SessionPersistence {
             pathMemory: sessionState.pathMemory,
             // Convert history back to ThinkingOperationData format
             history: sessionState.history.map(entry => ({
-                ...entry.input,
+                ...historyInput(entry),
                 timestamp: entry.timestamp,
             })),
         };

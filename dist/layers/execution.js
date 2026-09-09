@@ -425,7 +425,14 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
             // what the server flagged, so a caller-supplied array must never reach
             // it — otherwise a caller could forge the record that exists to catch
             // callers deviating.
-            const { realityAssessment: inputRealityAssessment, modificationHistory: _rebuiltEachStep, advisoryFindings: _serverAuthoredOnly, ...inputWithoutReality } = input;
+            // `ergodicityCheck` and `ruinAssessment.prompt` are the server's own
+            // prompt text, written onto the input for THIS response and read from
+            // the live input only; on a history entry they were 25 copies of the
+            // same paragraph per session in the export and on disk (#415).
+            const { realityAssessment: inputRealityAssessment, modificationHistory: _rebuiltEachStep, advisoryFindings: _serverAuthoredOnly, ergodicityCheck: _promptForThisResponse, ruinAssessment: inputRuinAssessment, ...inputWithoutReality } = input;
+            const ruinAssessmentForHistory = inputRuinAssessment
+                ? (({ prompt: _p, ...verdict }) => verdict)(inputRuinAssessment)
+                : undefined;
             // If there's a reality assessment from input, we should handle it separately
             if (inputRealityAssessment) {
                 // Reality assessment is handled through realityResult and added to response separately
@@ -433,6 +440,7 @@ export async function executeThinkingStep(input, sessionManager, techniqueRegist
             }
             const operationData = {
                 ...inputWithoutReality,
+                ...(ruinAssessmentForHistory ? { ruinAssessment: ruinAssessmentForHistory } : {}),
                 sessionId,
             };
             // Kept as a named reference: advisory findings are recorded onto this

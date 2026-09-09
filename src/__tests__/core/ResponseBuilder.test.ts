@@ -723,11 +723,24 @@ describe('ResponseBuilder', () => {
       startTime: Date.now() - 3600000,
     };
 
-    it('should format as JSON', () => {
-      const json = builder.formatExportData(mockSession, 'json');
-      const parsed = parseGenericResponse<SessionData>(json);
+    it('should format as JSON: the session state, never the per-process manager', () => {
+      // Break: stringify the whole session. The manager is never persisted
+      // and carried a second copy of pathMemory plus empty learning slots.
+      const withManager = {
+        ...mockSession,
+        pathMemory: { pathHistory: [], currentFlexibility: { flexibilityScore: 1 } },
+        ergodicityManager: {
+          pathMemoryManager: { pathMemory: { pathHistory: [] } },
+          escapeVelocitySystem: { monitoring: { learnings: [] } },
+        },
+      } as unknown as SessionData;
+      const json = builder.formatExportData(withManager, 'json');
+      const parsed = parseGenericResponse<Record<string, unknown>>(json);
 
-      expect(parsed).toEqual(mockSession);
+      expect(parsed).not.toHaveProperty('ergodicityManager');
+      expect(parsed).toHaveProperty('pathMemory');
+      const { ergodicityManager: _m, ...expected } = withManager;
+      expect(parsed).toEqual(expected);
     });
 
     it('should format as Markdown', () => {

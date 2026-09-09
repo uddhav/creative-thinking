@@ -383,8 +383,17 @@ export class ResponseBuilder {
      */
     formatExportData(session, format) {
         switch (format) {
-            case 'json':
-                return JSON.stringify(session, null, 2);
+            case 'json': {
+                // The live SessionData minus the ergodicity manager. The manager is a
+                // per-process object that persistence never writes and load rebuilds
+                // from `pathMemory`; serialising it shipped its subsystems' empty
+                // slots (#416) and a second, byte-identical copy of `pathMemory`
+                // (43.6% of a three-step export, #415). The persisted shape is NOT
+                // what is exported: it wraps every history entry, which would double
+                // the history.
+                const { ergodicityManager: _perProcess, ...state } = session;
+                return JSON.stringify(state, null, 2);
+            }
             case 'markdown':
                 return this.formatAsMarkdown(session);
             case 'csv':

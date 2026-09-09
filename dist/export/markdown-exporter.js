@@ -1,6 +1,7 @@
 /**
  * Enhanced Markdown exporter with rich formatting
  */
+import { historyInput } from '../persistence/types.js';
 import { DEFAULT_MARKDOWN_TEMPLATE } from './types.js';
 import { BaseExporter } from './base-exporter.js';
 export class MarkdownExporter extends BaseExporter {
@@ -81,7 +82,7 @@ export class MarkdownExporter extends BaseExporter {
     formatHistory(session) {
         const sections = [];
         session.history.forEach((entry, index) => {
-            const section = this.formatHistoryEntry(entry.input, entry.timestamp, index + 1, session.technique);
+            const section = this.formatHistoryEntry(historyInput(entry), entry.timestamp, index + 1, session.technique);
             sections.push(section);
         });
         return sections.join('\n\n');

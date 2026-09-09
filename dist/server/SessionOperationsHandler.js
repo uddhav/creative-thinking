@@ -2,6 +2,7 @@
  * SessionOperationsHandler - Handles session-related operations
  * Extracted from LateralThinkingServer to improve maintainability
  */
+import { historyInput } from '../persistence/types.js';
 import { ValidationError, SessionError, CreativeThinkingError, ErrorCode, } from '../errors/types.js';
 import { ErrorFactory } from '../errors/enhanced-errors.js';
 import { ErrorHandler } from '../errors/ErrorHandler.js';
@@ -100,7 +101,7 @@ export class SessionOperationsHandler {
                 tags: sessionState.tags,
                 name: sessionState.name,
                 history: sessionState.history.map(entry => ({
-                    ...entry.input,
+                    ...historyInput(entry),
                     timestamp: entry.timestamp,
                 })),
             },

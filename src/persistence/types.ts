@@ -166,18 +166,40 @@ export interface LateralThinkingInput {
 /**
  * Session state structure for persistence
  */
+/** A persisted history entry: the step data flat with `technique` at the top level (current), or wrapped as `{ input, output }` (older files). */
+export type PersistedHistoryEntry = { step: number; timestamp: string } & (
+  { input: LateralThinkingInput; output?: LateralThinkingInput } | LateralThinkingInput
+);
+
+/**
+ * The step data of a persisted entry, whichever shape the file holds. A flat
+ * entry always carries `technique` at the top level and the old wrapper never
+ * did; keying on a field named `input` would misread a flat entry whose
+ * caller sent a field of that name (the execute schema admits unknown
+ * fields, and every one lands on the entry). The flat entry's `step` (the
+ * file's own index) is dropped: a reloaded entry then has the same keys as a
+ * fresh one.
+ */
+export function historyInput(entry: PersistedHistoryEntry): LateralThinkingInput {
+  if ('technique' in entry) {
+    const { step: _fileIndex, ...data } = entry as LateralThinkingInput & { step?: number };
+    return data;
+  }
+  return (entry as { input: LateralThinkingInput }).input;
+}
+
 export interface SessionState {
   id: string;
   problem: string;
   technique: LateralTechnique;
   currentStep: number;
   totalSteps: number;
-  history: Array<{
-    step: number;
-    timestamp: string;
-    input: LateralThinkingInput;
-    output: LateralThinkingInput;
-  }>;
+  /**
+   * One entry per step, written flat. Older files hold each entry twice,
+   * `{ input, output }` byte-identical, and still load:
+   * readers go through `historyInput`, which accepts both shapes.
+   */
+  history: PersistedHistoryEntry[];
   branches: Record<string, LateralThinkingInput[]>;
   insights: string[];
   startTime?: number;
