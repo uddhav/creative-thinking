@@ -66,7 +66,9 @@ node dist/cli.js discover --problem "..."                      # → JSON on std
 node dist/cli.js plan --problem "..." --techniques six_hats    # → planId persisted to disk
 node dist/cli.js execute --plan <planId> --technique six_hats \
     --problem "..." --step 1 --total-steps 7 --output "..." --next-step-needed
-node dist/cli.js execute --plan <planId> --technique six_hats \
+# → sessionId in the JSON; pass it back on every later step, or each call starts
+#   a fresh one-entry session and overwrites the same file
+node dist/cli.js execute --plan <planId> --session <sessionId> --technique six_hats \
     --problem "..." --step 7 --total-steps 7 --output "..." --no-next-step-needed
 node dist/cli.js session list --status active --limit 20
 ```
@@ -149,7 +151,7 @@ After `npm run build`, the stdio MCP server is at `dist/mcp-server-main.js`:
 ```bash
 node dist/mcp-server-main.js                            # direct
 npm start                                     # same, via package script
-npx -y github:uddhav/creative-thinking#semver:^2        # from GitHub (uses checked-in dist/)
+npx -y 'github:uddhav/creative-thinking#semver:^2'        # from GitHub (uses checked-in dist/)
 ```
 
 Smoke-test the stdio handshake without an MCP client:

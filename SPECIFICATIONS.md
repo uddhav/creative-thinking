@@ -6799,7 +6799,7 @@ creative-thinking/
 
 ```bash
 # Direct execution via npx
-npx -y github:uddhav/creative-thinking#semver:^2
+npx -y 'github:uddhav/creative-thinking#semver:^2'
 
 # Clone and build
 git clone https://github.com/uddhav/creative-thinking

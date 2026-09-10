@@ -75,30 +75,30 @@ into the repo so `npx` can run the build directly.
 ### Global install — both bins land on PATH
 
 ```bash
-npm install -g github:uddhav/creative-thinking#semver:^2
+npm install -g 'github:uddhav/creative-thinking#semver:^2'
 socketes --help            # the CLI
 creative-thinking          # starts the MCP server on stdio
 ```
 
-The `#semver:^2` suffix installs the newest release inside major 2; a new major changes the suffix
-here on its release, so a re-resolved install (`npx -y`, a re-run `npm install`) never crosses a
-breaking change on its own. In a shell with zsh's `extendedglob` set, quote the spec: `#` and `^`
-are glob operators there.
+The `#semver:^N` suffix installs the newest release inside the major it names; a new major changes
+the suffix here on its release, so a re-resolved install (`npx -y`, a re-run `npm install`) never
+crosses a breaking change on its own. The spec is quoted because `#` and `^` are glob operators
+under zsh's `extendedglob`; unquoted, such a shell reports `no matches found`.
 
 ### Run from GitHub via NPX (no install)
 
 ```bash
 # MCP server (default bin)
-npx -y github:uddhav/creative-thinking#semver:^2
+npx -y 'github:uddhav/creative-thinking#semver:^2'
 
 # CLI — pick the binary by name
-npx -y -p github:uddhav/creative-thinking#semver:^2 socketes discover --problem "..."
+npx -y -p 'github:uddhav/creative-thinking#semver:^2' socketes discover --problem "..."
 ```
 
 ### Register with an MCP client (Claude Code shown)
 
 ```bash
-claude mcp add --transport stdio creative-thinking -- npx -y github:uddhav/creative-thinking#semver:^2
+claude mcp add --transport stdio creative-thinking -- npx -y 'github:uddhav/creative-thinking#semver:^2'
 ```
 
 ### Local development
