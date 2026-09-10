@@ -1,3 +1,9 @@
+## [v3.0.0] - 2026-09-10
+
+### Changes from PR #451
+
+- feat: flip the execute-response default to minimal (breaking, v3.0.0)
+
 ## [v2.10.5] - 2026-09-09
 
 ### Changes from PR #448
