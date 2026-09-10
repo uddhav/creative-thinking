@@ -354,46 +354,53 @@ step.
 | `--next-step-needed` | boolean (required)           | Pass it while steps remain, `--no-next-step-needed` on the last. No default; see gotcha 9.     |
 | `--no-auto-save`     | boolean                      | Default is auto-save on. Pass this to skip persistence for this step (rarely useful).          |
 | `--persona <id>`     | string                       | Speaking persona id (debate mode only).                                                        |
-| `--verbosity <mode>` | `minimal` \| `full`          | Response size. `minimal` drops all echoes of your own input (see below); default `full`.       |
+| `--verbosity <mode>` | `minimal` \| `full`          | Response size. Default `minimal` since 3.0.0 (see below); `full` restores the pre-3.0 shape.   |
 
 **Long-tail technique-specific fields** (`hatColor`, `scamperAction`, `risks`, `extractedConcepts`,
 etc.) are easiest to pass via JSON-on-stdin. See [Flags vs JSON-on-stdin](#flags-vs-json-on-stdin).
 
-**Output (success):** JSON with `sessionId`, `historyLength` (after this step), `insights`,
-`technique`, `currentStep`, `nextStepGuidance`, plus any technique-specific feedback (risk warnings,
-ergodicity flags, escape recommendations).
+**Output (success):** JSON with `sessionId`, `historyLength` (after this step), `technique`,
+`currentStep`, `nextStepGuidance`, `newInsights` (this step's additions), `fieldsRecorded` (the
+technique fields the server read), plus any verdict the server reached about this step (risk
+warnings, ergodicity flags, escape recommendations). Under `--verbosity full` the cumulative
+`insights` list and the echoes of your own input come back too.
 
-**Minimal verbosity** (`--verbosity minimal`, or `RESPONSE_VERBOSITY=minimal` as the process
-default): keeps the step acknowledgment (`sessionId`, `technique`, `currentStep`, `totalSteps`,
-`nextStepNeeded`, `historyLength`, `techniqueProgress`, `persona` when one is active), the steering
-(`nextStepGuidance`, `sequentialThinkingSuggestion`, `completionMetadata.completionWarnings` when
-any exist), and every warning/verdict field (`ergodicityMetrics`, whose `optionSpaceSize` is a
-signed option velocity over the last five recorded steps, present only while one of them is a
-SCAMPER action that recorded an option, absent otherwise, `flexibilityScore`/`flexibilityMessage`,
-`earlyWarningState`, `escapeRecommendation`, `reflexivityWarning`, `reflectionRequired`,
-`optionGeneration`, `ergodicityCheck`, `alternativeSuggestions`, `realityAssessment`, the
-`ruinAssessment` verdict, the `appliedReversibility` clamp audit, and on scamper steps `pathImpact`
-— the server's reversibility judgment about this step, with its per-step `reversible` flag).
-`advisoryFindings` and the autoSave status fields ride every verbosity mode — they attach after the
-filter, the way the completion block does.
+**Minimal verbosity** (the default since 3.0.0; `--verbosity full`, or `RESPONSE_VERBOSITY=full` as
+the process default, restores the pre-3.0 shape): keeps the step acknowledgment (`sessionId`,
+`technique`, `currentStep`, `totalSteps`, `nextStepNeeded`, `historyLength`, `techniqueProgress`,
+`persona` when one is active), the steering (`nextStepGuidance`, `sequentialThinkingSuggestion`, and
+under `completionMetadata` the per-technique `techniqueStatuses` entries with their `skippedSteps`,
+plus `skippedTechniques` and `completionWarnings` when any exist, so a skipped step reaches you as
+data, not only as prose), and every warning/verdict field (`ergodicityMetrics`, whose
+`optionSpaceSize` is a signed option velocity over the last five recorded steps, present only while
+one of them is a SCAMPER action that recorded an option, absent otherwise,
+`flexibilityScore`/`flexibilityMessage`, `earlyWarningState`, `escapeRecommendation`,
+`reflexivityWarning`, `reflectionRequired`, `optionGeneration`, `ergodicityCheck`,
+`alternativeSuggestions`, `realityAssessment`, the `ruinAssessment` verdict, the
+`appliedReversibility` clamp audit, and on scamper steps `pathImpact` — the server's reversibility
+judgment about this step, with its per-step `reversible` flag). `advisoryFindings` and the autoSave
+status fields ride every verbosity mode — they attach after the filter, the way the completion block
+does.
 
 The rule is: **this step's verdicts stay; echoes and cumulative re-sends drop.** Two kinds of field
 go. Echoes of your own input — `problem`, `output`, technique field values — are replaced by
-receipts: `fieldsRecorded` carries the names of the technique fields the server read, and the
-session `export` returns the live session whole, minus the per-process ergodicity manager, which is
-never persisted or exported (load rebuilds it from `pathMemory`; its subsystems' learning slots have
-no production writer, #416), and minus the server's own prompt text on history entries
-(`ergodicityCheck`, `ruinAssessment.prompt`), which is written for the live response only (#415);
-the export is not the session file either (see Session files below). Cumulative re-sends — fields
-that repeat on every step what an earlier step already delivered — are cut to this step's share:
-`newInsights` carries only this step's additions (full mode's `insights` stays the cumulative list),
-and `modificationHistory` is dropped outright. That last one is not an echo: the server rebuilds it
-from history every step and discards anything you send. It is dropped because it re-sends every
-prior scamper step's `pathImpact`, each of which you received on the step that produced it. The
-final step's completion summary is always full.
+receipts: `fieldsRecorded` carries the names of the technique fields the server read. The session
+`export` is unaffected by verbosity: it returns the live session whole, minus the per-process
+ergodicity manager, which is never persisted or exported (load rebuilds it from `pathMemory`; its
+subsystems' learning slots have no production writer, #416), and minus what leaves each history
+entry at the push: the server's own prompt text (`ergodicityCheck`, `ruinAssessment.prompt`),
+written for the live response only (#415), and the per-step copy of `riskDiscoveryData`, which stays
+on the session. The export is not the session file either (see Session files below). Cumulative
+re-sends — fields that repeat on every step what an earlier step already delivered — are cut to this
+step's share: `newInsights` carries only this step's additions (full mode's `insights` stays the
+cumulative list), and `modificationHistory` is dropped outright. That last one is not an echo: the
+server rebuilds it from history every step and discards anything you send. It is dropped because it
+re-sends every prior scamper step's `pathImpact`, each of which you received on the step that
+produced it. The final step's completion summary is always full.
 
-> Deprecation notice: `minimal` is the intended future default. The flip will ship as a breaking
-> (major) release; until then nothing changes for callers that never pass the flag.
+> Since 3.0.0 `minimal` is the default. The flip shipped as the breaking change of that major;
+> `--verbosity full` or `RESPONSE_VERBOSITY=full` restores the pre-3.0 shape, and memory decoration
+> (the suggestive outputs) is off under `minimal` on every step, the terminal one included.
 
 If `--session` is omitted on the first step, the executor derives one as `session_<planId>`. This is
 convenient but has a sharp edge — see [Parallel execution](#parallel-execution) and the

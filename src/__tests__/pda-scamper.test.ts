@@ -89,6 +89,9 @@ describe('PDA-SCAMPER Enhancement', () => {
       nextStepNeeded,
       scamperAction: action as ScamperAction,
       sessionId,
+      // modificationHistory is a full-mode field; the default is 'minimal'
+      // since 3.0.0 (#311).
+      verbosity: 'full',
     };
 
     const result = await server.executeThinkingStep(input);

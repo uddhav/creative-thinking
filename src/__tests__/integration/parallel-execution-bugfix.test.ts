@@ -33,6 +33,7 @@ describe('Parallel Execution Bug Fixes', () => {
         hatColor: 'blue',
         output: 'Blue hat output',
         nextStepNeeded: true,
+        verbosity: 'full',
       });
 
       const result2 = await server.executeThinkingStep({
@@ -44,6 +45,7 @@ describe('Parallel Execution Bug Fixes', () => {
         scamperAction: 'substitute',
         output: 'Substitute output',
         nextStepNeeded: true,
+        verbosity: 'full',
       });
 
       const data1 = safeJsonParse(result1.content[0].text);
@@ -73,6 +75,7 @@ describe('Parallel Execution Bug Fixes', () => {
         scamperAction: 'combine',
         output: 'Combine output',
         nextStepNeeded: true,
+        verbosity: 'full',
       });
 
       const data = safeJsonParse(result.content[0].text);
@@ -96,6 +99,7 @@ describe('Parallel Execution Bug Fixes', () => {
         totalSteps: 4,
         output: 'TRIZ step 2 output',
         nextStepNeeded: true,
+        verbosity: 'full',
       });
 
       const data = safeJsonParse(result.content[0].text);
@@ -120,6 +124,7 @@ describe('Parallel Execution Bug Fixes', () => {
         randomStimulus: 'Test stimulus',
         output: 'Test output',
         nextStepNeeded: true,
+        verbosity: 'full',
       });
 
       const data = safeJsonParse(result.content[0].text);
@@ -150,6 +155,7 @@ describe('Parallel Execution Bug Fixes', () => {
         totalSteps: 4,
         output: 'Test output',
         nextStepNeeded: true,
+        verbosity: 'full',
       });
 
       const data = safeJsonParse(result.content[0].text);
@@ -183,6 +189,7 @@ describe('Parallel Execution Bug Fixes', () => {
           hatColor: 'blue',
           output: 'Blue perspective',
           nextStepNeeded: true,
+          verbosity: 'full',
         }),
         server.executeThinkingStep({
           planId: plan.planId,
@@ -193,6 +200,7 @@ describe('Parallel Execution Bug Fixes', () => {
           disneyRole: 'dreamer',
           output: 'Dreamer perspective',
           nextStepNeeded: true,
+          verbosity: 'full',
         }),
       ];
 
@@ -210,6 +218,7 @@ describe('Parallel Execution Bug Fixes', () => {
           hatColor: 'white',
           output: 'White perspective',
           nextStepNeeded: true,
+          verbosity: 'full',
           sessionId,
         }),
         server.executeThinkingStep({
@@ -221,6 +230,7 @@ describe('Parallel Execution Bug Fixes', () => {
           disneyRole: 'realist',
           output: 'Realist perspective',
           nextStepNeeded: true,
+          verbosity: 'full',
           sessionId,
         }),
       ];
@@ -253,6 +263,7 @@ describe('Parallel Execution Bug Fixes', () => {
           provocation: `Provocation ${i}`,
           output: `PO output ${i}`,
           nextStepNeeded: true,
+          verbosity: 'full',
         }),
         server.executeThinkingStep({
           planId: plan.planId,
@@ -262,6 +273,7 @@ describe('Parallel Execution Bug Fixes', () => {
           totalSteps: 4,
           output: `Concept output ${i}`,
           nextStepNeeded: true,
+          verbosity: 'full',
         }),
       ]).flat();
 
@@ -292,6 +304,7 @@ describe('Parallel Execution Bug Fixes', () => {
         scamperAction: 'substitute',
         output: 'Test output',
         nextStepNeeded: true,
+        verbosity: 'full',
       });
 
       const data = safeJsonParse(result.content[0].text);
@@ -317,6 +330,7 @@ describe('Parallel Execution Bug Fixes', () => {
         contradiction: 'Test contradiction',
         output: 'Test output',
         nextStepNeeded: true,
+        verbosity: 'full',
       });
 
       const data = safeJsonParse(result.content[0].text);

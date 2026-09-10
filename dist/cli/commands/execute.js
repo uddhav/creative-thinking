@@ -38,7 +38,7 @@ export function registerExecute(yargs) {
         .option('verbosity', {
         type: 'string',
         choices: ['minimal', 'full'],
-        describe: "Response size: 'minimal' = ack + steering + warnings/verdicts, no input echoes (intended future default); 'full' = current shape (default)",
+        describe: "Response size: 'minimal' = ack + steering + warnings/verdicts, no input echoes (default since 3.0.0); 'full' = the pre-3.0 shape (or RESPONSE_VERBOSITY=full)",
     })
         .epilogue('Reads a JSON object on stdin if piped; flags override stdin fields.\n' +
         'Long-tail technique fields (hatColor, scamperAction, risks, etc.) are easiest to pass on stdin.\n\n' +

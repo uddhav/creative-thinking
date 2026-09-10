@@ -82,16 +82,18 @@ const ESCAPE_STEPS_SHOWN = 3;
  * "echoes of your own input". Measured: a fully populated caller-sent
  * pathImpact comes back with none of its values surviving. It is kept now.
  *
- * Three nested picks that a flat list cannot reach are handled in
- * slimToMinimal: completionMetadata.completionWarnings,
- * executionMetadata.appliedReversibility, and ruinAssessment minus its
- * prompt. The terminal step's completion block bypasses slimming by
- * mechanism — handleSessionCompletion merges it into the already-serialized
- * response after this filter runs — as do the autoSave status fields and
- * advisoryFindings, added the same way.
+ * Nested picks that a flat list cannot reach are handled in slimToMinimal:
+ * completionMetadata (completionWarnings, techniqueStatuses,
+ * skippedTechniques), executionMetadata.appliedReversibility, and
+ * ruinAssessment minus its prompt. The terminal step's completion block
+ * bypasses slimming by mechanism — handleSessionCompletion merges it into
+ * the already-serialized response after this filter runs — as do the
+ * autoSave status fields and advisoryFindings, added the same way. Memory
+ * decoration (the MemoryAnalyzer's suggestive outputs) is skipped under
+ * minimal on every step, the terminal one included.
  *
- * Declared sunset: 'minimal' is the intended future DEFAULT ('full' exists
- * for compatibility); the default flip will ship as a breaking release.
+ * 'minimal' is the DEFAULT since 3.0.0 (#311); 'full', or
+ * RESPONSE_VERBOSITY=full, restores the pre-3.0 shape.
  */
 export const MINIMAL_RESPONSE_KEEP_KEYS = [
   'sessionId',
@@ -163,8 +165,18 @@ export class ExecutionResponseBuilder {
     // a private reach-through that recomputed threshold state per response.
     reflexivityWarning?: ReflexivityWarning | null
   ): LateralThinkingResponse {
-    const verbosity =
-      input.verbosity ?? (process.env.RESPONSE_VERBOSITY === 'minimal' ? 'minimal' : 'full');
+    // The default is 'minimal' since 3.0.0 (#311): a step response carries
+    // this step's verdicts and the steering, not echoes of the caller's
+    // input or cumulative re-sends. Only the string 'full', on the call or
+    // (with the field absent) in RESPONSE_VERBOSITY, selects the pre-3.0
+    // shape: nothing validates the enum on either surface (stdin bypasses the
+    // CLI's choices), so a misspelt value must fall into the default rather
+    // than silently widen the response.
+    const verbosity: 'full' | 'minimal' =
+      input.verbosity === 'full' ||
+      (input.verbosity === undefined && process.env.RESPONSE_VERBOSITY === 'full')
+        ? 'full'
+        : 'minimal';
     // Captured before buildCoreResponseData, which reassigns session.insights:
     // minimal mode reports this step's additions, not the cumulative list.
     const insightsBefore = new Set(session.insights);
@@ -486,14 +498,33 @@ export class ExecutionResponseBuilder {
       }
     }
 
-    // Nested picks a flat allowlist cannot reach.
+    // Nested picks a flat allowlist cannot reach. The per-technique statuses
+    // (completionPercentage, skippedSteps) and skippedTechniques are the
+    // structured skip signal a strict-mode client reads; only the prose
+    // completionWarnings used to survive, which left a structure-parsing
+    // client blind by default once minimal became the default (#311, #298).
     const completionMetadata = responseData.completionMetadata as
       Record<string, unknown> | undefined;
-    if (
-      Array.isArray(completionMetadata?.completionWarnings) &&
-      completionMetadata.completionWarnings.length > 0
-    ) {
-      slim.completionMetadata = { completionWarnings: completionMetadata.completionWarnings };
+    if (completionMetadata) {
+      const picked: Record<string, unknown> = {};
+      if (
+        Array.isArray(completionMetadata.completionWarnings) &&
+        completionMetadata.completionWarnings.length > 0
+      ) {
+        picked.completionWarnings = completionMetadata.completionWarnings;
+      }
+      if (Array.isArray(completionMetadata.techniqueStatuses)) {
+        picked.techniqueStatuses = completionMetadata.techniqueStatuses;
+      }
+      if (
+        Array.isArray(completionMetadata.skippedTechniques) &&
+        completionMetadata.skippedTechniques.length > 0
+      ) {
+        picked.skippedTechniques = completionMetadata.skippedTechniques;
+      }
+      if (Object.keys(picked).length > 0) {
+        slim.completionMetadata = picked;
+      }
     }
     if (input.appliedReversibility) {
       // The clamp audit is verdict-adjacent: a caller whose claim was moved

@@ -26,6 +26,11 @@
  * not hold up — was indistinguishable from a step that measured nothing. One
  * field, `suppressionDepth`, had been hand-patched to `!== undefined` after it
  * bit someone; the other hundred-odd had not.
+ *
+ * Since 3.0.0 the default response is 'minimal' (#311): values are not echoed,
+ * `fieldsRecorded` names the fields read instead. The value comparisons pin
+ * verbosity: 'full' (the receipt covers names only); a second per-technique
+ * pass asserts the default receipt names every declared field.
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
@@ -153,9 +158,10 @@ function textOf(result: { content: Array<{ type: string }> }): string {
 }
 
 /** Runs step 1 of a single-technique plan and returns what the caller got. */
-async function firstStep(
+async function firstStepWith(
   technique: LateralTechnique,
-  fields: Record<string, unknown>
+  fields: Record<string, unknown>,
+  extra: Record<string, unknown>
 ): Promise<Record<string, unknown>> {
   const plan = JSON.parse(
     textOf(
@@ -178,10 +184,43 @@ async function firstStep(
         output: 'A recorded finding for this step, written plainly and at length.',
         nextStepNeeded: true,
         ...fields,
+        ...extra,
       })
     )
   ) as Record<string, unknown>;
 }
+
+/** The pre-3.0 shape: field values echoed. */
+const firstStep = (
+  technique: LateralTechnique,
+  fields: Record<string, unknown>
+): Promise<Record<string, unknown>> => firstStepWith(technique, fields, { verbosity: 'full' });
+
+/** The default since 3.0.0: a receipt of names, no values. */
+const firstStepDefault = (
+  technique: LateralTechnique,
+  fields: Record<string, unknown>
+): Promise<Record<string, unknown>> => firstStepWith(technique, fields, {});
+
+describe('under the default, the receipt names every field the technique declares', () => {
+  it.each(ALL_LATERAL_TECHNIQUES.filter(t => EXPECTED[t].length > 0))(
+    '%s: fieldsRecorded covers what the caller sent',
+    async technique => {
+      const sent: Record<string, unknown> = {};
+      for (const field of EXPECTED[technique]) {
+        sent[field] = sampleFor(field, schemaProperties[field]);
+      }
+
+      const data = await firstStepDefault(technique, sent);
+      const recorded = Array.isArray(data.fieldsRecorded) ? (data.fieldsRecorded as string[]) : [];
+
+      const unreceipted = EXPECTED[technique].filter(field => !recorded.includes(field));
+      expect(unreceipted, `${technique} read these and did not name them`).toEqual([]);
+      const echoed = EXPECTED[technique].filter(field => data[field] !== undefined);
+      expect(echoed, `${technique} echoed values under the default`).toEqual([]);
+    }
+  );
+});
 
 describe('a technique gets back the fields it declares', () => {
   it('covers every registered technique, so a new one cannot be forgotten', () => {

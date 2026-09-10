@@ -99,6 +99,7 @@ describe('executionGraph parameters run verbatim', { retry: 0 }, () => {
     for (const [index, node] of nodes.entries()) {
       const data = await client.executeThinkingStep({
         ...node.parameters,
+        verbosity: 'full', // executionMetadata.flexibilityImpact is a full-mode field (#311)
         output: `Step ${node.stepNumber}: working ${PROBLEM} from the ${node.technique} angle`,
         ...(riskFieldsByIndex[index] ?? {}),
         ...(sessionId ? { sessionId } : {}),

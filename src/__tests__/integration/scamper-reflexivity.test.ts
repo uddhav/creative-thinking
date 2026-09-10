@@ -35,6 +35,7 @@ describe('SCAMPER Reflexivity Integration', () => {
         scamperAction: 'substitute',
         scamperModification: 'Replace rigid plastic with foldable material',
         nextStepNeeded: true,
+        verbosity: 'full',
       });
 
       const step1Response = JSON.parse(step1Result.content[0].text);
@@ -55,6 +56,7 @@ describe('SCAMPER Reflexivity Integration', () => {
         scamperAction: 'combine',
         scamperModification: 'Merge brewing system with IoT controls',
         nextStepNeeded: true,
+        verbosity: 'full',
       });
 
       const step2Response = JSON.parse(step2Result.content[0].text);
@@ -73,6 +75,7 @@ describe('SCAMPER Reflexivity Integration', () => {
         scamperAction: 'eliminate',
         scamperModification: 'Remove glass carafe and heating plate',
         nextStepNeeded: true,
+        verbosity: 'full',
       });
 
       const step6Response = JSON.parse(step6Result.content[0].text);
@@ -94,6 +97,7 @@ describe('SCAMPER Reflexivity Integration', () => {
         scamperAction: 'parameterize',
         scamperModification: 'Add variable controls for customization',
         nextStepNeeded: true,
+        verbosity: 'full',
       });
 
       const step8Response = JSON.parse(step8Result.content[0].text);
@@ -124,6 +128,7 @@ describe('SCAMPER Reflexivity Integration', () => {
         scamperAction: 'substitute',
         scamperModification: 'Replace navigation pattern',
         nextStepNeeded: true,
+        verbosity: 'full',
       });
 
       const step1Response = JSON.parse(step1Result.content[0].text);
@@ -142,6 +147,7 @@ describe('SCAMPER Reflexivity Integration', () => {
         scamperAction: 'combine',
         scamperModification: 'Merge separate screens',
         nextStepNeeded: true, // Can't terminate early in sequential mode!
+        verbosity: 'full',
       });
 
       const step2Response = JSON.parse(step2Result.content[0].text);

@@ -388,9 +388,12 @@ When AI is not available, the server provides:
 
 This ensures the server remains fully functional regardless of AI availability.
 
-### Memory-Aware Outputs (NEW)
+### Memory-Aware Outputs
 
-All three layers now provide memory-suggestive outputs to enhance contextual understanding:
+All three layers provide memory-suggestive outputs to enhance contextual understanding. On the
+execution layer they are a full-mode feature: since 3.0.0 the default step response is `minimal`,
+under which the memory analyzer does not run; send `verbosity: 'full'` (or set
+`RESPONSE_VERBOSITY=full`) to receive them.
 
 **Discovery Layer**:
 
@@ -1273,7 +1276,7 @@ The server supports environment variables for advanced features:
   last write is older, at startup and on the cleanup tick; unset means never delete
 - `DATABASE_URL=postgres://...` - PostgreSQL connection string (postgres adapter only)
 - `RESPONSE_VERBOSITY=minimal|full` - Default execute-response verbosity when a call omits
-  `verbosity` (default: full; `minimal` is the declared future default)
+  `verbosity` (default: `minimal` since 3.0.0; set `full` for the pre-3.0 shape)
 - `STEP_ORDER_ENFORCEMENT=advisory|strict` - What happens to an out-of-order step, a contradictory
   numbering pairing, or a stimulus the plan did not assign (default: advisory, which records the
   step and redirects or flags it; `strict` refuses it with `E211` and records nothing). A plan's
@@ -1631,7 +1634,8 @@ New technique for synthesizing insights from multiple sources:
 
 ### Enhanced Memory and Suggestions
 
-All techniques now include memory-suggestive output patterns:
+All techniques include memory-suggestive output patterns, delivered under `verbosity: 'full'` (the
+default step response, `minimal` since 3.0.0, omits them):
 
 - **Contextual insights**: Related observations from session history
 - **Historical notes**: Relevant past decisions and their outcomes

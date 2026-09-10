@@ -35,6 +35,7 @@ describe('Reflexivity Integration', () => {
         output:
           'The core contradiction: reducing cost typically means using cheaper materials or processes, which reduces quality',
         nextStepNeeded: true,
+        verbosity: 'full',
       });
 
       // Step 1 should not have reflexivity data (thinking step)
@@ -53,6 +54,7 @@ describe('Reflexivity Integration', () => {
           'Applying TRIZ principle of Segmentation: Break the product into modular components',
         inventivePrinciples: ['Segmentation', 'Asymmetry'],
         nextStepNeeded: true,
+        verbosity: 'full',
       });
 
       // Step 3 should have reflexivity data (action step)
@@ -85,6 +87,7 @@ describe('Reflexivity Integration', () => {
         output:
           'Mapping cultural landscape: Engineering values precision, Marketing values persuasion',
         nextStepNeeded: true,
+        verbosity: 'full',
       });
 
       const step1Response = JSON.parse(step1Result.content[0].text);
@@ -100,6 +103,7 @@ describe('Reflexivity Integration', () => {
         totalSteps: 5,
         output: 'Context sensitivity: Engineering culture values data, Marketing values narrative',
         nextStepNeeded: true,
+        verbosity: 'full',
       });
 
       // Execute step 3 (action step - Cross-Cultural Bridge Building)
@@ -114,6 +118,7 @@ describe('Reflexivity Integration', () => {
         bridgeStrategies: ['Shared metrics dashboard', 'Cross-functional teams'],
         sharedValues: ['Quality', 'Innovation', 'Customer satisfaction'],
         nextStepNeeded: true,
+        verbosity: 'full',
       });
 
       const step3Response = JSON.parse(step3Result.content[0].text);
@@ -132,6 +137,7 @@ describe('Reflexivity Integration', () => {
         adaptiveStrategies: ['Collaborative workshops', 'Cross-functional sprints'],
         pivotProtocols: ['Weekly feedback loops', 'Quarterly alignment reviews'],
         nextStepNeeded: true,
+        verbosity: 'full',
       });
 
       const step4Response = JSON.parse(step4Result.content[0].text);
@@ -168,6 +174,7 @@ describe('Reflexivity Integration', () => {
         output: 'Blue hat: We need a structured approach to improving morale',
         hatColor: 'blue',
         nextStepNeeded: true,
+        verbosity: 'full',
       });
 
       const stepResponse = JSON.parse(stepResult.content[0].text);
@@ -195,6 +202,7 @@ describe('Reflexivity Integration', () => {
         output: 'Eliminating contradiction: Remove intermediate warehouses',
         inventivePrinciples: ['Elimination'],
         nextStepNeeded: true,
+        verbosity: 'full',
       });
 
       const step3Response = JSON.parse(step3Result.content[0].text);
@@ -213,6 +221,7 @@ describe('Reflexivity Integration', () => {
         // Steps 1-2 were skipped on purpose, so the session has nothing to
         // complete; it stays open and the assertion is about accumulation.
         nextStepNeeded: true,
+        verbosity: 'full',
       });
 
       const step4Response = JSON.parse(step4Result.content[0].text);

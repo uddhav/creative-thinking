@@ -22,6 +22,12 @@
  * refusal. The control at the end runs the identical session without
  * `pathImpact`, so a failure here means the field caused it rather than the
  * technique.
+ *
+ * The session runs under verbosity: 'full': the fingerprint it reads is
+ * memory decoration, and under the default ('minimal' since 3.0.0) the
+ * MemoryAnalyzer does not run at all (ExecutionResponseBuilder skips
+ * generateMemoryOutputs), so only a full-mode session can reach the code
+ * this guards.
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
@@ -92,6 +98,7 @@ async function runNineWindows(pathImpactOnStepFive: object | undefined): Promise
         totalSteps: 9,
         output: `Cell ${step}: a concrete observation about urban transport at this scale.`,
         nextStepNeeded: step < 9,
+        verbosity: 'full',
         ...(step === 5 && pathImpactOnStepFive ? { pathImpact: pathImpactOnStepFive } : {}),
       })
     );

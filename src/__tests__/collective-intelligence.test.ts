@@ -102,8 +102,11 @@ describe('Collective Intelligence Orchestration', () => {
     planId: string,
     input: Partial<ExecuteThinkingStepInput>
   ): Promise<ExecutionResponse> {
+    // The echoes and memory outputs read here are full-mode fields; the
+    // default is 'minimal' since 3.0.0 (#311).
     const result = await server.executeThinkingStep({
       planId,
+      verbosity: 'full',
       ...input,
     });
 

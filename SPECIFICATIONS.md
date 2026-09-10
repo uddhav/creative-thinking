@@ -158,7 +158,8 @@ Combining past elements with present challenges **5. Barrier Prediction**: Antic
 states based on historical patterns
 
 The framework incorporates memory through **suggestive integration**—tool outputs naturally prompt
-memory operations without explicit dependencies:
+memory operations without explicit dependencies. On `execute_thinking_step` these fields arrive only
+under `verbosity: 'full'`; the default response (`minimal` since 3.0.0) omits them:
 
 ```typescript
 // Example of memory-suggestive output structure

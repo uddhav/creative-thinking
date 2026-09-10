@@ -85,6 +85,7 @@ async function step(
         totalSteps: 7,
         output: `Finding for step ${currentStep}, written plainly and at length.`,
         nextStepNeeded,
+        verbosity: 'full', // completedSteps is a full-mode field (#311)
       })
     )
   ) as StepResponse;

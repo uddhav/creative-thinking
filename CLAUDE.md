@@ -543,16 +543,16 @@ Process.
   (`conventional-changelog-angular` v8 + `conventional-commits-parser` v6) over each form, not from
   reading its regex — a transcription of that regex got the `BREAKING-CHANGE:` row backwards.
 
-  | Form                       | Matched? |                                                                                      |
-  | -------------------------- | -------- | ------------------------------------------------------------------------------------ |
-  | indented four spaces       | **yes**  | the original failure; `\s` is stripped                                               |
-  | markdown bullet `* …`      | **yes**  | `*` is stripped                                                                      |
-  | table pipe `\| …`          | **yes**  | `\|` is stripped                                                                     |
-  | line start, no colon       | **yes**  | the separator is `[:\s]+`, so a space suffices                                       |
-  | `BREAKING-CHANGE:`         | **yes**  | the parser normalises the hyphen, though the keyword list holds only the spaced form |
-  | inline mid-sentence        | no       | the `^` anchor cannot reach it                                                       |
-  | plural `BREAKING CHANGES:` | no       | `S` is neither colon nor space                                                       |
-  | `BREAKING_CHANGE:`         | no       | not the configured keyword                                                           |
+  | Form                       | Matched? |                                                                                                  |
+  | -------------------------- | -------- | ------------------------------------------------------------------------------------------------ |
+  | indented four spaces       | **yes**  | the original failure; `\s` is stripped                                                           |
+  | markdown bullet `* …`      | **yes**  | `*` is stripped                                                                                  |
+  | table pipe `\| …`          | **yes**  | `\|` is stripped                                                                                 |
+  | line start, no colon       | **yes**  | the separator is `[:\s]+`, so a space suffices                                                   |
+  | `BREAKING-CHANGE:`         | no       | the installed analyzer (conventional-changelog-angular 8) reads it as a minor; probed 2026-09-09 |
+  | inline mid-sentence        | no       | the `^` anchor cannot reach it                                                                   |
+  | plural `BREAKING CHANGES:` | no       | `S` is neither colon nor space                                                                   |
+  | `BREAKING_CHANGE:`         | no       | not the configured keyword                                                                       |
 
   So indentation, bullets, table cells and dropping the colon all fail to protect. Use an inline
   mention, the plural, or an underscored token. A **pull request description** is also safe — squash
