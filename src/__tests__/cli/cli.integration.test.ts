@@ -290,6 +290,9 @@ describe('socketes CLI cross-process flow', () => {
           '--output',
           `Step ${step}: merged-rota work for the two escalation cultures.`,
           '--next-step-needed',
+          // reflexivity's cumulative summary is a full-mode field (#311).
+          '--verbosity',
+          'full',
         ],
         { cwd: workDir, stdin }
       );

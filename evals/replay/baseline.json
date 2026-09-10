@@ -6,7 +6,7 @@
       "calls": 6,
       "errors": 0,
       "errorsByCode": {},
-      "normalizedBytes": 20481,
+      "normalizedBytes": 16895,
       "advisoryFindings": 0,
       "assignedStimuli": 1,
       "discoveries": [
@@ -24,7 +24,7 @@
       "calls": 5,
       "errors": 0,
       "errorsByCode": {},
-      "normalizedBytes": 19014,
+      "normalizedBytes": 16478,
       "advisoryFindings": 0,
       "assignedStimuli": 1,
       "discoveries": [
@@ -44,7 +44,7 @@
       "errorsByCode": {
         "uncoded": 2
       },
-      "normalizedBytes": 5026,
+      "normalizedBytes": 5147,
       "advisoryFindings": 0,
       "assignedStimuli": 0,
       "discoveries": [
@@ -62,7 +62,7 @@
       "calls": 9,
       "errors": 0,
       "errorsByCode": {},
-      "normalizedBytes": 47738,
+      "normalizedBytes": 36405,
       "advisoryFindings": 1,
       "assignedStimuli": 0,
       "discoveries": [

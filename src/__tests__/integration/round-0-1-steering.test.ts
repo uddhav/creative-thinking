@@ -189,8 +189,27 @@ describe('round 0+1 steering surfaces (via MCP client)', () => {
     });
     const findings = withModes.advisoryFindings as AdvisoryFindingShape[] | undefined;
     expect(findings?.find(f => f.gate === 'fields.steelman_red_team.step5')).toBeUndefined();
-    // The gated field must be echoed, or the caller cannot see what the gate saw.
-    expect(withModes.failureModes).toEqual(['handoff gap drops incident context between regions']);
+    // The caller must be able to see what the gate saw. Under the default
+    // ('minimal' since 3.0.0) that is the receipt naming the field; the value
+    // itself comes back under 'full'.
+    expect(withModes.fieldsRecorded).toContain('failureModes');
+    expect(withModes.failureModes, 'the default echoes no field values').toBeUndefined();
+
+    const withModesFull = await client.executeThinkingStep({
+      planId: plan.planId,
+      technique: 'steelman_red_team',
+      problem,
+      currentStep: 5,
+      totalSteps: 7,
+      output: 'The attack, with its failure modes recorded as data this time.',
+      nextStepNeeded: true,
+      sessionId,
+      failureModes: ['handoff gap drops incident context between regions'],
+      verbosity: 'full',
+    });
+    expect(withModesFull.failureModes).toEqual([
+      'handoff gap drops incident context between regions',
+    ]);
   });
 
   it('a declared crux surfaces its techniques past keyword categorization and is echoed', async () => {

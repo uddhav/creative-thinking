@@ -11,6 +11,10 @@ export default defineConfig({
       // PERSISTENCE_TYPE and PERSISTENCE_TTL_DAYS cannot have the suite sweep
       // their real ~/.creative-thinking.
       PERSISTENCE_TTL_DAYS: '',
+      // The execute-response default is 'minimal' since 3.0.0; a developer
+      // shell exporting RESPONSE_VERBOSITY=full would otherwise change what
+      // ~100 tests observe by default.
+      RESPONSE_VERBOSITY: '',
     },
     // Increase test timeout for NLP-heavy tests
     testTimeout: 10000,

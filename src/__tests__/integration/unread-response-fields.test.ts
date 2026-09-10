@@ -30,6 +30,11 @@
  * on this branch a field that would not fire turned out to be structurally
  * dead. Both are reachable; the conditions are simply narrow, and both were
  * confirmed against the running server before being written down here.
+ *
+ * Since 3.0.0 the default response is 'minimal' (#311). Three of the four
+ * fields are on its keep-list; `progressDisplay` is not (the numbers it
+ * renders travel as `techniqueProgress`). The fixture session runs under
+ * 'full' so all four are observable, and one default-mode case pins the split.
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
@@ -54,18 +59,18 @@ interface Seen {
 }
 
 let client: MCPClientTestHelper;
+
+function textOf(result: { content: Array<{ type: string }> }): string {
+  const first = result.content[0];
+  if (first?.type !== 'text') throw new Error('expected text content');
+  return (first as { type: 'text'; text: string }).text;
+}
 let seen: Record<string, Seen>;
 let totalSteps: number;
 
 beforeAll(async () => {
   client = new MCPClientTestHelper();
   await client.connect();
-
-  const textOf = (result: { content: Array<{ type: string }> }): string => {
-    const first = result.content[0];
-    if (first?.type !== 'text') throw new Error('expected text content');
-    return (first as { type: 'text'; text: string }).text;
-  };
 
   const plan = JSON.parse(
     textOf(
@@ -94,6 +99,7 @@ beforeAll(async () => {
           totalSteps,
           output: `Finding ${step}, written plainly and at length for the record.`,
           nextStepNeeded: step < totalSteps,
+          verbosity: 'full',
           ...(technique === 'scamper' ? { scamperAction: SCAMPER_ACTIONS[step % 8] } : {}),
         })
       )
@@ -126,6 +132,33 @@ describe('the fields nothing was reading do arrive', () => {
     expect(String(seen.progressDisplay.value)).toMatch(/Progress:/);
     expect(String(seen.progressDisplay.value)).toContain(`/${totalSteps} steps`);
   });
+
+  it('under the default, progress arrives as techniqueProgress, not as prose', async () => {
+    const plan = JSON.parse(
+      textOf(
+        await client.callTool('plan_thinking_session', {
+          problem: PROBLEM,
+          techniques: ['six_hats'],
+        })
+      )
+    ) as { planId: string };
+    const data = JSON.parse(
+      textOf(
+        await client.callTool('execute_thinking_step', {
+          planId: plan.planId,
+          technique: 'six_hats',
+          problem: PROBLEM,
+          currentStep: 1,
+          totalSteps: 7,
+          output: 'Finding 1, written plainly and at length for the record.',
+          nextStepNeeded: true,
+          hatColor: 'blue',
+        })
+      )
+    ) as { progressDisplay?: unknown; techniqueProgress?: { techniqueStep?: number } };
+    expect(data.progressDisplay, 'the prose rendering is a full-mode field').toBeUndefined();
+    expect(data.techniqueProgress?.techniqueStep).toBe(1);
+  }, 30_000);
 
   it('says flexibility is falling, once it is', () => {
     expect(seen.flexibilityMessage, 'flexibilityMessage never reached the caller').toBeDefined();

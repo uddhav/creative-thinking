@@ -26,6 +26,9 @@ export class ReplayClient {
       args: [this.serverPath],
       env: {
         ...process.env,
+        // The baseline is recorded under the shipping default; a shell's
+        // RESPONSE_VERBOSITY must not move it.
+        RESPONSE_VERBOSITY: '',
         ...this.env,
         DISABLE_THOUGHT_LOGGING: 'true',
       },

@@ -20,6 +20,11 @@
  * more — `isError` stripped from every layer-built error, and debate mode
  * dropped by the planning allowlist — both invisible to a test that enters
  * below `RequestHandlers`.
+ *
+ * Since 3.0.0 the default response is 'minimal' (#311): the echoes are
+ * replaced by `fieldsRecorded`, a receipt of names. The value comparisons
+ * below pin verbosity: 'full'; one case pins the default receipt. The metrics
+ * cases run under the default, because the verdicts are on its keep-list.
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
@@ -82,9 +87,30 @@ async function firstStep(
   ) as Record<string, unknown>;
 }
 
+/** The same step under the pre-3.0 shape, where field values are echoed. */
+function firstStepFull(
+  technique: LateralTechnique,
+  fields: Record<string, unknown>
+): Promise<Record<string, unknown>> {
+  return firstStep(technique, { ...fields, verbosity: 'full' });
+}
+
 describe('a technique gets its own declared fields back', () => {
-  it('echoes TRIZ fields, which only the uncalled copy used to know', async () => {
+  it('under the default, the receipt names the fields and echoes no value', async () => {
     const data = await firstStep('triz', {
+      contradiction: 'Faster releases against fewer regressions',
+      inventivePrinciples: ['Segmentation', 'Prior action'],
+    });
+
+    expect(data.fieldsRecorded).toEqual(
+      expect.arrayContaining(['contradiction', 'inventivePrinciples'])
+    );
+    expect(data.contradiction).toBeUndefined();
+    expect(data.inventivePrinciples).toBeUndefined();
+  });
+
+  it('echoes TRIZ fields, which only the uncalled copy used to know', async () => {
+    const data = await firstStepFull('triz', {
       contradiction: 'Faster releases against fewer regressions',
       inventivePrinciples: ['Segmentation', 'Prior action'],
       viaNegativaRemovals: ['The manual sign-off gate'],
@@ -98,7 +124,7 @@ describe('a technique gets its own declared fields back', () => {
   });
 
   it('echoes neural_state fields, including a suppressionDepth of zero', async () => {
-    const data = await firstStep('neural_state', {
+    const data = await firstStepFull('neural_state', {
       dominantNetwork: 'dmn',
       // Zero is a reading. The extractor tests `!== undefined` for exactly
       // this: a falsy guard would drop it and report nothing measured.
@@ -114,7 +140,7 @@ describe('a technique gets its own declared fields back', () => {
   });
 
   it('still echoes the six the live path already knew', async () => {
-    const data = await firstStep('six_hats', { hatColor: 'blue' });
+    const data = await firstStepFull('six_hats', { hatColor: 'blue' });
 
     expect(data.hatColor).toBe('blue');
   });
@@ -125,7 +151,7 @@ describe('a technique gets its own declared fields back', () => {
   // dead method worked, and every one of them passed while the eight
   // techniques above got nothing back.
   it('echoes the insights, guidance and history the caller asked for', async () => {
-    const data = await firstStep('six_hats', {
+    const data = await firstStepFull('six_hats', {
       hatColor: 'blue',
       risks: ['Risk 1'],
       mitigations: ['Mitigation 1'],
@@ -141,7 +167,7 @@ describe('a technique gets its own declared fields back', () => {
   });
 
   it('echoes SCAMPER path impact without echoing a caller-typed flexibility', async () => {
-    const data = await firstStep('scamper', {
+    const data = await firstStepFull('scamper', {
       scamperAction: 'substitute',
       alternativeSuggestions: ['Use recycled materials'],
     });
@@ -156,7 +182,7 @@ describe('a technique gets its own declared fields back', () => {
   });
 
   it('echoes revision fields', async () => {
-    const data = await firstStep('po', {
+    const data = await firstStepFull('po', {
       isRevision: true,
       revisesStep: 1,
       branchFromStep: 1,
@@ -170,7 +196,7 @@ describe('a technique gets its own declared fields back', () => {
   });
 
   it('echoes the risk and adversarial fields', async () => {
-    const data = await firstStep('triz', {
+    const data = await firstStepFull('triz', {
       risks: ['Risk 1'],
       failureModes: ['Failure 1'],
       mitigations: ['Mitigation 1'],

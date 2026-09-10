@@ -67,6 +67,7 @@ describe('Ergodicity Prompts', () => {
         totalSteps: 8,
         output: 'We could eliminate bonds and invest all savings in high-risk stocks',
         nextStepNeeded: true,
+        verbosity: 'full', // ruinAssessment.prompt is dropped by the default (#311)
       };
 
       const response = await executeThinkingStep(
@@ -302,6 +303,7 @@ describe('Ergodicity Prompts', () => {
         totalSteps: 4,
         output: 'I should permanently invest all my savings in cryptocurrency',
         nextStepNeeded: true,
+        verbosity: 'full', // ruinAssessment.prompt is dropped by the default (#311)
       };
 
       const response = await executeThinkingStep(

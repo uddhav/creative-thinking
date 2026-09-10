@@ -106,6 +106,7 @@ async function step(
     totalSteps: args.totalSteps,
     output: `Step ${args.currentStep} of ${args.technique ?? 'six_hats'}, written at length.`,
     nextStepNeeded: args.nextStepNeeded ?? true,
+    verbosity: 'full', // completedSteps is a full-mode field (#311)
   });
   return {
     isError: result.isError === true,

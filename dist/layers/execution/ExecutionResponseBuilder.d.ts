@@ -48,16 +48,18 @@ import type { ReflexivityWarning } from '../../core/ReflexivityTracker.js';
  * "echoes of your own input". Measured: a fully populated caller-sent
  * pathImpact comes back with none of its values surviving. It is kept now.
  *
- * Three nested picks that a flat list cannot reach are handled in
- * slimToMinimal: completionMetadata.completionWarnings,
- * executionMetadata.appliedReversibility, and ruinAssessment minus its
- * prompt. The terminal step's completion block bypasses slimming by
- * mechanism — handleSessionCompletion merges it into the already-serialized
- * response after this filter runs — as do the autoSave status fields and
- * advisoryFindings, added the same way.
+ * Nested picks that a flat list cannot reach are handled in slimToMinimal:
+ * completionMetadata (completionWarnings, techniqueStatuses,
+ * skippedTechniques), executionMetadata.appliedReversibility, and
+ * ruinAssessment minus its prompt. The terminal step's completion block
+ * bypasses slimming by mechanism — handleSessionCompletion merges it into
+ * the already-serialized response after this filter runs — as do the
+ * autoSave status fields and advisoryFindings, added the same way. Memory
+ * decoration (the MemoryAnalyzer's suggestive outputs) is skipped under
+ * minimal on every step, the terminal one included.
  *
- * Declared sunset: 'minimal' is the intended future DEFAULT ('full' exists
- * for compatibility); the default flip will ship as a breaking release.
+ * 'minimal' is the DEFAULT since 3.0.0 (#311); 'full', or
+ * RESPONSE_VERBOSITY=full, restores the pre-3.0 shape.
  */
 export declare const MINIMAL_RESPONSE_KEEP_KEYS: readonly ["sessionId", "technique", "currentStep", "totalSteps", "nextStepNeeded", "historyLength", "techniqueProgress", "nextStepGuidance", "sequentialThinkingSuggestion", "ergodicityMetrics", "flexibilityScore", "flexibilityMessage", "alternativeSuggestions", "ergodicityCheck", "earlyWarningState", "escapeRecommendation", "reflexivityWarning", "reflectionRequired", "optionGeneration", "realityAssessment", "pathImpact", "persona"];
 export declare class ExecutionResponseBuilder {

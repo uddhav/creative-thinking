@@ -8,12 +8,15 @@
  * export) with a second, byte-identical copy of `pathMemory`, the manager's
  * subsystems' empty learning slots (#416, which no production path can
  * populate), and on every history entry the server's own prompt text
- * (`ergodicityCheck`, `ruinAssessment.prompt`), read by nothing. The
- * session file wrote every history entry twice, `{ input, output }`
- * byte-identical, and read only `input`.
+ * (`ergodicityCheck`, `ruinAssessment.prompt`), read by nothing, and (since
+ * 3.0.0) the orchestrator's per-step copy of `session.riskDiscoveryData`,
+ * 53% of each entry and read by nothing there. The session file wrote every
+ * history entry twice, `{ input, output }` byte-identical, and read only
+ * `input`.
  *
  * Breaks: stringify the whole session (manager and duplicate reappear);
- * drop `ergodicityCheck` or `ruinAssessment` from the push destructure;
+ * drop `ergodicityCheck`, `ruinAssessment` or `riskDiscoveryData` from the
+ * push destructure;
  * restore the `{ input, output }` writer (the file doubles); drop the
  * old-shape branch of `historyInput` (an old file loads with no fields).
  *
@@ -106,9 +109,12 @@ describe('session export and file (#415, #416)', () => {
     expect(session.history).toHaveLength(3);
     for (const entry of session.history ?? []) {
       expect(entry).not.toHaveProperty('ergodicityCheck');
+      expect(entry).not.toHaveProperty('riskDiscoveryData');
       const ruin = entry.ruinAssessment as { prompt?: unknown } | undefined;
       if (ruin) expect(ruin).not.toHaveProperty('prompt');
     }
+    // The session-level copy stays: it is the live assessment, not an echo.
+    expect(session).toHaveProperty('riskDiscoveryData');
   }, 60_000);
 
   it('the file holds each entry once, and a file written in the old shape still loads', async () => {

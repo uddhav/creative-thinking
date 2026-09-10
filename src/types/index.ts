@@ -314,8 +314,8 @@ export interface ExecuteThinkingStepInput {
   // Response shaping. 'minimal' returns the step acknowledgment, steering,
   // and warnings/verdicts only — no echoes of the caller's own input, and
   // newInsights (this step's additions) instead of the cumulative insights
-  // list. Default 'full' (also settable via RESPONSE_VERBOSITY); 'minimal'
-  // is the declared future default.
+  // list. Default 'minimal' since 3.0.0; 'full' (also settable via
+  // RESPONSE_VERBOSITY=full) restores the pre-3.0 shape.
   verbosity?: 'minimal' | 'full';
 
   // Revision and branching
@@ -604,8 +604,8 @@ export interface ThinkingOperationData {
   // Response shaping. 'minimal' returns the step acknowledgment, steering,
   // and warnings/verdicts only — no echoes of the caller's own input, and
   // newInsights (this step's additions) instead of the cumulative insights
-  // list. Default 'full' (also settable via RESPONSE_VERBOSITY); 'minimal'
-  // is the declared future default.
+  // list. Default 'minimal' since 3.0.0; 'full' (also settable via
+  // RESPONSE_VERBOSITY=full) restores the pre-3.0 shape.
   verbosity?: 'minimal' | 'full';
 
   // Revision and branching

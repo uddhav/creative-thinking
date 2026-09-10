@@ -59,7 +59,9 @@ interface StepResponse {
     skippedTechniques?: string[];
     missedPerspectives?: string[];
     minimumThresholdMet?: boolean;
+    techniqueStatuses?: Array<{ technique: string; completionPercentage: number }>;
   };
+  completed?: boolean;
   ergodicityMetrics?: { currentFlexibility?: number };
   nextStepGuidance?: string;
 }
@@ -100,8 +102,12 @@ describe('the completion nag does not reach the caller on an early step', () => 
     expect(data.nextStepGuidance ?? '').not.toContain('MANDATORY');
 
     // The field itself has to be present, or the assertions above pass by the
-    // response simply not carrying completion information at all.
+    // response simply not carrying completion information at all. Under the
+    // default ('minimal' since 3.0.0) it carries the per-technique statuses;
+    // the warnings list is picked only when it has something in it, so its
+    // absence is the contract and `?? []` reads both shapes.
     expect(data.completionMetadata, 'completionMetadata never reached the caller').toBeDefined();
+    expect(data.completionMetadata?.techniqueStatuses?.[0]?.technique).toBe('six_hats');
 
     // Nothing at all on step 1. This carried "Black Hat thinking skipped" until
     // `findSkippedSteps` was corrected: it counted every incomplete step as
@@ -109,7 +115,7 @@ describe('the completion nag does not reach the caller on an early step', () => 
     // reached. A warning true of every session at step 1 carries no
     // information and teaches the reader to discount the ones that do.
     expect(
-      data.completionMetadata?.completionWarnings,
+      data.completionMetadata?.completionWarnings ?? [],
       'a warning fired about a step the session had not reached'
     ).toEqual([]);
   }, 30_000);
@@ -150,23 +156,50 @@ describe('the completion nag does not reach the caller on an early step', () => 
     expect(data.completionMetadata, 'completionMetadata never reached the caller').toBeDefined();
     expect(estimatedSteps).toBeGreaterThan(7);
 
+    // The default ('minimal' since 3.0.0) picks skippedTechniques only when
+    // non-empty, so absence is the contract; missedPerspectives and the
+    // threshold verdict are full-mode fields, asserted below under 'full'.
     expect(
-      data.completionMetadata?.skippedTechniques,
+      data.completionMetadata?.skippedTechniques ?? [],
+      'a technique the session had not reached was reported skipped'
+    ).toEqual([]);
+    expect(data.completionMetadata?.techniqueStatuses?.map(s => s.technique)).toEqual([
+      'six_hats',
+      'scamper',
+    ]);
+
+    const full = JSON.parse(
+      textOf(
+        await client.callTool('execute_thinking_step', {
+          planId,
+          technique: 'six_hats',
+          problem: PROBLEM,
+          currentStep: 1,
+          totalSteps: 7,
+          output: 'A recorded finding for this step, written plainly and at length.',
+          nextStepNeeded: true,
+          hatColor: 'blue',
+          verbosity: 'full',
+        })
+      )
+    ) as StepResponse;
+    expect(
+      full.completionMetadata?.skippedTechniques,
       'a technique the session had not reached was reported skipped'
     ).toEqual([]);
     expect(
-      data.completionMetadata?.missedPerspectives,
+      full.completionMetadata?.missedPerspectives,
       'a perspective the session had not reached was reported missed'
     ).toEqual([]);
     // A session in progress has not failed to meet a threshold it is still
     // working toward; `false` on step 1 reads as a verdict.
     expect(
-      data.completionMetadata?.minimumThresholdMet,
+      full.completionMetadata?.minimumThresholdMet,
       'a mid-run session was judged against the completion threshold'
     ).toBeUndefined();
   }, 30_000);
 
-  it('reports a finished session as finished', async () => {
+  async function finishSixHats(verbosity?: 'full'): Promise<StepResponse> {
     const { planId } = await plan(['six_hats']);
     let sessionId: string | undefined;
     let last: StepResponse = {};
@@ -184,11 +217,30 @@ describe('the completion nag does not reach the caller on an early step', () => 
             output: `Finding ${step}, written plainly and at length for the record.`,
             nextStepNeeded: step < 7,
             hatColor: HATS[step - 1],
+            ...(verbosity ? { verbosity } : {}),
           })
         )
       ) as StepResponse;
       sessionId = last.sessionId ?? sessionId;
     }
+    return last;
+  }
+
+  it('reports a finished session as finished', async () => {
+    // The default ('minimal' since 3.0.0): the completion block rides through
+    // whole, and the per-technique status says the technique is complete.
+    const last = await finishSixHats();
+
+    expect(last.completed).toBe(true);
+    expect(last.completionMetadata?.techniqueStatuses?.[0]?.completionPercentage).toBe(1);
+    expect(
+      last.completionMetadata?.completionWarnings ?? [],
+      'a completed session still warned about itself'
+    ).toEqual([]);
+  }, 30_000);
+
+  it('reports a finished session as finished, with the counters, under full', async () => {
+    const last = await finishSixHats('full');
 
     expect(last.completionMetadata?.completedSteps).toBe(7);
     expect(last.completionMetadata?.overallProgress).toBe(1);

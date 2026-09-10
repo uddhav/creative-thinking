@@ -151,16 +151,13 @@ describe('a plan whose nodes omit the problem is still executable', () => {
       'executing the node verbatim did not start a session'
     ).toBeDefined();
 
-    // Resolution reached the response at all.
-    expect(stepResponse.problem, 'the server never resolved the problem from the plan').toBe(
-      PROBLEM
-    );
-
-    // And separately, the guidance the caller acts on names the problem
-    // concretely. Asserted on nextStepGuidance ALONE on purpose: an earlier
-    // version concatenated it with the `problem` echo before matching, so it
-    // passed on the echo and proved nothing about interpolation — which is the
-    // central claim of moving the reference to plan time only.
+    // The guidance the caller acts on names the problem concretely. Asserted
+    // on nextStepGuidance ALONE on purpose: an earlier version concatenated it
+    // with the `problem` echo before matching, so it passed on the echo and
+    // proved nothing about interpolation — which is the central claim of
+    // moving the reference to plan time only. (Since 3.0.0 the default
+    // response carries no `problem` echo at all, so this is also the only
+    // place resolution can be observed from the caller's side.)
     expect(
       stepResponse.nextStepGuidance ?? '',
       'execute-time guidance was not interpolated with the real problem'

@@ -61,7 +61,7 @@ export function registerExecute(yargs: Argv): Argv {
           type: 'string',
           choices: ['minimal', 'full'] as const,
           describe:
-            "Response size: 'minimal' = ack + steering + warnings/verdicts, no input echoes (intended future default); 'full' = current shape (default)",
+            "Response size: 'minimal' = ack + steering + warnings/verdicts, no input echoes (default since 3.0.0); 'full' = the pre-3.0 shape (or RESPONSE_VERBOSITY=full)",
         })
         .epilogue(
           'Reads a JSON object on stdin if piped; flags override stdin fields.\n' +

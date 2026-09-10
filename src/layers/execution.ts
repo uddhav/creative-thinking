@@ -565,17 +565,22 @@ export async function executeThinkingStep(
       // prompt text, written onto the input for THIS response and read from
       // the live input only; on a history entry they were 25 copies of the
       // same paragraph per session in the export and on disk (#415).
+      // `riskDiscoveryData` is the orchestrator's per-step copy of
+      // `session.riskDiscoveryData`, written onto the input "for visibility"
+      // and read by nothing on an entry; it was 53% of each entry.
       const {
         realityAssessment: inputRealityAssessment,
         modificationHistory: _rebuiltEachStep,
         advisoryFindings: _serverAuthoredOnly,
         ergodicityCheck: _promptForThisResponse,
         ruinAssessment: inputRuinAssessment,
+        riskDiscoveryData: _sessionLevelCopy,
         ...inputWithoutReality
       } = input as ExecuteThinkingStepInput & {
         advisoryFindings?: unknown;
         ergodicityCheck?: unknown;
         ruinAssessment?: NonNullable<ThinkingOperationData['ruinAssessment']>;
+        riskDiscoveryData?: unknown;
       };
       const ruinAssessmentForHistory = inputRuinAssessment
         ? (({ prompt: _p, ...verdict }) => verdict)(inputRuinAssessment)

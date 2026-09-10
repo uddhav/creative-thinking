@@ -1,5 +1,11 @@
 /**
- * Tests for memory-suggestive outputs implementation
+ * Tests for memory-suggestive outputs implementation.
+ *
+ * Every step here pins verbosity: 'full'. Since 3.0.0 the default response is
+ * 'minimal' (#311), under which the MemoryAnalyzer's outputs (contextualInsight,
+ * historicalNote, patternObserved, sessionFingerprint, noteworthyPatterns) are
+ * withheld on every step, the terminal one included; the feature is a
+ * full-mode one for a default caller.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -82,6 +88,7 @@ describe('Memory-Suggestive Outputs', () => {
   ): Promise<ExecutionResponse> {
     const result = await server.executeThinkingStep({
       planId,
+      verbosity: 'full',
       ...input,
     });
 

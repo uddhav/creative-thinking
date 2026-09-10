@@ -8,8 +8,8 @@
  * the echoes with receipts (newInsights, fieldsRecorded). The allowlist is
  * exported (MINIMAL_RESPONSE_KEEP_KEYS) and pinned here as a SUBSET assertion
  * so a future warning-class field cannot silently vanish from minimal mode.
- * Default stays 'full' — zero break — with 'minimal' the declared future
- * default.
+ * 'minimal' is the default since 3.0.0 (#311); 'full', per call or through
+ * RESPONSE_VERBOSITY=full, restores the pre-3.0 shape.
  *
  * retry is disabled: kill-checked guards; the global retry: 2 would let a
  * flaky pass mask exactly the regression this file exists to catch.
@@ -22,7 +22,8 @@ const PROBLEM = 'Streamline the quarterly planning ritual';
 
 // Keys minimal mode may add beyond the flat keep-list: nested picks, the two
 // receipt fields, the optimizer's truncation report, and the post-slim
-// merges (completion block on the terminal step, autoSave status).
+// merges (advisory findings, autoSave status, the completion block on the
+// terminal step).
 const MINIMAL_EXTRAS = new Set([
   'completionMetadata',
   'executionMetadata',
@@ -30,6 +31,7 @@ const MINIMAL_EXTRAS = new Set([
   'newInsights',
   'fieldsRecorded',
   'truncation',
+  'advisoryFindings',
   'autoSaveStatus',
   'autoSaveMessage',
   'autoSaveError',
@@ -45,7 +47,6 @@ const MINIMAL_EXTRAS = new Set([
   'pathAnalysis',
   'warnings',
   'escapeOptions',
-  'nextSteps',
 ]);
 
 async function planId(client: MCPClientTestHelper, techniques: string[]): Promise<string> {
@@ -53,7 +54,7 @@ async function planId(client: MCPClientTestHelper, techniques: string[]): Promis
   return (plan as { planId: string }).planId;
 }
 
-describe('response verbosity (default-full server)', { retry: 0 }, () => {
+describe('response verbosity (default server)', { retry: 0 }, () => {
   const client = new MCPClientTestHelper();
 
   beforeAll(async () => {
@@ -64,7 +65,7 @@ describe('response verbosity (default-full server)', { retry: 0 }, () => {
     await client.disconnect();
   });
 
-  it('full mode (the default) still carries the documented contract', async () => {
+  it('the default is minimal: receipts and steering, no echoes', async () => {
     const id = await planId(client, ['scamper']);
     const data = (await client.executeThinkingStep({
       planId: id,
@@ -77,13 +78,63 @@ describe('response verbosity (default-full server)', { retry: 0 }, () => {
       scamperAction: 'substitute',
     })) as Record<string, unknown>;
 
-    // SOCKETES.md's documented output fields, unchanged by default.
+    // SOCKETES.md's documented default output.
+    expect(data.sessionId).toBeDefined();
+    expect(data.historyLength).toBe(1);
+    expect(data.nextStepGuidance).toBeDefined();
+    expect(Array.isArray(data.newInsights)).toBe(true);
+    expect(data.fieldsRecorded).toContain('scamperAction');
+    expect(data.pathImpact, "this step's verdict rides the default").toBeDefined();
+    expect(data.problem, 'the default echoes nothing').toBeUndefined();
+    expect(data.output).toBeUndefined();
+    expect(data.insights, 'the cumulative list is a full-mode field').toBeUndefined();
+  });
+
+  it('a value that is not the string full falls into the default, not into full', async () => {
+    // Nothing validates the enum on either surface (a stdin field bypasses the
+    // CLI's choices), so before this a misspelt value widened the response.
+    const id = await planId(client, ['six_hats']);
+    for (const bogus of ['Minimal', 'bogus', '']) {
+      const data = (await client.executeThinkingStep({
+        planId: id,
+        technique: 'six_hats',
+        problem: PROBLEM,
+        currentStep: 1,
+        totalSteps: 7,
+        output: 'Blue hat: setting the agenda',
+        nextStepNeeded: true,
+        hatColor: 'blue',
+        verbosity: bogus,
+      })) as Record<string, unknown>;
+      expect(
+        data.problem,
+        `verbosity ${JSON.stringify(bogus)} widened the response`
+      ).toBeUndefined();
+      expect(data.fieldsRecorded, `verbosity ${JSON.stringify(bogus)}`).toContain('hatColor');
+    }
+  });
+
+  it("verbosity: 'full' restores the pre-3.0 shape", async () => {
+    const id = await planId(client, ['scamper']);
+    const data = (await client.executeThinkingStep({
+      planId: id,
+      technique: 'scamper',
+      problem: PROBLEM,
+      currentStep: 1,
+      totalSteps: 8,
+      output: 'Swap the slide deck for a one-page pre-read',
+      nextStepNeeded: true,
+      scamperAction: 'substitute',
+      verbosity: 'full',
+    })) as Record<string, unknown>;
+
     expect(data.sessionId).toBeDefined();
     expect(data.historyLength).toBe(1);
     expect(Array.isArray(data.insights)).toBe(true);
     expect(data.nextStepGuidance).toBeDefined();
     expect(data.problem).toBe(PROBLEM);
     expect(data.output).toContain('one-page pre-read');
+    expect(data.scamperAction).toBe('substitute');
   });
 
   it('minimal mode keeps only the allowlist (plus its declared extras)', async () => {
@@ -178,25 +229,14 @@ describe('response verbosity (default-full server)', { retry: 0 }, () => {
     expect(last.metrics, 'the completion metrics bypass slimming').toBeDefined();
     expect(last.summary).toBeDefined();
   });
-});
 
-describe('response verbosity (env-default-minimal server)', { retry: 0 }, () => {
-  const client = new MCPClientTestHelper();
-
-  beforeAll(async () => {
-    // env replaces the child environment wholesale — spread process.env.
-    await client.connect({
-      env: { ...(process.env as Record<string, string>), RESPONSE_VERBOSITY: 'minimal' },
-    });
-  });
-
-  afterAll(async () => {
-    await client.disconnect();
-  });
-
-  it('param-absent calls are slim; an explicit verbosity: full overrides per call', async () => {
+  it('a skipped step reaches a default caller as structure, not only as prose', async () => {
+    // Under the default a client that parses structure rather than the
+    // completionWarnings prose still sees the skip: the per-technique status
+    // entry rides whole (#298 made skipping visible; #311 keeps it visible
+    // once minimal is the default).
     const id = await planId(client, ['six_hats']);
-    const slim = (await client.executeThinkingStep({
+    const first = (await client.executeThinkingStep({
       planId: id,
       technique: 'six_hats',
       problem: PROBLEM,
@@ -206,10 +246,58 @@ describe('response verbosity (env-default-minimal server)', { retry: 0 }, () => 
       nextStepNeeded: true,
       hatColor: 'blue',
     })) as Record<string, unknown>;
-    expect(slim.problem, 'env default must slim').toBeUndefined();
-    expect(slim.fieldsRecorded).toContain('hatColor');
+    const third = (await client.executeThinkingStep({
+      planId: id,
+      sessionId: first.sessionId,
+      technique: 'six_hats',
+      problem: PROBLEM,
+      currentStep: 3,
+      totalSteps: 7,
+      output: 'Red hat: how the room feels about it',
+      nextStepNeeded: true,
+      hatColor: 'red',
+    })) as Record<string, unknown>;
 
+    const statuses = (third.completionMetadata as Record<string, unknown> | undefined)
+      ?.techniqueStatuses as Array<{ technique: string; skippedSteps: number[] }> | undefined;
+    expect(statuses?.[0]?.technique, 'the per-technique status must ride the default').toBe(
+      'six_hats'
+    );
+    expect(statuses?.[0]?.skippedSteps, 'the skipped step is not named as data').toContain(2);
+  });
+});
+
+describe('response verbosity (env-default-full server)', { retry: 0 }, () => {
+  const client = new MCPClientTestHelper();
+
+  beforeAll(async () => {
+    // env replaces the child environment wholesale — spread process.env.
+    await client.connect({
+      env: { ...(process.env as Record<string, string>), RESPONSE_VERBOSITY: 'full' },
+    });
+  });
+
+  afterAll(async () => {
+    await client.disconnect();
+  });
+
+  it('param-absent calls are full; an explicit verbosity: minimal overrides per call', async () => {
+    const id = await planId(client, ['six_hats']);
     const full = (await client.executeThinkingStep({
+      planId: id,
+      technique: 'six_hats',
+      problem: PROBLEM,
+      currentStep: 1,
+      totalSteps: 7,
+      output: 'Blue hat: setting the agenda',
+      nextStepNeeded: true,
+      hatColor: 'blue',
+    })) as Record<string, unknown>;
+    expect(full.problem, 'RESPONSE_VERBOSITY=full must restore the echoes').toBe(PROBLEM);
+    expect(full.hatColor).toBe('blue');
+    expect(full.fieldsRecorded).toBeUndefined();
+
+    const slim = (await client.executeThinkingStep({
       planId: id,
       technique: 'six_hats',
       problem: PROBLEM,
@@ -218,10 +306,10 @@ describe('response verbosity (env-default-minimal server)', { retry: 0 }, () => 
       output: 'White hat: the facts',
       nextStepNeeded: true,
       hatColor: 'white',
-      sessionId: slim.sessionId,
-      verbosity: 'full',
+      sessionId: full.sessionId,
+      verbosity: 'minimal',
     })) as Record<string, unknown>;
-    expect(full.problem, 'per-call full must override the env default').toBe(PROBLEM);
-    expect(full.output).toContain('the facts');
+    expect(slim.problem, 'per-call minimal must override the env default').toBeUndefined();
+    expect(slim.fieldsRecorded).toContain('hatColor');
   });
 });

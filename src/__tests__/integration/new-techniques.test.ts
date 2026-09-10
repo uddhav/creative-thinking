@@ -120,6 +120,7 @@ describe('Disney Method and Nine Windows Integration', () => {
         totalSteps: 3,
         output: 'Virtual reality meditation rooms, AI health coaches, gamified wellness challenges',
         nextStepNeeded: true,
+        verbosity: 'full',
         disneyRole: 'dreamer',
         dreamerVision: [
           'VR meditation spaces for stress relief',
@@ -146,6 +147,7 @@ describe('Disney Method and Nine Windows Integration', () => {
         output:
           'Phase 1: Partner with VR vendor, pilot with 50 employees. Budget: $50k for 6 months.',
         nextStepNeeded: true,
+        verbosity: 'full',
         disneyRole: 'realist',
         realistPlan: [
           'Phase 1: VR meditation pilot with existing vendor',
@@ -171,6 +173,7 @@ describe('Disney Method and Nine Windows Integration', () => {
         output:
           'Privacy concerns with health data. VR motion sickness for some users. High initial cost.',
         nextStepNeeded: false,
+        verbosity: 'full',
         disneyRole: 'critic',
         criticRisks: [
           'Employee privacy concerns with health data collection',
@@ -266,6 +269,7 @@ describe('Disney Method and Nine Windows Integration', () => {
         output:
           'EVs currently represent 15% of new car sales. Range anxiety still exists but charging infrastructure is rapidly expanding.',
         nextStepNeeded: true,
+        verbosity: 'full', // the matrix echo is a full-mode field (#311)
         currentCell: {
           timeFrame: 'present',
           systemLevel: 'system',
@@ -305,6 +309,7 @@ describe('Disney Method and Nine Windows Integration', () => {
         output:
           'Autonomous EVs dominate transportation. Personal car ownership becomes rare in cities.',
         nextStepNeeded: true,
+        verbosity: 'full', // the matrix echo is a full-mode field (#311)
         currentCell: {
           timeFrame: 'future',
           systemLevel: 'system',
@@ -334,6 +339,7 @@ describe('Disney Method and Nine Windows Integration', () => {
         // The session stays open: this test samples three cells of the matrix
         // (5, 8, 9) rather than running all nine, so it has no completion to claim.
         nextStepNeeded: true,
+        verbosity: 'full',
         currentCell: {
           timeFrame: 'future',
           systemLevel: 'super-system',
@@ -380,6 +386,7 @@ describe('Disney Method and Nine Windows Integration', () => {
         totalSteps: 3,
         output: 'Zero-waste factory powered entirely by renewable energy',
         nextStepNeeded: true,
+        verbosity: 'full',
         disneyRole: 'dreamer',
         dreamerVision: ['Zero-waste manufacturing', '100% renewable energy'],
       };
