@@ -10,7 +10,8 @@
  * major release and refuses a spec that lost its pin, and this test is the
  * gate in CI for both.
  *
- * Breaks: unpin one site; rewrite one site to the wrong major.
+ * Breaks: unpin one site; rewrite one site to the wrong major; unquote one
+ * site; drop one site's closing quote.
  */
 import { readFileSync } from 'fs';
 import { describe, expect, it } from 'vitest';
@@ -28,6 +29,15 @@ describe('documented installs are pinned to the major', () => {
       expect(sites.length, `${file} names no install spec`).toBeGreaterThan(0);
       for (const site of sites) {
         expect(site, `${file}: ${site}`).toBe(`${SPEC}#semver:^${major}`);
+      }
+      // Quoted, every one, and closed with the quote it opened with: `#` and
+      // `^` are glob operators under zsh's extendedglob, so an unquoted spec
+      // there is `no matches found`, and an unclosed one swallows the line.
+      for (const match of text.matchAll(new RegExp(`${SPEC}[^\\s"'\`)\\]]*`, 'g'))) {
+        const before = text[(match.index ?? 0) - 1];
+        const after = text[(match.index ?? 0) + match[0].length];
+        expect(before, `${file}: unquoted spec at offset ${match.index}`).toMatch(/['"]/);
+        expect(after, `${file}: unbalanced quote at offset ${match.index}`).toBe(before);
       }
     });
   }
