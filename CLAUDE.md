@@ -151,7 +151,7 @@ After `npm run build`, the stdio MCP server is at `dist/mcp-server-main.js`:
 ```bash
 node dist/mcp-server-main.js                            # direct
 npm start                                     # same, via package script
-npx -y 'github:uddhav/creative-thinking#semver:^2'        # from GitHub (uses checked-in dist/)
+npx -y 'github:uddhav/creative-thinking#semver:^3'        # from GitHub (uses checked-in dist/)
 ```
 
 Smoke-test the stdio handshake without an MCP client:

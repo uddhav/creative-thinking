@@ -75,7 +75,7 @@ into the repo so `npx` can run the build directly.
 ### Global install — both bins land on PATH
 
 ```bash
-npm install -g 'github:uddhav/creative-thinking#semver:^2'
+npm install -g 'github:uddhav/creative-thinking#semver:^3'
 socketes --help            # the CLI
 creative-thinking          # starts the MCP server on stdio
 ```
@@ -89,16 +89,16 @@ under zsh's `extendedglob`; unquoted, such a shell reports `no matches found`.
 
 ```bash
 # MCP server (default bin)
-npx -y 'github:uddhav/creative-thinking#semver:^2'
+npx -y 'github:uddhav/creative-thinking#semver:^3'
 
 # CLI — pick the binary by name
-npx -y -p 'github:uddhav/creative-thinking#semver:^2' socketes discover --problem "..."
+npx -y -p 'github:uddhav/creative-thinking#semver:^3' socketes discover --problem "..."
 ```
 
 ### Register with an MCP client (Claude Code shown)
 
 ```bash
-claude mcp add --transport stdio creative-thinking -- npx -y 'github:uddhav/creative-thinking#semver:^2'
+claude mcp add --transport stdio creative-thinking -- npx -y 'github:uddhav/creative-thinking#semver:^3'
 ```
 
 ### Local development
@@ -1374,7 +1374,7 @@ over stdin/stdout, designed for an MCP client to drive. Two ways to wire it up:
   "mcpServers": {
     "creative-thinking": {
       "command": "npx",
-      "args": ["-y", "github:uddhav/creative-thinking#semver:^2"]
+      "args": ["-y", "github:uddhav/creative-thinking#semver:^3"]
     }
   }
 }
