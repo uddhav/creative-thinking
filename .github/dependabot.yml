@@ -33,7 +33,6 @@ updates:
           - 'chalk'
           - 'compromise'
           - 'yargs'
-          - 'zod'
         update-types:
           - 'minor'
           - 'patch'
