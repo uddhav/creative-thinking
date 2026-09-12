@@ -401,6 +401,11 @@ produced it. The final step's completion summary is always full.
 > Since 3.0.0 `minimal` is the default. The flip shipped as the breaking change of that major;
 > `--verbosity full` or `RESPONSE_VERBOSITY=full` restores the pre-3.0 shape, and memory decoration
 > (the suggestive outputs) is off under `minimal` on every step, the terminal one included.
+>
+> The size difference is measured per technique in
+> [`evals/evidence/verbosity-repricing.md`](./evals/evidence/verbosity-repricing.md) (regenerate
+> with `npm run evals:verbosity`): scamper −59.9% bytes, six_hats −32.7%, triz −36.4%, with token
+> figures beside them.
 
 If `--session` is omitted on the first step, the executor derives one as `session_<planId>`. This is
 convenient but has a sharp edge — see [Parallel execution](#parallel-execution) and the

@@ -1,17 +1,24 @@
 #!/usr/bin/env node
 // Re-price `minimal` against `full`: run scamper (8), six_hats (7) and triz (4)
 // through the built CLI under each RESPONSE_VERBOSITY and report stdout bytes
-// per step. The env var is read on every call, so the same script measures
-// before and after the default flip. Usage: node evals/measure-verbosity.mjs
+// AND token counts per step. The env var is read on every call, so the same
+// script measures before and after the default flip.
+//
+// Tokens: with ANTHROPIC_API_KEY set, count_tokens gives Claude's own count
+// (TOKEN_MODEL, default claude-opus-5); otherwise gpt-tokenizer o200k_base, an
+// approximation (see evals/lib/token-count.mjs). The tokenMode column carries
+// which. Usage: node evals/measure-verbosity.mjs
 import { spawnSync } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { makeCounter } from './lib/token-count.mjs';
 
 const CLI = fileURLToPath(new URL('../dist/cli.js', import.meta.url));
 const PROBLEM = 'Cut the release train from monthly to weekly';
 const TECHNIQUES = { scamper: 8, six_hats: 7, triz: 4 };
+const TOKEN_MODEL = process.env.TOKEN_MODEL || 'claude-opus-5';
 const SCAMPER = [
   'substitute',
   'combine',
@@ -24,7 +31,7 @@ const SCAMPER = [
 ];
 const HATS = ['blue', 'white', 'red', 'yellow', 'black', 'green', 'purple'];
 
-function run(args, stdin, verbosity, home) {
+function invoke(args, stdin, verbosity, home) {
   const env = {
     ...process.env,
     RESPONSE_VERBOSITY: verbosity,
@@ -38,19 +45,21 @@ function run(args, stdin, verbosity, home) {
   });
   if (r.status !== 0)
     throw new Error(`${args.slice(0, 2).join(' ')} exited ${r.status}: ${r.stderr}`);
-  return { bytes: Buffer.byteLength(r.stdout), json: JSON.parse(r.stdout) };
+  return r.stdout;
 }
 
-function session(technique, steps, verbosity) {
+async function session(counter, technique, steps, verbosity) {
   const home = mkdtempSync(join(tmpdir(), 'measure-verbosity-'));
   try {
-    const { planId } = run(
+    const planOut = invoke(
       ['plan', '--problem', PROBLEM, '--techniques', technique],
       {},
       verbosity,
       home
-    ).json;
-    const perStep = [];
+    );
+    const { planId } = JSON.parse(planOut);
+    const perStepBytes = [];
+    const perStepTokens = [];
     let sessionId;
     for (let step = 1; step <= steps; step++) {
       const stdin =
@@ -74,32 +83,62 @@ function session(technique, steps, verbosity) {
         step < steps ? '--next-step-needed' : '--no-next-step-needed',
       ];
       if (sessionId) args.push('--session', sessionId);
-      const r = run(args, stdin, verbosity, home);
-      sessionId = r.json.sessionId;
-      perStep.push(r.bytes);
+      const stdout = invoke(args, stdin, verbosity, home);
+      sessionId = JSON.parse(stdout).sessionId;
+      perStepBytes.push(Buffer.byteLength(stdout));
+      perStepTokens.push(await counter.count(stdout));
     }
-    return perStep;
+    return { perStepBytes, perStepTokens };
   } finally {
     rmSync(home, { recursive: true, force: true });
   }
 }
 
-const rows = [];
-for (const [technique, steps] of Object.entries(TECHNIQUES)) {
-  const full = session(technique, steps, 'full');
-  const minimal = session(technique, steps, 'minimal');
+async function main() {
+  const counter = await makeCounter({ apiKey: process.env.ANTHROPIC_API_KEY, model: TOKEN_MODEL });
   const sum = a => a.reduce((x, y) => x + y, 0);
-  rows.push({
-    technique,
-    steps,
-    full: sum(full),
-    minimal: sum(minimal),
-    delta: `${((sum(minimal) / sum(full) - 1) * 100).toFixed(1)}%`,
-    fullPerStep: full.join('/'),
-    minimalPerStep: minimal.join('/'),
-  });
+  const rows = [];
+  for (const [technique, steps] of Object.entries(TECHNIQUES)) {
+    const full = await session(counter, technique, steps, 'full');
+    const minimal = await session(counter, technique, steps, 'minimal');
+    const fb = sum(full.perStepBytes);
+    const mb = sum(minimal.perStepBytes);
+    const ft = sum(full.perStepTokens);
+    const mt = sum(minimal.perStepTokens);
+    rows.push({
+      technique,
+      steps,
+      full: fb,
+      minimal: mb,
+      delta: `${((mb / fb - 1) * 100).toFixed(1)}%`,
+      fullTokens: ft,
+      minimalTokens: mt,
+      tokenDelta: `${((mt / ft - 1) * 100).toFixed(1)}%`,
+      tokenMode: counter.label,
+      fullPerStep: full.perStepBytes.join('/'),
+      minimalPerStep: minimal.perStepBytes.join('/'),
+    });
+  }
+  // stdout on purpose: this is a report, not an MCP stream (the repo's console
+  // rule guards the server, not evals/).
+  const header = [
+    'technique',
+    'steps',
+    'full',
+    'minimal',
+    'delta',
+    'fullTokens',
+    'minimalTokens',
+    'tokenDelta',
+    'tokenMode',
+    'fullPerStep',
+    'minimalPerStep',
+  ];
+  process.stdout.write(header.join('\t') + '\n');
+  for (const r of rows) process.stdout.write(header.map(h => String(r[h])).join('\t') + '\n');
 }
-// stdout on purpose: this is a report, not an MCP stream (the repo's console rule guards the server).
-const header = ['technique', 'steps', 'full', 'minimal', 'delta', 'fullPerStep', 'minimalPerStep'];
-process.stdout.write(header.join('\t') + '\n');
-for (const r of rows) process.stdout.write(header.map(h => String(r[h])).join('\t') + '\n');
+
+main().catch(err => {
+  console.error(err);
+  process.exit(1);
+});
