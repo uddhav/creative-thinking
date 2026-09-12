@@ -36,7 +36,6 @@ export declare function extractHardConstraints(discoveryResponses: Record<Discov
 interface DiscoveryContext {
     domain: string;
     risks?: string[];
-    ruinScenarios?: number;
     worstCase?: string;
 }
 /**

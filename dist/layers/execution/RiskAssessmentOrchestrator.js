@@ -179,7 +179,6 @@ export class RiskAssessmentOrchestrator {
             session.riskDiscoveryData = {
                 domainAssessment: undefined,
                 risks: undefined,
-                ruinScenarios: [],
                 constraints: [],
                 validations: [],
             };
@@ -202,8 +201,8 @@ export class RiskAssessmentOrchestrator {
         session.riskDiscoveryData.risks = discoveredRisks;
         // Phase 3: Validate against discovered risks
         let validation;
-        if (discoveredRisks && session.riskDiscoveryData.ruinScenarios) {
-            validation = this.riskDiscovery.validateAgainstDiscoveredRisks(input.output, discoveredRisks, session.riskDiscoveryData.ruinScenarios);
+        if (discoveredRisks) {
+            validation = this.riskDiscovery.validateAgainstDiscoveredRisks(input.output, discoveredRisks);
             // Handle validation failure
             if (!validation.isValid && validation.riskLevel === 'unacceptable') {
                 // Log the violation
@@ -212,7 +211,6 @@ export class RiskAssessmentOrchestrator {
                         generateConstraintViolationFeedback(input.output, validation.violatedConstraints, {
                             domain: domainAssessment.primaryDomain,
                             risks: discoveredRisks.identifiedRisks.map(r => r.risk),
-                            ruinScenarios: session.riskDiscoveryData.ruinScenarios.length,
                             worstCase: discoveredRisks.identifiedRisks.find(r => r.impactMagnitude === 'catastrophic')?.risk,
                         }) +
                         '\n');

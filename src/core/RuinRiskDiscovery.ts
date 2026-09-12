@@ -80,18 +80,6 @@ export interface RiskDiscovery {
 }
 
 /**
- * Ruin scenario discovered by the LLM
- */
-export interface RuinScenario {
-  scenario: string;
-  triggers: string[];
-  consequences: string[];
-  recoveryPossible: boolean;
-  timeToRuin?: string;
-  warningSignals?: string[];
-}
-
-/**
  * Result of validating an action against discovered risks
  */
 export interface ValidationResult {
@@ -274,11 +262,7 @@ export class RuinRiskDiscovery {
   /**
    * Validate an action against discovered risks
    */
-  validateAgainstDiscoveredRisks(
-    action: string,
-    discovery: RiskDiscovery,
-    ruinScenarios: RuinScenario[]
-  ): ValidationResult {
+  validateAgainstDiscoveredRisks(action: string, discovery: RiskDiscovery): ValidationResult {
     const violatedConstraints: string[] = [];
 
     // Check if action violates any discovered safety practices
@@ -289,7 +273,7 @@ export class RuinRiskDiscovery {
     });
 
     // Assess overall risk level
-    const riskLevel = this.assessRiskLevel(action, discovery, ruinScenarios);
+    const riskLevel = this.assessRiskLevel(discovery);
 
     return {
       isValid: violatedConstraints.length === 0 && riskLevel !== 'unacceptable',
@@ -1285,22 +1269,13 @@ export class RuinRiskDiscovery {
     return match ? parseInt(match[1]) : null;
   }
 
-  private assessRiskLevel(
-    action: string,
-    discovery: RiskDiscovery,
-    scenarios: RuinScenario[]
-  ): ValidationResult['riskLevel'] {
+  private assessRiskLevel(discovery: RiskDiscovery): ValidationResult['riskLevel'] {
     // Count severe/catastrophic risks
     const severeRisks = discovery.identifiedRisks.filter(
       r => r.impactMagnitude === 'severe' || r.impactMagnitude === 'catastrophic'
     ).length;
 
-    // Check if any ruin scenarios are triggered
-    const triggeredScenarios = scenarios.filter(s =>
-      s.triggers.some(trigger => action.toLowerCase().includes(trigger.toLowerCase()))
-    ).length;
-
-    if (triggeredScenarios > 0 || severeRisks > 2) return 'unacceptable';
+    if (severeRisks > 2) return 'unacceptable';
     if (severeRisks > 0) return 'high';
     if (discovery.identifiedRisks.length > 3) return 'medium';
     return 'low';
