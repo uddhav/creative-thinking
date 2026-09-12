@@ -1276,7 +1276,8 @@ The server supports environment variables for advanced features:
   last write is older, at startup and on the cleanup tick; unset means never delete
 - `DATABASE_URL=postgres://...` - PostgreSQL connection string (postgres adapter only)
 - `RESPONSE_VERBOSITY=minimal|full` - Default execute-response verbosity when a call omits
-  `verbosity` (default: `minimal` since 3.0.0; set `full` for the pre-3.0 shape)
+  `verbosity` (default: `minimal` since 3.0.0; set `full` for the pre-3.0 shape). The size
+  difference is re-priced in `evals/evidence/verbosity-repricing.md` (`npm run evals:verbosity`)
 - `STEP_ORDER_ENFORCEMENT=advisory|strict` - What happens to an out-of-order step, a contradictory
   numbering pairing, or a stimulus the plan did not assign (default: advisory, which records the
   step and redirects or flags it; `strict` refuses it with `E211` and records nothing). A plan's
