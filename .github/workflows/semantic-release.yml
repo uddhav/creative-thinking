@@ -58,7 +58,7 @@ jobs:
           persist-credentials: false
 
       - name: 🏗️ Setup Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           # semantic-release v25 requires ^22.14.0 || >= 24.10.0. Dependabot
           # bumped it from v24 in #284 and this pin stayed at 20.x, so every
