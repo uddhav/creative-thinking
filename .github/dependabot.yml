@@ -94,6 +94,15 @@ updates:
     labels:
       - 'dependencies'
       - 'github-actions'
+    # Group the four codeql-action sub-actions (init/autobuild/analyze/
+    # upload-sarif) into one PR. They must move together: the action refuses
+    # to run when init and the analysis steps are on different versions, and
+    # #339 bumped init alone, leaving the codeql job broken for 13 days. The
+    # `*` glob is anchored, so the pattern matches the subpath names.
+    groups:
+      codeql:
+        patterns:
+          - 'github/codeql-action*'
     commit-message:
       prefix: 'ci'
       include: 'scope'

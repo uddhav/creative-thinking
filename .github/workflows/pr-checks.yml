@@ -103,17 +103,17 @@ jobs:
       # action logs, but the SARIF upload will fail on personal public repos.
       # continue-on-error keeps the overall check green.
       - name: 🔍 Initialize CodeQL
-        uses: github/codeql-action/init@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28 # v4.37.8
+        uses: github/codeql-action/init@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
         continue-on-error: true
         with:
           languages: javascript-typescript
 
       - name: 🔨 Autobuild
-        uses: github/codeql-action/autobuild@6f5948dfacef28e207b48d0905cf90c03365536d # v3
+        uses: github/codeql-action/autobuild@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
         continue-on-error: true
 
       - name: 🔍 Run CodeQL analysis
-        uses: github/codeql-action/analyze@6f5948dfacef28e207b48d0905cf90c03365536d # v3
+        uses: github/codeql-action/analyze@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
         continue-on-error: true
 
       - name: 🧪 Run tests with coverage
@@ -174,7 +174,7 @@ jobs:
           fetch-depth: 0
 
       - name: 🔍 Dependency Review
-        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v4
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         continue-on-error: true
         with:
           fail-on-severity: high
