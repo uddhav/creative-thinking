@@ -4,7 +4,7 @@
 import type { PathMemory } from '../ergodicity/index.js';
 import type { ErgodicityManager } from '../ergodicity/index.js';
 import type { EarlyWarningState, EscapeProtocol } from '../ergodicity/earlyWarning/types.js';
-import type { DomainAssessment, RiskDiscovery, RuinScenario, ValidationResult } from '../core/RuinRiskDiscovery.js';
+import type { DomainAssessment, RiskDiscovery, ValidationResult } from '../core/RuinRiskDiscovery.js';
 export type LateralTechnique = 'six_hats' | 'po' | 'random_entry' | 'scamper' | 'concept_extraction' | 'yes_and' | 'design_thinking' | 'triz' | 'neural_state' | 'temporal_work' | 'collective_intel' | 'disney_method' | 'nine_windows' | 'quantum_superposition' | 'temporal_creativity' | 'paradoxical_problem' | 'meta_learning' | 'biomimetic_path' | 'first_principles' | 'cultural_integration' | 'neuro_computational' | 'criteria_based_analysis' | 'linguistic_forensics' | 'competing_hypotheses' | 'reverse_benchmarking' | 'context_reframing' | 'perception_optimization' | 'anecdotal_signal' | 'cognitive_bias_audit' | 'latticework' | 'keeper_test' | 'steelman_red_team';
 export declare const ALL_LATERAL_TECHNIQUES: readonly LateralTechnique[];
 export type SixHatsColor = 'blue' | 'white' | 'red' | 'yellow' | 'black' | 'green' | 'purple';
@@ -89,12 +89,6 @@ export interface SessionData {
     riskDiscoveryData?: {
         domainAssessment?: DomainAssessment;
         risks?: RiskDiscovery;
-        /**
-         * Reserved: initialised to [] by the risk orchestrator and never written
-         * anywhere; the constraint-violation feedback reads it as always empty.
-         * Deleting it is an exported-type change, tracked separately.
-         */
-        ruinScenarios?: RuinScenario[];
         constraints?: string[];
         validations?: ValidationResult[];
     };

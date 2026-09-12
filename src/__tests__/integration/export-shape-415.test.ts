@@ -39,6 +39,7 @@ interface Exported {
   ergodicityManager?: unknown;
   pathMemory?: unknown;
   history?: Array<Record<string, unknown>>;
+  riskDiscoveryData?: Record<string, unknown>;
 }
 
 describe('session export and file (#415, #416)', () => {
@@ -115,6 +116,8 @@ describe('session export and file (#415, #416)', () => {
     }
     // The session-level copy stays: it is the live assessment, not an echo.
     expect(session).toHaveProperty('riskDiscoveryData');
+    // #439: the writer-less ruinScenarios field is gone from that object.
+    expect(session.riskDiscoveryData).not.toHaveProperty('ruinScenarios');
   }, 60_000);
 
   it('the file holds each entry once, and a file written in the old shape still loads', async () => {

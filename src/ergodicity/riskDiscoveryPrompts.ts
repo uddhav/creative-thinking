@@ -387,7 +387,6 @@ export function extractHardConstraints(
 interface DiscoveryContext {
   domain: string;
   risks?: string[];
-  ruinScenarios?: number;
   worstCase?: string;
 }
 
@@ -409,7 +408,6 @@ ${violatedConstraints.map((c, i) => `${i + 1}. ${c}`).join('\n')}
 Remember what you learned:
 - Domain: ${discoveryContext.domain}
 - Key risks: ${discoveryContext.risks ? discoveryContext.risks.slice(0, 3).join(', ') : 'Multiple severe risks'}
-- Ruin scenarios: ${discoveryContext.ruinScenarios || 0} identified
 
 Your own analysis showed this could lead to:
 ${discoveryContext.worstCase || 'Catastrophic failure'}

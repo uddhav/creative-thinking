@@ -68,17 +68,6 @@ export interface RiskDiscovery {
     recoveryMechanisms?: string[];
 }
 /**
- * Ruin scenario discovered by the LLM
- */
-export interface RuinScenario {
-    scenario: string;
-    triggers: string[];
-    consequences: string[];
-    recoveryPossible: boolean;
-    timeToRuin?: string;
-    warningSignals?: string[];
-}
-/**
  * Result of validating an action against discovered risks
  */
 export interface ValidationResult {
@@ -122,7 +111,7 @@ export declare class RuinRiskDiscovery {
     /**
      * Validate an action against discovered risks
      */
-    validateAgainstDiscoveredRisks(action: string, discovery: RiskDiscovery, ruinScenarios: RuinScenario[]): ValidationResult;
+    validateAgainstDiscoveredRisks(action: string, discovery: RiskDiscovery): ValidationResult;
     /**
      * Force the LLM to calculate specific risk metrics based on discovered characteristics
      */

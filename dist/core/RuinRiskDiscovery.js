@@ -156,7 +156,7 @@ export class RuinRiskDiscovery {
     /**
      * Validate an action against discovered risks
      */
-    validateAgainstDiscoveredRisks(action, discovery, ruinScenarios) {
+    validateAgainstDiscoveredRisks(action, discovery) {
         const violatedConstraints = [];
         // Check if action violates any discovered safety practices
         discovery.domainSpecificSafetyPractices.forEach(practice => {
@@ -165,7 +165,7 @@ export class RuinRiskDiscovery {
             }
         });
         // Assess overall risk level
-        const riskLevel = this.assessRiskLevel(action, discovery, ruinScenarios);
+        const riskLevel = this.assessRiskLevel(discovery);
         return {
             isValid: violatedConstraints.length === 0 && riskLevel !== 'unacceptable',
             violatedConstraints,
@@ -961,12 +961,10 @@ export class RuinRiskDiscovery {
         const match = text.match(/(\d+)%/);
         return match ? parseInt(match[1]) : null;
     }
-    assessRiskLevel(action, discovery, scenarios) {
+    assessRiskLevel(discovery) {
         // Count severe/catastrophic risks
         const severeRisks = discovery.identifiedRisks.filter(r => r.impactMagnitude === 'severe' || r.impactMagnitude === 'catastrophic').length;
-        // Check if any ruin scenarios are triggered
-        const triggeredScenarios = scenarios.filter(s => s.triggers.some(trigger => action.toLowerCase().includes(trigger.toLowerCase()))).length;
-        if (triggeredScenarios > 0 || severeRisks > 2)
+        if (severeRisks > 2)
             return 'unacceptable';
         if (severeRisks > 0)
             return 'high';

@@ -161,7 +161,6 @@ describe('Risk Discovery Prompts', () => {
         {
           domain: 'financial',
           risks: ['bankruptcy', 'total loss', 'margin call'],
-          ruinScenarios: 3,
           worstCase: 'Complete financial ruin',
         }
       );

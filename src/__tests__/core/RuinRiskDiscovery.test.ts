@@ -4,7 +4,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { RuinRiskDiscovery } from '../../core/RuinRiskDiscovery.js';
-import type { RiskDiscovery, RuinScenario } from '../../core/RuinRiskDiscovery.js';
+import type { RiskDiscovery } from '../../core/RuinRiskDiscovery.js';
 
 describe('RuinRiskDiscovery', () => {
   let discovery: RuinRiskDiscovery;
@@ -121,26 +121,20 @@ describe('RuinRiskDiscovery', () => {
         maxAcceptableLoss: '10%',
       };
 
-      const ruinScenarios: RuinScenario[] = [
-        {
-          scenario: 'Investment goes to zero',
-          triggers: ['invest', 'stock', 'single position'],
-          consequences: ['Loss of retirement', 'Cannot recover'],
-          recoveryPossible: false,
-        },
-      ];
-
       const validation = discovery.validateAgainstDiscoveredRisks(
         'Invest 50% in single stock',
-        riskDiscovery,
-        ruinScenarios
+        riskDiscovery
       );
 
       expect(validation.isValid).toBe(false);
       expect(validation.violatedConstraints).toContain(
         'Never risk more than 10% on single position'
       );
-      expect(validation.riskLevel).toBe('unacceptable');
+      // One catastrophic risk is 'high'; 'unacceptable' now requires >2 severe
+      // risks (the ruin-scenario trigger path was removed with #439). The
+      // point of this case — a violated safety practice makes isValid false —
+      // stands.
+      expect(validation.riskLevel).toBe('high');
       expect(validation.educationalFeedback).toContain('violates the following safety practices');
     });
 
@@ -154,8 +148,7 @@ describe('RuinRiskDiscovery', () => {
 
       const validation = discovery.validateAgainstDiscoveredRisks(
         'Invest 5% in diversified fund',
-        riskDiscovery,
-        []
+        riskDiscovery
       );
 
       expect(validation.isValid).toBe(true);
@@ -297,11 +290,7 @@ describe('RuinRiskDiscovery', () => {
         domainSpecificSafetyPractices: [],
       };
 
-      const validation = discovery.validateAgainstDiscoveredRisks(
-        'risky action',
-        riskDiscovery,
-        []
-      );
+      const validation = discovery.validateAgainstDiscoveredRisks('risky action', riskDiscovery);
 
       expect(validation.riskLevel).toBe('unacceptable');
     });
@@ -315,7 +304,7 @@ describe('RuinRiskDiscovery', () => {
         domainSpecificSafetyPractices: [],
       };
 
-      const validation = discovery.validateAgainstDiscoveredRisks('action', riskDiscovery, []);
+      const validation = discovery.validateAgainstDiscoveredRisks('action', riskDiscovery);
 
       expect(validation.riskLevel).toBe('high');
     });
