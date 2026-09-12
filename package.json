@@ -125,7 +125,7 @@
     "src/**/*.{js,ts,tsx}": [
       "eslint --max-warnings 0"
     ],
-    "*.{js,ts,tsx,json,md}": [
+    "*.{js,mjs,cjs,ts,tsx,json,md}": [
       "prettier --write"
     ]
   }
