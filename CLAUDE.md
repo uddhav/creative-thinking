@@ -32,7 +32,7 @@ npm test                 # Run tests in watch mode
 npm run test:coverage    # Run tests with V8 coverage report
 npm run lint             # ESLint check (--max-warnings 0)
 npm run lint:fix         # ESLint auto-fix
-npm run format           # Prettier format all src files
+npm run format           # Prettier format src, scripts and evals
 npm run format:check     # Prettier check without writing
 npm run typecheck        # TypeScript type check without emitting
 npm run dev              # TypeScript watch mode for development

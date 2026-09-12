@@ -42,8 +42,8 @@
     "prepublishOnly": "npm run build && npm run test:run",
     "lint": "eslint . --ext .ts,.tsx --max-warnings 0",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
-    "format": "prettier --write \"src/**/*.{ts,tsx,json,md}\"",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx,json,md}\"",
+    "format": "prettier --write \"src/**/*.{ts,tsx,json,md}\" \"scripts/**/*.{js,mjs,cjs,ts}\" \"evals/**/*.mjs\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,json,md}\" \"scripts/**/*.{js,mjs,cjs,ts}\" \"evals/**/*.mjs\"",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist coverage .build-output",
     "build:quiet": "./scripts/run-with-output.sh build",
@@ -125,7 +125,7 @@
     "src/**/*.{js,ts,tsx}": [
       "eslint --max-warnings 0"
     ],
-    "*.{js,ts,tsx,json,md}": [
+    "*.{js,mjs,cjs,ts,tsx,json,md}": [
       "prettier --write"
     ]
   }
