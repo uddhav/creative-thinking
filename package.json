@@ -94,7 +94,7 @@
     "gpt-tokenizer": "^4.0.0",
     "husky": "^9.1.7",
     "lint-staged": "^17.5.1",
-    "prettier": "^3.9.6",
+    "prettier": "^3.9.8",
     "semantic-release": "^25.0.9",
     "standard-version": "^9.5.0",
     "typescript": "^5.9.3",
