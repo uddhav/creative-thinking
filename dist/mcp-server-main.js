@@ -4,7 +4,9 @@
  *
  * This file is purely the runtime bootstrap: instantiate the MCP Server,
  * wire request handlers to the LateralThinkingServer class, register
- * shutdown handlers, and connect the stdio transport. All side effects
+ * shutdown handlers, and connect the transport: stdio by default, or
+ * Streamable HTTP with `--transport http` / MCP_TRANSPORT=http (see
+ * `./server/httpTransport.ts`). All side effects
  * live here so importing the class from `./index.js` (e.g. from the
  * socketes CLI in `./cli.ts`) cannot accidentally start a server.
  *
@@ -15,26 +17,33 @@
  * module's `import.meta.url` resolve to the bundle's entry URL). With a
  * dedicated entry file, no detection is needed.
  */
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { LateralThinkingServer } from './index.js';
-import { RequestHandlers } from './server/RequestHandlers.js';
-import { getVersion } from './version.js';
-const server = new Server({
-    name: 'creative-thinking',
-    version: getVersion(),
-}, {
-    capabilities: {
-        tools: {},
-        prompts: {},
-    },
-});
+import { createMcpServer } from './server/createMcpServer.js';
+import { resolveHttpOptions, resolveTransportMode, startHttpServer, } from './server/httpTransport.js';
+// Read the transport choice before building anything, so a typo exits at once.
+let transportMode;
+let httpOptions = null;
+try {
+    transportMode = resolveTransportMode(process.argv.slice(2), process.env);
+    if (transportMode === 'http')
+        httpOptions = resolveHttpOptions(process.env);
+}
+catch (error) {
+    console.error(`[Server] ${error instanceof Error ? error.message : String(error)}`);
+    process.exit(1);
+}
 const lateralServer = new LateralThinkingServer();
-const requestHandlers = new RequestHandlers(server, lateralServer);
-requestHandlers.setupHandlers();
-const activeRequests = 0;
+// stdio keeps one protocol server for the life of the process. HTTP builds one
+// per request inside the transport, so it has none here.
+let server = null;
+let requestHandlers = null;
+if (transportMode === 'stdio') {
+    ({ server, requestHandlers } = createMcpServer(lateralServer));
+}
+let httpHandle = null;
 function getActiveRequests() {
-    return requestHandlers.getActiveRequests() + activeRequests;
+    return (requestHandlers?.getActiveRequests() ?? 0) + (httpHandle?.activeRequests() ?? 0);
 }
 let isShuttingDown = false;
 let transport = null;
@@ -83,12 +92,18 @@ async function gracefulShutdown(signal) {
         }
         await lateralServer.shutdown();
         console.error('[Server] Cleaned up server resources');
+        if (httpHandle) {
+            await httpHandle.close();
+            console.error('[Server] Closed HTTP server');
+        }
         if (transport) {
             await transport.close();
             console.error('[Server] Closed transport connection');
         }
-        await server.close();
-        console.error('[Server] Closed MCP server');
+        if (server) {
+            await server.close();
+            console.error('[Server] Closed MCP server');
+        }
         await new Promise(resolve => {
             if (process.stdout && !process.stdout.writableEnded) {
                 process.stdout.end(() => {
@@ -127,23 +142,39 @@ async function gracefulShutdown(signal) {
         setTimeout(() => process.exit(1), 500);
     }
 }
+async function startStdio(mcpServer) {
+    transport = new StdioServerTransport();
+    transport.onclose = () => {
+        console.error('[Server] Transport closed');
+        if (!isShuttingDown) {
+            void gracefulShutdown('transport-close');
+        }
+    };
+    transport.onerror = error => {
+        console.error('[Server] Transport error:', error);
+        if (!isShuttingDown) {
+            void gracefulShutdown('transport-error');
+        }
+    };
+    await mcpServer.connect(transport);
+    console.error('Creative Thinking MCP server running on stdio');
+}
+async function startHttp(options) {
+    httpHandle = await startHttpServer(lateralServer, options);
+    console.error(`Creative Thinking MCP server listening on ${httpHandle.url}`);
+    if (!options.authToken && options.host !== '127.0.0.1' && options.host !== 'localhost') {
+        console.error('[Server] Warning: no MCP_HTTP_AUTH_TOKEN and not bound to loopback. ' +
+            'Anyone who can reach this address can call the tools.');
+    }
+}
 async function main() {
     try {
-        transport = new StdioServerTransport();
-        transport.onclose = () => {
-            console.error('[Server] Transport closed');
-            if (!isShuttingDown) {
-                void gracefulShutdown('transport-close');
-            }
-        };
-        transport.onerror = error => {
-            console.error('[Server] Transport error:', error);
-            if (!isShuttingDown) {
-                void gracefulShutdown('transport-error');
-            }
-        };
-        await server.connect(transport);
-        console.error('Creative Thinking MCP server running on stdio');
+        if (httpOptions) {
+            await startHttp(httpOptions);
+        }
+        else if (server) {
+            await startStdio(server);
+        }
         console.error('[Server] Debug mode:', process.env.DEBUG_MCP === 'true' ? 'ENABLED' : 'disabled');
         console.error('[Server] To enable debug logging, set DEBUG_MCP=true');
     }

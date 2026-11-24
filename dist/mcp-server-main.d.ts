@@ -4,7 +4,9 @@
  *
  * This file is purely the runtime bootstrap: instantiate the MCP Server,
  * wire request handlers to the LateralThinkingServer class, register
- * shutdown handlers, and connect the stdio transport. All side effects
+ * shutdown handlers, and connect the transport: stdio by default, or
+ * Streamable HTTP with `--transport http` / MCP_TRANSPORT=http (see
+ * `./server/httpTransport.ts`). All side effects
  * live here so importing the class from `./index.js` (e.g. from the
  * socketes CLI in `./cli.ts`) cannot accidentally start a server.
  *
