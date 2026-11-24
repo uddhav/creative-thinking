@@ -215,7 +215,7 @@ describe('FilesystemAdapter', () => {
 
       expect(newSessionId).toMatch(/^session_[a-f0-9-]+$/);
       expect(fs.writeFile).toHaveBeenCalledWith(
-        expect.stringMatching(/session-.*\.tmp$/),
+        expect.stringMatching(/[\\/]sessions[\\/]\.[^\\/]+\.json\.[0-9a-f-]+\.tmp$/),
         expect.any(String),
         {
           encoding: 'utf8',
@@ -263,12 +263,12 @@ describe('FilesystemAdapter', () => {
       await adapter.initialize({ adapter: 'filesystem', options: { path: tempDir } });
       await adapter.save(mockSession.id, mockSession);
 
-      // Should save both session and metadata files to temp files first
+      // Should save both session and metadata files to temp files beside their targets first
       expect(fs.writeFile).toHaveBeenCalledTimes(2);
 
       // Check that temp files were written with secure permissions
       expect(fs.writeFile).toHaveBeenCalledWith(
-        expect.stringMatching(/session-.*\.tmp$/),
+        expect.stringMatching(/[\\/]sessions[\\/]\.[^\\/]+\.json\.[0-9a-f-]+\.tmp$/),
         JSON.stringify(
           {
             version: '1.0.0',
@@ -286,7 +286,7 @@ describe('FilesystemAdapter', () => {
         }
       );
       expect(fs.writeFile).toHaveBeenCalledWith(
-        expect.stringMatching(/metadata-.*\.tmp$/),
+        expect.stringMatching(/[\\/]metadata[\\/]\.[^\\/]+\.json\.[0-9a-f-]+\.tmp$/),
         expect.any(String),
         {
           encoding: 'utf8',
@@ -297,11 +297,11 @@ describe('FilesystemAdapter', () => {
       // Check that rename was called to move temp files to final location
       expect(fs.rename).toHaveBeenCalledTimes(2);
       expect(fs.rename).toHaveBeenCalledWith(
-        expect.stringMatching(/session-.*\.tmp$/),
+        expect.stringMatching(/[\\/]sessions[\\/]\.[^\\/]+\.json\.[0-9a-f-]+\.tmp$/),
         path.join(tempDir, 'sessions', 'test-session.json')
       );
       expect(fs.rename).toHaveBeenCalledWith(
-        expect.stringMatching(/metadata-.*\.tmp$/),
+        expect.stringMatching(/[\\/]metadata[\\/]\.[^\\/]+\.json\.[0-9a-f-]+\.tmp$/),
         path.join(tempDir, 'metadata', 'test-session.json')
       );
     });
