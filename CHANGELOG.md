@@ -1,3 +1,9 @@
+## [v3.0.1] - 2026-11-24
+
+### Changes from PR #516
+
+- fix(persistence): write temp files beside their target so saves survive another filesystem
+
 ## [v3.0.0] - 2026-09-10
 
 ### Changes from PR #451
