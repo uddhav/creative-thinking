@@ -137,15 +137,55 @@ How it behaves:
   tools and write to your volume, and the server logs a warning. Clients that can send headers
   (Claude Code, most SDKs) should use `MCP_HTTP_AUTH_TOKEN`. For clients that cannot, use a long
   random `MCP_HTTP_PATH`. Also set `PERSISTENCE_TTL_DAYS` so old sessions are removed.
-- **`/health`** answers `GET` with the version and needs no token, for load balancer probes.
+- **`/health`** answers `GET` with the version and needs no token, for load balancer probes. It also
+  reports persistence as `{"type":"postgres","state":"ready"}`. `failed` means the backend is
+  configured but not connected; the server keeps answering from memory and retries on the next save.
+  The status code stays 200 either way, so a database blip does not get the instance killed.
 
-The `Dockerfile` builds an HTTP image with persistence on a `/data` volume:
+The `Dockerfile` builds an HTTP image that saves every step to `/data/creative-thinking`:
 
 ```bash
 docker build -t creative-thinking .
 docker run -p 8080:8080 -v ct-data:/data \
   -e MCP_HTTP_AUTH_TOKEN="$(openssl rand -hex 32)" creative-thinking
 ```
+
+The container starts as root only to take ownership of the data directory, then runs the server as
+`node`. That is what lets it write to a fresh volume, which Fly and some Docker volume drivers mount
+owned by root. For Postgres instead, pass `-e PERSISTENCE_TYPE=postgres -e DATABASE_URL=...`.
+
+#### Free hosting: Cloud Run and Neon
+
+[Cloud Run](https://cloud.google.com/run/pricing) scales to zero, and
+[Neon](https://neon.com/pricing) keeps plans and sessions in Postgres. Both have free tiers that fit
+one person's use. Cloud Run still needs a billing account on the project.
+
+1. Create a Neon project in an AWS US East region, near Cloud Run's `us-east1`, and copy its
+   connection string.
+2. Open [Google Cloud Shell](https://shell.cloud.google.com), clone this repository, and run:
+
+   ```bash
+   ./scripts/deploy/cloud-run-neon.sh <your-gcp-project-id>
+   ```
+
+   It asks for the connection string without echoing it. It stores the string and a random MCP path
+   in Secret Manager, deploys at most one instance with no minimum, checks `/health`, and prints the
+   connector URL. Run it again to update: it changes only what changed, and the URL stays the same.
+
+3. Add the URL as a custom connector in Claude.
+
+What to know first:
+
+- **The URL is the key.** Claude custom connectors take OAuth, not a fixed bearer token, so the
+  random path is the only thing protecting the tools. Cloud Run's request logs record the path, so
+  anyone who can read the project's logs can read it.
+- **Cold starts.** Cloud Run stops an idle instance (it may keep one up to 15 minutes), and Neon's
+  free plan suspends after 5 idle minutes. The first call after a pause waits for both to wake.
+- **What can cost money.** Each image is about 320 MB, and Artifact Registry's free storage is 0.5
+  GB, so the two images the script keeps cost about two cents a month. Secret Manager is free up to
+  six active secret versions; the script adds a version only when a value changes. Cloud Build's
+  free minutes cover dozens of deploys a month. A public URL can still be called by anyone who finds
+  it, so set a [budget alert](https://console.cloud.google.com/billing/budgets).
 
 ### Local development
 
@@ -1321,6 +1361,8 @@ The server supports environment variables for advanced features:
 - `PERSISTENCE_TTL_DAYS=<whole days>` - Opt-in retention: delete persisted sessions and plans whose
   last write is older, at startup and on the cleanup tick; unset means never delete
 - `DATABASE_URL=postgres://...` - PostgreSQL connection string (postgres adapter only)
+- `PERSISTENCE_AUTO_SAVE=true` - Save every `execute_thinking_step` call that omits `autoSave`
+  (default: unset, so MCP calls save nothing unless they ask). The Docker image sets it.
 - `RESPONSE_VERBOSITY=minimal|full` - Default execute-response verbosity when a call omits
   `verbosity` (default: `minimal` since 3.0.0; set `full` for the pre-3.0 shape). The size
   difference is re-priced in `evals/evidence/verbosity-repricing.md` (`npm run evals:verbosity`)
@@ -1444,7 +1486,9 @@ over stdin/stdout, designed for an MCP client to drive. Two ways to wire it up:
 
 Sessions can be automatically saved during execution by setting `autoSave: true` in the
 execute_thinking_step input. This ensures progress is preserved even if the session is interrupted.
-The `socketes` CLI defaults this to `true` on every `execute` call.
+The `socketes` CLI defaults this to `true` on every `execute` call. MCP clients do not send it, so a
+hosted server should set `PERSISTENCE_AUTO_SAVE=true`, which makes `true` the default for calls that
+omit it. The Docker image sets it.
 
 ## Session Management
 

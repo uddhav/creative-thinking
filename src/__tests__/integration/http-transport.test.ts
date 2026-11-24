@@ -10,7 +10,9 @@
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { spawn, type ChildProcess } from 'child_process';
+import { mkdtempSync, readdirSync, rmSync } from 'fs';
 import { request } from 'http';
+import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -364,4 +366,106 @@ describe('HTTP transport (built binary)', () => {
     expect(code).toBe(1);
     expect(stderr).toMatch(/Unknown transport "carrier-pigeon"/);
   });
+});
+
+/** Start the built server over HTTP and resolve with its MCP URL. */
+function spawnHttpServer(
+  env: Record<string, string>
+): Promise<{ child: ChildProcess; url: string }> {
+  const child = spawn('node', [SERVER_MAIN, '--transport', 'http'], {
+    env: { ...process.env, PORT: '0', HOST: '127.0.0.1', DISABLE_THOUGHT_LOGGING: 'true', ...env },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  return new Promise((resolve, reject) => {
+    let stderr = '';
+    const timer = setTimeout(() => reject(new Error(`no listen line:\n${stderr}`)), 8000);
+    child.stderr?.on('data', (chunk: Buffer) => {
+      stderr += chunk.toString();
+      const match = /listening on (http:\/\/\S+)/.exec(stderr);
+      if (match) {
+        clearTimeout(timer);
+        resolve({ child, url: match[1] });
+      }
+    });
+    child.on('exit', code => reject(new Error(`exited ${code}:\n${stderr}`)));
+  });
+}
+
+async function stopServer(child: ChildProcess): Promise<void> {
+  if (child.exitCode !== null) return;
+  await new Promise<void>(resolve => {
+    child.once('exit', () => resolve());
+    child.kill('SIGTERM');
+  });
+}
+
+/**
+ * The hosted shape: persistence on, PERSISTENCE_AUTO_SAVE set, the way the
+ * Docker image runs. MCP clients never send `autoSave`, so without the env
+ * default no step was saved and a restart lost every session.
+ */
+describe('HTTP transport (built binary, persistence on)', () => {
+  let dir: string;
+  let env: Record<string, string>;
+
+  beforeAll(() => {
+    dir = mkdtempSync(path.join(os.tmpdir(), 'ct-http-persist-'));
+    env = {
+      PERSISTENCE_TYPE: 'filesystem',
+      PERSISTENCE_PATH: path.join(dir, 'store'),
+      PERSISTENCE_AUTO_SAVE: 'true',
+    };
+  });
+
+  afterAll(() => rmSync(dir, { recursive: true, force: true }));
+
+  it('reports persistence on /health and resumes a session after a restart', async () => {
+    // Break: drop the PERSISTENCE_AUTO_SAVE default in execution.ts, rebuild.
+    let server = await spawnHttpServer(env);
+    try {
+      const health = (await httpCall(new URL('/health', server.url))).json();
+      expect(health).toMatchObject({ persistence: { type: 'filesystem' } });
+
+      let client = await connectClient(server.url);
+      const plan = textJson(
+        await client.callTool({
+          name: 'plan_thinking_session',
+          arguments: { problem: PROBLEM, techniques: ['six_hats'] },
+        })
+      );
+      const step = (currentStep: number, sessionId?: string) => ({
+        name: 'execute_thinking_step',
+        arguments: {
+          planId: plan.planId,
+          ...(sessionId ? { sessionId } : {}),
+          technique: 'six_hats',
+          problem: PROBLEM,
+          currentStep,
+          totalSteps: 6,
+          output: `Hat ${currentStep}: one thought about ${PROBLEM}`,
+          nextStepNeeded: true,
+        },
+      });
+      const first = await client.callTool(step(1));
+      expect(first.isError).not.toBe(true);
+      const sessionId = String(textJson(first).sessionId);
+      await client.close();
+
+      expect(readdirSync(path.join(dir, 'store', 'sessions'))).toContain(`${sessionId}.json`);
+      expect((await httpCall(new URL('/health', server.url))).json()).toMatchObject({
+        persistence: { type: 'filesystem', state: 'ready' },
+      });
+
+      await stopServer(server.child);
+      server = await spawnHttpServer(env);
+
+      client = await connectClient(server.url);
+      const second = await client.callTool(step(2, sessionId));
+      expect(second.isError).not.toBe(true);
+      expect(textJson(second).sessionId).toBe(sessionId);
+      await client.close();
+    } finally {
+      await stopServer(server.child);
+    }
+  }, 30000);
 });

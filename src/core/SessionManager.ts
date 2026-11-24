@@ -474,6 +474,15 @@ export class SessionManager {
     return this.sessionPersistence.getPersistenceAdapter() !== null;
   }
 
+  /**
+   * Persistence state for a health check. Never waits: it nudges a retry of a
+   * failed backend in the background and reports the state as it stands.
+   */
+  public getPersistenceStatus(): ReturnType<SessionPersistence['getStatus']> {
+    void this.sessionPersistence.initialize().catch(() => undefined);
+    return this.sessionPersistence.getStatus();
+  }
+
   // Metrics operations - delegate to SessionMetrics
   public getSessionSize(sessionId: string): number {
     return this.sessionMetrics.getSessionSize(sessionId);
