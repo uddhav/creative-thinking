@@ -23,6 +23,14 @@ import { ExportFactory } from '../export/index.js';
 import { ErrorFactory } from '../errors/enhanced-errors.js';
 
 /**
+ * A temp path in the same directory as `target`, so `fs.rename` stays on one
+ * filesystem and stays atomic.
+ */
+function tempPathBeside(target: string): string {
+  return path.join(path.dirname(target), `.${path.basename(target)}.${randomUUID()}.tmp`);
+}
+
+/**
  * Filesystem-based persistence adapter
  * Stores sessions as JSON files in a directory structure
  */
@@ -128,11 +136,13 @@ export class FilesystemAdapter implements PersistenceAdapter {
         );
       }
 
-      // Use atomic writes to prevent race conditions and partial writes
-      // Create temporary files in system temp directory with restrictive permissions
-      const tmpDir = os.tmpdir();
-      tempSessionPath = path.join(tmpDir, `session-${randomUUID()}.tmp`);
-      tempMetadataPath = path.join(tmpDir, `metadata-${randomUUID()}.tmp`);
+      // Atomic writes: write a temp file, then rename it over the target.
+      // The temp file sits beside its target, because rename(2) cannot cross
+      // filesystems: a temp file in os.tmpdir() fails with EXDEV whenever
+      // PERSISTENCE_PATH is on another device (a mounted volume, a network
+      // share). Dot-prefixed and .tmp-suffixed so no reader takes it for data.
+      tempSessionPath = tempPathBeside(sessionPath);
+      tempMetadataPath = tempPathBeside(metadataPath);
 
       // Write session data atomically with restrictive permissions (0600)
       await fs.writeFile(tempSessionPath, serialized, {
@@ -430,7 +440,8 @@ export class FilesystemAdapter implements PersistenceAdapter {
     let oldestTime: number | undefined;
     let newestTime: number | undefined;
 
-    for (const file of files) {
+    const sessionFiles = files.filter(file => file.endsWith('.json')); // skip in-flight temp files
+    for (const file of sessionFiles) {
       const filePath = path.join(sessionsDir, file);
       const stats = await fs.stat(filePath);
       totalSize += stats.size;
@@ -441,7 +452,7 @@ export class FilesystemAdapter implements PersistenceAdapter {
     }
 
     return {
-      totalSessions: files.length,
+      totalSessions: sessionFiles.length,
       totalSize,
       oldestSession: oldestTime ? new Date(oldestTime) : undefined,
       newestSession: newestTime ? new Date(newestTime) : undefined,
@@ -491,8 +502,9 @@ export class FilesystemAdapter implements PersistenceAdapter {
     // Bare JSON, no {version, format, data} envelope: that is what the old
     // synchronous store wrote, so files from before and after this change are
     // one format and need no version sniffing. Same atomic write and 0600 mode
-    // as sessions: the plan carries the caller's problem statement.
-    const tempPath = path.join(os.tmpdir(), `plan-${randomUUID()}.tmp`);
+    // as sessions: the plan carries the caller's problem statement. The temp
+    // file sits beside the target so the rename never crosses filesystems.
+    const tempPath = tempPathBeside(planPath);
     try {
       await fs.writeFile(tempPath, JSON.stringify(plan), { encoding: 'utf8', mode: 0o600 });
       await fs.rename(tempPath, planPath);
