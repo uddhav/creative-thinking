@@ -25,6 +25,9 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
+      - name: Use npm 11, the version Dependabot writes lockfiles with
+        run: npm install -g npm@11
+
       - name: 📦 Install dependencies
         run: npm ci
 
@@ -56,6 +59,9 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
+
+      - name: Use npm 11, the version Dependabot writes lockfiles with
+        run: npm install -g npm@11
 
       - name: 📦 Install dependencies
         run: npm ci
@@ -91,6 +97,9 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
+
+      - name: Use npm 11, the version Dependabot writes lockfiles with
+        run: npm install -g npm@11
 
       - name: 📦 Install dependencies
         run: npm ci
@@ -165,6 +174,9 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
+      - name: Use npm 11, the version Dependabot writes lockfiles with
+        run: npm install -g npm@11
+
       - name: 📦 Install dependencies
         run: npm ci
 
@@ -197,7 +209,7 @@ jobs:
       # commit. Verified by CI on this PR rather than locally; a workflow
       # expression cannot be exercised any other way.
       - name: 🔐 Check for secrets
-        uses: trufflesecurity/trufflehog@4b7d1d3a6827691637eff750b6482042e06462d0 # main
+        uses: trufflesecurity/trufflehog@c56f0b1718634cf6b322558a15e18f4b019939e4 # main
         with:
           path: ./
           base: ${{ github.event_name == 'pull_request' && github.event.repository.default_branch || github.event.before || 'HEAD~1' }}
@@ -216,6 +228,9 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
+
+      - name: Use npm 11, the version Dependabot writes lockfiles with
+        run: npm install -g npm@11
 
       - name: 📦 Install dependencies
         run: npm ci
@@ -251,6 +266,9 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
+
+      - name: Use npm 11, the version Dependabot writes lockfiles with
+        run: npm install -g npm@11
 
       - name: 📦 Install dependencies
         run: npm ci
@@ -295,6 +313,9 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
+
+      - name: Use npm 11, the version Dependabot writes lockfiles with
+        run: npm install -g npm@11
 
       - name: 📦 Install dependencies
         run: npm ci

@@ -49,11 +49,11 @@ describe('codeql-action steps are pinned to one version', () => {
 });
 
 describe('claude-code-action is passed only inputs it declares', () => {
-  // action.yml inputs at the pinned SHA below (byte-identical at a874e9ec and
-  // d75b94d5). Re-derive with:
+  // action.yml inputs at the pinned SHA below (all five still declared at
+  // ed670b4c, v1.0.240). Re-derive with:
   //   gh api repos/anthropics/claude-code-action/contents/action.yml?ref=<sha> \
   //     --jq .content | base64 -d | grep -E '^  [a-z_]+:'
-  const PINNED_SHA = 'd75b94d5ad426cb8546e6628b6f5f19b84e5cce1'; // checked 2026-09-12
+  const PINNED_SHA = 'ed670b4cf9de2a5a570d130d2f6197b9e543cd64'; // v1.0.240, checked 2026-11-24
   const ALLOWED = new Set([
     'additional_permissions',
     'claude_code_oauth_token',
