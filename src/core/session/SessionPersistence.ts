@@ -16,12 +16,30 @@ export class SessionPersistence {
   private persistenceAdapter: PersistenceAdapter | null = null;
   private initializationPromise: Promise<void> | null = null;
   private isInitialized = false;
+  /** When a configured backend last failed to start, or null. */
+  private initFailedAt: number | null = null;
+
+  /** Wait this long after a failed start before trying the backend again. */
+  static readonly RETRY_AFTER_MS = 5000;
 
   /**
    * Initialize persistence adapter
    */
   async initialize(): Promise<void> {
-    if (this.isInitialized) return;
+    if (this.isInitialized) {
+      if (
+        this.initFailedAt === null ||
+        Date.now() - this.initFailedAt < SessionPersistence.RETRY_AFTER_MS
+      ) {
+        return;
+      }
+      // A configured backend failed to start: a database still waking up, a
+      // network blip at boot. Settling for memory for the life of the process
+      // turned one slow start into silent data loss, so try again.
+      this.isInitialized = false;
+      this.initializationPromise = null;
+      this.initFailedAt = null;
+    }
     if (this.initializationPromise) return this.initializationPromise;
 
     this.initializationPromise = this.initializePersistence();
@@ -53,9 +71,25 @@ export class SessionPersistence {
       this.persistenceAdapter = await createAdapter(persistenceConfig);
       console.error('[SessionManager] Persistence adapter initialized successfully');
     } catch (error) {
-      console.error('[SessionManager] Failed to initialize persistence:', error);
-      // Continue without persistence - sessions will be memory-only
+      this.initFailedAt = Date.now();
+      console.error(
+        `[SessionManager] Failed to initialize persistence; memory only until a retry ` +
+          `succeeds (next try after ${SessionPersistence.RETRY_AFTER_MS / 1000}s):`,
+        error
+      );
     }
+  }
+
+  /**
+   * What persistence is doing right now, for health checks. `failed` means a
+   * backend is configured but not connected; the next save or load retries.
+   */
+  getStatus(): { type: string; state: 'memory' | 'pending' | 'ready' | 'failed' } {
+    const type = process.env.PERSISTENCE_TYPE || 'memory';
+    if (this.persistenceAdapter) return { type, state: 'ready' };
+    if (this.initFailedAt !== null) return { type, state: 'failed' };
+    if (!this.isInitialized) return { type, state: 'pending' };
+    return { type, state: 'memory' };
   }
 
   /**

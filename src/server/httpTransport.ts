@@ -269,11 +269,15 @@ export async function startHttpServer(
         sendJson(res, 405, { error: 'Method not allowed' }, { Allow: 'GET, HEAD' });
         return;
       }
+      // 200 whenever the process answers. Persistence rides along as a field
+      // rather than the status code: a database blip should not get a healthy
+      // instance killed, but a deploy check needs to see it.
       sendJson(res, 200, {
         status: 'ok',
         name: 'creative-thinking',
         version: getVersion(),
         transport: 'streamable-http',
+        persistence: lateralServer.getSessionManager().getPersistenceStatus(),
       });
       return;
     }

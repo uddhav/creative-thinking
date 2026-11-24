@@ -11,6 +11,10 @@ export declare class SessionPersistence {
     private persistenceAdapter;
     private initializationPromise;
     private isInitialized;
+    /** When a configured backend last failed to start, or null. */
+    private initFailedAt;
+    /** Wait this long after a failed start before trying the backend again. */
+    static readonly RETRY_AFTER_MS = 5000;
     /**
      * Initialize persistence adapter
      */
@@ -19,6 +23,14 @@ export declare class SessionPersistence {
      * Initialize the persistence adapter
      */
     private initializePersistence;
+    /**
+     * What persistence is doing right now, for health checks. `failed` means a
+     * backend is configured but not connected; the next save or load retries.
+     */
+    getStatus(): {
+        type: string;
+        state: 'memory' | 'pending' | 'ready' | 'failed';
+    };
     /**
      * Save session to persistent storage
      */

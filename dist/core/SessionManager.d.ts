@@ -7,6 +7,7 @@ import type { PlanThinkingSessionOutput } from '../types/planning.js';
 import type { PersistenceAdapter } from '../persistence/adapter.js';
 import type { SessionState } from '../persistence/types.js';
 import { SessionCleaner } from './session/SessionCleaner.js';
+import { SessionPersistence } from './session/SessionPersistence.js';
 import { type SkipDetectionResult, type SkipPattern } from './session/SkipDetector.js';
 import { type SessionLock } from './session/SessionLock.js';
 import { ReflexivityTracker } from './ReflexivityTracker.js';
@@ -141,6 +142,11 @@ export declare class SessionManager {
      * file was in fact gone.
      */
     persistenceReady(): Promise<boolean>;
+    /**
+     * Persistence state for a health check. Never waits: it nudges a retry of a
+     * failed backend in the background and reports the state as it stands.
+     */
+    getPersistenceStatus(): ReturnType<SessionPersistence['getStatus']>;
     getSessionSize(sessionId: string): number;
     getTotalMemoryUsage(): number;
     getConfig(): SessionConfig;

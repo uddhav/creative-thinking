@@ -238,6 +238,14 @@ export async function executeThinkingStep(
   ergodicityManager: ErgodicityManager,
   validationWarnings?: string[]
 ): Promise<LateralThinkingResponse> {
+  // MCP clients do not send autoSave, so on a hosted server sessions lived in
+  // memory only and a restart (a scale-to-zero, a deploy) lost them while
+  // their plans survived. PERSISTENCE_AUTO_SAVE=true makes saving the default.
+  // A caller's explicit autoSave: false still wins.
+  if (input.autoSave === undefined && process.env.PERSISTENCE_AUTO_SAVE === 'true') {
+    input = { ...input, autoSave: true };
+  }
+
   const errorContextBuilder = new ErrorContextBuilder();
   const errorHandler = new ErrorHandler();
   const sessionLock = sessionManager.getSessionLock();

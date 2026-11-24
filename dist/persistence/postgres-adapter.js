@@ -41,7 +41,11 @@ export class PostgresAdapter {
             // Recommended pool settings for production
             max: 20, // maximum pool size
             idleTimeoutMillis: 30000,
-            connectionTimeoutMillis: 2000,
+            // Generous on purpose: a serverless database (Neon's free tier, say)
+            // suspends when idle and takes a moment to wake, and the first connect
+            // also pays for DNS and TLS. Two seconds turned a cold start into a
+            // failed start.
+            connectionTimeoutMillis: 10000,
         });
         // Test connection
         try {
@@ -51,6 +55,9 @@ export class PostgresAdapter {
             this.initialized = true;
         }
         catch (error) {
+            // Close the pool, or every failed start leaves one behind.
+            await this.pool.end().catch(() => undefined);
+            this.pool = null;
             throw new PersistenceError('Failed to connect to PostgreSQL', PersistenceErrorCode.IO_ERROR, error);
         }
     }
