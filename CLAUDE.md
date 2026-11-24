@@ -20,7 +20,11 @@ The `creative-thinking` package ships **two distinct binaries with different sha
   JSON-RPC over stdin/stdout for an MCP client to drive. Same three tools, same handlers as the CLI
   under the hood — kept for backwards compatibility.
 
-There is no remote / HTTP / SSE transport for either binary.
+The MCP server speaks stdio by default and Streamable HTTP with `--transport http` (or
+`MCP_TRANSPORT=http`); see `src/server/httpTransport.ts` and README "Run over HTTP". HTTP is
+stateless: each POST builds a fresh SDK `Server` (via `src/server/createMcpServer.ts`) over the one
+shared `LateralThinkingServer`, so no MCP session id lives in process memory. It uses plain
+`node:http`, not express. There is no SSE transport, and the CLI has no network transport.
 
 ## Commands
 

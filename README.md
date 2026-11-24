@@ -101,6 +101,52 @@ npx -y -p 'github:uddhav/creative-thinking#semver:^3' socketes discover --proble
 claude mcp add --transport stdio creative-thinking -- npx -y 'github:uddhav/creative-thinking#semver:^3'
 ```
 
+### Run over HTTP (remote MCP server)
+
+The `creative-thinking` server also speaks MCP's Streamable HTTP transport. Use it to host the
+server and add it to a remote MCP client, such as a Claude custom connector. stdio stays the
+default, so every setup above is unchanged.
+
+```bash
+creative-thinking --transport http              # or MCP_TRANSPORT=http
+# → Creative Thinking MCP server listening on http://127.0.0.1:8080/mcp
+curl http://127.0.0.1:8080/health               # {"status":"ok",...}
+claude mcp add --transport http creative-thinking-http http://127.0.0.1:8080/mcp
+```
+
+| Variable                  | Default     | Meaning                                                          |
+| ------------------------- | ----------- | ---------------------------------------------------------------- |
+| `HOST`                    | `127.0.0.1` | Interface to bind. Use `0.0.0.0` in a container.                 |
+| `PORT`                    | `8080`      | Port to bind. Cloud Run and Fly set this for you.                |
+| `MCP_HTTP_PATH`           | `/mcp`      | Path of the MCP endpoint. A long random path works as a secret.  |
+| `MCP_HTTP_AUTH_TOKEN`     | unset       | When set, MCP calls must send `Authorization: Bearer <token>`.   |
+| `MCP_HTTP_MAX_BODY_BYTES` | `1048576`   | Largest request body accepted.                                   |
+| `PERSISTENCE_TYPE`        | memory      | Set `filesystem` (with `PERSISTENCE_PATH`) or `postgres` to keep |
+|                           |             | plans and sessions across restarts.                              |
+
+How it behaves:
+
+- **Stateless.** Each POST is handled on its own, and the server issues no MCP session id. A restart
+  or a second instance does not break connected clients. GET and DELETE on the MCP path return 405.
+  Thinking plans and sessions are keyed by their own ids, so they survive only if persistence is on.
+- **One instance, or postgres.** The filesystem adapter is local to one machine. Run one instance
+  with a volume, or use `PERSISTENCE_TYPE=postgres` to scale out.
+- **Loopback is guarded.** Bound to `127.0.0.1` or `localhost`, the server refuses requests whose
+  `Host` header is not a loopback name. This blocks DNS rebinding from a web page.
+- **Protect a public URL.** On a public bind with no token, anyone who finds the URL can call the
+  tools and write to your volume, and the server logs a warning. Clients that can send headers
+  (Claude Code, most SDKs) should use `MCP_HTTP_AUTH_TOKEN`. For clients that cannot, use a long
+  random `MCP_HTTP_PATH`. Also set `PERSISTENCE_TTL_DAYS` so old sessions are removed.
+- **`/health`** answers `GET` with the version and needs no token, for load balancer probes.
+
+The `Dockerfile` builds an HTTP image with persistence on a `/data` volume:
+
+```bash
+docker build -t creative-thinking .
+docker run -p 8080:8080 -v ct-data:/data \
+  -e MCP_HTTP_AUTH_TOKEN="$(openssl rand -hex 32)" creative-thinking
+```
+
 ### Local development
 
 ```bash
@@ -1710,7 +1756,7 @@ Key error recovery features:
 
 ## Building
 
-Docker:
+Docker (HTTP transport; see [Run over HTTP](#run-over-http-remote-mcp-server)):
 
 ```bash
 docker build -t creative-thinking .
