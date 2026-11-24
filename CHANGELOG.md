@@ -1,3 +1,9 @@
+## [v3.1.1] - 2026-11-24
+
+### Changes from PR #525
+
+- fix(docker): build the image, persist to a fresh volume, deploy free on Cloud Run + Neon
+
 ## [v3.1.0] - 2026-11-24
 
 ### Changes from PR #518
