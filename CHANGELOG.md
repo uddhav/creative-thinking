@@ -1,3 +1,9 @@
+## [v3.1.0] - 2026-11-24
+
+### Changes from PR #518
+
+- feat(server): add Streamable HTTP transport beside stdio
+
 ## [v3.0.1] - 2026-11-24
 
 ### Changes from PR #516
