@@ -102,6 +102,20 @@ function tokenMatches(given, expected) {
     const b = createHash('sha256').update(expected).digest();
     return timingSafeEqual(a, b);
 }
+/**
+ * The token from an `Authorization: Bearer <token>` header, or undefined.
+ * Split on the first space rather than with a regex: a pattern like
+ * /^Bearer\s+(.+)$/ backtracks quadratically on a header full of spaces.
+ */
+export function bearerToken(header) {
+    if (!header)
+        return undefined;
+    const space = header.indexOf(' ');
+    if (space === -1 || header.slice(0, space).toLowerCase() !== 'bearer')
+        return undefined;
+    const token = header.slice(space + 1).trim();
+    return token || undefined;
+}
 class BodyTooLargeError extends Error {
 }
 function readBody(req, limit) {
@@ -151,9 +165,8 @@ export async function startHttpServer(lateralServer, options) {
             return;
         }
         if (options.authToken) {
-            const header = req.headers.authorization ?? '';
-            const match = /^Bearer\s+(.+)$/i.exec(header);
-            if (!match || !tokenMatches(match[1].trim(), options.authToken)) {
+            const given = bearerToken(req.headers.authorization);
+            if (!given || !tokenMatches(given, options.authToken)) {
                 sendJsonRpcError(res, 401, -32001, 'Unauthorized', {
                     'WWW-Authenticate': 'Bearer',
                 });

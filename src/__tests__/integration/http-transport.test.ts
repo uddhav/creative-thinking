@@ -19,6 +19,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 
 import { LateralThinkingServer } from '../../index.js';
 import {
+  bearerToken,
   resolveHttpOptions,
   resolveTransportMode,
   startHttpServer,
@@ -245,7 +246,7 @@ describe('HTTP transport (in process)', () => {
     });
     expect(wrong.status).toBe(401);
 
-    const client = await connectClient(guarded.url, { Authorization: 'Bearer test-token' });
+    const client = await connectClient(guarded.url, { Authorization: 'bearer  test-token ' });
     const { tools } = await client.listTools();
     expect(tools).toHaveLength(3);
     await client.close();
@@ -253,6 +254,19 @@ describe('HTTP transport (in process)', () => {
 });
 
 describe('transport configuration', () => {
+  it('reads a bearer token in linear time', () => {
+    expect(bearerToken('Bearer abc')).toBe('abc');
+    expect(bearerToken('bearer   abc  ')).toBe('abc');
+    expect(bearerToken('Basic abc')).toBeUndefined();
+    expect(bearerToken('Bearer    ')).toBeUndefined();
+    expect(bearerToken(undefined)).toBeUndefined();
+    // A regex like /^Bearer\s+(.+)$/ backtracks quadratically here (CodeQL
+    // js/polynomial-redos): over a second at this length.
+    const started = Date.now();
+    expect(bearerToken(`Bearer ${' '.repeat(50_000)}\n`)).toBeUndefined();
+    expect(Date.now() - started).toBeLessThan(200);
+  });
+
   it('defaults to stdio', () => {
     expect(resolveTransportMode([], {})).toBe('stdio');
     expect(resolveTransportMode([], { MCP_TRANSPORT: '' })).toBe('stdio');

@@ -50,6 +50,12 @@ export declare function resolveTransportMode(argv: readonly string[], env?: Node
  */
 export declare function resolveHttpOptions(env?: NodeJS.ProcessEnv): HttpTransportOptions;
 /**
+ * The token from an `Authorization: Bearer <token>` header, or undefined.
+ * Split on the first space rather than with a regex: a pattern like
+ * /^Bearer\s+(.+)$/ backtracks quadratically on a header full of spaces.
+ */
+export declare function bearerToken(header: string | undefined): string | undefined;
+/**
  * Start the HTTP server. Resolves once it is listening.
  */
 export declare function startHttpServer(lateralServer: LateralThinkingServer, options: HttpTransportOptions): Promise<HttpServerHandle>;
